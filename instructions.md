@@ -64,6 +64,21 @@ python3 solve_pLaplace_custom_newton.py --quiet --json results/custom.json
 mpirun -n 8 python3 solve_pLaplace_custom_newton.py --quiet --json results/custom_8proc.json
 ```
 
+### JAX Newton (no MPI)
+
+Pure-JAX solver using auto-diff gradients, sparse finite-difference Hessian (graph coloring), and PyAMG CG. Runs on a single CPU — no MPI parallelism. Requires `jax`, `h5py`, and `pyamg`.
+
+```bash
+# Default (mesh levels 5–9)
+python3 solve_pLaplace_jax_newton.py
+
+# Specific levels
+python3 solve_pLaplace_jax_newton.py --levels 5 6 7
+
+# Save results to JSON
+python3 solve_pLaplace_jax_newton.py --json results/jax.json
+```
+
 ## Automated Experiment Runner
 
 `run_experiments.py` runs a complete benchmark suite with multiple solvers, MPI configurations, and repetitions:
@@ -104,7 +119,7 @@ results/<experiment_id>/<solver>_np<nprocs>_run<repetition>.json
 | Field           | Values                                                                 |
 | --------------- | ---------------------------------------------------------------------- |
 | `experiment_id` | Sequential (`experiment_001`) or timestamped (`20260221_133000_mytag`) |
-| `solver`        | `snes_newton` or `custom_newton`                                       |
+| `solver`        | `snes_newton`, `custom_newton`, or `jax_newton`                        |
 | `nprocs`        | Number of MPI processes (1 = serial)                                   |
 | `repetition`    | Run number (1, 2, 3…)                                                  |
 

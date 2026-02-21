@@ -21,6 +21,7 @@ RUN python3 -m pip install --upgrade \
     jax \
     jaxlib \
     pyamg \
+    h5py \
     igraph \
     scalene \
     Jinja2 \

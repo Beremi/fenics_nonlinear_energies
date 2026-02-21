@@ -72,6 +72,26 @@ To regenerate this plot:
 python3 generate_scaling_plot.py results/experiment_001/
 ```
 
+### JAX Newton (serial only, no MPI)
+
+The same p-Laplace problem solved using a pure-JAX pipeline (automatic differentiation for gradients, sparse finite differences with graph coloring for Hessian assembly, PyAMG smoothed-aggregation CG solver). This implementation lives in [`pLaplace2D/`](pLaplace2D/), [`tools/`](tools/) and is wrapped by [`solve_pLaplace_jax_newton.py`](solve_pLaplace_jax_newton.py).
+
+| lvl | dofs   | setup (s) | solve (s) | total (s) | iters | J(u)    |
+| --- | ------ | --------- | --------- | --------- | ----- | ------- |
+| 4   | 2945   | 0.184     | 0.076     | 0.260     | 6     | -7.9430 |
+| 5   | 12033  | 0.182     | 0.147     | 0.329     | 6     | -7.9546 |
+| 6   | 48641  | 0.263     | 0.435     | 0.698     | 6     | -7.9583 |
+| 7   | 195585 | 0.582     | 2.173     | 2.755     | 8     | -7.9596 |
+| 8   | 784385 | 1.903     | 10.918    | 12.821    | 9     | -7.9600 |
+
+**Setup** includes JIT compilation, Hessian sparsity detection (graph coloring), and AMG preconditioner construction. **Solve** is the Newton iteration time only.
+
+**Comparison with FEniCS (serial)**:
+- **Solve time**: JAX is comparable to FEniCS SNES for small problems but slightly slower at larger levels (10.9 s vs 10.0 s at lvl 8), likely due to differences in AMG implementations (PyAMG vs HYPRE).
+- **Iterations**: JAX converges in 6–9 iterations (similar to SNES 7–10). The JAX solver uses a golden-section line search on $[-0.5, 2]$ with `tol=1e-3`, allowing $\alpha > 1$ — unlike the FEniCS custom Newton which searches $[0, 1]$.
+- **No parallelism**: The JAX solver runs on a single CPU core. There is no MPI parallelism yet.
+- **Setup overhead**: The ~0.2–1.9 s setup cost (JIT + graph coloring) is amortized over the solve but significant for small problems.
+
 ---
 
 ## Generating LaTeX Tables and Plots

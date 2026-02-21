@@ -29,6 +29,10 @@ This is the **recommended solver** — matches the "FEniCS serial/parallel" colu
 Manual Newton method with golden-section line search on the energy functional, CG + HYPRE AMG.
 Slower due to line search overhead but provides more control and debugging output.
 
+### `solve_pLaplace_jax_newton.py` — JAX Newton (no MPI)
+
+Pure-JAX solver using automatic differentiation for gradients, sparse finite differences (graph coloring) for Hessian assembly, and PyAMG smoothed-aggregation CG. Runs on a single CPU; no MPI parallelism. Uses the modules in `pLaplace2D/` and `tools/`.
+
 ## Repository Structure
 
 ```
@@ -39,6 +43,7 @@ Slower due to line search overhead but provides more control and debugging outpu
 │
 ├── solve_pLaplace_snes_newton.py      # Main solver: SNES Newton (DOLFINx 0.10+)
 ├── solve_pLaplace_custom_newton.py    # Custom Newton with line search (DOLFINx 0.10+)
+├── solve_pLaplace_jax_newton.py       # JAX Newton solver (single CPU, no MPI)
 ├── run_experiments.py                 # Automated experiment runner
 ├── generate_latex_tables.py           # Generate LaTeX/Markdown tables from results
 ├── generate_scaling_plot.py           # Generate strong scaling plots from results
