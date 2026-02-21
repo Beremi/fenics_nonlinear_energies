@@ -25,4 +25,8 @@ RUN python3 -m pip install --upgrade \
     igraph \
     scalene \
     Jinja2 \
-    meshio
+    meshio \
+    ipykernel \
+    jupyter \
+    pandas \
+    tabulate

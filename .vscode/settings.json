@@ -47,5 +47,11 @@
     "python.analysis.extraPaths": [
         "/usr/local/dolfinx-real/lib/python3.10/dist-packages/dolfinx",
         "/usr/local/lib/python3.10/dist-packages/petsc4py"
-    ]
+    ],
+    "chat.tools.terminal.autoApprove": {
+        "/^git add -A && git --no-pager commit -m \"Add jupyter, pandas, tabulate to devcontainer for notebook support\"$/": {
+            "approve": true,
+            "matchCommandLine": true
+        }
+    }
 }
