@@ -74,7 +74,7 @@ def aggregate_runs(runs_list):
             by_level[lvl]["times"].append(r["time"])
             by_level[lvl]["iters"].append(r["iters"])
             by_level[lvl]["energies"].append(r["energy"])
-            by_level[lvl]["dofs"].append(r["total_dofs"])
+            by_level[lvl]["dofs"].append(r.get("total_dofs", r.get("dofs", 0)))
 
     aggregated = {}
     for lvl in sorted(by_level.keys()):
@@ -200,7 +200,12 @@ def generate_all_solvers_table(metadata, runs):
     header1 = " & "
     headers = []
     for solver, nprocs in configs:
-        solver_label = "SNES Newton" if solver == "snes_newton" else "Custom Newton"
+        if solver == "snes_newton":
+            solver_label = "SNES Newton"
+        elif solver == "jax_newton":
+            solver_label = "JAX Newton"
+        else:
+            solver_label = "Custom Newton"
         proc_label = "serial" if nprocs == 1 else f"{nprocs} proc"
         label = f"{solver_label} ({proc_label})"
         sep = "|" if (solver, nprocs) != configs[-1] else ""

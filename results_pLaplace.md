@@ -25,41 +25,17 @@ Raw data is stored as JSON files in [results/](results/). See [instructions.md](
 | 7   | 195585 | 2.152         | 8     | -7.9596 | 0.768         | 8     | -7.9596 | 0.463         | 8     | -7.9596 | 0.274          | 8     | -7.9596 |
 | 8   | 784385 | 10.026        | 9     | -7.9600 | 3.772         | 9     | -7.9600 | 2.430         | 9     | -7.9600 | 1.404          | 9     | -7.9600 |
 
-### All Solver Configurations
+### All Solver Configurations (SNES vs Custom Newton)
 
 | lvl | dofs   | SNES serial | iters | Custom serial | iters | SNES 4-proc | iters | Custom 4-proc | iters | SNES 8-proc | iters | Custom 8-proc | iters | SNES 16-proc | iters | Custom 16-proc | iters | J(u)    |
 | --- | ------ | ----------- | ----- | ------------- | ----- | ----------- | ----- | ------------- | ----- | ----------- | ----- | ------------- | ----- | ------------ | ----- | -------------- | ----- | ------- |
-| 4   | 2945   | 0.043       | 10    | 0.043         | 8     | 0.029       | 11    | 0.025         | 8     | 0.026       | 10    | 0.026         | 9     | 0.033        | 11    | 0.031          | 9     | -7.9430 |
-| 5   | 12033  | 0.167       | 10    | 0.193         | 9     | 0.071       | 10    | 0.075         | 9     | 0.050       | 10    | 0.055         | 9     | 0.054        | 10    | 0.058          | 9     | -7.9546 |
-| 6   | 48641  | 0.478       | 7     | 0.754         | 9     | 0.169       | 7     | 0.259         | 9     | 0.110       | 7     | 0.164         | 9     | 0.087        | 8     | 0.119          | 9     | -7.9583 |
-| 7   | 195585 | 2.152       | 8     | 3.373         | 10    | 0.768       | 8     | 1.014         | 9     | 0.463       | 8     | 0.681         | 10    | 0.274        | 8     | 0.386          | 10    | -7.9596 |
-| 8   | 784385 | 10.026      | 9     | 15.162        | 11    | 3.772       | 9     | 5.337         | 11    | 2.430       | 9     | 3.508         | 11    | 1.404        | 9     | 1.921          | 11    | -7.9600 |
+| 4   | 2945   | 0.043       | 10    | 0.039         | 5     | 0.029       | 11    | 0.021         | 5     | 0.026       | 10    | 0.016         | 5     | 0.033        | 11    | 0.021          | 5     | -7.9430 |
+| 5   | 12033  | 0.167       | 10    | 0.157         | 5     | 0.071       | 10    | 0.055         | 5     | 0.050       | 10    | 0.039         | 5     | 0.054        | 10    | 0.039          | 5     | -7.9546 |
+| 6   | 48641  | 0.478       | 7     | 0.731         | 6     | 0.169       | 7     | 0.239         | 6     | 0.110       | 7     | 0.143         | 6     | 0.087        | 8     | 0.098          | 6     | -7.9583 |
+| 7   | 195585 | 2.152       | 8     | 3.434         | 7     | 0.768       | 8     | 0.931         | 6     | 0.463       | 8     | 0.556         | 6     | 0.274        | 8     | 0.318          | 6     | -7.9596 |
+| 8   | 784385 | 10.026      | 9     | 12.488        | 6     | 3.772       | 9     | 4.091         | 6     | 2.430       | 9     | 2.873         | 6     | 1.404        | 9     | 1.482          | 6     | -7.9600 |
 
-**Note on Custom Newton performance**: The Custom Newton solver is consistently slower due to two issues in its golden-section line search (see [analysis below](#custom-newton-line-search-analysis)).
-
-### Custom Newton Line Search Analysis
-
-The custom Newton solver uses a golden-section search on the interval $[0, 1]$ with tolerance `tol=0.1` to find the step size $\alpha$. Verbose output for mesh level 7 (serial) reveals the problem:
-
-```
-IT 1: |grad|_inf = 5.708e-02, alpha = 3.713e-01, ksp_its = 1
-IT 2: |grad|_inf = 5.493e-01, alpha = 6.287e-01, ksp_its = 2
-IT 3: |grad|_inf = 2.551e-01, alpha = 9.549e-01, ksp_its = 2
-IT 4: |grad|_inf = 8.009e-02, alpha = 9.549e-01, ksp_its = 2
-IT 5: |grad|_inf = 1.874e-02, alpha = 9.549e-01, ksp_its = 2
-IT 6: |grad|_inf = 3.064e-03, alpha = 9.549e-01, ksp_its = 2
-IT 7: |grad|_inf = 2.369e-04, alpha = 9.549e-01, ksp_its = 2
-IT 8: |grad|_inf = 1.136e-05, alpha = 9.549e-01, ksp_its = 2
-IT 9: |grad|_inf = 5.149e-07, alpha = 3.713e-01, ksp_its = 2
-```
-
-Two issues are evident:
-
-1. **Alpha is capped at ~0.955**: The golden-section search with `tol=0.1` on `[0, 1]` can only resolve alpha to discrete golden-ratio values (0.371, 0.629, 0.955). Near convergence, the optimal step is $\alpha = 1$ (full Newton step), but the search always returns $\alpha \leq 0.955$, systematically undershooting and requiring more iterations (9–11 vs 7–9 for SNES).
-
-2. **~5 energy evaluations per iteration**: Each golden-section step evaluates the energy (vector scatter + scalar assembly + allreduce). With `tol=0.1` this is about 5 evaluations per Newton step — pure overhead when a full step ($\alpha = 1$) would suffice (as SNES "basic" demonstrates).
-
-**The SNES Newton with `linesearch_type=basic` (full step, no line search) is the correct and faster approach for this well-behaved problem.** The custom Newton's line search is solving a subproblem that doesn't need solving — it would only help for ill-conditioned problems where full Newton steps diverge.
+The Custom Newton uses the JAX-version algorithm (golden-section line search on $[-0.5, 2]$, CG + HYPRE AMG). It converges in fewer iterations (5–7 vs 7–10 for SNES) with comparable wall times. At small mesh levels the Custom solver is faster due to fewer iterations; at larger levels the per-iteration cost of the golden-section line search (~20 energy evaluations) adds overhead that offsets the iteration savings.
 
 ### Strong Scaling (SNES Newton, 1–32 processes)
 
@@ -88,7 +64,7 @@ The same p-Laplace problem solved using a pure-JAX pipeline (automatic different
 
 **Comparison with FEniCS (serial)**:
 - **Solve time**: JAX is comparable to FEniCS SNES for small problems but slightly slower at larger levels (10.9 s vs 10.0 s at lvl 8), likely due to differences in AMG implementations (PyAMG vs HYPRE).
-- **Iterations**: JAX converges in 6–9 iterations (similar to SNES 7–10). The JAX solver uses a golden-section line search on $[-0.5, 2]$ with `tol=1e-3`, allowing $\alpha > 1$ — unlike the FEniCS custom Newton which searches $[0, 1]$.
+- **Iterations**: JAX converges in 6–9 iterations (similar to the Custom Newton's 5–7). Both use a golden-section line search on $[-0.5, 2]$ with `tol=1e-3`. SNES converges in 7–10 iterations with a full-step (basic) line search.
 - **No parallelism**: The JAX solver runs on a single CPU core. There is no MPI parallelism yet.
 - **Setup overhead**: The ~0.2–1.9 s setup cost (JIT + graph coloring) is amortized over the solve but significant for small problems.
 
@@ -98,17 +74,17 @@ Re-implementation of the JAX minimiser (`tools/minimizers.py`) on top of PETSc v
 
 Script: [`pLaplace2D_fenics/solve_pLaplace_custom_jaxversion.py`](pLaplace2D_fenics/solve_pLaplace_custom_jaxversion.py)
 
-| lvl | dofs   | time (serial) | iters | time (4-proc) | iters | J(u)    |
-| --- | ------ | ------------- | ----- | ------------- | ----- | ------- |
-| 4   | 3201   | 0.040         | 5     | —             | —     | -7.9430 |
-| 5   | 12545  | 0.154         | 5     | —             | —     | -7.9546 |
-| 6   | 49665  | 0.724         | 6     | 0.236         | 6     | -7.9583 |
-| 7   | 197633 | 3.454         | 7     | 0.923         | 6     | -7.9596 |
-| 8   | 788481 | 12.369        | 6     | 4.085         | 6     | -7.9600 |
+| lvl | dofs   | time (serial) | iters | time (4-proc) | iters | time (8-proc) | iters | time (16-proc) | iters | J(u)    |
+| --- | ------ | ------------- | ----- | ------------- | ----- | ------------- | ----- | -------------- | ----- | ------- |
+| 4   | 3201   | 0.039         | 5     | 0.021         | 5     | 0.016         | 5     | 0.021          | 5     | -7.9430 |
+| 5   | 12545  | 0.157         | 5     | 0.055         | 5     | 0.039         | 5     | 0.039          | 5     | -7.9546 |
+| 6   | 49665  | 0.731         | 6     | 0.239         | 6     | 0.143         | 6     | 0.098          | 6     | -7.9583 |
+| 7   | 197633 | 3.434         | 7     | 0.931         | 6     | 0.556         | 6     | 0.318          | 6     | -7.9596 |
+| 8   | 788481 | 12.488        | 6     | 4.091         | 6     | 2.873         | 6     | 1.482          | 6     | -7.9600 |
 
 **Key observations**:
-- **5–7 iterations** — matches or beats the JAX solver (6–9) and significantly fewer than the original Custom Newton (8–11).
-- **Line search allows α > 1**: The wider interval $[-0.5, 2]$ and tighter tolerance (`1e-3` vs `0.1`) enable full or overshooting steps, eliminating the α ≤ 0.955 cap of the original Custom Newton.
+- **5–7 iterations** — matches or beats the JAX solver (6–9) and significantly fewer than SNES (7–10).
+- **Line search allows α > 1**: The wider interval $[-0.5, 2]$ and tighter tolerance (`1e-3`) enable full or overshooting steps.
 - **MPI-parallel**: Unlike pure JAX, this solver scales across MPI processes.
 - **Comparable serial times** to SNES Newton — slightly slower due to golden-section energy evaluations per iteration, but fewer iterations compensate.
 

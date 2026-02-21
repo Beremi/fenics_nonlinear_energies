@@ -1,0 +1,67 @@
+{
+  "metadata": {
+    "solver": "custom_jaxversion",
+    "description": "Custom Newton (JAX-version algorithm): golden-section line search [-0.5, 2], CG + HYPRE AMG",
+    "dolfinx_version": "0.10.0.post2",
+    "nprocs": 4,
+    "linear_solver": {
+      "ksp_type": "cg",
+      "pc_type": "hypre",
+      "ksp_rtol": 0.001
+    },
+    "newton_params": {
+      "tolf": 1e-05,
+      "tolg": 0.001,
+      "linesearch_interval": [
+        -0.5,
+        2.0
+      ],
+      "linesearch_tol": 0.001,
+      "maxit": 100
+    },
+    "p": 3,
+    "rhs_f": -10.0
+  },
+  "results": [
+    {
+      "mesh_level": 5,
+      "total_dofs": 3201,
+      "time": 0.021,
+      "iters": 5,
+      "energy": -7.943,
+      "message": "Energy change converged"
+    },
+    {
+      "mesh_level": 6,
+      "total_dofs": 12545,
+      "time": 0.0562,
+      "iters": 5,
+      "energy": -7.9546,
+      "message": "Gradient norm converged"
+    },
+    {
+      "mesh_level": 7,
+      "total_dofs": 49665,
+      "time": 0.2388,
+      "iters": 6,
+      "energy": -7.9583,
+      "message": "Energy change converged"
+    },
+    {
+      "mesh_level": 8,
+      "total_dofs": 197633,
+      "time": 0.9315,
+      "iters": 6,
+      "energy": -7.9596,
+      "message": "Gradient norm converged"
+    },
+    {
+      "mesh_level": 9,
+      "total_dofs": 788481,
+      "time": 4.0913,
+      "iters": 6,
+      "energy": -7.96,
+      "message": "Energy change converged"
+    }
+  ]
+}

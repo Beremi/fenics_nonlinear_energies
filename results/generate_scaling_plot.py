@@ -10,7 +10,7 @@ aggregates repeated runs (median time), and produces:
 Usage:
   python3 results/generate_scaling_plot.py results/experiment_001/
   python3 results/generate_scaling_plot.py results/experiment_001/ --output results/experiment_001/scaling.png
-  python3 results/generate_scaling_plot.py results/experiment_001/ --solver custom_newton
+  python3 results/generate_scaling_plot.py results/experiment_001/ --solver custom_jaxversion
 """
 import numpy as np
 import matplotlib.ticker as ticker

@@ -56,26 +56,16 @@ python3 pLaplace2D_fenics/solve_pLaplace_snes_newton.py --json results/my_run.js
 mpirun -n 4 python3 pLaplace2D_fenics/solve_pLaplace_snes_newton.py --json results/parallel.json
 ```
 
-### Custom Newton
-
-```bash
-# With quiet mode (suppress per-iteration output)
-python3 pLaplace2D_fenics/solve_pLaplace_custom_newton.py --quiet --json results/custom.json
-
-# Parallel
-mpirun -n 8 python3 pLaplace2D_fenics/solve_pLaplace_custom_newton.py --quiet --json results/custom_8proc.json
-```
-
-### Custom Newton — JAX-version algorithm
+### Custom Newton (JAX algorithm)
 
 Re-implementation of the JAX minimiser (`tools/minimizers.py`) on top of PETSc via `tools_petsc4py/minimizers.py`. Uses golden-section line search on [−0.5, 2] with tol=1e-3, CG + HYPRE AMG with rtol=1e-3, matching JAX iteration counts while supporting MPI parallelism.
 
 ```bash
 # Serial
-python3 pLaplace2D_fenics/solve_pLaplace_custom_jaxversion.py --json results/jaxver.json
+python3 pLaplace2D_fenics/solve_pLaplace_custom_jaxversion.py --json results/custom.json
 
 # Parallel
-mpirun -n 4 python3 pLaplace2D_fenics/solve_pLaplace_custom_jaxversion.py --quiet --json results/jaxver_4proc.json
+mpirun -n 4 python3 pLaplace2D_fenics/solve_pLaplace_custom_jaxversion.py --quiet --json results/custom_4proc.json
 ```
 
 ### JAX Newton (no MPI)
@@ -118,9 +108,9 @@ results/
     ├── snes_newton_np1_run3.json
     ├── snes_newton_np4_run1.json        # SNES Newton, 4 proc, run 1
     ├── ...
-    ├── custom_newton_np1_run1.json      # Custom Newton, serial, run 1
+    ├── custom_jaxversion_np1_run1.json  # Custom Newton, serial, run 1
     ├── ...
-    ├── custom_newton_np8_run3.json
+    ├── custom_jaxversion_np8_run3.json
     └── tables.tex                       # Generated LaTeX tables
 ```
 
@@ -133,7 +123,7 @@ results/<experiment_id>/<solver>_np<nprocs>_run<repetition>.json
 | Field           | Values                                                                 |
 | --------------- | ---------------------------------------------------------------------- |
 | `experiment_id` | Sequential (`experiment_001`) or timestamped (`20260221_133000_mytag`) |
-| `solver`        | `snes_newton`, `custom_newton`, or `jax_newton`                        |
+| `solver`        | `snes_newton`, `custom_jaxversion`, or `jax_newton`                    |
 | `nprocs`        | Number of MPI processes (1 = serial)                                   |
 | `repetition`    | Run number (1, 2, 3…)                                                  |
 
@@ -261,7 +251,7 @@ python3 results/generate_latex_tables.py results/experiment_001/ --markdown
 
 The script produces two tables:
 1. **FEniCS SNES Newton comparison** — serial vs parallel timings (matches the paper format)
-2. **All solver configurations** — both SNES and Custom Newton across all MPI counts
+2. **All solver configurations** — SNES and Custom Newton across all MPI counts
 
 The generated `.tex` file can be `\input{}`-ed directly into a LaTeX document.
 
@@ -277,7 +267,7 @@ python3 results/generate_scaling_plot.py results/experiment_001/
 python3 results/generate_scaling_plot.py results/experiment_001/ --output my_scaling.png
 
 # Plot a different solver
-python3 results/generate_scaling_plot.py results/experiment_001/ --solver custom_newton
+python3 results/generate_scaling_plot.py results/experiment_001/ --solver custom_jaxversion
 ```
 
 **Note**: Requires `matplotlib`. If running outside the devcontainer, use Docker:

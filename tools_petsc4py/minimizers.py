@@ -131,7 +131,7 @@ def newton(
         ``message`` – termination reason.
     """
     if ghost_update_fn is None:
-        ghost_update_fn = lambda _v: None          # noqa: E731
+        def ghost_update_fn(_v): return None          # noqa: E731
 
     rank = 0
     if comm is not None:
