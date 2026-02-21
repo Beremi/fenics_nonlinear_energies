@@ -118,7 +118,8 @@ def generate_fenics_comparison_table(metadata, runs):
     headers = []
     for solver, nprocs in snes_configs:
         label = f"FEniCS {'serial' if nprocs == 1 else f'parallel ({nprocs} proc)'}"
-        headers.append(r"\multicolumn{3}{c" + ("|" if solver != snes_configs[-1][0] or nprocs != snes_configs[-1][1] else "") + r"}{\textbf{" + label + "}}")
+        headers.append(r"\multicolumn{3}{c" + ("|" if solver !=
+                       snes_configs[-1][0] or nprocs != snes_configs[-1][1] else "") + r"}{\textbf{" + label + "}}")
     header1 += " & ".join(headers)
     lines.append(header1 + r"\\")
     lines.append(r"\hline")
