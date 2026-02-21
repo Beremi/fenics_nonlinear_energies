@@ -1,37 +1,30 @@
-# FEniCS Nonlinear Energies
+# Nonlinear Energies — FEniCS & JAX Solvers
 
-This repository contains FEniCSx (DOLFINx) solvers for nonlinear energy minimization problems and infrastructure for reproducible benchmarking.
+This repository contains solvers for nonlinear energy minimization problems using both **FEniCSx (DOLFINx)** and **JAX**, with infrastructure for reproducible benchmarking.
 
 ## Problem: p-Laplacian 2D
 
-We solve the p-Laplacian problem ($p = 3$) on the unit square with homogeneous Dirichlet boundary conditions:
-
 $$\min_u J(u) = \int_\Omega \frac{1}{p} |\nabla u|^p \, dx - \int_\Omega f \cdot u \, dx, \quad u|_{\partial\Omega} = 0$$
 
-with $f = -10$. Two solver variants are provided — see [Solver Scripts](#solver-scripts) below.
+with $p = 3$, $f = -10$ on the unit square. Three solver variants are provided:
 
-Benchmark results are in [results_pLaplace.md](results_pLaplace.md).
-Instructions for running solvers, storing results, and generating tables are in [instructions.md](instructions.md).
+| Solver | Location | Parallelism |
+| ------ | -------- | ----------- |
+| **SNES Newton** (recommended) | `pLaplace2D_fenics/solve_pLaplace_snes_newton.py` | MPI |
+| **Custom Newton** (line search) | `pLaplace2D_fenics/solve_pLaplace_custom_newton.py` | MPI |
+| **JAX Newton** (auto-diff + PyAMG) | `pLaplace2D_jax/solve_pLaplace_jax_newton.py` | single CPU |
+
+Benchmark results: [results_pLaplace.md](results_pLaplace.md)
+How to run: [instructions.md](instructions.md)
+
+## Other JAX Problems
+
+- **Ginzburg-Landau 2D** — `GinzburgLandau2D_jax/` ([example notebook](GinzburgLandau2D_jax/example.ipynb))
+- **Hyperelasticity 3D** — `HyperElasticity3D_jax/` ([example notebook](HyperElasticity3D_jax/example.ipynb))
 
 ## Prerequisites
 
-All solvers require **DOLFINx >= 0.10** with PETSc support. The easiest way is via the included devcontainer (see [instructions.md](instructions.md)).
-
-## Solver Scripts
-
-### `solve_pLaplace_snes_newton.py` — Built-in SNES Newton
-
-Uses PETSc's SNES with Newton line search (`newtonls`), full steps (`basic`), CG + HYPRE AMG.
-This is the **recommended solver** — matches the "FEniCS serial/parallel" columns in the paper.
-
-### `solve_pLaplace_custom_newton.py` — Custom Newton with Line Search
-
-Manual Newton method with golden-section line search on the energy functional, CG + HYPRE AMG.
-Slower due to line search overhead but provides more control and debugging output.
-
-### `solve_pLaplace_jax_newton.py` — JAX Newton (no MPI)
-
-Pure-JAX solver using automatic differentiation for gradients, sparse finite differences (graph coloring) for Hessian assembly, and PyAMG smoothed-aggregation CG. Runs on a single CPU; no MPI parallelism. Uses the modules in `pLaplace2D/` and `tools/`.
+FEniCS solvers require **DOLFINx >= 0.10** with PETSc. JAX solvers require **JAX**, **h5py**, **PyAMG**. The included devcontainer provides everything — see [instructions.md](instructions.md).
 
 ## Repository Structure
 
@@ -41,30 +34,48 @@ Pure-JAX solver using automatic differentiation for gradients, sparse finite dif
 ├── instructions.md                    # How to run, store results, generate tables
 ├── results_pLaplace.md                # Compiled benchmark results
 │
-├── solve_pLaplace_snes_newton.py      # Main solver: SNES Newton (DOLFINx 0.10+)
-├── solve_pLaplace_custom_newton.py    # Custom Newton with line search (DOLFINx 0.10+)
-├── solve_pLaplace_jax_newton.py       # JAX Newton solver (single CPU, no MPI)
-├── run_experiments.py                 # Automated experiment runner
+├── mesh_data/                         # Shared mesh files (all problems)
+│   ├── pLaplace/                      #   HDF5 source + FEniCS XDMF, levels 1–9
+│   ├── GinzburgLandau/                #   HDF5, levels 2–9
+│   └── HyperElasticity/              #   HDF5, levels 1–4
+│
+├── pLaplace2D_fenics/                 # FEniCS solvers for p-Laplace
+│   ├── solve_pLaplace_snes_newton.py  #   SNES Newton (DOLFINx 0.10+)
+│   ├── solve_pLaplace_custom_newton.py#   Custom Newton with line search
+│   ├── export_pLaplace_meshes.py      #   HDF5 → XDMF mesh converter
+│   └── benchmark.ipynb                #   Jupyter notebook: run & compare solvers
+│
+├── pLaplace2D_jax/                    # JAX solver for p-Laplace
+│   ├── jax_energy.py                  #   Energy functional in JAX
+│   ├── mesh.py                        #   Mesh loader (HDF5 → JAX arrays)
+│   ├── solve_pLaplace_jax_newton.py   #   Benchmark script
+│   └── example.ipynb                  #   Jupyter example notebook
+│
+├── GinzburgLandau2D_jax/              # JAX solver for Ginzburg-Landau 2D
+│   ├── jax_energy.py, mesh.py         #   Energy + mesh loader
+│   └── example.ipynb                  #   Jupyter example notebook
+│
+├── HyperElasticity3D_jax/             # JAX solver for Hyperelasticity 3D
+│   ├── jax_energy.py, mesh.py         #   Energy + mesh loader
+│   ├── rotate_boundary.py             #   Boundary rotation utility
+│   └── example.ipynb                  #   Jupyter example notebook
+│
+├── tools/                             # Shared JAX utilities
+│   ├── jax_diff.py                    #   Auto-diff + sparse Hessian assembly
+│   ├── minimizers.py                  #   Newton solver with line search
+│   ├── sparse_solvers.py              #   PyAMG / direct linear solvers
+│   └── graph_sfd.py                   #   Graph coloring for sparse finite differences
+│
+├── run_experiments.py                 # Automated FEniCS benchmark runner
 ├── generate_latex_tables.py           # Generate LaTeX/Markdown tables from results
-├── generate_scaling_plot.py           # Generate strong scaling plots from results
-├── export_pLaplace_meshes.py          # Generate FEniCS mesh files from pLaplace2D data
-│
-├── pLaplace_fenics_mesh/              # Pre-generated mesh files (XDMF + HDF5), levels 1–9
-├── pLaplace2D/                        # Mesh generation module (JAX-based mesh data)
-├── results/                           # Experiment results (JSON + LaTeX tables)
-│
-├── GinzburgLandau2D/                  # Ginzburg-Landau 2D problem (JAX energy + mesh)
-├── HyperElasticity3D/                 # Hyperelasticity 3D problem (JAX energy + mesh)
-├── tools/                             # Shared utilities (JAX diff, minimizers, sparse solvers)
-│
-├── test_fenics_pLaplace.py            # Legacy: old DOLFINx API (for reference only)
-├── test_fenics_pLaplace2.py           # Legacy: old DOLFINx API (for reference only)
+├── generate_scaling_plot.py           # Generate strong scaling plots
+├── results/                           # Experiment results (JSON + tables + plots)
 └── .devcontainer/                     # Docker/devcontainer configuration
 ```
 
 ## Mesh Levels
 
-The meshes in `pLaplace_fenics_mesh/` (levels 1–9) are pre-generated. The paper table uses levels 4–8, which correspond to **mesh files 5–9**:
+The meshes in `mesh_data/pLaplace/` (levels 1–9) are pre-generated. The paper table uses levels 4–8, which correspond to **mesh files 5–9**:
 
 | Table Level |  Mesh File   | Total DOFs | Free DOFs |
 | :---------: | :----------: | :--------: | :-------: |
@@ -74,8 +85,4 @@ The meshes in `pLaplace_fenics_mesh/` (levels 1–9) are pre-generated. The pape
 |      7      | mesh_level_8 |   197633   |  195585   |
 |      8      | mesh_level_9 |   788481   |  784385   |
 
-To regenerate meshes: `python3 export_pLaplace_meshes.py`
-
-## Legacy Scripts
-
-The original scripts (`test_fenics_pLaplace.py`, `test_fenics_pLaplace2.py`) are kept for reference but use the **old DOLFINx API** (`u.vector` instead of `u.x.petsc_vec`, old `NonlinearProblem` / `NewtonSolver` constructors). They will **not run** with DOLFINx >= 0.10.
+To regenerate FEniCS XDMF meshes from HDF5 source: `python3 pLaplace2D_fenics/export_pLaplace_meshes.py`

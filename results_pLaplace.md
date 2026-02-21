@@ -74,7 +74,7 @@ python3 generate_scaling_plot.py results/experiment_001/
 
 ### JAX Newton (serial only, no MPI)
 
-The same p-Laplace problem solved using a pure-JAX pipeline (automatic differentiation for gradients, sparse finite differences with graph coloring for Hessian assembly, PyAMG smoothed-aggregation CG solver). This implementation lives in [`pLaplace2D/`](pLaplace2D/), [`tools/`](tools/) and is wrapped by [`solve_pLaplace_jax_newton.py`](solve_pLaplace_jax_newton.py).
+The same p-Laplace problem solved using a pure-JAX pipeline (automatic differentiation for gradients, sparse finite differences with graph coloring for Hessian assembly, PyAMG smoothed-aggregation CG solver). This implementation lives in [`pLaplace2D_jax/`](pLaplace2D_jax/), [`tools/`](tools/) and is wrapped by [`pLaplace2D_jax/solve_pLaplace_jax_newton.py`](pLaplace2D_jax/solve_pLaplace_jax_newton.py).
 
 | lvl | dofs   | setup (s) | solve (s) | total (s) | iters | J(u)    |
 | --- | ------ | --------- | --------- | --------- | ----- | ------- |

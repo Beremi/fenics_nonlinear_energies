@@ -17,14 +17,14 @@ All solvers require **DOLFINx >= 0.10** with PETSc support.
    ```bash
    docker run --rm --entrypoint python3 -e PYTHONUNBUFFERED=1 \
      -v "$PWD":/work -w /work fenics_test \
-     /work/solve_pLaplace_snes_newton.py
+     /work/pLaplace2D_fenics/solve_pLaplace_snes_newton.py
    ```
 
 3. Run a solver (parallel with N processes):
    ```bash
    docker run --rm --entrypoint mpirun -e PYTHONUNBUFFERED=1 \
      -v "$PWD":/work -w /work fenics_test \
-     -n 4 python3 /work/solve_pLaplace_snes_newton.py
+     -n 4 python3 /work/pLaplace2D_fenics/solve_pLaplace_snes_newton.py
    ```
 
 ### VS Code Devcontainer
@@ -32,36 +32,38 @@ All solvers require **DOLFINx >= 0.10** with PETSc support.
 Open this folder in VS Code and use **"Reopen in Container"**. Then run directly in the terminal:
 
 ```bash
-python3 solve_pLaplace_snes_newton.py
-mpirun -n 4 python3 solve_pLaplace_snes_newton.py
+python3 pLaplace2D_fenics/solve_pLaplace_snes_newton.py
+mpirun -n 4 python3 pLaplace2D_fenics/solve_pLaplace_snes_newton.py
 ```
 
 ## Running Solvers
+
+All commands are run from the **repository root** (the working directory must be the repo root so mesh paths resolve correctly).
 
 ### SNES Newton (recommended)
 
 ```bash
 # Default (all mesh levels)
-python3 solve_pLaplace_snes_newton.py
+python3 pLaplace2D_fenics/solve_pLaplace_snes_newton.py
 
 # Specific mesh levels
-python3 solve_pLaplace_snes_newton.py --levels 5 6 7 8 9
+python3 pLaplace2D_fenics/solve_pLaplace_snes_newton.py --levels 5 6 7 8 9
 
 # Save results to JSON
-python3 solve_pLaplace_snes_newton.py --json results/my_run.json
+python3 pLaplace2D_fenics/solve_pLaplace_snes_newton.py --json results/my_run.json
 
 # Parallel
-mpirun -n 4 python3 solve_pLaplace_snes_newton.py --json results/parallel.json
+mpirun -n 4 python3 pLaplace2D_fenics/solve_pLaplace_snes_newton.py --json results/parallel.json
 ```
 
 ### Custom Newton
 
 ```bash
 # With quiet mode (suppress per-iteration output)
-python3 solve_pLaplace_custom_newton.py --quiet --json results/custom.json
+python3 pLaplace2D_fenics/solve_pLaplace_custom_newton.py --quiet --json results/custom.json
 
 # Parallel
-mpirun -n 8 python3 solve_pLaplace_custom_newton.py --quiet --json results/custom_8proc.json
+mpirun -n 8 python3 pLaplace2D_fenics/solve_pLaplace_custom_newton.py --quiet --json results/custom_8proc.json
 ```
 
 ### JAX Newton (no MPI)
@@ -70,13 +72,13 @@ Pure-JAX solver using auto-diff gradients, sparse finite-difference Hessian (gra
 
 ```bash
 # Default (mesh levels 5–9)
-python3 solve_pLaplace_jax_newton.py
+python3 pLaplace2D_jax/solve_pLaplace_jax_newton.py
 
 # Specific levels
-python3 solve_pLaplace_jax_newton.py --levels 5 6 7
+python3 pLaplace2D_jax/solve_pLaplace_jax_newton.py --levels 5 6 7
 
 # Save results to JSON
-python3 solve_pLaplace_jax_newton.py --json results/jax.json
+python3 pLaplace2D_jax/solve_pLaplace_jax_newton.py --json results/jax.json
 ```
 
 ## Automated Experiment Runner
@@ -213,8 +215,8 @@ for lvl in sorted(times):
    python3 run_experiments.py --nprocs 1 4 8 --tag experiment_002
 
    # Option B: Run manually
-   python3 solve_pLaplace_snes_newton.py --json results/experiment_002/snes_newton_np1_run1.json
-   mpirun -n 4 python3 solve_pLaplace_snes_newton.py --json results/experiment_002/snes_newton_np4_run1.json
+   python3 pLaplace2D_fenics/solve_pLaplace_snes_newton.py --json results/experiment_002/snes_newton_np1_run1.json
+   mpirun -n 4 python3 pLaplace2D_fenics/solve_pLaplace_snes_newton.py --json results/experiment_002/snes_newton_np4_run1.json
    ```
 
 4. **Save metadata** — the experiment runner does this automatically, or create `metadata.json` manually.
