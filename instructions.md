@@ -83,10 +83,10 @@ python3 pLaplace2D_jax/solve_pLaplace_jax_newton.py --json results/jax.json
 
 ## Automated Experiment Runner
 
-`run_experiments.py` runs a complete benchmark suite with multiple solvers, MPI configurations, and repetitions:
+`results/run_experiments.py` runs a complete benchmark suite with multiple solvers, MPI configurations, and repetitions:
 
 ```bash
-python3 run_experiments.py --nprocs 1 4 8 --levels 5 6 7 8 9 --repeat 3 --tag my_machine
+python3 results/run_experiments.py --nprocs 1 4 8 --levels 5 6 7 8 9 --repeat 3 --tag my_machine
 ```
 
 This creates a timestamped directory under `results/` with:
@@ -212,7 +212,7 @@ for lvl in sorted(times):
 3. **Run experiments** (inside devcontainer or Docker):
    ```bash
    # Option A: Use the experiment runner
-   python3 run_experiments.py --nprocs 1 4 8 --tag experiment_002
+   python3 results/run_experiments.py --nprocs 1 4 8 --tag experiment_002
 
    # Option B: Run manually
    python3 pLaplace2D_fenics/solve_pLaplace_snes_newton.py --json results/experiment_002/snes_newton_np1_run1.json
@@ -223,7 +223,7 @@ for lvl in sorted(times):
 
 5. **Generate tables**:
    ```bash
-   python3 generate_latex_tables.py results/experiment_002/ --output results/experiment_002/tables.tex
+   python3 results/generate_latex_tables.py results/experiment_002/ --output results/experiment_002/tables.tex
    ```
 
 6. **Commit results**:
@@ -234,17 +234,17 @@ for lvl in sorted(times):
 
 ## Generating LaTeX Tables
 
-`generate_latex_tables.py` reads all JSON files in an experiment directory, aggregates repeated runs (median time), and produces formatted tables.
+`results/generate_latex_tables.py` reads all JSON files in an experiment directory, aggregates repeated runs (median time), and produces formatted tables.
 
 ```bash
 # Print LaTeX to stdout
-python3 generate_latex_tables.py results/experiment_001/
+python3 results/generate_latex_tables.py results/experiment_001/
 
 # Save LaTeX to file
-python3 generate_latex_tables.py results/experiment_001/ --output results/experiment_001/tables.tex
+python3 results/generate_latex_tables.py results/experiment_001/ --output results/experiment_001/tables.tex
 
 # Print Markdown tables to stdout
-python3 generate_latex_tables.py results/experiment_001/ --markdown
+python3 results/generate_latex_tables.py results/experiment_001/ --markdown
 ```
 
 The script produces two tables:
@@ -255,21 +255,21 @@ The generated `.tex` file can be `\input{}`-ed directly into a LaTeX document.
 
 ## Generating Scaling Plots
 
-`generate_scaling_plot.py` reads SNES Newton JSON results across process counts and produces strong scaling and speedup plots.
+`results/generate_scaling_plot.py` reads SNES Newton JSON results across process counts and produces strong scaling and speedup plots.
 
 ```bash
 # Default output: <exp_dir>/scaling.png
-python3 generate_scaling_plot.py results/experiment_001/
+python3 results/generate_scaling_plot.py results/experiment_001/
 
 # Custom output path
-python3 generate_scaling_plot.py results/experiment_001/ --output my_scaling.png
+python3 results/generate_scaling_plot.py results/experiment_001/ --output my_scaling.png
 
 # Plot a different solver
-python3 generate_scaling_plot.py results/experiment_001/ --solver custom_newton
+python3 results/generate_scaling_plot.py results/experiment_001/ --solver custom_newton
 ```
 
 **Note**: Requires `matplotlib`. If running outside the devcontainer, use Docker:
 ```bash
 docker run --rm --entrypoint python3 -v "$PWD":/work -w /work fenics_test \
-  /work/generate_scaling_plot.py results/experiment_001/
+  /work/results/generate_scaling_plot.py results/experiment_001/
 ```

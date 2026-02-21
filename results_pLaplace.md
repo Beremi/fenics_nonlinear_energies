@@ -69,7 +69,7 @@ Left: wall time vs number of MPI processes (log-log). Right: parallel speedup re
 
 To regenerate this plot:
 ```bash
-python3 generate_scaling_plot.py results/experiment_001/
+python3 results/generate_scaling_plot.py results/experiment_001/
 ```
 
 ### JAX Newton (serial only, no MPI)
@@ -96,17 +96,17 @@ The same p-Laplace problem solved using a pure-JAX pipeline (automatic different
 
 ## Generating LaTeX Tables and Plots
 
-The script `generate_latex_tables.py` reads JSON result files, aggregates repeated runs (median time), and produces publication-ready tables.
+The script `results/generate_latex_tables.py` reads JSON result files, aggregates repeated runs (median time), and produces publication-ready tables.
 
 ```bash
 # Print LaTeX tables to stdout
-python3 generate_latex_tables.py results/experiment_001/
+python3 results/generate_latex_tables.py results/experiment_001/
 
 # Save to .tex file (can be \input{}-ed in a LaTeX document)
-python3 generate_latex_tables.py results/experiment_001/ --output results/experiment_001/tables.tex
+python3 results/generate_latex_tables.py results/experiment_001/ --output results/experiment_001/tables.tex
 
 # Print Markdown tables instead
-python3 generate_latex_tables.py results/experiment_001/ --markdown
+python3 results/generate_latex_tables.py results/experiment_001/ --markdown
 ```
 
 The generated LaTeX file is also committed at [results/experiment_001/tables.tex](results/experiment_001/tables.tex).
