@@ -34,7 +34,7 @@ def run_level(mesh_level):
     comm = MPI.COMM_WORLD
     rank = comm.rank
 
-    with XDMFFile(comm, f"pLaplace_fenics_mesh/mesh_level_{mesh_level}.xdmf", "r") as xdmf_file:
+    with XDMFFile(comm, f"mesh_data/pLaplace/mesh_level_{mesh_level}.xdmf", "r") as xdmf_file:
         msh = xdmf_file.read_mesh(name="mesh")
 
     V = fem.functionspace(msh, ("Lagrange", 1))

@@ -6,7 +6,7 @@ import numpy as np
 class MeshGL2D:
     def __init__(self, mesh_level):
         self.mesh_level = mesh_level
-        self.filename = f'GinzburgLandau2D/mesh_data/GL_level{mesh_level}.h5'
+        self.filename = f'mesh_data/GinzburgLandau/GL_level{mesh_level}.h5'
         self.load_data(self.filename)
         self.compute_initial_guess()
 

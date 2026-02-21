@@ -6,7 +6,7 @@ import numpy as np
 class MeshHyperElasticity3D:
     def __init__(self, mesh_level):
         self.mesh_level = mesh_level
-        self.filename = f'HyperElasticity3D/mesh_data/HyperElasticity_level{mesh_level}.h5'
+        self.filename = f'mesh_data/HyperElasticity/HyperElasticity_level{mesh_level}.h5'
         self.load_data(self.filename)
         self.compute_initial_guess()
         self.compute_elastic_nullspace()

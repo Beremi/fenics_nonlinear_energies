@@ -1,13 +1,13 @@
 import os
 from mpi4py import MPI
 import dolfinx
-from pLaplace2D.mesh import MeshpLaplace2D
+from pLaplace2D_jax.mesh import MeshpLaplace2D
 import ufl
 import basix.ufl
 from dolfinx.io import XDMFFile
 
 # Create output directory if it doesn't exist
-output_dir = "pLaplace_fenics_mesh"
+output_dir = "mesh_data/pLaplace"
 os.makedirs(output_dir, exist_ok=True)
 
 # Define number of spatial dimensions and element type

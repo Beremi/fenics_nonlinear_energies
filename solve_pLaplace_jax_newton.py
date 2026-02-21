@@ -17,8 +17,8 @@ Usage:
 
 Requires: jax, jaxlib, h5py, pyamg, scipy, numpy
 """
-from pLaplace2D.mesh import MeshpLaplace2D
-from pLaplace2D.jax_energy import J
+from pLaplace2D_jax.mesh import MeshpLaplace2D
+from pLaplace2D_jax.jax_energy import J
 from tools.jax_diff import EnergyDerivator
 from tools.sparse_solvers import HessSolverGenerator
 from tools.minimizers import newton
