@@ -7,8 +7,8 @@ This script:
 2. Runs both solver variants (SNES Newton + Custom Newton) in serial and parallel
 3. Saves results as JSON files in results/<experiment_id>/
 
-Usage (inside the devcontainer):
-  python3 run_experiments.py [--nprocs N] [--levels L1 L2 ...] [--tag TAG]
+Usage (inside the devcontainer, from the repo root):
+  python3 results/run_experiments.py [--nprocs N] [--levels L1 L2 ...] [--tag TAG]
 
 The script must be run OUTSIDE of mpirun (it calls mpirun internally).
 """
