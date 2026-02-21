@@ -7,17 +7,17 @@
 \begin{table}[H]
 \centering
 \resizebox{\linewidth}{!}{%
-\begin{tabular}{ll|ccc|ccc|ccc}
+\begin{tabular}{ll|ccc|ccc|ccc|ccc|ccc|ccc}
 \hline
- & \multicolumn{3}{c|}{\textbf{FEniCS serial}} & \multicolumn{3}{c|}{\textbf{FEniCS parallel (4 proc)}} & \multicolumn{3}{c}{\textbf{FEniCS parallel (8 proc)}}\\
+ & \multicolumn{3}{c|}{\textbf{FEniCS serial}} & \multicolumn{3}{c|}{\textbf{FEniCS parallel (2 proc)}} & \multicolumn{3}{c|}{\textbf{FEniCS parallel (4 proc)}} & \multicolumn{3}{c|}{\textbf{FEniCS parallel (8 proc)}} & \multicolumn{3}{c|}{\textbf{FEniCS parallel (16 proc)}} & \multicolumn{3}{c}{\textbf{FEniCS parallel (32 proc)}}\\
 \hline
-lvl & dofs & time [s] & iters & $J(\boldsymbol{u})$ & time [s] & iters & $J(\boldsymbol{u})$ & time [s] & iters & $J(\boldsymbol{u})$\\
+lvl & dofs & time [s] & iters & $J(\boldsymbol{u})$ & time [s] & iters & $J(\boldsymbol{u})$ & time [s] & iters & $J(\boldsymbol{u})$ & time [s] & iters & $J(\boldsymbol{u})$ & time [s] & iters & $J(\boldsymbol{u})$ & time [s] & iters & $J(\boldsymbol{u})$\\
 \hline
-4 & 2945 & 0.043 & 10 & -7.9430 & 0.029 & 11 & -7.9430 & 0.026 & 10 & -7.9430\\
-5 & 12033 & 0.167 & 10 & -7.9546 & 0.071 & 10 & -7.9546 & 0.050 & 10 & -7.9546\\
-6 & 48641 & 0.478 & 7 & -7.9583 & 0.169 & 7 & -7.9583 & 0.110 & 7 & -7.9583\\
-7 & 195585 & 2.152 & 8 & -7.9596 & 0.768 & 8 & -7.9596 & 0.463 & 8 & -7.9596\\
-8 & 784385 & 10.026 & 9 & -7.9600 & 3.772 & 9 & -7.9600 & 2.430 & 9 & -7.9600\\
+4 & 2945 & 0.043 & 10 & -7.9430 & 0.031 & 10 & -7.9430 & 0.029 & 11 & -7.9430 & 0.026 & 10 & -7.9430 & 0.033 & 11 & -7.9430 & 0.073 & 11 & -7.9430\\
+5 & 12033 & 0.167 & 10 & -7.9546 & 0.099 & 10 & -7.9546 & 0.071 & 10 & -7.9546 & 0.050 & 10 & -7.9546 & 0.054 & 10 & -7.9546 & 0.080 & 10 & -7.9546\\
+6 & 48641 & 0.478 & 7 & -7.9583 & 0.271 & 7 & -7.9583 & 0.169 & 7 & -7.9583 & 0.110 & 7 & -7.9583 & 0.087 & 7 & -7.9583 & 0.103 & 7 & -7.9583\\
+7 & 195585 & 2.152 & 8 & -7.9596 & 1.253 & 8 & -7.9596 & 0.768 & 8 & -7.9596 & 0.463 & 8 & -7.9596 & 0.274 & 8 & -7.9596 & 0.294 & 8 & -7.9596\\
+8 & 784385 & 10.026 & 9 & -7.9600 & 5.905 & 9 & -7.9600 & 3.772 & 9 & -7.9600 & 2.430 & 9 & -7.9600 & 1.404 & 9 & -7.9600 & 1.415 & 9 & -7.9600\\
 \hline
 \end{tabular}
 }
@@ -30,17 +30,17 @@ lvl & dofs & time [s] & iters & $J(\boldsymbol{u})$ & time [s] & iters & $J(\bol
 \begin{table}[H]
 \centering
 \resizebox{\linewidth}{!}{%
-\begin{tabular}{ll|ccc|ccc|ccc|ccc|ccc|ccc}
+\begin{tabular}{ll|ccc|ccc|ccc|ccc|ccc|ccc|ccc|ccc|ccc|ccc}
 \hline
- & \multicolumn{3}{c|}{\textbf{Custom Newton (serial)}} & \multicolumn{3}{c|}{\textbf{Custom Newton (4 proc)}} & \multicolumn{3}{c|}{\textbf{Custom Newton (8 proc)}} & \multicolumn{3}{c|}{\textbf{SNES Newton (serial)}} & \multicolumn{3}{c|}{\textbf{SNES Newton (4 proc)}} & \multicolumn{3}{c}{\textbf{SNES Newton (8 proc)}}\\
+ & \multicolumn{3}{c|}{\textbf{Custom Newton (serial)}} & \multicolumn{3}{c|}{\textbf{Custom Newton (4 proc)}} & \multicolumn{3}{c|}{\textbf{Custom Newton (8 proc)}} & \multicolumn{3}{c|}{\textbf{Custom Newton (16 proc)}} & \multicolumn{3}{c|}{\textbf{SNES Newton (serial)}} & \multicolumn{3}{c|}{\textbf{SNES Newton (2 proc)}} & \multicolumn{3}{c|}{\textbf{SNES Newton (4 proc)}} & \multicolumn{3}{c|}{\textbf{SNES Newton (8 proc)}} & \multicolumn{3}{c|}{\textbf{SNES Newton (16 proc)}} & \multicolumn{3}{c}{\textbf{SNES Newton (32 proc)}}\\
 \hline
-lvl & dofs & time [s] & iters & $J(\boldsymbol{u})$ & time [s] & iters & $J(\boldsymbol{u})$ & time [s] & iters & $J(\boldsymbol{u})$ & time [s] & iters & $J(\boldsymbol{u})$ & time [s] & iters & $J(\boldsymbol{u})$ & time [s] & iters & $J(\boldsymbol{u})$\\
+lvl & dofs & time [s] & iters & $J(\boldsymbol{u})$ & time [s] & iters & $J(\boldsymbol{u})$ & time [s] & iters & $J(\boldsymbol{u})$ & time [s] & iters & $J(\boldsymbol{u})$ & time [s] & iters & $J(\boldsymbol{u})$ & time [s] & iters & $J(\boldsymbol{u})$ & time [s] & iters & $J(\boldsymbol{u})$ & time [s] & iters & $J(\boldsymbol{u})$ & time [s] & iters & $J(\boldsymbol{u})$ & time [s] & iters & $J(\boldsymbol{u})$\\
 \hline
-4 & 2945 & 0.043 & 8 & -7.9430 & 0.025 & 8 & -7.9430 & 0.026 & 9 & -7.9430 & 0.043 & 10 & -7.9430 & 0.029 & 11 & -7.9430 & 0.026 & 10 & -7.9430\\
-5 & 12033 & 0.193 & 9 & -7.9546 & 0.075 & 9 & -7.9546 & 0.055 & 9 & -7.9546 & 0.167 & 10 & -7.9546 & 0.071 & 10 & -7.9546 & 0.050 & 10 & -7.9546\\
-6 & 48641 & 0.754 & 9 & -7.9583 & 0.259 & 9 & -7.9583 & 0.164 & 9 & -7.9583 & 0.478 & 7 & -7.9583 & 0.169 & 7 & -7.9583 & 0.110 & 7 & -7.9583\\
-7 & 195585 & 3.373 & 10 & -7.9596 & 1.014 & 9 & -7.9596 & 0.681 & 10 & -7.9596 & 2.152 & 8 & -7.9596 & 0.768 & 8 & -7.9596 & 0.463 & 8 & -7.9596\\
-8 & 784385 & 15.162 & 11 & -7.9600 & 5.337 & 11 & -7.9600 & 3.508 & 11 & -7.9600 & 10.026 & 9 & -7.9600 & 3.772 & 9 & -7.9600 & 2.430 & 9 & -7.9600\\
+4 & 2945 & 0.043 & 8 & -7.9430 & 0.025 & 8 & -7.9430 & 0.026 & 9 & -7.9430 & 0.031 & 9 & -7.9430 & 0.043 & 10 & -7.9430 & 0.031 & 10 & -7.9430 & 0.029 & 11 & -7.9430 & 0.026 & 10 & -7.9430 & 0.033 & 11 & -7.9430 & 0.073 & 11 & -7.9430\\
+5 & 12033 & 0.193 & 9 & -7.9546 & 0.075 & 9 & -7.9546 & 0.055 & 9 & -7.9546 & 0.058 & 9 & -7.9546 & 0.167 & 10 & -7.9546 & 0.099 & 10 & -7.9546 & 0.071 & 10 & -7.9546 & 0.050 & 10 & -7.9546 & 0.054 & 10 & -7.9546 & 0.080 & 10 & -7.9546\\
+6 & 48641 & 0.754 & 9 & -7.9583 & 0.259 & 9 & -7.9583 & 0.164 & 9 & -7.9583 & 0.119 & 9 & -7.9583 & 0.478 & 7 & -7.9583 & 0.271 & 7 & -7.9583 & 0.169 & 7 & -7.9583 & 0.110 & 7 & -7.9583 & 0.087 & 7 & -7.9583 & 0.103 & 7 & -7.9583\\
+7 & 195585 & 3.373 & 10 & -7.9596 & 1.014 & 9 & -7.9596 & 0.681 & 10 & -7.9596 & 0.386 & 10 & -7.9596 & 2.152 & 8 & -7.9596 & 1.253 & 8 & -7.9596 & 0.768 & 8 & -7.9596 & 0.463 & 8 & -7.9596 & 0.274 & 8 & -7.9596 & 0.294 & 8 & -7.9596\\
+8 & 784385 & 15.162 & 11 & -7.9600 & 5.337 & 11 & -7.9600 & 3.508 & 11 & -7.9600 & 1.921 & 11 & -7.9600 & 10.026 & 9 & -7.9600 & 5.905 & 9 & -7.9600 & 3.772 & 9 & -7.9600 & 2.430 & 9 & -7.9600 & 1.404 & 9 & -7.9600 & 1.415 & 9 & -7.9600\\
 \hline
 \end{tabular}
 }
