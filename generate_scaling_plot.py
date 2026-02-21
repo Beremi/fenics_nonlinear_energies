@@ -12,6 +12,9 @@ Usage:
   python3 generate_scaling_plot.py results/experiment_001/ --output results/experiment_001/scaling.png
   python3 generate_scaling_plot.py results/experiment_001/ --solver custom_newton
 """
+import numpy as np
+import matplotlib.ticker as ticker
+import matplotlib.pyplot as plt
 import argparse
 import json
 import os
@@ -21,9 +24,6 @@ import statistics
 
 import matplotlib
 matplotlib.use("Agg")
-import matplotlib.pyplot as plt
-import matplotlib.ticker as ticker
-import numpy as np
 
 # Mapping from mesh file level -> table level
 MESH_TO_TABLE_LEVEL = {5: 4, 6: 5, 7: 6, 8: 7, 9: 8}

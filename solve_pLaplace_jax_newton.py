@@ -17,6 +17,11 @@ Usage:
 
 Requires: jax, jaxlib, h5py, pyamg, scipy, numpy
 """
+from pLaplace2D.mesh import MeshpLaplace2D
+from pLaplace2D.jax_energy import J
+from tools.jax_diff import EnergyDerivator
+from tools.sparse_solvers import HessSolverGenerator
+from tools.minimizers import newton
 import sys
 import time
 import json
@@ -25,12 +30,6 @@ import numpy as np
 
 from jax import config
 config.update("jax_enable_x64", True)
-
-from tools.minimizers import newton
-from tools.sparse_solvers import HessSolverGenerator
-from tools.jax_diff import EnergyDerivator
-from pLaplace2D.jax_energy import J
-from pLaplace2D.mesh import MeshpLaplace2D
 
 
 def run_level(mesh_level, verbose=False):
