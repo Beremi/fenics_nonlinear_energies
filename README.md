@@ -8,11 +8,11 @@ $$\min_u J(u) = \int_\Omega \frac{1}{p} |\nabla u|^p \, dx - \int_\Omega f \cdot
 
 with $p = 3$, $f = -10$ on the unit square. Three solver variants are provided:
 
-| Solver | Location | Parallelism |
-| ------ | -------- | ----------- |
-| **SNES Newton** (recommended) | `pLaplace2D_fenics/solve_pLaplace_snes_newton.py` | MPI |
-| **Custom Newton** (line search) | `pLaplace2D_fenics/solve_pLaplace_custom_newton.py` | MPI |
-| **JAX Newton** (auto-diff + PyAMG) | `pLaplace2D_jax/solve_pLaplace_jax_newton.py` | single CPU |
+| Solver                             | Location                                            | Parallelism |
+| ---------------------------------- | --------------------------------------------------- | ----------- |
+| **SNES Newton** (recommended)      | `pLaplace2D_fenics/solve_pLaplace_snes_newton.py`   | MPI         |
+| **Custom Newton** (line search)    | `pLaplace2D_fenics/solve_pLaplace_custom_newton.py` | MPI         |
+| **JAX Newton** (auto-diff + PyAMG) | `pLaplace2D_jax/solve_pLaplace_jax_newton.py`       | single CPU  |
 
 Benchmark results: [results_pLaplace.md](results_pLaplace.md)
 How to run: [instructions.md](instructions.md)
