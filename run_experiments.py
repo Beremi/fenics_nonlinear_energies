@@ -138,8 +138,8 @@ def main():
     sys.stdout.flush()
 
     solvers = [
-        ("snes_newton", "solve_pLaplace_snes_newton.py", []),
-        ("custom_newton", "solve_pLaplace_custom_newton.py", ["--quiet"]),
+        ("snes_newton", "pLaplace2D_fenics/solve_pLaplace_snes_newton.py", []),
+        ("custom_newton", "pLaplace2D_fenics/solve_pLaplace_custom_newton.py", ["--quiet"]),
     ]
 
     # Run all combinations
