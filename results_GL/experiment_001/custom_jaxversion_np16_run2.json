@@ -1,0 +1,66 @@
+{
+  "metadata": {
+    "solver": "custom_jaxversion",
+    "description": "Custom Newton (JAX-version algorithm): golden-section line search [-0.5, 2], GMRES + HYPRE AMG",
+    "dolfinx_version": "0.10.0.post2",
+    "nprocs": 16,
+    "linear_solver": {
+      "ksp_type": "gmres",
+      "pc_type": "hypre",
+      "ksp_rtol": 0.001
+    },
+    "newton_params": {
+      "tolf": 1e-06,
+      "tolg": 1e-05,
+      "linesearch_interval": [
+        -0.5,
+        2.0
+      ],
+      "linesearch_tol": 0.001,
+      "maxit": 100
+    },
+    "eps": 0.01
+  },
+  "results": [
+    {
+      "mesh_level": 5,
+      "total_dofs": 4225,
+      "time": 0.0343,
+      "iters": 7,
+      "energy": 0.3462,
+      "message": "Gradient norm converged"
+    },
+    {
+      "mesh_level": 6,
+      "total_dofs": 16641,
+      "time": 0.0529,
+      "iters": 7,
+      "energy": 0.3458,
+      "message": "Gradient norm converged"
+    },
+    {
+      "mesh_level": 7,
+      "total_dofs": 66049,
+      "time": 0.11,
+      "iters": 7,
+      "energy": 0.3457,
+      "message": "Gradient norm converged"
+    },
+    {
+      "mesh_level": 8,
+      "total_dofs": 263169,
+      "time": 0.3729,
+      "iters": 7,
+      "energy": 0.3456,
+      "message": "Gradient norm converged"
+    },
+    {
+      "mesh_level": 9,
+      "total_dofs": 1050625,
+      "time": 1.732,
+      "iters": 6,
+      "energy": 0.3456,
+      "message": "Gradient norm converged"
+    }
+  ]
+}

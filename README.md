@@ -32,6 +32,23 @@ The **Custom Newton** re-implements the JAX minimisation algorithm (golden-secti
 Benchmark results: [results_pLaplace.md](results_pLaplace.md)
 How to run: [instructions.md](instructions.md)
 
+## Problem: Ginzburg-Landau 2D
+
+$$\min_u J(u) = \int_\Omega \frac{\varepsilon}{2} |\nabla u|^2 + \frac{1}{4}(u^2 - 1)^2 \, dx, \quad u|_{\partial\Omega} = 0$$
+
+with $\varepsilon = 0.01$ on $[-1,1]^2$. This is a **non-convex** energy (indefinite Hessian). Three solver variants are provided:
+
+| Solver                             | Location                                                    | Parallelism |
+| ---------------------------------- | ----------------------------------------------------------- | ----------- |
+| **Custom Newton** (recommended)    | `GinzburgLandau2D_fenics/solve_GL_custom_jaxversion.py`     | MPI         |
+| **SNES Newton** (unreliable)       | `GinzburgLandau2D_fenics/solve_GL_snes_newton.py`           | MPI†        |
+| **JAX Newton** (auto-diff + PyAMG) | `GinzburgLandau2D_jax/` + `example_GinzburgLandau2D_jax.ipynb` | single CPU  |
+
+†SNES with basic line search is unreliable for non-convex problems — often diverges or converges to wrong local minima, especially in parallel. The **Custom Newton** uses a golden-section energy line search that guarantees energy decrease, making it robust for non-convex problems.
+
+Benchmark results: [results_GinzburgLandau2D.md](results_GinzburgLandau2D.md)
+How to run: [instructions.md](instructions.md)
+
 ## Prerequisites
 
 FEniCS solvers require **DOLFINx >= 0.10** with PETSc. JAX solvers require **JAX**, **h5py**, **PyAMG**. The included devcontainer provides everything — see [instructions.md](instructions.md).
@@ -47,7 +64,8 @@ FEniCS solvers require **DOLFINx >= 0.10** with PETSc. JAX solvers require **JAX
 │
 ├── README.md                          # This file
 ├── instructions.md                    # How to run, store results, generate tables
-├── results_pLaplace.md                # Compiled benchmark results
+├── results_pLaplace.md                # Compiled p-Laplace benchmark results
+├── results_GinzburgLandau2D.md        # Compiled Ginzburg-Landau benchmark results
 │
 ├── mesh_data/                         # Shared mesh files (all problems)
 │   ├── pLaplace/                      #   HDF5 source + FEniCS XDMF, levels 1–9
@@ -67,6 +85,11 @@ FEniCS solvers require **DOLFINx >= 0.10** with PETSc. JAX solvers require **JAX
 ├── GinzburgLandau2D_jax/              # JAX solver for Ginzburg-Landau 2D
 │   └── jax_energy.py, mesh.py         #   Energy + mesh loader
 │
+├── GinzburgLandau2D_fenics/           # FEniCS solvers for Ginzburg-Landau 2D
+│   ├── solve_GL_snes_newton.py        #   SNES Newton (unreliable for non-convex)
+│   ├── solve_GL_custom_jaxversion.py  #   Custom Newton (recommended, uses tools_petsc4py)
+│   └── export_GL_meshes.py            #   HDF5 → XDMF mesh converter
+│
 ├── HyperElasticity3D_jax/             # JAX solver for Hyperelasticity 3D
 │   ├── jax_energy.py, mesh.py         #   Energy + mesh loader
 │   └── rotate_boundary.py             #   Boundary rotation utility
@@ -80,11 +103,15 @@ FEniCS solvers require **DOLFINx >= 0.10** with PETSc. JAX solvers require **JAX
 ├── tools_petsc4py/                    # Shared PETSc Newton utilities
 │   └── minimizers.py                  #   Newton solver (PETSc Vec interface)
 │
-├── results/                           # Experiment results + processing scripts
+├── results/                           # p-Laplace experiment results + processing scripts
 │   ├── run_experiments.py             #   Automated FEniCS benchmark runner
 │   ├── generate_latex_tables.py       #   Generate LaTeX/Markdown tables from results
 │   ├── generate_scaling_plot.py       #   Generate strong scaling plots
 │   └── experiment_001/                #   Stored benchmark results (JSON + tables + plots)
+│
+├── results_GL/                        # Ginzburg-Landau experiment results
+│   ├── run_experiments.py             #   Automated GL benchmark runner
+│   └── experiment_001/                #   Stored benchmark results (JSON)
 │
 └── .devcontainer/                     # Docker/devcontainer configuration
 ```

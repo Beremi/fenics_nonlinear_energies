@@ -83,9 +83,37 @@ python3 pLaplace2D_jax/solve_pLaplace_jax_newton.py --levels 5 6 7
 python3 pLaplace2D_jax/solve_pLaplace_jax_newton.py --json results/jax.json
 ```
 
+### Ginzburg-Landau 2D — Custom Newton (recommended)
+
+Re-implementation of the JAX minimiser for the non-convex Ginzburg-Landau energy.
+Uses golden-section line search on [−0.5, 2] with tol=1e-3, GMRES + HYPRE AMG with rtol=1e-3.
+GMRES is required (not CG) because the Hessian is indefinite.
+
+```bash
+# Serial
+python3 GinzburgLandau2D_fenics/solve_GL_custom_jaxversion.py --json results_GL/custom.json
+
+# Parallel
+mpirun -n 4 python3 GinzburgLandau2D_fenics/solve_GL_custom_jaxversion.py --quiet --json results_GL/custom_4proc.json
+```
+
+### Ginzburg-Landau 2D — SNES Newton
+
+**Warning**: SNES with basic line search is unreliable for non-convex problems. It often diverges or converges to wrong local minima, especially in parallel. Use the custom Newton for reliable results.
+
+```bash
+# Serial (usually works)
+python3 GinzburgLandau2D_fenics/solve_GL_snes_newton.py --json results_GL/snes.json
+
+# Parallel (may diverge or converge to wrong minimum)
+mpirun -n 4 python3 GinzburgLandau2D_fenics/solve_GL_snes_newton.py --json results_GL/snes_4proc.json
+```
+
 ## Automated Experiment Runner
 
-`results/run_experiments.py` runs a complete benchmark suite with multiple solvers, MPI configurations, and repetitions:
+### p-Laplace
+
+`results/run_experiments.py` runs a complete p-Laplace benchmark suite with multiple solvers, MPI configurations, and repetitions:
 
 ```bash
 python3 results/run_experiments.py --nprocs 1 4 8 --levels 5 6 7 8 9 --repeat 3 --tag my_machine
@@ -94,6 +122,16 @@ python3 results/run_experiments.py --nprocs 1 4 8 --levels 5 6 7 8 9 --repeat 3 
 This creates a timestamped directory under `results/` with:
 - `metadata.json` — system info, git commit, DOLFINx version, CPU, etc.
 - `<solver>_np<N>_run<R>.json` — individual run results
+
+### Ginzburg-Landau
+
+`results_GL/run_experiments.py` runs a complete GL benchmark suite:
+
+```bash
+python3 results_GL/run_experiments.py --nprocs 1 4 8 16 --levels 5 6 7 8 9 --repeat 3 --tag my_machine
+```
+
+This creates a timestamped directory under `results_GL/` with the same format. Note that SNES results may contain failures due to the non-convex energy.
 
 ## Storing Results
 
@@ -126,6 +164,8 @@ results/<experiment_id>/<solver>_np<nprocs>_run<repetition>.json
 | `solver`        | `snes_newton`, `custom_jaxversion`, or `jax_newton`                    |
 | `nprocs`        | Number of MPI processes (1 = serial)                                   |
 | `repetition`    | Run number (1, 2, 3…)                                                  |
+
+Results for different problems are stored in separate directories (`results/` for p-Laplace, `results_GL/` for Ginzburg-Landau).
 
 ### JSON Result Format
 

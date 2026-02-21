@@ -1,0 +1,62 @@
+{
+  "metadata": {
+    "solver": "snes_newton",
+    "description": "Built-in PETSc SNES Newton solver with basic line search, GMRES + HYPRE AMG",
+    "dolfinx_version": "0.10.0.post2",
+    "nprocs": 8,
+    "petsc_options": {
+      "snes_type": "newtonls",
+      "snes_linesearch_type": "basic",
+      "snes_atol": 1e-06,
+      "snes_rtol": 1e-08,
+      "snes_max_it": 500,
+      "snes_divergence_tolerance": -1.0,
+      "ksp_type": "gmres",
+      "pc_type": "hypre",
+      "ksp_rtol": 0.1
+    },
+    "eps": 0.01
+  },
+  "results": [
+    {
+      "mesh_level": 5,
+      "total_dofs": 4225,
+      "time": 0.0953,
+      "iters": 29,
+      "energy": 0.3462,
+      "converged_reason": 2
+    },
+    {
+      "mesh_level": 6,
+      "total_dofs": 16641,
+      "time": 0.4074,
+      "iters": 70,
+      "energy": 0.5029,
+      "converged_reason": 2
+    },
+    {
+      "mesh_level": 7,
+      "total_dofs": 66049,
+      "time": 0.6598,
+      "iters": 42,
+      "energy": 174069.8982,
+      "converged_reason": -9
+    },
+    {
+      "mesh_level": 8,
+      "total_dofs": 263169,
+      "time": 1.1434,
+      "iters": 21,
+      "energy": 0.915,
+      "converged_reason": 4
+    },
+    {
+      "mesh_level": 9,
+      "total_dofs": 1050625,
+      "time": 5.6611,
+      "iters": 17,
+      "energy": 252879.0073,
+      "converged_reason": -9
+    }
+  ]
+}
