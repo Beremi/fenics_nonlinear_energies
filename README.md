@@ -19,13 +19,16 @@ Open in VS Code devcontainer and run — everything is pre-configured.
 
 $$\min_u J(u) = \int_\Omega \frac{1}{p} |\nabla u|^p \, dx - \int_\Omega f \cdot u \, dx, \quad u|_{\partial\Omega} = 0$$
 
-with $p = 3$, $f = -10$ on the unit square. Three solver variants are provided:
+with $p = 3$, $f = -10$ on the unit square. Four solver variants are provided:
 
-| Solver                             | Location                                            | Parallelism |
-| ---------------------------------- | --------------------------------------------------- | ----------- |
-| **SNES Newton** (recommended)      | `pLaplace2D_fenics/solve_pLaplace_snes_newton.py`   | MPI         |
-| **Custom Newton** (line search)    | `pLaplace2D_fenics/solve_pLaplace_custom_newton.py` | MPI         |
-| **JAX Newton** (auto-diff + PyAMG) | `pLaplace2D_jax/solve_pLaplace_jax_newton.py`       | single CPU  |
+| Solver                                 | Location                                                   | Parallelism |
+| -------------------------------------- | ---------------------------------------------------------- | ----------- |
+| **SNES Newton** (recommended)          | `pLaplace2D_fenics/solve_pLaplace_snes_newton.py`          | MPI         |
+| **Custom Newton** (line search)        | `pLaplace2D_fenics/solve_pLaplace_custom_newton.py`        | MPI         |
+| **Custom Newton (JAX-version)** ★      | `pLaplace2D_fenics/solve_pLaplace_custom_jaxversion.py`    | MPI         |
+| **JAX Newton** (auto-diff + PyAMG)     | `pLaplace2D_jax/solve_pLaplace_jax_newton.py`              | single CPU  |
+
+The **JAX-version** custom Newton re-implements the JAX minimisation algorithm (golden-section on [−0.5, 2], tighter tolerances) on top of PETSc, matching JAX iteration counts while supporting MPI parallelism.
 
 Benchmark results: [results_pLaplace.md](results_pLaplace.md)
 How to run: [instructions.md](instructions.md)
@@ -55,6 +58,7 @@ FEniCS solvers require **DOLFINx >= 0.10** with PETSc. JAX solvers require **JAX
 ├── pLaplace2D_fenics/                 # FEniCS solvers for p-Laplace
 │   ├── solve_pLaplace_snes_newton.py  #   SNES Newton (DOLFINx 0.10+)
 │   ├── solve_pLaplace_custom_newton.py#   Custom Newton with line search
+│   ├── solve_pLaplace_custom_jaxversion.py # ★ JAX-version algorithm via PETSc
 │   └── export_pLaplace_meshes.py      #   HDF5 → XDMF mesh converter
 │
 ├── pLaplace2D_jax/                    # JAX solver for p-Laplace
@@ -74,6 +78,9 @@ FEniCS solvers require **DOLFINx >= 0.10** with PETSc. JAX solvers require **JAX
 │   ├── minimizers.py                  #   Newton solver with line search
 │   ├── sparse_solvers.py              #   PyAMG / direct linear solvers
 │   └── graph_sfd.py                   #   Graph coloring for sparse finite differences
+│
+├── tools_petsc4py/                    # Shared PETSc Newton utilities
+│   └── minimizers.py                  #   Newton solver (PETSc Vec interface)
 │
 ├── results/                           # Experiment results + processing scripts
 │   ├── run_experiments.py             #   Automated FEniCS benchmark runner

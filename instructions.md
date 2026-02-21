@@ -66,6 +66,18 @@ python3 pLaplace2D_fenics/solve_pLaplace_custom_newton.py --quiet --json results
 mpirun -n 8 python3 pLaplace2D_fenics/solve_pLaplace_custom_newton.py --quiet --json results/custom_8proc.json
 ```
 
+### Custom Newton — JAX-version algorithm
+
+Re-implementation of the JAX minimiser (`tools/minimizers.py`) on top of PETSc via `tools_petsc4py/minimizers.py`. Uses golden-section line search on [−0.5, 2] with tol=1e-3, CG + HYPRE AMG with rtol=1e-3, matching JAX iteration counts while supporting MPI parallelism.
+
+```bash
+# Serial
+python3 pLaplace2D_fenics/solve_pLaplace_custom_jaxversion.py --json results/jaxver.json
+
+# Parallel
+mpirun -n 4 python3 pLaplace2D_fenics/solve_pLaplace_custom_jaxversion.py --quiet --json results/jaxver_4proc.json
+```
+
 ### JAX Newton (no MPI)
 
 Pure-JAX solver using auto-diff gradients, sparse finite-difference Hessian (graph coloring), and PyAMG CG. Runs on a single CPU — no MPI parallelism. Requires `jax`, `h5py`, and `pyamg`.

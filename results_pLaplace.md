@@ -92,6 +92,26 @@ The same p-Laplace problem solved using a pure-JAX pipeline (automatic different
 - **No parallelism**: The JAX solver runs on a single CPU core. There is no MPI parallelism yet.
 - **Setup overhead**: The ~0.2–1.9 s setup cost (JIT + graph coloring) is amortized over the solve but significant for small problems.
 
+### Custom Newton — JAX-version algorithm (FEniCS + PETSc)
+
+Re-implementation of the JAX minimiser (`tools/minimizers.py`) on top of PETSc via `tools_petsc4py/minimizers.py`. Uses the same golden-section line search on $[-0.5, 2]$ with `tol=1e-3`, CG + HYPRE AMG with `rtol=1e-3`, `tolf=1e-5`, `tolg=1e-3`. Supports MPI parallelism.
+
+Script: [`pLaplace2D_fenics/solve_pLaplace_custom_jaxversion.py`](pLaplace2D_fenics/solve_pLaplace_custom_jaxversion.py)
+
+| lvl | dofs   | time (serial) | iters | time (4-proc) | iters | J(u)    |
+| --- | ------ | ------------- | ----- | ------------- | ----- | ------- |
+| 4   | 3201   | 0.040         | 5     | —             | —     | -7.9430 |
+| 5   | 12545  | 0.154         | 5     | —             | —     | -7.9546 |
+| 6   | 49665  | 0.724         | 6     | 0.236         | 6     | -7.9583 |
+| 7   | 197633 | 3.454         | 7     | 0.923         | 6     | -7.9596 |
+| 8   | 788481 | 12.369        | 6     | 4.085         | 6     | -7.9600 |
+
+**Key observations**:
+- **5–7 iterations** — matches or beats the JAX solver (6–9) and significantly fewer than the original Custom Newton (8–11).
+- **Line search allows α > 1**: The wider interval $[-0.5, 2]$ and tighter tolerance (`1e-3` vs `0.1`) enable full or overshooting steps, eliminating the α ≤ 0.955 cap of the original Custom Newton.
+- **MPI-parallel**: Unlike pure JAX, this solver scales across MPI processes.
+- **Comparable serial times** to SNES Newton — slightly slower due to golden-section energy evaluations per iteration, but fewer iterations compensate.
+
 ---
 
 ## Generating LaTeX Tables and Plots
