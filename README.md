@@ -41,6 +41,7 @@ Slower due to line search overhead but provides more control and debugging outpu
 ├── solve_pLaplace_custom_newton.py    # Custom Newton with line search (DOLFINx 0.10+)
 ├── run_experiments.py                 # Automated experiment runner
 ├── generate_latex_tables.py           # Generate LaTeX/Markdown tables from results
+├── generate_scaling_plot.py           # Generate strong scaling plots from results
 ├── export_pLaplace_meshes.py          # Generate FEniCS mesh files from pLaplace2D data
 │
 ├── pLaplace_fenics_mesh/              # Pre-generated mesh files (XDMF + HDF5), levels 1–9
@@ -60,13 +61,13 @@ Slower due to line search overhead but provides more control and debugging outpu
 
 The meshes in `pLaplace_fenics_mesh/` (levels 1–9) are pre-generated. The paper table uses levels 4–8, which correspond to **mesh files 5–9**:
 
-| Table Level | Mesh File | Total DOFs | Free DOFs |
-|:-----------:|:---------:|:----------:|:---------:|
-| 4 | mesh_level_5 | 3201 | 2945 |
-| 5 | mesh_level_6 | 12545 | 12033 |
-| 6 | mesh_level_7 | 49665 | 48641 |
-| 7 | mesh_level_8 | 197633 | 195585 |
-| 8 | mesh_level_9 | 788481 | 784385 |
+| Table Level |  Mesh File   | Total DOFs | Free DOFs |
+| :---------: | :----------: | :--------: | :-------: |
+|      4      | mesh_level_5 |    3201    |   2945    |
+|      5      | mesh_level_6 |   12545    |   12033   |
+|      6      | mesh_level_7 |   49665    |   48641   |
+|      7      | mesh_level_8 |   197633   |  195585   |
+|      8      | mesh_level_9 |   788481   |  784385   |
 
 To regenerate meshes: `python3 export_pLaplace_meshes.py`
 

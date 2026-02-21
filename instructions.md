@@ -101,12 +101,12 @@ results/
 results/<experiment_id>/<solver>_np<nprocs>_run<repetition>.json
 ```
 
-| Field | Values |
-|-------|--------|
+| Field           | Values                                                                 |
+| --------------- | ---------------------------------------------------------------------- |
 | `experiment_id` | Sequential (`experiment_001`) or timestamped (`20260221_133000_mytag`) |
-| `solver` | `snes_newton` or `custom_newton` |
-| `nprocs` | Number of MPI processes (1 = serial) |
-| `repetition` | Run number (1, 2, 3…) |
+| `solver`        | `snes_newton` or `custom_newton`                                       |
+| `nprocs`        | Number of MPI processes (1 = serial)                                   |
+| `repetition`    | Run number (1, 2, 3…)                                                  |
 
 ### JSON Result Format
 
@@ -235,3 +235,24 @@ The script produces two tables:
 2. **All solver configurations** — both SNES and Custom Newton across all MPI counts
 
 The generated `.tex` file can be `\input{}`-ed directly into a LaTeX document.
+
+## Generating Scaling Plots
+
+`generate_scaling_plot.py` reads SNES Newton JSON results across process counts and produces strong scaling and speedup plots.
+
+```bash
+# Default output: <exp_dir>/scaling.png
+python3 generate_scaling_plot.py results/experiment_001/
+
+# Custom output path
+python3 generate_scaling_plot.py results/experiment_001/ --output my_scaling.png
+
+# Plot a different solver
+python3 generate_scaling_plot.py results/experiment_001/ --solver custom_newton
+```
+
+**Note**: Requires `matplotlib`. If running outside the devcontainer, use Docker:
+```bash
+docker run --rm --entrypoint python3 -v "$PWD":/work -w /work fenics_test \
+  /work/generate_scaling_plot.py results/experiment_001/
+```
