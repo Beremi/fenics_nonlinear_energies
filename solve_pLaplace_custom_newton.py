@@ -127,7 +127,7 @@ def run_level(mesh_level, max_iterations=40, grad_tol=1e-6, verbose=True):
     # Linear solver setup
     du = fem.Function(V)
     A = create_matrix(hessian_form)
-    L = create_vector(grad_form)
+    L = create_vector(V)
     ksp = PETSc.KSP().create(msh.comm)
     ksp.setOperators(A)
     ksp.setType(PETSc.KSP.Type.CG)
@@ -155,7 +155,7 @@ def run_level(mesh_level, max_iterations=40, grad_tol=1e-6, verbose=True):
         with L.localForm() as loc_L:
             loc_L.set(0)
         assemble_vector(L, grad_form)
-        apply_lifting(L, [hessian_form], [[bc]], x0=[u.x.petsc_vec])
+        apply_lifting(L, [hessian_form], [[bc]], x0=[u.x.petsc_vec])  # type: ignore
         L.ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
         L.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
         set_bc(L, [bc])

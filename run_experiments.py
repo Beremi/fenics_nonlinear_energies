@@ -70,7 +70,7 @@ def run_benchmark(script, nprocs, levels, json_path, extra_args=None):
     """Run a benchmark script with optional MPI."""
     cmd = []
     if nprocs > 1:
-        cmd = ["mpirun", "--allow-run-as-root", "-n", str(nprocs)]
+        cmd = ["mpirun", "-n", str(nprocs)]
     cmd += ["python3", script, "--levels"] + [str(l) for l in levels]
     cmd += ["--json", json_path]
     if extra_args:

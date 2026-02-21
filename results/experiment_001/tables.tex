@@ -1,0 +1,49 @@
+% Auto-generated LaTeX tables from p-Laplace experiment results
+% Experiment: experiment_001
+% Generated: 2026-02-21T13:36:59.405339
+% Git commit: 7dce8760105ef28d9c2213374c23247ce3a33098
+
+% === FEniCS SNES Newton: serial vs parallel ===
+\begin{table}[H]
+\centering
+\resizebox{\linewidth}{!}{%
+\begin{tabular}{ll|ccc|ccc|ccc}
+\hline
+ & \multicolumn{3}{c|}{\textbf{FEniCS serial}} & \multicolumn{3}{c|}{\textbf{FEniCS parallel (4 proc)}} & \multicolumn{3}{c}{\textbf{FEniCS parallel (8 proc)}}\\
+\hline
+lvl & dofs & time [s] & iters & $J(\boldsymbol{u})$ & time [s] & iters & $J(\boldsymbol{u})$ & time [s] & iters & $J(\boldsymbol{u})$\\
+\hline
+4 & 2945 & 0.043 & 10 & -7.9430 & 0.029 & 11 & -7.9430 & 0.026 & 10 & -7.9430\\
+5 & 12033 & 0.167 & 10 & -7.9546 & 0.071 & 10 & -7.9546 & 0.050 & 10 & -7.9546\\
+6 & 48641 & 0.478 & 7 & -7.9583 & 0.169 & 7 & -7.9583 & 0.110 & 7 & -7.9583\\
+7 & 195585 & 2.152 & 8 & -7.9596 & 0.768 & 8 & -7.9596 & 0.463 & 8 & -7.9596\\
+8 & 784385 & 10.026 & 9 & -7.9600 & 3.772 & 9 & -7.9600 & 2.430 & 9 & -7.9600\\
+\hline
+\end{tabular}
+}
+\caption{p-Laplace 2D FEniCS results. DOLFINx 0.10.0.post2, CPU: AMD Ryzen 9 9950X3D 16-Core Processor, commit: \texttt{7dce8760}, date: 2026-02-21.}
+\label{tab:plaplace_2d_fenics_results}
+\end{table}
+
+
+% === All solver configurations ===
+\begin{table}[H]
+\centering
+\resizebox{\linewidth}{!}{%
+\begin{tabular}{ll|ccc|ccc|ccc|ccc|ccc|ccc}
+\hline
+ & \multicolumn{3}{c|}{\textbf{Custom Newton (serial)}} & \multicolumn{3}{c|}{\textbf{Custom Newton (4 proc)}} & \multicolumn{3}{c|}{\textbf{Custom Newton (8 proc)}} & \multicolumn{3}{c|}{\textbf{SNES Newton (serial)}} & \multicolumn{3}{c|}{\textbf{SNES Newton (4 proc)}} & \multicolumn{3}{c}{\textbf{SNES Newton (8 proc)}}\\
+\hline
+lvl & dofs & time [s] & iters & $J(\boldsymbol{u})$ & time [s] & iters & $J(\boldsymbol{u})$ & time [s] & iters & $J(\boldsymbol{u})$ & time [s] & iters & $J(\boldsymbol{u})$ & time [s] & iters & $J(\boldsymbol{u})$ & time [s] & iters & $J(\boldsymbol{u})$\\
+\hline
+4 & 2945 & 0.043 & 8 & -7.9430 & 0.025 & 8 & -7.9430 & 0.026 & 9 & -7.9430 & 0.043 & 10 & -7.9430 & 0.029 & 11 & -7.9430 & 0.026 & 10 & -7.9430\\
+5 & 12033 & 0.193 & 9 & -7.9546 & 0.075 & 9 & -7.9546 & 0.055 & 9 & -7.9546 & 0.167 & 10 & -7.9546 & 0.071 & 10 & -7.9546 & 0.050 & 10 & -7.9546\\
+6 & 48641 & 0.754 & 9 & -7.9583 & 0.259 & 9 & -7.9583 & 0.164 & 9 & -7.9583 & 0.478 & 7 & -7.9583 & 0.169 & 7 & -7.9583 & 0.110 & 7 & -7.9583\\
+7 & 195585 & 3.373 & 10 & -7.9596 & 1.014 & 9 & -7.9596 & 0.681 & 10 & -7.9596 & 2.152 & 8 & -7.9596 & 0.768 & 8 & -7.9596 & 0.463 & 8 & -7.9596\\
+8 & 784385 & 15.162 & 11 & -7.9600 & 5.337 & 11 & -7.9600 & 3.508 & 11 & -7.9600 & 10.026 & 9 & -7.9600 & 3.772 & 9 & -7.9600 & 2.430 & 9 & -7.9600\\
+\hline
+\end{tabular}
+}
+\caption{p-Laplace 2D: all solver configurations. Commit: \texttt{7dce8760}, date: 2026-02-21.}
+\label{tab:plaplace_2d_all}
+\end{table}

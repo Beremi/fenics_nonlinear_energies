@@ -1,0 +1,62 @@
+{
+  "metadata": {
+    "solver": "custom_newton_golden_section",
+    "description": "Custom Newton with golden-section line search, CG + HYPRE AMG",
+    "dolfinx_version": "0.10.0.post2",
+    "nprocs": 8,
+    "linear_solver": {
+      "ksp_type": "cg",
+      "pc_type": "hypre",
+      "ksp_rtol": 0.1
+    },
+    "newton_params": {
+      "max_it": 40,
+      "grad_tol": 1e-06,
+      "linesearch_tol": 0.1
+    },
+    "p": 3,
+    "rhs_f": -10.0
+  },
+  "results": [
+    {
+      "mesh_level": 5,
+      "total_dofs": 3201,
+      "time": 0.0279,
+      "iters": 9,
+      "energy": -7.943,
+      "converged": true
+    },
+    {
+      "mesh_level": 6,
+      "total_dofs": 12545,
+      "time": 0.058,
+      "iters": 9,
+      "energy": -7.9546,
+      "converged": true
+    },
+    {
+      "mesh_level": 7,
+      "total_dofs": 49665,
+      "time": 0.1913,
+      "iters": 10,
+      "energy": -7.9583,
+      "converged": true
+    },
+    {
+      "mesh_level": 8,
+      "total_dofs": 197633,
+      "time": 0.6813,
+      "iters": 10,
+      "energy": -7.9596,
+      "converged": true
+    },
+    {
+      "mesh_level": 9,
+      "total_dofs": 788481,
+      "time": 3.5077,
+      "iters": 11,
+      "energy": -7.96,
+      "converged": true
+    }
+  ]
+}

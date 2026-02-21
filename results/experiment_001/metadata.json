@@ -1,0 +1,26 @@
+{
+  "experiment_id": "experiment_001",
+  "timestamp": "2026-02-21T13:36:59.405339",
+  "git_commit": "7dce8760105ef28d9c2213374c23247ce3a33098",
+  "git_dirty": false,
+  "hostname": "beremifeipc",
+  "cpu": "AMD Ryzen 9 9950X3D 16-Core Processor",
+  "cpu_count": 32,
+  "os": "Linux 6.19.3-2-cachyos",
+  "python_version": "3.14.3",
+  "dolfinx_version": "0.10.0.post2",
+  "mesh_levels": [
+    5,
+    6,
+    7,
+    8,
+    9
+  ],
+  "nprocs_tested": [
+    1,
+    4,
+    8
+  ],
+  "repetitions": 3,
+  "docker_image": "fenics_test (dolfinx/lab:stable based)"
+}
