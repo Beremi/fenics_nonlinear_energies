@@ -1,6 +1,12 @@
 {
     "name": "FenicsX_docker",
-    "dockerFile": "Dockerfile",
+    "build": {
+        "dockerfile": "Dockerfile",
+        "context": ".",
+        "options": [
+            "--network=host"
+        ]
+    },
     "hostRequirements": {
         "cpus": 2
     },
