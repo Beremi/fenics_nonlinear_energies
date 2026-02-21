@@ -6,8 +6,8 @@ Reads all JSON result files from an experiment directory, aggregates repeated
 runs (taking the median time), and produces LaTeX table source.
 
 Usage:
-  python3 generate_latex_tables.py results/<experiment_id>/
-  python3 generate_latex_tables.py results/<experiment_id>/ --output results/<experiment_id>/tables.tex
+  python3 results/generate_latex_tables.py results/<experiment_id>/
+  python3 results/generate_latex_tables.py results/<experiment_id>/ --output results/<experiment_id>/tables.tex
 """
 import argparse
 import json

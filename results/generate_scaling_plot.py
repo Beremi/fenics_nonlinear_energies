@@ -8,9 +8,9 @@ aggregates repeated runs (median time), and produces:
   2. Speedup plot: speedup vs number of processes (log-log)
 
 Usage:
-  python3 generate_scaling_plot.py results/experiment_001/
-  python3 generate_scaling_plot.py results/experiment_001/ --output results/experiment_001/scaling.png
-  python3 generate_scaling_plot.py results/experiment_001/ --solver custom_newton
+  python3 results/generate_scaling_plot.py results/experiment_001/
+  python3 results/generate_scaling_plot.py results/experiment_001/ --output results/experiment_001/scaling.png
+  python3 results/generate_scaling_plot.py results/experiment_001/ --solver custom_newton
 """
 import numpy as np
 import matplotlib.ticker as ticker
