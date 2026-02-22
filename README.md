@@ -79,6 +79,13 @@ Observed trend:
 
 This section captures the exact settings for the **single-step-24** examination (level 1, restart from step 23).
 
+Current fast variant used in latest reruns (step-24 and full trajectory):
+- Linear solver: `gmres + hypre (boomeramg)`
+- `ksp_rtol = 1e-1`
+- `ksp_max_it = 30`
+- skip explicit `hypre_nodal_coarsen` / `hypre_vec_interp_variant` (HYPRE defaults)
+- `--pc_setup_on_ksp_cap` enabled (PC setup only after previous solve hits cap; first solve always sets up)
+
 #### Custom FEniCS (PETSc) — settings
 
 - Nonlinear solver: custom Newton (`tools_petsc4py/minimizers.py`)
@@ -95,8 +102,10 @@ This section captures the exact settings for the **single-step-24** examination 
 	- KSP type: `gmres` (or `cg` in failing comparisons)
 	- PC type: `hypre` (`boomeramg`)
 	- `ksp_rtol` swept over `1e-1, 1e-2, 1e-3, 1e-4, 1e-5, 1e-6`
+	- latest skip-variant reruns use `ksp_rtol = 1e-1`
 	- HYPRE options: `pc_hypre_boomeramg_nodal_coarsen=6`, `pc_hypre_boomeramg_vec_interp_variant=3`
-	- `ksp_max_it` not explicitly set (PETSc default applies, observed cap at `10000`)
+	- latest skip-variant reruns set `ksp_max_it = 30` (cap-triggered setup mode)
+	- earlier sweeps used larger caps (including observed `10000` cap-hit behavior)
 
 #### JAX reference — settings (for comparability)
 
