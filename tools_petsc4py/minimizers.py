@@ -81,6 +81,7 @@ def newton(
     verbose=False,
     comm=None,
     ghost_update_fn=None,
+    save_history=False,
 ):
     """Newton's method for energy minimisation on PETSc vectors.
 
@@ -146,6 +147,7 @@ def newton(
     fx = energy_fn(x)
     nit = 0
     message = "Maximum number of iterations reached"
+    history = []
 
     for _ in range(maxit):
         # ---- gradient ----
@@ -169,11 +171,28 @@ def newton(
         def _energy_at_alpha(alpha):
             x_trial.waxpy(alpha, h, x)
             ghost_update_fn(x_trial)
-            return energy_fn(x_trial)
+            val = energy_fn(x_trial)
+            if not np.isfinite(val):
+                return np.inf
+            return val
 
         alpha, ls_evals = golden_section_search(
             _energy_at_alpha, ls_a, ls_b, linesearch_tol
         )
+
+        # Guard against non-finite trial energies (e.g. det(F) <= 0 in hyperelasticity).
+        # If golden-section ends in a non-finite region, backtrack toward zero.
+        trial_val = _energy_at_alpha(alpha)
+        if not np.isfinite(trial_val):
+            alpha_bt = min(1.0, max(0.0, ls_b))
+            if alpha_bt <= 0.0:
+                alpha_bt = 1.0
+            while alpha_bt > 1e-12:
+                trial_val = _energy_at_alpha(alpha_bt)
+                if np.isfinite(trial_val):
+                    alpha = alpha_bt
+                    break
+                alpha_bt *= 0.5
 
         # ---- update ----
         x.axpy(alpha, h)
@@ -188,6 +207,17 @@ def newton(
                 f"||g||={normg:.5e}, alpha={alpha:.5e}, "
                 f"ksp_its={ksp_its}, ls_evals={ls_evals}"
             )
+
+        if save_history:
+            history.append({
+                "it": int(nit),
+                "energy": float(fx),
+                "dE": float(fx_old - fx),
+                "grad_norm": float(normg),
+                "alpha": float(alpha),
+                "ksp_its": int(ksp_its),
+                "ls_evals": int(ls_evals),
+            })
 
         if abs(fx - fx_old) < tolf:
             message = "Energy change converged"
@@ -206,4 +236,5 @@ def newton(
         "nit": nit,
         "time": runtime,
         "message": message,
+        "history": history,
     }

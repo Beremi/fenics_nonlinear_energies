@@ -38,16 +38,101 @@ $$\min_u J(u) = \int_\Omega \frac{\varepsilon}{2} |\nabla u|^2 + \frac{1}{4}(u^2
 
 with $\varepsilon = 0.01$ on $[-1,1]^2$. This is a **non-convex** energy (indefinite Hessian). Three solver variants are provided:
 
-| Solver                             | Location                                                    | Parallelism |
-| ---------------------------------- | ----------------------------------------------------------- | ----------- |
-| **Custom Newton** (recommended)    | `GinzburgLandau2D_fenics/solve_GL_custom_jaxversion.py`     | MPI         |
-| **SNES Newton**                    | `GinzburgLandau2D_fenics/solve_GL_snes_newton.py`           | MPI         |
+| Solver                             | Location                                                       | Parallelism |
+| ---------------------------------- | -------------------------------------------------------------- | ----------- |
+| **Custom Newton** (recommended)    | `GinzburgLandau2D_fenics/solve_GL_custom_jaxversion.py`        | MPI         |
+| **SNES Newton**                    | `GinzburgLandau2D_fenics/solve_GL_snes_newton.py`              | MPI         |
 | **JAX Newton** (auto-diff + PyAMG) | `GinzburgLandau2D_jax/` + `example_GinzburgLandau2D_jax.ipynb` | single CPU  |
 
 The **SNES Newton** uses trust-region Newton (`newtontr`) with FGMRES + ASM/ILU preconditioning and loose inner tolerance (`ksp_rtol=1e-1`). This was the only SNES configuration found to be reliable across all mesh sizes and MPI decompositions (see [results_GinzburgLandau2D.md](results_GinzburgLandau2D.md) for the full configuration survey). The **Custom Newton** uses a golden-section energy line search and remains the fastest option (6 iterations at all levels).
 
 Benchmark results: [results_GinzburgLandau2D.md](results_GinzburgLandau2D.md)
 How to run: [instructions.md](instructions.md)
+
+## Problem: HyperElasticity 3D (current status)
+
+The HyperElasticity setup uses a rotating right boundary and Neo-Hookean-type energy. Current benchmark and debugging status is tracked in:
+
+- [results_HyperElasticity3D.md](results_HyperElasticity3D.md)
+
+### Level-1 custom Newton result (updated)
+
+- With corrected JAX->FEniCS restart mapping, custom FEniCS converges at step 20 from JAX step 19 restart:
+	- energy `137.392333`, Newton iters `22`
+	- artifact: [experiment_scripts/he_custom_restart_step20_maxit1000_fixedinit.json](experiment_scripts/he_custom_restart_step20_maxit1000_fixedinit.json)
+
+### Step-24 inner-precision sweep (`ksp_rtol = 1e-1 ... 1e-6`)
+
+For level 1, step 24 (restart from step 23), custom Newton was profiled with per-iteration convergence history.
+
+Sweep artifacts:
+- Summary table: [experiment_scripts/he_step24_precision_sweep/step24_precision_summary.md](experiment_scripts/he_step24_precision_sweep/step24_precision_summary.md)
+- Full JSON: [experiment_scripts/he_step24_precision_sweep/step24_precision_summary.json](experiment_scripts/he_step24_precision_sweep/step24_precision_summary.json)
+- Convergence profiles (all iterations): [experiment_scripts/he_step24_precision_sweep/step24_convergence_profiles.csv](experiment_scripts/he_step24_precision_sweep/step24_convergence_profiles.csv)
+
+Observed trend:
+- `CG + HYPRE` fails for all tested `ksp_rtol` values (`1e-1 ... 1e-6`) at step 24.
+- `GMRES + HYPRE` converges for all tested `ksp_rtol` values, with final energies around `197.7484` (close to JAX reference `197.748635`).
+- This indicates late-step robustness is dominated by linear solver choice, not only tolerance tightening.
+
+### Step-24 detailed settings used (for current diagnosis)
+
+This section captures the exact settings for the **single-step-24** examination (level 1, restart from step 23).
+
+#### Custom FEniCS (PETSc) — settings
+
+- Nonlinear solver: custom Newton (`tools_petsc4py/minimizers.py`)
+- Outer tolerances:
+	- energy change tolerance `tolf = 1e-4`
+	- gradient norm tolerance `tolg = 1e-3`
+	- max Newton iterations `maxit = 300` (for sweep runs)
+- Line search:
+	- method: golden-section
+	- tolerance `linesearch_tol = 1e-3`
+	- interval `[-0.5, 2.0]`
+	- non-finite trial energies are treated as `+inf` (guard enabled)
+- Linear solver (inner):
+	- KSP type: `gmres` (or `cg` in failing comparisons)
+	- PC type: `hypre` (`boomeramg`)
+	- `ksp_rtol` swept over `1e-1, 1e-2, 1e-3, 1e-4, 1e-5, 1e-6`
+	- HYPRE options: `pc_hypre_boomeramg_nodal_coarsen=6`, `pc_hypre_boomeramg_vec_interp_variant=3`
+	- `ksp_max_it` not explicitly set (PETSc default applies, observed cap at `10000`)
+
+#### JAX reference — settings (for comparability)
+
+- Nonlinear solver: `tools/minimizers.py::newton`
+- Outer tolerances:
+	- energy change tolerance `tolf = 1e-4`
+	- gradient norm tolerance `tolg = 1e-3` (default)
+	- max Newton iterations `maxit = 100`
+- Line search:
+	- method: golden-section
+	- tolerance `linesearch_tol = 1e-3`
+	- interval `[-0.5, 2.0]`
+- Linear solver (inner):
+	- Krylov: SciPy `cg`
+	- preconditioner: PyAMG smoothed aggregation (`smooth='energy'`)
+	- tolerance `tol = 1e-3`
+	- max inner iterations `maxiter = 100`
+
+#### Why step 24 is slow (measured)
+
+For `gmres+hypre` at step 24:
+
+- `ksp_rtol = 1e-3`:
+	- wall time `70.1249 s`, Newton iterations `23`
+	- total inner iterations across Newton steps: `43944`
+	- average inner iterations per Newton step: `1910.61`
+	- Newton steps hitting inner cap (`ksp_its = 10000`): `4`
+- `ksp_rtol = 1e-6`:
+	- wall time `90.1326 s`, Newton iterations `23`
+	- total inner iterations: `57177`
+	- average inner iterations per Newton step: `2485.96`
+	- Newton steps hitting cap: `4`
+
+Interpretation:
+- The long runtime is dominated by expensive inner GMRES solves in several Newton steps (including cap hits), not by a large number of outer Newton iterations.
+- Tightening `ksp_rtol` from `1e-3` to `1e-6` increases total inner work substantially and therefore runtime.
 
 ## Prerequisites
 

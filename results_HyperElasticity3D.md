@@ -46,7 +46,65 @@ Command used:
 
 ---
 
-## 3) SNES configuration survey (Phase 2, single-step)
+## 3) Time-evolution check (levels 1 and 2, 24 steps) — JAX vs custom FEniCS
+
+Before moving to SNES level-2 work, both reference paths were run across the full rotation evolution.
+
+Outputs:
+- JAX: [experiment_scripts/he_jax_evolution_l1.json](experiment_scripts/he_jax_evolution_l1.json)
+- FEniCS custom: [experiment_scripts/he_fenics_custom_evolution_l1.json](experiment_scripts/he_fenics_custom_evolution_l1.json)
+- JAX (level 2): [experiment_scripts/he_jax_evolution_l2.json](experiment_scripts/he_jax_evolution_l2.json)
+- FEniCS custom (level 2): [experiment_scripts/he_fenics_custom_evolution_l2.json](experiment_scripts/he_fenics_custom_evolution_l2.json)
+
+Commands used:
+- `source /tmp/jaxenv/bin/activate.fish && PYTHONPATH=. python3 experiment_scripts/run_he_jax_evolution.py --level 1 --steps 24 --out experiment_scripts/he_jax_evolution_l1.json`
+- `docker run --rm --entrypoint "" -v "$PWD":/work -w /work fenics_test python3 HyperElasticity3D_fenics/solve_HE_custom_jaxversion.py --level 1 --steps 24 --out experiment_scripts/he_fenics_custom_evolution_l1.json --quiet`
+- `source /tmp/jaxenv/bin/activate.fish && PYTHONPATH=. python3 experiment_scripts/run_he_jax_evolution.py --level 2 --steps 24 --out experiment_scripts/he_jax_evolution_l2.json`
+- `docker run --rm --entrypoint "" -v "$PWD":/work -w /work fenics_test python3 HyperElasticity3D_fenics/solve_HE_custom_jaxversion.py --level 2 --steps 24 --out experiment_scripts/he_fenics_custom_evolution_l2.json --quiet`
+
+### Level 1 trajectory summary
+
+- JAX converges for all 24 steps (finite energies, standard Newton termination).
+- FEniCS custom matches JAX through step 19, then fails from step 20 onward (`iters=100`, `energy=NaN`).
+- For steps 1–19, agreement is strong: max relative energy error is ~`1.14e-6`.
+
+### Level 1 selected step comparison
+
+| Step |     JAX energy | FEniCS custom energy | Relative error | JAX iters | FEniCS iters |
+| ---: | -------------: | -------------------: | -------------: | --------: | -----------: |
+|    1 |   0.3464113962 |             0.346411 |        1.14e-6 |        18 |           18 |
+|    6 |  12.4422658099 |            12.442266 |        1.53e-8 |        20 |           18 |
+|   12 |  49.5500693409 |            49.550069 |        6.88e-9 |        21 |           19 |
+|   18 | 111.3262030649 |           111.326203 |       5.83e-10 |        21 |           19 |
+|   19 | 124.0155386580 |           124.015539 |        2.76e-9 |        22 |           18 |
+|   20 | 137.3923331636 |                  NaN |              — |        22 |          100 |
+|   24 | 197.7486351731 |                  NaN |              — |        34 |          100 |
+
+### Level 2 trajectory summary
+
+- JAX converges for all 24 steps.
+- FEniCS custom matches JAX through step 9, then fails from step 10 onward (`iters=100`, `energy=NaN`).
+- For steps 1–9, agreement is strong: max relative energy error is ~`5.64e-6`.
+
+### Level 2 selected step comparison
+
+| Step |     JAX energy | FEniCS custom energy | Relative error | JAX iters | FEniCS iters |
+| ---: | -------------: | -------------------: | -------------: | --------: | -----------: |
+|    1 |   0.2027078558 |             0.202709 |        5.64e-6 |        23 |           21 |
+|    3 |   1.8243690766 |             1.824366 |        1.69e-6 |        19 |           21 |
+|    6 |   7.2960180354 |             7.296016 |        2.79e-7 |        20 |           21 |
+|    9 |  16.4069415137 |            16.406942 |        2.96e-8 |        21 |           22 |
+|   10 |  20.2529469544 |                  NaN |              — |        21 |          100 |
+|   24 | 116.3363305574 |                  NaN |              — |        26 |          100 |
+
+### Interpretation
+
+- The custom FEniCS implementation is accurate in early evolution on both levels but loses robustness as deformation accumulates.
+- Failure happens earlier on level 2 (step 10) than on level 1 (step 20), so stabilization should target level-2 robustness first before further SNES level-2 comparisons.
+
+---
+
+## 4) SNES configuration survey (Phase 2, single-step)
 
 Sweep completed on level 1 using:
 - [experiment_scripts/bench_he_snes_phase2.py](experiment_scripts/bench_he_snes_phase2.py)
@@ -97,7 +155,7 @@ Notes:
 
 ---
 
-## 4) Workflow continuation (as planned)
+## 5) Workflow continuation (as planned)
 
 ### Phase 2 (next): focus sweep on level 2 using survivors
 
@@ -122,3 +180,208 @@ Acceptance criterion remains:
 ### Phase 5: validate on level 2
 - Repeat full evolution with custom Newton and surviving SNES configs.
 - Compare stability, energy agreement, and iteration growth.
+
+---
+
+## 6) Failure investigation: restart from JAX states (level 1)
+
+Goal: identify why custom FEniCS fails in late steps while JAX converges.
+
+### Data generation (JAX)
+
+Added [experiment_scripts/gen_he_jax_testdata.py](experiment_scripts/gen_he_jax_testdata.py) to export restart-ready fields:
+- `coords`: nodal coordinates
+- `u_full_steps`: full **deformed coordinates** per step (all nodes)
+
+Artifacts:
+- [experiment_scripts/he_jax_testdata_l1.npz](experiment_scripts/he_jax_testdata_l1.npz)
+- [experiment_scripts/he_jax_testdata_l1.json](experiment_scripts/he_jax_testdata_l1.json)
+
+### Restart tests in custom FEniCS (`maxit=1000`)
+
+Runs:
+- Step 20 from JAX step 19 state
+- Step 24 from JAX step 23 state
+
+Outputs:
+- [experiment_scripts/he_custom_restart_step20_maxit1000.json](experiment_scripts/he_custom_restart_step20_maxit1000.json)
+- [experiment_scripts/he_custom_restart_step24_maxit1000.json](experiment_scripts/he_custom_restart_step24_maxit1000.json)
+
+Important correction:
+- Initial restart loader was wrong in two ways:
+	1) It treated JAX fields as displacements (they are deformed coordinates).
+	2) It injected values via raw vector indexing with incorrect vector-DOF assumptions.
+- Loader was fixed to interpolate by coordinates and convert to displacement (`u = x_deformed - X_ref`).
+
+Validation of corrected restart mapping:
+- Step 2 from JAX step 1 now converges correctly to the reference energy:
+	- [experiment_scripts/he_custom_restart_step2_from1_check.json](experiment_scripts/he_custom_restart_step2_from1_check.json)
+	- energy `1.385634`, iters `18`.
+
+Corrected restart results:
+- Step 20 from JAX step 19, `maxit=1000`:
+	- [experiment_scripts/he_custom_restart_step20_maxit1000_fixedinit.json](experiment_scripts/he_custom_restart_step20_maxit1000_fixedinit.json)
+	- converged, energy `137.392333`, iters `22`.
+- Step 24 from JAX step 23, `maxit=1000`:
+	- [experiment_scripts/he_custom_restart_step24_maxit1000_fixedinit.json](experiment_scripts/he_custom_restart_step24_maxit1000_fixedinit.json)
+	- failed (`energy=NaN`, max iterations reached).
+
+### Why step 24 fails (root cause)
+
+Observed at step 24 (verbose trace):
+- NaN appears immediately after Newton update 1.
+- With original line search, `alpha` sticks near upper bound (`~2.0`) once energies become NaN.
+
+Line-search stabilization added:
+- `tools_petsc4py/minimizers.py` now treats non-finite trial energies as `+inf` and backtracks to finite steps.
+
+Even with NaN-safe line-search:
+- Default `CG + HYPRE` still fails at step 24:
+	- [experiment_scripts/he_custom_restart_step24_cg_after_lsfix.json](experiment_scripts/he_custom_restart_step24_cg_after_lsfix.json)
+	- no NaN, but diverges to very large energy.
+
+KSP/PC A/B tests at step 24 with same corrected initial state:
+- `GMRES + HYPRE`, `ksp_rtol=1e-6`:
+	- [experiment_scripts/he_custom_restart_step24_gmres_hypre_r1e6.json](experiment_scripts/he_custom_restart_step24_gmres_hypre_r1e6.json)
+	- converged, energy `197.748436` (matches JAX `197.748635`), iters `23`.
+- `preonly + LU`:
+	- [experiment_scripts/he_custom_restart_step24_preonly_lu.json](experiment_scripts/he_custom_restart_step24_preonly_lu.json)
+	- converged, energy `197.748420`, iters `23`.
+
+Conclusion:
+- The previous “step 20 + 24 both fail at `maxit=1000`” conclusion was invalid due to restart-state loading bugs.
+- After fixing restart loading, step 20 converges and step 24 isolates the true issue.
+- Primary failure driver is **linear solve choice** in the custom Newton path at high deformation: `CG+HYPRE` is not robust there, while `GMRES+HYPRE` (tight tolerance) or LU recovers the correct solution.
+- Secondary issue was line-search handling of non-finite energies; this is now guarded in the PETSc minimizer.
+
+---
+
+## 7) Step-24 convergence profiles and inner-precision sweep
+
+Requested sweep for level 1, step 24 (restart from step 23) over:
+- `ksp_rtol = 1e-1, 1e-2, 1e-3, 1e-4, 1e-5, 1e-6`
+- KSP types: `cg`, `gmres`
+- PC type: `hypre`
+
+Automation script:
+- [experiment_scripts/sweep_he_custom_step24_precision.py](experiment_scripts/sweep_he_custom_step24_precision.py)
+
+Outputs:
+- [experiment_scripts/he_step24_precision_sweep/step24_precision_summary.md](experiment_scripts/he_step24_precision_sweep/step24_precision_summary.md)
+- [experiment_scripts/he_step24_precision_sweep/step24_precision_summary.json](experiment_scripts/he_step24_precision_sweep/step24_precision_summary.json)
+- [experiment_scripts/he_step24_precision_sweep/step24_convergence_profiles.csv](experiment_scripts/he_step24_precision_sweep/step24_convergence_profiles.csv)
+
+### Sweep summary
+
+| KSP           | ksp_rtol range  | Convergence status                  | Typical final energy                             |
+| ------------- | --------------- | ----------------------------------- | ------------------------------------------------ |
+| `cg+hypre`    | `1e-1 ... 1e-6` | all runs hit max Newton iters (300) | large non-physical values (`~3.2e6` to `~6.8e7`) |
+| `gmres+hypre` | `1e-1 ... 1e-6` | all runs converged                  | `197.7484...`                                    |
+
+### Convergence-profile notes
+
+- Per-iteration profiles now include: energy, `dE`, gradient norm, line-search `alpha`, inner `ksp_its`, and line-search eval count.
+- Example diverging profile (`cg`, `1e-3`):
+	- [experiment_scripts/he_step24_precision_sweep/step24_cg_rtol_1e-03.json](experiment_scripts/he_step24_precision_sweep/step24_cg_rtol_1e-03.json)
+- Example converged profile (`gmres`, `1e-6`):
+	- [experiment_scripts/he_step24_precision_sweep/step24_gmres_rtol_1e-06.json](experiment_scripts/he_step24_precision_sweep/step24_gmres_rtol_1e-06.json)
+
+Interpretation:
+- Tightening inner tolerance alone does not rescue `cg+hypre` at step 24.
+- Changing Krylov method to `gmres` is the key factor for robustness in this late nonlinear regime.
+
+---
+
+## 8) Recompute campaign progress (1:1 comparable tables)
+
+Requested sequence: first level 1, start from JAX, then custom-GMRES and level 2.
+
+### 8.1 JAX level 1 (fresh rerun, serial)
+
+Run command:
+- `PYTHONPATH=. /tmp/jaxenv/bin/python experiment_scripts/run_he_jax_evolution.py --level 1 --steps 24 --out experiment_scripts/he_jax_evolution_l1_recompute_gmres_compare.json`
+
+Output:
+- [experiment_scripts/he_jax_evolution_l1_recompute_gmres_compare.json](experiment_scripts/he_jax_evolution_l1_recompute_gmres_compare.json)
+
+Runtime summary:
+- total measured step time: `28.8091 s`
+- slowest step: `step 24`, `2.0587 s`
+- fastest step: `step 3`, `0.9354 s`
+
+| Step | Time [s] | Newton iters |         Energy | Message                               |
+| ---: | -------: | -----------: | -------------: | ------------------------------------- |
+|    1 |   0.9555 |           18 |   0.3464113962 | Stopping condition for f is satisfied |
+|    2 |   0.9883 |           18 |   1.3856347792 | Stopping condition for f is satisfied |
+|    3 |   0.9354 |           18 |   3.1173389157 | Stopping condition for f is satisfied |
+|    4 |   0.9383 |           17 |   5.5401476466 | Stopping condition for f is satisfied |
+|    5 |   0.9902 |           19 |   8.6504988097 | Stopping condition for f is satisfied |
+|    6 |   1.0675 |           20 |  12.4422658099 | Stopping condition for f is satisfied |
+|    7 |   1.3990 |           22 |  16.9115637817 | Stopping condition for f is satisfied |
+|    8 |   1.1646 |           23 |  22.0617389409 | Stopping condition for f is satisfied |
+|    9 |   1.1146 |           21 |  27.8989757279 | Stopping condition for f is satisfied |
+|   10 |   1.1420 |           21 |  34.4264986836 | Stopping condition for f is satisfied |
+|   11 |   1.1005 |           20 |  41.6441021195 | Stopping condition for f is satisfied |
+|   12 |   1.3005 |           21 |  49.5500693409 | Stopping condition for f is satisfied |
+|   13 |   1.0327 |           19 |  58.1426609931 | Stopping condition for f is satisfied |
+|   14 |   1.2174 |           22 |  67.4207907906 | Stopping condition for f is satisfied |
+|   15 |   1.2823 |           23 |  77.3830591107 | Stopping condition for f is satisfied |
+|   16 |   1.2632 |           22 |  88.0180575975 | Stopping condition for f is satisfied |
+|   17 |   1.2160 |           22 |  99.3269874951 | Stopping condition for f is satisfied |
+|   18 |   1.0924 |           21 | 111.3262030649 | Stopping condition for f is satisfied |
+|   19 |   1.1635 |           22 | 124.0155386580 | Stopping condition for f is satisfied |
+|   20 |   1.1919 |           22 | 137.3923331636 | Stopping condition for f is satisfied |
+|   21 |   1.2581 |           22 | 151.4552317421 | Stopping condition for f is satisfied |
+|   22 |   1.4789 |           24 | 166.2042207199 | Stopping condition for f is satisfied |
+|   23 |   1.4576 |           22 | 181.6387101832 | Stopping condition for f is satisfied |
+|   24 |   2.0587 |           34 | 197.7486351731 | Stopping condition for f is satisfied |
+
+Next in this section:
+- level-1 custom rerun with default `gmres+hypre`
+- then level-2 JAX and level-2 custom, using the same table format for direct 1:1 comparison.
+
+### 8.2 Custom FEniCS level 1 (fresh rerun, default `gmres+hypre`, serial)
+
+Run command:
+- `docker run --rm --entrypoint python3 -v "$PWD":/workspace -w /workspace fenics_test HyperElasticity3D_fenics/solve_HE_custom_jaxversion.py --level 1 --steps 24 --out experiment_scripts/he_fenics_custom_evolution_l1_recompute_gmres_compare.json --quiet`
+
+Output:
+- [experiment_scripts/he_fenics_custom_evolution_l1_recompute_gmres_compare.json](experiment_scripts/he_fenics_custom_evolution_l1_recompute_gmres_compare.json)
+
+Runtime summary:
+- total measured step time: `725.0245 s`
+- slowest step: `step 24`, `85.6920 s`
+- fastest step: `step 13`, `4.5460 s`
+
+### 8.3 Level-1 1:1 table (JAX vs custom-GMRES)
+
+| Step | JAX time [s] | Custom time [s] | JAX iters | Custom iters |     JAX energy | Custom energy | Relative error |
+| ---: | -----------: | --------------: | --------: | -----------: | -------------: | ------------: | -------------: |
+|    1 |       0.9555 |          5.0714 |        18 |           19 |   0.3464113962 |      0.346411 |       3.96e-07 |
+|    2 |       0.9883 |          5.6412 |        18 |           19 |   1.3856347792 |      1.385634 |       5.62e-07 |
+|    3 |       0.9354 |          5.0659 |        18 |           18 |   3.1173389157 |      3.117339 |       2.71e-08 |
+|    4 |       0.9383 |         27.3454 |        17 |           19 |   5.5401476466 |      5.540148 |       6.38e-08 |
+|    5 |       0.9902 |         28.0728 |        19 |           19 |   8.6504988097 |      8.650499 |       2.20e-08 |
+|    6 |       1.0675 |         25.1509 |        20 |           20 |  12.4422658099 |     12.442266 |       1.53e-08 |
+|    7 |       1.3990 |         24.8665 |        22 |           21 |  16.9115637817 |     16.911564 |       1.29e-08 |
+|    8 |       1.1646 |         25.8568 |        23 |           23 |  22.0617389409 |     22.061739 |       2.68e-09 |
+|    9 |       1.1146 |         24.0720 |        21 |           21 |  27.8989757279 |     27.898976 |       9.75e-09 |
+|   10 |       1.1420 |         24.4781 |        21 |           20 |  34.4264986836 |     34.426499 |       9.19e-09 |
+|   11 |       1.1005 |          5.1904 |        20 |           19 |  41.6441021195 |     41.644102 |       2.87e-09 |
+|   12 |       1.3005 |          5.2935 |        21 |           21 |  49.5500693409 |     49.550069 |       6.88e-09 |
+|   13 |       1.0327 |          4.5460 |        19 |           17 |  58.1426609931 |     58.142661 |       1.18e-10 |
+|   14 |       1.2174 |         57.9293 |        22 |           23 |  67.4207907906 |     67.420791 |       3.11e-09 |
+|   15 |       1.2823 |         25.9168 |        23 |           22 |  77.3830591107 |     77.383059 |       1.43e-09 |
+|   16 |       1.2632 |         43.6188 |        22 |           23 |  88.0180575975 |     88.018058 |       4.57e-09 |
+|   17 |       1.2160 |          8.0892 |        22 |           23 |  99.3269874951 |     99.326987 |       4.98e-09 |
+|   18 |       1.0924 |         24.1944 |        21 |           22 | 111.3262030649 |    111.326204 |       8.40e-09 |
+|   19 |       1.1635 |         39.5289 |        22 |           19 | 124.0155386580 |    124.015540 |       1.08e-08 |
+|   20 |       1.1919 |         40.6994 |        22 |           19 | 137.3923331636 |    137.392334 |       6.09e-09 |
+|   21 |       1.2581 |         55.0695 |        22 |           22 | 151.4552317421 |    151.455233 |       8.31e-09 |
+|   22 |       1.4789 |         59.6499 |        24 |           21 | 166.2042207199 |    166.204220 |       4.33e-09 |
+|   23 |       1.4576 |         73.9854 |        22 |           20 | 181.6387101832 |    181.638762 |       2.85e-07 |
+|   24 |       2.0587 |         85.6920 |        34 |           39 | 197.7486351731 |    197.748593 |       2.13e-07 |
+
+Level-1 summary (fresh rerun):
+- custom-GMRES converges all 24 steps and matches JAX energies closely (`max relative error ≈ 5.62e-7`).
+- measured cumulative time ratio is `custom/JAX ≈ 25.17x` for this serial run.
