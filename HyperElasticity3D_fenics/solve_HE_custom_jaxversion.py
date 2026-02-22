@@ -51,18 +51,12 @@ def _ghost_update(v):
 
 def build_nullspace(V, A):
     """Build the 6 rigid body modes for 3D elasticity."""
-    # Get the coordinates of DOFs
     x = V.tabulate_dof_coordinates()
-
     index_map = V.dofmap.index_map
-    bs = V.dofmap.index_map_bs
-
-    # Only use owned nodes
     x_owned = x[:index_map.size_local, :]
 
     print("Creating vectors...", flush=True)
-    from dolfinx.fem.petsc import create_vector
-    vecs = [create_vector(V) for _ in range(6)]
+    vecs = [A.createVecLeft() for _ in range(6)]
 
     for i, vec in enumerate(vecs):
         with vec.localForm() as loc:
@@ -78,24 +72,23 @@ def build_nullspace(V, A):
     # Rotations
     # Mode 3: rotation about x-axis
     with vecs[3].localForm() as loc:
-        loc.array[1::3] = -x[:, 2]
-        loc.array[2::3] = x[:, 1]
+        loc.array[1::3] = -x_owned[:, 2]
+        loc.array[2::3] = x_owned[:, 1]
 
     # Mode 4: rotation about y-axis
     with vecs[4].localForm() as loc:
-        loc.array[0::3] = x[:, 2]
-        loc.array[2::3] = -x[:, 0]
+        loc.array[0::3] = x_owned[:, 2]
+        loc.array[2::3] = -x_owned[:, 0]
 
     # Mode 5: rotation about z-axis
     with vecs[5].localForm() as loc:
-        loc.array[0::3] = -x[:, 1]
-        loc.array[1::3] = x[:, 0]
+        loc.array[0::3] = -x_owned[:, 1]
+        loc.array[1::3] = x_owned[:, 0]
 
     for vec in vecs:
         vec.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
 
     print("Creating NullSpace...", flush=True)
-    return PETSc.NullSpace().create(vectors=vecs)
     return PETSc.NullSpace().create(vectors=vecs)
 
 # ---------------------------------------------------------------------------
@@ -142,7 +135,11 @@ def _set_initial_from_jax_npz(V, u, npz_path, init_step):
 def run_level(mesh_level, num_steps=1, verbose=True, maxit=100, start_step=1,
               init_npz="", init_step=0, linesearch_interval=(-0.5, 2.0),
               use_abs_det=False, ksp_type="gmres", pc_type="hypre",
-              ksp_rtol=1e-3, save_history=False):
+              ksp_rtol=1e-3, ksp_max_it=10000, use_near_nullspace=True,
+              hypre_nodal_coarsen=6, hypre_vec_interp_variant=3,
+              hypre_strong_threshold=None, hypre_coarsen_type="",
+              save_history=False, save_linear_timing=False,
+              pc_setup_on_ksp_cap=False):
     """Run JAX-version Newton solver for one HE mesh level.
 
     Returns dict with: mesh_level, total_dofs, time, iters, energy, message
@@ -228,11 +225,12 @@ def run_level(mesh_level, num_steps=1, verbose=True, maxit=100, start_step=1,
     print("Creating matrix...", flush=True)
     A = create_matrix(hessian_form)
 
-    # Set near null space for HYPRE
-    print("Building nullspace...", flush=True)
-    nullspace = build_nullspace(V, A)
-    print("Setting near nullspace...", flush=True)
-    A.setNearNullSpace(nullspace)
+    nullspace = None
+    if use_near_nullspace:
+        print("Building nullspace...", flush=True)
+        nullspace = build_nullspace(V, A)
+        print("Setting near nullspace...", flush=True)
+        A.setNearNullSpace(nullspace)
 
     print("Creating KSP...", flush=True)
     ksp = PETSc.KSP().create(msh.comm)
@@ -245,15 +243,23 @@ def run_level(mesh_level, num_steps=1, verbose=True, maxit=100, start_step=1,
     # Tell HYPRE it's 3D elasticity
     opts = PETSc.Options()
     if pc_type == "hypre":
-        opts["pc_hypre_boomeramg_nodal_coarsen"] = 6
-        opts["pc_hypre_boomeramg_vec_interp_variant"] = 3
+        if hypre_nodal_coarsen >= 0:
+            opts["pc_hypre_boomeramg_nodal_coarsen"] = hypre_nodal_coarsen
+        if hypre_vec_interp_variant >= 0:
+            opts["pc_hypre_boomeramg_vec_interp_variant"] = hypre_vec_interp_variant
+        if hypre_strong_threshold is not None:
+            opts["pc_hypre_boomeramg_strong_threshold"] = hypre_strong_threshold
+        if hypre_coarsen_type:
+            opts["pc_hypre_boomeramg_coarsen_type"] = hypre_coarsen_type
     ksp.setFromOptions()
 
-    ksp.setTolerances(rtol=ksp_rtol)
+    ksp.setTolerances(rtol=ksp_rtol, max_it=ksp_max_it)
 
     # ------------------------------------------------------------------
     # Callbacks for tools_petsc4py.minimizers.newton
     # ------------------------------------------------------------------
+    linear_timing_records = []
+    force_pc_setup_next = True
 
     def energy_fn(vec):
         """J(u) at an arbitrary PETSc Vec (globally reduced scalar)."""
@@ -275,16 +281,44 @@ def run_level(mesh_level, num_steps=1, verbose=True, maxit=100, start_step=1,
 
     def hessian_solve_fn(vec, rhs, sol):
         """Assemble Hessian, solve H · sol = rhs. Return KSP iters."""
+        nonlocal force_pc_setup_next
         print("Assembling Hessian...", flush=True)
+        t0 = time.perf_counter()
         A.zeroEntries()
         assemble_matrix(A, hessian_form, bcs=bcs)
         A.assemble()
+        t1 = time.perf_counter()
         print("Setting operators...", flush=True)
         ksp.setOperators(A)
+        t2 = time.perf_counter()
+        if pc_setup_on_ksp_cap:
+            if force_pc_setup_next:
+                ksp.setUp()
+                force_pc_setup_next = False
+            t3 = time.perf_counter()
+        else:
+            ksp.setUp()
+            t3 = time.perf_counter()
         print("Solving KSP...", flush=True)
         ksp.solve(rhs, sol)
+        t4 = time.perf_counter()
         print("KSP solved.", flush=True)
-        return ksp.getIterationNumber()
+
+        ksp_its = ksp.getIterationNumber()
+        if pc_setup_on_ksp_cap and ksp_its >= ksp_max_it:
+            force_pc_setup_next = True
+
+        if save_linear_timing:
+            linear_timing_records.append(
+                {
+                    "assemble_time": round(t1 - t0, 6),
+                    "setop_time": round(t2 - t1, 6),
+                    "pc_setup_time": round(t3 - t2, 6),
+                    "solve_time": round(t4 - t3, 6),
+                    "linear_total_time": round(t4 - t0, 6),
+                }
+            )
+        return ksp_its
 
     # ---- time evolution ----
     rotation_per_iter = 4 * 2 * np.pi / 24
@@ -343,6 +377,9 @@ def run_level(mesh_level, num_steps=1, verbose=True, maxit=100, start_step=1,
         }
         if save_history:
             step_record["history"] = result.get("history", [])
+        if save_linear_timing:
+            step_record["linear_timing"] = linear_timing_records.copy()
+            linear_timing_records.clear()
         results.append(step_record)
 
         if rank == 0 and verbose:
@@ -351,7 +388,8 @@ def run_level(mesh_level, num_steps=1, verbose=True, maxit=100, start_step=1,
     # ---- clean up PETSc objects ----
     ksp.destroy()
     A.destroy()
-    nullspace.destroy()
+    if nullspace is not None:
+        nullspace.destroy()
 
     return {
         "mesh_level": mesh_level,
@@ -374,10 +412,24 @@ if __name__ == "__main__":
     parser.add_argument("--ksp_type", type=str, default="gmres", help="PETSc KSP type")
     parser.add_argument("--pc_type", type=str, default="hypre", help="PETSc PC type")
     parser.add_argument("--ksp_rtol", type=float, default=1e-3, help="KSP relative tolerance")
+    parser.add_argument("--ksp_max_it", type=int, default=10000, help="KSP maximum iterations per Newton step")
+    parser.add_argument("--no_near_nullspace", action="store_true", help="Disable elasticity near-nullspace on Hessian")
+    parser.add_argument("--hypre_nodal_coarsen", type=int, default=6, help="BoomerAMG nodal coarsen (-1 to skip setting)")
+    parser.add_argument("--hypre_vec_interp_variant", type=int, default=3, help="BoomerAMG vector interpolation variant (-1 to skip setting)")
+    parser.add_argument("--hypre_strong_threshold", type=float, default=None, help="BoomerAMG strong threshold")
+    parser.add_argument("--hypre_coarsen_type", type=str, default="", help="BoomerAMG coarsen type (e.g. HMIS, PMIS)")
     parser.add_argument(
         "--save_history",
         action="store_true",
         help="Include per-iteration Newton profile in output JSON")
+    parser.add_argument(
+        "--save_linear_timing",
+        action="store_true",
+        help="Include per-Newton linear timing breakdown in output JSON")
+    parser.add_argument(
+        "--pc_setup_on_ksp_cap",
+        action="store_true",
+        help="Only run KSP/PC setup when previous linear solve hit ksp_max_it (first solve always sets up)")
     parser.add_argument("--out", type=str, default="", help="Output JSON file")
     parser.add_argument("--quiet", action="store_true")
     args = parser.parse_args()
@@ -395,7 +447,15 @@ if __name__ == "__main__":
         ksp_type=args.ksp_type,
         pc_type=args.pc_type,
         ksp_rtol=args.ksp_rtol,
+        ksp_max_it=args.ksp_max_it,
+        use_near_nullspace=not args.no_near_nullspace,
+        hypre_nodal_coarsen=args.hypre_nodal_coarsen,
+        hypre_vec_interp_variant=args.hypre_vec_interp_variant,
+        hypre_strong_threshold=args.hypre_strong_threshold,
+        hypre_coarsen_type=args.hypre_coarsen_type,
         save_history=args.save_history,
+        save_linear_timing=args.save_linear_timing,
+        pc_setup_on_ksp_cap=args.pc_setup_on_ksp_cap,
     )
 
     if MPI.COMM_WORLD.rank == 0:
