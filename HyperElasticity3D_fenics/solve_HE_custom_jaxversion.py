@@ -414,8 +414,10 @@ if __name__ == "__main__":
     parser.add_argument("--ksp_rtol", type=float, default=1e-3, help="KSP relative tolerance")
     parser.add_argument("--ksp_max_it", type=int, default=10000, help="KSP maximum iterations per Newton step")
     parser.add_argument("--no_near_nullspace", action="store_true", help="Disable elasticity near-nullspace on Hessian")
-    parser.add_argument("--hypre_nodal_coarsen", type=int, default=6, help="BoomerAMG nodal coarsen (-1 to skip setting)")
-    parser.add_argument("--hypre_vec_interp_variant", type=int, default=3, help="BoomerAMG vector interpolation variant (-1 to skip setting)")
+    parser.add_argument("--hypre_nodal_coarsen", type=int, default=6,
+                        help="BoomerAMG nodal coarsen (-1 to skip setting)")
+    parser.add_argument("--hypre_vec_interp_variant", type=int, default=3,
+                        help="BoomerAMG vector interpolation variant (-1 to skip setting)")
     parser.add_argument("--hypre_strong_threshold", type=float, default=None, help="BoomerAMG strong threshold")
     parser.add_argument("--hypre_coarsen_type", type=str, default="", help="BoomerAMG coarsen type (e.g. HMIS, PMIS)")
     parser.add_argument(
