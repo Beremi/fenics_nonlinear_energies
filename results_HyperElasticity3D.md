@@ -435,6 +435,78 @@ Summary: total time = `16.9981 s`, total Newton iters = `635`, total linear iter
 
 Summary: total time = `14.6130 s`, total Newton iters = `657`, total linear iters = `10762`, max relative error = `1.07e-04`, mean relative error = `7.78e-06`.
 
+### Level 3 — Custom FEniCS MPI nproc=16
+
+Artifact:
+- [experiment_scripts/he_fenics_custom_evolution_l3_skip_ksp30_pc_cap_np16.json](experiment_scripts/he_fenics_custom_evolution_l3_skip_ksp30_pc_cap_np16.json)
+
+No level-3 JAX reference trajectory is available in this report yet, so relative error vs JAX is reported as `—`.
+
+| Step | Time [s] | Newton iters | Sum linear iters | Energy | Relative error vs JAX | Status |
+|---:|---:|---:|---:|---:|---:|---|
+| 1 | 4.7440 | 26 | 323 | 0.1625750000 | — | Energy change converged |
+| 2 | 5.1946 | 27 | 332 | 0.6502440000 | — | Energy change converged |
+| 3 | 5.2324 | 27 | 339 | 1.4630780000 | — | Energy change converged |
+| 4 | 5.5783 | 28 | 369 | 2.6011410000 | — | Energy change converged |
+| 5 | 5.5568 | 28 | 369 | 4.0645120000 | — | Energy change converged |
+| 6 | 5.5878 | 28 | 362 | 5.8532820000 | — | Energy change converged |
+| 7 | 6.0551 | 29 | 429 | 7.9675450000 | — | Energy change converged |
+| 8 | 6.0837 | 28 | 435 | 10.4074380000 | — | Energy change converged |
+| 9 | 5.7178 | 28 | 377 | 13.1730700000 | — | Energy change converged |
+| 10 | 6.0522 | 28 | 432 | 16.2645250000 | — | Energy change converged |
+| 11 | 5.8020 | 26 | 415 | 19.6818740000 | — | Energy change converged |
+| 12 | 5.9056 | 27 | 424 | 23.4251650000 | — | Energy change converged |
+| 13 | 5.7986 | 27 | 409 | 27.4943760000 | — | Energy change converged |
+| 14 | 5.8379 | 27 | 415 | 31.8894140000 | — | Energy change converged |
+| 15 | 4.8552 | 25 | 301 | 36.6099980000 | — | Energy change converged |
+| 16 | 9.0974 | 37 | 737 | 41.6541600000 | — | Energy change converged |
+| 17 | 6.7359 | 30 | 515 | 47.0225850000 | — | Energy change converged |
+| 18 | 5.6796 | 26 | 406 | 52.7168850000 | — | Energy change converged |
+| 19 | 6.1056 | 27 | 461 | 58.7367310000 | — | Energy change converged |
+| 20 | 6.5124 | 27 | 509 | 65.0818470000 | — | Energy change converged |
+| 21 | 6.8496 | 29 | 529 | 71.7518310000 | — | Energy change converged |
+| 22 | 6.3764 | 28 | 468 | 78.7463110000 | — | Energy change converged |
+| 23 | 5.9168 | 26 | 410 | 86.0644680000 | — | Energy change converged |
+| 24 | 6.2964 | 27 | 428 | 93.7051150000 | — | Energy change converged |
+
+Summary: total time = `143.5721 s`, total Newton iters = `666`, total linear iters = `10194`.
+
+### Level 4 — Custom FEniCS MPI nproc=16
+
+Artifact:
+- [experiment_scripts/he_fenics_custom_evolution_l4_skip_ksp30_pc_cap_np16.json](experiment_scripts/he_fenics_custom_evolution_l4_skip_ksp30_pc_cap_np16.json)
+
+No level-4 JAX reference trajectory is available in this report yet, so relative error vs JAX is reported as `—`.
+
+| Step | Time [s] | Newton iters | Sum linear iters | Energy | Relative error vs JAX | Status |
+|---:|---:|---:|---:|---:|---:|---|
+| 1 | 91.7594 | 28 | 350 | 0.1519710000 | — | Energy change converged |
+| 2 | 133.1481 | 31 | 491 | 0.6078930000 | — | Energy change converged |
+| 3 | 101.2237 | 28 | 378 | 1.3678100000 | — | Energy change converged |
+| 4 | 102.3104 | 28 | 373 | 2.4318070000 | — | Energy change converged |
+| 5 | 115.4161 | 30 | 430 | 3.7999700000 | — | Energy change converged |
+| 6 | 105.7331 | 29 | 377 | 5.4724480000 | — | Energy change converged |
+| 7 | 126.1320 | 31 | 466 | 7.4493840000 | — | Energy change converged |
+| 8 | 129.5468 | 31 | 442 | 9.7309880000 | — | Energy change converged |
+| 9 | 116.9576 | 29 | 417 | 12.3173970000 | — | Energy change converged |
+| 10 | 106.0879 | 28 | 379 | 15.2088840000 | — | Energy change converged |
+| 11 | 111.6968 | 28 | 406 | 18.4055980000 | — | Energy change converged |
+| 12 | 116.9532 | 28 | 433 | 21.9074750000 | — | Energy change converged |
+| 13 | 120.7920 | 29 | 455 | 25.7143880000 | — | Energy change converged |
+| 14 | 68.6393 | 17 | 258 | 29.9425350000 | — | Energy change converged |
+| 15 | 110.0916 | 32 | 384 | 34.2432770000 | — | Energy change converged |
+| 16 | 116.2453 | 30 | 428 | 38.9651580000 | — | Energy change converged |
+| 17 | 114.3216 | 29 | 421 | 43.9918990000 | — | Energy change converged |
+| 18 | 107.6639 | 28 | 414 | 49.3237070000 | — | Energy change converged |
+| 19 | 115.4159 | 30 | 446 | 54.9608540000 | — | Energy change converged |
+| 20 | 21.1442 | 14 | 20 | 71.3995850000 | — | Energy change converged |
+| 21 | 183.2629 | 100 | 142 | nan | — | Maximum number of iterations reached |
+| 22 | 177.6202 | 100 | 124 | nan | — | Maximum number of iterations reached |
+| 23 | 178.1935 | 100 | 140 | nan | — | Maximum number of iterations reached |
+| 24 | 178.2756 | 100 | 141 | nan | — | Maximum number of iterations reached |
+
+Summary: total time = `2848.6311 s`, total Newton iters = `958`, total linear iters = `8315`.
+
 ---
 
 ## Annex A) Diagnostic experiments and solver forensics
