@@ -41,10 +41,10 @@ with $\varepsilon = 0.01$ on $[-1,1]^2$. This is a **non-convex** energy (indefi
 | Solver                             | Location                                                    | Parallelism |
 | ---------------------------------- | ----------------------------------------------------------- | ----------- |
 | **Custom Newton** (recommended)    | `GinzburgLandau2D_fenics/solve_GL_custom_jaxversion.py`     | MPI         |
-| **SNES Newton** (unreliable)       | `GinzburgLandau2D_fenics/solve_GL_snes_newton.py`           | MPI†        |
+| **SNES Newton**                    | `GinzburgLandau2D_fenics/solve_GL_snes_newton.py`           | MPI         |
 | **JAX Newton** (auto-diff + PyAMG) | `GinzburgLandau2D_jax/` + `example_GinzburgLandau2D_jax.ipynb` | single CPU  |
 
-†SNES with basic line search is unreliable for non-convex problems — often diverges or converges to wrong local minima, especially in parallel. The **Custom Newton** uses a golden-section energy line search that guarantees energy decrease, making it robust for non-convex problems.
+The **SNES Newton** uses trust-region Newton (`newtontr`) with FGMRES + ASM/ILU preconditioning and loose inner tolerance (`ksp_rtol=1e-1`). This was the only SNES configuration found to be reliable across all mesh sizes and MPI decompositions (see [results_GinzburgLandau2D.md](results_GinzburgLandau2D.md) for the full configuration survey). The **Custom Newton** uses a golden-section energy line search and remains the fastest option (6 iterations at all levels).
 
 Benchmark results: [results_GinzburgLandau2D.md](results_GinzburgLandau2D.md)
 How to run: [instructions.md](instructions.md)
@@ -86,7 +86,7 @@ FEniCS solvers require **DOLFINx >= 0.10** with PETSc. JAX solvers require **JAX
 │   └── jax_energy.py, mesh.py         #   Energy + mesh loader
 │
 ├── GinzburgLandau2D_fenics/           # FEniCS solvers for Ginzburg-Landau 2D
-│   ├── solve_GL_snes_newton.py        #   SNES Newton (unreliable for non-convex)
+│   ├── solve_GL_snes_newton.py        #   SNES Newton (newtontr + ASM/ILU)
 │   ├── solve_GL_custom_jaxversion.py  #   Custom Newton (recommended, uses tools_petsc4py)
 │   └── export_GL_meshes.py            #   HDF5 → XDMF mesh converter
 │

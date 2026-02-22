@@ -4,7 +4,7 @@ Benchmark results for the 2D Ginzburg-Landau problem with $\varepsilon = 0.01$, 
 
 $$J(u) = \int_\Omega \frac{\varepsilon}{2} |\nabla u|^2 + \frac{1}{4}(u^2 - 1)^2 \, \mathrm{d}x$$
 
-This is a **non-convex** energy — the Hessian is indefinite, so CG cannot be used for the linear solve; GMRES is required. The non-convexity also makes standard SNES Newton (full-step) unreliable, especially in parallel.
+This is a **non-convex** energy — the Hessian is indefinite, so CG cannot be used for the linear solve; GMRES/FGMRES is required. The non-convexity makes most standard SNES configurations unreliable, especially in parallel. An extensive configuration survey (see [Appendix](#appendix--snes-configuration-survey-sine-initial-guess)) identified trust-region Newton with ASM/ILU and loose KSP tolerance as the only fully reliable SNES setup.
 
 Raw data is stored as JSON files in [results_GL/](results_GL/). See [instructions.md](instructions.md) for how to run new experiments.
 
@@ -43,35 +43,34 @@ Script: [`GinzburgLandau2D_fenics/solve_GL_custom_jaxversion.py`](GinzburgLandau
 
 Script: [`GinzburgLandau2D_fenics/solve_GL_snes_newton.py`](GinzburgLandau2D_fenics/solve_GL_snes_newton.py)
 
-Uses PETSc SNES with basic line search (full Newton step), GMRES + HYPRE AMG.
+Uses PETSc SNES trust-region Newton (`newtontr`) with FGMRES + ASM/ILU preconditioner (`overlap=2`, `ilu(1)`). This is the **A3** configuration with `ksp_rtol=1e-1` — the only SNES setup found to be reliable across all mesh sizes and MPI decompositions (see the [Appendix survey](#appendix--snes-configuration-survey-sine-initial-guess)). Key settings: `snes_atol=1e-5`, `snes_rtol=1e-8`, `snes_max_it=100`, `SNESSetObjective` enabled.
 
-| lvl | dofs      | time (serial) | iters | J(u)   | time (4-proc) | iters | J(u)   | time (8-proc) | iters | J(u)   | time (16-proc) | iters | J(u)         |
-| --- | --------- | ------------- | ----- | ------ | ------------- | ----- | ------ | ------------- | ----- | ------ | -------------- | ----- | ------------ |
-| 5   | 4 225     | 0.244         | 71    | 0.3462 | 0.146         | 48    | 0.3462 | 0.094         | 29    | 0.3462 | 0.164          | 43    | 0.3462       |
-| 6   | 16 641    | 1.475         | 114   | 0.3458 | **FAIL**      | —     | —      | **FAIL**      | —     | —      | 0.456          | 77    | 0.3458 (1/3) |
-| 7   | 66 049    | 7.496         | 148   | 0.3457 | 1.087         | 45    | 0.3457 | **FAIL**      | —     | —      | **FAIL**       | —     | —            |
-| 8   | 263 169   | 45.151        | 218   | 0.3456 | 2.559         | 28    | 0.3456 | **FAIL**      | —     | —      | 2.453          | 68    | 0.3456 (1/3) |
-| 9   | 1 050 625 | 57.268        | 65    | 0.3456 | **FAIL**      | —     | —      | **FAIL**      | —     | —      | 7.178          | 39    | 0.3456       |
+| lvl | dofs      | time (serial) | iters | time (4-proc) | iters | time (8-proc) | iters | time (16-proc) | iters | J(u)      |
+| --- | --------- | ------------- | ----- | ------------- | ----- | ------------- | ----- | -------------- | ----- | --------- |
+| 5   | 4 225     | 0.019         | 10    | 0.008         | 11    | 0.006         | 11    | 0.005          | 11    | 0.3462324 |
+| 6   | 16 641    | 0.089         | 12    | 0.029         | 12    | 0.017         | 12    | 0.013          | 12    | 0.3457767 |
+| 7   | 66 049    | 0.478         | 15    | 0.149         | 15    | 0.087         | 16    | 0.044          | 15    | 0.3456623 |
+| 8   | 263 169   | 2.613         | 19    | 1.145         | 25    | 1.168         | 36    | 0.541          | 35    | 0.3456337 |
+| 9   | 1 050 625 | 15.27         | 25    | 14.05         | 59    | 9.18          | 59    | 7.43           | 68    | 0.3456265 |
 
-**SNES convergence issues** (non-convex problem):
-- SNES with basic line search (full Newton step) is **unreliable for non-convex problems**. The Newton direction from the indefinite Hessian may not be a descent direction, and taking a full step can increase energy dramatically.
-- **Serial**: Converges at all levels but requires 65–218 iterations. At some levels/runs it diverges (`reason=-9` = `DIVERGED_DTOL`): level 7 failed in 1 of 3 runs, level 8 failed in 2 of 3 runs.
-- **Parallel**: Highly unreliable. At 8 processes, only level 5 converges correctly. At 4 and 16 processes, some levels converge but others produce wrong energies (converged to a different local minimum, e.g. $J \approx 0.5$) or diverge entirely.
-- The `snes_divergence_tolerance = -1` option disables the DTOL check to prevent some premature divergences, but does not fix the fundamental issue.
-
-**Bottom line**: For non-convex problems like Ginzburg-Landau, **the custom Newton with energy line search is strongly recommended** over SNES basic line search.
+**Key observations**:
+- **Fully reliable** at all mesh levels (L5–L9) and all MPI process counts (1–16). This is the only SNES configuration that achieved zero failures across the entire test matrix.
+- **10–25 iterations serial**, increasing to 25–68 in parallel at L8–L9. The ASM/ILU preconditioner produces consistent Newton directions with the loose `ksp_rtol=1e-1` — tighter KSP tolerances actually hurt parallel reliability.
+- **Trust-region** (`newtontr`) handles the indefinite Hessian by adjusting the step size based on actual vs predicted energy reduction, using `SNESSetObjective` to evaluate the energy functional.
+- **Slower than Custom Newton**: At L9 serial, SNES takes 15.3 s (25 it) vs Custom Newton 10.1 s (6 it). The gap widens in parallel — at L9/16-proc: SNES 7.4 s (68 it) vs Custom 1.7 s (6 it).
+- **Why loose KSP works**: The loose inner tolerance allows FGMRES to terminate early, producing approximate Newton directions. For the trust-region method, the direction quality is less critical because the trust radius controls step size. Tighter tolerances (`ksp_rtol=1e-3`) cause failures at L9 with np≥4.
 
 ### All Solver Configurations — Summary
 
-| lvl | dofs      | Custom serial | iters | Custom 4-proc | iters | Custom 8-proc | iters | Custom 16-proc | iters | SNES serial | iters | J(u)   |
-| --- | --------- | ------------- | ----- | ------------- | ----- | ------------- | ----- | -------------- | ----- | ----------- | ----- | ------ |
-| 5   | 4 225     | 0.046         | 7     | 0.034         | 7     | 0.050         | 12    | 0.034          | 7     | 0.244       | 71    | 0.3462 |
-| 6   | 16 641    | 0.240         | 10    | 0.082         | 8     | 0.056         | 7     | 0.053          | 7     | 1.475       | 114   | 0.3458 |
-| 7   | 66 049    | 0.616         | 6     | 0.267         | 7     | 0.246         | 11    | 0.112          | 7     | 7.496       | 148   | 0.3457 |
-| 8   | 263 169   | 2.399         | 6     | 1.059         | 7     | 0.421         | 5     | 0.375          | 7     | 45.151      | 218   | 0.3456 |
-| 9   | 1 050 625 | 10.143        | 6     | 6.014         | 8     | 5.561         | 11    | 1.732          | 6     | 57.268      | 65    | 0.3456 |
+| lvl | dofs      | Custom serial | iters | Custom 16-proc | iters | SNES serial | iters | SNES 16-proc | iters | J(u)      |
+| --- | --------- | ------------- | ----- | -------------- | ----- | ----------- | ----- | ------------ | ----- | --------- |
+| 5   | 4 225     | 0.046         | 7     | 0.034          | 7     | 0.019       | 10    | 0.005        | 11    | 0.3462324 |
+| 6   | 16 641    | 0.240         | 10    | 0.053          | 7     | 0.089       | 12    | 0.013        | 12    | 0.3457767 |
+| 7   | 66 049    | 0.616         | 6     | 0.112          | 7     | 0.478       | 15    | 0.044        | 15    | 0.3456623 |
+| 8   | 263 169   | 2.399         | 6     | 0.375          | 7     | 2.613       | 19    | 0.541        | 35    | 0.3456337 |
+| 9   | 1 050 625 | 10.143        | 6     | 1.732          | 6     | 15.27       | 25    | 7.43         | 68    | 0.3456265 |
 
-The custom Newton is **5–30× faster** than SNES serial (and more reliable). At level 8, custom serial takes 2.4 s (6 iters) vs SNES 45 s (218 iters). With 16 processes the custom solver reaches 0.375 s — a **120× speedup** over SNES serial.
+Both solvers are **reliable at all levels and process counts**. The custom Newton is faster due to fewer iterations (6–12 vs 10–68), especially at large meshes: at L9/16-proc, Custom takes 1.7 s (6 it) vs SNES 7.4 s (68 it) — a **4.3× speedup**. At L5–L7 SNES is competitive (fewer dofs, iteration-count overhead is small).
 
 ### JAX Newton (serial only, no MPI)
 
@@ -399,14 +398,14 @@ PETSc does support a `SNESLINESEARCHSHELL` type for user-defined line search cal
 
 ### Takeaways
 
-1. **With the generic sine initial guess**, SNES fails or is unreliable with most configurations. The custom Newton with energy line search is the only solver that converges reliably (6–12 iterations) without any problem-specific tricks. It also supports MPI parallelism.
+1. **With the generic sine initial guess**, most SNES configurations fail or are unreliable. The custom Newton with energy line search converges reliably (6–12 iterations) without any problem-specific tricks and supports MPI parallelism. Among SNES configurations, **A3 (`newtontr` + ASM/ILU, `ksp_rtol=1e-1`) is the only setup reliable across all mesh sizes and all MPI decompositions** — this is now the default SNES solver in [`solve_GL_snes_newton.py`](GinzburgLandau2D_fenics/solve_GL_snes_newton.py).
 
 2. **A problem-specific `tanh` initial guess** transforms the convergence landscape: even the simplest SNES config (`basic`, full step) converges in 4 iterations. This is because the initial guess is already close to the correct minimum, making the Newton direction a descent direction.
 
 3. **$\varepsilon$-continuation** is a robust alternative that does not require a problem-specific initial guess. Solving for $\varepsilon = 0.1 \to 0.05 \to 0.02 \to 0.01$ with `basic` line search converges in 16–18 total iterations.
 
-4. **`newtontr` + ASM+ILU** is the only trust-region config that works at all levels. BoomerAMG interacts poorly with the indefinite Hessian in `newtontr`.
+4. **`newtontr` + ASM+ILU** (A3) is the only trust-region config that works at all levels. BoomerAMG interacts poorly with the indefinite Hessian in `newtontr`. Crucially, **loose KSP tolerance (`ksp_rtol=1e-1`) is required for parallel reliability** — tighter tolerances cause failures at L9.
 
-5. **`l2` + tight KSP** (`ksp_rtol=1e-6`) works but is slow (15–24 s at L8) because the tight KSP tolerance means expensive linear solves.
+5. **`l2` + tight KSP** (`ksp_rtol=1e-6`) works serially but is slow (15–24 s at L8) and unreliable in parallel.
 
-6. **Eisenstat–Walker + preconditioner lagging** (C3) is a surprising success: the combination of adaptive KSP tolerance and PC reuse produces a fast, reliable solver (13–37 iterations).
+6. **Eisenstat–Walker + preconditioner lagging** (C3) converges fast serially (13–37 iterations) but has insidious wrong-minimum failures in parallel (reports "converged" with incorrect energy).

@@ -6,15 +6,22 @@ homogeneous Dirichlet BCs:
 
     min_u  J(u) = ∫_Ω  ε/2 |∇u|² + 1/4 (u² − 1)²  dx
 
-with ε = 0.01.  Uses PETSc SNES with basic line search, GMRES + HYPRE AMG.
+with ε = 0.01.
 
-Note: The Ginzburg-Landau Hessian is indefinite (non-convex problem), so GMRES
-is used instead of CG.
+Uses PETSc SNES trust-region Newton (newtontr) with FGMRES + ASM/ILU
+preconditioner.  This is the most reliable SNES configuration found for this
+non-convex problem across all mesh sizes and MPI decompositions (see
+results_GinzburgLandau2D.md, configuration A3 with ksp_rtol=1e-1).
 
-WARNING: SNES basic line search (full Newton step) is unreliable for non-convex
-problems.  Convergence to the correct minimum depends on mesh level and MPI
-decomposition.  For a reliable solver see solve_GL_custom_jaxversion.py which
-uses a golden-section energy line search.
+Key settings:
+  - snes_type = newtontr  (trust-region handles indefinite Hessian)
+  - ksp_type = fgmres, ksp_rtol = 1e-1  (loose inner solve; tighter hurts parallel)
+  - pc_type = asm, overlap=2, sub_pc=ilu(1)  (robust for indefinite systems)
+  - snes_atol = 1e-5  (tightest tolerance matching reference energy)
+  - SNESSetObjective is set (required for trust-region to evaluate energy)
+
+Note: FGMRES is used because the ASM preconditioner is non-symmetric.
+The Ginzburg-Landau Hessian is indefinite (non-convex), so CG cannot be used.
 
 Runs mesh levels 5-9 by default and reports dofs, time, iterations, energy.
 
@@ -91,19 +98,23 @@ def run_level(mesh_level):
     vec.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
 
     # ---- SNES solver options ----
-    # Note: GMRES is needed because the Hessian is indefinite (non-convex energy).
-    # snes_divergence_tolerance = -1 disables the DTOL check which can trigger
-    # spuriously for non-convex problems.
+    # Trust-region Newton with FGMRES + ASM/ILU.
+    # This is the A3 config from results_GinzburgLandau2D.md — the only SNES
+    # configuration reliable across all mesh levels and MPI decompositions.
+    # Key: ksp_rtol=1e-1 (loose inner solve); tighter tolerances actually
+    # hurt parallel reliability due to inconsistent Newton directions.
     petsc_opts = {
-        "snes_type": "newtonls",
-        "snes_linesearch_type": "basic",
-        "snes_atol": 1e-6,
+        "snes_type": "newtontr",
+        "snes_atol": 1e-5,
         "snes_rtol": 1e-8,
-        "snes_max_it": 500,
-        "snes_divergence_tolerance": -1.0,
-        "ksp_type": "gmres",
-        "pc_type": "hypre",
+        "snes_max_it": 100,
+        "ksp_type": "fgmres",
         "ksp_rtol": 1e-1,
+        "ksp_max_it": 200,
+        "pc_type": "asm",
+        "pc_asm_overlap": 2,
+        "sub_pc_type": "ilu",
+        "sub_pc_factor_levels": 1,
     }
 
     problem = NonlinearProblem(
@@ -113,8 +124,24 @@ def run_level(mesh_level):
         petsc_options=petsc_opts,
     )
 
+    # SNESSetObjective — required by newtontr to evaluate the energy
+    # functional during the trust-region subproblem.
+    energy_form = fem.form(F_energy)
+
+    def objective(snes_ctx, x_vec):
+        x_vec.copy(u.x.petsc_vec)
+        u.x.petsc_vec.ghostUpdate(
+            addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
+        local_val = fem.assemble_scalar(energy_form)
+        return comm.allreduce(local_val, op=MPI.SUM)
+
+    problem.solver.setObjective(objective)
+
     start_time = time.time()
-    problem.solve()
+    try:
+        problem.solve()
+    except Exception:
+        pass  # capture SNES divergence without crashing
     total_time = time.time() - start_time
 
     snes = problem.solver
@@ -122,7 +149,7 @@ def run_level(mesh_level):
     reason = snes.getConvergedReason()
     snes.destroy()
 
-    final_energy = fem.assemble_scalar(fem.form(F_energy))
+    final_energy = fem.assemble_scalar(energy_form)
     final_energy = msh.comm.allreduce(final_energy, op=MPI.SUM)
 
     return {
@@ -174,19 +201,21 @@ def main():
             import dolfinx
             metadata = {
                 "solver": "snes_newton",
-                "description": "Built-in PETSc SNES Newton solver with basic line search, GMRES + HYPRE AMG",
+                "description": "PETSc SNES trust-region Newton (newtontr) + FGMRES + ASM/ILU",
                 "dolfinx_version": dolfinx.__version__,
                 "nprocs": nprocs,
                 "petsc_options": {
-                    "snes_type": "newtonls",
-                    "snes_linesearch_type": "basic",
-                    "snes_atol": 1e-6,
+                    "snes_type": "newtontr",
+                    "snes_atol": 1e-5,
                     "snes_rtol": 1e-8,
-                    "snes_max_it": 500,
-                    "snes_divergence_tolerance": -1.0,
-                    "ksp_type": "gmres",
-                    "pc_type": "hypre",
+                    "snes_max_it": 100,
+                    "ksp_type": "fgmres",
                     "ksp_rtol": 1e-1,
+                    "ksp_max_it": 200,
+                    "pc_type": "asm",
+                    "pc_asm_overlap": 2,
+                    "sub_pc_type": "ilu",
+                    "sub_pc_factor_levels": 1,
                 },
                 "eps": EPS,
             }
