@@ -353,35 +353,28 @@ Runtime summary:
 - slowest step: `step 24`, `85.6920 s`
 - fastest step: `step 13`, `4.5460 s`
 
-### 8.3 Level-1 1:1 table (JAX vs custom-GMRES)
+### 8.3 Step-24 only comparison (requested detailed check)
 
-| Step | JAX time [s] | Custom time [s] | JAX iters | Custom iters |     JAX energy | Custom energy | Relative error |
-| ---: | -----------: | --------------: | --------: | -----------: | -------------: | ------------: | -------------: |
-|    1 |       0.9555 |          5.0714 |        18 |           19 |   0.3464113962 |      0.346411 |       3.96e-07 |
-|    2 |       0.9883 |          5.6412 |        18 |           19 |   1.3856347792 |      1.385634 |       5.62e-07 |
-|    3 |       0.9354 |          5.0659 |        18 |           18 |   3.1173389157 |      3.117339 |       2.71e-08 |
-|    4 |       0.9383 |         27.3454 |        17 |           19 |   5.5401476466 |      5.540148 |       6.38e-08 |
-|    5 |       0.9902 |         28.0728 |        19 |           19 |   8.6504988097 |      8.650499 |       2.20e-08 |
-|    6 |       1.0675 |         25.1509 |        20 |           20 |  12.4422658099 |     12.442266 |       1.53e-08 |
-|    7 |       1.3990 |         24.8665 |        22 |           21 |  16.9115637817 |     16.911564 |       1.29e-08 |
-|    8 |       1.1646 |         25.8568 |        23 |           23 |  22.0617389409 |     22.061739 |       2.68e-09 |
-|    9 |       1.1146 |         24.0720 |        21 |           21 |  27.8989757279 |     27.898976 |       9.75e-09 |
-|   10 |       1.1420 |         24.4781 |        21 |           20 |  34.4264986836 |     34.426499 |       9.19e-09 |
-|   11 |       1.1005 |          5.1904 |        20 |           19 |  41.6441021195 |     41.644102 |       2.87e-09 |
-|   12 |       1.3005 |          5.2935 |        21 |           21 |  49.5500693409 |     49.550069 |       6.88e-09 |
-|   13 |       1.0327 |          4.5460 |        19 |           17 |  58.1426609931 |     58.142661 |       1.18e-10 |
-|   14 |       1.2174 |         57.9293 |        22 |           23 |  67.4207907906 |     67.420791 |       3.11e-09 |
-|   15 |       1.2823 |         25.9168 |        23 |           22 |  77.3830591107 |     77.383059 |       1.43e-09 |
-|   16 |       1.2632 |         43.6188 |        22 |           23 |  88.0180575975 |     88.018058 |       4.57e-09 |
-|   17 |       1.2160 |          8.0892 |        22 |           23 |  99.3269874951 |     99.326987 |       4.98e-09 |
-|   18 |       1.0924 |         24.1944 |        21 |           22 | 111.3262030649 |    111.326204 |       8.40e-09 |
-|   19 |       1.1635 |         39.5289 |        22 |           19 | 124.0155386580 |    124.015540 |       1.08e-08 |
-|   20 |       1.1919 |         40.6994 |        22 |           19 | 137.3923331636 |    137.392334 |       6.09e-09 |
-|   21 |       1.2581 |         55.0695 |        22 |           22 | 151.4552317421 |    151.455233 |       8.31e-09 |
-|   22 |       1.4789 |         59.6499 |        24 |           21 | 166.2042207199 |    166.204220 |       4.33e-09 |
-|   23 |       1.4576 |         73.9854 |        22 |           20 | 181.6387101832 |    181.638762 |       2.85e-07 |
-|   24 |       2.0587 |         85.6920 |        34 |           39 | 197.7486351731 |    197.748593 |       2.13e-07 |
+Scope:
+- level 1
+- step 24 only
+- custom initialized from step-23 restart state
+- custom Newton cap set to `maxit=100`
 
-Level-1 summary (fresh rerun):
-- custom-GMRES converges all 24 steps and matches JAX energies closely (`max relative error ≈ 5.62e-7`).
-- measured cumulative time ratio is `custom/JAX ≈ 25.17x` for this serial run.
+Artifacts:
+- JAX step-24 profile: [experiment_scripts/he_jax_step24_profile_l1.json](experiment_scripts/he_jax_step24_profile_l1.json)
+- Custom sweep summary (`maxit=100`, `gmres+hypre`):
+	- [experiment_scripts/he_step24_precision_sweep_maxit100_gmres/step24_precision_summary.md](experiment_scripts/he_step24_precision_sweep_maxit100_gmres/step24_precision_summary.md)
+	- [experiment_scripts/he_step24_precision_sweep_maxit100_gmres/step24_precision_summary.json](experiment_scripts/he_step24_precision_sweep_maxit100_gmres/step24_precision_summary.json)
+
+| Solver                        | Inner tol (`ksp_rtol`) | Time [s] | Newton iters | Linear iters (total) | Linear iters (max / Newton step) |         Energy | Status                                |
+| ----------------------------- | ---------------------: | -------: | -----------: | -------------------: | -------------------------------: | -------------: | ------------------------------------- |
+| JAX (`cg + PyAMG`)            |                   1e-3 |   2.3378 |           34 |                  664 |                               29 | 197.7486351731 | Stopping condition for f is satisfied |
+| Custom FEniCS (`gmres+hypre`) |                   1e-1 |  18.3333 |           24 |                10734 |                            10000 |     197.749038 | Energy change converged               |
+| Custom FEniCS (`gmres+hypre`) |                   1e-2 |  19.6718 |           22 |                12122 |                            10000 |     197.748883 | Energy change converged               |
+| Custom FEniCS (`gmres+hypre`) |                   1e-3 |  69.0097 |           23 |                44061 |                            10000 |     197.748430 | Energy change converged               |
+| Custom FEniCS (`gmres+hypre`) |                   1e-6 |  87.8538 |           23 |                56995 |                            10000 |     197.748428 | Energy change converged               |
+
+Notes:
+- All requested custom tolerances converged within `maxit=100`.
+- Runtime growth is driven by very large inner GMRES work (several Newton steps hit `ksp_its=10000`).
