@@ -315,3 +315,103 @@ python3 results/generate_scaling_plot.py results/experiment_001/ --solver custom
 docker run --rm --entrypoint python3 -v "$PWD":/work -w /work fenics_test \
   /work/results/generate_scaling_plot.py results/experiment_001/
 ```
+
+## SNES Configuration Testing (Ginzburg-Landau)
+
+The `experiment_scripts/` directory contains standalone Python and shell scripts used for systematic testing of PETSc SNES configurations on the non-convex Ginzburg-Landau problem. These are **not polished tools** — they are a collection of mini-experiments kept for reproducibility and reference. Results are documented in [`results_GinzburgLandau2D.md`](results_GinzburgLandau2D.md).
+
+### Directory structure
+
+```
+experiment_scripts/
+├── test_snes_comprehensive.py   # Master survey: 16 SNES configs (Groups A–E)
+├── test_tol_sweep.py            # Nonlinear tolerance sweep for B4
+├── test_b3b.py                  # B4 variant (l2 + HYPRE + ksp_rtol=1e-3)
+├── bench_b4.py                  # B4 parallel scaling benchmark
+├── bench_tr2.py                 # newtontr + HYPRE parallel scaling
+├── bench_a3.py                  # A3 (newtontr + ASM+ILU) parallel scaling
+├── bench_c3.py                  # C3 (basic + EW + lag) parallel scaling
+├── bench_jax_gl.py              # JAX GL solver benchmark (serial)
+├── run_tr2.sh                   # Batch runner for TR + HYPRE benchmarks
+├── run_a3.sh                    # Batch runner for A3 benchmarks
+├── run_c3.sh                    # Batch runner for C3 benchmarks
+├── .gitignore                   # Excludes *.txt/*.log/*.json output files
+└── ...                          # Other exploratory scripts
+```
+
+Output files (`*.txt`, `*.log`, `*.json`) are gitignored — they can be regenerated from the scripts.
+
+### How to run a parallel benchmark
+
+All benchmark scripts (`bench_*.py`) follow the same pattern:
+- Read `KSP_RTOL` from the environment variable (default varies per script)
+- Run levels 5–9, 3 repetitions (or 1 for known-failing levels), report median by time
+- Write results to `experiment_scripts/<prefix>_ksp<val>_np<N>.txt`
+- Use `SNESSetObjective` where the config requires it
+
+**Running inside Docker** (from the repo root):
+
+```bash
+# Single configuration: serial, ksp_rtol=1e-3
+docker run --rm --entrypoint "" -v "$(pwd)":/work -w /work fenics_test \
+  bash -c "KSP_RTOL=1e-3 python3 experiment_scripts/bench_a3.py"
+
+# Single configuration: 4 processes
+docker run --rm --entrypoint "" -v "$(pwd)":/work -w /work fenics_test \
+  bash -c "KSP_RTOL=1e-3 mpirun -n 4 python3 experiment_scripts/bench_a3.py"
+
+# Full sweep (all ksp_rtol × all nprocs):
+docker run --rm --entrypoint "" -v "$(pwd)":/work -w /work fenics_test \
+  bash experiment_scripts/run_a3.sh
+```
+
+**Important notes**:
+- The Docker image uses **MPICH** (not OpenMPI) — do NOT use `--oversubscribe`
+- All commands must be run from the **repo root** (mesh paths resolve relative to it)
+- For long runs, add `2>&1 | tee experiment_scripts/output.txt` for logging
+- The `snes_max_it` is capped at 100 in parallel benchmarks (>100 iterations is unusable)
+
+### Workflow for testing a new SNES configuration
+
+1. **Start from `test_snes_comprehensive.py`** — it has the framework for serial testing of any SNES config. Add your config and run:
+   ```bash
+   docker run --rm --entrypoint "" -v "$(pwd)":/work -w /work fenics_test \
+     python3 experiment_scripts/test_snes_comprehensive.py
+   ```
+
+2. **If the config works for all levels in serial**, create a parallel benchmark script (copy `bench_a3.py` as template):
+   - Set the PETSc options matching your config
+   - Set `snes_max_it=100` (cap)
+   - Read `KSP_RTOL` from environment variable
+   - Include `SNESSetObjective` if your config uses trust region or `bt` line search
+
+3. **Create a batch runner** (`run_*.sh`) that loops over `ksp_rtol ∈ {1e-3, 1e-2, 1e-1}` and `np ∈ {1, 2, 4, 8, 16}`.
+
+4. **Run and wait** — full sweeps (3 tolerances × 5 process counts × 5 levels × 3 reps) take 10–40 minutes depending on the solver.
+
+5. **Add results to `results_GinzburgLandau2D.md`** — include a table for each `ksp_rtol` value with columns: lvl, dofs, serial, 2-proc, 4-proc, 8-proc, 16-proc. Each cell: `N it, X.XXXs, J=Y.YYYYYYY` or `**FAIL** (N it, J=Y.YYY)`.
+
+### Key findings from SNES testing
+
+- **Non-convex problems** (like GL) defeat most built-in SNES line searches — the Newton direction from the indefinite Hessian may not be a descent direction
+- **No PETSc line search supports negative step sizes** — the custom Newton's $\alpha \in [-0.5, 2]$ golden-section search is essential
+- **Parallel decomposition changes convergence** — different MPI ranks → different AMG hierarchies → different Newton directions → different trajectories through the non-convex landscape
+- **Working serial configs** may fail in parallel — always test with multiple process counts
+- **`snes_atol` dominates convergence** — `snes_rtol` is typically irrelevant; `snes_atol=1e-5` is the loosest that matches the reference energy
+- **ASM+ILU is more trust-region-friendly than HYPRE AMG** for indefinite Hessians
+- **Loose KSP tolerance (`ksp_rtol=1e-1`) can be more robust** than tight tolerance for trust region + ASM+ILU
+
+### JAX solver benchmarking
+
+The JAX solver (serial only) uses a separate Python environment with `jax`, `jaxlib`, `numpy`, `scipy`, `pyamg`, `h5py`, and `igraph`:
+
+```bash
+# Create venv and install
+python3 -m venv /tmp/jaxenv
+/tmp/jaxenv/bin/pip install numpy jax jaxlib scipy pyamg h5py igraph
+
+# Run GL benchmark
+PYTHONPATH=. /tmp/jaxenv/bin/python experiment_scripts/bench_jax_gl.py
+```
+
+The JAX solver does NOT run inside the FEniCS Docker container (different dependencies). Pre-prepared mesh files in `mesh_data/GinzburgLandau/` are used instead of DOLFINx mesh generation.

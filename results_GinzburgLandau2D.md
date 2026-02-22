@@ -77,11 +77,20 @@ The custom Newton is **5–30× faster** than SNES serial (and more reliable). A
 
 The same Ginzburg-Landau problem solved using a pure-JAX pipeline (automatic differentiation for gradients, sparse finite differences with graph coloring for Hessian assembly, PyAMG smoothed-aggregation GMRES solver). This implementation lives in [`GinzburgLandau2D_jax/`](GinzburgLandau2D_jax/) and [`tools/`](tools/) and is driven by the [`example_GinzburgLandau2D_jax.ipynb`](example_GinzburgLandau2D_jax.ipynb) notebook.
 
-The JAX solver uses the same golden-section line search algorithm as the custom FEniCS solver. Detailed timing results are available in the notebook.
+The JAX solver uses the same golden-section line search algorithm as the custom FEniCS solver ($\alpha \in [-0.5, 2]$, `tol=1e-3`, `tolf=1e-6`, `tolg=1e-5`). Uses PyAMG smoothed-aggregation GMRES with `tol=1e-3`. Benchmark script: [`experiment_scripts/bench_jax_gl.py`](experiment_scripts/bench_jax_gl.py).
+
+| lvl | dofs      | time (serial) | iters | J(u)      |
+| --- | --------- | ------------- | ----- | --------- |
+| 5   | 4 225     | 0.088         | 7     | 0.3462314 |
+| 6   | 16 641    | 0.286         | 6     | 0.3457766 |
+| 7   | 66 049    | 1.099         | 6     | 0.3456623 |
+| 8   | 263 169   | 4.045         | 6     | 0.3456336 |
+| 9   | 1 050 625 | 17.717        | 6     | 0.3456265 |
 
 **Comparison with FEniCS (serial)**:
-- **Iterations**: Both solvers converge in 6–12 iterations (same algorithm, same stopping criteria).
-- **Wall time**: FEniCS custom Newton is faster at large problems due to more efficient sparse assembly (DOLFINx) and better AMG preconditioning (HYPRE vs PyAMG).
+- **Iterations**: Both solvers converge in 6–7 iterations (same algorithm, same stopping criteria).
+- **Wall time**: FEniCS custom Newton is faster at large problems due to more efficient sparse assembly (DOLFINx) and better AMG preconditioning (HYPRE vs PyAMG). At level 9, FEniCS serial takes 10.1 s vs JAX 17.7 s — a 1.7× advantage.
+- **Energy values match**: Both solvers reach the same minimum at every level (to 7 digits).
 - **MPI parallelism**: Only the FEniCS version supports MPI-parallel execution.
 
 ---
@@ -105,7 +114,7 @@ We tested all reasonable PETSc SNES configurations to determine whether any buil
 
 Unless otherwise noted, the default initial guess is $u_0(x,y) = \sin(\pi(x-1)/2)\sin(\pi(y-1)/2)$ (a smooth bump that satisfies the Dirichlet BC but is far from the true solution).
 
-Test script: [`tmp_work/test_snes_comprehensive.py`](tmp_work/test_snes_comprehensive.py)
+Test script: [`experiment_scripts/test_snes_comprehensive.py`](experiment_scripts/test_snes_comprehensive.py)
 
 ### PETSc options tested
 
@@ -160,6 +169,88 @@ Testing different KSP/PC combinations with `newtontr`, using `ksp_rtol=1e-6`, `k
 
 **Key finding**: **A3 (`newtontr` + ASM+ILU) is the only trust-region config that succeeds at all levels.** BoomerAMG's behaviour with the indefinite Hessian produces Newton directions that defeat the trust region at large meshes, while the simpler ASM+ILU preconditioner gives more reliable directions (16–19 iterations at L7–L8). Eisenstat–Walker (`ksp_ew`, config A2) has negligible effect on trust region.
 
+**Parallel scaling of `newtontr` + fgmres + HYPRE AMG** (`snes_atol=1e-5`, `snes_rtol=1e-8`, `snes_max_it=300` for L8–L9, `SNESSetObjective` set, sine initial guess, 3 runs median for L5–L7, 1 run for L8–L9). Script: [`experiment_scripts/bench_tr2.py`](experiment_scripts/bench_tr2.py):
+
+We tested three inner KSP tolerances: `ksp_rtol` = $10^{-3}$, $10^{-2}$, $10^{-1}$. Since Level 8 and Level 9 hit the iteration limit at 300 iterations for all process counts and all three tolerances (converging to wrong minima $J \approx 0.617$–$0.651$), the tables below show only the converging levels (L5–L7) with full detail, plus L8–L9 as FAIL.
+
+**`ksp_rtol = 1e-3`**:
+
+| lvl | dofs      | serial                              | 2-proc                              | 4-proc                              | 8-proc                              | 16-proc                             |
+| --- | --------- | ----------------------------------- | ----------------------------------- | ----------------------------------- | ----------------------------------- | ----------------------------------- |
+| 5   | 4 225     | 10 it, 0.025s, $J$=0.3462324       | 10 it, 0.018s, $J$=0.3462324       | 10 it, 0.015s, $J$=0.3462324       | 10 it, 0.013s, $J$=0.3462324       | 10 it, 0.016s, $J$=0.3462324       |
+| 6   | 16 641    | 12 it, 0.121s, $J$=0.3457767       | 12 it, 0.076s, $J$=0.3457767       | 12 it, 0.050s, $J$=0.3457767       | 28 it, 0.106s, $J$=0.3457767       | 12 it, 0.042s, $J$=0.3457768       |
+| 7   | 66 049    | 241 it, 10.18s, $J$=0.3456623      | 287 it, 7.42s, $J$=0.3456623       | 293 it, 4.80s, $J$=0.3456623       | 289 it, 2.87s, $J$=0.3456623       | 241 it, 2.04s, $J$=0.3456623       |
+| 8   | 263 169   | **FAIL** (300 it, $J$=0.617)        | **FAIL** (300 it, $J$=0.617)        | **FAIL** (300 it, $J$=0.617)        | **FAIL** (300 it, $J$=0.617)        | **FAIL** (300 it, $J$=0.617)        |
+| 9   | 1 050 625 | **FAIL** (300 it, $J$=0.651)        | **FAIL** (300 it, $J$=0.651)        | **FAIL** (300 it, $J$=0.651)        | **FAIL** (300 it, $J$=0.651)        | **FAIL** (300 it, $J$=0.651)        |
+
+**`ksp_rtol = 1e-2`**:
+
+| lvl | dofs      | serial                              | 2-proc                              | 4-proc                              | 8-proc                              | 16-proc                             |
+| --- | --------- | ----------------------------------- | ----------------------------------- | ----------------------------------- | ----------------------------------- | ----------------------------------- |
+| 5   | 4 225     | 10 it, 0.026s, $J$=0.3462324       | 10 it, 0.019s, $J$=0.3462324       | 10 it, 0.015s, $J$=0.3462324       | 10 it, 0.016s, $J$=0.3462324       | 10 it, 0.016s, $J$=0.3462324       |
+| 6   | 16 641    | 12 it, 0.119s, $J$=0.3457767       | 12 it, 0.076s, $J$=0.3457767       | 12 it, 0.048s, $J$=0.3457767       | 28 it, 0.104s, $J$=0.3457767       | 12 it, 0.041s, $J$=0.3457768       |
+| 7   | 66 049    | 241 it, 10.63s, $J$=0.3456623      | 287 it, 7.48s, $J$=0.3456623       | 293 it, 4.83s, $J$=0.3456623       | 289 it, 2.83s, $J$=0.3456623       | 241 it, 2.15s, $J$=0.3456623       |
+| 8   | 263 169   | **FAIL** (300 it, $J$=0.617)        | **FAIL** (300 it, $J$=0.617)        | **FAIL** (300 it, $J$=0.617)        | **FAIL** (300 it, $J$=0.617)        | **FAIL** (300 it, $J$=0.617)        |
+| 9   | 1 050 625 | **FAIL** (300 it, $J$=0.651)        | **FAIL** (300 it, $J$=0.651)        | **FAIL** (300 it, $J$=0.651)        | **FAIL** (300 it, $J$=0.651)        | **FAIL** (300 it, $J$=0.651)        |
+
+**`ksp_rtol = 1e-1`**:
+
+| lvl | dofs      | serial                              | 2-proc                              | 4-proc                              | 8-proc                              | 16-proc                             |
+| --- | --------- | ----------------------------------- | ----------------------------------- | ----------------------------------- | ----------------------------------- | ----------------------------------- |
+| 5   | 4 225     | 10 it, 0.024s, $J$=0.3462324       | 10 it, 0.016s, $J$=0.3462324       | 10 it, 0.015s, $J$=0.3462324       | 10 it, 0.011s, $J$=0.3462324       | 10 it, 0.012s, $J$=0.3462324       |
+| 6   | 16 641    | 12 it, 0.118s, $J$=0.3457767       | 12 it, 0.069s, $J$=0.3457767       | 12 it, 0.047s, $J$=0.3457767       | 28 it, 0.097s, $J$=0.3457767       | 13 it, 0.037s, $J$=0.3457767       |
+| 7   | 66 049    | 241 it, 10.26s, $J$=0.3456623      | 287 it, 7.03s, $J$=0.3456623       | 293 it, 4.60s, $J$=0.3456623       | 289 it, 2.69s, $J$=0.3456623       | 241 it, 1.57s, $J$=0.3456623       |
+| 8   | 263 169   | **FAIL** (300 it, $J$=0.617)        | **FAIL** (300 it, $J$=0.617)        | **FAIL** (300 it, $J$=0.617)        | **FAIL** (300 it, $J$=0.617)        | **FAIL** (300 it, $J$=0.617)        |
+| 9   | 1 050 625 | **FAIL** (300 it, $J$=0.651)        | **FAIL** (300 it, $J$=0.651)        | **FAIL** (300 it, $J$=0.651)        | **FAIL** (300 it, $J$=0.651)        | **FAIL** (300 it, $J$=0.651)        |
+
+**Observations**:
+- **Inner KSP tolerance is irrelevant**: All three `ksp_rtol` values ($10^{-3}$, $10^{-2}$, $10^{-1}$) produce the same iteration counts and same failure pattern. The trust region algorithm dominates convergence behaviour.
+- **L5–L6**: Converge in 10–28 iterations across all process counts. The 28-iteration outlier at np=8 for L6 is consistent across all three `ksp_rtol` values.
+- **L7**: Converges but requires 241–293 iterations (10 s serial, 1.6–2.0 s at np=16). Very slow compared to the custom Newton (6 iterations, 0.11 s at np=16).
+- **L8–L9**: Always fail — the trust region converges to a wrong minimum ($J \approx 0.617$ at L8, $J \approx 0.651$ at L9) instead of the true minimum ($J^* \approx 0.346$). This confirms the Part 2 finding that BoomerAMG interacts poorly with `newtontr` at fine meshes.
+- **Parallel scaling** (for L7): Wall time shows good scaling from serial (10.2 s) to 16-proc (1.6–2.0 s), a ~5–6× speedup. But since L8+ always fails, this is only useful for meshes up to ~66K dofs.
+- **Compared to A3 (`newtontr` + ASM+ILU)**: A3 succeeds at L8 (19 iterations) while all HYPRE variants fail. The simpler ASM+ILU preconditioner produces trust-region-compatible directions even at fine meshes.
+
+**Parallel scaling of A3: `newtontr` + fgmres + ASM+ILU** (`snes_atol=1e-5`, `snes_rtol=1e-8`, `snes_max_it=100`, overlap=2, ILU(1), `SNESSetObjective` set, sine initial guess, 3 runs median). Script: [`experiment_scripts/bench_a3.py`](experiment_scripts/bench_a3.py):
+
+**`ksp_rtol = 1e-3`**:
+
+| lvl | dofs      | serial                              | 2-proc                              | 4-proc                              | 8-proc                              | 16-proc                             |
+| --- | --------- | ----------------------------------- | ----------------------------------- | ----------------------------------- | ----------------------------------- | ----------------------------------- |
+| 5   | 4 225     | 10 it, 0.020s, $J$=0.3462324       | 10 it, 0.011s, $J$=0.3462324       | 11 it, 0.011s, $J$=0.3462324       | 11 it, 0.005s, $J$=0.3462324       | 10 it, 0.005s, $J$=0.3462324       |
+| 6   | 16 641    | 12 it, 0.095s, $J$=0.3457767       | 12 it, 0.052s, $J$=0.3457767       | 12 it, 0.031s, $J$=0.3457767       | 11 it, 0.016s, $J$=0.3457767       | 11 it, 0.014s, $J$=0.3457767       |
+| 7   | 66 049    | 14 it, 0.477s, $J$=0.3456624       | 14 it, 0.271s, $J$=0.3456623       | 14 it, 0.151s, $J$=0.3456623       | 16 it, 0.099s, $J$=0.3456623       | 15 it, 0.051s, $J$=0.3456623       |
+| 8   | 263 169   | 18 it, 2.833s, $J$=0.3456336       | 19 it, 1.811s, $J$=0.3456351       | 25 it, 1.354s, $J$=0.3456338       | 35 it, 1.482s, $J$=0.3456336       | 34 it, 0.622s, $J$=0.3456347       |
+| 9   | 1 050 625 | 23 it, 16.94s, $J$=0.3456280       | 32 it, 13.50s, $J$=0.3456310       | **FAIL** (57 it, $J$=0.367)         | **FAIL** (55 it, $J$=0.364)         | **FAIL** (65 it, $J$=0.362)         |
+
+**`ksp_rtol = 1e-2`**:
+
+| lvl | dofs      | serial                              | 2-proc                              | 4-proc                              | 8-proc                              | 16-proc                             |
+| --- | --------- | ----------------------------------- | ----------------------------------- | ----------------------------------- | ----------------------------------- | ----------------------------------- |
+| 5   | 4 225     | 10 it, 0.020s, $J$=0.3462324       | 10 it, 0.012s, $J$=0.3462324       | 11 it, 0.008s, $J$=0.3462324       | 11 it, 0.005s, $J$=0.3462324       | 10 it, 0.004s, $J$=0.3462324       |
+| 6   | 16 641    | 12 it, 0.093s, $J$=0.3457767       | 12 it, 0.053s, $J$=0.3457767       | 12 it, 0.030s, $J$=0.3457767       | 11 it, 0.016s, $J$=0.3457767       | 11 it, 0.011s, $J$=0.3457767       |
+| 7   | 66 049    | 14 it, 0.444s, $J$=0.3456624       | 14 it, 0.259s, $J$=0.3456623       | 14 it, 0.143s, $J$=0.3456623       | 16 it, 0.090s, $J$=0.3456623       | 15 it, 0.047s, $J$=0.3456623       |
+| 8   | 263 169   | 17 it, 2.401s, $J$=0.3456337       | 19 it, 1.652s, $J$=0.3456351       | 25 it, 1.206s, $J$=0.3456338       | 35 it, 1.295s, $J$=0.3456336       | 34 it, 0.555s, $J$=0.3456348       |
+| 9   | 1 050 625 | 23 it, 15.59s, $J$=0.3456274       | 32 it, 12.48s, $J$=0.3456304       | **FAIL** (57 it, $J$=0.367)         | 57 it, 10.31s, $J$=0.3456303       | 68 it, 10.74s, $J$=0.3456265       |
+
+**`ksp_rtol = 1e-1`**:
+
+| lvl | dofs      | serial                              | 2-proc                              | 4-proc                              | 8-proc                              | 16-proc                             |
+| --- | --------- | ----------------------------------- | ----------------------------------- | ----------------------------------- | ----------------------------------- | ----------------------------------- |
+| 5   | 4 225     | 10 it, 0.019s, $J$=0.3462324       | 10 it, 0.011s, $J$=0.3462324       | 11 it, 0.008s, $J$=0.3462324       | 11 it, 0.006s, $J$=0.3462324       | 11 it, 0.005s, $J$=0.3462324       |
+| 6   | 16 641    | 12 it, 0.089s, $J$=0.3457767       | 12 it, 0.051s, $J$=0.3457767       | 12 it, 0.029s, $J$=0.3457767       | 12 it, 0.017s, $J$=0.3457767       | 12 it, 0.013s, $J$=0.3457767       |
+| 7   | 66 049    | 15 it, 0.478s, $J$=0.3456623       | 15 it, 0.268s, $J$=0.3456623       | 15 it, 0.149s, $J$=0.3456623       | 16 it, 0.087s, $J$=0.3456623       | 15 it, 0.044s, $J$=0.3456625       |
+| 8   | 263 169   | 19 it, 2.613s, $J$=0.3456337       | 20 it, 1.670s, $J$=0.3456336       | 25 it, 1.145s, $J$=0.3456342       | 36 it, 1.168s, $J$=0.3456337       | 35 it, 0.541s, $J$=0.3456337       |
+| 9   | 1 050 625 | 25 it, 15.27s, $J$=0.3456265       | 32 it, 11.22s, $J$=0.3456307       | 59 it, 14.05s, $J$=0.3456330       | 59 it, 9.18s, $J$=0.3456266        | 68 it, 7.43s, $J$=0.3456293        |
+
+**Observations**:
+- **A3 with `ksp_rtol=1e-1` is the most robust**: All levels converge at all process counts — the only fully reliable `newtontr` configuration in parallel. The loose inner tolerance does not hurt convergence because the ASM+ILU preconditioner produces consistent Newton directions regardless of KSP accuracy.
+- **Tighter KSP tolerance hurts at L9 in parallel**: `ksp_rtol=1e-3` fails at L9 with np=4,8,16 (converges to wrong minimum $J \approx 0.36$–$0.37$). `ksp_rtol=1e-2` fails at np=4 but succeeds at np=8,16. `ksp_rtol=1e-1` succeeds everywhere.
+- **L5–L8**: Fast and reliable at all tolerances — 10–36 iterations (0.005–2.8 s serial, scaling well with processes).
+- **L9**: Serial always works (23–25 iterations, 15–17 s). In parallel, iteration counts increase (32–68) but wall time can decrease thanks to parallelism. At np=16 with `ksp_rtol=1e-1`: 68 iterations in 7.4 s (~2× speedup over serial).
+- **Compared to `newtontr` + HYPRE**: A3 succeeds at L8 and L9 (with `ksp_rtol=1e-1`), while HYPRE always fails at L8+. However, A3 at L9 parallel requires more iterations (32–68 vs ~6 for custom Newton).
+- **Compared to custom Newton**: Custom Newton converges in 6 iterations at all levels and all process counts (1.7 s at L9 with 16 procs). A3 is competitive at L5–L7 but slower at L8–L9 due to increased iteration counts in parallel.
+
 ---
 
 ### Part 3 — Line search variants with different KSP/PC (sine initial guess)
@@ -175,6 +266,32 @@ Testing `newtonls` + `l2` with different preconditioners, using `ksp_rtol=1e-6`,
 
 **Key finding**: **B3 and B4 (`l2` + fgmres + HYPRE with `ksp_rtol` ≤ 1e-3) succeed at all levels!** The tighter KSP tolerance (compared to Part 1's `ksp_rtol=1e-1`) produces more accurate Newton directions that keep the `l2` line search on track. B4 with `ksp_rtol=1e-3` is slightly faster than B3 at L8 (10.6s vs 15.8s) while remaining reliable. GAMG and ASM+ILU both fail — the preconditioner quality is critical for `l2` on this problem.
 
+**Nonlinear tolerance sweep for B4** (`l2` + fgmres + HYPRE, `ksp_rtol=1e-3`, script: [`experiment_scripts/test_tol_sweep.py`](experiment_scripts/test_tol_sweep.py)): We varied `snes_atol` from $10^{-2}$ to $10^{-8}$ and `snes_rtol` from $10^{-2}$ to $10^{-8}$ (49 combinations × 4 levels = 196 solves) and checked whether the final energy matches the reference solution (computed at `snes_atol=snes_rtol=1e-12`) with relative error $< 10^{-5}$. Results:
+
+|  `snes_atol`  | `snes_rtol` |            L5 (iters, relErr)             |           L6 (iters, relErr)           |           L7 (iters, relErr)           |           L8 (iters, relErr)           | All OK? |
+| :-----------: | :---------: | :---------------------------------------: | :------------------------------------: | :------------------------------------: | :------------------------------------: | :-----: |
+|   $10^{-2}$   |     any     |              1 it, $J=0.78$               |             0 it, $J=0.67$             |             0 it, $J=0.67$             |             0 it, $J=0.67$             | **NO**  |
+|   $10^{-3}$   |     any     |       22 it, $1.3 \times 10^{-6}$ ✓       |     18 it, $2.0 \times 10^{-4}$ ✗      |            4 it, $J=0.83$ ✗            |            2 it, $J=0.80$ ✗            | **NO**  |
+|   $10^{-4}$   |     any     |       22 it, $1.3 \times 10^{-6}$ ✓       |     19 it, $1.0 \times 10^{-7}$ ✓      |     28 it, $3.9 \times 10^{-7}$ ✓      |     13 it, $7.9 \times 10^{-5}$ ✗      | **NO**  |
+| **$10^{-5}$** |   **any**   | **22–23 it, $\leq 1.3 \times 10^{-6}$** ✓ | **19 it, $\leq 1.0 \times 10^{-7}$** ✓ | **28 it, $\leq 3.9 \times 10^{-7}$** ✓ | **14 it, $\leq 1.5 \times 10^{-8}$** ✓ | **YES** |
+|   $10^{-6}$   |     any     |                 22–23 it                  |                 19 it                  |                28–29 it                |                 14 it                  | **YES** |
+|   $10^{-7}$   |     any     |                 22–24 it                  |                19–20 it                |                28–29 it                |                14–15 it                | **YES** |
+|   $10^{-8}$   |     any     |                 22–24 it                  |                19–20 it                |                28–29 it                |                14–15 it                | **YES** |
+
+**Conclusion**: The **loosest nonlinear tolerance** that matches the custom Newton's energy to relative error $< 10^{-5}$ is **`snes_atol=1e-5`**. The `snes_rtol` value is irrelevant — convergence is entirely dominated by the absolute tolerance. At `snes_atol=1e-4`, L8 barely misses the threshold (rel error $\approx 7.9 \times 10^{-5}$). At `snes_atol=1e-3` and looser, the solver stops too early at the finer meshes, converging to a wrong critical point or stalling near the initial guess.
+
+**B4 parallel scaling** (`l2` + `fgmres` + HYPRE, `ksp_rtol=1e-3`, `snes_atol=1e-5`, `snes_rtol=1e-8`, sine initial guess, 3 runs median). Script: [`experiment_scripts/bench_b4.py`](experiment_scripts/bench_b4.py):
+
+| lvl | dofs      | serial | 2-proc | 4-proc | 8-proc | 16-proc |
+| --- | --------- | ------ | ------ | ------ | ------ | ------- |
+| 5   | 4 225     | 23 it, 0.259s, $J$=0.3462324 | 35 it, 0.258s, $J$=0.3462324 | **FAIL** (6 it, $J$=246924) | 17 it, 0.094s, $J$=0.3462324 | 21 it, 0.107s, $J$=0.3462324 |
+| 6   | 16 641    | 19 it, 0.811s, $J$=0.3457767 | **FAIL** (6 it, $J$=580519) | 13 it, 0.215s, $J$=0.3457767 | 16 it, 0.190s, $J$=0.3457767 | 19 it, 0.173s, $J$=0.3457767 |
+| 7   | 66 049    | 28 it, 4.571s, $J$=0.3456624 | 18 it, 1.818s, $J$=0.3456623 | 27 it, 1.496s, $J$=0.3456623 | 19 it, 0.601s, $J$=0.3456623 | 14 it, 0.327s, $J$=0.3456623 |
+| 8   | 263 169   | 14 it, 10.93s, $J$=0.3456336 | 26 it, 11.35s, $J$=0.3456342 | 23 it, 5.102s, $J$=0.3456336 | 20 it, 2.483s, $J$=0.3456336 | 30 it, 2.322s, $J$=0.3456339 |
+| 9   | 1 050 625 | 28 it, 81.24s, $J$=0.3456277 | 24 it, 32.37s, $J$=0.3456325 | **FAIL** (1 it, $J$=0.779) | **FAIL** (3 it, $J$=0.820) | 28 it, 11.65s, $J$=0.3456265 |
+
+**Observations**: B4 is **unreliable in parallel** — several level/process-count combinations diverge or converge to wrong critical points (FAIL entries). This is the same fundamental issue as SNES `basic`: the MPI domain decomposition changes the AMG hierarchy and Newton direction quality, and `l2` line search (which targets residual norm, not energy) cannot recover from bad directions. Serial is reliable at all levels. 16-proc is reliable too in this run, but scattered failures at other process counts show the method is not robust. The custom Newton's energy line search remains the only approach that is reliable across all levels and process counts.
+
 ---
 
 ### Part 4 — Eisenstat–Walker and preconditioner lagging (sine initial guess)
@@ -188,6 +305,46 @@ Using `newtonls` + `basic`, `ksp_rtol=1e-1`, HYPRE, `divtol=-1`.
 | C3  | **`basic` + `ksp_ew` + `lag_pc=2`** | `fgmres`, `ksp_rtol=1e-6` |    **OK (37 it, 0.09s)**     |         **OK (13 it, 0.13s)**         | **OK (15 it, 0.58s)** | **OK (13 it, 2.2s)** |
 
 **Key finding**: Eisenstat–Walker **alone** (C1) is catastrophic with `ksp_rtol=1e-1` — the initial loose solve never produces a useful Newton direction. But **combined with `lag_pc=2` and tight `ksp_rtol=1e-6`** (C3), it converges reliably and fast (13–37 iterations). Lagging alone (C2) is unreliable.
+
+**Parallel scaling of C3: `newtonls` + `basic` + EW + `lag_pc=2` + fgmres + HYPRE** (`snes_atol=1e-5`, `snes_rtol=1e-8`, `snes_max_it=100`, `snes_divergence_tolerance=-1`, NO `SNESSetObjective`, sine initial guess, single run). Script: [`experiment_scripts/bench_c3.py`](experiment_scripts/bench_c3.py):
+
+**`ksp_rtol = 1e-3`**:
+
+| lvl | dofs      | serial                              | 2-proc                              | 4-proc                              | 8-proc                               | 16-proc                              |
+| --- | --------- | ----------------------------------- | ----------------------------------- | ----------------------------------- | ------------------------------------- | ------------------------------------- |
+| 5   | 4 225     | 36 it, 0.085s, $J$=0.3462324       | 27 it, 0.051s, $J$=0.3462324       | 13 it, 0.028s, $J$=0.3462324       | **FAIL** (20 it, $J$=0.504)          | 13 it, 0.026s, $J$=0.3462324         |
+| 6   | 16 641    | 12 it, 0.114s, $J$=0.3457767       | 14 it, 0.087s, $J$=0.3457767       | 13 it, 0.058s, $J$=0.3457767       | 12 it, 0.043s, $J$=0.3457767         | **FAIL** (13 it, $J$=0.503)          |
+| 7   | 66 049    | 14 it, 0.531s, $J$=0.3456623       | 19 it, 0.461s, $J$=0.3456623       | 13 it, 0.206s, $J$=0.3456623       | **FAIL** (15 it, $J$=1.3×10⁸, r=-9) | 14 it, 0.091s, $J$=0.3456623         |
+| 8   | 263 169   | 12 it, 1.978s, $J$=0.3456340       | 26 it, 2.512s, $J$=0.3456339       | 13 it, 0.813s, $J$=0.3456337       | 12 it, 0.445s, $J$=0.3456337         | 12 it, 0.273s, $J$=0.3456339         |
+| 9   | 1 050 625 | 14 it, 8.985s, $J$=0.3456269       | 23 it, 9.744s, $J$=0.3456265       | 13 it, 3.779s, $J$=0.3456265       | 13 it, 2.555s, $J$=0.3456265         | 14 it, 1.627s, $J$=0.3456265         |
+
+**`ksp_rtol = 1e-2`**:
+
+| lvl | dofs      | serial                              | 2-proc                              | 4-proc                              | 8-proc                               | 16-proc                              |
+| --- | --------- | ----------------------------------- | ----------------------------------- | ----------------------------------- | ------------------------------------- | ------------------------------------- |
+| 5   | 4 225     | 36 it, 0.086s, $J$=0.3462324       | 27 it, 0.053s, $J$=0.3462324       | 13 it, 0.024s, $J$=0.3462324       | **FAIL** (20 it, $J$=0.504)          | 13 it, 0.027s, $J$=0.3462324         |
+| 6   | 16 641    | 12 it, 0.115s, $J$=0.3457767       | 14 it, 0.085s, $J$=0.3457767       | 13 it, 0.057s, $J$=0.3457767       | 12 it, 0.043s, $J$=0.3457767         | **FAIL** (13 it, $J$=0.503)          |
+| 7   | 66 049    | 14 it, 0.524s, $J$=0.3456623       | 19 it, 0.456s, $J$=0.3456623       | 13 it, 0.211s, $J$=0.3456623       | **FAIL** (15 it, $J$=1.3×10⁸, r=-9) | 14 it, 0.092s, $J$=0.3456623         |
+| 8   | 263 169   | 12 it, 1.951s, $J$=0.3456340       | 26 it, 2.529s, $J$=0.3456339       | 13 it, 0.827s, $J$=0.3456337       | 12 it, 0.433s, $J$=0.3456337         | 12 it, 0.282s, $J$=0.3456339         |
+| 9   | 1 050 625 | 14 it, 8.922s, $J$=0.3456269       | 23 it, 9.689s, $J$=0.3456265       | 13 it, 3.805s, $J$=0.3456265       | 13 it, 2.436s, $J$=0.3456265         | 14 it, 1.706s, $J$=0.3456265         |
+
+**`ksp_rtol = 1e-1`**:
+
+| lvl | dofs      | serial                              | 2-proc                              | 4-proc                              | 8-proc                               | 16-proc                              |
+| --- | --------- | ----------------------------------- | ----------------------------------- | ----------------------------------- | ------------------------------------- | ------------------------------------- |
+| 5   | 4 225     | 36 it, 0.088s, $J$=0.3462324       | 27 it, 0.052s, $J$=0.3462324       | 13 it, 0.027s, $J$=0.3462324       | **FAIL** (20 it, $J$=0.504)          | 13 it, 0.027s, $J$=0.3462324         |
+| 6   | 16 641    | 12 it, 0.115s, $J$=0.3457767       | 14 it, 0.086s, $J$=0.3457767       | 13 it, 0.059s, $J$=0.3457767       | 12 it, 0.038s, $J$=0.3457767         | **FAIL** (13 it, $J$=0.503)          |
+| 7   | 66 049    | 14 it, 0.526s, $J$=0.3456623       | 19 it, 0.454s, $J$=0.3456623       | 13 it, 0.210s, $J$=0.3456623       | **FAIL** (15 it, $J$=1.3×10⁸, r=-9) | 14 it, 0.098s, $J$=0.3456623         |
+| 8   | 263 169   | 12 it, 1.975s, $J$=0.3456340       | 26 it, 2.543s, $J$=0.3456339       | 13 it, 0.852s, $J$=0.3456337       | 12 it, 0.450s, $J$=0.3456337         | 12 it, 0.284s, $J$=0.3456339         |
+| 9   | 1 050 625 | 14 it, 8.863s, $J$=0.3456269       | 23 it, 9.827s, $J$=0.3456265       | 13 it, 3.841s, $J$=0.3456265       | 13 it, 2.504s, $J$=0.3456265         | 14 it, 1.660s, $J$=0.3456265         |
+
+**Observations**:
+- **EW forcing makes `ksp_rtol` irrelevant**: All three tables are essentially identical — same iteration counts, same convergence/failure pattern. Eisenstat–Walker dynamically adapts the inner KSP tolerance, so the initial `ksp_rtol` setting has no effect. This is expected behaviour.
+- **Reproducible parallel failures**: np=8 fails at L5 (wrong minimum, $J \approx 0.504$) and L7 (divergence $r=-9$); np=16 fails at L6 (wrong minimum, $J \approx 0.503$). These wrong-minimum cases are insidious: SNES reports convergence (reason > 0) but the energy is far from the correct value. The failures are **deterministic** and persist across all KSP tolerances.
+- **Serial is perfectly reliable**: All levels converge correctly in 12–36 iterations.
+- **np=4 is the sweet spot**: All levels converge in exactly 13 iterations (except L5 at serial/2-proc), giving the best parallel speedup without reliability loss. At L9: 3.8s (2.3× speedup over serial).
+- **Compared to A3 (`newtontr` + ASM+ILU)**: C3 has fewer iterations at L9 (13–23 vs 23–68) but has unpredictable wrong-minimum failures at np=8,16 that A3 (`ksp_rtol=1e-1`) avoids entirely. A3 is more robust in parallel despite being slower.
+- **Compared to B4 (`l2` + HYPRE)**: Both fail in parallel, but C3's failures are more insidious (wrong minimum with "OK" status vs B4's explicit line-search failures).
 
 ---
 
