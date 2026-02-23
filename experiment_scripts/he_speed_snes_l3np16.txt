@@ -1,0 +1,31 @@
+--- Step 1/1, Angle: 0.2618 ---
+Step 1 finished: Energy = 0.010160, Iters = 14, Reason = 2
+{
+  "mesh_level": 3,
+  "total_dofs": 78003,
+  "config": {
+    "snes_type": "newtonls",
+    "linesearch": "basic",
+    "ksp_type": "gmres",
+    "pc_type": "hypre",
+    "ksp_rtol": 0.1,
+    "ksp_max_it": 500,
+    "snes_atol": 0.001,
+    "use_objective": false,
+    "use_near_nullspace": true,
+    "hypre_nodal_coarsen": -1,
+    "hypre_vec_interp_variant": -1,
+    "nullspace_gram_schmidt": false
+  },
+  "steps": [
+    {
+      "step": 1,
+      "angle": 0.2617993877991494,
+      "time": 2.5096,
+      "iters": 14,
+      "linear_iters": 214,
+      "energy": 0.01016,
+      "reason": 2
+    }
+  ]
+}

@@ -58,35 +58,27 @@ def build_nullspace(V, A):
     print("Creating vectors...", flush=True)
     vecs = [A.createVecLeft() for _ in range(6)]
 
-    for i, vec in enumerate(vecs):
-        with vec.localForm() as loc:
-            loc.set(0.0)
+    for vec in vecs:
+        vec.getArray()[:] = 0.0
 
     print("Setting translations...", flush=True)
     # Translations
     for i in range(3):
-        with vecs[i].localForm() as loc:
-            loc.array[i::3] = 1.0
+        vecs[i].getArray()[i::3] = 1.0
 
     print("Setting rotations...", flush=True)
     # Rotations
     # Mode 3: rotation about x-axis
-    with vecs[3].localForm() as loc:
-        loc.array[1::3] = -x_owned[:, 2]
-        loc.array[2::3] = x_owned[:, 1]
+    vecs[3].getArray()[1::3] = -x_owned[:, 2]
+    vecs[3].getArray()[2::3] = x_owned[:, 1]
 
     # Mode 4: rotation about y-axis
-    with vecs[4].localForm() as loc:
-        loc.array[0::3] = x_owned[:, 2]
-        loc.array[2::3] = -x_owned[:, 0]
+    vecs[4].getArray()[0::3] = x_owned[:, 2]
+    vecs[4].getArray()[2::3] = -x_owned[:, 0]
 
     # Mode 5: rotation about z-axis
-    with vecs[5].localForm() as loc:
-        loc.array[0::3] = -x_owned[:, 1]
-        loc.array[1::3] = x_owned[:, 0]
-
-    for vec in vecs:
-        vec.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
+    vecs[5].getArray()[0::3] = -x_owned[:, 1]
+    vecs[5].getArray()[1::3] = x_owned[:, 0]
 
     print("Creating NullSpace...", flush=True)
     return PETSc.NullSpace().create(vectors=vecs)

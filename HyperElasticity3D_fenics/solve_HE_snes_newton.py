@@ -68,28 +68,20 @@ def build_nullspace(V, A, gram_schmidt=False):
 
     vecs = [A.createVecLeft() for _ in range(6)]
 
-    for i, vec in enumerate(vecs):
-        with vec.localForm() as loc:
-            loc.set(0.0)
+    for vec in vecs:
+        vec.getArray()[:] = 0.0
 
     for i in range(3):
-        with vecs[i].localForm() as loc:
-            loc.array[i::3] = 1.0
+        vecs[i].getArray()[i::3] = 1.0
 
-    with vecs[3].localForm() as loc:
-        loc.array[1::3] = -xc[:, 2]
-        loc.array[2::3] = xc[:, 1]
+    vecs[3].getArray()[1::3] = -xc[:, 2]
+    vecs[3].getArray()[2::3] = xc[:, 1]
 
-    with vecs[4].localForm() as loc:
-        loc.array[0::3] = xc[:, 2]
-        loc.array[2::3] = -xc[:, 0]
+    vecs[4].getArray()[0::3] = xc[:, 2]
+    vecs[4].getArray()[2::3] = -xc[:, 0]
 
-    with vecs[5].localForm() as loc:
-        loc.array[0::3] = -xc[:, 1]
-        loc.array[1::3] = xc[:, 0]
-
-    for vec in vecs:
-        vec.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
+    vecs[5].getArray()[0::3] = -xc[:, 1]
+    vecs[5].getArray()[1::3] = xc[:, 0]
 
     if gram_schmidt:
         # Gram-Schmidt orthonormalization
@@ -106,11 +98,18 @@ def build_nullspace(V, A, gram_schmidt=False):
 # ---------------------------------------------------------------------------
 
 
-def run_level(mesh_level, num_steps=1, snes_type="newtonls", linesearch="basic",
+def run_level(mesh_level, num_steps=1, total_steps=None, snes_type="newtonls", linesearch="basic",
               ksp_type="gmres", pc_type="hypre", ksp_rtol=1e-3, ksp_max_it=10000,
               snes_atol=1e-5, use_objective=False, verbose=True,
               use_near_nullspace=True, hypre_nodal_coarsen=-1, hypre_vec_interp_variant=-1,
               nullspace_gram_schmidt=False, stop_on_fail=False):
+    """Run SNES Newton solver for one HE mesh level.
+
+    total_steps controls the rotation per iteration: the full 4*2*pi rotation
+    is divided into total_steps equal steps (default: num_steps, i.e. the steps
+    run span the entire rotation). Set total_steps > num_steps to use a finer
+    step size and run only the first num_steps of them.
+    """
     """Run SNES Newton solver for one HE mesh level."""
     comm = MPI.COMM_WORLD
     rank = comm.rank
@@ -242,7 +241,8 @@ def run_level(mesh_level, num_steps=1, snes_type="newtonls", linesearch="basic",
         snes.setObjective(snes_objective)
 
     # ---- time evolution ----
-    rotation_per_iter = 4 * 2 * np.pi / num_steps
+    effective_total = total_steps if total_steps is not None else num_steps
+    rotation_per_iter = 4 * 2 * np.pi / effective_total
     results = []
 
     for step in range(1, num_steps + 1):
@@ -342,9 +342,12 @@ if __name__ == "__main__":
     parser.add_argument("--quiet", action="store_true")
     parser.add_argument("--stop_on_fail", action="store_true",
                         help="Stop loading sequence at first diverged step")
+    parser.add_argument("--total_steps", type=int, default=None,
+                        help="Total steps spanning full 4*2pi rotation (controls step size); "
+                             "default: same as --steps")
     args, _ = parser.parse_known_args()
 
-    res = run_level(args.level, num_steps=args.steps,
+    res = run_level(args.level, num_steps=args.steps, total_steps=args.total_steps,
                     snes_type=args.snes_type, linesearch=args.linesearch,
                     ksp_type=args.ksp_type, pc_type=args.pc_type,
                     ksp_rtol=args.ksp_rtol, ksp_max_it=args.ksp_max_it,

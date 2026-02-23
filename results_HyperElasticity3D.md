@@ -1000,3 +1000,120 @@ Each step covers 15° of rotation (quarter of the original 60°/step); total rot
 - Steps 1–93: 11–13 Newton iters, 150–270 KSP per step (all converging, avg 19.0 KSP/Newton).
 - Avg KSP/Newton ratio: 22 490 / 1 175 ≈ **19.1 KSP/Newton** — essentially matches custom solver's 20.6.
 - Steps 94–96 (1410°–1440°): `SNES_DIVERGED_LINEAR_SOLVE`; each step hits the 500-iteration KSP cap on one internal Newton linear solve, suggesting HYPRE defaults AMG loses effectiveness at this extreme deformation state. Not a nullspace issue.
+
+---
+
+## Annex E) Speed investigation: why is SNES faster at level 1 but slower at level 3?
+
+**Motivation:** Annex D showed SNES completing 96 quarter-steps in **15.03 s** vs custom's **72.62 s** (5× advantage at level 1).  Yet the main §2 scaling tables showed SNES slower than custom at larger meshes with more MPI processes.  This annex isolates the very first quarter-step (15° rotation) at mesh level 3 with 16 MPI processes to understand the crossover.
+
+### E.1 Critical bug discovered during setup: `build_nullspace` parallelism fix
+
+While setting up these experiments a critical bug was found in `build_nullspace` in **both** solvers (`solve_HE_custom_jaxversion.py` and `solve_HE_snes_newton.py`):
+
+**Root cause:** `A.createVecLeft()` produces a standard MPI (non-ghost) PETSc Vec.  Calling `localForm()` on such a Vec returns an empty read-only sequential form (size 0).  All numpy array assignments to `loc.array[...]` were silently no-ops, leaving all six rigid-body nullspace vectors as zeros.  `ghostUpdate(INSERT_VALUES, FORWARD)` then raises `PETSc.Error` ("Vector is not ghosted") on any np > 1.
+
+**Effect:** For np = 1 the AMG preconditioner still ran (HYPRE silently ignores all-zero near-nullspace), but convergence was degraded.  For np > 1 the process crashed with a SIGSEGV inside HYPRE's coarsening routines.
+
+**Fix:** Replace `localForm()` / `loc.array` with a direct `vec.getArray()` call, which correctly returns the owned local entries for standard MPI Vecs.  Remove the `ghostUpdate(INSERT_VALUES, FORWARD)` call which is invalid on non-ghost Vecs.  Both files were patched before running the Annex E experiments.
+
+**Additional finding:** The `nodal_coarsen=6 + vec_interp_variant=3` (n6v3) HYPRE configuration crashes inside HYPRE at mesh level ≥ 2, even at np = 1.  All Annex E experiments therefore use HYPRE defaults (`hypre_nodal_coarsen=-1`, `hypre_vec_interp_variant=-1`).
+
+### E.2 Experiment setup
+
+Both solvers run the identical problem: one quarter-step (15°) of a 96-step trajectory on a level 3 mesh (78 003 DOFs) using 16 MPI processes.  The `--total_steps 96` flag (added to the SNES solver for this investigation) pins the rotation per step to 360°×4/96 = 15°, independent of the `--steps` count.
+
+| Parameter                | Custom Newton                        | SNES Newton                          |
+| ------------------------ | ------------------------------------ | ------------------------------------ |
+| Script                   | `solve_HE_custom_jaxversion.py`      | `solve_HE_snes_newton.py`            |
+| Mesh level / DOFs        | 3 / 78 003                           | 3 / 78 003                           |
+| MPI processes            | 16                                   | 16                                   |
+| Steps (total_steps)      | 1 (of 96)                            | 1 (of 96)                            |
+| KSP type                 | CG                                   | GMRES                                |
+| PC type                  | HYPRE BoomerAMG (defaults)           | HYPRE BoomerAMG (defaults)           |
+| `ksp_rtol`               | 1e-1                                 | 1e-1                                 |
+| `ksp_max_it`             | 30                                   | 500                                  |
+| Convergence criterion    | energy change < 1e-4                 | `snes_atol=1e-3`                     |
+| AMG reuse strategy       | `--pc_setup_on_ksp_cap` (reuse until cap hit) | PETSc SNES: reassemble each Newton iter |
+| Line search              | Golden-section (custom Python)       | `newtonls` + `basic` (PETSc)         |
+| Artifacts                | `he_speed_custom_l3np16.json/txt`    | `he_speed_snes_l3np16.json/txt`      |
+
+### E.3 Results summary
+
+| Metric                    |   Custom Newton |   SNES Newton |
+| ------------------------- | --------------: | ------------: |
+| Wall time [s]             |      **1.8239** |    **2.5096** |
+| Newton iterations         |              11 |            14 |
+| Total KSP iterations      |             148 |           214 |
+| Avg KSP / Newton          |            13.5 |          15.3 |
+| Final energy              |        0.010163 |       0.01016 |
+| PC setups performed       |               1 |            14 |
+| PC setup time [s]         |          0.0605 |       ~0.84 ✱ |
+| Total assembly time [s]   |          0.1679 |         — ✱✱ |
+| Total KSP solve time [s]  |          1.4822 |         — ✱✱ |
+| Total linear time [s]     |          1.7108 |         — ✱✱ |
+| Non-linear overhead [s]   |          0.1131 |         — ✱✱ |
+
+✱ Estimated: 14 Newton iters × ~0.0605 s/setup (measured from the custom solver's first PC setup at this level/np).
+✱✱ SNES manages Newton/KSP internals; no per-Newton timing is exposed.
+
+**At level 3 np=16, custom is ~1.4× faster (1.82 s vs 2.51 s).**  This is the opposite of the level 1 result.
+
+### E.4 Per-Newton timing breakdown — custom solver
+
+The `--save_linear_timing` flag records assembly, PC setup, and KSP solve times for every Newton iteration:
+
+| Newton | KSP its | assemble [s] | pc_setup [s] | ksp_solve [s] | lin_total [s] |
+| -----: | ------: | -----------: | -----------: | ------------: | ------------: |
+|      0 |       4 |       0.0142 |       0.0605 |        0.0243 |        0.0989 |
+|      1 |       6 |       0.0148 |       0.0000 |        0.0913 |        0.1061 |
+|      2 |      11 |       0.0163 |       0.0000 |        0.1194 |        0.1357 |
+|      3 |      12 |       0.0151 |       0.0000 |        0.1283 |        0.1434 |
+|      4 |      16 |       0.0149 |       0.0000 |        0.1525 |        0.1674 |
+|      5 |      15 |       0.0147 |       0.0000 |        0.1465 |        0.1612 |
+|      6 |      13 |       0.0149 |       0.0000 |        0.1391 |        0.1540 |
+|      7 |      18 |       0.0152 |       0.0000 |        0.1666 |        0.1818 |
+|      8 |      12 |       0.0156 |       0.0000 |        0.1380 |        0.1536 |
+|      9 |      29 |       0.0158 |       0.0000 |        0.2375 |        0.2533 |
+|     10 |      12 |       0.0165 |       0.0000 |        0.1388 |        0.1553 |
+| **Σ** | **148** |   **0.1679** |   **0.0605** |    **1.4822** |    **1.7108** |
+
+**Observations:**
+- Only Newton step 0 incurs a PC setup (0.060 s).  The `pc_setup_on_ksp_cap` flag reuses the AMG preconditioner for all subsequent Newton steps — none of steps 1–10 hit the `ksp_max_it=30` cap.
+- KSP iterations grow from 4 (step 0) to a peak of 29 (step 9) as the Jacobian drifts from the initial preconditioner.  Step 10 drops back to 12, consistent with the iterate converging near the minimum.
+- Assembly is essentially constant (~0.015 s per Newton) and is parallelism-bound (mesh-level 3, 16 processes).
+- KSP solve time (1.48 s, 81.3% of wall) dominates; the increase from step 0→9 reflects the growing misalignment between the reused AMG and the current Jacobian.
+- Non-linear overhead (Python line search + energy evaluations): 0.113 s (6.2%).
+
+### E.5 Explaining the level 1 vs level 3 crossover
+
+At **level 1 np=1** (serial, 2 187 DOFs):
+
+| Metric            | Custom (step 1) | SNES (step 1) |
+| ----------------- | --------------: | ------------: |
+| Wall time [s]     |          0.4358 |        0.0916 |
+| Newton iters      |              10 |            12 |
+| Total KSP iters   |             130 |           147 |
+| Speed ratio       |       baseline  |   **4.8× faster** |
+
+At **level 3 np=16** (parallel, 78 003 DOFs):
+
+| Metric            | Custom (step 1) | SNES (step 1) |
+| ----------------- | --------------: | ------------: |
+| Wall time [s]     |          1.8239 |        2.5096 |
+| Newton iters      |              11 |            14 |
+| Total KSP iters   |             148 |           214 |
+| Speed ratio       |       **1.4× faster** |    baseline  |
+
+**Why SNES is faster at level 1:**
+At small serial problems the AMG setup (≈0.060 s at level 3, much less at level 1 ≈ few ms) is cheap relative to Python overhead.  Each Newton iteration in the custom solver involves a full Python function call, golden-section line search (up to 17 energy evaluations per step visible in `ls_evals` field), and CG inside a Python loop.  PETSc SNES manages the entire Newton loop in compiled C, with only the residual/Jacobian callbacks entering Python.  This eliminates the per-Newton Python overhead.
+
+**Why custom is faster at level 3 np=16:**
+The AMG setup cost scales with mesh size.  At level 3 with 16 MPI processes, one HYPRE BoomerAMG setup takes ~0.060 s.  PETSc SNES (with `newtonls`) rebuilds and re-factorises the Jacobian at every Newton iteration — 14 setups × 0.060 s ≈ **0.84 s** in AMG setups alone.  The custom solver's `pc_setup_on_ksp_cap` flag reuses the preconditioner until the KSP iteration count hits `ksp_max_it=30`: because no step hits that cap here, only **1 AMG setup (0.060 s)** is performed for all 11 Newton iterations.  This ~0.78 s saving more than compensates for the custom solver's Python overhead (0.113 s line search).
+
+**Summary of the crossover mechanism:**
+
+> At small meshes/serial execution: Python Newton loop overhead > AMG reuse benefit → SNES wins.
+> At large meshes/MPI execution: AMG setup cost per Newton iter > Python Newton loop overhead → custom's AMG reuse wins.
+
+The `--pc_setup_on_ksp_cap` strategy is particularly effective here because this is the first step of the trajectory (the initial AMG is a good preconditioner for the un-deformed Jacobian, so KSP never hits the 30-iteration cap across all 11 Newton steps).
