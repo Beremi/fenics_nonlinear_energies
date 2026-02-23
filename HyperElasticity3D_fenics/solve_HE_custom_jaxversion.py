@@ -136,7 +136,7 @@ def run_level(mesh_level, num_steps=1, verbose=True, maxit=100, start_step=1,
               init_npz="", init_step=0, linesearch_interval=(-0.5, 2.0),
               use_abs_det=False, ksp_type="gmres", pc_type="hypre",
               ksp_rtol=1e-3, ksp_max_it=10000, use_near_nullspace=True,
-              hypre_nodal_coarsen=6, hypre_vec_interp_variant=3,
+              total_steps=24, hypre_nodal_coarsen=6, hypre_vec_interp_variant=3,
               hypre_strong_threshold=None, hypre_coarsen_type="",
               save_history=False, save_linear_timing=False,
               pc_setup_on_ksp_cap=False):
@@ -321,7 +321,7 @@ def run_level(mesh_level, num_steps=1, verbose=True, maxit=100, start_step=1,
         return ksp_its
 
     # ---- time evolution ----
-    rotation_per_iter = 4 * 2 * np.pi / 24
+    rotation_per_iter = 4 * 2 * np.pi / total_steps
 
     results = []
 
@@ -433,6 +433,8 @@ if __name__ == "__main__":
         action="store_true",
         help="Only run KSP/PC setup when previous linear solve hit ksp_max_it (first solve always sets up)")
     parser.add_argument("--out", type=str, default="", help="Output JSON file")
+    parser.add_argument("--total_steps", type=int, default=24,
+                        help="Total steps that span the full 4×2π rotation (controls step size)")
     parser.add_argument("--quiet", action="store_true")
     args = parser.parse_args()
 
@@ -451,6 +453,7 @@ if __name__ == "__main__":
         ksp_rtol=args.ksp_rtol,
         ksp_max_it=args.ksp_max_it,
         use_near_nullspace=not args.no_near_nullspace,
+        total_steps=args.total_steps,
         hypre_nodal_coarsen=args.hypre_nodal_coarsen,
         hypre_vec_interp_variant=args.hypre_vec_interp_variant,
         hypre_strong_threshold=args.hypre_strong_threshold,

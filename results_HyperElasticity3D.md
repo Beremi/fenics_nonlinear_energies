@@ -561,3 +561,236 @@ Main finding:
 
 Main finding:
 - Further loosening tolerance reduced inner linear work but increased Newton iterations and introduced localized larger energy error (notably one outlier step).
+
+---
+
+## Annex B) SNES replication campaign (serial screening → L2 → MPI-16)
+
+Goal: reproduce the custom solver robustness as closely as possible using `HyperElasticity3D_fenics/solve_HE_snes_newton.py` under comparable PETSc controls.
+
+Common settings in this campaign:
+- `ksp_type=gmres`
+- level trajectory length: 24 timesteps
+- SNES objective disabled (`--use_objective` not used)
+- output artifacts in [experiment_scripts/he_snes_replicate](experiment_scripts/he_snes_replicate)
+
+### B.1 Serial level-1 screening
+
+Screened configurations (all full 24-step trajectories):
+
+| ID                               | Core options                                                                        | Artifact                                                                                                                                                   | Outcome summary                                                  |
+| -------------------------------- | ----------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------- |
+| `ls_basic_hypre_r1e1_k30_nonull` | `newtonls + basic`, `pc=hypre`, `ksp_rtol=1e-1`, `ksp_max_it=30`, no near-nullspace | [experiment_scripts/he_snes_replicate/l1_ls_basic_hypre_r1e1_k30_nonull.json](experiment_scripts/he_snes_replicate/l1_ls_basic_hypre_r1e1_k30_nonull.json) | finite through early steps, then NaN; non-converged final reason |
+| `ls_basic_hypre_r1e1_k30_null`   | same as above with near-nullspace enabled                                           | [experiment_scripts/he_snes_replicate/l1_ls_basic_hypre_r1e1_k30_null.json](experiment_scripts/he_snes_replicate/l1_ls_basic_hypre_r1e1_k30_null.json)     | similar failure pattern; no robustness gain                      |
+| `ls_basic_hypre_r1e2_k30_nonull` | `ksp_rtol=1e-2`, no near-nullspace                                                  | [experiment_scripts/he_snes_replicate/l1_ls_basic_hypre_r1e2_k30_nonull.json](experiment_scripts/he_snes_replicate/l1_ls_basic_hypre_r1e2_k30_nonull.json) | fails very early                                                 |
+| `ls_bt_hypre_r1e1_k30_nonull`    | `newtonls + bt` with hypre                                                          | [experiment_scripts/he_snes_replicate/l1_ls_bt_hypre_r1e1_k30_nonull.json](experiment_scripts/he_snes_replicate/l1_ls_bt_hypre_r1e1_k30_nonull.json)       | immediate/early divergence                                       |
+| `tr_hypre_r1e1_k30_nonull`       | `newtontr` with hypre                                                               | [experiment_scripts/he_snes_replicate/l1_tr_hypre_r1e1_k30_nonull.json](experiment_scripts/he_snes_replicate/l1_tr_hypre_r1e1_k30_nonull.json)             | immediate/early divergence                                       |
+| `ls_basic_asm_r1e1_k30`          | `newtonls + basic`, `pc=asm`, `ksp_rtol=1e-1`, `ksp_max_it=30`                      | [experiment_scripts/he_snes_replicate/l1_ls_basic_asm_r1e1_k30.json](experiment_scripts/he_snes_replicate/l1_ls_basic_asm_r1e1_k30.json)                   | finite energies on all steps, but SNES reasons non-converged     |
+
+Serial summary artifact for this round:
+- [experiment_scripts/he_snes_replicate/l1_serial_summary.json](experiment_scripts/he_snes_replicate/l1_serial_summary.json)
+
+Second-round L1 refinements:
+- [experiment_scripts/he_snes_replicate/l1_ls_basic_hypre_r1e1_k500_nonull.json](experiment_scripts/he_snes_replicate/l1_ls_basic_hypre_r1e1_k500_nonull.json) (`ksp_max_it=500`)
+- [experiment_scripts/he_snes_replicate/l1_ls_basic_asm_r1e3_k500_nonull.json](experiment_scripts/he_snes_replicate/l1_ls_basic_asm_r1e3_k500_nonull.json)
+- [experiment_scripts/he_snes_replicate/l1_ls_l2_hypre_r1e1_k500_nonull.json](experiment_scripts/he_snes_replicate/l1_ls_l2_hypre_r1e1_k500_nonull.json)
+
+Main findings from serial screening:
+- No tested SNES setup achieved the same “all-step converged + low-error” behavior as custom FEniCS final setup.
+- `hypre` with larger inner cap (`ksp_max_it=500`) improved early-step convergence count but still diverged in the mid trajectory.
+- `asm` with loose inner tolerance stayed finite on L1 but did not satisfy SNES convergence criteria (`reason <= 0` at all steps).
+
+### B.2 Shortlisted candidates and downstream validation
+
+Shortlist used for downstream checks:
+- Candidate H: `newtonls/basic + gmres+hypre`, `ksp_rtol=1e-1`, `ksp_max_it=500`, no near-nullspace.
+- Candidate A: `newtonls/basic + gmres+asm`, `ksp_rtol=1e-1`, `ksp_max_it=30`.
+
+Validation metrics (relative errors computed against the JAX level-1/level-2 reference trajectories in Section 2):
+
+| Case                    | Finite steps | Converged steps (`reason > 0`) | Total time [s] | Max relative error vs JAX | Mean relative error vs JAX | First NaN step |
+| ----------------------- | -----------: | -----------------------------: | -------------: | ------------------------: | -------------------------: | -------------: |
+| L1 serial / Candidate H |           13 |                             12 |        11.5733 |                  1.92e+02 |                   1.48e+01 |             14 |
+| L1 serial / Candidate A |           24 |                              0 |         1.1367 |                  1.79e-02 |                   6.21e-03 |              — |
+| L2 serial / Candidate H |            0 |                              0 |       151.5931 |                         — |                          — |              1 |
+| L2 serial / Candidate A |           14 |                              0 |         3.7082 |                  3.60e+00 |                   1.07e+00 |             15 |
+| L1 MPI-16 / Candidate H |            0 |                              0 |         6.8064 |                         — |                          — |              1 |
+| L1 MPI-16 / Candidate A |           20 |                              0 |         0.1220 |                  2.27e+00 |                   4.80e-01 |             21 |
+
+Artifacts for L2 and MPI-16 validation:
+- [experiment_scripts/he_snes_replicate/l2_ls_basic_hypre_r1e1_k500_nonull.json](experiment_scripts/he_snes_replicate/l2_ls_basic_hypre_r1e1_k500_nonull.json)
+- [experiment_scripts/he_snes_replicate/l2_ls_basic_asm_r1e1_k30.json](experiment_scripts/he_snes_replicate/l2_ls_basic_asm_r1e1_k30.json)
+- [experiment_scripts/he_snes_replicate/l1_np16_ls_basic_hypre_r1e1_k500_nonull.json](experiment_scripts/he_snes_replicate/l1_np16_ls_basic_hypre_r1e1_k500_nonull.json)
+- [experiment_scripts/he_snes_replicate/l1_np16_ls_basic_asm_r1e1_k30.json](experiment_scripts/he_snes_replicate/l1_np16_ls_basic_asm_r1e1_k30.json)
+
+### B.3 Conclusion of this SNES campaign
+
+- Under tested settings, SNES did not match the custom solver robustness across serial L1/L2 and MPI-16 checks.
+- Best partial behavior depended on criterion:
+  - convergence count on early L1 steps: Candidate H,
+  - finite full L1 trajectory (but non-converged SNES reasons): Candidate A.
+- For production-quality trajectories in this project, the custom solver path remains the recommended method.
+
+### B.4 Continuation rerun for iterative SNES (half step size)
+
+To test whether the 24-step loading path was too aggressive for SNES iterative methods, we repeated the Annex B iterative configurations with continuation at half step size (`48` steps over the same total rotation).
+
+Important implementation note:
+- This required fixing the step-to-rotation scaling in [HyperElasticity3D_fenics/solve_HE_snes_newton.py](HyperElasticity3D_fenics/solve_HE_snes_newton.py) so `rotation_per_iter` uses `num_steps` instead of a hardcoded 24.
+
+Half-step artifacts:
+- [experiment_scripts/he_snes_replicate/l1_half_ls_basic_hypre_r1e1_k30_nonull.json](experiment_scripts/he_snes_replicate/l1_half_ls_basic_hypre_r1e1_k30_nonull.json)
+- [experiment_scripts/he_snes_replicate/l1_half_ls_basic_hypre_r1e1_k30_null.json](experiment_scripts/he_snes_replicate/l1_half_ls_basic_hypre_r1e1_k30_null.json)
+- [experiment_scripts/he_snes_replicate/l1_half_ls_basic_hypre_r1e2_k30_nonull.json](experiment_scripts/he_snes_replicate/l1_half_ls_basic_hypre_r1e2_k30_nonull.json)
+- [experiment_scripts/he_snes_replicate/l1_half_ls_bt_hypre_r1e1_k30_nonull.json](experiment_scripts/he_snes_replicate/l1_half_ls_bt_hypre_r1e1_k30_nonull.json)
+- [experiment_scripts/he_snes_replicate/l1_half_tr_hypre_r1e1_k30_nonull.json](experiment_scripts/he_snes_replicate/l1_half_tr_hypre_r1e1_k30_nonull.json)
+- [experiment_scripts/he_snes_replicate/l1_half_ls_basic_asm_r1e1_k30.json](experiment_scripts/he_snes_replicate/l1_half_ls_basic_asm_r1e1_k30.json)
+- [experiment_scripts/he_snes_replicate/l1_half_ls_basic_hypre_r1e1_k500_nonull.json](experiment_scripts/he_snes_replicate/l1_half_ls_basic_hypre_r1e1_k500_nonull.json)
+- [experiment_scripts/he_snes_replicate/l1_half_ls_basic_hypre_r1e1_k500_null_hypredefault.json](experiment_scripts/he_snes_replicate/l1_half_ls_basic_hypre_r1e1_k500_null_hypredefault.json)
+
+HYPRE setup parity check vs custom solver:
+- In custom final setup, explicit BoomerAMG `nodal_coarsen` / `vec_interp_variant` are skipped (HYPRE defaults).
+- The added `k500 + null` case above was run with `--hypre_nodal_coarsen -1 --hypre_vec_interp_variant -1` to match that behavior.
+
+Summary at 48 steps (L1 serial):
+
+| Case                                                              | Finite steps | Positive-reason steps | First non-finite step | First `reason <= 0` | Total time [s] | Sum linear iters | Relative error at final step |
+| ----------------------------------------------------------------- | -----------: | --------------------: | --------------------: | ------------------: | -------------: | ---------------: | ---------------------------: |
+| `newtonls/basic + gmres+hypre (1e-1, k30, no-null)`               |           48 |                     0 |                     — |                   1 |         4.5488 |             5319 |                     5.44e-06 |
+| `newtonls/basic + gmres+hypre (1e-1, k30, null)`                  |           48 |                     0 |                     — |                   1 |        15.4540 |             4262 |                     7.14e-03 |
+| `newtonls/basic + gmres+hypre (1e-2, k30, no-null)`               |           28 |                     0 |                    17 |                   1 |         1.6815 |             2663 |                            — |
+| `newtonls/bt + gmres+hypre (1e-1, k30, no-null)`                  |           25 |                     0 |                    12 |                   1 |         0.6467 |              168 |                            — |
+| `newtontr + gmres+hypre (1e-1, k30, no-null)`                     |            1 |                     0 |                     2 |                   1 |         1.2449 |             1400 |                            — |
+| `newtonls/basic + gmres+asm (1e-1, k30)`                          |           48 |                     0 |                     — |                   1 |         1.4612 |             5063 |                     5.47e-03 |
+| `newtonls/basic + gmres+hypre (1e-1, k500, no-null)`              |           48 |                    45 |                     — |                  46 |        18.5889 |            38589 |                     3.21e-05 |
+| `newtonls/basic + gmres+hypre (1e-1, k500, null, hypre defaults)` |           48 |                    46 |                     — |                  47 |         9.8215 |            14521 |                     3.27e-05 |
+
+Interpretation:
+- The original 24-step path was indeed a harder nonlinear trajectory for these iterative SNES variants.
+- With half-size continuation increments, several iterative methods remain finite across all 48 steps and recover accurate final energies.
+- However, strict SNES convergence reasons remain a limitation for most iterative settings (`reason <= 0` appears early), except the `k500` hypre variant which is positive for most steps before degrading near the end.
+
+---
+
+## Annex C) Custom solver — quarter-step baseline (96 steps, level 1)
+
+**Setup:** `solve_HE_custom_jaxversion.py`, mesh level 1 (2187 DOFs), 96 steps (`--total_steps 96`),
+`ksp_rtol=1e-1`, `ksp_max_it=30`, near-nullspace **ON** (default: `nodal_coarsen=6`, `vec_interp_variant=3`), serial execution.
+
+Each step covers 15° of rotation (quarter of the original 60°/step); total rotation = 4 × 360° = 1440°.
+
+**Artifact:** `experiment_scripts/he_custom_quarter_steps_l1_k30.json`
+
+**Summary:** 96/96 steps converged, total Newton iterations = 1209, total KSP iterations = 24 872, wall time = 72.62 s.
+
+### C.1 Per-step table (level 1, 96 quarter-steps)
+
+| Step | Angle [°] | Time [s] | Newton its | Sum KSP its | Message                 |
+| ---: | --------: | -------: | ---------: | ----------: | ----------------------- |
+|    1 |     15.00 |   0.4358 |         10 |         130 | Energy change converged |
+|    2 |     30.00 |   0.3705 |          9 |         119 | Energy change converged |
+|    3 |     45.00 |   0.4181 |         10 |         143 | Energy change converged |
+|    4 |     60.00 |   0.3699 |          9 |         123 | Energy change converged |
+|    5 |     75.00 |   0.3692 |          9 |         120 | Energy change converged |
+|    6 |     90.00 |   0.4310 |         10 |         132 | Energy change converged |
+|    7 |    105.00 |   0.3872 |          9 |         118 | Energy change converged |
+|    8 |    120.00 |   0.4191 |          9 |         124 | Energy change converged |
+|    9 |    135.00 |   0.4295 |          9 |         121 | Energy change converged |
+|   10 |    150.00 |   0.5972 |         11 |         179 | Energy change converged |
+|   11 |    165.00 |   0.4421 |          9 |         111 | Energy change converged |
+|   12 |    180.00 |   0.5949 |         11 |         170 | Energy change converged |
+|   13 |    195.00 |   0.5186 |         10 |         135 | Energy change converged |
+|   14 |    210.00 |   0.4625 |          9 |         118 | Energy change converged |
+|   15 |    225.00 |   0.6432 |         11 |         173 | Energy change converged |
+|   16 |    240.00 |   0.5138 |          9 |         135 | Energy change converged |
+|   17 |    255.00 |   0.5919 |         10 |         163 | Energy change converged |
+|   18 |    270.00 |   0.5011 |          9 |         132 | Energy change converged |
+|   19 |    285.00 |   0.6760 |         11 |         192 | Energy change converged |
+|   20 |    300.00 |   0.7682 |         12 |         229 | Energy change converged |
+|   21 |    315.00 |   0.6815 |         11 |         197 | Energy change converged |
+|   22 |    330.00 |   0.6804 |         11 |         211 | Energy change converged |
+|   23 |    345.00 |   0.6791 |         11 |         222 | Energy change converged |
+|   24 |    360.00 |   0.8307 |         13 |         279 | Energy change converged |
+|   25 |    375.00 |   0.6293 |         11 |         193 | Energy change converged |
+|   26 |    390.00 |   0.5857 |         10 |         177 | Energy change converged |
+|   27 |    405.00 |   0.7540 |         12 |         237 | Energy change converged |
+|   28 |    420.00 |   0.8244 |         13 |         288 | Energy change converged |
+|   29 |    435.00 |   0.6487 |         11 |         212 | Energy change converged |
+|   30 |    450.00 |   0.7380 |         12 |         249 | Energy change converged |
+|   31 |    465.00 |   0.7291 |         12 |         249 | Energy change converged |
+|   32 |    480.00 |   0.7364 |         12 |         254 | Energy change converged |
+|   33 |    495.00 |   0.7422 |         12 |         256 | Energy change converged |
+|   34 |    510.00 |   0.7603 |         12 |         253 | Energy change converged |
+|   35 |    525.00 |   0.8708 |         14 |         317 | Energy change converged |
+|   36 |    540.00 |   0.8082 |         13 |         279 | Energy change converged |
+|   37 |    555.00 |   0.7232 |         12 |         254 | Energy change converged |
+|   38 |    570.00 |   0.9991 |         15 |         342 | Energy change converged |
+|   39 |    585.00 |   1.0087 |         15 |         346 | Energy change converged |
+|   40 |    600.00 |   0.9308 |         14 |         313 | Energy change converged |
+|   41 |    615.00 |   0.8639 |         13 |         286 | Energy change converged |
+|   42 |    630.00 |   0.7935 |         12 |         265 | Energy change converged |
+|   43 |    645.00 |   0.8351 |         13 |         289 | Energy change converged |
+|   44 |    660.00 |   0.7930 |         12 |         259 | Energy change converged |
+|   45 |    675.00 |   0.6237 |         10 |         202 | Energy change converged |
+|   46 |    690.00 |   0.7311 |         12 |         250 | Energy change converged |
+|   47 |    705.00 |   0.7345 |         12 |         251 | Energy change converged |
+|   48 |    720.00 |   0.6604 |         11 |         225 | Energy change converged |
+|   49 |    735.00 |   0.7461 |         12 |         253 | Energy change converged |
+|   50 |    750.00 |   0.6635 |         11 |         221 | Energy change converged |
+|   51 |    765.00 |   0.7339 |         12 |         256 | Energy change converged |
+|   52 |    780.00 |   0.5847 |         10 |         196 | Energy change converged |
+|   53 |    795.00 |   0.7501 |         12 |         257 | Energy change converged |
+|   54 |    810.00 |   0.6581 |         11 |         225 | Energy change converged |
+|   55 |    825.00 |   0.5673 |         10 |         192 | Energy change converged |
+|   56 |    840.00 |   0.5822 |         10 |         191 | Energy change converged |
+|   57 |    855.00 |   0.6336 |         11 |         218 | Energy change converged |
+|   58 |    870.00 |   0.6540 |         11 |         221 | Energy change converged |
+|   59 |    885.00 |   0.7420 |         12 |         257 | Energy change converged |
+|   60 |    900.00 |   0.7396 |         12 |         262 | Energy change converged |
+|   61 |    915.00 |   0.9816 |         15 |         352 | Energy change converged |
+|   62 |    930.00 |   1.4249 |         21 |         527 | Energy change converged |
+|   63 |    945.00 |   1.3022 |         19 |         467 | Energy change converged |
+|   64 |    960.00 |   1.5453 |         23 |         594 | Energy change converged |
+|   65 |    975.00 |   1.2676 |         19 |         475 | Energy change converged |
+|   66 |    990.00 |   1.0855 |         17 |         413 | Energy change converged |
+|   67 |   1005.00 |   1.2409 |         18 |         439 | Energy change converged |
+|   68 |   1020.00 |   1.1502 |         17 |         409 | Energy change converged |
+|   69 |   1035.00 |   1.2432 |         18 |         440 | Energy change converged |
+|   70 |   1050.00 |   0.9480 |         15 |         346 | Energy change converged |
+|   71 |   1065.00 |   1.0231 |         16 |         373 | Energy change converged |
+|   72 |   1080.00 |   1.1429 |         17 |         405 | Energy change converged |
+|   73 |   1095.00 |   0.9864 |         16 |         366 | Energy change converged |
+|   74 |   1110.00 |   0.8479 |         14 |         312 | Energy change converged |
+|   75 |   1125.00 |   0.9908 |         16 |         371 | Energy change converged |
+|   76 |   1140.00 |   0.8141 |         14 |         310 | Energy change converged |
+|   77 |   1155.00 |   1.0415 |         17 |         402 | Energy change converged |
+|   78 |   1170.00 |   0.9695 |         16 |         366 | Energy change converged |
+|   79 |   1185.00 |   0.7526 |         13 |         272 | Energy change converged |
+|   80 |   1200.00 |   0.9131 |         15 |         342 | Energy change converged |
+|   81 |   1215.00 |   0.9378 |         16 |         361 | Energy change converged |
+|   82 |   1230.00 |   0.9048 |         15 |         331 | Energy change converged |
+|   83 |   1245.00 |   0.8376 |         14 |         300 | Energy change converged |
+|   84 |   1260.00 |   0.8371 |         14 |         300 | Energy change converged |
+|   85 |   1275.00 |   0.7673 |         13 |         271 | Energy change converged |
+|   86 |   1290.00 |   0.8288 |         14 |         297 | Energy change converged |
+|   87 |   1305.00 |   0.9932 |         16 |         361 | Energy change converged |
+|   88 |   1320.00 |   0.6121 |         11 |         209 | Energy change converged |
+|   89 |   1335.00 |   0.6787 |         12 |         240 | Energy change converged |
+|   90 |   1350.00 |   0.5973 |         11 |         205 | Energy change converged |
+|   91 |   1365.00 |   0.6017 |         11 |         212 | Energy change converged |
+|   92 |   1380.00 |   0.6657 |         12 |         241 | Energy change converged |
+|   93 |   1395.00 |   0.5833 |         11 |         207 | Energy change converged |
+|   94 |   1410.00 |   0.5265 |         10 |         177 | Energy change converged |
+|   95 |   1425.00 |   0.5898 |         11 |         203 | Energy change converged |
+|   96 |   1440.00 |   0.5933 |         11 |         205 | Energy change converged |
+
+| **Total** | | **72.62** | **1209** | **24 872** | |
+
+**Observations:**
+- All 96 steps converged (100% success rate).
+- Steps 1–9: ~9–10 Newton iters, ~120–145 KSP per step (loose tolerance reached quickly).
+- Steps 10–60: gradual increase from ~9 to ~15 Newton iters, ~110–350 KSP per step, as deformation builds.
+- Steps 62–69: hardest band (915°–1035°), 17–23 Newton iters and up to 594 KSP per step.
+- Steps 70–96: recovery to 11–17 Newton iters, ~200–410 KSP per step.
+- Average KSP iterations per Newton step: 24 872 / 1209 ≈ **20.6 KSP/Newton** (capped at 30).
+- Wall time 72.62 s vs 363.31 s for `ksp_rtol=1e-3`/`ksp_max_it=500` — **5× faster** at the cost of ~50% more Newton iterations (1209 vs 813).

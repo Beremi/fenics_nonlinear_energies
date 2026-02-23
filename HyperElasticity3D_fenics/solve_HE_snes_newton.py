@@ -19,7 +19,6 @@ from dolfinx.fem.petsc import (
     assemble_matrix,
     assemble_vector,
     create_matrix,
-    create_vector,
     set_bc,
 )
 
@@ -40,11 +39,24 @@ def _ghost_update(v):
 
 
 def build_nullspace(V, A):
-    """Build the 6 rigid body modes for 3D elasticity."""
+    """Build the 6 rigid body modes for 3D elasticity, Gram-Schmidt orthonormalized.
+
+    Orthonormalization is required for HYPRE BoomerAMG to correctly use the
+    near-null space vectors when nodal_coarsen + vec_interp_variant are set.
+    """
     x = V.tabulate_dof_coordinates()
     index_map = V.dofmap.index_map
-    bs = V.dofmap.index_map_bs
     x_owned = x[:index_map.size_local, :]
+
+    # Center coordinates so translations are orthogonal to rotations
+    x_mean = np.zeros(3)
+    for d in range(3):
+        local_sum = float(np.sum(x_owned[:, d]))
+        local_count = float(len(x_owned))
+        global_sum = A.comm.tompi4py().allreduce(local_sum)
+        global_count = A.comm.tompi4py().allreduce(local_count)
+        x_mean[d] = global_sum / global_count
+    xc = x_owned - x_mean  # centered coordinates
 
     vecs = [A.createVecLeft() for _ in range(6)]
 
@@ -57,19 +69,26 @@ def build_nullspace(V, A):
             loc.array[i::3] = 1.0
 
     with vecs[3].localForm() as loc:
-        loc.array[1::3] = -x_owned[:, 2]
-        loc.array[2::3] = x_owned[:, 1]
+        loc.array[1::3] = -xc[:, 2]
+        loc.array[2::3] = xc[:, 1]
 
     with vecs[4].localForm() as loc:
-        loc.array[0::3] = x_owned[:, 2]
-        loc.array[2::3] = -x_owned[:, 0]
+        loc.array[0::3] = xc[:, 2]
+        loc.array[2::3] = -xc[:, 0]
 
     with vecs[5].localForm() as loc:
-        loc.array[0::3] = -x_owned[:, 1]
-        loc.array[1::3] = x_owned[:, 0]
+        loc.array[0::3] = -xc[:, 1]
+        loc.array[1::3] = xc[:, 0]
 
     for vec in vecs:
         vec.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
+
+    # Gram-Schmidt orthonormalization so HYPRE interpolation uses valid basis
+    for i, v in enumerate(vecs):
+        for j in range(i):
+            alpha = v.dot(vecs[j])
+            v.axpy(-alpha, vecs[j])
+        v.normalize()
 
     return PETSc.NullSpace().create(vectors=vecs)
 
@@ -79,8 +98,9 @@ def build_nullspace(V, A):
 
 
 def run_level(mesh_level, num_steps=1, snes_type="newtonls", linesearch="basic",
-              ksp_type="gmres", pc_type="hypre", ksp_rtol=1e-3, snes_atol=1e-5,
-              use_objective=False, verbose=True):
+              ksp_type="gmres", pc_type="hypre", ksp_rtol=1e-3, ksp_max_it=10000,
+              snes_atol=1e-5, use_objective=False, verbose=True,
+              use_near_nullspace=True, hypre_nodal_coarsen=-1, hypre_vec_interp_variant=-1):
     """Run SNES Newton solver for one HE mesh level."""
     comm = MPI.COMM_WORLD
     rank = comm.rank
@@ -142,8 +162,10 @@ def run_level(mesh_level, num_steps=1, snes_type="newtonls", linesearch="basic",
     x.assemble()
 
     A = create_matrix(hessian_form)
-    nullspace = build_nullspace(V, A)
-    A.setNearNullSpace(nullspace)
+    nullspace = None
+    if use_near_nullspace:
+        nullspace = build_nullspace(V, A)
+        A.setNearNullSpace(nullspace)
 
     b = x.duplicate()
 
@@ -164,9 +186,11 @@ def run_level(mesh_level, num_steps=1, snes_type="newtonls", linesearch="basic",
     pc.setType(pc_type)
     if pc_type == "hypre":
         pc.setHYPREType("boomeramg")
-        opts["he_pc_hypre_boomeramg_nodal_coarsen"] = 6
-        opts["he_pc_hypre_boomeramg_vec_interp_variant"] = 3
-    ksp.setTolerances(rtol=ksp_rtol)
+        if hypre_nodal_coarsen >= 0:
+            opts["he_pc_hypre_boomeramg_nodal_coarsen"] = hypre_nodal_coarsen
+        if hypre_vec_interp_variant >= 0:
+            opts["he_pc_hypre_boomeramg_vec_interp_variant"] = hypre_vec_interp_variant
+    ksp.setTolerances(rtol=ksp_rtol, max_it=ksp_max_it)
 
     snes.setFromOptions()
 
@@ -197,9 +221,10 @@ def run_level(mesh_level, num_steps=1, snes_type="newtonls", linesearch="basic",
             P_mat.zeroEntries()
             assemble_matrix(P_mat, hessian_form, bcs=bcs)
             P_mat.assemble()
-        J_mat.setNearNullSpace(nullspace)
-        if P_mat.handle != J_mat.handle:
-            P_mat.setNearNullSpace(nullspace)
+        if nullspace is not None:
+            J_mat.setNearNullSpace(nullspace)
+            if P_mat.handle != J_mat.handle:
+                P_mat.setNearNullSpace(nullspace)
 
     snes.setFunction(snes_residual, b)
     snes.setJacobian(snes_jacobian, A, A)
@@ -207,7 +232,7 @@ def run_level(mesh_level, num_steps=1, snes_type="newtonls", linesearch="basic",
         snes.setObjective(snes_objective)
 
     # ---- time evolution ----
-    rotation_per_iter = 4 * 2 * np.pi / 24
+    rotation_per_iter = 4 * 2 * np.pi / num_steps
     results = []
 
     for step in range(1, num_steps + 1):
@@ -255,7 +280,8 @@ def run_level(mesh_level, num_steps=1, snes_type="newtonls", linesearch="basic",
     snes.destroy()
     A.destroy()
     b.destroy()
-    nullspace.destroy()
+    if nullspace is not None:
+        nullspace.destroy()
 
     return {
         "mesh_level": mesh_level,
@@ -266,8 +292,12 @@ def run_level(mesh_level, num_steps=1, snes_type="newtonls", linesearch="basic",
             "ksp_type": ksp_type,
             "pc_type": pc_type,
             "ksp_rtol": ksp_rtol,
+            "ksp_max_it": ksp_max_it,
             "snes_atol": snes_atol,
-            "use_objective": use_objective
+            "use_objective": use_objective,
+            "use_near_nullspace": use_near_nullspace,
+            "hypre_nodal_coarsen": hypre_nodal_coarsen,
+            "hypre_vec_interp_variant": hypre_vec_interp_variant,
         },
         "steps": results
     }
@@ -282,8 +312,14 @@ if __name__ == "__main__":
     parser.add_argument("--ksp_type", type=str, default="gmres")
     parser.add_argument("--pc_type", type=str, default="hypre")
     parser.add_argument("--ksp_rtol", type=float, default=1e-3)
+    parser.add_argument("--ksp_max_it", type=int, default=10000)
     parser.add_argument("--snes_atol", type=float, default=1e-5)
     parser.add_argument("--use_objective", action="store_true")
+    parser.add_argument("--no_near_nullspace", action="store_true")
+    parser.add_argument("--hypre_nodal_coarsen", type=int, default=-1,
+                        help="BoomerAMG nodal coarsen (-1 to skip setting)")
+    parser.add_argument("--hypre_vec_interp_variant", type=int, default=-1,
+                        help="BoomerAMG vec interp variant (-1 to skip setting)")
     parser.add_argument("--out", type=str, default="")
     parser.add_argument("--quiet", action="store_true")
     args, _ = parser.parse_known_args()
@@ -291,8 +327,12 @@ if __name__ == "__main__":
     res = run_level(args.level, num_steps=args.steps,
                     snes_type=args.snes_type, linesearch=args.linesearch,
                     ksp_type=args.ksp_type, pc_type=args.pc_type,
-                    ksp_rtol=args.ksp_rtol, snes_atol=args.snes_atol,
-                    use_objective=args.use_objective, verbose=not args.quiet)
+                    ksp_rtol=args.ksp_rtol, ksp_max_it=args.ksp_max_it,
+                    snes_atol=args.snes_atol,
+                    use_objective=args.use_objective, verbose=not args.quiet,
+                    use_near_nullspace=not args.no_near_nullspace,
+                    hypre_nodal_coarsen=args.hypre_nodal_coarsen,
+                    hypre_vec_interp_variant=args.hypre_vec_interp_variant)
 
     if MPI.COMM_WORLD.rank == 0:
         print(json.dumps(res, indent=2))
