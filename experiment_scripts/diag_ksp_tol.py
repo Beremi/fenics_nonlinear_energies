@@ -1,12 +1,13 @@
 """Diagnostic: check if snes.setFromOptions() resets KSP tolerances."""
+from HyperElasticity3D_fenics.solve_HE_snes_newton import build_nullspace
 import ufl
 from mpi4py import MPI
 from dolfinx import fem, mesh
 from dolfinx.fem.petsc import create_matrix
 from petsc4py import PETSc
-import sys, os
+import sys
+import os
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
-from HyperElasticity3D_fenics.solve_HE_snes_newton import build_nullspace
 
 comm = MPI.COMM_WORLD
 msh = mesh.create_box(comm, [[0.0, -0.005, -0.005], [0.4, 0.005, 0.005]],

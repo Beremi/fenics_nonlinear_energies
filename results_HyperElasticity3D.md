@@ -48,9 +48,45 @@ Reference artifacts used in tables:
     - subsequent solves reuse PC
     - rebuild PC only when previous solve hit `ksp_max_it`
 
+**How to run (96 quarter-steps, level 1, single process):**
+```bash
+python3 HyperElasticity3D_fenics/solve_HE_custom_jaxversion.py \
+    --level 1 --steps 96 --total_steps 96 \
+    --ksp_rtol 1e-1 --ksp_max_it 30 \
+    --pc_setup_on_ksp_cap \
+    --quiet --out experiment_scripts/out_custom.json
+```
+
 Final artifacts used in tables:
 - Level 1: [experiment_scripts/he_fenics_custom_evolution_l1_skip_ksp30_pc_cap.json](experiment_scripts/he_fenics_custom_evolution_l1_skip_ksp30_pc_cap.json)
 - Level 2: [experiment_scripts/he_fenics_custom_evolution_l2_skip_ksp30_pc_cap.json](experiment_scripts/he_fenics_custom_evolution_l2_skip_ksp30_pc_cap.json)
+
+### 1.3 SNES FEniCS final setup
+
+- Solver: `HyperElasticity3D_fenics/solve_HE_snes_newton.py` (PETSc SNES Newton with line search)
+- Nonlinear tolerances:
+  - `snes_atol = 1e-3`
+  - `snes_rtol = 1e-10` (default, not active in practice)
+  - `snes_max_it = 50` (default)
+- Near-nullspace: rigid-body translations + rotations attached to stiffness matrix (same as custom solver)
+- Inner linear solve:
+  - `ksp_type = gmres`
+  - `pc_type = hypre` (`boomeramg`)
+  - `ksp_rtol = 1e-1`
+  - `ksp_max_it = 500`
+  - HYPRE default coarsening (no explicit `nodal_coarsen` / `vec_interp_variant`)
+  - **Note**: `vec_interp_variant=3` (used in early experiments) produces a non-symmetric AMG preconditioner, which causes CG breakdown (`KSP_DIVERGED_BREAKDOWN`) inside SNES because SNES requires `KSP reason > 0`. GMRES + HYPRE defaults avoids this.
+
+**How to run (96 quarter-steps, level 1, single process):**
+```bash
+python3 HyperElasticity3D_fenics/solve_HE_snes_newton.py \
+    --level 1 --steps 96 \
+    --ksp_type gmres --pc_type hypre \
+    --ksp_rtol 1e-1 --ksp_max_it 500 --snes_atol 1e-3 \
+    --quiet --out experiment_scripts/out_snes.json
+```
+
+Results artifact: [experiment_scripts/gl_snes_np1.json](experiment_scripts/gl_snes_np1.json) (see Annex D for full per-step table)
 
 ---
 
@@ -817,18 +853,18 @@ Each step covers 15° of rotation (quarter of the original 60°/step); total rot
 
 **Comparison with custom solver (Annex C):**
 
-| Metric                    | Custom solver (Annex C)                          | SNES (Annex D)      |
-| ------------------------- | -----------------------------------------------: | ------------------: |
-| KSP type                  | CG                                               | GMRES               |
-| AMG config                | `nodal_coarsen=6`, `vec_interp_variant=3` (n6v3) | HYPRE defaults      |
-| `ksp_rtol`                | 1e-1                                             | 1e-1                |
-| `ksp_max_it`              | 30                                               | 500                 |
-| Convergence criterion     | energy change < 1e-4                             | `snes_atol=1e-3`    |
-| Converged steps           | 96/96                                            | 93/96               |
-| Total Newton iterations   | 1 209                                            | 1 175               |
-| Total KSP iterations      | 24 872                                           | 22 490              |
-| **Avg KSP / Newton step** | **20.6**                                         | **19.1**            |
-| Wall time [s]             | 72.62                                            | 15.03               |
+| Metric                    |                          Custom solver (Annex C) |   SNES (Annex D) |
+| ------------------------- | -----------------------------------------------: | ---------------: |
+| KSP type                  |                                               CG |            GMRES |
+| AMG config                | `nodal_coarsen=6`, `vec_interp_variant=3` (n6v3) |   HYPRE defaults |
+| `ksp_rtol`                |                                             1e-1 |             1e-1 |
+| `ksp_max_it`              |                                               30 |              500 |
+| Convergence criterion     |                             energy change < 1e-4 | `snes_atol=1e-3` |
+| Converged steps           |                                            96/96 |            93/96 |
+| Total Newton iterations   |                                            1 209 |            1 175 |
+| Total KSP iterations      |                                           24 872 |           22 490 |
+| **Avg KSP / Newton step** |                                         **20.6** |         **19.1** |
+| Wall time [s]             |                                            72.62 |            15.03 |
 
 **Key finding:** Average KSP iterations per Newton step are essentially identical (19.1 vs 20.6), confirming the near-nullspace **IS correctly configured and active** in the SNES solver.  The 3/96 failures (steps 94–96, angles 1410°–1440°) require >500 GMRES iterations for individual linear solves at extreme deformation — a hard-conditioning problem at those specific Jacobians, not a nullspace issue. SNES is significantly faster in wall time (15 s vs 73 s) due to lighter assembly overhead vs the custom Newton loop.
 
@@ -932,9 +968,9 @@ Each step covers 15° of rotation (quarter of the original 60°/step); total rot
 |   91 |   1365.00 |   0.1547 |         11 |         194 |   conv |
 |   92 |   1380.00 |   0.1600 |         12 |         211 |   conv |
 |   93 |   1395.00 |   0.1636 |         12 |         214 |   conv |
-|   94 |   1410.00 |   0.8676 |         10 |         867 | r=-3 |
-|   95 |   1425.00 |   0.6536 |         11 |         654 | r=-3 |
-|   96 |   1440.00 |   0.5967 |          8 |         597 | r=-3 |
+|   94 |   1410.00 |   0.8676 |         10 |         867 |   r=-3 |
+|   95 |   1425.00 |   0.6536 |         11 |         654 |   r=-3 |
+|   96 |   1440.00 |   0.5967 |          8 |         597 |   r=-3 |
 
 | **Total** | | **15.03** | **1175** | **22,490** | **93/96** |
 
