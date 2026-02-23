@@ -53,10 +53,10 @@ How to run: [instructions.md](instructions.md)
 
 Neo-Hookean energy on a 3D beam with a rotating right-face boundary condition (0°–360° in 96 quarter-degree steps). Two FEniCS solver variants are provided:
 
-| Solver                            | Location                                                       | Status         |
-| --------------------------------- | -------------------------------------------------------------- | -------------- |
-| **Custom Newton** (recommended)   | `HyperElasticity3D_fenics/solve_HE_custom_jaxversion.py`       | 96/96 steps ✓  |
-| **SNES Newton**                   | `HyperElasticity3D_fenics/solve_HE_snes_newton.py`             | 93/96 steps ✓  |
+| Solver                          | Location                                                 | Status        |
+| ------------------------------- | -------------------------------------------------------- | ------------- |
+| **Custom Newton** (recommended) | `HyperElasticity3D_fenics/solve_HE_custom_jaxversion.py` | 96/96 steps ✓ |
+| **SNES Newton**                 | `HyperElasticity3D_fenics/solve_HE_snes_newton.py`       | 93/96 steps ✓ |
 
 Both solvers use:
 - GMRES + HYPRE BoomerAMG (default coarsening — no explicit `nodal_coarsen` / `vec_interp_variant`)
@@ -101,10 +101,10 @@ docker run --rm --entrypoint "" -v "$PWD":/work -w /work fenics_test \
 
 ### Summary results (level 1, 96 quarter-steps)
 
-| Solver          | Converged | Newton iters | KSP iters | Avg KSP/Newton | Wall time |
-| --------------- | --------: | -----------: | --------: | -------------: | --------: |
-| Custom Newton   |     96/96 |         1209 |     24872 |           20.6 |    72.6 s |
-| SNES Newton     |     93/96 |         1175 |     22490 |           19.1 |    15.0 s |
+| Solver        | Converged | Newton iters | KSP iters | Avg KSP/Newton | Wall time |
+| ------------- | --------: | -----------: | --------: | -------------: | --------: |
+| Custom Newton |     96/96 |         1209 |     24872 |           20.6 |    72.6 s |
+| SNES Newton   |     93/96 |         1175 |     22490 |           19.1 |    15.0 s |
 
 Steps 94–96 fail in the SNES solver due to AMG degradation at extreme deformation (the near-nullspace
 is working correctly — confirmed by matching KSP/Newton ratio). See
