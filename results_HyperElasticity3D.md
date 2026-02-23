@@ -1023,36 +1023,36 @@ While setting up these experiments a critical bug was found in `build_nullspace`
 
 Both solvers run the identical problem: one quarter-step (15°) of a 96-step trajectory on a level 3 mesh (78 003 DOFs) using 16 MPI processes.  The `--total_steps 96` flag (added to the SNES solver for this investigation) pins the rotation per step to 360°×4/96 = 15°, independent of the `--steps` count.
 
-| Parameter                | Custom Newton                        | SNES Newton                          |
-| ------------------------ | ------------------------------------ | ------------------------------------ |
-| Script                   | `solve_HE_custom_jaxversion.py`      | `solve_HE_snes_newton.py`            |
-| Mesh level / DOFs        | 3 / 78 003                           | 3 / 78 003                           |
-| MPI processes            | 16                                   | 16                                   |
-| Steps (total_steps)      | 1 (of 96)                            | 1 (of 96)                            |
-| KSP type                 | CG                                   | GMRES                                |
-| PC type                  | HYPRE BoomerAMG (defaults)           | HYPRE BoomerAMG (defaults)           |
-| `ksp_rtol`               | 1e-1                                 | 1e-1                                 |
-| `ksp_max_it`             | 30                                   | 500                                  |
-| Convergence criterion    | energy change < 1e-4                 | `snes_atol=1e-3`                     |
-| AMG reuse strategy       | `--pc_setup_on_ksp_cap` (reuse until cap hit) | PETSc SNES: reassemble each Newton iter |
-| Line search              | Golden-section (custom Python)       | `newtonls` + `basic` (PETSc)         |
-| Artifacts                | `he_speed_custom_l3np16.json/txt`    | `he_speed_snes_l3np16.json/txt`      |
+| Parameter             | Custom Newton                                 | SNES Newton                             |
+| --------------------- | --------------------------------------------- | --------------------------------------- |
+| Script                | `solve_HE_custom_jaxversion.py`               | `solve_HE_snes_newton.py`               |
+| Mesh level / DOFs     | 3 / 78 003                                    | 3 / 78 003                              |
+| MPI processes         | 16                                            | 16                                      |
+| Steps (total_steps)   | 1 (of 96)                                     | 1 (of 96)                               |
+| KSP type              | CG                                            | GMRES                                   |
+| PC type               | HYPRE BoomerAMG (defaults)                    | HYPRE BoomerAMG (defaults)              |
+| `ksp_rtol`            | 1e-1                                          | 1e-1                                    |
+| `ksp_max_it`          | 30                                            | 500                                     |
+| Convergence criterion | energy change < 1e-4                          | `snes_atol=1e-3`                        |
+| AMG reuse strategy    | `--pc_setup_on_ksp_cap` (reuse until cap hit) | PETSc SNES: reassemble each Newton iter |
+| Line search           | Golden-section (custom Python)                | `newtonls` + `basic` (PETSc)            |
+| Artifacts             | `he_speed_custom_l3np16.json/txt`             | `he_speed_snes_l3np16.json/txt`         |
 
 ### E.3 Results summary
 
-| Metric                    |   Custom Newton |   SNES Newton |
-| ------------------------- | --------------: | ------------: |
-| Wall time [s]             |      **1.8239** |    **2.5096** |
-| Newton iterations         |              11 |            14 |
-| Total KSP iterations      |             148 |           214 |
-| Avg KSP / Newton          |            13.5 |          15.3 |
-| Final energy              |        0.010163 |       0.01016 |
-| PC setups performed       |               1 |            14 |
-| PC setup time [s]         |          0.0605 |       ~0.84 ✱ |
-| Total assembly time [s]   |          0.1679 |         — ✱✱ |
-| Total KSP solve time [s]  |          1.4822 |         — ✱✱ |
-| Total linear time [s]     |          1.7108 |         — ✱✱ |
-| Non-linear overhead [s]   |          0.1131 |         — ✱✱ |
+| Metric                   | Custom Newton | SNES Newton |
+| ------------------------ | ------------: | ----------: |
+| Wall time [s]            |    **1.8239** |  **2.5096** |
+| Newton iterations        |            11 |          14 |
+| Total KSP iterations     |           148 |         214 |
+| Avg KSP / Newton         |          13.5 |        15.3 |
+| Final energy             |      0.010163 |     0.01016 |
+| PC setups performed      |             1 |          14 |
+| PC setup time [s]        |        0.0605 |     ~0.84 ✱ |
+| Total assembly time [s]  |        0.1679 |        — ✱✱ |
+| Total KSP solve time [s] |        1.4822 |        — ✱✱ |
+| Total linear time [s]    |        1.7108 |        — ✱✱ |
+| Non-linear overhead [s]  |        0.1131 |        — ✱✱ |
 
 ✱ Estimated: 14 Newton iters × ~0.0605 s/setup (measured from the custom solver's first PC setup at this level/np).
 ✱✱ SNES manages Newton/KSP internals; no per-Newton timing is exposed.
@@ -1076,7 +1076,7 @@ The `--save_linear_timing` flag records assembly, PC setup, and KSP solve times 
 |      8 |      12 |       0.0156 |       0.0000 |        0.1380 |        0.1536 |
 |      9 |      29 |       0.0158 |       0.0000 |        0.2375 |        0.2533 |
 |     10 |      12 |       0.0165 |       0.0000 |        0.1388 |        0.1553 |
-| **Σ** | **148** |   **0.1679** |   **0.0605** |    **1.4822** |    **1.7108** |
+|  **Σ** | **148** |   **0.1679** |   **0.0605** |    **1.4822** |    **1.7108** |
 
 **Observations:**
 - Only Newton step 0 incurs a PC setup (0.060 s).  The `pc_setup_on_ksp_cap` flag reuses the AMG preconditioner for all subsequent Newton steps — none of steps 1–10 hit the `ksp_max_it=30` cap.
@@ -1089,21 +1089,21 @@ The `--save_linear_timing` flag records assembly, PC setup, and KSP solve times 
 
 At **level 1 np=1** (serial, 2 187 DOFs):
 
-| Metric            | Custom (step 1) | SNES (step 1) |
-| ----------------- | --------------: | ------------: |
-| Wall time [s]     |          0.4358 |        0.0916 |
-| Newton iters      |              10 |            12 |
-| Total KSP iters   |             130 |           147 |
-| Speed ratio       |       baseline  |   **4.8× faster** |
+| Metric          | Custom (step 1) |   SNES (step 1) |
+| --------------- | --------------: | --------------: |
+| Wall time [s]   |          0.4358 |          0.0916 |
+| Newton iters    |              10 |              12 |
+| Total KSP iters |             130 |             147 |
+| Speed ratio     |        baseline | **4.8× faster** |
 
 At **level 3 np=16** (parallel, 78 003 DOFs):
 
-| Metric            | Custom (step 1) | SNES (step 1) |
-| ----------------- | --------------: | ------------: |
-| Wall time [s]     |          1.8239 |        2.5096 |
-| Newton iters      |              11 |            14 |
-| Total KSP iters   |             148 |           214 |
-| Speed ratio       |       **1.4× faster** |    baseline  |
+| Metric          | Custom (step 1) | SNES (step 1) |
+| --------------- | --------------: | ------------: |
+| Wall time [s]   |          1.8239 |        2.5096 |
+| Newton iters    |              11 |            14 |
+| Total KSP iters |             148 |           214 |
+| Speed ratio     | **1.4× faster** |      baseline |
 
 **Why SNES is faster at level 1:**
 At small serial problems the AMG setup (≈0.060 s at level 3, much less at level 1 ≈ few ms) is cheap relative to Python overhead.  Each Newton iteration in the custom solver involves a full Python function call, golden-section line search (up to 17 energy evaluations per step visible in `ls_evals` field), and CG inside a Python loop.  PETSc SNES manages the entire Newton loop in compiled C, with only the residual/Jacobian callbacks entering Python.  This eliminates the per-Newton Python overhead.

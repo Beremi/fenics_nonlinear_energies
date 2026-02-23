@@ -1,12 +1,13 @@
 """Diagnose build_nullspace SEGV: compare vector sizes vs DOF counts."""
-import sys, os
-sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
-from mpi4py import MPI
-from dolfinx import fem, mesh
-from dolfinx.fem.petsc import create_matrix
-import ufl
-import numpy as np
 from petsc4py import PETSc
+import numpy as np
+import ufl
+from dolfinx.fem.petsc import create_matrix
+from dolfinx import fem, mesh
+from mpi4py import MPI
+import sys
+import os
+sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
 comm = MPI.COMM_WORLD
 rank = comm.rank
@@ -41,14 +42,14 @@ for level in [1, 2]:
 
     print(f"[rank={rank}] level={level}  size_local={size_local}  ghosts={size_ghosts}"
           f"  vec_local={vec_local_size}  tabulate_shape={x_shape}"
-          f"  3*size_local={3*size_local}  vec_local==3*size_local={vec_local_size == 3*size_local}",
+          f"  3*size_local={3 * size_local}  vec_local==3*size_local={vec_local_size == 3 * size_local}",
           flush=True)
 
     # Try localForm
     with vec.localForm() as loc:
         loc_size = len(loc.array)
         print(f"[rank={rank}] level={level}  localForm array size={loc_size}  "
-              f"expected={3*size_local}  match={loc_size == 3*size_local}", flush=True)
+              f"expected={3 * size_local}  match={loc_size == 3 * size_local}", flush=True)
 
     comm.Barrier()
     if rank == 0:
