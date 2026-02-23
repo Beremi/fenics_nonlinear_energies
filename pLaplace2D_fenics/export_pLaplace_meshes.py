@@ -1,3 +1,13 @@
+"""
+[OBSOLETE] Export pLaplace meshes to XDMF format.
+
+This script was previously used to derive mesh_level_N.{xdmf,h5} from the JAX
+source files pLaplace_levelN.h5 for use with FEniCS XDMFFile.read_mesh().
+
+The FEniCS solvers now load meshes directly from pLaplace_levelN.h5 via h5py +
+dolfinx.mesh.create_mesh, so this script and the derived XDMF/H5 files are no
+longer needed. This file is kept for reference only.
+"""
 import os
 from mpi4py import MPI
 import dolfinx

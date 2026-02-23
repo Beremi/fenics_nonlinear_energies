@@ -16,11 +16,12 @@ import sys
 import time
 import json
 import argparse
+import h5py
 import ufl
 import numpy as np
+import basix.ufl
 from mpi4py import MPI
 from dolfinx import fem, mesh
-from dolfinx.io import XDMFFile
 from petsc4py import PETSc
 from dolfinx.fem.petsc import NonlinearProblem, set_bc
 from petsc4py.PETSc import ScalarType
@@ -34,8 +35,11 @@ def run_level(mesh_level):
     comm = MPI.COMM_WORLD
     rank = comm.rank
 
-    with XDMFFile(comm, f"mesh_data/pLaplace/mesh_level_{mesh_level}.xdmf", "r") as xdmf_file:
-        msh = xdmf_file.read_mesh(name="mesh")
+    with h5py.File(f"mesh_data/pLaplace/pLaplace_level{mesh_level}.h5", "r") as f:
+        points = f["nodes"][:]
+        triangles = f["elems"][:].astype(np.int64)
+    c_el = ufl.Mesh(basix.ufl.element("Lagrange", "triangle", 1, shape=(2,)))
+    msh = mesh.create_mesh(comm, triangles, c_el, points)
 
     V = fem.functionspace(msh, ("Lagrange", 1))
     total_dofs = V.dofmap.index_map.size_global
