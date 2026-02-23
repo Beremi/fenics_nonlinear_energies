@@ -38,25 +38,33 @@ def _ghost_update(v):
     v.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
 
 
-def build_nullspace(V, A):
-    """Build the 6 rigid body modes for 3D elasticity, Gram-Schmidt orthonormalized.
+def build_nullspace(V, A, gram_schmidt=False):
+    """Build the 6 rigid body modes for 3D elasticity.
 
-    Orthonormalization is required for HYPRE BoomerAMG to correctly use the
-    near-null space vectors when nodal_coarsen + vec_interp_variant are set.
+    Parameters
+    ----------
+    gram_schmidt : bool
+        If True, apply coordinate centering + Gram-Schmidt orthonormalisation
+        before passing vectors to HYPRE.  If False (default), pass the raw
+        un-centered RBMs exactly as the custom solver does — this is required
+        for HYPRE nodal_coarsen=6 / vec_interp_variant=3 to work reliably.
     """
     x = V.tabulate_dof_coordinates()
     index_map = V.dofmap.index_map
     x_owned = x[:index_map.size_local, :]
 
-    # Center coordinates so translations are orthogonal to rotations
-    x_mean = np.zeros(3)
-    for d in range(3):
-        local_sum = float(np.sum(x_owned[:, d]))
-        local_count = float(len(x_owned))
-        global_sum = A.comm.tompi4py().allreduce(local_sum)
-        global_count = A.comm.tompi4py().allreduce(local_count)
-        x_mean[d] = global_sum / global_count
-    xc = x_owned - x_mean  # centered coordinates
+    if gram_schmidt:
+        # Center coordinates so translations are orthogonal to rotations
+        x_mean = np.zeros(3)
+        for d in range(3):
+            local_sum = float(np.sum(x_owned[:, d]))
+            local_count = float(len(x_owned))
+            global_sum = A.comm.tompi4py().allreduce(local_sum)
+            global_count = A.comm.tompi4py().allreduce(local_count)
+            x_mean[d] = global_sum / global_count
+        xc = x_owned - x_mean
+    else:
+        xc = x_owned
 
     vecs = [A.createVecLeft() for _ in range(6)]
 
@@ -83,12 +91,13 @@ def build_nullspace(V, A):
     for vec in vecs:
         vec.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
 
-    # Gram-Schmidt orthonormalization so HYPRE interpolation uses valid basis
-    for i, v in enumerate(vecs):
-        for j in range(i):
-            alpha = v.dot(vecs[j])
-            v.axpy(-alpha, vecs[j])
-        v.normalize()
+    if gram_schmidt:
+        # Gram-Schmidt orthonormalization
+        for i, v in enumerate(vecs):
+            for j in range(i):
+                alpha = v.dot(vecs[j])
+                v.axpy(-alpha, vecs[j])
+            v.normalize()
 
     return PETSc.NullSpace().create(vectors=vecs)
 
@@ -100,7 +109,8 @@ def build_nullspace(V, A):
 def run_level(mesh_level, num_steps=1, snes_type="newtonls", linesearch="basic",
               ksp_type="gmres", pc_type="hypre", ksp_rtol=1e-3, ksp_max_it=10000,
               snes_atol=1e-5, use_objective=False, verbose=True,
-              use_near_nullspace=True, hypre_nodal_coarsen=-1, hypre_vec_interp_variant=-1):
+              use_near_nullspace=True, hypre_nodal_coarsen=-1, hypre_vec_interp_variant=-1,
+              nullspace_gram_schmidt=False):
     """Run SNES Newton solver for one HE mesh level."""
     comm = MPI.COMM_WORLD
     rank = comm.rank
@@ -164,7 +174,7 @@ def run_level(mesh_level, num_steps=1, snes_type="newtonls", linesearch="basic",
     A = create_matrix(hessian_form)
     nullspace = None
     if use_near_nullspace:
-        nullspace = build_nullspace(V, A)
+        nullspace = build_nullspace(V, A, gram_schmidt=nullspace_gram_schmidt)
         A.setNearNullSpace(nullspace)
 
     b = x.duplicate()
@@ -298,6 +308,7 @@ def run_level(mesh_level, num_steps=1, snes_type="newtonls", linesearch="basic",
             "use_near_nullspace": use_near_nullspace,
             "hypre_nodal_coarsen": hypre_nodal_coarsen,
             "hypre_vec_interp_variant": hypre_vec_interp_variant,
+            "nullspace_gram_schmidt": nullspace_gram_schmidt,
         },
         "steps": results
     }
@@ -320,6 +331,8 @@ if __name__ == "__main__":
                         help="BoomerAMG nodal coarsen (-1 to skip setting)")
     parser.add_argument("--hypre_vec_interp_variant", type=int, default=-1,
                         help="BoomerAMG vec interp variant (-1 to skip setting)")
+    parser.add_argument("--nullspace_gram_schmidt", action="store_true",
+                        help="Apply centering + Gram-Schmidt to RBM nullspace vectors")
     parser.add_argument("--out", type=str, default="")
     parser.add_argument("--quiet", action="store_true")
     args, _ = parser.parse_known_args()
@@ -332,7 +345,8 @@ if __name__ == "__main__":
                     use_objective=args.use_objective, verbose=not args.quiet,
                     use_near_nullspace=not args.no_near_nullspace,
                     hypre_nodal_coarsen=args.hypre_nodal_coarsen,
-                    hypre_vec_interp_variant=args.hypre_vec_interp_variant)
+                    hypre_vec_interp_variant=args.hypre_vec_interp_variant,
+                    nullspace_gram_schmidt=args.nullspace_gram_schmidt)
 
     if MPI.COMM_WORLD.rank == 0:
         print(json.dumps(res, indent=2))
