@@ -110,7 +110,7 @@ def run_level(mesh_level, num_steps=1, snes_type="newtonls", linesearch="basic",
               ksp_type="gmres", pc_type="hypre", ksp_rtol=1e-3, ksp_max_it=10000,
               snes_atol=1e-5, use_objective=False, verbose=True,
               use_near_nullspace=True, hypre_nodal_coarsen=-1, hypre_vec_interp_variant=-1,
-              nullspace_gram_schmidt=False):
+              nullspace_gram_schmidt=False, stop_on_fail=False):
     """Run SNES Newton solver for one HE mesh level."""
     comm = MPI.COMM_WORLD
     rank = comm.rank
@@ -287,6 +287,11 @@ def run_level(mesh_level, num_steps=1, snes_type="newtonls", linesearch="basic",
                 f"Reason = {snes.getConvergedReason()}"
             )
 
+        if stop_on_fail and snes.getConvergedReason() < 0:
+            if rank == 0 and verbose:
+                print(f"Stopping at step {step} due to divergence (reason={snes.getConvergedReason()}).")
+            break
+
     snes.destroy()
     A.destroy()
     b.destroy()
@@ -335,6 +340,8 @@ if __name__ == "__main__":
                         help="Apply centering + Gram-Schmidt to RBM nullspace vectors")
     parser.add_argument("--out", type=str, default="")
     parser.add_argument("--quiet", action="store_true")
+    parser.add_argument("--stop_on_fail", action="store_true",
+                        help="Stop loading sequence at first diverged step")
     args, _ = parser.parse_known_args()
 
     res = run_level(args.level, num_steps=args.steps,
@@ -346,7 +353,8 @@ if __name__ == "__main__":
                     use_near_nullspace=not args.no_near_nullspace,
                     hypre_nodal_coarsen=args.hypre_nodal_coarsen,
                     hypre_vec_interp_variant=args.hypre_vec_interp_variant,
-                    nullspace_gram_schmidt=args.nullspace_gram_schmidt)
+                    nullspace_gram_schmidt=args.nullspace_gram_schmidt,
+                    stop_on_fail=args.stop_on_fail)
 
     if MPI.COMM_WORLD.rank == 0:
         print(json.dumps(res, indent=2))

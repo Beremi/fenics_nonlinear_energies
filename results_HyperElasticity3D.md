@@ -154,6 +154,28 @@ Note: JAX output does not include per-Newton inner linear iteration counts in th
 
 Summary: total time = `6.9156 s`, total Newton iters = `527`, total linear iters = `7503`, max relative error = `3.31e-05`, mean relative error = `1.68e-06`.
 
+## Level 1 — SNES FEniCS (standard 24 steps, stop at first fail)
+
+Config: `newtonls + basic linesearch`, `gmres + hypre boomeramg (HYPRE defaults)`, near-nullspace ON, `ksp_rtol=1e-1`, `ksp_max_it=500`, `snes_atol=1e-3`. Stopped at step 13 (`SNES_DIVERGED_MAX_IT`, reason=-5). Artifact: [experiment_scripts/he_snes_24steps_l1.json](experiment_scripts/he_snes_24steps_l1.json)
+
+| Step | Time [s] | Newton iters | Sum linear iters |         Energy | Relative error vs JAX | Status |
+| ---: | -------: | -----------: | ---------------: | -------------: | --------------------: | ------ |
+|    1 |   0.1417 |           18 |              195 |   0.3464110000 |              1.14e-06 | conv   |
+|    2 |   0.1616 |           19 |              217 |   1.3856340000 |              5.62e-07 | conv   |
+|    3 |   0.1769 |           20 |              222 |   3.1173390000 |              2.70e-08 | conv   |
+|    4 |   0.1979 |           21 |              251 |   5.5401480000 |              6.38e-08 | conv   |
+|    5 |   0.2064 |           22 |              257 |   8.6504990000 |              2.20e-08 | conv   |
+|    6 |   0.1739 |           18 |              212 |  12.4422650000 |              6.51e-08 | conv   |
+|    7 |   0.2290 |           22 |              284 |  16.9115640000 |              1.29e-08 | conv   |
+|    8 |   0.2333 |           24 |              245 |  22.0617390000 |              2.68e-09 | conv   |
+|    9 |   0.2040 |           20 |              240 |  27.8989760000 |              9.75e-09 | conv   |
+|   10 |   0.1987 |           20 |              206 |  34.4264990000 |              9.19e-09 | conv   |
+|   11 |   0.2083 |           20 |              229 |  41.6441010000 |              2.69e-08 | conv   |
+|   12 |   0.2154 |           21 |              237 |  49.5500690000 |              6.88e-09 | conv   |
+|   13 |   0.7664 |          100 |              135 |  11310.741725  |                     — | r=-5   |
+
+Summary: steps 1–12 converged (12/13), step 13 diverged (`SNES_DIVERGED_MAX_IT`). Total wall time = `3.11 s`, converged Newton iters = `245`, converged KSP iters = `2795`, avg KSP/Newton = `11.4`. Max relative error (steps 1–12) = `1.14e-06`, mean relative error = `1.62e-07`.
+
 ## Level 2 — JAX (all timesteps)
 
 | Step | Time [s] | Newton iters | Sum linear iters |         Energy | Status                                |

@@ -1,0 +1,164 @@
+--- Step 1/24, Angle: 1.0472 ---
+Step 1 finished: Energy = 0.346411, Iters = 18, Reason = 2
+--- Step 2/24, Angle: 2.0944 ---
+Step 2 finished: Energy = 1.385634, Iters = 19, Reason = 2
+--- Step 3/24, Angle: 3.1416 ---
+Step 3 finished: Energy = 3.117339, Iters = 20, Reason = 2
+--- Step 4/24, Angle: 4.1888 ---
+Step 4 finished: Energy = 5.540148, Iters = 21, Reason = 2
+--- Step 5/24, Angle: 5.2360 ---
+Step 5 finished: Energy = 8.650499, Iters = 22, Reason = 2
+--- Step 6/24, Angle: 6.2832 ---
+Step 6 finished: Energy = 12.442265, Iters = 18, Reason = 2
+--- Step 7/24, Angle: 7.3304 ---
+Step 7 finished: Energy = 16.911564, Iters = 22, Reason = 2
+--- Step 8/24, Angle: 8.3776 ---
+Step 8 finished: Energy = 22.061739, Iters = 24, Reason = 2
+--- Step 9/24, Angle: 9.4248 ---
+Step 9 finished: Energy = 27.898976, Iters = 20, Reason = 2
+--- Step 10/24, Angle: 10.4720 ---
+Step 10 finished: Energy = 34.426499, Iters = 20, Reason = 2
+--- Step 11/24, Angle: 11.5192 ---
+Step 11 finished: Energy = 41.644101, Iters = 20, Reason = 2
+--- Step 12/24, Angle: 12.5664 ---
+Step 12 finished: Energy = 49.550069, Iters = 21, Reason = 2
+--- Step 13/24, Angle: 13.6136 ---
+Step 13 finished: Energy = 11310.741725, Iters = 100, Reason = -5
+Stopping at step 13 due to divergence (reason=-5).
+{
+  "mesh_level": 1,
+  "total_dofs": 2187,
+  "config": {
+    "snes_type": "newtonls",
+    "linesearch": "basic",
+    "ksp_type": "gmres",
+    "pc_type": "hypre",
+    "ksp_rtol": 0.1,
+    "ksp_max_it": 500,
+    "snes_atol": 0.001,
+    "use_objective": false,
+    "use_near_nullspace": true,
+    "hypre_nodal_coarsen": -1,
+    "hypre_vec_interp_variant": -1,
+    "nullspace_gram_schmidt": false
+  },
+  "steps": [
+    {
+      "step": 1,
+      "angle": 1.0471975511965976,
+      "time": 0.1417,
+      "iters": 18,
+      "linear_iters": 195,
+      "energy": 0.346411,
+      "reason": 2
+    },
+    {
+      "step": 2,
+      "angle": 2.0943951023931953,
+      "time": 0.1616,
+      "iters": 19,
+      "linear_iters": 217,
+      "energy": 1.385634,
+      "reason": 2
+    },
+    {
+      "step": 3,
+      "angle": 3.141592653589793,
+      "time": 0.1769,
+      "iters": 20,
+      "linear_iters": 222,
+      "energy": 3.117339,
+      "reason": 2
+    },
+    {
+      "step": 4,
+      "angle": 4.1887902047863905,
+      "time": 0.1979,
+      "iters": 21,
+      "linear_iters": 251,
+      "energy": 5.540148,
+      "reason": 2
+    },
+    {
+      "step": 5,
+      "angle": 5.235987755982988,
+      "time": 0.2064,
+      "iters": 22,
+      "linear_iters": 257,
+      "energy": 8.650499,
+      "reason": 2
+    },
+    {
+      "step": 6,
+      "angle": 6.283185307179586,
+      "time": 0.1739,
+      "iters": 18,
+      "linear_iters": 212,
+      "energy": 12.442265,
+      "reason": 2
+    },
+    {
+      "step": 7,
+      "angle": 7.330382858376184,
+      "time": 0.229,
+      "iters": 22,
+      "linear_iters": 284,
+      "energy": 16.911564,
+      "reason": 2
+    },
+    {
+      "step": 8,
+      "angle": 8.377580409572781,
+      "time": 0.2333,
+      "iters": 24,
+      "linear_iters": 245,
+      "energy": 22.061739,
+      "reason": 2
+    },
+    {
+      "step": 9,
+      "angle": 9.42477796076938,
+      "time": 0.204,
+      "iters": 20,
+      "linear_iters": 240,
+      "energy": 27.898976,
+      "reason": 2
+    },
+    {
+      "step": 10,
+      "angle": 10.471975511965976,
+      "time": 0.1987,
+      "iters": 20,
+      "linear_iters": 206,
+      "energy": 34.426499,
+      "reason": 2
+    },
+    {
+      "step": 11,
+      "angle": 11.519173063162574,
+      "time": 0.2083,
+      "iters": 20,
+      "linear_iters": 229,
+      "energy": 41.644101,
+      "reason": 2
+    },
+    {
+      "step": 12,
+      "angle": 12.566370614359172,
+      "time": 0.2154,
+      "iters": 21,
+      "linear_iters": 237,
+      "energy": 49.550069,
+      "reason": 2
+    },
+    {
+      "step": 13,
+      "angle": 13.613568165555769,
+      "time": 0.7664,
+      "iters": 100,
+      "linear_iters": 135,
+      "energy": 11310.741725,
+      "reason": -5
+    }
+  ]
+}
