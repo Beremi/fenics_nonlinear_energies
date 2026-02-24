@@ -178,6 +178,65 @@ quality), so it is listed only in serial.
 
 ---
 
+## 5. Multi-start randomised coloring (MPI, np = 16)
+
+**Approach:** Each MPI rank runs the *full* serial greedy algorithm
+independently on the entire graph, using a different random seed.
+Two sources of randomness are introduced:
+1. **Random starting vertex** (instead of deterministic max-degree)
+2. **Random tie-breaking** — when multiple uncoloured vertices share the
+   highest "coloured-neighbour" score, one is picked uniformly at random
+   (instead of the first found)
+
+The $A^2$ matrix is computed once on rank 0 with SciPy and broadcast
+(~3–6× faster than PETSc parallel `matMult` + `getRedundantMatrix` for
+these problem sizes).  Each rank then runs the greedy independently —
+the coloring step is embarrassingly parallel.  The global result is the
+fewest colors across all ranks.
+
+### Results (16 ranks, seed = rank)
+
+| Problem | Level | N | A² setup (s) | Greedy max (s) | Total (s) |
+| ------- | ----: | -------: | -----------: | -------------: | --------: |
+| pLaplace 2D | 9 | 784,385 | 0.40 | 0.11 | 0.51 |
+| GL 2D | 9 | 1,046,529 | 0.71 | 0.15 | 0.86 |
+| HE 3D | 4 | 554,013 | 3.37 | 0.31 | 3.68 |
+
+### Colors per rank
+
+**p-Laplace 2D level 9** (deterministic serial: 11, igraph: 7):
+
+| Rank | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 |
+| ---- | - | - | - | - | - | - | - | - | - | - | -- | -- | -- | -- | -- | -- |
+| Colors | 11 | 11 | 11 | 11 | 11 | 10 | 11 | 11 | 11 | 10 | 11 | 11 | **9** | 11 | 11 | 10 |
+
+**Ginzburg–Landau 2D level 9** (deterministic serial: 11, igraph: 7):
+
+| Rank | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 |
+| ---- | - | - | - | - | - | - | - | - | - | - | -- | -- | -- | -- | -- | -- |
+| Colors | 11 | 11 | 10 | 11 | 11 | 10 | 11 | **9** | 11 | 11 | 11 | 11 | 10 | 11 | 11 | **9** |
+
+**HyperElasticity 3D level 4** (deterministic serial: 70, igraph: 68):
+
+| Rank | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 |
+| ---- | - | - | - | - | - | - | - | - | - | - | -- | -- | -- | -- | -- | -- |
+| Colors | 70 | 69 | 69 | 69 | 70 | **68** | 69 | 70 | 70 | 69 | 70 | 69 | 69 | 70 | 69 | 69 |
+
+### A² computation: SciPy vs PETSc
+
+| Problem | SciPy (rank 0 + Bcast) | PETSc (par. matmult + gather) | Ratio |
+| ------- | ---------------------: | ----------------------------: | ----: |
+| pLaplace 2D lvl 9 | 0.40 s | 2.26 s | 5.7× |
+| GL 2D lvl 9 | 0.71 s | 3.09 s | 4.4× |
+| HE 3D lvl 4 | 3.37 s | 10.90 s | 3.2× |
+
+PETSc's `matMult` distributes the computation across ranks, but each rank
+still needs the full $A^2$ locally (gathered via `getRedundantMatrix`).
+The gather overhead plus PETSc matrix setup makes it slower than
+simply computing $A^2$ on rank 0 with SciPy and broadcasting the CSC arrays.
+
+---
+
 ## Key observations
 
 1. **Custom C greedy is the fastest serial method.** The C implementation of
@@ -212,44 +271,40 @@ quality), so it is listed only in serial.
    (1.4–1.7×). However, for the largest problems (HE 3D level 4), parallel
    SL at 1.77 s is still **5.4× faster** than serial igraph at 9.5 s.
 
-6. **Custom algorithm is not effectively parallelizable.** Two approaches
-   were tested (OpenMP shared-memory, MPI domain-decomposition); neither
-   provides a net speedup over serial:
-   - **Without reordering:** block partition by DOF index creates massive
-     boundary conflicts (DOF numbering does not preserve spatial locality).
-     The boundary-fix phase alone takes **10–20× longer** than the serial
-     greedy loop (e.g., GL 2D lvl 9: C code = 1.59 s vs serial = 0.07 s).
-   - **With Cuthill–McKee reordering:** the parallel C coloring step is
-     genuinely 2–4× faster (0.017 s vs 0.059 s for pLaplace lvl 9), but
-     the RCM overhead itself (0.12–0.34 s for 2D, 0.64–1.01 s for 3D)
-     exceeds the entire serial greedy time.
-   - **Total time with 16 threads (largest levels):**
+6. **OpenMP domain-decomposition is not viable (abandoned).**
+   Block-partition by DOF creates massive boundary conflicts (DOF numbering
+   lacks spatial locality). With Cuthill–McKee reordering, the RCM overhead
+   exceeds the entire serial greedy time.  Total wall time is 1.5–2× *worse*
+   than serial, with more colors.  This approach was abandoned.
 
-     | Problem | Serial total | RCM + OMP-16 total | Colors (ser → OMP) |
-     | ------- | -----------: | -----------------: | -----------------: |
-     | pL lvl9 |       0.24 s |             0.40 s |          11 → 15   |
-     | GL lvl9 |       0.42 s |             0.71 s |          11 → 15   |
-     | HE lvl4 |       1.75 s |             2.70 s |          70 → 96   |
+7. **Multi-start randomised coloring improves quality at no wall-time cost.**
+   Running 16 independent greedy calls with different random seeds
+   (embarrassingly parallel via MPI) reliably finds fewer colors than the
+   deterministic serial:
+   - **pLaplace 2D:** 9 vs 11 (−18 %, approaching igraph's 7)
+   - **GL 2D:** 9 vs 11 (−18 %, approaching igraph's 7 and PETSc SL's 8)
+   - **HE 3D:** 68 vs 70 (−3 %, **matches igraph**)
+   
+   The A² setup dominates wall time (0.4–3.4 s); the greedy phase is only
+   0.1–0.3 s even for the largest problems. Total time with 16 ranks:
+   0.51 s (pL), 0.86 s (GL), 3.68 s (HE). The A² cost is amortised
+   because it is computed once and broadcast; SciPy on rank 0 + MPI Bcast
+   is 3–6× faster than PETSc parallel matmult.
 
-   - The algorithm's sequential "most-coloured-neighbours" heuristic creates
-     an inherent data dependency: each vertex's colour depends on all
-     previously coloured vertices. This cannot be broken with
-     domain decomposition without degrading both speed and quality.
-   - **Conclusion:** for this algorithm, serial is optimal.  When parallel
-     coloring is needed, use PETSc (`sl` or `greedy`).
-
-7. **NetworkX is impractical for production.** NX DSATUR gives excellent
+8. **NetworkX is impractical for production.** NX DSATUR gives excellent
    color quality but its $O(n^2)$ complexity makes it unusable for $N > 10{,}000$.
    NX `smallest_last` is better (~10–20× slower than PETSc) but still cannot
    compete with PETSc or igraph for large problems.
 
-8. **PETSc LF is not recommended.** The largest-first ordering (`lf`)
+9. **PETSc LF is not recommended.** The largest-first ordering (`lf`)
    produces more colors than greedy in 3D (e.g., 90 vs 91 at HE level 4)
    and more than SL/ID everywhere. It offers no advantage.
 
-9. **Practical recommendation.**
+10. **Practical recommendation.**
    - **Serial, fastest:** Custom C (best speed, acceptable color count).
    - **Serial, fewest colors:** igraph (optimal colors, moderate speed).
    - **Serial, PETSc available:** PETSc ID or SL (near-optimal colors, good speed).
-   - **Parallel (MPI):** PETSc SL for best color quality; PETSc greedy for
-     fastest wall time when color count is less critical.
+   - **Parallel, best quality:** Multi-start Custom (16 seeds), matches igraph
+     quality for HE 3D, approaches it for 2D; dominates when A² is reused.
+   - **Parallel (MPI), PETSc only:** PETSc SL for best color quality;
+     PETSc greedy for fastest wall time when color count is less critical.

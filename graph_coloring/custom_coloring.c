@@ -154,6 +154,202 @@ int custom_greedy_color(int n,
 }
 
 /* ------------------------------------------------------------------ */
+/*  Simple xoshiro128** PRNG (fast, no global state)                   */
+/* ------------------------------------------------------------------ */
+static inline unsigned int xoro_rotl(unsigned int x, int k)
+{
+    return (x << k) | (x >> (32 - k));
+}
+
+static unsigned int xoro_next(unsigned int s[4])
+{
+    unsigned int r = xoro_rotl(s[1] * 5, 7) * 9;
+    unsigned int t = s[1] << 9;
+    s[2] ^= s[0];
+    s[3] ^= s[1];
+    s[1] ^= s[2];
+    s[0] ^= s[3];
+    s[2] ^= t;
+    s[3] = xoro_rotl(s[3], 11);
+    return r;
+}
+
+static void xoro_seed(unsigned int s[4], unsigned int seed)
+{
+    /* SplitMix32 to fill state from a single seed */
+    for (int i = 0; i < 4; i++)
+    {
+        seed += 0x9e3779b9u;
+        unsigned int z = seed;
+        z = (z ^ (z >> 16)) * 0x85ebca6bu;
+        z = (z ^ (z >> 13)) * 0xc2b2ae35u;
+        z = z ^ (z >> 16);
+        s[i] = z;
+    }
+}
+
+/* ------------------------------------------------------------------ */
+/*  custom_greedy_color_random                                         */
+/*                                                                     */
+/*  Same algorithm as custom_greedy_color but with randomised          */
+/*  tie-breaking and random starting vertex.  Different seeds          */
+/*  produce different colourings; running many in parallel and         */
+/*  taking the best is a simple Monte-Carlo parallelisation.           */
+/*                                                                     */
+/*  Input                                                              */
+/*    n, indptr, indices – A^2 in CSC (same as custom_greedy_color)    */
+/*    seed               – PRNG seed (e.g. MPI rank)                   */
+/*                                                                     */
+/*  Output                                                             */
+/*    colors  – 0-based colour for each vertex                         */
+/*                                                                     */
+/*  Returns: number of colours used                                    */
+/* ------------------------------------------------------------------ */
+int custom_greedy_color_random(int n,
+                               const int *indptr,
+                               const int *indices,
+                               int *colors,
+                               unsigned int seed)
+{
+    if (n == 0)
+        return 0;
+    if (n == 1)
+    {
+        colors[0] = 0;
+        return 1;
+    }
+
+    /* PRNG state */
+    unsigned int rng[4];
+    xoro_seed(rng, seed);
+
+    /* --- random start vertex --- */
+    int start = (int)(xoro_next(rng) % (unsigned int)n);
+
+    /* --- find max degree for colour-mask sizing --- */
+    int max_deg = 0;
+    for (int i = 0; i < n; i++)
+    {
+        int deg = indptr[i + 1] - indptr[i];
+        if (deg > max_deg)
+            max_deg = deg;
+    }
+
+    /* working memory */
+    int mc = max_deg + 2;
+    int *cn = (int *)calloc(n, sizeof(int));
+    char *cmask = (char *)malloc(mc);
+    char *done = (char *)calloc(n, sizeof(char));
+    /* scratch for tie candidates (max possible = n) */
+    int *ties = (int *)malloc(n * sizeof(int));
+    if (!cn || !cmask || !done || !ties)
+    {
+        free(cn);
+        free(cmask);
+        free(done);
+        free(ties);
+        return -1;
+    }
+
+    for (int i = 0; i < n; i++)
+        colors[i] = 1;
+
+    cn[start] = 1;
+
+    const int *nb = &indices[indptr[start]];
+    int nnb = indptr[start + 1] - indptr[start];
+
+    for (int step = 0; step < n; step++)
+    {
+        /* 1. Select: find max cn among UNCOLOURED local neighbours */
+        int bv = -1;
+        int ntie = 0;
+        for (int j = 0; j < nnb; j++)
+        {
+            int v = nb[j];
+            if (!done[v])
+            {
+                if (cn[v] > bv)
+                {
+                    bv = cn[v];
+                    ntie = 0;
+                    ties[ntie++] = v;
+                }
+                else if (cn[v] == bv)
+                {
+                    ties[ntie++] = v;
+                }
+            }
+        }
+
+        /* 2. Fallback: global search */
+        if (ntie == 0)
+        {
+            bv = -1;
+            for (int v = 0; v < n; v++)
+            {
+                if (!done[v])
+                {
+                    if (cn[v] > bv)
+                    {
+                        bv = cn[v];
+                        ntie = 0;
+                        ties[ntie++] = v;
+                    }
+                    else if (cn[v] == bv)
+                    {
+                        ties[ntie++] = v;
+                    }
+                }
+            }
+        }
+
+        /* 3. Random tie-break */
+        int bi = ties[xoro_next(rng) % (unsigned int)ntie];
+
+        /* 4. Move to selected vertex */
+        nb = &indices[indptr[bi]];
+        nnb = indptr[bi + 1] - indptr[bi];
+
+        /* 5. Build colour mask */
+        memset(cmask, 1, mc);
+        for (int j = 0; j < nnb; j++)
+            cmask[colors[nb[j]]] = 0;
+
+        /* 6. Increment coloured-neighbours for UNCOLOURED neighbours */
+        for (int j = 0; j < nnb; j++)
+        {
+            if (!done[nb[j]])
+                cn[nb[j]]++;
+        }
+
+        /* 7. Assign smallest available colour */
+        int c = 1;
+        while (!cmask[c])
+            c++;
+        colors[bi] = c;
+
+        /* 8. Mark done */
+        done[bi] = 1;
+    }
+
+    /* convert to 0-based */
+    int nc = 0;
+    for (int i = 0; i < n; i++)
+    {
+        colors[i]--;
+        if (colors[i] >= nc)
+            nc = colors[i] + 1;
+    }
+
+    free(cn);
+    free(cmask);
+    free(done);
+    free(ties);
+    return nc;
+}
+
+/* ------------------------------------------------------------------ */
 /*  fix_coloring_conflicts                                             */
 /*                                                                     */
 /*  After domain-decomposition parallel colouring, some boundary       */
@@ -328,19 +524,22 @@ int custom_greedy_color_omp(int n,
     for (int t = 0; t < nthreads; t++)
         starts[t + 1] = starts[t] + blk + (t < rem_t ? 1 : 0);
 
-    /* --- Phase 1: parallel local coloring --- */
-    #pragma omp parallel
+/* --- Phase 1: parallel local coloring --- */
+#pragma omp parallel
     {
         int tid = omp_get_thread_num();
-        int s   = starts[tid];
+        int s = starts[tid];
         int len = starts[tid + 1] - s;
 
-        if (len > 0) {
+        if (len > 0)
+        {
             /* count local nnz (edges with both endpoints in this block) */
             int local_nnz = 0;
-            for (int j = 0; j < len; j++) {
+            for (int j = 0; j < len; j++)
+            {
                 int gj = s + j;
-                for (int p = csc_indptr[gj]; p < csc_indptr[gj + 1]; p++) {
+                for (int p = csc_indptr[gj]; p < csc_indptr[gj + 1]; p++)
+                {
                     int r = csc_indices[p];
                     if (r >= s && r < s + len)
                         local_nnz++;
@@ -350,14 +549,17 @@ int custom_greedy_color_omp(int n,
             /* build local CSC sub-graph (indices remapped to [0, len)) */
             int *lip = (int *)malloc((len + 1) * sizeof(int));
             int *lix = (int *)malloc((local_nnz > 0 ? local_nnz : 1) * sizeof(int));
-            int *lc  = (int *)calloc(len, sizeof(int));
+            int *lc = (int *)calloc(len, sizeof(int));
 
-            if (lip && lix && lc) {
+            if (lip && lix && lc)
+            {
                 lip[0] = 0;
                 int pos = 0;
-                for (int j = 0; j < len; j++) {
+                for (int j = 0; j < len; j++)
+                {
                     int gj = s + j;
-                    for (int p = csc_indptr[gj]; p < csc_indptr[gj + 1]; p++) {
+                    for (int p = csc_indptr[gj]; p < csc_indptr[gj + 1]; p++)
+                    {
                         int r = csc_indices[p];
                         if (r >= s && r < s + len)
                             lix[pos++] = r - s;
@@ -382,14 +584,19 @@ int custom_greedy_color_omp(int n,
     int *boundary = (int *)malloc(n * sizeof(int));
     int n_boundary = 0;
 
-    if (boundary) {
-        for (int t = 0; t < nthreads; t++) {
+    if (boundary)
+    {
+        for (int t = 0; t < nthreads; t++)
+        {
             int s = starts[t];
             int e = starts[t + 1];
-            for (int i = s; i < e; i++) {
-                for (int p = csr_indptr[i]; p < csr_indptr[i + 1]; p++) {
+            for (int i = s; i < e; i++)
+            {
+                for (int p = csr_indptr[i]; p < csr_indptr[i + 1]; p++)
+                {
                     int j = csr_indices[p];
-                    if (j != i && (j < s || j >= e)) {
+                    if (j != i && (j < s || j >= e))
+                    {
                         boundary[n_boundary++] = i;
                         break;
                     }
@@ -400,10 +607,13 @@ int custom_greedy_color_omp(int n,
 
     /* --- Phase 3: fix boundary conflicts --- */
     int nc;
-    if (boundary && n_boundary > 0) {
+    if (boundary && n_boundary > 0)
+    {
         nc = fix_coloring_conflicts(n, csr_indptr, csr_indices,
                                     n_boundary, boundary, colors);
-    } else {
+    }
+    else
+    {
         nc = 0;
         for (int i = 0; i < n; i++)
             if (colors[i] > nc)

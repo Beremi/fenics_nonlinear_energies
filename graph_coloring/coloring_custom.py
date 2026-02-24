@@ -96,6 +96,16 @@ def _get_lib():
     _LIB.custom_has_openmp.restype = ctypes.c_int
     _LIB.custom_has_openmp.argtypes = []
 
+    # custom_greedy_color_random(n, indptr, indices, colors, seed) -> n_colors
+    _LIB.custom_greedy_color_random.restype = ctypes.c_int
+    _LIB.custom_greedy_color_random.argtypes = [
+        ctypes.c_int,
+        ctypes.POINTER(ctypes.c_int),
+        ctypes.POINTER(ctypes.c_int),
+        ctypes.POINTER(ctypes.c_int),
+        ctypes.c_uint,
+    ]
+
     return _LIB
 
 
@@ -138,6 +148,48 @@ def color_custom(adjacency):
     colors = np.zeros(n, dtype=np.int32)
 
     nc = lib.custom_greedy_color(ctypes.c_int(n), _ptr(indptr), _ptr(indices), _ptr(colors))
+    return int(nc), colors
+
+
+def color_custom_random(adjacency_or_A2, seed=0, *, is_A2=False):
+    """
+    Randomised custom greedy coloring (serial, C backend).
+
+    Same algorithm as :func:`color_custom` but with a random starting vertex
+    and random tie-breaking when multiple candidates have equal score.
+    Different seeds produce different (valid) colourings.
+
+    Parameters
+    ----------
+    adjacency_or_A2 : scipy.sparse matrix
+        Element–DOF adjacency *A* (default) or pre-computed *A²* if
+        *is_A2* is ``True``.
+    seed : int
+        PRNG seed (e.g. MPI rank).
+    is_A2 : bool
+        If ``True``, skip the A² computation.
+
+    Returns
+    -------
+    n_colors : int
+    coloring : ndarray of int32
+    """
+    lib = _get_lib()
+
+    if is_A2:
+        A2 = sp.csc_matrix(adjacency_or_A2)
+    else:
+        A2 = sp.csc_matrix(adjacency_or_A2 @ adjacency_or_A2)
+
+    n = A2.shape[0]
+    indptr = _i32(A2.indptr)
+    indices = _i32(A2.indices)
+    colors = np.zeros(n, dtype=np.int32)
+
+    nc = lib.custom_greedy_color_random(
+        ctypes.c_int(n), _ptr(indptr), _ptr(indices),
+        _ptr(colors), ctypes.c_uint(seed),
+    )
     return int(nc), colors
 
 
