@@ -1,10 +1,10 @@
 """
-Comprehensive graph coloring benchmark: igraph, PETSc (all types), NetworkX.
+Comprehensive graph coloring benchmark: custom, igraph, PETSc (all types), NetworkX.
 
 Usage (inside Docker):
   Serial:
     python3 experiment_scripts/bench_graph_coloring_all.py
-  Parallel (PETSc only):
+  Parallel (PETSc + custom):
     mpirun -n 16 python3 experiment_scripts/bench_graph_coloring_all.py
 
 Measures coloring time and number of colors for all three problems.
@@ -42,6 +42,14 @@ nprocs = comm.Get_size()
 # ---------------------------------------------------------------------------
 HAS_IGRAPH = False
 HAS_NETWORKX = False
+HAS_CUSTOM = False
+
+# Custom coloring (C backend) – works in serial and parallel
+try:
+    from graph_coloring.coloring_custom import color_custom, color_custom_mpi
+    HAS_CUSTOM = True
+except Exception:
+    pass
 
 if nprocs == 1:
     try:
@@ -83,6 +91,20 @@ def bench_igraph(adjacency):
 def bench_networkx(adjacency, strategy):
     t0 = time.perf_counter()
     n_colors, _ = color_networkx(adjacency, strategy=strategy)
+    return int(n_colors), time.perf_counter() - t0
+
+
+def bench_custom(adjacency):
+    t0 = time.perf_counter()
+    n_colors, _ = color_custom(adjacency)
+    return int(n_colors), time.perf_counter() - t0
+
+
+def bench_custom_mpi(adjacency, comm):
+    comm.Barrier()
+    t0 = time.perf_counter()
+    n_colors, _ = color_custom_mpi(adjacency, comm=comm)
+    comm.Barrier()
     return int(n_colors), time.perf_counter() - t0
 
 
@@ -147,6 +169,24 @@ def main():
                     print(f"    igraph:          {nc:>4} colors  {t:>8.4f}s")
                 if t > TIME_LIMIT:
                     exceeded_methods.add("igraph")
+
+            # ---- Custom (serial or parallel) ----
+            if HAS_CUSTOM and "custom" not in exceeded_methods:
+                all_exceeded = False
+                try:
+                    if nprocs == 1:
+                        nc, t = bench_custom(adjacency)
+                    else:
+                        nc, t = bench_custom_mpi(adjacency, comm)
+                    row_data["custom_colors"] = nc
+                    row_data["custom_time"] = round(t, 6)
+                    if rank == 0:
+                        print(f"    custom:          {nc:>4} colors  {t:>8.4f}s")
+                    if t > TIME_LIMIT:
+                        exceeded_methods.add("custom")
+                except Exception as e:
+                    if rank == 0:
+                        print(f"    custom: ERROR {e}")
 
             # ---- NetworkX (serial, small only) ----
             if HAS_NETWORKX and n <= NX_SIZE_LIMIT:

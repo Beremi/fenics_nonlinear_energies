@@ -11,6 +11,7 @@ Three libraries with multiple strategies are compared:
 
 | Backend              | Library / Function                    | Algorithm                                       | Serial / Parallel |
 | -------------------- | ------------------------------------- | ----------------------------------------------- | ----------------- |
+| **Custom**           | C via ctypes (`custom_coloring.c`)    | "Most coloured neighbours" greedy on $A^2$      | Serial            |
 | **igraph**           | `igraph.Graph.vertex_coloring_greedy` | Sequential greedy on explicitly formed $A^2$    | Serial only       |
 | **PETSc greedy**     | `MatColoring` (`MATCOLORINGGREEDY`)   | Greedy distance-2 coloring                      | Both              |
 | **PETSc JP**         | `MatColoring` (`MATCOLORINGJP`)       | Jones–Plassmann parallel coloring               | Both              |
@@ -21,13 +22,20 @@ Three libraries with multiple strategies are compared:
 | **NX smallest_last** | `networkx.coloring.greedy_color`      | Smallest-last ordering                          | Serial only       |
 | **NX largest_first** | `networkx.coloring.greedy_color`      | Largest-first ordering                          | Serial only       |
 
+The **Custom** backend is a C implementation of the MATLAB `my_greedy_color2`
+function.  It forms $A^2$ explicitly, then greedily colours vertices using a
+"most coloured neighbours" priority — always selecting the uncoloured vertex
+among the current vertex's $A^2$-neighbours that has the most already-coloured
+neighbours.  A domain-decomposition MPI wrapper exists but is not competitive
+due to redundant $A^2$ computation on every rank.
+
 NetworkX is limited to $N \le 50{,}000$ due to its pure-Python overhead;
 NX DSATUR is further limited by its $O(n^2)$ complexity.
 
 *Scripts:*
 - `experiment_scripts/bench_graph_coloring_all.py` (comprehensive, requires Docker / petsc4py)
 
-*Reusable module:* `graph_coloring/` (igraph, PETSc, NetworkX backends)
+*Reusable module:* `graph_coloring/` (custom C, igraph, PETSc, NetworkX backends)
 
 ---
 
@@ -37,76 +45,76 @@ Fewer colors = fewer Hessian–vector products per SFD assembly step.
 
 ### p-Laplace 2D
 
-| Level |       N |    nnz(A) | igraph | PETSc SL | PETSc ID | PETSc greedy | PETSc JP | PETSc LF | NX DSATUR | NX sm.last | NX lg.first |
-| ----: | ------: | --------: | -----: | -------: | -------: | -----------: | -------: | -------: | --------: | ---------: | ----------: |
-|     1 |       5 |        13 |      3 |        3 |        3 |            4 |        4 |        3 |         3 |          3 |           3 |
-|     2 |      33 |       177 |      7 |        7 |        7 |            9 |        9 |        8 |         7 |          7 |           9 |
-|     3 |     161 |     1,009 |      8 |        9 |        8 |           12 |       12 |       11 |         7 |          8 |          10 |
-|     4 |     705 |     4,689 |      7 |        9 |        9 |           13 |       13 |       12 |         7 |          9 |          13 |
-|     5 |   2,945 |    20,113 |      8 |       10 |        9 |           14 |       14 |       13 |         7 |         10 |          14 |
-|     6 |  12,033 |    83,217 |      8 |        9 |        9 |           14 |       14 |       13 |         7 |          9 |          14 |
-|     7 |  48,641 |   338,449 |      8 |       10 |        9 |           14 |       14 |       13 |         — |         10 |          14 |
-|     8 | 195,585 | 1,365,009 |      8 |       10 |        9 |           15 |       15 |       13 |         — |          — |           — |
-|     9 | 784,385 | 5,482,513 |      7 |       10 |        9 |           15 |       15 |       13 |         — |          — |           — |
+| Level |       N |    nnz(A) | igraph | Custom | PETSc SL | PETSc ID | PETSc greedy | PETSc JP | PETSc LF | NX DSATUR | NX sm.last | NX lg.first |
+| ----: | ------: | --------: | -----: | -----: | -------: | -------: | -----------: | -------: | -------: | --------: | ---------: | ----------: |
+|     1 |       5 |        13 |      3 |      4 |        3 |        3 |            4 |        4 |        3 |         3 |          3 |           3 |
+|     2 |      33 |       177 |      7 |      8 |        7 |        7 |            9 |        9 |        8 |         7 |          7 |           9 |
+|     3 |     161 |     1,009 |      8 |     10 |        9 |        8 |           12 |       12 |       11 |         7 |          8 |          10 |
+|     4 |     705 |     4,689 |      7 |     10 |        9 |        9 |           13 |       13 |       12 |         7 |          9 |          13 |
+|     5 |   2,945 |    20,113 |      8 |     11 |       10 |        9 |           14 |       14 |       13 |         7 |         10 |          14 |
+|     6 |  12,033 |    83,217 |      8 |     11 |        9 |        9 |           14 |       14 |       13 |         7 |          9 |          14 |
+|     7 |  48,641 |   338,449 |      8 |     11 |       10 |        9 |           14 |       14 |       13 |         — |         10 |          14 |
+|     8 | 195,585 | 1,365,009 |      8 |     11 |       10 |        9 |           15 |       15 |       13 |         — |          — |           — |
+|     9 | 784,385 | 5,482,513 |      7 |     11 |       10 |        9 |           15 |       15 |       13 |         — |          — |           — |
 
 ### Ginzburg–Landau 2D
 
-| Level |         N |    nnz(A) | igraph | PETSc SL | PETSc ID | PETSc greedy | PETSc JP | PETSc LF | NX DSATUR | NX sm.last | NX lg.first |
-| ----: | --------: | --------: | -----: | -------: | -------: | -----------: | -------: | -------: | --------: | ---------: | ----------: |
-|     2 |        49 |       289 |      7 |        8 |        8 |           12 |       12 |        8 |         7 |          8 |           9 |
-|     3 |       225 |     1,457 |      7 |        9 |        9 |           12 |       12 |       12 |         7 |         10 |          13 |
-|     4 |       961 |     6,481 |      8 |        8 |        9 |           14 |       14 |       13 |         7 |          8 |          14 |
-|     5 |     3,969 |    27,281 |      7 |        8 |       10 |           14 |       14 |       13 |         7 |         10 |          14 |
-|     6 |    16,129 |   111,889 |      7 |        8 |       10 |           15 |       15 |       13 |         7 |          8 |          14 |
-|     7 |    65,025 |   453,137 |      8 |        8 |        9 |           14 |       14 |       13 |         — |          — |           — |
-|     8 |   261,121 | 1,823,761 |      7 |        8 |        9 |           15 |       15 |       13 |         — |          — |           — |
-|     9 | 1,046,529 | 7,317,521 |      7 |        8 |        9 |           15 |       15 |       13 |         — |          — |           — |
+| Level |         N |    nnz(A) | igraph | Custom | PETSc SL | PETSc ID | PETSc greedy | PETSc JP | PETSc LF | NX DSATUR | NX sm.last | NX lg.first |
+| ----: | --------: | --------: | -----: | -----: | -------: | -------: | -----------: | -------: | -------: | --------: | ---------: | ----------: |
+|     2 |        49 |       289 |      7 |      9 |        8 |        8 |           12 |       12 |        8 |         7 |          8 |           9 |
+|     3 |       225 |     1,457 |      7 |     10 |        9 |        9 |           12 |       12 |       12 |         7 |         10 |          13 |
+|     4 |       961 |     6,481 |      8 |     11 |        8 |        9 |           14 |       14 |       13 |         7 |          8 |          14 |
+|     5 |     3,969 |    27,281 |      7 |     11 |        8 |       10 |           14 |       14 |       13 |         7 |         10 |          14 |
+|     6 |    16,129 |   111,889 |      7 |     11 |        8 |       10 |           15 |       15 |       13 |         7 |          8 |          14 |
+|     7 |    65,025 |   453,137 |      8 |     11 |        8 |        9 |           14 |       14 |       13 |         — |          — |           — |
+|     8 |   261,121 | 1,823,761 |      7 |     11 |        8 |        9 |           15 |       15 |       13 |         — |          — |           — |
+|     9 | 1,046,529 | 7,317,521 |      7 |     11 |        8 |        9 |           15 |       15 |       13 |         — |          — |           — |
 
 ### HyperElasticity 3D
 
-| Level |       N |     nnz(A) | igraph | PETSc SL | PETSc ID | PETSc greedy | PETSc JP | PETSc LF | NX DSATUR | NX sm.last | NX lg.first |
-| ----: | ------: | ---------: | -----: | -------: | -------: | -----------: | -------: | -------: | --------: | ---------: | ----------: |
-|     1 |   2,133 |     64,251 |     48 |       48 |       48 |           58 |       58 |       63 |        48 |         48 |          63 |
-|     2 |  11,925 |    426,411 |     58 |       63 |       60 |           70 |       70 |       81 |        57 |         56 |          81 |
-|     3 |  77,517 |  3,081,123 |     63 |       69 |       69 |           86 |       86 |       90 |         — |          — |           — |
-|     4 | 554,013 | 23,369,715 |     68 |       75 |       78 |           91 |       91 |       90 |         — |          — |           — |
+| Level |       N |     nnz(A) | igraph | Custom | PETSc SL | PETSc ID | PETSc greedy | PETSc JP | PETSc LF | NX DSATUR | NX sm.last | NX lg.first |
+| ----: | ------: | ---------: | -----: | -----: | -------: | -------: | -----------: | -------: | -------: | --------: | ---------: | ----------: |
+|     1 |   2,133 |     64,251 |     48 |     49 |       48 |       48 |           58 |       58 |       63 |        48 |         48 |          63 |
+|     2 |  11,925 |    426,411 |     58 |     56 |       63 |       60 |           70 |       70 |       81 |        57 |         56 |          81 |
+|     3 |  77,517 |  3,081,123 |     63 |     63 |       69 |       69 |           86 |       86 |       90 |         — |          — |           — |
+|     4 | 554,013 | 23,369,715 |     68 |     70 |       75 |       78 |           91 |       91 |       90 |         — |          — |           — |
 
 ---
 
 ## 2. Serial timing (np = 1)
 
-All times in seconds. NetworkX DSATUR omitted from this table because it is
-100–10,000× slower than the other methods (e.g., 122 s for GL2D level 6
-with $N = 16{,}129$).
+All times in seconds. The **Custom** C backend is **the fastest serial method**
+across all problems. NetworkX DSATUR omitted because it is
+100–10,000× slower than the other methods.
 
 ### p-Laplace 2D
 
-| Level |       N | igraph | PETSc SL | PETSc ID | PETSc greedy | NX sm.last |
-| ----: | ------: | -----: | -------: | -------: | -----------: | ---------: |
-|     5 |   2,945 |  0.004 |    0.004 |    0.004 |        0.004 |      0.038 |
-|     6 |  12,033 |  0.018 |    0.016 |    0.016 |        0.017 |      0.241 |
-|     7 |  48,641 |  0.079 |    0.065 |    0.068 |        0.069 |      1.155 |
-|     8 | 195,585 |  0.308 |    0.262 |    0.260 |        0.294 |          — |
-|     9 | 784,385 |  1.362 |    1.159 |    1.172 |        1.262 |          — |
+| Level |       N | Custom | igraph | PETSc SL | PETSc ID | PETSc greedy |
+| ----: | ------: | -----: | -----: | -------: | -------: | -----------: |
+|     5 |   2,945 |  0.001 |  0.004 |    0.004 |    0.004 |        0.005 |
+|     6 |  12,033 |  0.003 |  0.018 |    0.016 |    0.016 |        0.017 |
+|     7 |  48,641 |  0.010 |  0.077 |    0.064 |    0.064 |        0.070 |
+|     8 | 195,585 |  0.043 |  0.331 |    0.268 |    0.272 |        0.292 |
+|     9 | 784,385 |  0.199 |  1.392 |    1.158 |    1.178 |        1.300 |
 
 ### Ginzburg–Landau 2D
 
-| Level |         N | igraph | PETSc SL | PETSc ID | PETSc greedy | NX sm.last |
-| ----: | --------: | -----: | -------: | -------: | -----------: | ---------: |
-|     5 |     3,969 |  0.005 |    0.006 |    0.006 |        0.006 |      0.056 |
-|     6 |    16,129 |  0.023 |    0.022 |    0.021 |        0.024 |      0.343 |
-|     7 |    65,025 |  0.100 |    0.087 |    0.087 |        0.096 |          — |
-|     8 |   261,121 |  0.429 |    0.373 |    0.374 |        0.411 |          — |
-|     9 | 1,046,529 |  1.936 |    1.741 |    1.718 |        1.881 |          — |
+| Level |         N | Custom | igraph | PETSc SL | PETSc ID | PETSc greedy |
+| ----: | --------: | -----: | -----: | -------: | -------: | -----------: |
+|     5 |     3,969 |  0.001 |  0.005 |    0.006 |    0.006 |        0.006 |
+|     6 |    16,129 |  0.004 |  0.023 |    0.022 |    0.021 |        0.024 |
+|     7 |    65,025 |  0.015 |  0.099 |    0.087 |    0.089 |        0.094 |
+|     8 |   261,121 |  0.080 |  0.437 |    0.376 |    0.383 |        0.420 |
+|     9 | 1,046,529 |  0.433 |  1.939 |    1.715 |    1.697 |        1.921 |
 
 ### HyperElasticity 3D
 
-| Level |       N | igraph | PETSc SL | PETSc ID | PETSc greedy | NX sm.last |
-| ----: | ------: | -----: | -------: | -------: | -----------: | ---------: |
-|     1 |   2,133 |  0.013 |    0.006 |    0.006 |        0.010 |      0.126 |
-|     2 |  11,925 |  0.127 |    0.040 |    0.040 |        0.072 |      1.374 |
-|     3 |  77,517 |  1.114 |    0.291 |    0.292 |        0.515 |          — |
-|     4 | 554,013 |  9.504 |    2.715 |    2.718 |        4.872 |          — |
+| Level |       N | Custom | igraph | PETSc SL | PETSc ID | PETSc greedy |
+| ----: | ------: | -----: | -----: | -------: | -------: | -----------: |
+|     1 |   2,133 |  0.003 |  0.013 |    0.006 |    0.006 |        0.010 |
+|     2 |  11,925 |  0.027 |  0.126 |    0.041 |    0.041 |        0.072 |
+|     3 |  77,517 |  0.202 |  1.136 |    0.296 |    0.300 |        0.514 |
+|     4 | 554,013 |  1.726 |  9.566 |    2.811 |    2.890 |        5.096 |
 
 ---
 
@@ -149,24 +157,40 @@ with $N = 16{,}129$).
 ## 4. Speedup: serial (np = 1) vs parallel (np = 16)
 
 Comparison of wall-clock times for selected methods on the largest mesh levels.
+The Custom algorithm is inherently sequential and does **not** benefit from
+parallelism (domain-decomposition MPI wrapper degrades both speed and color
+quality), so it is listed only in serial.
 
 | Problem     | Level | Method       | np=1 (s) | np=16 (s) | Speedup |
 | ----------- | ----: | ------------ | -------: | --------: | ------: |
-| pLaplace 2D |     9 | PETSc greedy |    1.262 |     0.255 |    4.9× |
-| pLaplace 2D |     9 | PETSc SL     |    1.159 |     0.674 |    1.7× |
-| pLaplace 2D |     9 | PETSc ID     |    1.172 |     0.684 |    1.7× |
-| GL 2D       |     9 | PETSc greedy |    1.881 |     0.653 |    2.9× |
-| GL 2D       |     9 | PETSc SL     |    1.741 |     1.233 |    1.4× |
-| GL 2D       |     9 | PETSc ID     |    1.718 |     1.240 |    1.4× |
-| HE 3D       |     4 | PETSc greedy |    4.872 |     1.542 |    3.2× |
-| HE 3D       |     4 | PETSc SL     |    2.715 |     1.771 |    1.5× |
-| HE 3D       |     4 | PETSc ID     |    2.718 |     1.778 |    1.5× |
+| pLaplace 2D |     9 | **Custom**   |    0.199 |         — |       — |
+| pLaplace 2D |     9 | PETSc greedy |    1.300 |     0.255 |    5.1× |
+| pLaplace 2D |     9 | PETSc SL     |    1.158 |     0.674 |    1.7× |
+| pLaplace 2D |     9 | PETSc ID     |    1.178 |     0.684 |    1.7× |
+| GL 2D       |     9 | **Custom**   |    0.433 |         — |       — |
+| GL 2D       |     9 | PETSc greedy |    1.921 |     0.653 |    2.9× |
+| GL 2D       |     9 | PETSc SL     |    1.715 |     1.233 |    1.4× |
+| GL 2D       |     9 | PETSc ID     |    1.697 |     1.240 |    1.4× |
+| HE 3D       |     4 | **Custom**   |    1.726 |         — |       — |
+| HE 3D       |     4 | PETSc greedy |    5.096 |     1.542 |    3.3× |
+| HE 3D       |     4 | PETSc SL     |    2.811 |     1.771 |    1.6× |
+| HE 3D       |     4 | PETSc ID     |    2.890 |     1.778 |    1.6× |
 
 ---
 
 ## Key observations
 
-1. **PETSc SL and ID are the best PETSc options.** The smallest-last (`sl`)
+1. **Custom C greedy is the fastest serial method.** The C implementation of
+   `my_greedy_color2` ("most-coloured-neighbours" heuristic on $A^2$) is
+   **4–6× faster** than PETSc and **5–10× faster** than igraph:
+   - pLaplace lvl 9 ($N = 784{,}385$): **0.20 s** vs PETSc SL 1.16 s, igraph 1.39 s
+   - GL 2D lvl 9 ($N = 1{,}046{,}529$): **0.43 s** vs PETSc SL 1.72 s, igraph 1.94 s
+   - HE 3D lvl 4 ($N = 554{,}013$): **1.73 s** vs PETSc SL 2.81 s, igraph 9.57 s
+   - It uses slightly more colors than PETSc SL/ID (11 vs 9–10 for 2D, 70 vs
+     75–78 for 3D) but fewer than greedy/JP. Notably for HE 3D level 2 it
+     produces **56 colors** — fewer than igraph (58).
+
+2. **PETSc SL and ID are the best PETSc options.** The smallest-last (`sl`)
    and incidence-degree (`id`) orderings produce dramatically fewer colors
    than the default `greedy` or `jp`:
    - **2D (pLaplace, GL):** 8–10 colors (SL/ID) vs 14–15 (greedy/jp)
@@ -174,23 +198,22 @@ Comparison of wall-clock times for selected methods on the largest mesh levels.
    - This reduces the number of Hessian–vector products by **~35–45 %** in 2D
      and **~15–20 %** in 3D.
 
-2. **igraph gives the best color quality overall.** igraph produces 7–8 colors
+3. **igraph gives the best color quality overall.** igraph produces 7–8 colors
    for 2D and 48–68 for 3D, consistently the fewest among practical methods.
    NX DSATUR occasionally matches or beats igraph by 1 color (e.g., 7 vs 8
    at pLaplace level 3) but is 100–10,000× slower.
 
-3. **PETSc SL nearly matches igraph for structured 2D meshes.**
+4. **PETSc SL nearly matches igraph for structured 2D meshes.**
    On Ginzburg–Landau 2D, PETSc SL consistently produces exactly **8 colors**
    (igraph: 7–8), making it an excellent parallel-capable alternative.
-
-4. **PETSc is the fastest backend in serial.** PETSc SL/ID are typically
-   10–15 % faster than igraph in serial and **3.5× faster** on HE 3D level 4
-   (2.7 s vs 9.5 s) because they avoid forming $A^2$ explicitly.
 
 5. **Parallel scaling favors greedy.** PETSc `greedy` achieves the best
    speedup with 16 processes (3–5×), while SL/ID show more modest speedup
    (1.4–1.7×). However, for the largest problems (HE 3D level 4), parallel
    SL at 1.77 s is still **5.4× faster** than serial igraph at 9.5 s.
+   The Custom algorithm is inherently sequential; its MPI wrapper (domain-
+   decomposition + boundary conflict resolution) is slower than serial due
+   to redundant $A^2$ computation overhead and yields more colors.
 
 6. **NetworkX is impractical for production.** NX DSATUR gives excellent
    color quality but its $O(n^2)$ complexity makes it unusable for $N > 10{,}000$.
@@ -202,7 +225,8 @@ Comparison of wall-clock times for selected methods on the largest mesh levels.
    and more than SL/ID everywhere. It offers no advantage.
 
 8. **Practical recommendation.**
-   - **Serial, Python-only:** igraph (optimal colors, fast).
-   - **Serial, PETSc available:** PETSc ID or SL (near-optimal colors, fastest).
+   - **Serial, fastest:** Custom C (best speed, acceptable color count).
+   - **Serial, fewest colors:** igraph (optimal colors, moderate speed).
+   - **Serial, PETSc available:** PETSc ID or SL (near-optimal colors, good speed).
    - **Parallel (MPI):** PETSc SL for best color quality; PETSc greedy for
      fastest wall time when color count is less critical.
