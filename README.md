@@ -6,14 +6,14 @@ This repository contains solvers for nonlinear energy minimization problems usin
 
 The best way to explore the solvers is through the **Jupyter notebooks in the repository root**:
 
-| Notebook                                                                   | Problem            | Framework        |
-| -------------------------------------------------------------------------- | ------------------ | ---------------- |
-| [example_pLaplace2D_jax.ipynb](example_pLaplace2D_jax.ipynb)                               | p-Laplacian 2D     | JAX              |
-| [example_GinzburgLandau2D_jax.ipynb](example_GinzburgLandau2D_jax.ipynb)                   | Ginzburg-Landau 2D | JAX              |
-| [example_HyperElasticity3D_jax.ipynb](example_HyperElasticity3D_jax.ipynb)                 | Hyperelasticity 3D | JAX              |
-| [benchmark_pLaplace2D_fenics.ipynb](benchmark_pLaplace2D_fenics.ipynb)                     | p-Laplacian 2D     | FEniCS (DOLFINx) |
-| [benchmark_GinzburgLandau2D_fenics.ipynb](benchmark_GinzburgLandau2D_fenics.ipynb)         | Ginzburg-Landau 2D | FEniCS (DOLFINx) |
-| [benchmark_HyperElasticity3D_fenics.ipynb](benchmark_HyperElasticity3D_fenics.ipynb)       | Hyperelasticity 3D | FEniCS (DOLFINx) |
+| Notebook                                                                             | Problem            | Framework        |
+| ------------------------------------------------------------------------------------ | ------------------ | ---------------- |
+| [example_pLaplace2D_jax.ipynb](example_pLaplace2D_jax.ipynb)                         | p-Laplacian 2D     | JAX              |
+| [example_GinzburgLandau2D_jax.ipynb](example_GinzburgLandau2D_jax.ipynb)             | Ginzburg-Landau 2D | JAX              |
+| [example_HyperElasticity3D_jax.ipynb](example_HyperElasticity3D_jax.ipynb)           | Hyperelasticity 3D | JAX              |
+| [benchmark_pLaplace2D_fenics.ipynb](benchmark_pLaplace2D_fenics.ipynb)               | p-Laplacian 2D     | FEniCS (DOLFINx) |
+| [benchmark_GinzburgLandau2D_fenics.ipynb](benchmark_GinzburgLandau2D_fenics.ipynb)   | Ginzburg-Landau 2D | FEniCS (DOLFINx) |
+| [benchmark_HyperElasticity3D_fenics.ipynb](benchmark_HyperElasticity3D_fenics.ipynb) | Hyperelasticity 3D | FEniCS (DOLFINx) |
 
 Open in VS Code devcontainer and run — everything is pre-configured.
 
