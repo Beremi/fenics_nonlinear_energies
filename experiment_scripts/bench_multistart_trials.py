@@ -29,7 +29,7 @@ BENCHMARKS = [
     ("HyperElasticity3D", 4),
 ]
 
-TRIALS_LIST = [1, 5, 10]
+TRIALS_LIST = [1, 5, 10, 100]
 
 for prob_name, lvl in BENCHMARKS:
     h5 = PROBLEMS[prob_name]["path"](lvl)

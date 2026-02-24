@@ -316,27 +316,23 @@ Each rank runs `trials_per_rank` independent randomised greedy colorings
 (distinct seeds), not just one. A² is computed once on rank 0 with scipy
 and broadcast; the coloring phase scales linearly with `trials_per_rank`.
 
-### Timing breakdown & best color count
+Reference color counts from other methods: igraph (best known), PETSc
+SmallestLast, PETSc IncidenceDegree, and the deterministic custom C greedy.
 
-| Problem         | trials/rank | total trials | A² (s) | Bcast (s) | Color (s) | Total (s) | best #col |
-| --------------- | ----------: | -----------: | -----: | --------: | --------: | --------: | --------: |
-| **pLaplace 2D** |           1 |           16 |   0.16 |      0.08 |      0.09 |      0.33 |         9 |
-|                 |           5 |           80 |   0.16 |      0.08 |      0.42 |      0.66 |         8 |
-|                 |          10 |          160 |   0.12 |      0.09 |      0.86 |      1.07 |         8 |
-| **GL 2D**       |           1 |           16 |   0.25 |      0.12 |      0.13 |      0.49 |         9 |
-|                 |           5 |           80 |   0.24 |      0.12 |      0.58 |      0.94 |         8 |
-|                 |          10 |          160 |   0.25 |      0.11 |      1.14 |      1.50 |         8 |
-| **HE 3D**       |           1 |           16 |   1.24 |      0.52 |      0.32 |      2.08 |        69 |
-|                 |           5 |           80 |   1.24 |      0.49 |      1.53 |      3.25 |        69 |
-|                 |          10 |          160 |   1.24 |      0.48 |      3.01 |      4.74 |        68 |
-
-### Reference color counts
-
-| Problem     | igraph | PETSc SL | PETSc ID | Custom deterministic |
-| ----------- | -----: | -------: | -------: | -------------------: |
-| pLaplace 2D |      7 |       10 |        9 |                   11 |
-| GL 2D       |      7 |        8 |        9 |                   11 |
-| HE 3D       |     68 |       75 |       78 |                   70 |
+| Problem         | trials/rank | total trials | A² (s) | Bcast (s) | Color (s) | Total (s) | #col | igraph | PETSc SL | PETSc ID | Custom det. |
+| --------------- | ----------: | -----------: | -----: | --------: | --------: | --------: | ---: | -----: | -------: | -------: | ----------: |
+| **pLaplace 2D** |           1 |           16 |   0.17 |      0.08 |      0.10 |      0.34 |    9 |      7 |       10 |        9 |          11 |
+|                 |           5 |           80 |   0.16 |      0.08 |      0.46 |      0.70 |    8 |        |          |          |             |
+|                 |          10 |          160 |   0.16 |      0.08 |      0.85 |      1.08 |    8 |        |          |          |             |
+|                 |         100 |         1600 |   0.16 |      0.08 |      8.43 |      8.67 |    8 |        |          |          |             |
+| **GL 2D**       |           1 |           16 |   0.30 |      0.11 |      0.12 |      0.53 |    9 |      7 |        8 |        9 |          11 |
+|                 |           5 |           80 |   0.30 |      0.11 |      0.58 |      0.99 |    8 |        |          |          |             |
+|                 |          10 |          160 |   0.30 |      0.11 |      1.14 |      1.56 |    8 |        |          |          |             |
+|                 |         100 |         1600 |   0.32 |      0.12 |     11.45 |     11.89 |    8 |        |          |          |             |
+| **HE 3D**       |           1 |           16 |   1.78 |      0.57 |      0.30 |      2.65 |   69 |     68 |       75 |       78 |          70 |
+|                 |           5 |           80 |   1.78 |      0.57 |      1.50 |      3.85 |   69 |        |          |          |             |
+|                 |          10 |          160 |   1.77 |      0.57 |      3.00 |      5.34 |   68 |        |          |          |             |
+|                 |         100 |         1600 |   1.94 |      0.58 |     29.37 |     31.89 |   68 |        |          |          |             |
 
 ---
 
@@ -398,8 +394,11 @@ and broadcast; the coloring phase scales linearly with `trials_per_rank`.
    With **5 trials per rank** (80 total), color quality improves further:
    8 colors for 2D (only 1 above igraph) and 69 for HE.  With **10
    trials per rank** (160 total), HE reaches **68 — matching igraph**.
-   Coloring time scales linearly with `trials_per_rank`; A² + Bcast is a
-   fixed cost that does not grow.
+   Going to **100 trials per rank** (1 600 total) does not improve
+   further: 8 / 8 / 68 — the same as 10 trials, indicating diminishing
+   returns past ~160 total trials.  Coloring time scales linearly with
+   `trials_per_rank` (~8.4 s, 11.4 s, 29.4 s for pL/GL/HE at 100);
+   A² + Bcast is a fixed cost that does not grow.
 
 8. **Graph-library A² computation is not competitive.** igraph's
    `neighborhood(order=2)` is internally fast but the Python-side overhead
