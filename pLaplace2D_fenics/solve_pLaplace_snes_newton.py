@@ -35,9 +35,16 @@ def run_level(mesh_level):
     comm = MPI.COMM_WORLD
     rank = comm.rank
 
-    with h5py.File(f"mesh_data/pLaplace/pLaplace_level{mesh_level}.h5", "r") as f:
-        points = f["nodes"][:]
-        triangles = f["elems"][:].astype(np.int64)
+    if rank == 0:
+        with h5py.File(f"mesh_data/pLaplace/pLaplace_level{mesh_level}.h5", "r",
+                       driver="core", backing_store=False) as f:
+            points = f["nodes"][:]
+            triangles = f["elems"][:].astype(np.int64)
+    else:
+        points = None
+        triangles = None
+    points = comm.bcast(points, root=0)
+    triangles = comm.bcast(triangles, root=0)
     c_el = ufl.Mesh(basix.ufl.element("Lagrange", "triangle", 1, shape=(2,)))
     msh = mesh.create_mesh(comm, triangles, c_el, points)
 

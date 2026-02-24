@@ -82,7 +82,7 @@ def _print_timing_breakdown(report, solve_time, solver):
 # ---------------------------------------------------------------------------
 
 def run_level(mesh_level, comm, verbose=True, coloring_trials=10,
-              ksp_rtol=1e-3, pc_type="gamg"):
+              ksp_rtol=1e-3, pc_type="gamg", reorder_dofs=True):
     """Run parallel JAX+PETSc Newton solver for one mesh level.
 
     Returns dict with: mesh_level, dofs, setup_time, time, iters, energy,
@@ -107,6 +107,7 @@ def run_level(mesh_level, comm, verbose=True, coloring_trials=10,
         ksp_rtol=ksp_rtol,
         ksp_type="cg",
         pc_type=pc_type,
+        reorder_dofs=reorder_dofs,
     )
     setup_time = time.perf_counter() - setup_start
 
@@ -193,6 +194,14 @@ def main():
         "--pc-type", type=str, default="gamg",
         help="PETSc PC type: gamg (default, recommended) or hypre",
     )
+    parser.add_argument(
+        "--reorder", action="store_true", default=True,
+        help="Enable locality-aware DOF reordering (default: on)",
+    )
+    parser.add_argument(
+        "--no-reorder", action="store_false", dest="reorder",
+        help="Disable DOF reordering",
+    )
     args = parser.parse_args()
 
     comm = MPI.COMM_WORLD
@@ -219,6 +228,7 @@ def main():
             coloring_trials=args.coloring_trials,
             ksp_rtol=args.ksp_rtol,
             pc_type=args.pc_type,
+            reorder_dofs=args.reorder,
         )
         all_results.append(result)
 

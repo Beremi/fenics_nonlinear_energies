@@ -98,7 +98,7 @@ A hybrid solver that uses **JAX** for automatic differentiation (energy, gradien
 - **PETSc KSP**: CG + GAMG (PETSc native AMG) with `rtol=1e-3` (same tolerance as the FEniCS custom Newton).
 - **Same Newton algorithm** as the other custom solvers: golden-section line search on $[-0.5, 2]$, `tolf=1e-5`, `tolg=1e-3`, via `tools_petsc4py/minimizers.py`.
 
-**Important**: GAMG is used instead of HYPRE BoomerAMG.  In the replicated-data model the DOF ordering does not reflect mesh locality (PETSc default block distribution).  HYPRE BoomerAMG setup scales catastrophically under this condition — up to **30× slower** in parallel than serial — while GAMG handles arbitrary orderings gracefully.  See Annex B for detailed analysis.
+**Important**: GAMG is used instead of HYPRE BoomerAMG.  In the replicated-data model the DOF ordering does not reflect mesh locality (PETSc default block distribution).  HYPRE BoomerAMG setup scales catastrophically under this condition — up to **30× slower** in parallel than serial — while GAMG handles arbitrary orderings gracefully.  See Annex B for detailed analysis.  Alternatively, enabling **RCM DOF reordering** (`--reorder`) restores proper data locality and makes HYPRE competitive again — see Annex C for a head-to-head comparison with FEniCS.
 
 Script: [`pLaplace2D_jax_petsc/solve_pLaplace_jax_petsc.py`](pLaplace2D_jax_petsc/solve_pLaplace_jax_petsc.py)
 
@@ -292,6 +292,122 @@ With HYPRE, only the CG iteration phase (PC reuse column) scales properly — co
 ### B.4  Recommendation
 
 For replicated-data solvers (or any solver where the DOF ordering does not reflect mesh locality), **GAMG should be preferred over HYPRE BoomerAMG**.  GAMG's algebraic coarsening is robust to arbitrary orderings, while HYPRE's parallel setup assumes locality-aware partitions.
+
+---
+
+## Annex C — RCM DOF Reordering: FEniCS vs JAX+PETSc Comparison
+
+### C.1  Motivation
+
+Annexes A and B showed that the replicated-data JAX+PETSc solver suffered from catastrophically poor HYPRE scaling due to random DOF ordering.  GAMG was adopted as a workaround, but its serial KSP time is roughly 2× slower than HYPRE's.
+
+This annex introduces **locality-aware DOF reordering** via the Reverse Cuthill–McKee (RCM) algorithm.  The RCM permutation is computed on the sparsity graph (rank 0, then broadcast), and applied to the COO assembly indices so that PETSc's default block distribution assigns geometrically nearby DOFs to each rank — mimicking what FEniCS/DOLFINx achieves with ParMETIS/SCOTCH.
+
+With this fix, **HYPRE BoomerAMG works correctly in parallel** and the KSP phase becomes directly comparable between FEniCS and JAX+PETSc.
+
+### C.2  Benchmark Setup
+
+To enable a clean parallel comparison (the Docker container has a DOLFINx/h5py conflict that prevents parallel mesh loading from HDF5), the FEniCS benchmark uses `create_unit_square` with comparable DOF counts:
+
+| Problem size | FEniCS mesh | FEniCS DOFs | JAX mesh (from HDF5) | JAX DOFs |
+| :----------- | :---------- | ----------: | :-------------------- | -------: |
+| ~195 K       | unit square $441 \times 441$ | 195 364 | Level 8 (unstructured) | 195 585 |
+| ~785 K       | unit square $885 \times 885$ | 784 996 | Level 9 (unstructured) | 784 385 |
+
+Both solvers use: CG + HYPRE BoomerAMG, `rtol = 1e-3`, golden-section line search on $[-0.5, 2]$, `tolf = 1e-5`, `tolg = 1e-3`.
+
+### C.3  KSP Linear Solve — Head-to-Head Comparison
+
+The KSP column isolates the CG + HYPRE AMG solve (preconditioner setup + iterations), which is the phase that should be equivalent between the two solvers after matrix assembly.
+
+**~195 K DOFs:**
+
+| nproc | FEniCS KSP (s) | JAX+PETSc KSP (s) | Ratio | FEniCS KSP its | JAX KSP its |
+| ----: | -------------: | -----------------: | ----: | :------------- | :---------- |
+|     1 |          1.302 |              1.453 |  1.12 | 3–4            | 3–4         |
+|     4 |          0.471 |              0.600 |  1.27 | 3–4            | 3–4         |
+|    16 |          0.220 |              0.289 |  1.31 | 3–4            | 3–4         |
+
+**~785 K DOFs:**
+
+| nproc | FEniCS KSP (s) | JAX+PETSc KSP (s) | Ratio | FEniCS KSP its | JAX KSP its |
+| ----: | -------------: | -----------------: | ----: | :------------- | :---------- |
+|     1 |          5.232 |              7.270 |  1.39 | 3–4            | 3–5         |
+|     4 |          2.297 |              2.742 |  1.19 | 3–4            | 3–4         |
+|    16 |          0.929 |              1.523 |  1.64 | 3–4            | 3–5         |
+
+**Key finding**: After RCM reordering, the JAX+PETSc KSP times are within **1.1–1.6×** of FEniCS — dramatically improved from the 20–30× gap without reordering.  The remaining gap stems from:
+- Different mesh topology (structured grid vs unstructured triangulation — different condition numbers, different AMG coarsening)
+- Different iteration counts (7 vs 5 Newton steps → 7 vs 5 KSP solves, including more PC rebuilds)
+- RCM ordering quality vs DOLFINx's ParMETIS/SCOTCH partitioning
+
+### C.4  KSP Parallel Scaling (Speedup)
+
+| nproc | FEniCS speedup (~195 K) | JAX speedup (~195 K) | FEniCS speedup (~785 K) | JAX speedup (~785 K) |
+| ----: | ----------------------: | -------------------: | ----------------------: | -------------------: |
+|     1 |                   1.0×  |                1.0×  |                   1.0×  |                1.0×  |
+|     4 |                   2.8×  |                2.4×  |                   2.3×  |                2.7×  |
+|    16 |                   5.9×  |                5.0×  |                   5.6×  |                4.8×  |
+
+Both solvers exhibit near-identical KSP scaling behaviour — confirming that the RCM reordering produces a partition quality sufficient for HYPRE's parallel AMG.
+
+### C.5  Full Timing Breakdown — ~195 K DOFs
+
+**FEniCS Custom Newton** (5 Newton iterations):
+
+| nproc | Assembly (s) | KSP (s) | Hessian (s) | Other (s) | Solve (s) |
+| ----: | -----------: | ------: | ----------: | --------: | --------: |
+|     1 |        0.247 |   1.302 |       1.549 |     1.156 |     2.705 |
+|     4 |        0.115 |   0.471 |       0.585 |     0.450 |     1.036 |
+|    16 |        0.035 |   0.220 |       0.255 |     0.142 |     0.397 |
+
+**JAX+PETSc SFD + RCM reorder** (6 Newton iterations):
+
+| nproc | HVP (s) | KSP (s) | Hessian (s) | Other (s) | Solve (s) |
+| ----: | ------: | ------: | ----------: | --------: | --------: |
+|     1 |   0.304 |   1.453 |       1.781 |     0.260 |     2.041 |
+|     4 |   0.326 |   0.600 |       0.971 |     0.598 |     1.569 |
+|    16 |   0.320 |   0.289 |       0.783 |     2.709 |     3.492 |
+
+### C.6  Full Timing Breakdown — ~785 K DOFs
+
+**FEniCS Custom Newton** (5 Newton iterations):
+
+| nproc | Assembly (s) | KSP (s) | Hessian (s) | Other (s) |  Solve (s) |
+| ----: | -----------: | ------: | ----------: | --------: | ---------: |
+|     1 |        0.989 |   5.232 |       6.220 |     4.880 |     11.100 |
+|     4 |        0.471 |   2.297 |       2.767 |     1.916 |      4.684 |
+|    16 |        0.153 |   0.929 |       1.082 |     0.579 |      1.661 |
+
+**JAX+PETSc SFD + RCM reorder** (7 Newton iterations):
+
+| nproc | HVP (s) | KSP (s) | Hessian (s) | Other (s) |  Solve (s) |
+| ----: | ------: | ------: | ----------: | --------: | ---------: |
+|     1 |   1.858 |   7.270 |       9.283 |     1.252 |     10.535 |
+|     4 |   1.486 |   2.742 |       4.505 |     3.620 |      8.125 |
+|    16 |   1.485 |   1.523 |       3.966 |    15.558 |     19.524 |
+
+### C.7  Impact of RCM Reordering on HYPRE
+
+| Config (level 9, ~785 K DOFs) | KSP sum (s) | Solve (s) |
+| :----------------------------- | ----------: | --------: |
+| np = 16, HYPRE, **no** reorder |       30.60 |     50.00 |
+| np = 16, HYPRE, RCM reorder   |        1.52 |     19.52 |
+| np = 16, GAMG, no reorder      |        3.52 |     21.82 |
+
+RCM reordering gives a **20× KSP speedup** over the unordered case and makes HYPRE **2.3× faster** than GAMG (which was the previous workaround).
+
+### C.8  Analysis
+
+**1. KSP times now match (within 1.1–1.6×).**  The RCM permutation restores proper data locality for PETSc's block distribution, enabling HYPRE's parallel AMG setup to work correctly.  The small residual gap is expected from different mesh structures (structured vs unstructured triangulation).
+
+**2. Assembly cost difference.**  FEniCS assembles the exact Hessian via compiled UFL forms (0.15–0.99 s); JAX+PETSc computes SFD Hessian-vector products (0.30–1.86 s), roughly 2× more expensive.  However, the SFD approach is **automatic** (requires only the energy function, no hand-derived forms).
+
+**3. "Other" overhead diverges in parallel.**  FEniCS distributes all computations (energy, gradient, assembly) across ranks natively.  JAX+PETSc uses **replicated data**: every rank evaluates the full energy/gradient on the complete vector.  At np = 16 on ~785 K DOFs, this overhead is 15.6 s (80 % of solve time), compared to FEniCS's 0.6 s.  This is the fundamental scaling limitation of the replicated-data architecture.
+
+**4. Serial performance is competitive.**  At np = 1, JAX+PETSc actually solves *faster* at ~195 K (2.04 s vs 2.70 s) thanks to fewer energy evaluations per line search step (JAX JIT is more efficient for scalar energy).  At ~785 K the picture reverses (10.53 s vs 11.10 s — nearly equal).
+
+**5. The bottleneck is not KSP anymore.**  With RCM reordering + HYPRE, the linear-solve phase is no longer the scaling limitation.  The replicated energy/gradient evaluation is the dominant cost in parallel, and resolving it requires a fundamentally different data-distribution strategy (true distributed assembly as in DOLFINx).
 
 ---
 

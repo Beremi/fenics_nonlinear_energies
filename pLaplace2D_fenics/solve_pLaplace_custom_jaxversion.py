@@ -63,9 +63,16 @@ def run_level(mesh_level, verbose=True):
     rank = comm.rank
 
     # ---- mesh + function space ----
-    with h5py.File(f"mesh_data/pLaplace/pLaplace_level{mesh_level}.h5", "r") as f:
-        points = f["nodes"][:]
-        triangles = f["elems"][:].astype(np.int64)
+    if rank == 0:
+        with h5py.File(f"mesh_data/pLaplace/pLaplace_level{mesh_level}.h5", "r",
+                       driver="core", backing_store=False) as f:
+            points = f["nodes"][:]
+            triangles = f["elems"][:].astype(np.int64)
+    else:
+        points = None
+        triangles = None
+    points = comm.bcast(points, root=0)
+    triangles = comm.bcast(triangles, root=0)
     c_el = ufl.Mesh(basix.ufl.element("Lagrange", "triangle", 1, shape=(2,)))
     msh = mesh.create_mesh(comm, triangles, c_el, points)
 
@@ -145,14 +152,27 @@ def run_level(mesh_level, verbose=True):
         g.ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
         set_bc(g, [bc], vec)
 
+    _hess_timings = []  # per-iteration assembly + KSP breakdown
+
     def hessian_solve_fn(vec, rhs, sol):
         """Assemble Hessian, solve  H · sol = rhs.  Return KSP iters."""
+        t0 = time.perf_counter()
         A.zeroEntries()
         assemble_matrix(A, hessian_form, bcs=[bc])
         A.assemble()
+        t_asm = time.perf_counter() - t0
+
+        t0 = time.perf_counter()
         ksp.setOperators(A)
         ksp.solve(rhs, sol)
-        return ksp.getIterationNumber()
+        ksp_its = ksp.getIterationNumber()
+        t_ksp = time.perf_counter() - t0
+
+        _hess_timings.append({
+            "assembly": t_asm, "ksp": t_ksp,
+            "ksp_its": ksp_its, "total": t_asm + t_ksp,
+        })
+        return ksp_its
 
     # ---- solve ----
     t_start = time.perf_counter()
@@ -174,6 +194,32 @@ def run_level(mesh_level, verbose=True):
 
     # ---- final energy (from the solver result, already computed) ----
     final_energy = result["fun"]
+
+    # ---- print per-iteration breakdown (rank 0 only) ----
+    if verbose and rank == 0 and _hess_timings:
+        other_time = total_time - sum(d["total"] for d in _hess_timings)
+        sys.stdout.write("\n  Timing Breakdown (hessian_solve_fn per Newton iteration):\n")
+        sys.stdout.write(f"  {'It':>3s} {'assembly':>10s} {'KSP':>10s} {'KSP it':>7s} {'total':>10s}\n")
+        sys.stdout.write("  " + "-" * 46 + "\n")
+        for i, d in enumerate(_hess_timings):
+            sys.stdout.write(
+                f"  {i:3d} {d['assembly']:10.4f} {d['ksp']:10.4f}"
+                f" {d['ksp_its']:7d} {d['total']:10.4f}\n"
+            )
+        sys.stdout.write("  " + "-" * 46 + "\n")
+        asm_sum = sum(d["assembly"] for d in _hess_timings)
+        ksp_sum = sum(d["ksp"] for d in _hess_timings)
+        tot_sum = sum(d["total"] for d in _hess_timings)
+        sys.stdout.write(
+            f"  {'SUM':>3s} {asm_sum:10.4f} {ksp_sum:10.4f}"
+            f" {'':>7s} {tot_sum:10.4f}\n"
+        )
+        sys.stdout.write(
+            f"\n  Hessian total: {tot_sum:.4f}s  |  "
+            f"Other (energy+grad+LS): {other_time:.4f}s  |  "
+            f"Solve wall: {total_time:.4f}s\n"
+        )
+        sys.stdout.flush()
 
     # ---- clean up PETSc objects ----
     ksp.destroy()

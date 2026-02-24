@@ -80,11 +80,13 @@ class ParallelSFDSolver:
         ksp_rtol=1e-3,
         ksp_type="cg",
         pc_type="gamg",
+        reorder_dofs=True,
     ):
         self.comm = comm
         self.rank = comm.Get_rank()
         self.size = comm.Get_size()
         self.params = params
+        self.reorder_dofs = reorder_dofs
         self.timings = {}
 
         # Per-iteration timing breakdown (lists, appended each hessian_solve call)
@@ -104,6 +106,11 @@ class ParallelSFDSolver:
         t0 = time.perf_counter()
         self._precompute_indices(adjacency)
         self.timings["precompute"] = time.perf_counter() - t0
+
+        # ---- 3b. Locality-aware DOF reordering (RCM) --------------------
+        t0 = time.perf_counter()
+        self._compute_reordering(adjacency)
+        self.timings["reorder"] = time.perf_counter() - t0
 
         # ---- 4. Create PETSc objects (Mat, KSP, Vec helpers) -------------
         t0 = time.perf_counter()
@@ -204,6 +211,33 @@ class ParallelSFDSolver:
             nz_rows = row_adj[nz_indices]
             self.color_nz_map[c] = (nz_indices, nz_rows)
 
+    def _compute_reordering(self, adjacency):
+        """Compute locality-aware DOF reordering via Reverse Cuthill-McKee.
+
+        After calling:
+        -  ``self.perm[new_idx] = old_idx``  (new-to-old mapping)
+        -  ``self.iperm[old_idx] = new_idx`` (old-to-new mapping)
+
+        If ``reorder_dofs`` is ``False``, identity permutations are stored.
+        """
+        if not self.reorder_dofs:
+            self.perm = np.arange(self.n, dtype=np.int64)
+            self.iperm = np.arange(self.n, dtype=np.int64)
+            return
+
+        from scipy.sparse.csgraph import reverse_cuthill_mckee
+
+        if self.rank == 0:
+            perm = reverse_cuthill_mckee(adjacency.tocsr())
+            perm = np.ascontiguousarray(perm, dtype=np.int64)
+        else:
+            perm = np.empty(self.n, dtype=np.int64)
+        self.comm.Bcast(perm, root=0)
+
+        self.perm = perm  # perm[new] = old
+        self.iperm = np.empty_like(perm)
+        self.iperm[perm] = np.arange(self.n, dtype=np.int64)  # iperm[old] = new
+
     def _setup_petsc(self, ksp_rtol, ksp_type, pc_type):
         """Create PETSc MPIAIJ matrix via COO preallocation and build KSP."""
         n = self.n
@@ -217,11 +251,18 @@ class ParallelSFDSolver:
         # --- COO preallocation -----------------------------------------
         #
         # Each rank registers the (row, col) entries it owns (by row range).
-        # Since entries don't overlap between ranks, INSERT_VALUES is correct.
-        owned_mask = (self.row_adj >= self.lo) & (self.row_adj < self.hi)
+        # If DOF reordering is active, use permuted indices so that the
+        # PETSc block distribution reflects mesh locality.
+        if self.reorder_dofs:
+            eff_rows = self.iperm[self.row_adj]
+            eff_cols = self.iperm[self.col_adj]
+        else:
+            eff_rows = self.row_adj
+            eff_cols = self.col_adj
+        owned_mask = (eff_rows >= self.lo) & (eff_rows < self.hi)
         self._owned_mask = owned_mask
-        self._owned_global_rows = self.row_adj[owned_mask].copy()
-        self._owned_global_cols = self.col_adj[owned_mask].copy()
+        self._owned_global_rows = eff_rows[owned_mask].copy()
+        self._owned_global_cols = eff_cols[owned_mask].copy()
         # Indices into the full nnz data array for owned entries
         self._owned_data_idx = np.where(owned_mask)[0]
         self._n_owned_nnz = int(owned_mask.sum())
@@ -248,6 +289,11 @@ class ParallelSFDSolver:
         self.ksp.getPC().setType(pc_type)
         self.ksp.setTolerances(rtol=ksp_rtol)
         self.ksp.setFromOptions()
+
+        # --- Extra vectors for reordered KSP solve ---
+        if self.reorder_dofs:
+            self._rhs_reord = PETSc.Vec().createMPI(n, comm=self.comm)
+            self._sol_reord = PETSc.Vec().createMPI(n, comm=self.comm)
 
     # ------------------------------------------------------------------
     # Utility methods
@@ -348,11 +394,22 @@ class ParallelSFDSolver:
         self.A.setValuesCOO(owned_vals, addv=PETSc.InsertMode.INSERT_VALUES)
         t_assembly = time.perf_counter() - t0
 
-        # --- 4. KSP solve ---
+        # --- 4. KSP solve (with optional DOF permutation) ---
         t0 = time.perf_counter()
         self.ksp.setOperators(self.A)
-        self.ksp.solve(rhs, sol)
-        ksp_its = self.ksp.getIterationNumber()
+        if self.reorder_dofs:
+            # Permute RHS: natural → reordered ordering
+            rhs_full = self.allgather_vec(rhs)
+            self._rhs_reord.array[:] = rhs_full[self.perm][self.lo:self.hi]
+            # Solve in reordered space
+            self.ksp.solve(self._rhs_reord, self._sol_reord)
+            ksp_its = self.ksp.getIterationNumber()
+            # Permute SOL: reordered → natural ordering
+            sol_full = self.allgather_vec(self._sol_reord)
+            sol.array[:] = sol_full[self.iperm][self.lo:self.hi]
+        else:
+            self.ksp.solve(rhs, sol)
+            ksp_its = self.ksp.getIterationNumber()
         t_ksp = time.perf_counter() - t0
 
         t_total = time.perf_counter() - t_total_start
@@ -389,6 +446,7 @@ class ParallelSFDSolver:
             "nnz": int(self.nnz),
             "n_dofs": self.n,
             "n_owned_nnz": self._n_owned_nnz,
+            "reorder_dofs": self.reorder_dofs,
         }
         if self.iter_timings:
             keys = ["allgather", "hvp", "allreduce", "assembly", "ksp", "total"]
@@ -407,3 +465,6 @@ class ParallelSFDSolver:
         """Destroy PETSc objects."""
         self.ksp.destroy()
         self.A.destroy()
+        if self.reorder_dofs:
+            self._rhs_reord.destroy()
+            self._sol_reord.destroy()
