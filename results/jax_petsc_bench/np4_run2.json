@@ -1,0 +1,107 @@
+{
+  "metadata": {
+    "solver": "jax_petsc_sfd",
+    "description": "JAX + PETSc parallel SFD Hessian: golden-section line search [-0.5, 2], CG + HYPRE AMG",
+    "nprocs": 4,
+    "coloring_trials_per_rank": 10,
+    "linear_solver": {
+      "ksp_type": "cg",
+      "pc_type": "hypre",
+      "ksp_rtol": 0.001
+    },
+    "newton_params": {
+      "tolf": 1e-05,
+      "tolg": 0.001,
+      "linesearch_interval": [
+        -0.5,
+        2.0
+      ],
+      "linesearch_tol": 0.001,
+      "maxit": 100
+    },
+    "p": 3,
+    "rhs_f": -10.0
+  },
+  "results": [
+    {
+      "mesh_level": 5,
+      "dofs": 2945,
+      "setup_time": 0.2356,
+      "time": 0.0827,
+      "iters": 6,
+      "energy": -7.9429687192,
+      "message": "Energy change converged",
+      "n_colors": 9,
+      "timings": {
+        "jit": 0.1843,
+        "coloring": 0.0079,
+        "precompute": 0.0008,
+        "petsc_setup": 0.0007
+      }
+    },
+    {
+      "mesh_level": 6,
+      "dofs": 12033,
+      "setup_time": 0.2176,
+      "time": 0.2722,
+      "iters": 6,
+      "energy": -7.9545635615,
+      "message": "Gradient norm converged",
+      "n_colors": 8,
+      "timings": {
+        "jit": 0.1687,
+        "coloring": 0.0099,
+        "precompute": 0.0016,
+        "petsc_setup": 0.0009
+      }
+    },
+    {
+      "mesh_level": 7,
+      "dofs": 48641,
+      "setup_time": 0.2736,
+      "time": 1.2577,
+      "iters": 6,
+      "energy": -7.9582924189,
+      "message": "Energy change converged",
+      "n_colors": 9,
+      "timings": {
+        "jit": 0.1893,
+        "coloring": 0.0338,
+        "precompute": 0.0054,
+        "petsc_setup": 0.0029
+      }
+    },
+    {
+      "mesh_level": 8,
+      "dofs": 195585,
+      "setup_time": 0.5133,
+      "time": 8.511,
+      "iters": 6,
+      "energy": -7.9595563052,
+      "message": "Energy change converged",
+      "n_colors": 9,
+      "timings": {
+        "jit": 0.2088,
+        "coloring": 0.1858,
+        "precompute": 0.0222,
+        "petsc_setup": 0.0107
+      }
+    },
+    {
+      "mesh_level": 9,
+      "dofs": 784385,
+      "setup_time": 1.4241,
+      "time": 100.0191,
+      "iters": 7,
+      "energy": -7.9600056371,
+      "message": "Energy change converged",
+      "n_colors": 8,
+      "timings": {
+        "jit": 0.2493,
+        "coloring": 0.7149,
+        "precompute": 0.1044,
+        "petsc_setup": 0.0694
+      }
+    }
+  ]
+}

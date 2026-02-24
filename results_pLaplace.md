@@ -88,6 +88,45 @@ Script: [`pLaplace2D_fenics/solve_pLaplace_custom_jaxversion.py`](pLaplace2D_fen
 - **MPI-parallel**: Unlike pure JAX, this solver scales across MPI processes.
 - **Comparable serial times** to SNES Newton — slightly slower due to golden-section energy evaluations per iteration, but fewer iterations compensate.
 
+### JAX + PETSc SFD Newton (MPI-parallel)
+
+A hybrid solver that uses **JAX** for automatic differentiation (energy, gradient, Hessian-vector products) combined with **PETSc** for distributed sparse linear algebra. The Hessian is assembled via sparse finite differences (SFD) with graph coloring — the same approach as the serial JAX Newton solver, but with MPI parallelism:
+
+- **Distributed HVP computation**: graph coloring produces $n_c$ colour groups, distributed round-robin across MPI ranks. Each rank computes only $\lceil n_c / p \rceil$ Hessian-vector products per Newton step.
+- **Parallel multi-start coloring** via `graph_coloring/multistart_coloring.py` (each rank runs independent trials; the best global result is kept).
+- **PETSc MPIAIJ** matrix with precomputed sparsity pattern (from adjacency). Assembled via `MPI_Allreduce(SUM)` of per-rank HVP data.
+- **PETSc KSP**: CG + HYPRE AMG with `rtol=1e-3` (same as the FEniCS custom Newton).
+- **Same Newton algorithm** as the other custom solvers: golden-section line search on $[-0.5, 2]$, `tolf=1e-5`, `tolg=1e-3`, via `tools_petsc4py/minimizers.py`.
+
+Script: [`pLaplace2D_jax_petsc/solve_pLaplace_jax_petsc.py`](pLaplace2D_jax_petsc/solve_pLaplace_jax_petsc.py)
+
+| lvl | dofs   | setup (s) | solve (s) | iters | n_colors | J(u)    | setup 4-proc | solve 4-proc | iters | setup 8-proc | solve 8-proc | iters | setup 16-proc | solve 16-proc | iters |
+| --- | ------ | --------- | --------- | ----- | -------- | ------- | ------------ | ------------ | ----- | ------------ | ------------ | ----- | ------------- | ------------- | ----- |
+| 4   | 2945   | 0.183     | 0.071     | 6     | 9        | -7.9430 | 0.224        | 0.083        | 6     | 0.308        | 0.090        | 6     | 0.530         | 0.141         | 6     |
+| 5   | 12033  | 0.175     | 0.239     | 6     | 9        | -7.9546 | 0.216        | 0.275        | 6     | 0.300        | 0.259        | 6     | 0.500         | 0.336         | 6     |
+| 6   | 48641  | 0.238     | 0.912     | 6     | 10       | -7.9583 | 0.277        | 1.255        | 6     | 0.370        | 1.127        | 6     | 0.628         | 1.219         | 6     |
+| 7   | 195585 | 0.416     | 3.716     | 6     | 9        | -7.9596 | 0.486        | 8.479        | 6     | 0.695        | 6.716        | 6     | 1.181         | 6.564         | 6     |
+| 8   | 784385 | 1.181     | 18.626    | 7     | 9        | -7.9600 | 1.404        | 99.396       | 7     | 2.059        | 64.192       | 7     | 3.358         | 47.331        | 7     |
+
+**Key observations**:
+- **6–7 iterations** — matches the serial JAX Newton (6–9) and FEniCS Custom Newton (5–7). Same algorithm, same tolerances, same energy values.
+- **Serial solve time** is competitive with the serial JAX Newton (0.071–18.6 s vs 0.076–10.9 s). Slightly slower at the largest level due to PETSc overhead vs native PyAMG.
+- **Parallel scaling is poor** — the replicated-data model means every rank still runs full-vector JAX operations (energy, gradient, `Allgatherv`). With only 8–10 colours but $n_c / p \approx 1$ HVP per rank, the colour distribution saves little compute while adding `Allreduce` communication on the full $\text{nnz}$ array. The KSP solve itself scales, but it accounts for only a fraction of the total time.
+- **Setup cost** grows with MPI ranks (more coloring trials, PETSc MPIAIJ preallocation overhead), from 0.18 s (serial) to 3.4 s (16 proc) at lvl 8.
+- **The bottleneck is the replicated energy/gradient evaluation and `Allreduce`**: each Newton step requires ~20 energy evaluations (golden-section line search), all computed on the full vector. True data-parallel assembly (as in DOLFINx) would eliminate this.
+
+```bash
+# Serial
+python3 pLaplace2D_jax_petsc/solve_pLaplace_jax_petsc.py --levels 5 6 7 8 9 --json results/<exp>/jax_petsc_sfd_np1_run1.json
+
+# Parallel (4 / 8 / 16 processes)
+mpirun -n 4  python3 pLaplace2D_jax_petsc/solve_pLaplace_jax_petsc.py --levels 5 6 7 8 9 --quiet --json results/<exp>/jax_petsc_sfd_np4_run1.json
+mpirun -n 8  python3 pLaplace2D_jax_petsc/solve_pLaplace_jax_petsc.py --levels 5 6 7 8 9 --quiet --json results/<exp>/jax_petsc_sfd_np8_run1.json
+mpirun -n 16 python3 pLaplace2D_jax_petsc/solve_pLaplace_jax_petsc.py --levels 5 6 7 8 9 --quiet --json results/<exp>/jax_petsc_sfd_np16_run1.json
+```
+
+**Environment note**: Requires `jax`, `jaxlib`, `petsc4py`, `mpi4py`, `h5py`, `scipy` — a combined JAX+PETSc environment (the devcontainer Dockerfile installs all of these).
+
 ---
 
 ## Generating LaTeX Tables and Plots

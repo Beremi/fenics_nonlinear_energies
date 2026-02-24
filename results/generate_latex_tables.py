@@ -204,6 +204,8 @@ def generate_all_solvers_table(metadata, runs):
             solver_label = "SNES Newton"
         elif solver == "jax_newton":
             solver_label = "JAX Newton"
+        elif solver == "jax_petsc_sfd":
+            solver_label = "JAX+PETSc SFD"
         else:
             solver_label = "Custom Newton"
         proc_label = "serial" if nprocs == 1 else f"{nprocs} proc"

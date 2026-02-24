@@ -83,6 +83,26 @@ python3 pLaplace2D_jax/solve_pLaplace_jax_newton.py --levels 5 6 7
 python3 pLaplace2D_jax/solve_pLaplace_jax_newton.py --json results/jax.json
 ```
 
+### JAX + PETSc SFD Newton (MPI-parallel)
+
+Hybrid solver combining JAX automatic differentiation with PETSc distributed linear algebra. Uses sparse finite differences with graph coloring for Hessian assembly (same approach as the serial JAX solver), but with MPI parallelism: HVP computations are distributed across ranks by colour, and the linear system is solved with PETSc KSP (CG + HYPRE AMG).
+
+Requires a combined JAX + PETSc environment: `jax`, `jaxlib`, `petsc4py`, `mpi4py`, `h5py`, `scipy`.
+
+```bash
+# Serial
+python3 pLaplace2D_jax_petsc/solve_pLaplace_jax_petsc.py
+
+# Specific levels + JSON output
+python3 pLaplace2D_jax_petsc/solve_pLaplace_jax_petsc.py --levels 5 6 7 --json results/jax_petsc.json
+
+# Parallel
+mpirun -n 4 python3 pLaplace2D_jax_petsc/solve_pLaplace_jax_petsc.py --quiet --json results/jax_petsc_4proc.json
+
+# Adjust coloring trials and KSP tolerance
+mpirun -n 8 python3 pLaplace2D_jax_petsc/solve_pLaplace_jax_petsc.py --coloring-trials 20 --ksp-rtol 1e-4 --json results/jax_petsc_8proc.json
+```
+
 ### Ginzburg-Landau 2D — Custom Newton (recommended)
 
 Re-implementation of the JAX minimiser for the non-convex Ginzburg-Landau energy.
@@ -161,7 +181,7 @@ results/<experiment_id>/<solver>_np<nprocs>_run<repetition>.json
 | Field           | Values                                                                 |
 | --------------- | ---------------------------------------------------------------------- |
 | `experiment_id` | Sequential (`experiment_001`) or timestamped (`20260221_133000_mytag`) |
-| `solver`        | `snes_newton`, `custom_jaxversion`, or `jax_newton`                    |
+| `solver`        | `snes_newton`, `custom_jaxversion`, `jax_newton`, or `jax_petsc_sfd`   |
 | `nprocs`        | Number of MPI processes (1 = serial)                                   |
 | `repetition`    | Run number (1, 2, 3…)                                                  |
 

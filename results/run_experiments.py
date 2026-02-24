@@ -140,6 +140,7 @@ def main():
     solvers = [
         ("snes_newton", "pLaplace2D_fenics/solve_pLaplace_snes_newton.py", []),
         ("custom_jaxversion", "pLaplace2D_fenics/solve_pLaplace_custom_jaxversion.py", ["--quiet"]),
+        ("jax_petsc_sfd", "pLaplace2D_jax_petsc/solve_pLaplace_jax_petsc.py", ["--quiet"]),
     ]
 
     # Run all combinations
