@@ -132,8 +132,10 @@ if rank == 0:
         print("  " + "-" * 52)
         s_grad = s_hess = s_ls = s_update = 0.0
         for h in hist:
-            s_grad += h["t_grad"]; s_hess += h["t_hess"]
-            s_ls += h["t_ls"]; s_update += h["t_update"]
+            s_grad += h["t_grad"]
+            s_hess += h["t_hess"]
+            s_ls += h["t_ls"]
+            s_update += h["t_update"]
             print(f"  {h['it']:3d} {h['t_grad']:8.4f} {h['t_hess']:8.4f} "
                   f"{h['t_ls']:8.4f} {h['t_update']:8.4f} {h['ls_evals']:6d} {h['t_iter']:8.4f}")
         print("  " + "-" * 52)
