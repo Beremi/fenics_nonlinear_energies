@@ -276,23 +276,23 @@ can beat scipy sparse matrix multiplication.
 
 ### Serial results (np = 1)
 
-| Method                  | pL lvl 9 (s) | GL lvl 9 (s) | HE lvl 4 (s) |
-| ----------------------- | -----------: | -----------: | -----------: |
-| scipy CSR               |         0.19 |         0.34 |     **1.39** |
-| scipy bool CSR          |     **0.17** |         0.28 |         1.56 |
-| igraph neighborhood     |         2.13 |         2.62 |         6.83 |
-| igraph neighborhood fast|         1.62 |         2.21 |         6.51 |
-| **C direct 2-hop**      |         0.29 |     **0.22** |         1.51 |
+| Method                   | pL lvl 9 (s) | GL lvl 9 (s) | HE lvl 4 (s) |
+| ------------------------ | -----------: | -----------: | -----------: |
+| scipy CSR                |         0.19 |         0.34 |     **1.39** |
+| scipy bool CSR           |     **0.17** |         0.28 |         1.56 |
+| igraph neighborhood      |         2.13 |         2.62 |         6.83 |
+| igraph neighborhood fast |         1.62 |         2.21 |         6.51 |
+| **C direct 2-hop**       |         0.29 |     **0.22** |         1.51 |
 
 ### With MPI broadcast (np = 16)
 
-| Method                  | pL lvl 9 (s) | GL lvl 9 (s) | HE lvl 4 (s) |
-| ----------------------- | -----------: | -----------: | -----------: |
-| scipy CSR + Bcast       |         0.33 |         0.47 |         2.55 |
-| scipy bool CSR + Bcast  |         0.31 |         0.42 |         2.77 |
-| igraph neighborhood     |         2.47 |         3.99 |        10.86 |
-| igraph neighborhood fast|         2.44 |         3.34 |         9.30 |
-| **C direct 2-hop + Bcast**|   **0.28** |     **0.42** |     **2.13** |
+| Method                     | pL lvl 9 (s) | GL lvl 9 (s) | HE lvl 4 (s) |
+| -------------------------- | -----------: | -----------: | -----------: |
+| scipy CSR + Bcast          |         0.33 |         0.47 |         2.55 |
+| scipy bool CSR + Bcast     |         0.31 |         0.42 |         2.77 |
+| igraph neighborhood        |         2.47 |         3.99 |        10.86 |
+| igraph neighborhood fast   |         2.44 |         3.34 |         9.30 |
+| **C direct 2-hop + Bcast** |     **0.28** |     **0.42** |     **2.13** |
 
 **Findings:**
 - **igraph is 5–10× slower** than scipy CSR.  The `neighborhood(order=2)` call
@@ -307,6 +307,36 @@ can beat scipy sparse matrix multiplication.
 - **scipy bool CSR** helps slightly for smaller 2D problems but is actually
   slower for HE 3D (1.56 s vs 1.39 s), suggesting the bool conversion
   overhead exceeds the arithmetic savings for denser graphs.
+
+---
+
+## 7. Multi-start with multiple trials per rank (np = 16)
+
+Each rank runs `trials_per_rank` independent randomised greedy colorings
+(distinct seeds), not just one. A² is computed once on rank 0 with scipy
+and broadcast; the coloring phase scales linearly with `trials_per_rank`.
+
+### Timing breakdown & best color count
+
+| Problem         | trials/rank | total trials | A² (s) | Bcast (s) | Color (s) | Total (s) | best #col |
+| --------------- | ----------: | -----------: | -----: | --------: | --------: | --------: | --------: |
+| **pLaplace 2D** |           1 |           16 |   0.16 |      0.08 |      0.09 |      0.33 |         9 |
+|                 |           5 |           80 |   0.16 |      0.08 |      0.42 |      0.66 |         8 |
+|                 |          10 |          160 |   0.12 |      0.09 |      0.86 |      1.07 |         8 |
+| **GL 2D**       |           1 |           16 |   0.25 |      0.12 |      0.13 |      0.49 |         9 |
+|                 |           5 |           80 |   0.24 |      0.12 |      0.58 |      0.94 |         8 |
+|                 |          10 |          160 |   0.25 |      0.11 |      1.14 |      1.50 |         8 |
+| **HE 3D**       |           1 |           16 |   1.24 |      0.52 |      0.32 |      2.08 |        69 |
+|                 |           5 |           80 |   1.24 |      0.49 |      1.53 |      3.25 |        69 |
+|                 |          10 |          160 |   1.24 |      0.48 |      3.01 |      4.74 |        68 |
+
+### Reference color counts
+
+| Problem     | igraph | PETSc SL | PETSc ID | Custom deterministic |
+| ----------- | -----: | -------: | -------: | -------------------: |
+| pLaplace 2D |      7 |       10 |        9 |                   11 |
+| GL 2D       |      7 |        8 |        9 |                   11 |
+| HE 3D       |     68 |       75 |       78 |                   70 |
 
 ---
 
@@ -364,6 +394,12 @@ can beat scipy sparse matrix multiplication.
    0.51 s (pL), 0.86 s (GL), 3.68 s (HE). The A² cost is amortised
    because it is computed once and broadcast; SciPy on rank 0 + MPI Bcast
    is 3–6× faster than PETSc parallel matmult.
+   
+   With **5 trials per rank** (80 total), color quality improves further:
+   8 colors for 2D (only 1 above igraph) and 69 for HE.  With **10
+   trials per rank** (160 total), HE reaches **68 — matching igraph**.
+   Coloring time scales linearly with `trials_per_rank`; A² + Bcast is a
+   fixed cost that does not grow.
 
 8. **Graph-library A² computation is not competitive.** igraph's
    `neighborhood(order=2)` is internally fast but the Python-side overhead
