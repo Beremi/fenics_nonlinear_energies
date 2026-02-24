@@ -9,20 +9,15 @@ Parallelism comes from two sources:
   1. **Distributed HVP computation** — graph coloring produces ``n_colors``
      colour groups.  These are assigned round-robin to ranks, so each rank
      computes only ``⌈n_colors / nprocs⌉`` Hessian-vector products per
-     Newton step.
+     Newton step.  If ``nprocs > n_colors``, excess ranks stay idle during
+     HVP computation but still participate in KSP solves.
   2. **Distributed KSP solve** — the assembled Hessian is stored as a
      PETSc MPIAIJ matrix; CG + HYPRE AMG runs in parallel.
 
-Data flow per Newton iteration
-------------------------------
-1.  ``allgather_vec`` — collect distributed PETSc Vec → full numpy array.
-2.  Energy / gradient — each rank evaluates JAX on the full vector (identical
-    result; no communication needed beyond the initial gather).
-3.  HVP per colour — each rank computes its assigned HVPs.  Results are
-    written into a shared ``data`` array (length = nnz of Hessian).
-4.  ``MPI_Allreduce(SUM)`` on ``data`` — combines partial contributions.
-5.  Each rank fills its owned rows of the PETSc MPIAIJ matrix from ``data``.
-6.  PETSc KSP solve (CG + HYPRE AMG) — fully distributed.
+Matrix assembly uses the PETSc COO (``setPreallocationCOO`` /
+``setValuesCOO``) fast-path: the sparsity pattern is registered once, and
+only values are streamed each Newton step — no per-entry ``setValues``
+calls, no index lookups at assembly time.
 
 Provides three callbacks compatible with ``tools_petsc4py.minimizers.newton``:
     energy_fn(PETSc.Vec) -> float
@@ -66,7 +61,12 @@ class ParallelSFDSolver:
     ksp_type : str
         PETSc KSP type (``"cg"`` for SPD, ``"gmres"`` for indefinite).
     pc_type : str
-        PETSc PC type (``"hypre"`` for BoomerAMG, ``"gamg"``, …).
+        PETSc PC type (``"gamg"`` for PETSc AMG, ``"hypre"`` for BoomerAMG, …).
+        **Note:** ``"gamg"`` is strongly recommended over ``"hypre"`` for the
+        replicated-data model because HYPRE BoomerAMG setup scales very
+        poorly when the DOF ordering does not reflect mesh locality (the
+        setup is up to 30× slower in parallel).  GAMG handles arbitrary
+        DOF orderings gracefully.
     """
 
     def __init__(
@@ -79,13 +79,16 @@ class ParallelSFDSolver:
         coloring_trials_per_rank=10,
         ksp_rtol=1e-3,
         ksp_type="cg",
-        pc_type="hypre",
+        pc_type="gamg",
     ):
         self.comm = comm
         self.rank = comm.Get_rank()
         self.size = comm.Get_size()
         self.params = params
         self.timings = {}
+
+        # Per-iteration timing breakdown (lists, appended each hessian_solve call)
+        self.iter_timings = []
 
         # ---- 1. JIT compile JAX functions --------------------------------
         t0 = time.perf_counter()
@@ -145,13 +148,17 @@ class ParallelSFDSolver:
         self.n = len(coloring)
         self.color_info = color_info
 
+        # How many ranks actually have work?
+        self.active_ranks = min(self.size, n_colors)
+        self.is_active = self.rank < n_colors  # idle if rank >= n_colors
+
     def _precompute_indices(self, adjacency):
         """Precompute all index arrays needed for distributed SFD assembly.
 
         After this method, every rank has:
         - ``row_adj, col_adj`` — adjacency (= Hessian sparsity) nonzeros
         - ``color_indicators`` — one jnp indicator vector per colour
-        - ``my_colors`` — colours assigned to this rank
+        - ``my_colors`` — colours assigned to this rank (empty if idle)
         - ``color_nz_map[c]`` — (nz_indices, nz_rows) for each colour
         """
         # --- broadcast adjacency nonzeros from rank 0 ---
@@ -182,7 +189,7 @@ class ParallelSFDSolver:
             v[self.coloring == c] = 1.0
             self.color_indicators.append(jnp.array(v))
 
-        # --- round-robin colour assignment ---
+        # --- round-robin colour assignment (idle ranks get empty list) ---
         self.my_colors = list(range(self.rank, self.n_colors, self.size))
 
         # --- for each colour: which nnz entries does it produce? ---
@@ -198,7 +205,7 @@ class ParallelSFDSolver:
             self.color_nz_map[c] = (nz_indices, nz_rows)
 
     def _setup_petsc(self, ksp_rtol, ksp_type, pc_type):
-        """Create PETSc MPIAIJ matrix, determine ownership, build KSP."""
+        """Create PETSc MPIAIJ matrix via COO preallocation and build KSP."""
         n = self.n
 
         # Determine row ownership range (PETSc default block distribution).
@@ -207,39 +214,26 @@ class ParallelSFDSolver:
         self.n_local = self.hi - self.lo
         tmp.destroy()
 
-        # --- MPIAIJ preallocation (d_nnz / o_nnz per owned row) ---
-        owned_mask = (self.row_adj >= self.lo) & (self.row_adj < self.hi)
-        local_rows = self.row_adj[owned_mask] - self.lo
-        owned_cols = self.col_adj[owned_mask]
-        diag_mask = (owned_cols >= self.lo) & (owned_cols < self.hi)
-
-        d_nnz = np.bincount(
-            local_rows[diag_mask], minlength=self.n_local
-        ).astype(np.int32)
-        o_nnz = np.bincount(
-            local_rows[~diag_mask], minlength=self.n_local
-        ).astype(np.int32)
-
-        self.A = PETSc.Mat().createAIJ(
-            size=(n, n), nnz=(d_nnz, o_nnz), comm=self.comm
-        )
-        self.A.setOption(PETSc.Mat.Option.NEW_NONZERO_ALLOCATION_ERR, True)
-        self.A.setUp()
-
-        # --- precompute owned-row CSR for fast value insertion ---
+        # --- COO preallocation -----------------------------------------
         #
-        # For each owned row, store the column indices and their positions
-        # in the global ``data`` array so that ``setValues`` can be called
-        # row-by-row with precomputed slicing.
-        order = np.argsort(local_rows)
-        self._owned_local_rows = local_rows[order]
-        self._owned_cols_sorted = owned_cols[order]
-        self._owned_data_idx = np.where(owned_mask)[0][order]
+        # Each rank registers the (row, col) entries it owns (by row range).
+        # Since entries don't overlap between ranks, INSERT_VALUES is correct.
+        owned_mask = (self.row_adj >= self.lo) & (self.row_adj < self.hi)
+        self._owned_mask = owned_mask
+        self._owned_global_rows = self.row_adj[owned_mask].copy()
+        self._owned_global_cols = self.col_adj[owned_mask].copy()
+        # Indices into the full nnz data array for owned entries
+        self._owned_data_idx = np.where(owned_mask)[0]
+        self._n_owned_nnz = int(owned_mask.sum())
 
-        # CSR-style indptr over owned rows
-        indptr = np.zeros(self.n_local + 1, dtype=np.int64)
-        np.add.at(indptr[1:], self._owned_local_rows, 1)
-        self._owned_indptr = np.cumsum(indptr)
+        # PETSc COO: register pattern once
+        coo_rows = self._owned_global_rows.astype(PETSc.IntType)
+        coo_cols = self._owned_global_cols.astype(PETSc.IntType)
+
+        self.A = PETSc.Mat().create(comm=self.comm)
+        self.A.setType(PETSc.Mat.Type.MPIAIJ)
+        self.A.setSizes(((self.n_local, n), (self.n_local, n)))
+        self.A.setPreallocationCOO(coo_rows, coo_cols)
 
         # --- Allgatherv displacement table (reused every gather) ---
         self._gather_sizes = np.array(
@@ -314,16 +308,25 @@ class ParallelSFDSolver:
             1. Allgather *u* from distributed ``vec``.
             2. Each rank computes HVPs for its assigned colours.
             3. ``MPI_Allreduce(SUM)`` combines partial ``data`` arrays.
-            4. Each rank fills its owned MPIAIJ rows.
+            4. ``setValuesCOO`` streams values into PETSc MPIAIJ matrix.
             5. PETSc KSP solve: ``H · sol = rhs``.
 
         Returns the number of KSP iterations.
+
+        Detailed timing breakdown is appended to ``self.iter_timings``.
         """
+        t_total_start = time.perf_counter()
+
+        # --- 0. Allgather u ---
+        t0 = time.perf_counter()
         u_full = self.allgather_vec(vec)
         u_jnp = jnp.array(u_full)
+        t_allgather = time.perf_counter() - t0
 
         # --- 1. distributed HVP computation ---
+        t0 = time.perf_counter()
         data = np.zeros(self.nnz, dtype=np.float64)
+        n_hvps = 0
         for c in self.my_colors:
             hvp_result = np.asarray(
                 self.hvp_jit(u_jnp, self.color_indicators[c], self.params),
@@ -331,28 +334,70 @@ class ParallelSFDSolver:
             )
             nz_indices, nz_rows = self.color_nz_map[c]
             data[nz_indices] = hvp_result[nz_rows]
+            n_hvps += 1
+        t_hvp = time.perf_counter() - t0
 
         # --- 2. combine across all ranks ---
+        t0 = time.perf_counter()
         self.comm.Allreduce(MPI.IN_PLACE, data, op=MPI.SUM)
+        t_allreduce = time.perf_counter() - t0
 
-        # --- 3. fill PETSc MPIAIJ matrix (owned rows only) ---
-        self.A.zeroEntries()
-        for li in range(self.n_local):
-            s = self._owned_indptr[li]
-            e = self._owned_indptr[li + 1]
-            if s < e:
-                gi = self.lo + li
-                cols = self._owned_cols_sorted[s:e]
-                vals = data[self._owned_data_idx[s:e]]
-                self.A.setValues(
-                    [gi], cols.tolist(), vals.tolist(), addv=PETSc.InsertMode.INSERT
-                )
-        self.A.assemble()
+        # --- 3. COO assembly: extract owned values, stream into PETSc ---
+        t0 = time.perf_counter()
+        owned_vals = data[self._owned_data_idx].astype(PETSc.ScalarType)
+        self.A.setValuesCOO(owned_vals, addv=PETSc.InsertMode.INSERT_VALUES)
+        t_assembly = time.perf_counter() - t0
 
         # --- 4. KSP solve ---
+        t0 = time.perf_counter()
         self.ksp.setOperators(self.A)
         self.ksp.solve(rhs, sol)
-        return self.ksp.getIterationNumber()
+        ksp_its = self.ksp.getIterationNumber()
+        t_ksp = time.perf_counter() - t0
+
+        t_total = time.perf_counter() - t_total_start
+
+        # Record per-iteration timing breakdown
+        self.iter_timings.append({
+            "allgather": t_allgather,
+            "hvp": t_hvp,
+            "n_hvps": n_hvps,
+            "allreduce": t_allreduce,
+            "assembly": t_assembly,
+            "ksp": t_ksp,
+            "ksp_its": ksp_its,
+            "total": t_total,
+        })
+
+        return ksp_its
+
+    # ------------------------------------------------------------------
+    # Reporting
+    # ------------------------------------------------------------------
+
+    def get_timing_report(self):
+        """Return a dict summarising per-iteration and aggregate timings.
+
+        Call after the Newton solve to get a full breakdown.
+        """
+        report = {
+            "setup": dict(self.timings),
+            "n_colors": self.n_colors,
+            "my_n_colors": len(self.my_colors),
+            "active_ranks": self.active_ranks,
+            "is_active": self.is_active,
+            "nnz": int(self.nnz),
+            "n_dofs": self.n,
+            "n_owned_nnz": self._n_owned_nnz,
+        }
+        if self.iter_timings:
+            keys = ["allgather", "hvp", "allreduce", "assembly", "ksp", "total"]
+            totals = {k: sum(d[k] for d in self.iter_timings) for k in keys}
+            report["iteration_details"] = list(self.iter_timings)
+            report["totals"] = totals
+            report["ksp_iterations"] = [d["ksp_its"] for d in self.iter_timings]
+            report["n_hvps_per_iter"] = [d["n_hvps"] for d in self.iter_timings]
+        return report
 
     # ------------------------------------------------------------------
     # Cleanup

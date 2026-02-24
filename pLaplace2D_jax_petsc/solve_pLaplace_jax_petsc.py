@@ -34,11 +34,55 @@ config.update("jax_enable_x64", True)
 
 
 # ---------------------------------------------------------------------------
+# Timing breakdown printer
+# ---------------------------------------------------------------------------
+
+def _print_timing_breakdown(report, solve_time, solver):
+    """Print detailed per-iteration timing breakdown (rank 0)."""
+    sys.stdout.write("\n  Timing Breakdown (hessian_solve_fn per Newton iteration):\n")
+    sys.stdout.write(
+        f"  {'It':>3s} {'allgath':>8s} {'HVP':>8s} {'nHVP':>5s} "
+        f"{'allred':>8s} {'assem':>8s} {'KSP':>8s} {'KSP it':>7s} "
+        f"{'total':>8s}\n"
+    )
+    sys.stdout.write("  " + "-" * 72 + "\n")
+    for i, d in enumerate(report["iteration_details"]):
+        sys.stdout.write(
+            f"  {i:3d} {d['allgather']:8.4f} {d['hvp']:8.4f} "
+            f"{d['n_hvps']:5d} {d['allreduce']:8.4f} {d['assembly']:8.4f} "
+            f"{d['ksp']:8.4f} {d['ksp_its']:7d} {d['total']:8.4f}\n"
+        )
+
+    totals = report["totals"]
+    sys.stdout.write("  " + "-" * 72 + "\n")
+    sys.stdout.write(
+        f"  {'SUM':>3s} {totals['allgather']:8.4f} {totals['hvp']:8.4f} "
+        f"{'':>5s} {totals['allreduce']:8.4f} {totals['assembly']:8.4f} "
+        f"{totals['ksp']:8.4f} {'':>7s} {totals['total']:8.4f}\n"
+    )
+    hess_total = totals["total"]
+    overhead = solve_time - hess_total
+    sys.stdout.write(
+        f"\n  Hessian-solve total: {hess_total:.4f}s  |  "
+        f"Other (energy+grad+LS): {overhead:.4f}s  |  "
+        f"Solve wall: {solve_time:.4f}s\n"
+    )
+    sys.stdout.write(
+        f"  n_colors={report['n_colors']}  "
+        f"active_ranks={report['active_ranks']}/{solver.size}  "
+        f"my_HVPs/iter={report['my_n_colors']}  "
+        f"dofs={report['n_dofs']}  "
+        f"nnz={report['nnz']}\n"
+    )
+    sys.stdout.flush()
+
+
+# ---------------------------------------------------------------------------
 # Solver for a single mesh level
 # ---------------------------------------------------------------------------
 
 def run_level(mesh_level, comm, verbose=True, coloring_trials=10,
-              ksp_rtol=1e-3):
+              ksp_rtol=1e-3, pc_type="gamg"):
     """Run parallel JAX+PETSc Newton solver for one mesh level.
 
     Returns dict with: mesh_level, dofs, setup_time, time, iters, energy,
@@ -62,7 +106,7 @@ def run_level(mesh_level, comm, verbose=True, coloring_trials=10,
         coloring_trials_per_rank=coloring_trials,
         ksp_rtol=ksp_rtol,
         ksp_type="cg",
-        pc_type="hypre",
+        pc_type=pc_type,
     )
     setup_time = time.perf_counter() - setup_start
 
@@ -84,12 +128,19 @@ def run_level(mesh_level, comm, verbose=True, coloring_trials=10,
         verbose=verbose,
         comm=comm,
         ghost_update_fn=None,      # no ghosts — standard MPI Vec
+        save_history=True,
     )
     solve_time = time.perf_counter() - solve_start
 
     # ---- collect results ----
     n_colors = solver.n_colors
     timings = {k: round(v, 4) for k, v in solver.timings.items()}
+    timing_report = solver.get_timing_report()
+
+    # ---- print per-iteration timing breakdown (rank 0 only) ----
+    rank = comm.Get_rank()
+    if verbose and rank == 0 and timing_report.get("iteration_details"):
+        _print_timing_breakdown(timing_report, solve_time, solver)
 
     # ---- cleanup PETSc objects ----
     x.destroy()
@@ -105,6 +156,8 @@ def run_level(mesh_level, comm, verbose=True, coloring_trials=10,
         "message": result["message"],
         "n_colors": n_colors,
         "timings": timings,
+        "timing_report": timing_report,
+        "history": result.get("history", []),
     }
 
 
@@ -136,6 +189,10 @@ def main():
         "--ksp-rtol", type=float, default=1e-3,
         help="PETSc KSP relative tolerance (default: 1e-3)",
     )
+    parser.add_argument(
+        "--pc-type", type=str, default="gamg",
+        help="PETSc PC type: gamg (default, recommended) or hypre",
+    )
     args = parser.parse_args()
 
     comm = MPI.COMM_WORLD
@@ -161,6 +218,7 @@ def main():
             verbose=(not args.quiet),
             coloring_trials=args.coloring_trials,
             ksp_rtol=args.ksp_rtol,
+            pc_type=args.pc_type,
         )
         all_results.append(result)
 
@@ -186,14 +244,14 @@ def main():
             metadata = {
                 "solver": "jax_petsc_sfd",
                 "description": (
-                    "JAX + PETSc parallel SFD Hessian: "
-                    "golden-section line search [-0.5, 2], CG + HYPRE AMG"
+                    f"JAX + PETSc parallel SFD Hessian: "
+                    f"golden-section line search [-0.5, 2], CG + {args.pc_type.upper()} AMG"
                 ),
                 "nprocs": nprocs,
                 "coloring_trials_per_rank": args.coloring_trials,
                 "linear_solver": {
                     "ksp_type": "cg",
-                    "pc_type": "hypre",
+                    "pc_type": args.pc_type,
                     "ksp_rtol": args.ksp_rtol,
                 },
                 "newton_params": {

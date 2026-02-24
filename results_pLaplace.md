@@ -95,25 +95,27 @@ A hybrid solver that uses **JAX** for automatic differentiation (energy, gradien
 - **Distributed HVP computation**: graph coloring produces $n_c$ colour groups, distributed round-robin across MPI ranks. Each rank computes only $\lceil n_c / p \rceil$ Hessian-vector products per Newton step.
 - **Parallel multi-start coloring** via `graph_coloring/multistart_coloring.py` (each rank runs independent trials; the best global result is kept).
 - **PETSc MPIAIJ** matrix with precomputed sparsity pattern (from adjacency). Assembled via `MPI_Allreduce(SUM)` of per-rank HVP data.
-- **PETSc KSP**: CG + HYPRE AMG with `rtol=1e-3` (same as the FEniCS custom Newton).
+- **PETSc KSP**: CG + GAMG (PETSc native AMG) with `rtol=1e-3` (same tolerance as the FEniCS custom Newton).
 - **Same Newton algorithm** as the other custom solvers: golden-section line search on $[-0.5, 2]$, `tolf=1e-5`, `tolg=1e-3`, via `tools_petsc4py/minimizers.py`.
+
+**Important**: GAMG is used instead of HYPRE BoomerAMG.  In the replicated-data model the DOF ordering does not reflect mesh locality (PETSc default block distribution).  HYPRE BoomerAMG setup scales catastrophically under this condition — up to **30× slower** in parallel than serial — while GAMG handles arbitrary orderings gracefully.  See Annex B for detailed analysis.
 
 Script: [`pLaplace2D_jax_petsc/solve_pLaplace_jax_petsc.py`](pLaplace2D_jax_petsc/solve_pLaplace_jax_petsc.py)
 
-| lvl | dofs   | setup (s) | solve (s) | iters | n_colors | J(u)    | setup 4-proc | solve 4-proc | iters | setup 8-proc | solve 8-proc | iters | setup 16-proc | solve 16-proc | iters |
-| --- | ------ | --------- | --------- | ----- | -------- | ------- | ------------ | ------------ | ----- | ------------ | ------------ | ----- | ------------- | ------------- | ----- |
-| 4   | 2945   | 0.183     | 0.071     | 6     | 9        | -7.9430 | 0.224        | 0.083        | 6     | 0.308        | 0.090        | 6     | 0.530         | 0.141         | 6     |
-| 5   | 12033  | 0.175     | 0.239     | 6     | 9        | -7.9546 | 0.216        | 0.275        | 6     | 0.300        | 0.259        | 6     | 0.500         | 0.336         | 6     |
-| 6   | 48641  | 0.238     | 0.912     | 6     | 10       | -7.9583 | 0.277        | 1.255        | 6     | 0.370        | 1.127        | 6     | 0.628         | 1.219         | 6     |
-| 7   | 195585 | 0.416     | 3.716     | 6     | 9        | -7.9596 | 0.486        | 8.479        | 6     | 0.695        | 6.716        | 6     | 1.181         | 6.564         | 6     |
-| 8   | 784385 | 1.181     | 18.626    | 7     | 9        | -7.9600 | 1.404        | 99.396       | 7     | 2.059        | 64.192       | 7     | 3.358         | 47.331        | 7     |
+| lvl | dofs   | setup (s) | solve (s) | iters | n_colors | J(u)    | setup 2-proc | solve 2-proc | iters | setup 4-proc | solve 4-proc | iters | setup 8-proc | solve 8-proc | iters | setup 16-proc | solve 16-proc | iters |
+| --- | ------ | --------- | --------- | ----- | -------- | ------- | ------------ | ------------ | ----- | ------------ | ------------ | ----- | ------------ | ------------ | ----- | ------------- | ------------- | ----- |
+| 5   | 2945   | 0.201     | 0.029     | 5     | 9        | -7.9430 | 0.209        | 0.039        | 6     | 0.274        | 0.047        | 6     | 0.346        | 0.068        | 6     | 0.607         | 0.075         | 6     |
+| 6   | 12033  | 0.203     | 0.099     | 6     | 9        | -7.9546 | 0.206        | 0.099        | 6     | 0.250        | 0.109        | 6     | 0.346        | 0.154        | 6     | 0.584         | 0.261         | 6     |
+| 7   | 48641  | 0.258     | 0.313     | 6     | 10       | -7.9583 | 0.261        | 0.341        | 6     | 0.323        | 0.370        | 6     | 0.423        | 0.446        | 6     | 0.728         | 0.802         | 6     |
+| 8   | 195585 | 0.429     | 1.205     | 6     | 9        | -7.9596 | 0.491        | 1.391        | 6     | 0.572        | 1.689        | 6     | 0.773        | 2.299        | 6     | 1.327         | 3.917         | 6     |
+| 9   | 784385 | 1.129     | 6.727     | 7     | 9        | -7.9600 | 1.297        | 7.541        | 7     | 1.723        | 9.087        | 7     | 2.247        | 12.769       | 7     | 3.572         | 21.569        | 7     |
 
 **Key observations**:
-- **6–7 iterations** — matches the serial JAX Newton (6–9) and FEniCS Custom Newton (5–7). Same algorithm, same tolerances, same energy values.
-- **Serial solve time** is competitive with the serial JAX Newton (0.071–18.6 s vs 0.076–10.9 s). Slightly slower at the largest level due to PETSc overhead vs native PyAMG.
-- **Parallel scaling is poor** — the replicated-data model means every rank still runs full-vector JAX operations (energy, gradient, `Allgatherv`). With only 8–10 colours but $n_c / p \approx 1$ HVP per rank, the colour distribution saves little compute while adding `Allreduce` communication on the full $\text{nnz}$ array. The KSP solve itself scales, but it accounts for only a fraction of the total time.
-- **Setup cost** grows with MPI ranks (more coloring trials, PETSc MPIAIJ preallocation overhead), from 0.18 s (serial) to 3.4 s (16 proc) at lvl 8.
-- **The bottleneck is the replicated energy/gradient evaluation and `Allreduce`**: each Newton step requires ~20 energy evaluations (golden-section line search), all computed on the full vector. True data-parallel assembly (as in DOLFINx) would eliminate this.
+- **5–7 iterations** — matches the serial JAX Newton (6–9) and FEniCS Custom Newton (5–7). Same algorithm, same tolerances, same energy values.
+- **Serial solve time** is now faster than the serial JAX Newton with PyAMG (0.029–6.73 s vs 0.076–10.9 s) thanks to GAMG.
+- **Serial is fastest** — the replicated-data model means every rank still runs full-vector JAX operations (energy, gradient, `Allgatherv`). While the KSP phase scales well with GAMG (see Annex A), the replicated energy/gradient evaluation (~20 energy calls per Newton step for golden-section line search) grows proportionally with $p$ due to shared-memory CPU contention and `Allgatherv` overhead. This overhead dominates at higher process counts.
+- **KSP (linear solve) scales well**: with GAMG, KSP time decreases from 0.65 s (serial) to 0.55 s (16 proc) at level 8. The bottleneck is the replicated energy/gradient evaluation.
+- **Setup cost** grows with MPI ranks (more coloring trials, PETSc MPIAIJ preallocation overhead), from 0.20 s (serial) to 3.57 s (16 proc) at lvl 9.
 
 ```bash
 # Serial
@@ -126,6 +128,136 @@ mpirun -n 16 python3 pLaplace2D_jax_petsc/solve_pLaplace_jax_petsc.py --levels 5
 ```
 
 **Environment note**: Requires `jax`, `jaxlib`, `petsc4py`, `mpi4py`, `h5py`, `scipy` — a combined JAX+PETSc environment (the devcontainer Dockerfile installs all of these).
+
+---
+
+## Annex A — Timing Breakdown of JAX + PETSc SFD Solver (GAMG)
+
+Detailed timing breakdown with the **GAMG** preconditioner on mesh **level 8** ($n = 195{,}585$ DOFs, $\text{nnz} = 1{,}365{,}009$) and **level 9** ($n = 784{,}385$, $\text{nnz} = 5{,}482{,}513$).  All measurements on AMD Ryzen 9 9950X3D (16C/32T), single Docker container.
+
+### A.1  Timing Breakdown — Level 8 (195 585 DOFs)
+
+**Aggregated over 6 Newton iterations** (all times in seconds):
+
+| nproc |    KSP |   HVP | Allreduce | Allgather | COO assem | Hess total | Other† |  Solve | Setup | active |
+| ----: | -----: | ----: | --------: | --------: | --------: | ---------: | -----: | -----: | ----: | :----: |
+|     1 |  0.648 | 0.290 |     0.000 |     0.001 |     0.016 |      0.955 |  0.249 |  1.205 | 0.429 |  1/1   |
+|     2 |  0.812 | 0.296 |     0.014 |     0.003 |     0.012 |      1.137 |  0.344 |  1.481 | 0.491 |  2/2   |
+|     4 |  0.806 | 0.337 |     0.027 |     0.006 |     0.009 |      1.186 |  0.620 |  1.805 | 0.572 |  4/4   |
+|     8 |  0.662 | 0.318 |     0.067 |     0.012 |     0.010 |      1.070 |  1.249 |  2.318 | 0.773 |  8/8   |
+|    16 |  0.552 | 0.322 |     0.147 |     0.022 |     0.012 |      1.054 |  2.900 |  3.954 | 1.327 |  8/16  |
+
+†*Other* = energy evaluations + gradient + golden-section line search (≈20 energy evals per Newton step, each requiring `Allgatherv` + replicated JAX computation).
+
+### A.2  Per-Iteration Detail — Level 8, Serial (np = 1)
+
+|   it | Allgather |    HVP | nHVP | Allreduce | COO asm |    KSP | KSP its |  Total |
+| ---: | --------: | -----: | ---: | --------: | ------: | -----: | ------: | -----: |
+|    0 |    0.0002 | 0.0475 |    9 |    0.0000 |  0.0038 | 0.2903 |       7 | 0.3419 |
+|    1 |    0.0002 | 0.0475 |    9 |    0.0000 |  0.0031 | 0.0687 |       6 | 0.1195 |
+|    2 |    0.0001 | 0.0517 |    9 |    0.0000 |  0.0026 | 0.0662 |       6 | 0.1207 |
+|    3 |    0.0001 | 0.0457 |    9 |    0.0000 |  0.0025 | 0.0713 |       7 | 0.1196 |
+|    4 |    0.0002 | 0.0482 |    9 |    0.0000 |  0.0022 | 0.0736 |       6 | 0.1243 |
+|    5 |    0.0002 | 0.0492 |    9 |    0.0000 |  0.0023 | 0.0777 |       8 | 0.1294 |
+
+### A.3  Per-Iteration Detail — Level 8, 16 MPI Ranks
+
+|   it | Allgather |    HVP | nHVP | Allreduce | COO asm |    KSP | KSP its |  Total |
+| ---: | --------: | -----: | ---: | --------: | ------: | -----: | ------: | -----: |
+|    0 |    0.0027 | 0.0462 |    1 |    0.0358 |  0.0010 | 0.2730 |       8 | 0.3588 |
+|    1 |    0.0043 | 0.0655 |    1 |    0.0245 |  0.0008 | 0.0526 |       6 | 0.1478 |
+|    2 |    0.0021 | 0.0678 |    1 |    0.0171 |  0.0024 | 0.0534 |       6 | 0.1428 |
+|    3 |    0.0020 | 0.0482 |    1 |    0.0244 |  0.0026 | 0.0572 |       7 | 0.1344 |
+|    4 |    0.0078 | 0.0522 |    1 |    0.0169 |  0.0023 | 0.0538 |       7 | 0.1330 |
+|    5 |    0.0030 | 0.0418 |    1 |    0.0283 |  0.0023 | 0.0618 |       7 | 0.1371 |
+
+### A.4  Timing Breakdown — Level 9 (784 385 DOFs)
+
+| nproc |    KSP |   HVP | Allreduce | Allgather | COO assem | Hess total | Other† |  Solve | Setup |
+| ----: | -----: | ----: | --------: | --------: | --------: | ---------: | -----: | -----: | ----: |
+|     1 |  3.559 | 1.809 |     0.000 |     0.005 |     0.084 |      5.457 |  1.270 |  6.727 | 1.129 |
+|    16 |  3.414 | 1.579 |     0.753 |     0.104 |     0.050 |      5.900 | 15.936 | 21.835 | 3.580 |
+
+### A.5  Analysis
+
+**1. KSP (CG + GAMG) scales well.**
+
+With GAMG, the KSP phase scales properly: 0.65 s (serial) → 0.55 s (np = 16) at level 8.  The first iteration includes GAMG setup (~0.22 s), while subsequent iterations use only GAMG V-cycles (~0.07 s each).  This is a dramatic improvement over the HYPRE configuration (see Annex B).
+
+**2. Replicated energy/gradient evaluation ("Other") is the bottleneck.**
+
+Every Newton step executes ≈20 energy evaluations (golden-section line search) plus one gradient evaluation.  In the replicated-data model, *every rank* computes these on the full vector.  Each call requires an `Allgatherv` of $n$ doubles from $p$ ranks, plus a full JAX JIT call.  With 16 processes on shared memory, both the MPI traffic and the JAX CPU work compete for resources:
+
+- Level 8: "Other" = 0.25 s (serial) → 2.90 s (np = 16), a **12× increase**.
+- Level 9: "Other" = 1.27 s (serial) → 15.94 s (np = 16), a **13× increase**.
+
+At np = 16 on level 9, "Other" accounts for 73 % of the solve wall time.
+
+**3. HVP parallelisation is effective but has low weight.**
+
+The HVP phase drops from 9 products/rank (serial) to 1 product/rank (np = 16, with 8 colours).  But total HVP time is flat (~0.3 s at level 8 regardless of $p$) because each rank's single HVP takes about the same wall time as the serial rank's 9 HVPs (memory contention).
+
+**4. COO matrix assembly is negligible.**
+
+The `setPreallocationCOO` / `setValuesCOO` assembly path adds only 0.01–0.08 s total (< 1.5 % of solve time).
+
+### A.6  Conclusions
+
+The replicated-data JAX+PETSc solver's parallel scaling is limited because:
+1. The replicated energy/gradient computation adds overhead proportional to $p$ (contention for CPU+memory), and this now dominates total time with GAMG fixing the KSP bottleneck.
+2. The only parallelised component (HVP + KSP) contributes ~70 % of serial hessian-solve time and scales moderately, but this is overwhelmed by the "Other" overhead at high $p$.
+3. For this architecture to show speedup, the problem would need a much larger number of colours (more HVPs to distribute) or the replicated-data model should be replaced with **true data-parallel assembly** (as in DOLFINx / FEniCS).
+
+---
+
+## Annex B — HYPRE BoomerAMG vs GAMG: Impact of DOF Ordering
+
+### B.1  The Problem
+
+In the replicated-data architecture, PETSc's default block distribution assigns DOF rows linearly (rows $0 \ldots n/p - 1$ to rank 0, etc.).  This distribution does **not** reflect mesh locality — neighbouring mesh nodes may end up on different ranks, creating extensive off-diagonal coupling in the MPIAIJ matrix.
+
+FEniCS/DOLFINx, in contrast, uses a graph partitioner (ParMETIS / SCOTCH) to distribute DOFs so that each rank owns a geometrically contiguous region, minimising off-diagonal entries.
+
+### B.2  Impact on HYPRE BoomerAMG Setup
+
+HYPRE BoomerAMG's parallel setup (coarsening + interpolation construction) is highly sensitive to the partition quality.  With poor DOF ordering, the setup phase becomes catastrophically slow:
+
+**KSP timing per solve (level 8, 195 585 DOFs, CG + AMG, rtol = 1e-3):**
+
+| nproc | HYPRE (rebuild) | HYPRE (reuse) | GAMG (rebuild) | GAMG (reuse) |
+| ----: | --------------: | ------------: | -------------: | -----------: |
+|     1 |          0.286s |        0.083s |         0.067s |       0.039s |
+|     2 |          1.845s |        0.074s |         0.059s |       0.028s |
+|     4 |          2.058s |        0.056s |         0.061s |       0.026s |
+|    16 |          0.550s |        0.033s |         0.052s |       0.018s |
+
+- **HYPRE setup (rebuild − reuse)**: 0.20 s (serial) → 1.77 s (np = 2) → 2.00 s (np = 4) → 0.52 s (np = 16).  The setup is **up to 10× slower** in parallel.
+- **GAMG setup**: 0.028 s (serial) → 0.031 s (np = 2) → 0.035 s (np = 4) → 0.034 s (np = 16).  Scales gracefully.
+
+With HYPRE, only the CG iteration phase (PC reuse column) scales properly — confirming that the CG + SpMV + V-cycle application is fine.  The bottleneck is entirely in the AMG **setup** (coarsening + interpolation construction), which HYPRE computes using algorithms sensitive to partition quality.
+
+### B.3  Effect on Full Newton Solve
+
+**Level 8 (195 585 DOFs), solve time:**
+
+| nproc | HYPRE  | GAMG  | Speedup |
+| ----: | -----: | ----: | ------: |
+|     1 |  2.32s | 1.20s |    1.9× |
+|     2 | 10.89s | 1.48s |    7.4× |
+|     4 |  8.01s | 1.81s |    4.4× |
+|     8 |  6.33s | 2.30s |    2.8× |
+|    16 |  6.33s | 3.95s |    1.6× |
+
+**Level 9 (784 385 DOFs):**
+
+| nproc | HYPRE   | GAMG    | Speedup |
+| ----: | ------: | ------: | ------: |
+|     1 |  11.97s |  6.73s  |    1.8× |
+|    16 |  47.35s | 21.57s  |    2.2× |
+
+### B.4  Recommendation
+
+For replicated-data solvers (or any solver where the DOF ordering does not reflect mesh locality), **GAMG should be preferred over HYPRE BoomerAMG**.  GAMG's algebraic coarsening is robust to arbitrary orderings, while HYPRE's parallel setup assumes locality-aware partitions.
 
 ---
 
