@@ -12,6 +12,8 @@ Stops progressing through levels once a coloring exceeds TIME_LIMIT.
 Results written to tmp_work/ as JSON.
 """
 
+from graph_coloring.coloring_petsc import color_petsc
+from graph_coloring.mesh_loader import PROBLEMS, load_adjacency
 import json
 import os
 import sys
@@ -26,8 +28,6 @@ from mpi4py import MPI
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, REPO_ROOT)
 
-from graph_coloring.mesh_loader import PROBLEMS, load_adjacency
-from graph_coloring.coloring_petsc import color_petsc
 
 TMP_DIR = os.path.join(REPO_ROOT, "tmp_work")
 os.makedirs(TMP_DIR, exist_ok=True)

@@ -9,17 +9,17 @@ proper coloring of the connectivity graph $C = A \cdot A$.
 
 Three libraries with multiple strategies are compared:
 
-| Backend              | Library / Function                      | Algorithm                                      | Serial / Parallel |
-| -------------------- | --------------------------------------- | ---------------------------------------------- | ----------------- |
-| **igraph**           | `igraph.Graph.vertex_coloring_greedy`   | Sequential greedy on explicitly formed $A^2$   | Serial only       |
-| **PETSc greedy**     | `MatColoring` (`MATCOLORINGGREEDY`)     | Greedy distance-2 coloring                     | Both              |
-| **PETSc JP**         | `MatColoring` (`MATCOLORINGJP`)         | Jones–Plassmann parallel coloring              | Both              |
-| **PETSc SL**         | `MatColoring` (`MATCOLORINGSL`)         | Smallest-Last ordering + sequential coloring   | Both              |
-| **PETSc LF**         | `MatColoring` (`MATCOLORINGLF`)         | Largest-First ordering + sequential coloring   | Both              |
-| **PETSc ID**         | `MatColoring` (`MATCOLORINGID`)         | Incidence-Degree ordering + sequential coloring| Both              |
-| **NX DSATUR**        | `networkx.coloring.greedy_color`        | DSATUR (saturation degree) heuristic           | Serial only       |
-| **NX smallest_last** | `networkx.coloring.greedy_color`        | Smallest-last ordering                         | Serial only       |
-| **NX largest_first** | `networkx.coloring.greedy_color`        | Largest-first ordering                         | Serial only       |
+| Backend              | Library / Function                    | Algorithm                                       | Serial / Parallel |
+| -------------------- | ------------------------------------- | ----------------------------------------------- | ----------------- |
+| **igraph**           | `igraph.Graph.vertex_coloring_greedy` | Sequential greedy on explicitly formed $A^2$    | Serial only       |
+| **PETSc greedy**     | `MatColoring` (`MATCOLORINGGREEDY`)   | Greedy distance-2 coloring                      | Both              |
+| **PETSc JP**         | `MatColoring` (`MATCOLORINGJP`)       | Jones–Plassmann parallel coloring               | Both              |
+| **PETSc SL**         | `MatColoring` (`MATCOLORINGSL`)       | Smallest-Last ordering + sequential coloring    | Both              |
+| **PETSc LF**         | `MatColoring` (`MATCOLORINGLF`)       | Largest-First ordering + sequential coloring    | Both              |
+| **PETSc ID**         | `MatColoring` (`MATCOLORINGID`)       | Incidence-Degree ordering + sequential coloring | Both              |
+| **NX DSATUR**        | `networkx.coloring.greedy_color`      | DSATUR (saturation degree) heuristic            | Serial only       |
+| **NX smallest_last** | `networkx.coloring.greedy_color`      | Smallest-last ordering                          | Serial only       |
+| **NX largest_first** | `networkx.coloring.greedy_color`      | Largest-first ordering                          | Serial only       |
 
 NetworkX is limited to $N \le 50{,}000$ due to its pure-Python overhead;
 NX DSATUR is further limited by its $O(n^2)$ complexity.
@@ -86,8 +86,8 @@ with $N = 16{,}129$).
 |     5 |   2,945 |  0.004 |    0.004 |    0.004 |        0.004 |      0.038 |
 |     6 |  12,033 |  0.018 |    0.016 |    0.016 |        0.017 |      0.241 |
 |     7 |  48,641 |  0.079 |    0.065 |    0.068 |        0.069 |      1.155 |
-|     8 | 195,585 |  0.308 |    0.262 |    0.260 |        0.294 |        — |
-|     9 | 784,385 |  1.362 |    1.159 |    1.172 |        1.262 |        — |
+|     8 | 195,585 |  0.308 |    0.262 |    0.260 |        0.294 |          — |
+|     9 | 784,385 |  1.362 |    1.159 |    1.172 |        1.262 |          — |
 
 ### Ginzburg–Landau 2D
 
@@ -95,9 +95,9 @@ with $N = 16{,}129$).
 | ----: | --------: | -----: | -------: | -------: | -----------: | ---------: |
 |     5 |     3,969 |  0.005 |    0.006 |    0.006 |        0.006 |      0.056 |
 |     6 |    16,129 |  0.023 |    0.022 |    0.021 |        0.024 |      0.343 |
-|     7 |    65,025 |  0.100 |    0.087 |    0.087 |        0.096 |        — |
-|     8 |   261,121 |  0.429 |    0.373 |    0.374 |        0.411 |        — |
-|     9 | 1,046,529 |  1.936 |    1.741 |    1.718 |        1.881 |        — |
+|     7 |    65,025 |  0.100 |    0.087 |    0.087 |        0.096 |          — |
+|     8 |   261,121 |  0.429 |    0.373 |    0.374 |        0.411 |          — |
+|     9 | 1,046,529 |  1.936 |    1.741 |    1.718 |        1.881 |          — |
 
 ### HyperElasticity 3D
 
@@ -105,8 +105,8 @@ with $N = 16{,}129$).
 | ----: | ------: | -----: | -------: | -------: | -----------: | ---------: |
 |     1 |   2,133 |  0.013 |    0.006 |    0.006 |        0.010 |      0.126 |
 |     2 |  11,925 |  0.127 |    0.040 |    0.040 |        0.072 |      1.374 |
-|     3 |  77,517 |  1.114 |    0.291 |    0.292 |        0.515 |        — |
-|     4 | 554,013 |  9.504 |    2.715 |    2.718 |        4.872 |        — |
+|     3 |  77,517 |  1.114 |    0.291 |    0.292 |        0.515 |          — |
+|     4 | 554,013 |  9.504 |    2.715 |    2.718 |        4.872 |          — |
 
 ---
 
@@ -114,9 +114,9 @@ with $N = 16{,}129$).
 
 ### p-Laplace 2D
 
-| Level |       N | greedy |       | JP   |       | SL   |       | ID   |       | LF   |       |
+| Level |       N | greedy |       |   JP |       |   SL |       |   ID |       |   LF |       |
 | ----: | ------: | -----: | ----: | ---: | ----: | ---: | ----: | ---: | ----: | ---: | ----: |
-|       |         |   Cols | Time  | Cols | Time  | Cols | Time  | Cols | Time  | Cols | Time  |
+|       |         |   Cols |  Time | Cols |  Time | Cols |  Time | Cols |  Time | Cols |  Time |
 |     5 |   2,945 |     16 | 0.001 |   13 | 0.002 |   10 | 0.002 |    9 | 0.001 |   13 | 0.001 |
 |     6 |  12,033 |     17 | 0.003 |   14 | 0.005 |    9 | 0.004 |    9 | 0.004 |   13 | 0.003 |
 |     7 |  48,641 |     17 | 0.011 |   14 | 0.017 |   10 | 0.019 |    9 | 0.019 |   13 | 0.016 |
@@ -125,9 +125,9 @@ with $N = 16{,}129$).
 
 ### Ginzburg–Landau 2D
 
-| Level |         N | greedy |       | JP   |       | SL   |       | ID   |       | LF   |       |
+| Level |         N | greedy |       |   JP |       |   SL |       |   ID |       |   LF |       |
 | ----: | --------: | -----: | ----: | ---: | ----: | ---: | ----: | ---: | ----: | ---: | ----: |
-|       |           |   Cols | Time  | Cols | Time  | Cols | Time  | Cols | Time  | Cols | Time  |
+|       |           |   Cols |  Time | Cols |  Time | Cols |  Time | Cols |  Time | Cols |  Time |
 |     5 |     3,969 |     17 | 0.002 |   14 | 0.002 |    8 | 0.002 |   10 | 0.002 |   13 | 0.001 |
 |     6 |    16,129 |     18 | 0.005 |   14 | 0.006 |    8 | 0.006 |   10 | 0.006 |   13 | 0.005 |
 |     7 |    65,025 |     18 | 0.022 |   15 | 0.029 |    8 | 0.035 |    9 | 0.036 |   13 | 0.029 |
@@ -136,9 +136,9 @@ with $N = 16{,}129$).
 
 ### HyperElasticity 3D
 
-| Level |       N | greedy |       | JP   |       | SL   |       | ID   |       | LF   |       |
+| Level |       N | greedy |       |   JP |       |   SL |       |   ID |       |   LF |       |
 | ----: | ------: | -----: | ----: | ---: | ----: | ---: | ----: | ---: | ----: | ---: | ----: |
-|       |         |   Cols | Time  | Cols | Time  | Cols | Time  | Cols | Time  | Cols | Time  |
+|       |         |   Cols |  Time | Cols |  Time | Cols |  Time | Cols |  Time | Cols |  Time |
 |     1 |   2,133 |     60 | 0.004 |   58 | 0.009 |   48 | 0.002 |   48 | 0.002 |   63 | 0.002 |
 |     2 |  11,925 |     81 | 0.020 |   71 | 0.038 |   63 | 0.014 |   60 | 0.013 |   81 | 0.013 |
 |     3 |  77,517 |     95 | 0.174 |   86 | 0.327 |   69 | 0.167 |   69 | 0.165 |   90 | 0.161 |
@@ -150,17 +150,17 @@ with $N = 16{,}129$).
 
 Comparison of wall-clock times for selected methods on the largest mesh levels.
 
-| Problem      | Level | Method       | np=1 (s)  | np=16 (s) | Speedup |
-| ------------ | ----: | ------------ | --------: | --------: | ------: |
-| pLaplace 2D  |     9 | PETSc greedy |     1.262 |     0.255 |   4.9×  |
-| pLaplace 2D  |     9 | PETSc SL     |     1.159 |     0.674 |   1.7×  |
-| pLaplace 2D  |     9 | PETSc ID     |     1.172 |     0.684 |   1.7×  |
-| GL 2D        |     9 | PETSc greedy |     1.881 |     0.653 |   2.9×  |
-| GL 2D        |     9 | PETSc SL     |     1.741 |     1.233 |   1.4×  |
-| GL 2D        |     9 | PETSc ID     |     1.718 |     1.240 |   1.4×  |
-| HE 3D        |     4 | PETSc greedy |     4.872 |     1.542 |   3.2×  |
-| HE 3D        |     4 | PETSc SL     |     2.715 |     1.771 |   1.5×  |
-| HE 3D        |     4 | PETSc ID     |     2.718 |     1.778 |   1.5×  |
+| Problem     | Level | Method       | np=1 (s) | np=16 (s) | Speedup |
+| ----------- | ----: | ------------ | -------: | --------: | ------: |
+| pLaplace 2D |     9 | PETSc greedy |    1.262 |     0.255 |    4.9× |
+| pLaplace 2D |     9 | PETSc SL     |    1.159 |     0.674 |    1.7× |
+| pLaplace 2D |     9 | PETSc ID     |    1.172 |     0.684 |    1.7× |
+| GL 2D       |     9 | PETSc greedy |    1.881 |     0.653 |    2.9× |
+| GL 2D       |     9 | PETSc SL     |    1.741 |     1.233 |    1.4× |
+| GL 2D       |     9 | PETSc ID     |    1.718 |     1.240 |    1.4× |
+| HE 3D       |     4 | PETSc greedy |    4.872 |     1.542 |    3.2× |
+| HE 3D       |     4 | PETSc SL     |    2.715 |     1.771 |    1.5× |
+| HE 3D       |     4 | PETSc ID     |    2.718 |     1.778 |    1.5× |
 
 ---
 
