@@ -673,8 +673,10 @@ int build_A2_pattern(int n,
     /* marker array: marks which vertices are in current row's 2-hop set.
        marker[v] == i means v is in row i's set. Initialised to -1. */
     int *marker = (int *)malloc(n * sizeof(int));
-    if (!marker) return -1;
-    for (int v = 0; v < n; v++) marker[v] = -1;
+    if (!marker)
+        return -1;
+    for (int v = 0; v < n; v++)
+        marker[v] = -1;
 
     int nnz = 0;
     a2_indptr[0] = 0;
@@ -685,7 +687,8 @@ int build_A2_pattern(int n,
 
         /* Include self (diagonal of A^2) */
         marker[i] = i;
-        if (a2_indices) a2_indices[nnz + row_nnz] = i;
+        if (a2_indices)
+            a2_indices[nnz + row_nnz] = i;
         row_nnz++;
 
         /* For each neighbour j of i ... */
@@ -696,7 +699,8 @@ int build_A2_pattern(int n,
             if (marker[j] != i)
             {
                 marker[j] = i;
-                if (a2_indices) a2_indices[nnz + row_nnz] = j;
+                if (a2_indices)
+                    a2_indices[nnz + row_nnz] = j;
                 row_nnz++;
             }
             /* For each neighbour k of j: k is a 2-hop neighbour */
@@ -706,7 +710,8 @@ int build_A2_pattern(int n,
                 if (marker[k] != i)
                 {
                     marker[k] = i;
-                    if (a2_indices) a2_indices[nnz + row_nnz] = k;
+                    if (a2_indices)
+                        a2_indices[nnz + row_nnz] = k;
                     row_nnz++;
                 }
             }

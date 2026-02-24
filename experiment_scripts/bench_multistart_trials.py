@@ -8,18 +8,20 @@ for trials_per_rank = 1, 5, 10.
 Usage:
     mpirun -n 16 python experiment_scripts/bench_multistart_trials.py
 """
-import sys, os, time
+from graph_coloring.multistart_coloring import multistart_color
+from graph_coloring.mesh_loader import PROBLEMS, load_adjacency
+import numpy as np
+from mpi4py import MPI
+import sys
+import os
+import time
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from mpi4py import MPI
-import numpy as np
 
 comm = MPI.COMM_WORLD
 rank = comm.Get_rank()
 size = comm.Get_size()
 
-from graph_coloring.mesh_loader import PROBLEMS, load_adjacency
-from graph_coloring.multistart_coloring import multistart_color
 
 BENCHMARKS = [
     ("pLaplace2D", 9),
@@ -42,13 +44,13 @@ for prob_name, lvl in BENCHMARKS:
     n_ref = comm.bcast(n_ref, root=0)
 
     if rank == 0:
-        print(f"\n{'='*90}")
+        print(f"\n{'=' * 90}")
         print(f"  {prob_name} level {lvl}  (N={n_ref:,}, np={size})")
-        print(f"{'='*90}")
+        print(f"{'=' * 90}")
         print(f"  {'trials/rank':<12}  {'total trials':>12}  {'A²(s)':>7}  "
               f"{'Bcast':>7}  {'Color':>7}  {'Total':>7}  {'best #col':>9}")
-        print(f"  {'-'*12}  {'-'*12}  {'-'*7}  {'-'*7}  {'-'*7}  "
-              f"{'-'*7}  {'-'*9}")
+        print(f"  {'-' * 12}  {'-' * 12}  {'-' * 7}  {'-' * 7}  {'-' * 7}  "
+              f"{'-' * 7}  {'-' * 9}")
         sys.stdout.flush()
     comm.Barrier()
 
@@ -74,7 +76,7 @@ for prob_name, lvl in BENCHMARKS:
 
     if rank == 0:
         print(f"\n  Per-rank detail (trials_per_rank={trials}, "
-              f"total={trials*size}):")
+              f"total={trials * size}):")
         for r, t_list in enumerate(all_trials):
             best = min(t_list)
             print(f"    rank {r:2d}: colors={t_list}  best={best}")

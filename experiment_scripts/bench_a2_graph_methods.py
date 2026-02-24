@@ -9,18 +9,19 @@ Usage:
     python bench_a2_graph_methods.py
     mpirun -n 16 python bench_a2_graph_methods.py
 """
-import sys, os, time
+from graph_coloring.mesh_loader import PROBLEMS, load_adjacency
+import scipy.sparse as sp
+import numpy as np
+from mpi4py import MPI
+import sys
+import os
+import time
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from mpi4py import MPI
-import numpy as np
-import scipy.sparse as sp
 
 comm = MPI.COMM_WORLD
 rank = comm.Get_rank()
 size = comm.Get_size()
-
-from graph_coloring.mesh_loader import PROBLEMS, load_adjacency
 
 
 # ────────────────────────────────────────────────────────────────
@@ -51,7 +52,8 @@ def method_scipy_csr(h5_path, comm):
         ip = np.ascontiguousarray(A2.indptr, dtype=np.int32)
         ix = np.ascontiguousarray(A2.indices, dtype=np.int32)
     else:
-        n = np.int32(0); ip = ix = np.empty(0, dtype=np.int32)
+        n = np.int32(0)
+        ip = ix = np.empty(0, dtype=np.int32)
     return bcast_csr(n, ip, ix, comm)
 
 
@@ -89,16 +91,17 @@ def method_igraph_neighborhood(h5_path, comm):
         ix = np.empty(ip[n], dtype=np.int32)
         for i in range(n):
             # neighborhood includes self (distance 0), sort for consistency
-            ix[ip[i]:ip[i+1]] = np.sort(nbs[i])
+            ix[ip[i]:ip[i + 1]] = np.sort(nbs[i])
         t_csr1 = time.perf_counter()
 
-        print(f"    [igraph] graph build: {t_ig1-t_ig0:.4f}s, "
-              f"neighborhood: {t_nb1-t_nb0:.4f}s, "
-              f"CSR build: {t_csr1-t_csr0:.4f}s")
+        print(f"    [igraph] graph build: {t_ig1 - t_ig0:.4f}s, "
+              f"neighborhood: {t_nb1 - t_nb0:.4f}s, "
+              f"CSR build: {t_csr1 - t_csr0:.4f}s")
 
         n = np.int32(n)
     else:
-        n = np.int32(0); ip = ix = np.empty(0, dtype=np.int32)
+        n = np.int32(0)
+        ip = ix = np.empty(0, dtype=np.int32)
     return bcast_csr(n, ip, ix, comm)
 
 
@@ -121,7 +124,7 @@ def method_igraph_neighborhood_fast(h5_path, comm):
         g = igraph.Graph(n=n, edges=list(zip(sources.tolist(), targets.tolist())), directed=False)
         t_ig1 = time.perf_counter()
 
-        # Get 2-hop neighborhoods 
+        # Get 2-hop neighborhoods
         t_nb0 = time.perf_counter()
         nbs = g.neighborhood(order=2)
         t_nb1 = time.perf_counter()
@@ -134,16 +137,17 @@ def method_igraph_neighborhood_fast(h5_path, comm):
         ix = np.concatenate([np.array(nb, dtype=np.int32) for nb in nbs])
         # Sort each row
         for i in range(n):
-            ix[ip[i]:ip[i+1]].sort()
+            ix[ip[i]:ip[i + 1]].sort()
         t_csr1 = time.perf_counter()
 
-        print(f"    [igraph fast] graph build: {t_ig1-t_ig0:.4f}s, "
-              f"neighborhood: {t_nb1-t_nb0:.4f}s, "
-              f"CSR build: {t_csr1-t_csr0:.4f}s")
+        print(f"    [igraph fast] graph build: {t_ig1 - t_ig0:.4f}s, "
+              f"neighborhood: {t_nb1 - t_nb0:.4f}s, "
+              f"CSR build: {t_csr1 - t_csr0:.4f}s")
 
         n = np.int32(n)
     else:
-        n = np.int32(0); ip = ix = np.empty(0, dtype=np.int32)
+        n = np.int32(0)
+        ip = ix = np.empty(0, dtype=np.int32)
     return bcast_csr(n, ip, ix, comm)
 
 
@@ -211,7 +215,8 @@ def method_c_direct(h5_path, comm):
         ip = a2_ip
         ix = a2_ix
     else:
-        n = np.int32(0); ip = ix = np.empty(0, dtype=np.int32)
+        n = np.int32(0)
+        ip = ix = np.empty(0, dtype=np.int32)
     return bcast_csr(n, ip, ix, comm)
 
 
@@ -229,7 +234,8 @@ def method_scipy_bool_csr(h5_path, comm):
         ip = np.ascontiguousarray(A2.indptr, dtype=np.int32)
         ix = np.ascontiguousarray(A2.indices, dtype=np.int32)
     else:
-        n = np.int32(0); ip = ix = np.empty(0, dtype=np.int32)
+        n = np.int32(0)
+        ip = ix = np.empty(0, dtype=np.int32)
     return bcast_csr(n, ip, ix, comm)
 
 
@@ -253,7 +259,7 @@ def method_igraph_from_csr(h5_path, comm):
         # Only upper triangle for undirected graph
         edges = []
         for i in range(n):
-            for jj in range(ai[i], ai[i+1]):
+            for jj in range(ai[i], ai[i + 1]):
                 j = aj[jj]
                 if j > i:
                     edges.append((i, j))
@@ -272,15 +278,16 @@ def method_igraph_from_csr(h5_path, comm):
         np.cumsum(lengths, out=ip[1:])
         ix = np.concatenate([np.array(nb, dtype=np.int32) for nb in nbs])
         for i in range(n):
-            ix[ip[i]:ip[i+1]].sort()
+            ix[ip[i]:ip[i + 1]].sort()
         t5 = time.perf_counter()
 
-        print(f"    [igraph from CSR] graph build: {t1-t0:.4f}s, "
-              f"neighborhood: {t3-t2:.4f}s, CSR: {t5-t4:.4f}s")
+        print(f"    [igraph from CSR] graph build: {t1 - t0:.4f}s, "
+              f"neighborhood: {t3 - t2:.4f}s, CSR: {t5 - t4:.4f}s")
 
         n = np.int32(n)
     else:
-        n = np.int32(0); ip = ix = np.empty(0, dtype=np.int32)
+        n = np.int32(0)
+        ip = ix = np.empty(0, dtype=np.int32)
     return bcast_csr(n, ip, ix, comm)
 
 
@@ -316,15 +323,16 @@ def method_igraph_adjacency(h5_path, comm):
         np.cumsum(lengths, out=ip[1:])
         ix = np.concatenate([np.array(nb, dtype=np.int32) for nb in nbs])
         for i in range(n):
-            ix[ip[i]:ip[i+1]].sort()
+            ix[ip[i]:ip[i + 1]].sort()
         t5 = time.perf_counter()
 
-        print(f"    [igraph Adjacency] graph build: {t0:.4f}->{t1:.4f} ({t1-t0:.4f}s), "
-              f"neighborhood: {t3-t2:.4f}s, CSR: {t5-t4:.4f}s")
+        print(f"    [igraph Adjacency] graph build: {t0:.4f}->{t1:.4f} ({t1 - t0:.4f}s), "
+              f"neighborhood: {t3 - t2:.4f}s, CSR: {t5 - t4:.4f}s")
 
         n = np.int32(n)
     else:
-        n = np.int32(0); ip = ix = np.empty(0, dtype=np.int32)
+        n = np.int32(0)
+        ip = ix = np.empty(0, dtype=np.int32)
     return bcast_csr(n, ip, ix, comm)
 
 
@@ -332,11 +340,11 @@ def method_igraph_adjacency(h5_path, comm):
 # Run all methods
 # ────────────────────────────────────────────────────────────────
 METHODS = [
-    ("scipy CSR + Bcast",                method_scipy_csr),
-    ("scipy bool CSR + Bcast",           method_scipy_bool_csr),
-    ("igraph neighborhood + Bcast",      method_igraph_neighborhood),
+    ("scipy CSR + Bcast", method_scipy_csr),
+    ("scipy bool CSR + Bcast", method_scipy_bool_csr),
+    ("igraph neighborhood + Bcast", method_igraph_neighborhood),
     ("igraph neighborhood fast + Bcast", method_igraph_neighborhood_fast),
-    ("C direct 2-hop + Bcast",           method_c_direct),
+    ("C direct 2-hop + Bcast", method_c_direct),
 ]
 
 BENCHMARKS = [
@@ -350,11 +358,11 @@ for prob_name, lvl in BENCHMARKS:
     if rank == 0:
         A_ref = load_adjacency(h5)
         n_ref = A_ref.shape[0]
-        print(f"\n{'='*72}")
+        print(f"\n{'=' * 72}")
         print(f"  {prob_name} level {lvl}  (N={n_ref:,}, np={size})")
-        print(f"{'='*72}")
+        print(f"{'=' * 72}")
         print(f"  {'Method':<38}  {'Time (s)':>10}  {'nnz(A²)':>12}")
-        print(f"  {'-'*38}  {'-'*10}  {'-'*12}")
+        print(f"  {'-' * 38}  {'-' * 10}  {'-' * 12}")
 
     for mname, mfunc in METHODS:
         comm.Barrier()
