@@ -34,67 +34,100 @@ int custom_greedy_color(int n,
                         const int *indices,
                         int *colors)
 {
-    if (n == 0) return 0;
-    if (n == 1) { colors[0] = 0; return 1; }
+    if (n == 0)
+        return 0;
+    if (n == 1)
+    {
+        colors[0] = 0;
+        return 1;
+    }
 
     /* --- find start vertex (maximum degree in A^2) --- */
     int max_deg = 0, start = 0;
-    for (int i = 0; i < n; i++) {
+    for (int i = 0; i < n; i++)
+    {
         int deg = indptr[i + 1] - indptr[i];
-        if (deg > max_deg) { max_deg = deg; start = i; }
+        if (deg > max_deg)
+        {
+            max_deg = deg;
+            start = i;
+        }
     }
 
     /* working memory */
-    int mc      = max_deg + 2;          /* safe upper bound for colour mask  */
-    int *cn     = (int  *)calloc(n,  sizeof(int));    /* coloured-neighbours */
-    char *cmask = (char *)malloc(mc);                 /* colour availability */
-    char *done  = (char *)calloc(n,  sizeof(char));   /* 1 = already coloured */
-    if (!cn || !cmask || !done) { free(cn); free(cmask); free(done); return -1; }
+    int mc = max_deg + 2;                         /* safe upper bound for colour mask  */
+    int *cn = (int *)calloc(n, sizeof(int));      /* coloured-neighbours */
+    char *cmask = (char *)malloc(mc);             /* colour availability */
+    char *done = (char *)calloc(n, sizeof(char)); /* 1 = already coloured */
+    if (!cn || !cmask || !done)
+    {
+        free(cn);
+        free(cmask);
+        free(done);
+        return -1;
+    }
 
     /* initialise: all colours = 1 (uncoloured sentinel, MATLAB convention) */
-    for (int i = 0; i < n; i++) colors[i] = 1;
+    for (int i = 0; i < n; i++)
+        colors[i] = 1;
 
     /* prioritise start vertex so it is selected first */
     cn[start] = 1;
 
     /* current neighbour list (initially: neighbours of start vertex) */
     const int *nb = &indices[indptr[start]];
-    int        nnb = indptr[start + 1] - indptr[start];
+    int nnb = indptr[start + 1] - indptr[start];
 
     /* --- main loop: colour one vertex per iteration --- */
-    for (int step = 0; step < n; step++) {
+    for (int step = 0; step < n; step++)
+    {
 
         /* 1. Select next vertex: max cn among current UNCOLOURED neighbours */
         int bv = -1, bi = -1;
-        for (int j = 0; j < nnb; j++) {
+        for (int j = 0; j < nnb; j++)
+        {
             int v = nb[j];
-            if (!done[v] && cn[v] > bv) { bv = cn[v]; bi = v; }
+            if (!done[v] && cn[v] > bv)
+            {
+                bv = cn[v];
+                bi = v;
+            }
         }
 
         /* 2. Fallback: global search if no uncoloured local neighbour found */
-        if (bi == -1) {
+        if (bi == -1)
+        {
             bv = -1;
-            for (int v = 0; v < n; v++) {
-                if (!done[v] && cn[v] > bv) { bv = cn[v]; bi = v; }
+            for (int v = 0; v < n; v++)
+            {
+                if (!done[v] && cn[v] > bv)
+                {
+                    bv = cn[v];
+                    bi = v;
+                }
             }
         }
 
         /* 3. Move to selected vertex */
-        nb  = &indices[indptr[bi]];
+        nb = &indices[indptr[bi]];
         nnb = indptr[bi + 1] - indptr[bi];
 
         /* 4. Build colour mask from neighbour colours */
         memset(cmask, 1, mc);
-        for (int j = 0; j < nnb; j++) cmask[colors[nb[j]]] = 0;
+        for (int j = 0; j < nnb; j++)
+            cmask[colors[nb[j]]] = 0;
 
         /* 5. Increment coloured-neighbours count for all UNCOLOURED neighbours */
-        for (int j = 0; j < nnb; j++) {
-            if (!done[nb[j]]) cn[nb[j]]++;
+        for (int j = 0; j < nnb; j++)
+        {
+            if (!done[nb[j]])
+                cn[nb[j]]++;
         }
 
         /* 6. Assign smallest available colour (1-based during algorithm) */
         int c = 1;
-        while (!cmask[c]) c++;
+        while (!cmask[c])
+            c++;
         colors[bi] = c;
 
         /* 7. Mark vertex as coloured */
@@ -103,9 +136,11 @@ int custom_greedy_color(int n,
 
     /* convert to 0-based and compute number of colours */
     int nc = 0;
-    for (int i = 0; i < n; i++) {
+    for (int i = 0; i < n; i++)
+    {
         colors[i]--;
-        if (colors[i] >= nc) nc = colors[i] + 1;
+        if (colors[i] >= nc)
+            nc = colors[i] + 1;
     }
 
     free(cn);
@@ -140,47 +175,66 @@ int fix_coloring_conflicts(int n,
                            const int *boundary,
                            int *colors)
 {
-    if (n_boundary == 0) goto done;
+    if (n_boundary == 0)
+        goto done;
 
     /* find max degree for scratch buffer sizing */
     int max_deg = 0;
-    for (int k = 0; k < n_boundary; k++) {
-        int i   = boundary[k];
+    for (int k = 0; k < n_boundary; k++)
+    {
+        int i = boundary[k];
         int deg = row_ptr[i + 1] - row_ptr[i];
-        if (deg > max_deg) max_deg = deg;
+        if (deg > max_deg)
+            max_deg = deg;
     }
 
     {
         char *used = (char *)calloc(max_deg + n_boundary + 2, sizeof(char));
-        int  *marked = (int *)malloc((max_deg + 1) * sizeof(int));
-        if (!used || !marked) { free(used); free(marked); goto done; }
+        int *marked = (int *)malloc((max_deg + 1) * sizeof(int));
+        if (!used || !marked)
+        {
+            free(used);
+            free(marked);
+            goto done;
+        }
 
         int changed = 1, passes = 0;
-        while (changed && passes < 50) {
+        while (changed && passes < 50)
+        {
             changed = 0;
             passes++;
 
-            for (int k = 0; k < n_boundary; k++) {
-                int i    = boundary[k];
+            for (int k = 0; k < n_boundary; k++)
+            {
+                int i = boundary[k];
                 int my_c = colors[i];
-                int p0   = row_ptr[i];
-                int p1   = row_ptr[i + 1];
+                int p0 = row_ptr[i];
+                int p1 = row_ptr[i + 1];
 
                 /* check for conflict */
                 int conflict = 0;
-                for (int p = p0; p < p1; p++) {
+                for (int p = p0; p < p1; p++)
+                {
                     int j = col_idx[p];
-                    if (j != i && colors[j] == my_c) { conflict = 1; break; }
+                    if (j != i && colors[j] == my_c)
+                    {
+                        conflict = 1;
+                        break;
+                    }
                 }
 
-                if (conflict) {
+                if (conflict)
+                {
                     /* mark used colours among neighbours */
                     int nm = 0;
-                    for (int p = p0; p < p1; p++) {
+                    for (int p = p0; p < p1; p++)
+                    {
                         int j = col_idx[p];
-                        if (j != i) {
+                        if (j != i)
+                        {
                             int c = colors[j];
-                            if (!used[c]) {
+                            if (!used[c])
+                            {
                                 used[c] = 1;
                                 marked[nm++] = c;
                             }
@@ -189,11 +243,13 @@ int fix_coloring_conflicts(int n,
 
                     /* find smallest unused colour */
                     int nc = 0;
-                    while (used[nc]) nc++;
+                    while (used[nc])
+                        nc++;
                     colors[i] = nc;
 
                     /* clear marks */
-                    for (int m = 0; m < nm; m++) used[marked[m]] = 0;
+                    for (int m = 0; m < nm; m++)
+                        used[marked[m]] = 0;
 
                     changed = 1;
                 }
@@ -206,8 +262,10 @@ int fix_coloring_conflicts(int n,
 
 done:;
     int max_c = 0;
-    for (int i = 0; i < n; i++) {
-        if (colors[i] > max_c) max_c = colors[i];
+    for (int i = 0; i < n; i++)
+    {
+        if (colors[i] > max_c)
+            max_c = colors[i];
     }
     return max_c + 1;
 }

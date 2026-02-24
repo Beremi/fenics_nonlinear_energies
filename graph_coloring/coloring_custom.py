@@ -170,7 +170,7 @@ def color_custom_mpi(adjacency, comm=None):
     local_n = counts[rank]
 
     # --- extract and colour local sub-graph ---
-    local_A2 = sp.csc_matrix(A2_csc[rstart : rstart + local_n, rstart : rstart + local_n])
+    local_A2 = sp.csc_matrix(A2_csc[rstart: rstart + local_n, rstart: rstart + local_n])
     li = _i32(local_A2.indptr)
     lx = _i32(local_A2.indices)
     local_colors = np.zeros(local_n, dtype=np.int32)
@@ -184,7 +184,7 @@ def color_custom_mpi(adjacency, comm=None):
     # --- identify boundary vertices (numpy-vectorised) ---
     partition_of = np.empty(n, dtype=np.int32)
     for r in range(size):
-        partition_of[offsets[r] : offsets[r] + counts[r]] = r
+        partition_of[offsets[r]: offsets[r] + counts[r]] = r
 
     boundary_mask = np.zeros(n, dtype=bool)
     for i in range(n):
