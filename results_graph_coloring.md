@@ -211,20 +211,43 @@ quality), so it is listed only in serial.
    speedup with 16 processes (3–5×), while SL/ID show more modest speedup
    (1.4–1.7×). However, for the largest problems (HE 3D level 4), parallel
    SL at 1.77 s is still **5.4× faster** than serial igraph at 9.5 s.
-   The Custom algorithm is inherently sequential; its MPI wrapper (domain-
-   decomposition + boundary conflict resolution) is slower than serial due
-   to redundant $A^2$ computation overhead and yields more colors.
 
-6. **NetworkX is impractical for production.** NX DSATUR gives excellent
+6. **Custom algorithm is not effectively parallelizable.** Two approaches
+   were tested (OpenMP shared-memory, MPI domain-decomposition); neither
+   provides a net speedup over serial:
+   - **Without reordering:** block partition by DOF index creates massive
+     boundary conflicts (DOF numbering does not preserve spatial locality).
+     The boundary-fix phase alone takes **10–20× longer** than the serial
+     greedy loop (e.g., GL 2D lvl 9: C code = 1.59 s vs serial = 0.07 s).
+   - **With Cuthill–McKee reordering:** the parallel C coloring step is
+     genuinely 2–4× faster (0.017 s vs 0.059 s for pLaplace lvl 9), but
+     the RCM overhead itself (0.12–0.34 s for 2D, 0.64–1.01 s for 3D)
+     exceeds the entire serial greedy time.
+   - **Total time with 16 threads (largest levels):**
+
+     | Problem | Serial total | RCM + OMP-16 total | Colors (ser → OMP) |
+     | ------- | -----------: | -----------------: | -----------------: |
+     | pL lvl9 |       0.24 s |             0.40 s |          11 → 15   |
+     | GL lvl9 |       0.42 s |             0.71 s |          11 → 15   |
+     | HE lvl4 |       1.75 s |             2.70 s |          70 → 96   |
+
+   - The algorithm's sequential "most-coloured-neighbours" heuristic creates
+     an inherent data dependency: each vertex's colour depends on all
+     previously coloured vertices. This cannot be broken with
+     domain decomposition without degrading both speed and quality.
+   - **Conclusion:** for this algorithm, serial is optimal.  When parallel
+     coloring is needed, use PETSc (`sl` or `greedy`).
+
+7. **NetworkX is impractical for production.** NX DSATUR gives excellent
    color quality but its $O(n^2)$ complexity makes it unusable for $N > 10{,}000$.
    NX `smallest_last` is better (~10–20× slower than PETSc) but still cannot
    compete with PETSc or igraph for large problems.
 
-7. **PETSc LF is not recommended.** The largest-first ordering (`lf`)
+8. **PETSc LF is not recommended.** The largest-first ordering (`lf`)
    produces more colors than greedy in 3D (e.g., 90 vs 91 at HE level 4)
    and more than SL/ID everywhere. It offers no advantage.
 
-8. **Practical recommendation.**
+9. **Practical recommendation.**
    - **Serial, fastest:** Custom C (best speed, acceptable color count).
    - **Serial, fewest colors:** igraph (optimal colors, moderate speed).
    - **Serial, PETSc available:** PETSc ID or SL (near-optimal colors, good speed).

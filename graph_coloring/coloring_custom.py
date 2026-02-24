@@ -5,6 +5,9 @@ Provides
 --------
   color_custom(adjacency)
       Serial coloring via compiled C implementation.
+  color_custom_omp(adjacency, nthreads=None)
+      OpenMP shared-memory parallel version: block-partition local colouring
+      followed by deterministic boundary-conflict resolution.
   color_custom_mpi(adjacency, comm)
       MPI parallel version: domain-decomposition local colouring followed by
       deterministic boundary-conflict resolution.
@@ -43,10 +46,17 @@ def _get_lib():
 
     need = not os.path.exists(_SO) or os.path.getmtime(_SRC) > os.path.getmtime(_SO)
     if need:
-        subprocess.check_call(
-            ["gcc", "-O3", "-shared", "-fPIC", "-o", _SO, _SRC],
-            cwd=_DIR,
-        )
+        # Try with OpenMP first, fall back to without
+        try:
+            subprocess.check_call(
+                ["gcc", "-O3", "-fopenmp", "-shared", "-fPIC", "-o", _SO, _SRC],
+                cwd=_DIR,
+            )
+        except subprocess.CalledProcessError:
+            subprocess.check_call(
+                ["gcc", "-O3", "-shared", "-fPIC", "-o", _SO, _SRC],
+                cwd=_DIR,
+            )
 
     _LIB = ctypes.CDLL(_SO)
 
@@ -69,6 +79,22 @@ def _get_lib():
         ctypes.POINTER(ctypes.c_int),
         ctypes.POINTER(ctypes.c_int),
     ]
+
+    # custom_greedy_color_omp(n, csc_ip, csc_ix, csr_ip, csr_ix, colors, nthreads) -> n_colors
+    _LIB.custom_greedy_color_omp.restype = ctypes.c_int
+    _LIB.custom_greedy_color_omp.argtypes = [
+        ctypes.c_int,
+        ctypes.POINTER(ctypes.c_int),
+        ctypes.POINTER(ctypes.c_int),
+        ctypes.POINTER(ctypes.c_int),
+        ctypes.POINTER(ctypes.c_int),
+        ctypes.POINTER(ctypes.c_int),
+        ctypes.c_int,
+    ]
+
+    # custom_has_openmp() -> int (0 = no OpenMP, >0 = max threads)
+    _LIB.custom_has_openmp.restype = ctypes.c_int
+    _LIB.custom_has_openmp.argtypes = []
 
     return _LIB
 
@@ -214,5 +240,94 @@ def color_custom_mpi(adjacency, comm=None):
         bptr,
         _ptr(colors),
     )
+
+    return int(nc), colors
+
+
+# ---------------------------------------------------------------------------
+# OpenMP parallel coloring
+# ---------------------------------------------------------------------------
+def color_custom_omp(adjacency, nthreads=None, reorder=True):
+    """
+    OpenMP-parallel custom greedy coloring.
+
+    Block-partitions vertices among *nthreads* OpenMP threads.  Each thread
+    independently colours its local sub-graph of A², then boundary conflicts
+    (edges crossing partition boundaries) are fixed greedily.
+
+    When *reorder* is ``True`` (default), a reverse Cuthill–McKee permutation
+    is applied beforehand so that block partitions correspond to spatially
+    local vertex clusters, drastically reducing boundary conflicts and
+    improving both speed and colour quality.
+
+    Typical use-case: the **C coloring step** is 2–4× faster than serial with
+    16 threads, but the total time (A² + RCM + coloring) is comparable to
+    serial because the reordering itself costs O(nnz).  This variant is most
+    useful when the same sparsity pattern is coloured repeatedly or when the
+    reordering can be amortised.
+
+    Parameters
+    ----------
+    adjacency : scipy.sparse matrix
+        Element–DOF adjacency matrix *A*.
+    nthreads : int, optional
+        Number of OpenMP threads (default: ``os.cpu_count()``).
+    reorder : bool, optional
+        Apply reverse Cuthill–McKee reordering before partitioning (default
+        ``True``).  Without reordering, block partition by DOF index gives
+        poor locality and the parallel version is typically *slower* than
+        serial.
+
+    Returns
+    -------
+    n_colors : int
+        Number of colours used.
+    coloring : ndarray of int32
+        0-based colour for each vertex.
+    """
+    lib = _get_lib()
+
+    if nthreads is None:
+        nthreads = os.cpu_count() or 1
+
+    # Check OpenMP availability
+    has_omp = lib.custom_has_openmp()
+    if has_omp == 0 and nthreads > 1:
+        import warnings
+        warnings.warn(
+            "custom_coloring.so was compiled without OpenMP; "
+            "falling back to serial coloring."
+        )
+
+    A2_csc = sp.csc_matrix(adjacency @ adjacency)
+    n = A2_csc.shape[0]
+
+    # Optional bandwidth-reducing reorder for better partition locality
+    perm = None
+    if reorder and nthreads > 1:
+        from scipy.sparse.csgraph import reverse_cuthill_mckee
+        perm = reverse_cuthill_mckee(A2_csc)
+        A2_csc = sp.csc_matrix(A2_csc[perm][:, perm])
+
+    # A² is symmetric (DOF adjacency graph), so CSC data can serve as CSR too:
+    # iterating column j of CSC gives the same neighbours as iterating row j of
+    # CSR.  This avoids an expensive .tocsr() conversion for large matrices.
+    ip = _i32(A2_csc.indptr)
+    ix = _i32(A2_csc.indices)
+    colors = np.zeros(n, dtype=np.int32)
+
+    nc = lib.custom_greedy_color_omp(
+        ctypes.c_int(n),
+        _ptr(ip), _ptr(ix),   # CSC
+        _ptr(ip), _ptr(ix),   # reused as CSR (symmetric)
+        _ptr(colors),
+        ctypes.c_int(nthreads),
+    )
+
+    # Undo permutation if applied
+    if perm is not None:
+        inv = np.empty(n, dtype=np.int32)
+        inv[perm] = np.arange(n, dtype=np.int32)
+        colors = colors[inv]
 
     return int(nc), colors

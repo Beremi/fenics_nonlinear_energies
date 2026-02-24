@@ -16,6 +16,10 @@
 #include <stdlib.h>
 #include <string.h>
 
+#ifdef _OPENMP
+#include <omp.h>
+#endif
+
 /* ------------------------------------------------------------------ */
 /*  custom_greedy_color                                                */
 /*                                                                     */
@@ -268,4 +272,160 @@ done:;
             max_c = colors[i];
     }
     return max_c + 1;
+}
+
+/* ------------------------------------------------------------------ */
+/*  custom_greedy_color_omp                                            */
+/*                                                                     */
+/*  OpenMP-parallel version: block-partitions vertices among threads,   */
+/*  each thread independently colours its local sub-graph of A^2, then */
+/*  boundary conflicts are fixed greedily (sequential deterministic).   */
+/*                                                                     */
+/*  Advantage over MPI domain-decomposition: shared memory means A^2   */
+/*  is computed only once (by Python) and shared across all threads.    */
+/*                                                                     */
+/*  Input                                                              */
+/*    n                  - number of vertices                           */
+/*    csc_indptr/indices - A^2 in CSC format (for greedy coloring)      */
+/*    csr_indptr/indices - A^2 in CSR format (for boundary detection)   */
+/*    nthreads           - OpenMP thread count (<=1 => serial fallback) */
+/*                                                                     */
+/*  Output                                                             */
+/*    colors  - 0-based colour for each vertex                         */
+/*                                                                     */
+/*  Returns: number of colours used                                    */
+/* ------------------------------------------------------------------ */
+int custom_greedy_color_omp(int n,
+                            const int *csc_indptr,
+                            const int *csc_indices,
+                            const int *csr_indptr,
+                            const int *csr_indices,
+                            int *colors,
+                            int nthreads)
+{
+    if (n == 0)
+        return 0;
+
+#ifndef _OPENMP
+    /* compiled without OpenMP - fall back to serial */
+    (void)csr_indptr;
+    (void)csr_indices;
+    (void)nthreads;
+    return custom_greedy_color(n, csc_indptr, csc_indices, colors);
+#else
+    if (nthreads <= 1)
+        return custom_greedy_color(n, csc_indptr, csc_indices, colors);
+
+    omp_set_num_threads(nthreads);
+
+    /* --- block partition --- */
+    int blk = n / nthreads;
+    int rem_t = n % nthreads;
+    int *starts = (int *)malloc((nthreads + 1) * sizeof(int));
+    if (!starts)
+        return custom_greedy_color(n, csc_indptr, csc_indices, colors);
+    starts[0] = 0;
+    for (int t = 0; t < nthreads; t++)
+        starts[t + 1] = starts[t] + blk + (t < rem_t ? 1 : 0);
+
+    /* --- Phase 1: parallel local coloring --- */
+    #pragma omp parallel
+    {
+        int tid = omp_get_thread_num();
+        int s   = starts[tid];
+        int len = starts[tid + 1] - s;
+
+        if (len > 0) {
+            /* count local nnz (edges with both endpoints in this block) */
+            int local_nnz = 0;
+            for (int j = 0; j < len; j++) {
+                int gj = s + j;
+                for (int p = csc_indptr[gj]; p < csc_indptr[gj + 1]; p++) {
+                    int r = csc_indices[p];
+                    if (r >= s && r < s + len)
+                        local_nnz++;
+                }
+            }
+
+            /* build local CSC sub-graph (indices remapped to [0, len)) */
+            int *lip = (int *)malloc((len + 1) * sizeof(int));
+            int *lix = (int *)malloc((local_nnz > 0 ? local_nnz : 1) * sizeof(int));
+            int *lc  = (int *)calloc(len, sizeof(int));
+
+            if (lip && lix && lc) {
+                lip[0] = 0;
+                int pos = 0;
+                for (int j = 0; j < len; j++) {
+                    int gj = s + j;
+                    for (int p = csc_indptr[gj]; p < csc_indptr[gj + 1]; p++) {
+                        int r = csc_indices[p];
+                        if (r >= s && r < s + len)
+                            lix[pos++] = r - s;
+                    }
+                    lip[j + 1] = pos;
+                }
+
+                custom_greedy_color(len, lip, lix, lc);
+
+                for (int j = 0; j < len; j++)
+                    colors[s + j] = lc[j];
+            }
+
+            free(lip);
+            free(lix);
+            free(lc);
+        }
+    } /* end omp parallel */
+
+    /* --- Phase 2: identify boundary vertices --- */
+    /* A vertex is boundary if any A^2-neighbour is in a different block */
+    int *boundary = (int *)malloc(n * sizeof(int));
+    int n_boundary = 0;
+
+    if (boundary) {
+        for (int t = 0; t < nthreads; t++) {
+            int s = starts[t];
+            int e = starts[t + 1];
+            for (int i = s; i < e; i++) {
+                for (int p = csr_indptr[i]; p < csr_indptr[i + 1]; p++) {
+                    int j = csr_indices[p];
+                    if (j != i && (j < s || j >= e)) {
+                        boundary[n_boundary++] = i;
+                        break;
+                    }
+                }
+            }
+        }
+    }
+
+    /* --- Phase 3: fix boundary conflicts --- */
+    int nc;
+    if (boundary && n_boundary > 0) {
+        nc = fix_coloring_conflicts(n, csr_indptr, csr_indices,
+                                    n_boundary, boundary, colors);
+    } else {
+        nc = 0;
+        for (int i = 0; i < n; i++)
+            if (colors[i] > nc)
+                nc = colors[i];
+        nc++;
+    }
+
+    free(boundary);
+    free(starts);
+    return nc;
+#endif /* _OPENMP */
+}
+
+/* ------------------------------------------------------------------ */
+/*  Query whether the library was compiled with OpenMP support.         */
+/*  Returns max threads if OpenMP is available, 0 otherwise.           */
+/* ------------------------------------------------------------------ */
+int custom_has_openmp(void)
+{
+#ifdef _OPENMP
+    return omp_get_max_threads();
+#else
+    return 0;
+#endif
 }
