@@ -139,13 +139,13 @@ Detailed timing breakdown with the **GAMG** preconditioner on mesh **level 8** (
 
 **Aggregated over 6 Newton iterations** (all times in seconds):
 
-| nproc |    KSP |   HVP | Allreduce | Allgather | COO assem | Hess total | Other† |  Solve | Setup | active |
-| ----: | -----: | ----: | --------: | --------: | --------: | ---------: | -----: | -----: | ----: | :----: |
-|     1 |  0.648 | 0.290 |     0.000 |     0.001 |     0.016 |      0.955 |  0.249 |  1.205 | 0.429 |  1/1   |
-|     2 |  0.812 | 0.296 |     0.014 |     0.003 |     0.012 |      1.137 |  0.344 |  1.481 | 0.491 |  2/2   |
-|     4 |  0.806 | 0.337 |     0.027 |     0.006 |     0.009 |      1.186 |  0.620 |  1.805 | 0.572 |  4/4   |
-|     8 |  0.662 | 0.318 |     0.067 |     0.012 |     0.010 |      1.070 |  1.249 |  2.318 | 0.773 |  8/8   |
-|    16 |  0.552 | 0.322 |     0.147 |     0.022 |     0.012 |      1.054 |  2.900 |  3.954 | 1.327 |  8/16  |
+| nproc |   KSP |   HVP | Allreduce | Allgather | COO assem | Hess total | Other† | Solve | Setup | active |
+| ----: | ----: | ----: | --------: | --------: | --------: | ---------: | -----: | ----: | ----: | :----: |
+|     1 | 0.648 | 0.290 |     0.000 |     0.001 |     0.016 |      0.955 |  0.249 | 1.205 | 0.429 |  1/1   |
+|     2 | 0.812 | 0.296 |     0.014 |     0.003 |     0.012 |      1.137 |  0.344 | 1.481 | 0.491 |  2/2   |
+|     4 | 0.806 | 0.337 |     0.027 |     0.006 |     0.009 |      1.186 |  0.620 | 1.805 | 0.572 |  4/4   |
+|     8 | 0.662 | 0.318 |     0.067 |     0.012 |     0.010 |      1.070 |  1.249 | 2.318 | 0.773 |  8/8   |
+|    16 | 0.552 | 0.322 |     0.147 |     0.022 |     0.012 |      1.054 |  2.900 | 3.954 | 1.327 |  8/16  |
 
 †*Other* = energy evaluations + gradient + golden-section line search (≈20 energy evals per Newton step, each requiring `Allgatherv` + replicated JAX computation).
 
@@ -173,12 +173,46 @@ Detailed timing breakdown with the **GAMG** preconditioner on mesh **level 8** (
 
 ### A.4  Timing Breakdown — Level 9 (784 385 DOFs)
 
-| nproc |    KSP |   HVP | Allreduce | Allgather | COO assem | Hess total | Other† |  Solve | Setup |
-| ----: | -----: | ----: | --------: | --------: | --------: | ---------: | -----: | -----: | ----: |
-|     1 |  3.559 | 1.809 |     0.000 |     0.005 |     0.084 |      5.457 |  1.270 |  6.727 | 1.129 |
-|    16 |  3.414 | 1.579 |     0.753 |     0.104 |     0.050 |      5.900 | 15.936 | 21.835 | 3.580 |
+| nproc |   KSP |   HVP | Allreduce | Allgather | COO assem | Hess total | Other† |  Solve | Setup | active |
+| ----: | ----: | ----: | --------: | --------: | --------: | ---------: | -----: | -----: | ----: | :----: |
+|     1 | 3.590 | 1.850 |     0.000 |     0.006 |     0.086 |      5.533 |  1.269 |  6.801 | 1.112 |  1/1   |
+|    16 | 3.518 | 1.679 |     0.684 |     0.099 |     0.054 |      6.033 | 15.788 | 21.821 | 3.638 |  8/16  |
 
-### A.5  Analysis
+†*Other* = energy evaluations + gradient + golden-section line search (≈17 energy evals × 7 Newton steps, each requiring `Allgatherv` + replicated JAX computation).
+
+### A.5  Per-Iteration Detail — Level 9, Serial (np = 1)
+
+**7 Newton iterations**, 784 385 DOFs, 5 482 513 nnz, 9 colours (all times in seconds):
+
+|   it | Allgather |    HVP | nHVP | Allreduce | COO asm |    KSP | KSP its |  Total |
+| ---: | --------: | -----: | ---: | --------: | ------: | -----: | ------: | -----: |
+|    0 |    0.0007 | 0.2575 |    9 |    0.0000 |  0.0116 | 1.3035 |       8 | 1.5734 |
+|    1 |    0.0007 | 0.2552 |    9 |    0.0000 |  0.0120 | 0.3389 |       6 | 0.6069 |
+|    2 |    0.0008 | 0.2626 |    9 |    0.0000 |  0.0117 | 0.3616 |       7 | 0.6367 |
+|    3 |    0.0008 | 0.2852 |    9 |    0.0000 |  0.0118 | 0.3793 |       8 | 0.6771 |
+|    4 |    0.0011 | 0.2722 |    9 |    0.0000 |  0.0156 | 0.3955 |       8 | 0.6845 |
+|    5 |    0.0007 | 0.2526 |    9 |    0.0000 |  0.0119 | 0.4018 |       9 | 0.6670 |
+|    6 |    0.0010 | 0.2645 |    9 |    0.0000 |  0.0115 | 0.4098 |       9 | 0.6869 |
+
+Iteration 0 includes GAMG setup (≈ 0.96 s); subsequent KSP calls reuse the preconditioner at ≈ 0.37 s each.  HVP is 9 products/iteration (one per colour).
+
+### A.6  Per-Iteration Detail — Level 9, 16 MPI Ranks
+
+**7 Newton iterations**, 784 385 DOFs, 5 482 513 nnz, 8 colours, 8 active ranks (all times in seconds):
+
+|   it | Allgather |    HVP | nHVP | Allreduce | COO asm |    KSP | KSP its |  Total |
+| ---: | --------: | -----: | ---: | --------: | ------: | -----: | ------: | -----: |
+|    0 |    0.0155 | 0.2789 |    1 |    0.0843 |  0.0096 | 1.2994 |       8 | 1.6878 |
+|    1 |    0.0151 | 0.2619 |    1 |    0.1195 |  0.0065 | 0.3354 |       7 | 0.7385 |
+|    2 |    0.0129 | 0.2771 |    1 |    0.1002 |  0.0034 | 0.3529 |       8 | 0.7464 |
+|    3 |    0.0094 | 0.2204 |    1 |    0.0904 |  0.0087 | 0.3641 |       8 | 0.6930 |
+|    4 |    0.0156 | 0.1954 |    1 |    0.1084 |  0.0086 | 0.3597 |       8 | 0.6877 |
+|    5 |    0.0173 | 0.2219 |    1 |    0.0991 |  0.0104 | 0.4173 |       8 | 0.7660 |
+|    6 |    0.0129 | 0.2228 |    1 |    0.0822 |  0.0070 | 0.3888 |       9 | 0.7137 |
+
+Each rank computes only 1 HVP/iteration (8 colours ÷ 8 active ranks).  The KSP timings are nearly identical to the serial case (first iteration ≈ 1.30 s with GAMG setup, subsequent ≈ 0.35 s).  The "hessian_solve" total is 6.03 s (serial 5.53 s) — parallelism adds only 9 % overhead here.  The dominant cost at np = 16 is **Other = 15.79 s** (73 % of the 21.82 s solve wall time), entirely due to replicated energy/gradient evaluations under shared-memory CPU contention.
+
+### A.7  Analysis
 
 **1. KSP (CG + GAMG) scales well.**
 
@@ -201,7 +235,7 @@ The HVP phase drops from 9 products/rank (serial) to 1 product/rank (np = 16, wi
 
 The `setPreallocationCOO` / `setValuesCOO` assembly path adds only 0.01–0.08 s total (< 1.5 % of solve time).
 
-### A.6  Conclusions
+### A.8  Conclusions
 
 The replicated-data JAX+PETSc solver's parallel scaling is limited because:
 1. The replicated energy/gradient computation adds overhead proportional to $p$ (contention for CPU+memory), and this now dominates total time with GAMG fixing the KSP bottleneck.
@@ -240,7 +274,7 @@ With HYPRE, only the CG iteration phase (PC reuse column) scales properly — co
 
 **Level 8 (195 585 DOFs), solve time:**
 
-| nproc | HYPRE  | GAMG  | Speedup |
+| nproc |  HYPRE |  GAMG | Speedup |
 | ----: | -----: | ----: | ------: |
 |     1 |  2.32s | 1.20s |    1.9× |
 |     2 | 10.89s | 1.48s |    7.4× |
@@ -250,10 +284,10 @@ With HYPRE, only the CG iteration phase (PC reuse column) scales properly — co
 
 **Level 9 (784 385 DOFs):**
 
-| nproc | HYPRE   | GAMG    | Speedup |
-| ----: | ------: | ------: | ------: |
-|     1 |  11.97s |  6.73s  |    1.8× |
-|    16 |  47.35s | 21.57s  |    2.2× |
+| nproc |  HYPRE |   GAMG | Speedup |
+| ----: | -----: | -----: | ------: |
+|     1 | 11.97s |  6.73s |    1.8× |
+|    16 | 47.35s | 21.57s |    2.2× |
 
 ### B.4  Recommendation
 
