@@ -640,3 +640,101 @@ int custom_has_openmp(void)
     return 0;
 #endif
 }
+
+/* ------------------------------------------------------------------ */
+/*  build_A2_pattern                                                   */
+/*                                                                     */
+/*  Compute the sparsity pattern of A^2 directly (without numerical    */
+/*  matrix multiplication).  For each vertex i, collect the union of   */
+/*  all neighbours-of-neighbours (2-hop reachable set), including i.   */
+/*                                                                     */
+/*  Two-pass approach:                                                 */
+/*    Pass 1: a2_indices == NULL — only compute row lengths (a2_indptr)*/
+/*            and total nnz (*nnz_out).                                */
+/*    Pass 2: a2_indices != NULL — fill the column indices.            */
+/*                                                                     */
+/*  Input:                                                             */
+/*    n         – number of vertices                                   */
+/*    ai, aj    – CSR indptr and indices of A  (int32)                 */
+/*                                                                     */
+/*  Output:                                                            */
+/*    a2_indptr – CSR indptr of A^2  (n+1 entries)                     */
+/*    a2_indices– CSR indices of A^2 (nnz entries, or NULL for pass 1) */
+/*    nnz_out   – total number of nonzeros in A^2                      */
+/*                                                                     */
+/*  Returns 0 on success.                                              */
+/* ------------------------------------------------------------------ */
+int build_A2_pattern(int n,
+                     const int *ai, const int *aj,
+                     int *a2_indptr,
+                     int *a2_indices,
+                     int *nnz_out)
+{
+    /* marker array: marks which vertices are in current row's 2-hop set.
+       marker[v] == i means v is in row i's set. Initialised to -1. */
+    int *marker = (int *)malloc(n * sizeof(int));
+    if (!marker) return -1;
+    for (int v = 0; v < n; v++) marker[v] = -1;
+
+    int nnz = 0;
+    a2_indptr[0] = 0;
+
+    for (int i = 0; i < n; i++)
+    {
+        int row_nnz = 0;
+
+        /* Include self (diagonal of A^2) */
+        marker[i] = i;
+        if (a2_indices) a2_indices[nnz + row_nnz] = i;
+        row_nnz++;
+
+        /* For each neighbour j of i ... */
+        for (int p = ai[i]; p < ai[i + 1]; p++)
+        {
+            int j = aj[p];
+            /* j is a 1-hop neighbour: include it */
+            if (marker[j] != i)
+            {
+                marker[j] = i;
+                if (a2_indices) a2_indices[nnz + row_nnz] = j;
+                row_nnz++;
+            }
+            /* For each neighbour k of j: k is a 2-hop neighbour */
+            for (int q = ai[j]; q < ai[j + 1]; q++)
+            {
+                int k = aj[q];
+                if (marker[k] != i)
+                {
+                    marker[k] = i;
+                    if (a2_indices) a2_indices[nnz + row_nnz] = k;
+                    row_nnz++;
+                }
+            }
+        }
+
+        /* Sort this row's entries for consistency */
+        if (a2_indices)
+        {
+            /* Simple insertion sort (rows are typically small) */
+            int *row = &a2_indices[nnz];
+            for (int a = 1; a < row_nnz; a++)
+            {
+                int key = row[a];
+                int b = a - 1;
+                while (b >= 0 && row[b] > key)
+                {
+                    row[b + 1] = row[b];
+                    b--;
+                }
+                row[b + 1] = key;
+            }
+        }
+
+        nnz += row_nnz;
+        a2_indptr[i + 1] = nnz;
+    }
+
+    *nnz_out = nnz;
+    free(marker);
+    return 0;
+}

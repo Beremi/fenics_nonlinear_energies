@@ -106,6 +106,17 @@ def _get_lib():
         ctypes.c_uint,
     ]
 
+    # build_A2_pattern(n, ai, aj, a2_indptr, a2_indices, nnz_out) -> 0
+    _LIB.build_A2_pattern.restype = ctypes.c_int
+    _LIB.build_A2_pattern.argtypes = [
+        ctypes.c_int,
+        ctypes.POINTER(ctypes.c_int),
+        ctypes.POINTER(ctypes.c_int),
+        ctypes.POINTER(ctypes.c_int),
+        ctypes.POINTER(ctypes.c_int),
+        ctypes.POINTER(ctypes.c_int),
+    ]
+
     return _LIB
 
 

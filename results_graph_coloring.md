@@ -228,18 +228,18 @@ fewest colors across all ranks.
 $A^2$ is symmetric, so CSR ≡ CSC structurally.  Using CSR avoids
 the costly CSC conversion (~15–20 % faster).
 
-| Method | pL lvl 9 (s) | GL lvl 9 (s) | HE lvl 4 (s) |
-| ------ | -----------: | -----------: | -----------: |
-| **scipy CSR rank 0 + Bcast** | **0.31** | **0.54** | **2.73** |
-| scipy CSC rank 0 + Bcast | 0.38 | 0.70 | 3.08 |
-| scipy bool + Bcast | 0.39 | 0.76 | 3.78 |
-| scipy int8 + Bcast | 0.56 | 0.73 | 3.66 |
-| scipy each rank (redundant) | 1.11 | 1.50 | 5.31 |
-| PETSc serial rank 0 + Bcast | 0.50 | 0.72 | 3.15 |
-| PETSc symbolic rank 0 + Bcast | 0.48 | 0.72 | 3.34 |
-| PETSc par. matMult + gather | 1.56 | 1.93 | 8.58 |
-| PETSc par. matMult (fill=2) | 1.54 | 1.77 | 8.69 |
-| PETSc par. $A^T A$ + gather | 1.91 | 2.66 | 10.96 |
+| Method                        | pL lvl 9 (s) | GL lvl 9 (s) | HE lvl 4 (s) |
+| ----------------------------- | -----------: | -----------: | -----------: |
+| **scipy CSR rank 0 + Bcast**  |     **0.31** |     **0.54** |     **2.73** |
+| scipy CSC rank 0 + Bcast      |         0.38 |         0.70 |         3.08 |
+| scipy bool + Bcast            |         0.39 |         0.76 |         3.78 |
+| scipy int8 + Bcast            |         0.56 |         0.73 |         3.66 |
+| scipy each rank (redundant)   |         1.11 |         1.50 |         5.31 |
+| PETSc serial rank 0 + Bcast   |         0.50 |         0.72 |         3.15 |
+| PETSc symbolic rank 0 + Bcast |         0.48 |         0.72 |         3.34 |
+| PETSc par. matMult + gather   |         1.56 |         1.93 |         8.58 |
+| PETSc par. matMult (fill=2)   |         1.54 |         1.77 |         8.69 |
+| PETSc par. $A^T A$ + gather   |         1.91 |         2.66 |        10.96 |
 
 **Findings:**
 - **SciPy CSR on rank 0 + MPI Bcast is the fastest approach** in all cases.
@@ -254,6 +254,59 @@ the costly CSC conversion (~15–20 % faster).
   bottleneck is index processing, not arithmetic.
 - Redundant scipy on all ranks is ~2× slower than rank-0 + Bcast, confirming
   that Bcast of the CSR arrays is worth it.
+
+---
+
+## 6. Alternative A² computation methods (graph-based vs sparse multiply)
+
+Since A² setup dominates 70–92 % of Custom coloring time, we investigated
+whether graph-library approaches (computing the 2-hop adjacency directly)
+can beat scipy sparse matrix multiplication.
+
+**Methods tested:**
+1. **scipy CSR** — baseline: `csr_matrix(A @ A)` on rank 0, Bcast arrays
+2. **scipy bool CSR** — same but with `dtype=bool` to skip arithmetic
+3. **igraph neighborhood** — build igraph `Graph` from edge list, call
+   `neighborhood(order=2)` to get 2-hop vertex lists, convert to CSR
+4. **igraph neighborhood fast** — same but with numpy concatenation for
+   CSR construction instead of Python loops
+5. **C direct 2-hop** — custom C function `build_A2_pattern()`: for each
+   vertex, iterate over neighbours-of-neighbours using a marker array
+   for O(1) duplicate detection. Two-pass (count nnz, then fill).
+
+### Serial results (np = 1)
+
+| Method                  | pL lvl 9 (s) | GL lvl 9 (s) | HE lvl 4 (s) |
+| ----------------------- | -----------: | -----------: | -----------: |
+| scipy CSR               |         0.19 |         0.34 |     **1.39** |
+| scipy bool CSR          |     **0.17** |         0.28 |         1.56 |
+| igraph neighborhood     |         2.13 |         2.62 |         6.83 |
+| igraph neighborhood fast|         1.62 |         2.21 |         6.51 |
+| **C direct 2-hop**      |         0.29 |     **0.22** |         1.51 |
+
+### With MPI broadcast (np = 16)
+
+| Method                  | pL lvl 9 (s) | GL lvl 9 (s) | HE lvl 4 (s) |
+| ----------------------- | -----------: | -----------: | -----------: |
+| scipy CSR + Bcast       |         0.33 |         0.47 |         2.55 |
+| scipy bool CSR + Bcast  |         0.31 |         0.42 |         2.77 |
+| igraph neighborhood     |         2.47 |         3.99 |        10.86 |
+| igraph neighborhood fast|         2.44 |         3.34 |         9.30 |
+| **C direct 2-hop + Bcast**|   **0.28** |     **0.42** |     **2.13** |
+
+**Findings:**
+- **igraph is 5–10× slower** than scipy CSR.  The `neighborhood(order=2)` call
+  itself is fast (~0.5 s for 1M vertices), but graph construction from edge
+  list (~0.3–1.4 s) and the Python-side CSR conversion from lists of lists
+  (~0.7–2.5 s) dominate.
+- **C direct 2-hop matches or beats scipy** for serial 2D problems (GL: 0.22 s
+  vs 0.34 s, 35 % faster) and is competitive for 3D (HE: 1.51 s vs 1.39 s).
+- **With MPI broadcast (np = 16), C direct 2-hop is the fastest method**
+  across all problems: pL 0.28 s (vs scipy 0.33 s, −15 %), GL 0.42 s
+  (vs 0.47 s, −11 %), HE 2.13 s (vs 2.55 s, −16 %).
+- **scipy bool CSR** helps slightly for smaller 2D problems but is actually
+  slower for HE 3D (1.56 s vs 1.39 s), suggesting the bool conversion
+  overhead exceeds the arithmetic savings for denser graphs.
 
 ---
 
@@ -312,16 +365,24 @@ the costly CSC conversion (~15–20 % faster).
    because it is computed once and broadcast; SciPy on rank 0 + MPI Bcast
    is 3–6× faster than PETSc parallel matmult.
 
-8. **NetworkX is impractical for production.** NX DSATUR gives excellent
+8. **Graph-library A² computation is not competitive.** igraph's
+   `neighborhood(order=2)` is internally fast but the Python-side overhead
+   (graph construction from edge list + CSR conversion from lists of lists)
+   makes it 5–10× slower than scipy sparse multiply. A custom C
+   `build_A2_pattern()` function that directly walks 2-hop neighbours with
+   a marker array is **competitive with scipy and the fastest with MPI
+   broadcast** (−11 to −16 % vs scipy CSR at np=16).
+
+9. **NetworkX is impractical for production.** NX DSATUR gives excellent
    color quality but its $O(n^2)$ complexity makes it unusable for $N > 10{,}000$.
    NX `smallest_last` is better (~10–20× slower than PETSc) but still cannot
    compete with PETSc or igraph for large problems.
 
-9. **PETSc LF is not recommended.** The largest-first ordering (`lf`)
+10. **PETSc LF is not recommended.** The largest-first ordering (`lf`)
    produces more colors than greedy in 3D (e.g., 90 vs 91 at HE level 4)
    and more than SL/ID everywhere. It offers no advantage.
 
-10. **Practical recommendation.**
+11. **Practical recommendation.**
    - **Serial, fastest:** Custom C (best speed, acceptable color count).
    - **Serial, fewest colors:** igraph (optimal colors, moderate speed).
    - **Serial, PETSc available:** PETSc ID or SL (near-optimal colors, good speed).
