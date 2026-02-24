@@ -84,37 +84,38 @@ Fewer colors = fewer Hessian–vector products per SFD assembly step.
 ## 2. Serial timing (np = 1)
 
 All times in seconds. The **Custom** C backend is **the fastest serial method**
-across all problems. NetworkX DSATUR omitted because it is
+across all problems. For Custom, the $A^2 = A \cdot A$ setup and greedy
+coloring are shown separately. NetworkX DSATUR omitted because it is
 100–10,000× slower than the other methods.
 
 ### p-Laplace 2D
 
-| Level |       N | Custom | igraph | PETSc SL | PETSc ID | PETSc greedy |
-| ----: | ------: | -----: | -----: | -------: | -------: | -----------: |
-|     5 |   2,945 |  0.001 |  0.004 |    0.004 |    0.004 |        0.005 |
-|     6 |  12,033 |  0.003 |  0.018 |    0.016 |    0.016 |        0.017 |
-|     7 |  48,641 |  0.010 |  0.077 |    0.064 |    0.064 |        0.070 |
-|     8 | 195,585 |  0.043 |  0.331 |    0.268 |    0.272 |        0.292 |
-|     9 | 784,385 |  0.199 |  1.392 |    1.158 |    1.178 |        1.300 |
+| Level |       N | Custom A² | Custom greedy | Custom total | igraph | PETSc SL | PETSc ID | PETSc greedy |
+| ----: | ------: | --------: | ------------: | -----------: | -----: | -------: | -------: | -----------: |
+|     5 |   2,945 |     0.001 |         0.000 |        0.001 |  0.004 |    0.004 |    0.004 |        0.005 |
+|     6 |  12,033 |     0.002 |         0.001 |        0.003 |  0.018 |    0.016 |    0.016 |        0.017 |
+|     7 |  48,641 |     0.008 |         0.004 |        0.012 |  0.077 |    0.064 |    0.064 |        0.070 |
+|     8 | 195,585 |     0.033 |         0.012 |        0.044 |  0.331 |    0.268 |    0.272 |        0.292 |
+|     9 | 784,385 |     0.178 |         0.062 |        0.240 |  1.392 |    1.158 |    1.178 |        1.300 |
 
 ### Ginzburg–Landau 2D
 
-| Level |         N | Custom | igraph | PETSc SL | PETSc ID | PETSc greedy |
-| ----: | --------: | -----: | -----: | -------: | -------: | -----------: |
-|     5 |     3,969 |  0.001 |  0.005 |    0.006 |    0.006 |        0.006 |
-|     6 |    16,129 |  0.004 |  0.023 |    0.022 |    0.021 |        0.024 |
-|     7 |    65,025 |  0.015 |  0.099 |    0.087 |    0.089 |        0.094 |
-|     8 |   261,121 |  0.080 |  0.437 |    0.376 |    0.383 |        0.420 |
-|     9 | 1,046,529 |  0.433 |  1.939 |    1.715 |    1.697 |        1.921 |
+| Level |         N | Custom A² | Custom greedy | Custom total | igraph | PETSc SL | PETSc ID | PETSc greedy |
+| ----: | --------: | --------: | ------------: | -----------: | -----: | -------: | -------: | -----------: |
+|     5 |     3,969 |     0.001 |         0.000 |        0.001 |  0.005 |    0.006 |    0.006 |        0.006 |
+|     6 |    16,129 |     0.003 |         0.002 |        0.005 |  0.023 |    0.022 |    0.021 |        0.024 |
+|     7 |    65,025 |     0.012 |         0.004 |        0.016 |  0.099 |    0.087 |    0.089 |        0.094 |
+|     8 |   261,121 |     0.065 |         0.018 |        0.083 |  0.437 |    0.376 |    0.383 |        0.420 |
+|     9 | 1,046,529 |     0.339 |         0.078 |        0.416 |  1.939 |    1.715 |    1.697 |        1.921 |
 
 ### HyperElasticity 3D
 
-| Level |       N | Custom | igraph | PETSc SL | PETSc ID | PETSc greedy |
-| ----: | ------: | -----: | -----: | -------: | -------: | -----------: |
-|     1 |   2,133 |  0.003 |  0.013 |    0.006 |    0.006 |        0.010 |
-|     2 |  11,925 |  0.027 |  0.126 |    0.041 |    0.041 |        0.072 |
-|     3 |  77,517 |  0.202 |  1.136 |    0.296 |    0.300 |        0.514 |
-|     4 | 554,013 |  1.726 |  9.566 |    2.811 |    2.890 |        5.096 |
+| Level |       N | Custom A² | Custom greedy | Custom total | igraph | PETSc SL | PETSc ID | PETSc greedy |
+| ----: | ------: | --------: | ------------: | -----------: | -----: | -------: | -------: | -----------: |
+|     1 |   2,133 |     0.003 |         0.000 |        0.003 |  0.013 |    0.006 |    0.006 |        0.010 |
+|     2 |  11,925 |     0.023 |         0.002 |        0.025 |  0.126 |    0.041 |    0.041 |        0.072 |
+|     3 |  77,517 |     0.188 |         0.019 |        0.207 |  1.136 |    0.296 |    0.300 |        0.514 |
+|     4 | 554,013 |     1.612 |         0.147 |        1.759 |  9.566 |    2.811 |    2.890 |        5.096 |
 
 ---
 
@@ -196,39 +197,39 @@ fewest colors across all ranks.
 
 ### Results (16 ranks, seed = rank)
 
-| Problem | Level | N | A² setup (s) | Greedy max (s) | Total (s) |
-| ------- | ----: | -------: | -----------: | -------------: | --------: |
-| pLaplace 2D | 9 | 784,385 | 0.40 | 0.11 | 0.51 |
-| GL 2D | 9 | 1,046,529 | 0.71 | 0.15 | 0.86 |
-| HE 3D | 4 | 554,013 | 3.37 | 0.31 | 3.68 |
+| Problem     | Level |         N | A² setup (s) | Greedy max (s) | Total (s) |
+| ----------- | ----: | --------: | -----------: | -------------: | --------: |
+| pLaplace 2D |     9 |   784,385 |         0.40 |           0.11 |      0.51 |
+| GL 2D       |     9 | 1,046,529 |         0.71 |           0.15 |      0.86 |
+| HE 3D       |     4 |   554,013 |         3.37 |           0.31 |      3.68 |
 
 ### Colors per rank
 
 **p-Laplace 2D level 9** (deterministic serial: 11, igraph: 7):
 
-| Rank | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 |
-| ---- | - | - | - | - | - | - | - | - | - | - | -- | -- | -- | -- | -- | -- |
-| Colors | 11 | 11 | 11 | 11 | 11 | 10 | 11 | 11 | 11 | 10 | 11 | 11 | **9** | 11 | 11 | 10 |
+| Rank   | 0   | 1   | 2   | 3   | 4   | 5   | 6   | 7   | 8   | 9   | 10  | 11  | 12    | 13  | 14  | 15  |
+| ------ | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | ----- | --- | --- | --- |
+| Colors | 11  | 11  | 11  | 11  | 11  | 10  | 11  | 11  | 11  | 10  | 11  | 11  | **9** | 11  | 11  | 10  |
 
 **Ginzburg–Landau 2D level 9** (deterministic serial: 11, igraph: 7):
 
-| Rank | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 |
-| ---- | - | - | - | - | - | - | - | - | - | - | -- | -- | -- | -- | -- | -- |
-| Colors | 11 | 11 | 10 | 11 | 11 | 10 | 11 | **9** | 11 | 11 | 11 | 11 | 10 | 11 | 11 | **9** |
+| Rank   | 0   | 1   | 2   | 3   | 4   | 5   | 6   | 7     | 8   | 9   | 10  | 11  | 12  | 13  | 14  | 15    |
+| ------ | --- | --- | --- | --- | --- | --- | --- | ----- | --- | --- | --- | --- | --- | --- | --- | ----- |
+| Colors | 11  | 11  | 10  | 11  | 11  | 10  | 11  | **9** | 11  | 11  | 11  | 11  | 10  | 11  | 11  | **9** |
 
 **HyperElasticity 3D level 4** (deterministic serial: 70, igraph: 68):
 
-| Rank | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 |
-| ---- | - | - | - | - | - | - | - | - | - | - | -- | -- | -- | -- | -- | -- |
-| Colors | 70 | 69 | 69 | 69 | 70 | **68** | 69 | 70 | 70 | 69 | 70 | 69 | 69 | 70 | 69 | 69 |
+| Rank   | 0   | 1   | 2   | 3   | 4   | 5      | 6   | 7   | 8   | 9   | 10  | 11  | 12  | 13  | 14  | 15  |
+| ------ | --- | --- | --- | --- | --- | ------ | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Colors | 70  | 69  | 69  | 69  | 70  | **68** | 69  | 70  | 70  | 69  | 70  | 69  | 69  | 70  | 69  | 69  |
 
 ### A² computation: SciPy vs PETSc
 
-| Problem | SciPy (rank 0 + Bcast) | PETSc (par. matmult + gather) | Ratio |
-| ------- | ---------------------: | ----------------------------: | ----: |
-| pLaplace 2D lvl 9 | 0.40 s | 2.26 s | 5.7× |
-| GL 2D lvl 9 | 0.71 s | 3.09 s | 4.4× |
-| HE 3D lvl 4 | 3.37 s | 10.90 s | 3.2× |
+| Problem           | SciPy (rank 0 + Bcast) | PETSc (par. matmult + gather) | Ratio |
+| ----------------- | ---------------------: | ----------------------------: | ----: |
+| pLaplace 2D lvl 9 |                 0.40 s |                        2.26 s |  5.7× |
+| GL 2D lvl 9       |                 0.71 s |                        3.09 s |  4.4× |
+| HE 3D lvl 4       |                 3.37 s |                       10.90 s |  3.2× |
 
 PETSc's `matMult` distributes the computation across ranks, but each rank
 still needs the full $A^2$ locally (gathered via `getRedundantMatrix`).
@@ -241,10 +242,11 @@ simply computing $A^2$ on rank 0 with SciPy and broadcasting the CSC arrays.
 
 1. **Custom C greedy is the fastest serial method.** The C implementation of
    `my_greedy_color2` ("most-coloured-neighbours" heuristic on $A^2$) is
-   **4–6× faster** than PETSc and **5–10× faster** than igraph:
-   - pLaplace lvl 9 ($N = 784{,}385$): **0.20 s** vs PETSc SL 1.16 s, igraph 1.39 s
-   - GL 2D lvl 9 ($N = 1{,}046{,}529$): **0.43 s** vs PETSc SL 1.72 s, igraph 1.94 s
-   - HE 3D lvl 4 ($N = 554{,}013$): **1.73 s** vs PETSc SL 2.81 s, igraph 9.57 s
+   **4–6× faster** than PETSc and **5–10× faster** than igraph.
+   The $A^2$ setup dominates the total time (70–92 %):
+   - pLaplace lvl 9 ($N = 784{,}385$): A²=0.18 s + greedy=0.06 s = **0.24 s** vs PETSc SL 1.16 s, igraph 1.39 s
+   - GL 2D lvl 9 ($N = 1{,}046{,}529$): A²=0.34 s + greedy=0.08 s = **0.42 s** vs PETSc SL 1.72 s, igraph 1.94 s
+   - HE 3D lvl 4 ($N = 554{,}013$): A²=1.61 s + greedy=0.15 s = **1.76 s** vs PETSc SL 2.81 s, igraph 9.57 s
    - It uses slightly more colors than PETSc SL/ID (11 vs 9–10 for 2D, 70 vs
      75–78 for 3D) but fewer than greedy/JP. Notably for HE 3D level 2 it
      produces **56 colors** — fewer than igraph (58).
