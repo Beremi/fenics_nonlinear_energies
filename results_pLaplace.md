@@ -571,6 +571,114 @@ RCM reordering gives a **20× KSP speedup** over the unordered case and makes HY
 
 ---
 
+## Annex D — Newton Iteration Breakdown: Line Search Bottleneck
+
+### D.1  Motivation
+
+Annexes A–C showed that RCM reordering + HYPRE BoomerAMG resolves the KSP scaling limitation.  However, the overall JAX+PETSc solver still slows down dramatically in parallel: at 16 MPI processes the total solve time is **2× slower than serial**, while FEniCS achieves a 7× speedup.  The prior breakdown lumped gradient evaluation, line search, and vector updates into a single "Other" bucket.
+
+This annex **decomposes each Newton iteration** into four timed phases:
+
+1. **grad** — gradient evaluation (`gradient_fn(x, g)`) and norm computation
+2. **hess** — Hessian solve (`hessian_solve_fn(x, g, h)`) including SFD assembly + KSP
+3. **LS** — golden-section line search (17 energy evaluations per step, tol = 10⁻³ on $[-0.5, 2]$)
+4. **update** — solution update `x ← x + α·h`, ghost synchronization, and final energy evaluation
+
+### D.2  How the Line Search Works
+
+The Newton solver uses **golden-section search** to find the optimal step length $\alpha$ along the descent direction $h$:
+
+$$
+\alpha^* = \arg\min_{\alpha \in [-0.5, 2.0]} J(x + \alpha h)
+$$
+
+The golden-section algorithm evaluates $J(x + \alpha h)$ at approximately $\lceil \log_{1/\varphi}(2.5 / 10^{-3}) \rceil = 17$ trial points per Newton step (where $\varphi = (1+\sqrt{5})/2$ is the golden ratio).
+
+**Critical difference in parallelism:**
+
+- **FEniCS (distributed):** Each energy evaluation computes the integrand on the local mesh partition (~$N/p$ elements), followed by a single `MPI_Allreduce` to sum the scalar energy.  Cost per evaluation: $\mathcal{O}(N/p)$.
+- **JAX+PETSc (replicated):** Each energy evaluation first calls `Allgatherv` to collect the *full* DOF vector ($N$ doubles) on every rank, then every rank evaluates the full energy via JAX JIT on all $N$ DOFs.  Cost per evaluation: $\mathcal{O}(N)$ computation + $\mathcal{O}(N)$ communication, *regardless* of $p$.
+
+This means the line search in JAX+PETSc **does not benefit from parallelism** — in fact it becomes *slower* due to `Allgatherv` communication overhead growing with the number of ranks.
+
+### D.3  Benchmark Setup
+
+Both solvers are run at the largest mesh level (~785K DOFs) with np = 1, 4, 8, 16:
+
+- **JAX+PETSc:** mesh level 9, 784,385 DOFs, HYPRE BoomerAMG + RCM reordering, `n_colors = 8`
+- **FEniCS Custom Newton:** `create_unit_square(N=885)`, 784,996 DOFs, same golden-section algorithm, HYPRE BoomerAMG
+
+### D.4  Results — JAX+PETSc
+
+| np | grad (s) | hess (s) | LS (s)  | update (s) | solve (s) | iters | grad % | hess % | LS %  |
+|----|----------|----------|---------|------------|-----------|-------|--------|--------|-------|
+| 1  | 0.12     | 8.98     | 0.92    | 0.05       | 10.06     | 7     | 1.2%   | 89.2%  | 9.1%  |
+| 4  | 0.52     | 4.61     | 2.75    | 0.14       | 8.04      | 7     | 6.4%   | 57.3%  | 34.2% |
+| 8  | 1.10     | 3.80     | 6.25    | 0.31       | 11.51     | 7     | 9.6%   | 33.0%  | 54.3% |
+| 16 | 2.29     | 3.96     | 12.88   | 0.62       | 19.84     | 7     | 11.5%  | 19.9%  | 64.9% |
+
+**Scaling factors (relative to np = 1):**
+
+| np | grad  | hess  | LS     | update | total |
+|----|-------|-------|--------|--------|-------|
+| 1  | 1.0×  | 1.0×  | 1.0×   | 1.0×   | 1.0×  |
+| 4  | 4.5×↑ | 1.9×↓ | 3.0×↑  | 2.9×↑  | 0.80× |
+| 8  | 9.5×↑ | 2.4×↓ | 6.8×↑  | 6.6×↑  | 1.14× |
+| 16 | 19.7×↑| 2.3×↓ | 14.0×↑ | 13.2×↑ | 1.97× |
+
+(↑ = cost increase = anti-scaling; ↓ = speedup)
+
+The hessian-solve phase scales properly (2.3× speedup at np = 16).  Everything else **degrades** with more ranks — gradient, line search, and update all grow superlinearly because they use replicated-data `Allgatherv` + full evaluation on every rank.
+
+### D.5  Results — FEniCS Custom Newton
+
+| np | grad (s) | hess (s) | LS (s)  | update (s) | solve (s) | iters | grad % | hess % | LS %  |
+|----|----------|----------|---------|------------|-----------|-------|--------|--------|-------|
+| 1  | 0.34     | 6.22     | 4.10    | 0.20       | 10.90     | 5     | 3.1%   | 57.0%  | 37.6% |
+| 4  | 0.09     | 2.51     | 1.14    | 0.06       | 3.82      | 5     | 2.5%   | 65.8%  | 29.9% |
+| 8  | 0.06     | 1.52     | 0.76    | 0.04       | 2.39      | 6     | 2.7%   | 63.6%  | 31.8% |
+| 16 | 0.04     | 1.00     | 0.47    | 0.02       | 1.53      | 5     | 2.4%   | 65.2%  | 30.5% |
+
+**Scaling factors (relative to np = 1):**
+
+| np | grad  | hess  | LS    | update | total |
+|----|-------|-------|-------|--------|-------|
+| 1  | 1.0×  | 1.0×  | 1.0×  | 1.0×   | 1.0×  |
+| 4  | 3.8×↓ | 2.5×↓ | 3.6×↓ | 3.3×↓  | 2.9×  |
+| 8  | 5.3×↓ | 4.1×↓ | 5.4×↓ | 5.0×↓  | 4.6×  |
+| 16 | 9.4×↓ | 6.2×↓ | 8.8×↓ | 10.0×↓ | 7.1×  |
+
+In FEniCS, **all phases scale proportionally** because every computation (energy, gradient, assembly, KSP) is distributed across ranks.  The percentage breakdown remains roughly constant: ~65% hess, ~30% LS, ~3% grad.
+
+### D.6  Per-Energy-Evaluation Cost
+
+Each line search performs 17 energy evaluations.  The cost per single energy evaluation:
+
+| np | JAX+PETSc (ms) | FEniCS (ms) | JAX/FEniCS ratio |
+|----|-----------------|-------------|------------------|
+| 1  | 7.7             | 48.2        | 0.16×            |
+| 4  | 23.1            | 13.4        | 1.7×             |
+| 8  | 52.4            | 7.5         | 7.0×             |
+| 16 | 108.2           | 5.5         | 19.7×            |
+
+At np = 1, JAX JIT is **6× faster** per energy evaluation than FEniCS.  But JAX's cost *increases* with more ranks (due to `Allgatherv` + replicated computation), while FEniCS's cost *decreases* (distributed evaluation).  At np = 16, JAX is **20× slower** per evaluation.
+
+### D.7  Analysis
+
+**1. The line search is now the dominant bottleneck.**  At np = 16, the golden-section line search consumes 64.9% of the JAX+PETSc solve time (12.88 s out of 19.84 s).  The hessian-solve phase — which was the bottleneck before RCM reordering — is now only 19.9% (3.96 s).
+
+**2. All replicated-data operations exhibit anti-scaling.**  Gradient evaluation (1 `Allgatherv` + full JAX eval), line search (17× the same), and update (1× the same) all become slower with more ranks.  Only the hessian-solve benefits from parallelism because the KSP is distributed via PETSc.
+
+**3. The fix requires distributed energy/gradient evaluation.**  The replicated-data architecture (`Allgatherv` → full local evaluation) was a pragmatic choice that makes the solver trivial to implement (standard JAX code, no mesh partitioning).  But it fundamentally cannot scale — each energy evaluation costs $\mathcal{O}(N)$ per rank, vs $\mathcal{O}(N/p)$ in FEniCS.  A scalable solution would require:
+   - Distributed mesh partitioning (like DOLFINx's ParMETIS/SCOTCH)
+   - Local energy/gradient evaluation on each partition
+   - MPI reduction for the scalar energy
+   - This is essentially what FEniCS already provides — the custom solver would need to replicate DOLFINx's distributed assembly infrastructure.
+
+**4. The crossover point.**  The JAX+PETSc solver is competitive up to ~4 MPI processes (8.04 s vs 3.82 s, a 2.1× gap mostly from the 5-vs-7 iteration count difference).  Beyond np = 4, the replicated-data overhead dominates and the gap widens rapidly.
+
+---
+
 ## Generating LaTeX Tables and Plots
 
 The script `results/generate_latex_tables.py` reads JSON result files, aggregates repeated runs (median time), and produces publication-ready tables.

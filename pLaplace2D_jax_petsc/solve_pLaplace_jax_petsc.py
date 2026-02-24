@@ -77,6 +77,45 @@ def _print_timing_breakdown(report, solve_time, solver):
     sys.stdout.flush()
 
 
+def _print_newton_breakdown(history, solve_time, report):
+    """Print per-iteration Newton-level timing breakdown (rank 0).
+
+    Shows: gradient, hessian_solve, line_search, update, and per-iter total.
+    """
+    sys.stdout.write("\n  Newton Iteration Breakdown:\n")
+    sys.stdout.write(
+        f"  {'It':>3s} {'grad':>8s} {'hess':>8s} {'LS':>8s} "
+        f"{'update':>8s} {'ls_ev':>6s} {'KSP it':>7s} {'iter':>8s}\n"
+    )
+    sys.stdout.write("  " + "-" * 58 + "\n")
+
+    s_grad = s_hess = s_ls = s_update = 0.0
+    for h in history:
+        s_grad += h["t_grad"]
+        s_hess += h["t_hess"]
+        s_ls += h["t_ls"]
+        s_update += h["t_update"]
+        sys.stdout.write(
+            f"  {h['it']:3d} {h['t_grad']:8.4f} {h['t_hess']:8.4f} "
+            f"{h['t_ls']:8.4f} {h['t_update']:8.4f} {h['ls_evals']:6d} "
+            f"{h['ksp_its']:7d} {h['t_iter']:8.4f}\n"
+        )
+
+    sys.stdout.write("  " + "-" * 58 + "\n")
+    s_total = s_grad + s_hess + s_ls + s_update
+    sys.stdout.write(
+        f"  {'SUM':>3s} {s_grad:8.4f} {s_hess:8.4f} "
+        f"{s_ls:8.4f} {s_update:8.4f} {'':>6s} {'':>7s} {s_total:8.4f}\n"
+    )
+    unaccounted = solve_time - s_total
+    sys.stdout.write(
+        f"\n  grad={s_grad:.4f}s  hess={s_hess:.4f}s  "
+        f"LS={s_ls:.4f}s  update={s_update:.4f}s  "
+        f"unaccounted={unaccounted:.4f}s  solve={solve_time:.4f}s\n"
+    )
+    sys.stdout.flush()
+
+
 # ---------------------------------------------------------------------------
 # Solver for a single mesh level
 # ---------------------------------------------------------------------------
@@ -142,6 +181,8 @@ def run_level(mesh_level, comm, verbose=True, coloring_trials=10,
     rank = comm.Get_rank()
     if verbose and rank == 0 and timing_report.get("iteration_details"):
         _print_timing_breakdown(timing_report, solve_time, solver)
+    if verbose and rank == 0 and result.get("history"):
+        _print_newton_breakdown(result["history"], solve_time, timing_report)
 
     # ---- cleanup PETSc objects ----
     x.destroy()

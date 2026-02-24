@@ -150,9 +150,13 @@ def newton(
     history = []
 
     for _ in range(maxit):
+        t_iter_start = time.perf_counter()
+
         # ---- gradient ----
+        t0 = time.perf_counter()
         gradient_fn(x, g)
         normg = g.norm(PETSc.NormType.NORM_2)
+        t_grad = time.perf_counter() - t0
 
         if normg < tolg:
             message = "Gradient norm converged"
@@ -161,11 +165,14 @@ def newton(
         nit += 1
 
         # ---- Hessian solve: H h = −g  (h is the descent direction) ----
+        t0 = time.perf_counter()
         g.scale(-1.0)
         ksp_its = hessian_solve_fn(x, g, h)
         ghost_update_fn(h)
+        t_hess = time.perf_counter() - t0
 
         # ---- line search: minimise  J(x + α h) ----
+        t0 = time.perf_counter()
         ls_a, ls_b = linesearch_interval
 
         def _energy_at_alpha(alpha):
@@ -193,13 +200,17 @@ def newton(
                     alpha = alpha_bt
                     break
                 alpha_bt *= 0.5
+        t_ls = time.perf_counter() - t0
 
         # ---- update ----
+        t0 = time.perf_counter()
         x.axpy(alpha, h)
         ghost_update_fn(x)
 
         fx_old = fx
         fx = energy_fn(x)
+        t_update = time.perf_counter() - t0
+        t_iter_total = time.perf_counter() - t_iter_start
 
         if verbose and rank == 0:
             print(
@@ -217,6 +228,11 @@ def newton(
                 "alpha": float(alpha),
                 "ksp_its": int(ksp_its),
                 "ls_evals": int(ls_evals),
+                "t_grad": float(t_grad),
+                "t_hess": float(t_hess),
+                "t_ls": float(t_ls),
+                "t_update": float(t_update),
+                "t_iter": float(t_iter_total),
             })
 
         if abs(fx - fx_old) < tolf:

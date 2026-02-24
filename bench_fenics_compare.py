@@ -109,11 +109,12 @@ result = newton(
     tolf=1e-5, tolg=1e-3, linesearch_tol=1e-3,
     linesearch_interval=(-0.5, 2.0), maxit=100,
     verbose=True, comm=comm, ghost_update_fn=_ghost_update,
+    save_history=True,
 )
 total = time.perf_counter() - t_start
 
 if rank == 0:
-    print(f"\nPer-iteration breakdown:")
+    print(f"\nPer-iteration breakdown (hessian_solve_fn):")
     print(f"  {'It':>3s} {'assembly':>10s} {'KSP':>10s} {'KSP it':>7s}")
     print("  " + "-" * 34)
     for i, d in enumerate(_hess_timings):
@@ -122,9 +123,24 @@ if rank == 0:
     ksp_sum = sum(d["ksp"] for d in _hess_timings)
     print("  " + "-" * 34)
     print(f"  SUM {asm_sum:10.4f} {ksp_sum:10.4f}")
-    hess_tot = asm_sum + ksp_sum
-    other = total - hess_tot
-    print(f"\n  Hessian total: {hess_tot:.4f}s | Other: {other:.4f}s | Solve: {total:.4f}s")
+
+    # Newton-level breakdown (from history)
+    hist = result.get("history", [])
+    if hist:
+        print(f"\n  Newton-level breakdown:")
+        print(f"  {'It':>3s} {'grad':>8s} {'hess':>8s} {'LS':>8s} {'update':>8s} {'ls_ev':>6s} {'iter':>8s}")
+        print("  " + "-" * 52)
+        s_grad = s_hess = s_ls = s_update = 0.0
+        for h in hist:
+            s_grad += h["t_grad"]; s_hess += h["t_hess"]
+            s_ls += h["t_ls"]; s_update += h["t_update"]
+            print(f"  {h['it']:3d} {h['t_grad']:8.4f} {h['t_hess']:8.4f} "
+                  f"{h['t_ls']:8.4f} {h['t_update']:8.4f} {h['ls_evals']:6d} {h['t_iter']:8.4f}")
+        print("  " + "-" * 52)
+        print(f"  SUM {s_grad:8.4f} {s_hess:8.4f} {s_ls:8.4f} {s_update:8.4f}")
+        print(f"\n  grad={s_grad:.4f}s  hess={s_hess:.4f}s  LS={s_ls:.4f}s  "
+              f"update={s_update:.4f}s  solve={total:.4f}s")
+
     print(f"  iters={result['nit']}, J(u)={result['fun']:.6f}")
 
 ksp.destroy()
