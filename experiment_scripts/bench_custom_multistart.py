@@ -13,19 +13,21 @@ Two A² strategies are benchmarked:
 Usage:
     mpirun -n 16 python bench_custom_multistart.py
 """
-import sys, os, time
+from graph_coloring.mesh_loader import PROBLEMS, load_adjacency
+from graph_coloring.coloring_custom import _get_lib, _i32, _ptr
+import ctypes
+import numpy as np
+from mpi4py import MPI
+import sys
+import os
+import time
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from mpi4py import MPI
-import numpy as np
-import ctypes
 
 comm = MPI.COMM_WORLD
 rank = comm.Get_rank()
 size = comm.Get_size()
 
-from graph_coloring.coloring_custom import _get_lib, _i32, _ptr
-from graph_coloring.mesh_loader import PROBLEMS, load_adjacency
 
 # Serialise .so compilation: only rank 0 triggers build, then barrier
 if rank == 0:
@@ -40,7 +42,7 @@ def build_A2_scipy(h5_path, comm):
     if rank == 0:
         import scipy.sparse as sp
         A = load_adjacency(h5_path)
-        A2 = sp.csc_matrix(A @ A)
+        A2 = sp.csr_matrix(A @ A)  # CSR — A² is symmetric, skip CSC conversion
         n = np.int32(A2.shape[0])
         indptr = _i32(A2.indptr)
         indices = _i32(A2.indices)
@@ -123,13 +125,12 @@ def build_A2_petsc(h5_path, comm):
     # Gather full A² to every rank
     A2_red = A2_pet.getRedundantMatrix(size)
 
-    # Extract CSR then convert to CSC
+    # Extract CSR directly — A² is symmetric, no CSC conversion needed
     ai2, aj2, av2 = A2_red.getValuesCSR()
     A2_csr = sp.csr_matrix((np.ones(len(aj2)), aj2, ai2), shape=(n, n))
-    A2_csc = sp.csc_matrix(A2_csr)
 
-    indptr = _i32(A2_csc.indptr)
-    indices = _i32(A2_csc.indices)
+    indptr = _i32(A2_csr.indptr)
+    indices = _i32(A2_csr.indices)
 
     A_pet.destroy()
     A2_pet.destroy()
@@ -185,9 +186,9 @@ for prob_name, lvl in BENCHMARKS:
     all_tc_petsc = comm.gather(t_color_petsc, root=0)
 
     if rank == 0:
-        print(f"\n{'='*70}")
+        print(f"\n{'=' * 70}")
         print(f"  {prob_name} level {lvl}  (N={n:,}, np={size})")
-        print(f"{'='*70}")
+        print(f"{'=' * 70}")
 
         print(f"\n  SciPy (rank 0 compute + Bcast):")
         print(f"    A² setup: {t_scipy:.4f} s")

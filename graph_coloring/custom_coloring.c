@@ -2,11 +2,12 @@
  * Custom greedy graph coloring: "most colored neighbors" vertex-selection
  * heuristic.  Faithful C translation of the MATLAB my_greedy_color2 function.
  *
- * The algorithm operates on A^2 (in CSC format, including diagonal) and
- * greedily colours vertices, always choosing the uncoloured vertex among the
- * current vertex's A^2-neighbours that has the most already-coloured
- * neighbours.  When all local neighbours are already coloured, it falls back
- * to a global search for the most constrained uncoloured vertex.
+ * The algorithm operates on A^2 (in CSC or CSR format — A^2 is symmetric so
+ * both give identical structure).  It greedily colours vertices, always
+ * choosing the uncoloured vertex among the current vertex's A^2-neighbours
+ * that has the most already-coloured neighbours.  When all local neighbours
+ * are already coloured, it falls back to a global search for the most
+ * constrained uncoloured vertex.
  *
  * Compile:
  *   gcc -O3 -march=native -shared -fPIC -o custom_coloring.so custom_coloring.c
@@ -25,8 +26,8 @@
 /*                                                                     */
 /*  Input                                                              */
 /*    n       – number of vertices                                     */
-/*    indptr  – CSC column pointers  (n+1 entries, int32)              */
-/*    indices – CSC row indices      (nnz entries, int32)              */
+/*    indptr  – CSR/CSC pointers     (n+1 entries, int32)              */
+/*    indices – CSR/CSC indices       (nnz entries, int32)              */
 /*                                                                     */
 /*  Output                                                             */
 /*    colors  – 0-based colour for each vertex (n entries, int32)      */

@@ -5,14 +5,17 @@ Measure A² setup and greedy coloring times separately for the Custom C backend.
 Usage:
     python bench_serial_split_timing.py
 """
-import sys, os, time, json
+from graph_coloring.mesh_loader import PROBLEMS, load_adjacency
+from graph_coloring.coloring_custom import _get_lib, _i32, _ptr
+import ctypes
+import scipy.sparse as sp
+import numpy as np
+import sys
+import os
+import time
+import json
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-import numpy as np
-import scipy.sparse as sp
-import ctypes
-from graph_coloring.coloring_custom import _get_lib, _i32, _ptr
-from graph_coloring.mesh_loader import PROBLEMS, load_adjacency
 
 lib = _get_lib()
 
@@ -25,9 +28,9 @@ BENCHMARKS = {
 results = {}
 
 for prob_name, levels in BENCHMARKS.items():
-    print(f"\n{'='*70}")
+    print(f"\n{'=' * 70}")
     print(f"  {prob_name}")
-    print(f"{'='*70}")
+    print(f"{'=' * 70}")
     print(f"  {'Level':>5}  {'N':>10}  {'A² (s)':>10}  {'Greedy (s)':>10}  {'Total (s)':>10}  {'Colors':>6}")
 
     prob_results = []
@@ -39,9 +42,9 @@ for prob_name, levels in BENCHMARKS.items():
 
         A = load_adjacency(h5)
 
-        # Time A² computation
+        # Time A² computation (CSR — A² is symmetric, skip CSC conversion)
         t0 = time.perf_counter()
-        A2 = sp.csc_matrix(A @ A)
+        A2 = sp.csr_matrix(A @ A)
         t_a2 = time.perf_counter() - t0
 
         n = A2.shape[0]

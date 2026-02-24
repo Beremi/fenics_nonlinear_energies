@@ -223,18 +223,37 @@ fewest colors across all ranks.
 | ------ | --- | --- | --- | --- | --- | ------ | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | Colors | 70  | 69  | 69  | 69  | 70  | **68** | 69  | 70  | 70  | 69  | 70  | 69  | 69  | 70  | 69  | 69  |
 
-### A² computation: SciPy vs PETSc
+### A² computation: method comparison (np = 16)
 
-| Problem           | SciPy (rank 0 + Bcast) | PETSc (par. matmult + gather) | Ratio |
-| ----------------- | ---------------------: | ----------------------------: | ----: |
-| pLaplace 2D lvl 9 |                 0.40 s |                        2.26 s |  5.7× |
-| GL 2D lvl 9       |                 0.71 s |                        3.09 s |  4.4× |
-| HE 3D lvl 4       |                 3.37 s |                       10.90 s |  3.2× |
+$A^2$ is symmetric, so CSR ≡ CSC structurally.  Using CSR avoids
+the costly CSC conversion (~15–20 % faster).
 
-PETSc's `matMult` distributes the computation across ranks, but each rank
-still needs the full $A^2$ locally (gathered via `getRedundantMatrix`).
-The gather overhead plus PETSc matrix setup makes it slower than
-simply computing $A^2$ on rank 0 with SciPy and broadcasting the CSC arrays.
+| Method | pL lvl 9 (s) | GL lvl 9 (s) | HE lvl 4 (s) |
+| ------ | -----------: | -----------: | -----------: |
+| **scipy CSR rank 0 + Bcast** | **0.31** | **0.54** | **2.73** |
+| scipy CSC rank 0 + Bcast | 0.38 | 0.70 | 3.08 |
+| scipy bool + Bcast | 0.39 | 0.76 | 3.78 |
+| scipy int8 + Bcast | 0.56 | 0.73 | 3.66 |
+| scipy each rank (redundant) | 1.11 | 1.50 | 5.31 |
+| PETSc serial rank 0 + Bcast | 0.50 | 0.72 | 3.15 |
+| PETSc symbolic rank 0 + Bcast | 0.48 | 0.72 | 3.34 |
+| PETSc par. matMult + gather | 1.56 | 1.93 | 8.58 |
+| PETSc par. matMult (fill=2) | 1.54 | 1.77 | 8.69 |
+| PETSc par. $A^T A$ + gather | 1.91 | 2.66 | 10.96 |
+
+**Findings:**
+- **SciPy CSR on rank 0 + MPI Bcast is the fastest approach** in all cases.
+  The CSR→CSC conversion is unnecessary because $A^2$ is symmetric.
+- **PETSc serial (rank 0) + Bcast** is the best PETSc option, only 10–20 %
+  slower than SciPy.  PETSc's "symbolic-only" product shows no improvement
+  over full `matMult` (the symbolic phase dominates anyway).
+- **PETSc distributed matMult + `getRedundantMatrix`** is 3–5× slower.
+  The overhead from matrix distribution, communication, and the all-to-all
+  gather exceeds any parallel compute benefit.
+- Using `bool` or `int8` dtypes instead of `float64` does not help — the
+  bottleneck is index processing, not arithmetic.
+- Redundant scipy on all ranks is ~2× slower than rank-0 + Bcast, confirming
+  that Bcast of the CSR arrays is worth it.
 
 ---
 
