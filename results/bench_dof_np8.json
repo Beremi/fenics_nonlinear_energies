@@ -1,0 +1,41 @@
+{
+  "level": 9,
+  "n_free": 784385,
+  "n_elems": 1572864,
+  "n_total": 788481,
+  "nprocs": 8,
+  "ncpus": 32,
+  "threads_per_rank": 4,
+  "serial": {
+    "energy_ms": 30.085,
+    "grad_ms": 140.695,
+    "hvp_ms": 217.993
+  },
+  "dof_partitioned": {
+    "energy_ms": 7.951,
+    "grad_ms": 14.468,
+    "hvp_ms": 23.893,
+    "energy_median_ms": 8.469,
+    "grad_median_ms": 15.302,
+    "hvp_median_ms": 24.986
+  },
+  "dof_partition_info": {
+    "n_owned": 98049,
+    "n_local_elems": 197427,
+    "n_local_nodes": 99380,
+    "n_unique_elems": 197427
+  },
+  "dof_setup_timings": {
+    "numpy_convert": 0.0155,
+    "rcm_reorder": 0.0723,
+    "partition_build": 0.1081,
+    "total_setup_partition": 0.1959,
+    "jax_convert": 0.0264,
+    "jit": 0.379
+  },
+  "breakdown": {
+    "allgatherv_ms": 1.91,
+    "local_grad_compute_ms": 7.912,
+    "local_hvp_compute_ms": 13.848
+  }
+}

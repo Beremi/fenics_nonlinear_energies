@@ -1,0 +1,278 @@
+[
+  {
+    "mesh_level": 5,
+    "n_free": 2945,
+    "n_elems": 6144,
+    "nprocs": 1,
+    "n_repeats": 10,
+    "serial": {
+      "energy_ms": 0.064,
+      "grad_ms": 0.08,
+      "hvp_ms": 0.309
+    },
+    "parallel": [
+      {
+        "n_partitions": 1,
+        "parts_per_rank": 1,
+        "setup_time": 0.0998,
+        "energy_ms": 0.084,
+        "grad_ms": 0.077,
+        "hvp_ms": 0.143,
+        "speedup_energy": 0.764,
+        "speedup_grad": 1.047,
+        "speedup_hvp": 2.161
+      },
+      {
+        "n_partitions": 2,
+        "parts_per_rank": 2,
+        "setup_time": 0.2151,
+        "energy_ms": 0.13,
+        "grad_ms": 0.124,
+        "hvp_ms": 0.223,
+        "speedup_energy": 0.492,
+        "speedup_grad": 0.651,
+        "speedup_hvp": 1.385
+      },
+      {
+        "n_partitions": 4,
+        "parts_per_rank": 4,
+        "setup_time": 0.4315,
+        "energy_ms": 0.16,
+        "grad_ms": 0.143,
+        "hvp_ms": 0.271,
+        "speedup_energy": 0.401,
+        "speedup_grad": 0.564,
+        "speedup_hvp": 1.143
+      },
+      {
+        "n_partitions": 8,
+        "parts_per_rank": 8,
+        "setup_time": 0.7837,
+        "energy_ms": 0.338,
+        "grad_ms": 0.369,
+        "hvp_ms": 0.587,
+        "speedup_energy": 0.19,
+        "speedup_grad": 0.218,
+        "speedup_hvp": 0.527
+      },
+      {
+        "n_partitions": 16,
+        "parts_per_rank": 16,
+        "setup_time": 1.438,
+        "energy_ms": 0.418,
+        "grad_ms": 0.421,
+        "hvp_ms": 0.742,
+        "speedup_energy": 0.153,
+        "speedup_grad": 0.191,
+        "speedup_hvp": 0.417
+      }
+    ]
+  },
+  {
+    "mesh_level": 6,
+    "n_free": 12033,
+    "n_elems": 24576,
+    "nprocs": 1,
+    "n_repeats": 10,
+    "serial": {
+      "energy_ms": 0.073,
+      "grad_ms": 0.185,
+      "hvp_ms": 0.454
+    },
+    "parallel": [
+      {
+        "n_partitions": 1,
+        "parts_per_rank": 1,
+        "setup_time": 0.1154,
+        "energy_ms": 0.117,
+        "grad_ms": 0.157,
+        "hvp_ms": 0.294,
+        "speedup_energy": 0.624,
+        "speedup_grad": 1.179,
+        "speedup_hvp": 1.544
+      },
+      {
+        "n_partitions": 2,
+        "parts_per_rank": 2,
+        "setup_time": 0.2485,
+        "energy_ms": 0.208,
+        "grad_ms": 0.28,
+        "hvp_ms": 0.559,
+        "speedup_energy": 0.35,
+        "speedup_grad": 0.66,
+        "speedup_hvp": 0.812
+      },
+      {
+        "n_partitions": 4,
+        "parts_per_rank": 4,
+        "setup_time": 0.4157,
+        "energy_ms": 0.416,
+        "grad_ms": 0.462,
+        "hvp_ms": 0.836,
+        "speedup_energy": 0.175,
+        "speedup_grad": 0.4,
+        "speedup_hvp": 0.542
+      },
+      {
+        "n_partitions": 8,
+        "parts_per_rank": 8,
+        "setup_time": 0.7537,
+        "energy_ms": 0.557,
+        "grad_ms": 0.558,
+        "hvp_ms": 0.843,
+        "speedup_energy": 0.131,
+        "speedup_grad": 0.331,
+        "speedup_hvp": 0.538
+      },
+      {
+        "n_partitions": 16,
+        "parts_per_rank": 16,
+        "setup_time": 1.4853,
+        "energy_ms": 0.66,
+        "grad_ms": 0.64,
+        "hvp_ms": 1.193,
+        "speedup_energy": 0.111,
+        "speedup_grad": 0.289,
+        "speedup_hvp": 0.38
+      }
+    ]
+  },
+  {
+    "mesh_level": 7,
+    "n_free": 48641,
+    "n_elems": 98304,
+    "nprocs": 1,
+    "n_repeats": 10,
+    "serial": {
+      "energy_ms": 0.321,
+      "grad_ms": 0.418,
+      "hvp_ms": 0.93
+    },
+    "parallel": [
+      {
+        "n_partitions": 1,
+        "parts_per_rank": 1,
+        "setup_time": 0.2151,
+        "energy_ms": 0.334,
+        "grad_ms": 0.622,
+        "hvp_ms": 0.912,
+        "speedup_energy": 0.96,
+        "speedup_grad": 0.672,
+        "speedup_hvp": 1.02
+      },
+      {
+        "n_partitions": 2,
+        "parts_per_rank": 2,
+        "setup_time": 0.3117,
+        "energy_ms": 0.444,
+        "grad_ms": 0.675,
+        "hvp_ms": 1.17,
+        "speedup_energy": 0.723,
+        "speedup_grad": 0.619,
+        "speedup_hvp": 0.795
+      },
+      {
+        "n_partitions": 4,
+        "parts_per_rank": 4,
+        "setup_time": 0.4729,
+        "energy_ms": 0.643,
+        "grad_ms": 1.035,
+        "hvp_ms": 1.735,
+        "speedup_energy": 0.498,
+        "speedup_grad": 0.404,
+        "speedup_hvp": 0.536
+      },
+      {
+        "n_partitions": 8,
+        "parts_per_rank": 8,
+        "setup_time": 0.8301,
+        "energy_ms": 0.942,
+        "grad_ms": 1.158,
+        "hvp_ms": 2.157,
+        "speedup_energy": 0.34,
+        "speedup_grad": 0.361,
+        "speedup_hvp": 0.431
+      },
+      {
+        "n_partitions": 16,
+        "parts_per_rank": 16,
+        "setup_time": 1.4701,
+        "energy_ms": 1.42,
+        "grad_ms": 1.379,
+        "hvp_ms": 2.765,
+        "speedup_energy": 0.226,
+        "speedup_grad": 0.303,
+        "speedup_hvp": 0.336
+      }
+    ]
+  },
+  {
+    "mesh_level": 8,
+    "n_free": 195585,
+    "n_elems": 393216,
+    "nprocs": 1,
+    "n_repeats": 10,
+    "serial": {
+      "energy_ms": 1.265,
+      "grad_ms": 1.74,
+      "hvp_ms": 5.131
+    },
+    "parallel": [
+      {
+        "n_partitions": 1,
+        "parts_per_rank": 1,
+        "setup_time": 0.4399,
+        "energy_ms": 1.43,
+        "grad_ms": 2.939,
+        "hvp_ms": 4.228,
+        "speedup_energy": 0.885,
+        "speedup_grad": 0.592,
+        "speedup_hvp": 1.214
+      },
+      {
+        "n_partitions": 2,
+        "parts_per_rank": 2,
+        "setup_time": 0.5505,
+        "energy_ms": 1.383,
+        "grad_ms": 3.103,
+        "hvp_ms": 4.515,
+        "speedup_energy": 0.915,
+        "speedup_grad": 0.561,
+        "speedup_hvp": 1.136
+      },
+      {
+        "n_partitions": 4,
+        "parts_per_rank": 4,
+        "setup_time": 0.7171,
+        "energy_ms": 1.906,
+        "grad_ms": 3.007,
+        "hvp_ms": 5.239,
+        "speedup_energy": 0.664,
+        "speedup_grad": 0.579,
+        "speedup_hvp": 0.979
+      },
+      {
+        "n_partitions": 8,
+        "parts_per_rank": 8,
+        "setup_time": 1.0665,
+        "energy_ms": 1.751,
+        "grad_ms": 3.787,
+        "hvp_ms": 5.546,
+        "speedup_energy": 0.723,
+        "speedup_grad": 0.46,
+        "speedup_hvp": 0.925
+      },
+      {
+        "n_partitions": 16,
+        "parts_per_rank": 16,
+        "setup_time": 1.8792,
+        "energy_ms": 2.29,
+        "grad_ms": 4.972,
+        "hvp_ms": 6.678,
+        "speedup_energy": 0.553,
+        "speedup_grad": 0.35,
+        "speedup_hvp": 0.768
+      }
+    ]
+  }
+]

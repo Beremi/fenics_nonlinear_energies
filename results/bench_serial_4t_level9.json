@@ -1,0 +1,14 @@
+{
+  "level": 9,
+  "n_free": 784385,
+  "n_elems": 1572864,
+  "nthreads": 4,
+  "ncpus": 32,
+  "jit_time_s": 0.203,
+  "energy_ms": 4.033,
+  "grad_ms": 16.188,
+  "hvp_ms": 24.903,
+  "energy_median_ms": 4.325,
+  "grad_median_ms": 17.872,
+  "hvp_median_ms": 26.66
+}

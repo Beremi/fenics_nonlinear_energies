@@ -1,0 +1,674 @@
+[
+  {
+    "mesh_level": 5,
+    "n_free": 2945,
+    "n_elems": 6144,
+    "n_repeats": 5,
+    "serial": {
+      "jit_time": 0.1556,
+      "energy_ms": 0.069,
+      "grad_ms": 0.098,
+      "hvp_ms": 0.172
+    },
+    "partitioned": [
+      {
+        "n_partitions": 1,
+        "padded": false,
+        "setup_time": 0.0998,
+        "energy_ms": 0.131,
+        "grad_ms": 0.09,
+        "hvp_ms": 0.17,
+        "speedup_energy": 0.526,
+        "speedup_grad": 1.087,
+        "speedup_hvp": 1.011
+      },
+      {
+        "n_partitions": 2,
+        "padded": false,
+        "setup_time": 0.2257,
+        "energy_ms": 0.138,
+        "grad_ms": 0.097,
+        "hvp_ms": 0.19,
+        "speedup_energy": 0.499,
+        "speedup_grad": 1.013,
+        "speedup_hvp": 0.906
+      },
+      {
+        "n_partitions": 4,
+        "padded": false,
+        "setup_time": 0.4081,
+        "energy_ms": 0.246,
+        "grad_ms": 0.223,
+        "hvp_ms": 0.367,
+        "speedup_energy": 0.279,
+        "speedup_grad": 0.44,
+        "speedup_hvp": 0.469
+      },
+      {
+        "n_partitions": 8,
+        "padded": false,
+        "setup_time": 0.7591,
+        "energy_ms": 0.294,
+        "grad_ms": 0.261,
+        "hvp_ms": 0.467,
+        "speedup_energy": 0.234,
+        "speedup_grad": 0.376,
+        "speedup_hvp": 0.369
+      },
+      {
+        "n_partitions": 16,
+        "padded": false,
+        "setup_time": 1.4756,
+        "energy_ms": 0.629,
+        "grad_ms": 0.676,
+        "hvp_ms": 1.041,
+        "speedup_energy": 0.109,
+        "speedup_grad": 0.145,
+        "speedup_hvp": 0.165
+      },
+      {
+        "n_partitions": 32,
+        "padded": false,
+        "setup_time": 2.9339,
+        "energy_ms": 0.83,
+        "grad_ms": 0.796,
+        "hvp_ms": 1.363,
+        "speedup_energy": 0.083,
+        "speedup_grad": 0.124,
+        "speedup_hvp": 0.126
+      },
+      {
+        "n_partitions": 64,
+        "padded": false,
+        "setup_time": 5.9718,
+        "energy_ms": 2.117,
+        "grad_ms": 2.332,
+        "hvp_ms": 3.545,
+        "speedup_energy": 0.032,
+        "speedup_grad": 0.042,
+        "speedup_hvp": 0.049
+      },
+      {
+        "n_partitions": 1,
+        "padded": true,
+        "setup_time": 0.2563,
+        "energy_ms": 0.143,
+        "grad_ms": 0.103,
+        "hvp_ms": 0.188,
+        "speedup_energy": 0.479,
+        "speedup_grad": 0.955,
+        "speedup_hvp": 0.918
+      },
+      {
+        "n_partitions": 2,
+        "padded": true,
+        "setup_time": 0.1953,
+        "energy_ms": 0.148,
+        "grad_ms": 0.11,
+        "hvp_ms": 0.211,
+        "speedup_energy": 0.464,
+        "speedup_grad": 0.896,
+        "speedup_hvp": 0.817
+      },
+      {
+        "n_partitions": 4,
+        "padded": true,
+        "setup_time": 0.3713,
+        "energy_ms": 0.204,
+        "grad_ms": 0.166,
+        "hvp_ms": 0.306,
+        "speedup_energy": 0.337,
+        "speedup_grad": 0.592,
+        "speedup_hvp": 0.564
+      },
+      {
+        "n_partitions": 8,
+        "padded": true,
+        "setup_time": 0.7499,
+        "energy_ms": 0.302,
+        "grad_ms": 0.273,
+        "hvp_ms": 0.488,
+        "speedup_energy": 0.227,
+        "speedup_grad": 0.36,
+        "speedup_hvp": 0.353
+      },
+      {
+        "n_partitions": 16,
+        "padded": true,
+        "setup_time": 1.4467,
+        "energy_ms": 0.624,
+        "grad_ms": 0.675,
+        "hvp_ms": 1.047,
+        "speedup_energy": 0.11,
+        "speedup_grad": 0.146,
+        "speedup_hvp": 0.165
+      },
+      {
+        "n_partitions": 32,
+        "padded": true,
+        "setup_time": 2.8927,
+        "energy_ms": 1.128,
+        "grad_ms": 0.905,
+        "hvp_ms": 1.893,
+        "speedup_energy": 0.061,
+        "speedup_grad": 0.109,
+        "speedup_hvp": 0.091
+      },
+      {
+        "n_partitions": 64,
+        "padded": true,
+        "setup_time": 5.9729,
+        "energy_ms": 1.502,
+        "grad_ms": 1.514,
+        "hvp_ms": 2.602,
+        "speedup_energy": 0.046,
+        "speedup_grad": 0.065,
+        "speedup_hvp": 0.066
+      }
+    ]
+  },
+  {
+    "mesh_level": 6,
+    "n_free": 12033,
+    "n_elems": 24576,
+    "n_repeats": 5,
+    "serial": {
+      "jit_time": 0.1613,
+      "energy_ms": 0.099,
+      "grad_ms": 0.203,
+      "hvp_ms": 0.176
+    },
+    "partitioned": [
+      {
+        "n_partitions": 1,
+        "padded": false,
+        "setup_time": 0.1274,
+        "energy_ms": 0.333,
+        "grad_ms": 0.247,
+        "hvp_ms": 0.385,
+        "speedup_energy": 0.296,
+        "speedup_grad": 0.822,
+        "speedup_hvp": 0.456
+      },
+      {
+        "n_partitions": 2,
+        "padded": false,
+        "setup_time": 0.2595,
+        "energy_ms": 0.3,
+        "grad_ms": 0.322,
+        "hvp_ms": 0.604,
+        "speedup_energy": 0.328,
+        "speedup_grad": 0.631,
+        "speedup_hvp": 0.291
+      },
+      {
+        "n_partitions": 4,
+        "padded": false,
+        "setup_time": 0.4339,
+        "energy_ms": 0.53,
+        "grad_ms": 0.492,
+        "hvp_ms": 0.899,
+        "speedup_energy": 0.186,
+        "speedup_grad": 0.413,
+        "speedup_hvp": 0.195
+      },
+      {
+        "n_partitions": 8,
+        "padded": false,
+        "setup_time": 0.8276,
+        "energy_ms": 0.603,
+        "grad_ms": 0.549,
+        "hvp_ms": 1.042,
+        "speedup_energy": 0.163,
+        "speedup_grad": 0.37,
+        "speedup_hvp": 0.169
+      },
+      {
+        "n_partitions": 16,
+        "padded": false,
+        "setup_time": 1.5613,
+        "energy_ms": 0.687,
+        "grad_ms": 0.631,
+        "hvp_ms": 1.212,
+        "speedup_energy": 0.143,
+        "speedup_grad": 0.322,
+        "speedup_hvp": 0.145
+      },
+      {
+        "n_partitions": 32,
+        "padded": false,
+        "setup_time": 2.9103,
+        "energy_ms": 1.104,
+        "grad_ms": 1.078,
+        "hvp_ms": 1.902,
+        "speedup_energy": 0.089,
+        "speedup_grad": 0.188,
+        "speedup_hvp": 0.092
+      },
+      {
+        "n_partitions": 64,
+        "padded": false,
+        "setup_time": 5.895,
+        "energy_ms": 2.446,
+        "grad_ms": 1.905,
+        "hvp_ms": 3.917,
+        "speedup_energy": 0.04,
+        "speedup_grad": 0.107,
+        "speedup_hvp": 0.045
+      },
+      {
+        "n_partitions": 1,
+        "padded": true,
+        "setup_time": 0.2879,
+        "energy_ms": 0.221,
+        "grad_ms": 0.251,
+        "hvp_ms": 0.462,
+        "speedup_energy": 0.446,
+        "speedup_grad": 0.808,
+        "speedup_hvp": 0.381
+      },
+      {
+        "n_partitions": 2,
+        "padded": true,
+        "setup_time": 0.207,
+        "energy_ms": 0.277,
+        "grad_ms": 0.29,
+        "hvp_ms": 0.566,
+        "speedup_energy": 0.355,
+        "speedup_grad": 0.7,
+        "speedup_hvp": 0.31
+      },
+      {
+        "n_partitions": 4,
+        "padded": true,
+        "setup_time": 0.3941,
+        "energy_ms": 0.526,
+        "grad_ms": 0.492,
+        "hvp_ms": 0.891,
+        "speedup_energy": 0.187,
+        "speedup_grad": 0.413,
+        "speedup_hvp": 0.197
+      },
+      {
+        "n_partitions": 8,
+        "padded": true,
+        "setup_time": 0.7241,
+        "energy_ms": 0.601,
+        "grad_ms": 0.543,
+        "hvp_ms": 1.018,
+        "speedup_energy": 0.164,
+        "speedup_grad": 0.374,
+        "speedup_hvp": 0.173
+      },
+      {
+        "n_partitions": 16,
+        "padded": true,
+        "setup_time": 1.4226,
+        "energy_ms": 0.946,
+        "grad_ms": 0.967,
+        "hvp_ms": 1.615,
+        "speedup_energy": 0.104,
+        "speedup_grad": 0.21,
+        "speedup_hvp": 0.109
+      },
+      {
+        "n_partitions": 32,
+        "padded": true,
+        "setup_time": 2.9355,
+        "energy_ms": 1.142,
+        "grad_ms": 1.077,
+        "hvp_ms": 1.952,
+        "speedup_energy": 0.086,
+        "speedup_grad": 0.189,
+        "speedup_hvp": 0.09
+      },
+      {
+        "n_partitions": 64,
+        "padded": true,
+        "setup_time": 5.937,
+        "energy_ms": 1.77,
+        "grad_ms": 1.71,
+        "hvp_ms": 3.402,
+        "speedup_energy": 0.056,
+        "speedup_grad": 0.119,
+        "speedup_hvp": 0.052
+      }
+    ]
+  },
+  {
+    "mesh_level": 7,
+    "n_free": 48641,
+    "n_elems": 98304,
+    "n_repeats": 5,
+    "serial": {
+      "jit_time": 0.1697,
+      "energy_ms": 0.263,
+      "grad_ms": 0.421,
+      "hvp_ms": 0.162
+    },
+    "partitioned": [
+      {
+        "n_partitions": 1,
+        "padded": false,
+        "setup_time": 0.194,
+        "energy_ms": 0.425,
+        "grad_ms": 0.526,
+        "hvp_ms": 0.814,
+        "speedup_energy": 0.618,
+        "speedup_grad": 0.8,
+        "speedup_hvp": 0.198
+      },
+      {
+        "n_partitions": 2,
+        "padded": false,
+        "setup_time": 0.3001,
+        "energy_ms": 0.577,
+        "grad_ms": 0.666,
+        "hvp_ms": 1.108,
+        "speedup_energy": 0.455,
+        "speedup_grad": 0.632,
+        "speedup_hvp": 0.146
+      },
+      {
+        "n_partitions": 4,
+        "padded": false,
+        "setup_time": 0.4984,
+        "energy_ms": 0.787,
+        "grad_ms": 1.067,
+        "hvp_ms": 2.017,
+        "speedup_energy": 0.334,
+        "speedup_grad": 0.395,
+        "speedup_hvp": 0.08
+      },
+      {
+        "n_partitions": 8,
+        "padded": false,
+        "setup_time": 0.8772,
+        "energy_ms": 1.133,
+        "grad_ms": 1.563,
+        "hvp_ms": 3.01,
+        "speedup_energy": 0.232,
+        "speedup_grad": 0.269,
+        "speedup_hvp": 0.054
+      },
+      {
+        "n_partitions": 16,
+        "padded": false,
+        "setup_time": 1.6407,
+        "energy_ms": 1.956,
+        "grad_ms": 2.284,
+        "hvp_ms": 3.898,
+        "speedup_energy": 0.134,
+        "speedup_grad": 0.184,
+        "speedup_hvp": 0.041
+      },
+      {
+        "n_partitions": 32,
+        "padded": false,
+        "setup_time": 3.1325,
+        "energy_ms": 2.457,
+        "grad_ms": 2.517,
+        "hvp_ms": 4.491,
+        "speedup_energy": 0.107,
+        "speedup_grad": 0.167,
+        "speedup_hvp": 0.036
+      },
+      {
+        "n_partitions": 64,
+        "padded": false,
+        "setup_time": 6.1767,
+        "energy_ms": 3.502,
+        "grad_ms": 2.728,
+        "hvp_ms": 5.022,
+        "speedup_energy": 0.075,
+        "speedup_grad": 0.154,
+        "speedup_hvp": 0.032
+      },
+      {
+        "n_partitions": 1,
+        "padded": true,
+        "setup_time": 0.3588,
+        "energy_ms": 0.646,
+        "grad_ms": 0.705,
+        "hvp_ms": 1.018,
+        "speedup_energy": 0.407,
+        "speedup_grad": 0.597,
+        "speedup_hvp": 0.159
+      },
+      {
+        "n_partitions": 2,
+        "padded": true,
+        "setup_time": 0.288,
+        "energy_ms": 0.647,
+        "grad_ms": 0.905,
+        "hvp_ms": 1.392,
+        "speedup_energy": 0.406,
+        "speedup_grad": 0.465,
+        "speedup_hvp": 0.116
+      },
+      {
+        "n_partitions": 4,
+        "padded": true,
+        "setup_time": 0.4468,
+        "energy_ms": 0.801,
+        "grad_ms": 1.198,
+        "hvp_ms": 2.018,
+        "speedup_energy": 0.328,
+        "speedup_grad": 0.351,
+        "speedup_hvp": 0.08
+      },
+      {
+        "n_partitions": 8,
+        "padded": true,
+        "setup_time": 0.8902,
+        "energy_ms": 1.133,
+        "grad_ms": 1.457,
+        "hvp_ms": 2.741,
+        "speedup_energy": 0.232,
+        "speedup_grad": 0.289,
+        "speedup_hvp": 0.059
+      },
+      {
+        "n_partitions": 16,
+        "padded": true,
+        "setup_time": 1.5275,
+        "energy_ms": 1.606,
+        "grad_ms": 1.571,
+        "hvp_ms": 3.333,
+        "speedup_energy": 0.164,
+        "speedup_grad": 0.268,
+        "speedup_hvp": 0.048
+      },
+      {
+        "n_partitions": 32,
+        "padded": true,
+        "setup_time": 3.1549,
+        "energy_ms": 2.134,
+        "grad_ms": 1.904,
+        "hvp_ms": 3.67,
+        "speedup_energy": 0.123,
+        "speedup_grad": 0.221,
+        "speedup_hvp": 0.044
+      },
+      {
+        "n_partitions": 64,
+        "padded": true,
+        "setup_time": 6.1373,
+        "energy_ms": 2.959,
+        "grad_ms": 2.647,
+        "hvp_ms": 4.926,
+        "speedup_energy": 0.089,
+        "speedup_grad": 0.159,
+        "speedup_hvp": 0.033
+      }
+    ]
+  },
+  {
+    "mesh_level": 8,
+    "n_free": 195585,
+    "n_elems": 393216,
+    "n_repeats": 5,
+    "serial": {
+      "jit_time": 0.1672,
+      "energy_ms": 1.447,
+      "grad_ms": 2.395,
+      "hvp_ms": 0.173
+    },
+    "partitioned": [
+      {
+        "n_partitions": 1,
+        "padded": false,
+        "setup_time": 0.4733,
+        "energy_ms": 1.532,
+        "grad_ms": 1.994,
+        "hvp_ms": 3.271,
+        "speedup_energy": 0.945,
+        "speedup_grad": 1.201,
+        "speedup_hvp": 0.053
+      },
+      {
+        "n_partitions": 2,
+        "padded": false,
+        "setup_time": 0.5406,
+        "energy_ms": 1.829,
+        "grad_ms": 2.931,
+        "hvp_ms": 4.276,
+        "speedup_energy": 0.791,
+        "speedup_grad": 0.817,
+        "speedup_hvp": 0.041
+      },
+      {
+        "n_partitions": 4,
+        "padded": false,
+        "setup_time": 0.7367,
+        "energy_ms": 1.89,
+        "grad_ms": 3.844,
+        "hvp_ms": 5.347,
+        "speedup_energy": 0.766,
+        "speedup_grad": 0.623,
+        "speedup_hvp": 0.032
+      },
+      {
+        "n_partitions": 8,
+        "padded": false,
+        "setup_time": 1.1239,
+        "energy_ms": 2.339,
+        "grad_ms": 4.082,
+        "hvp_ms": 6.687,
+        "speedup_energy": 0.619,
+        "speedup_grad": 0.587,
+        "speedup_hvp": 0.026
+      },
+      {
+        "n_partitions": 16,
+        "padded": false,
+        "setup_time": 1.9248,
+        "energy_ms": 3.634,
+        "grad_ms": 5.8,
+        "hvp_ms": 9.36,
+        "speedup_energy": 0.398,
+        "speedup_grad": 0.413,
+        "speedup_hvp": 0.019
+      },
+      {
+        "n_partitions": 32,
+        "padded": false,
+        "setup_time": 3.5338,
+        "energy_ms": 4.289,
+        "grad_ms": 6.469,
+        "hvp_ms": 11.89,
+        "speedup_energy": 0.337,
+        "speedup_grad": 0.37,
+        "speedup_hvp": 0.015
+      },
+      {
+        "n_partitions": 64,
+        "padded": false,
+        "setup_time": 6.4649,
+        "energy_ms": 6.347,
+        "grad_ms": 8.811,
+        "hvp_ms": 14.969,
+        "speedup_energy": 0.228,
+        "speedup_grad": 0.272,
+        "speedup_hvp": 0.012
+      },
+      {
+        "n_partitions": 1,
+        "padded": true,
+        "setup_time": 0.6009,
+        "energy_ms": 1.821,
+        "grad_ms": 2.296,
+        "hvp_ms": 4.261,
+        "speedup_energy": 0.794,
+        "speedup_grad": 1.043,
+        "speedup_hvp": 0.041
+      },
+      {
+        "n_partitions": 2,
+        "padded": true,
+        "setup_time": 0.5115,
+        "energy_ms": 1.491,
+        "grad_ms": 2.276,
+        "hvp_ms": 4.553,
+        "speedup_energy": 0.971,
+        "speedup_grad": 1.052,
+        "speedup_hvp": 0.038
+      },
+      {
+        "n_partitions": 4,
+        "padded": true,
+        "setup_time": 0.6945,
+        "energy_ms": 2.135,
+        "grad_ms": 3.737,
+        "hvp_ms": 5.685,
+        "speedup_energy": 0.678,
+        "speedup_grad": 0.641,
+        "speedup_hvp": 0.03
+      },
+      {
+        "n_partitions": 8,
+        "padded": true,
+        "setup_time": 1.0868,
+        "energy_ms": 2.634,
+        "grad_ms": 4.231,
+        "hvp_ms": 7.319,
+        "speedup_energy": 0.549,
+        "speedup_grad": 0.566,
+        "speedup_hvp": 0.024
+      },
+      {
+        "n_partitions": 16,
+        "padded": true,
+        "setup_time": 1.8861,
+        "energy_ms": 3.434,
+        "grad_ms": 4.825,
+        "hvp_ms": 8.67,
+        "speedup_energy": 0.421,
+        "speedup_grad": 0.496,
+        "speedup_hvp": 0.02
+      },
+      {
+        "n_partitions": 32,
+        "padded": true,
+        "setup_time": 3.5164,
+        "energy_ms": 3.61,
+        "grad_ms": 6.197,
+        "hvp_ms": 11.537,
+        "speedup_energy": 0.401,
+        "speedup_grad": 0.387,
+        "speedup_hvp": 0.015
+      },
+      {
+        "n_partitions": 64,
+        "padded": true,
+        "setup_time": 6.3698,
+        "energy_ms": 7.753,
+        "grad_ms": 8.066,
+        "hvp_ms": 13.742,
+        "speedup_energy": 0.187,
+        "speedup_grad": 0.297,
+        "speedup_hvp": 0.013
+      }
+    ]
+  }
+]

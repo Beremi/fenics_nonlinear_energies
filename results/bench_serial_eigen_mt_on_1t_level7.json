@@ -1,0 +1,16 @@
+{
+  "level": 7,
+  "n_free": 48641,
+  "n_elems": 98304,
+  "nthreads": 1,
+  "ncpus": 32,
+  "mode": "eigen_mt_on",
+  "eigen_mt_disabled": false,
+  "jit_time_s": 0.149,
+  "energy_ms": 0.247,
+  "grad_ms": 0.401,
+  "hvp_ms": 0.642,
+  "energy_median_ms": 0.254,
+  "grad_median_ms": 0.61,
+  "hvp_median_ms": 0.896
+}

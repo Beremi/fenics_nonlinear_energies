@@ -1,0 +1,121 @@
+{
+  "level": 9,
+  "n_free": 784385,
+  "n_elems": 1572864,
+  "nthreads": 1,
+  "serial_baseline": {
+    "energy_ms": 4.544,
+    "grad_ms": 15.902,
+    "hvp_ms": 26.228
+  },
+  "partitions": [
+    {
+      "n_parts": 1,
+      "n_local_elems": 1572862,
+      "n_local_nodes": 788479,
+      "n_owned": 784385,
+      "energy_ms": 3.718,
+      "grad_ms": 11.435,
+      "hvp_ms": 21.365,
+      "energy_ratio": 1.222,
+      "grad_ratio": 1.391,
+      "hvp_ratio": 1.228
+    },
+    {
+      "n_parts": 2,
+      "n_local_elems": 786943,
+      "n_local_nodes": 394752,
+      "n_owned": 392193,
+      "energy_ms": 1.277,
+      "grad_ms": 5.923,
+      "hvp_ms": 9.507,
+      "energy_ratio": 3.56,
+      "grad_ratio": 2.685,
+      "hvp_ratio": 2.759
+    },
+    {
+      "n_parts": 4,
+      "n_local_elems": 393983,
+      "n_local_nodes": 197888,
+      "n_owned": 196097,
+      "energy_ms": 0.649,
+      "grad_ms": 1.259,
+      "hvp_ms": 2.866,
+      "energy_ratio": 7.002,
+      "grad_ratio": 12.635,
+      "hvp_ratio": 9.15
+    },
+    {
+      "n_parts": 8,
+      "n_local_elems": 197427,
+      "n_local_nodes": 99380,
+      "n_owned": 98049,
+      "energy_ms": 0.336,
+      "grad_ms": 0.525,
+      "hvp_ms": 1.135,
+      "energy_ratio": 13.52,
+      "grad_ratio": 30.288,
+      "hvp_ratio": 23.099
+    },
+    {
+      "n_parts": 16,
+      "n_local_elems": 98989,
+      "n_local_nodes": 49966,
+      "n_owned": 49025,
+      "energy_ms": 0.177,
+      "grad_ms": 0.379,
+      "hvp_ms": 0.623,
+      "energy_ratio": 25.617,
+      "grad_ratio": 41.977,
+      "hvp_ratio": 42.088
+    },
+    {
+      "n_parts": 32,
+      "n_local_elems": 49689,
+      "n_local_nodes": 25178,
+      "n_owned": 24513,
+      "energy_ms": 0.112,
+      "grad_ms": 0.192,
+      "hvp_ms": 0.329,
+      "energy_ratio": 40.753,
+      "grad_ratio": 82.644,
+      "hvp_ratio": 79.753
+    },
+    {
+      "n_parts": 64,
+      "n_local_elems": 24985,
+      "n_local_nodes": 12730,
+      "n_owned": 12257,
+      "energy_ms": 0.068,
+      "grad_ms": 0.107,
+      "hvp_ms": 0.229,
+      "energy_ratio": 67.117,
+      "grad_ratio": 148.835,
+      "hvp_ratio": 114.748
+    },
+    {
+      "n_parts": 128,
+      "n_local_elems": 12591,
+      "n_local_nodes": 6464,
+      "n_owned": 6129,
+      "energy_ms": 0.066,
+      "grad_ms": 0.082,
+      "hvp_ms": 0.213,
+      "energy_ratio": 68.621,
+      "grad_ratio": 193.535,
+      "hvp_ratio": 123.176
+    },
+    {
+      "n_parts": 256,
+      "n_local_elems": 6364,
+      "n_local_nodes": 3301,
+      "n_owned": 3065,
+      "energy_ms": 0.054,
+      "grad_ms": 0.048,
+      "hvp_ms": 0.107,
+      "energy_ratio": 84.387,
+      "grad_ratio": 332.674,
+      "hvp_ratio": 244.284
+    }
+  ]
+}

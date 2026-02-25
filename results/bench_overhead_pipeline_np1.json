@@ -1,0 +1,88 @@
+{
+  "gradient_steps": {
+    "Barrier_sync": {
+      "min_ms": 0.0,
+      "med_ms": 0.0
+    },
+    "np_asarray_input": {
+      "min_ms": 0.001,
+      "med_ms": 0.001
+    },
+    "Allgatherv": {
+      "min_ms": 0.27,
+      "med_ms": 0.332
+    },
+    "build_v_local": {
+      "min_ms": 1.418,
+      "med_ms": 2.064
+    },
+    "jnp_array": {
+      "min_ms": 0.063,
+      "med_ms": 0.157
+    },
+    "grad_jit_compute": {
+      "min_ms": 11.413,
+      "med_ms": 12.762
+    },
+    "extract_owned": {
+      "min_ms": 1.125,
+      "med_ms": 1.34
+    },
+    "np_asarray_output": {
+      "min_ms": 0.31,
+      "med_ms": 0.408
+    }
+  },
+  "hvp_steps": {
+    "Barrier_sync": {
+      "min_ms": 0.0,
+      "med_ms": 0.0
+    },
+    "np_asarray_inputs": {
+      "min_ms": 0.001,
+      "med_ms": 0.001
+    },
+    "Allgatherv_u": {
+      "min_ms": 0.256,
+      "med_ms": 0.307
+    },
+    "Allgatherv_t": {
+      "min_ms": 0.241,
+      "med_ms": 0.311
+    },
+    "build_v_local": {
+      "min_ms": 1.463,
+      "med_ms": 2.437
+    },
+    "build_t_local": {
+      "min_ms": 1.507,
+      "med_ms": 2.2
+    },
+    "jnp_array_v": {
+      "min_ms": 0.072,
+      "med_ms": 0.346
+    },
+    "jnp_array_t": {
+      "min_ms": 0.022,
+      "med_ms": 0.043
+    },
+    "hvp_jit_compute": {
+      "min_ms": 19.346,
+      "med_ms": 21.447
+    },
+    "extract_owned": {
+      "min_ms": 1.087,
+      "med_ms": 1.279
+    },
+    "np_asarray_output": {
+      "min_ms": 0.008,
+      "med_ms": 0.012
+    }
+  },
+  "gradient_total_ms": 15.95,
+  "hvp_total_ms": 25.251,
+  "grad_sequential_ms": 10.739,
+  "grad_concurrent_ms": 11.131,
+  "hvp_sequential_ms": 19.392,
+  "hvp_concurrent_ms": 18.751
+}
