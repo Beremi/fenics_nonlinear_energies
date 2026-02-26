@@ -94,12 +94,26 @@ python3 HyperElasticity3D_fenics/solve_HE_snes_newton.py \
 
 **With Docker (from repository root):**
 ```bash
+# Serial (no special flags needed)
 docker run --rm --entrypoint "" -v "$PWD":/work -w /work fenics_test \
     python3 HyperElasticity3D_fenics/solve_HE_custom_jaxversion.py \
     --level 1 --steps 96 --total_steps 96 \
     --ksp_rtol 1e-1 --ksp_max_it 30 --pc_setup_on_ksp_cap \
     --quiet --out experiment_scripts/out_custom.json
+
+# Parallel — MUST use --shm-size for multi-process MPI (MPICH needs shared memory)
+docker run --rm --shm-size=8g --entrypoint mpirun -v "$PWD":/work -w /work fenics_test \
+    -n 16 python3 /work/HyperElasticity3D_fenics/solve_HE_custom_jaxversion.py \
+    --level 3 --steps 24 --total_steps 24 \
+    --ksp_rtol 1e-1 --ksp_max_it 30 --pc_setup_on_ksp_cap \
+    --quiet --out experiment_scripts/out_custom.json
 ```
+
+> **⚠ Docker shared-memory**: The image uses MPICH, which requires shared memory
+> for inter-process communication. Docker defaults to 64 MB, which causes
+> **SIGBUS (exit 135)** or OOM kills with ≥8 MPI processes. Always pass
+> `--shm-size=8g` for parallel runs. See [instructions.md](instructions.md) for
+> details and a persistent-container pattern for long benchmarks.
 
 ### Summary results (level 1, 96 quarter-steps)
 

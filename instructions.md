@@ -27,6 +27,44 @@ All solvers require **DOLFINx >= 0.10** with PETSc support.
      -n 4 python3 /work/pLaplace2D_fenics/solve_pLaplace_snes_newton.py
    ```
 
+> **⚠ Shared-memory requirement for multi-process MPI runs**
+>
+> The Docker image uses **MPICH**, which allocates shared-memory segments for
+> inter-process communication. Docker's default shared-memory size is **64 MB**,
+> which is far too small for ≥8 MPI processes and causes **SIGBUS (exit 135)**
+> or OOM kills (exit 9).
+>
+> **Always add `--shm-size=8g`** (or larger) when running with multiple MPI
+> processes:
+>
+> ```bash
+> docker run --rm --shm-size=8g --entrypoint mpirun -e PYTHONUNBUFFERED=1 \
+>   -v "$PWD":/work -w /work fenics_test \
+>   -n 16 python3 /work/pLaplace2D_fenics/solve_pLaplace_snes_newton.py
+> ```
+>
+> This is not needed for serial runs or when using the VS Code devcontainer
+> (which runs as a long-lived container with host resources).
+
+4. **Long-running benchmarks** — use a persistent container instead of `--rm`:
+   ```bash
+   # Create a persistent container with adequate shared memory
+   docker run -d --name bench_container --shm-size=8g \
+     --entrypoint /bin/bash \
+     -v "$PWD":/workdir -w /workdir \
+     fenics_test:latest -c "sleep infinity"
+
+   # Run commands inside it
+   docker exec bench_container mpirun -n 16 python3 \
+     /workdir/HyperElasticity3D_fenics/solve_HE_custom_jaxversion.py \
+     --level 3 --steps 24 --total_steps 24 \
+     --ksp_rtol 1e-1 --ksp_max_it 30 --pc_setup_on_ksp_cap \
+     --quiet --out /workdir/experiment_scripts/out.json
+
+   # Clean up when done
+   docker stop bench_container && docker rm bench_container
+   ```
+
 ### VS Code Devcontainer
 
 Open this folder in VS Code and use **"Reopen in Container"**. Then run directly in the terminal:
@@ -377,16 +415,17 @@ docker run --rm --entrypoint "" -v "$(pwd)":/work -w /work fenics_test \
   bash -c "KSP_RTOL=1e-3 python3 experiment_scripts/bench_a3.py"
 
 # Single configuration: 4 processes
-docker run --rm --entrypoint "" -v "$(pwd)":/work -w /work fenics_test \
+docker run --rm --shm-size=8g --entrypoint "" -v "$(pwd)":/work -w /work fenics_test \
   bash -c "KSP_RTOL=1e-3 mpirun -n 4 python3 experiment_scripts/bench_a3.py"
 
 # Full sweep (all ksp_rtol × all nprocs):
-docker run --rm --entrypoint "" -v "$(pwd)":/work -w /work fenics_test \
+docker run --rm --shm-size=8g --entrypoint "" -v "$(pwd)":/work -w /work fenics_test \
   bash experiment_scripts/run_a3.sh
 ```
 
 **Important notes**:
 - The Docker image uses **MPICH** (not OpenMPI) — do NOT use `--oversubscribe`
+- **Add `--shm-size=8g`** to all `docker run` commands with ≥8 MPI processes (MPICH needs shared memory; Docker's default 64 MB causes SIGBUS/exit 135 or OOM/exit 9)
 - All commands must be run from the **repo root** (mesh paths resolve relative to it)
 - For long runs, add `2>&1 | tee experiment_scripts/output.txt` for logging
 - The `snes_max_it` is capped at 100 in parallel benchmarks (>100 iterations is unusable)

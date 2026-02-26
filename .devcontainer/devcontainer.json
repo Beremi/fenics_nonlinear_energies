@@ -5,7 +5,8 @@
         "context": "."
     },
     "runArgs": [
-        "--network=host"
+        "--network=host",
+        "--shm-size=8g"
     ],
     "hostRequirements": {
         "cpus": 2

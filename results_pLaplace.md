@@ -300,14 +300,19 @@ make docker-build
 docker run --rm --entrypoint mpirun -v "$PWD":/workspace -w /workspace \
   fenics_test:latest -n 1 python3 pLaplace2D_jax_petsc/solve_pLaplace_dof.py --level 9
 
-# Run parallel (16 processes)
-docker run --rm --entrypoint mpirun -v "$PWD":/workspace -w /workspace \
+# Run parallel (16 processes) — note --shm-size=8g for MPICH shared memory
+docker run --rm --shm-size=8g --entrypoint mpirun -v "$PWD":/workspace -w /workspace \
   fenics_test:latest -n 16 python3 pLaplace2D_jax_petsc/solve_pLaplace_dof.py --level 9
 
 # Run FEniCS comparison benchmark (unit square, bypasses h5py parallel issue)
-docker run --rm --entrypoint mpirun -v "$PWD":/workspace -w /workspace \
+docker run --rm --shm-size=8g --entrypoint mpirun -v "$PWD":/workspace -w /workspace \
   fenics_test:latest -n 16 python3 experiment_scripts/bench_fenics_compare.py --N 885
 ```
+
+> **⚠ Docker shared-memory**: The image uses MPICH, which requires shared memory
+> for inter-process communication. Docker defaults to 64 MB, which causes
+> **SIGBUS (exit 135)** or OOM kills with ≥8 MPI processes. Always pass
+> `--shm-size=8g` (or larger) for multi-process MPI runs.
 
 **Known issue**: The Docker container has a DOLFINx/h5py conflict that prevents the FEniCS custom solver from loading external meshes in MPI-parallel mode (`malloc()` corruption in `create_mesh`). The standalone `experiment_scripts/bench_fenics_compare.py` script uses `create_unit_square` to bypass this. The JAX+PETSc solver is unaffected (each rank reads mesh data independently with serial h5py).
 

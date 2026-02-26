@@ -307,6 +307,34 @@ These runs use the same custom setup as the final serial configuration except `-
 
 Common settings for all tables below: `ksp_type=gmres`, `pc_type=hypre`, `ksp_rtol=1e-1`, `ksp_max_it=30`, skip explicit `nodal/vec`, `--pc_setup_on_ksp_cap`, `--no_near_nullspace`.
 
+> **⚠ Docker environment requirements for MPI runs**
+>
+> All parallel benchmarks in this section were run inside the `fenics_test:latest`
+> Docker container. The image uses **MPICH**, which allocates shared-memory
+> segments for inter-process communication. Key requirements:
+>
+> - **`--shm-size=8g`** (or larger) is **mandatory** when running ≥8 MPI
+>   processes. Docker's default shared memory is 64 MB, which causes **SIGBUS
+>   (exit code 135)** or OOM kills (exit code 9) with many ranks.
+> - For long-running benchmarks (e.g. level 3–4, 24 steps), use a **persistent
+>   container** rather than `docker run --rm`:
+>   ```bash
+>   docker run -d --name bench_container --shm-size=8g \
+>     --entrypoint /bin/bash \
+>     -v "$PWD":/workdir -w /workdir \
+>     fenics_test:latest -c "sleep infinity"
+>   docker exec bench_container mpirun -n 16 python3 \
+>     /workdir/HyperElasticity3D_fenics/solve_HE_custom_jaxversion.py \
+>     --level 3 --steps 24 --total_steps 24 \
+>     --ksp_rtol 1e-1 --ksp_max_it 30 --pc_setup_on_ksp_cap \
+>     --quiet --out /workdir/experiment_scripts/out.json
+>   docker stop bench_container && docker rm bench_container
+>   ```
+> - **Timing sensitivity**: Running in a container created from a *different*
+>   Docker image (even with the same packages) can produce 2–3× slower wall-clock
+>   times despite identical iteration counts. Always use `fenics_test:latest`
+>   built from `.devcontainer/Dockerfile` for reproducible timings.
+
 ### Level 1 — Custom FEniCS MPI nproc=4
 
 | Step | Time [s] | Newton iters | Sum linear iters |         Energy | Relative error vs JAX | Status                  |
