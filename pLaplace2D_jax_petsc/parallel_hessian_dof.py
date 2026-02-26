@@ -538,3 +538,295 @@ class ParallelDOFHessianAssembler:
         if self.iter_timings:
             report["assembly_details"] = list(self.iter_timings)
         return report
+
+
+class LocalColoringAssembler(ParallelDOFHessianAssembler):
+    """DOF-partitioned local SFD Hessian assembly with per-rank local coloring + vmap.
+
+    Replaces global graph coloring with local per-rank coloring on A²|_J
+    (Variant B: J = owned_DOFs ∪ A-neighbours), and uses JAX ``vmap`` for
+    batched all-color HVP computation.
+
+    Key benefits over :class:`ParallelDOFHessianAssembler`:
+      - No global A² computation/broadcast (coloring is purely local)
+      - Typically fewer colors (smaller subgraph ⇒ lower max degree)
+      - Batched HVP via ``vmap`` (single JIT call instead of n_colors sequential)
+      - P2P ghost exchange for assembly (no Allgatherv)
+
+    Same public interface: ``energy_fn``, ``gradient_fn``, ``hessian_solve_fn``,
+    ``create_vec``, ``cleanup``, ``get_timing_report``.
+    """
+
+    def _setup_coloring(self, adjacency, comm, trials_per_rank):
+        """Per-rank local graph coloring on A²|_J (Variant B) — no broadcast.
+
+        J = owned_DOFs ∪ N_A(owned_DOFs) in original free-DOF space.
+        Each rank builds A|_J directly from its local element connectivity
+        (no broadcast of the full adjacency matrix), computes A²|_J, and
+        colors locally with igraph greedy coloring.
+
+        Correctness: local elements = all elements touching ≥1 owned DOF.
+        Thus every A-neighbour of an owned DOF appears in a local element,
+        and every edge (owned, neighbour) is captured.  A² paths through
+        owned intermediaries are also captured, which is sufficient for SFD
+        correctness at owned rows.
+        """
+        import scipy.sparse as sp
+        import igraph
+
+        part = self.part
+        lo, hi = part.lo, part.hi
+        perm = part.perm
+        n_free = part.n_free
+
+        # ---- Map local nodes → original free-DOF indices ----
+        # free_local_indices:  which local nodes are free DOFs
+        # free_global_indices: their reordered free-DOF indices
+        # perm[reordered] = original
+        local_to_orig_freedof = np.full(part.n_local, -1, dtype=np.int64)
+        local_to_orig_freedof[part.free_local_indices] = perm[part.free_global_indices]
+
+        # ---- Build A|_J from local elements (no broadcast) ----
+        elems = part.elems_local_np           # (n_local_elems, npe) local node indices
+        npe = elems.shape[1]                  # 3 for P1 triangles
+        elem_fdof = local_to_orig_freedof[elems]  # (n_local_elems, npe); -1 = Dirichlet
+
+        # All ordered pairs within each element (vectorised)
+        rows_2d = np.repeat(elem_fdof, npe, axis=1)    # (n_elems, npe*npe)
+        cols_2d = np.tile(elem_fdof, (1, npe))          # (n_elems, npe*npe)
+        rows_flat = rows_2d.ravel()
+        cols_flat = cols_2d.ravel()
+        valid = (rows_flat >= 0) & (cols_flat >= 0)
+        row_arr = rows_flat[valid]
+        col_arr = cols_flat[valid]
+
+        # J = unique original free-DOF indices in local elements
+        J_arr = np.unique(local_to_orig_freedof[local_to_orig_freedof >= 0]).astype(np.int64)
+        n_J = len(J_arr)
+
+        # ---- J-indexed lookup ----
+        J_to_idx = np.full(n_free, -1, dtype=np.int64)
+        J_to_idx[J_arr] = np.arange(n_J, dtype=np.int64)
+
+        # ---- Build A|_J as CSR (deduplicates via summation, then binarise) ----
+        A_J = sp.csr_matrix(
+            (np.ones(len(row_arr), dtype=np.float64),
+             (J_to_idx[row_arr], J_to_idx[col_arr])),
+            shape=(n_J, n_J),
+        )
+        A_J.data[:] = 1.0   # binarise (multiple elements can share an edge)
+
+        # ---- Store edges in original free-DOF space for _precompute_indices ----
+        A_J_coo = A_J.tocoo()
+        self._row_adj = J_arr[A_J_coo.row].astype(np.int64)
+        self._col_adj = J_arr[A_J_coo.col].astype(np.int64)
+        self.nnz_global = 0   # no global broadcast; updated in _precompute_indices
+
+        # ---- A²|_J = (A|_J)² ----
+        A2_J = sp.csr_matrix(A_J @ A_J)
+
+        # ---- igraph greedy coloring on A²|_J ----
+        A2_J_coo = A2_J.tocoo()
+        lo_tri = A2_J_coo.row > A2_J_coo.col
+        edges = np.column_stack((A2_J_coo.row[lo_tri], A2_J_coo.col[lo_tri]))
+        g = igraph.Graph(n_J, edges.tolist() if len(edges) > 0 else [], directed=False)
+        coloring_raw = g.vertex_coloring_greedy()
+        best_coloring = np.array(coloring_raw, dtype=np.int32).ravel()
+        best_nc = int(best_coloring.max() + 1) if n_J > 0 else 0
+
+        self.n_colors = best_nc
+        self._local_coloring = best_coloring  # int32, length |J|
+        self._J_dofs = J_arr                  # original free-DOF indices in J
+        self._J_to_idx = J_to_idx             # n_free → J-index (or -1)
+        self.coloring = None                  # no global coloring
+        self.color_info = {
+            "method": "local_variant_B_igraph_no_bcast",
+            "n_J": n_J,
+            "n_owned": hi - lo,
+            "n_colors": best_nc,
+            "trials": 1,
+        }
+
+    def _precompute_indices(self, params, adjacency):
+        """Precompute SFD index arrays using local coloring.
+
+        Same outputs as the parent but colour grouping and indicator vectors
+        are based on the per-rank local coloring instead of a global one.
+        """
+        part = self.part
+        freedofs_np = np.asarray(params["freedofs"], dtype=np.int64)
+        lo, hi = part.lo, part.hi
+        iperm = part.iperm
+        row_adj = self._row_adj
+        col_adj = self._col_adj
+
+        # ---- COO pattern (unchanged — owned rows of A in reordered space) ----
+        eff_rows = iperm[row_adj]
+        eff_cols = iperm[col_adj]
+        owned_mask = (eff_rows >= lo) & (eff_rows < hi)
+
+        self._coo_rows = eff_rows[owned_mask].astype(PETSc.IntType)
+        self._coo_cols = eff_cols[owned_mask].astype(PETSc.IntType)
+        self._n_owned_nnz = int(owned_mask.sum())
+
+        # Compute global NNZ via allreduce (each rank contributes owned rows)
+        self.nnz_global = int(self.comm.allreduce(self._n_owned_nnz, op=MPI.SUM))
+
+        # Original free-DOF indices of owned NZ entries
+        owned_row_orig = row_adj[owned_mask]
+        owned_col_orig = col_adj[owned_mask]
+
+        # ---- Map owned NZ rows to local node indices ----
+        total_to_local = np.full(part.n_total, -1, dtype=np.int64)
+        total_to_local[part.local_to_total] = np.arange(
+            part.n_local, dtype=np.int64
+        )
+
+        owned_row_total = freedofs_np[owned_row_orig]
+        nz_local_rows = total_to_local[owned_row_total]
+        assert np.all(nz_local_rows >= 0), (
+            "BUG: some owned NZ rows map to nodes outside local domain"
+        )
+
+        # ---- Group owned NZ by LOCAL color of column DOF ----
+        owned_col_J_idx = self._J_to_idx[owned_col_orig]
+        assert np.all(owned_col_J_idx >= 0), (
+            "BUG: some owned NZ columns not in J"
+        )
+        owned_col_colors = self._local_coloring[owned_col_J_idx]
+
+        self._color_nz = {}
+        for c in range(self.n_colors):
+            mask_c = owned_col_colors == c
+            positions = np.where(mask_c)[0].astype(np.int64)
+            local_rows = nz_local_rows[positions].astype(np.int64)
+            self._color_nz[c] = (positions, local_rows)
+
+        # ---- Build local indicator vectors per LOCAL color ----
+        orig_to_local = total_to_local[freedofs_np]  # (n_free,) → local or -1
+
+        self._indicators_local = []
+        for c in range(self.n_colors):
+            indicator = np.zeros(part.n_local, dtype=np.float64)
+            J_dofs_c = self._J_dofs[self._local_coloring == c]
+            local_idx = orig_to_local[J_dofs_c]
+            valid = local_idx >= 0
+            indicator[local_idx[valid]] = 1.0
+            self._indicators_local.append(jnp.array(indicator))
+
+        # Stack for vmap
+        self._indicators_stacked = jnp.stack(self._indicators_local)
+
+        # ---- Store for energy / gradient callbacks ----
+        self._owned_idx = jnp.array(part.owned_local_indices, dtype=jnp.int32)
+        self._f_owned = jnp.array(part.f_owned, dtype=jnp.float64)
+
+    def _compile_jax(self):
+        """JIT-compile energy, gradient, and vmapped HVP for the local domain."""
+        p = self.part.p
+        elems = jnp.array(self.part.elems_local_np, dtype=jnp.int32)
+        dvx = jnp.array(self.part.dvx_np, dtype=jnp.float64)
+        dvy = jnp.array(self.part.dvy_np, dtype=jnp.float64)
+        vol = jnp.array(self.part.vol_np, dtype=jnp.float64)
+        vol_w = jnp.array(
+            self.part.vol_np * self.part.elem_weights, dtype=jnp.float64
+        )
+
+        # --- Energy: weighted (unique element assignment for Allreduce) ---
+        def energy_weighted(v_local):
+            v_e = v_local[elems]
+            Fx = jnp.sum(v_e * dvx, axis=1)
+            Fy = jnp.sum(v_e * dvy, axis=1)
+            intgrds = (1.0 / p) * (Fx**2 + Fy**2) ** (p / 2.0)
+            return jnp.sum(intgrds * vol_w)
+
+        self._energy_jit = jax.jit(energy_weighted)
+
+        # --- Gradient / HVP: unweighted (exact at owned DOFs) ---
+        def energy_full(v_local):
+            v_e = v_local[elems]
+            Fx = jnp.sum(v_e * dvx, axis=1)
+            Fy = jnp.sum(v_e * dvy, axis=1)
+            intgrds = (1.0 / p) * (Fx**2 + Fy**2) ** (p / 2.0)
+            return jnp.sum(intgrds * vol)
+
+        self._grad_jit = jax.jit(jax.grad(energy_full))
+
+        def hvp_fn(v_local, tangent_local):
+            return jax.jvp(
+                jax.grad(energy_full), (v_local,), (tangent_local,)
+            )[1]
+
+        self._hvp_jit = jax.jit(hvp_fn)  # kept for variant 1 compatibility
+
+        # --- Batched HVP via vmap (primary for assembly) ---
+        def hvp_batched(v_local, tangents):
+            """tangents: (n_colors, n_local) → (n_colors, n_local)"""
+            return jax.vmap(lambda t: hvp_fn(v_local, t))(tangents)
+
+        self._hvp_batched_jit = jax.jit(hvp_batched)
+
+        # Warmup (trigger JIT compilation)
+        v_dummy = jnp.zeros(self.part.n_local, dtype=jnp.float64)
+        _ = self._energy_jit(v_dummy).block_until_ready()
+        _ = self._grad_jit(v_dummy).block_until_ready()
+        dummy_tangents = jnp.zeros(
+            (self.n_colors, self.part.n_local), dtype=jnp.float64
+        )
+        _ = self._hvp_batched_jit(v_dummy, dummy_tangents).block_until_ready()
+
+    # ------------------------------------------------------------------
+    # Assembly (vmap-based, P2P ghost exchange)
+    # ------------------------------------------------------------------
+
+    def _assemble_variant2(self, u_owned):
+        """P2P ghost exchange + vmap all-colors HVP + COO assembly.
+
+        No Allgatherv, no Allreduce — each rank fills only its owned rows
+        using local coloring and batched HVP computation.
+        """
+        timings = {}
+        t_total = time.perf_counter()
+
+        # 1. P2P ghost exchange → v_local
+        t0 = time.perf_counter()
+        v_local = self._get_v_local(u_owned)
+        timings["p2p_exchange"] = time.perf_counter() - t0
+        timings["allgatherv"] = timings["p2p_exchange"]  # compat key
+
+        # 2. Batched HVP: all colors at once
+        t0 = time.perf_counter()
+        all_hvps = self._hvp_batched_jit(
+            v_local, self._indicators_stacked
+        ).block_until_ready()
+        all_hvps_np = np.asarray(all_hvps)  # (n_colors, n_local)
+        timings["hvp_compute"] = time.perf_counter() - t0
+        timings["n_hvps"] = self.n_colors
+
+        # 3. Extract owned entries
+        t0 = time.perf_counter()
+        owned_vals = np.zeros(self._n_owned_nnz, dtype=np.float64)
+        for c in range(self.n_colors):
+            positions, local_rows = self._color_nz[c]
+            if len(positions) > 0:
+                owned_vals[positions] = all_hvps_np[c, local_rows]
+        timings["extraction"] = time.perf_counter() - t0
+
+        # 4. COO assembly — NO Allreduce!
+        t0 = time.perf_counter()
+        self.A.setValuesCOO(
+            owned_vals.astype(PETSc.ScalarType),
+            addv=PETSc.InsertMode.INSERT_VALUES,
+        )
+        timings["coo_assembly"] = time.perf_counter() - t0
+
+        timings["total"] = time.perf_counter() - t_total
+        self.iter_timings.append(timings)
+        return timings
+
+    def get_timing_report(self):
+        """Return summary dict with local coloring info."""
+        report = super().get_timing_report()
+        report["coloring_method"] = "local_variant_B"
+        report["n_J_dofs"] = len(self._J_dofs)
+        return report

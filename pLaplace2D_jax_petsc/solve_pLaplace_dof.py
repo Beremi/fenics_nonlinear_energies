@@ -55,6 +55,8 @@ parser.add_argument("--tolf", type=float, default=1e-5,
                     help="Energy change tolerance (default: 1e-5)")
 parser.add_argument("--tolg", type=float, default=1e-3,
                     help="Gradient norm tolerance (default: 1e-3)")
+parser.add_argument("--local-coloring", action="store_true",
+                    help="Use local per-rank graph coloring + vmap (Variant B)")
 args = parser.parse_args()
 
 comm = MPI.COMM_WORLD
@@ -76,6 +78,7 @@ config.update("jax_enable_x64", True)
 
 from pLaplace2D_jax_petsc.mesh import MeshpLaplace2D  # noqa: E402
 from pLaplace2D_jax_petsc.parallel_hessian_dof import ParallelDOFHessianAssembler  # noqa: E402
+from pLaplace2D_jax_petsc.parallel_hessian_dof import LocalColoringAssembler  # noqa: E402
 from tools_petsc4py.minimizers import newton  # noqa: E402
 
 
@@ -146,7 +149,8 @@ def _print_assembly_breakdown(assembler_timings, n_iters):
 # ---------------------------------------------------------------------------
 
 def run_level(mesh_level, comm, verbose=True, coloring_trials=10,
-              ksp_rtol=1e-3, pc_type="hypre", tolf=1e-5, tolg=1e-3):
+              ksp_rtol=1e-3, pc_type="hypre", tolf=1e-5, tolg=1e-3,
+              local_coloring=False):
     """Run DOF-partitioned parallel solver for one mesh level.
 
     Returns dict with timing and convergence info.
@@ -163,7 +167,8 @@ def run_level(mesh_level, comm, verbose=True, coloring_trials=10,
 
     # ---- build DOF-partitioned assembler ----
     t0 = time.perf_counter()
-    assembler = ParallelDOFHessianAssembler(
+    AssemblerClass = LocalColoringAssembler if local_coloring else ParallelDOFHessianAssembler
+    assembler = AssemblerClass(
         params=params,
         comm=comm,
         adjacency=adjacency,
@@ -292,6 +297,7 @@ def main():
                 pc_type=args.pc_type,
                 tolf=args.tolf,
                 tolg=args.tolg,
+                local_coloring=args.local_coloring,
             )
             level_results.append(result)
 

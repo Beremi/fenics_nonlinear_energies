@@ -97,55 +97,47 @@ A hybrid solver that uses **JAX** for automatic differentiation (energy, gradien
 - **RCM reordering** of free DOFs via Reverse Cuthill–McKee ensures PETSc's block distribution maps to spatially compact regions (mimicking FEniCS's ParMETIS/SCOTCH).
 - **Point-to-point ghost exchange** for energy, gradient, and HVP: each rank sends/receives only the ghost DOF values from its neighbours (~8–32 KB at 16 ranks), instead of `Allgatherv` of the full vector (~6 MB). No `Allreduce` on dense vectors.
 - **Local SFD Hessian assembly**: each rank computes _all_ $n_c$ colour HVPs on its local domain (owned + overlap elements), producing exact owned-row Hessian entries. The PETSc COO fast-path inserts owned entries directly — no global `Allreduce` of NNZ arrays.
+- **Broadcast-free local graph coloring**: each rank builds the DOF adjacency $A|_J$ directly from its local element connectivity — no MPI broadcast of the full adjacency matrix (5.5 M nonzeros at level 9). A² is computed locally, then colored with igraph. Batched HVP via `vmap`.
 - **PETSc MPIAIJ** KSP: CG + HYPRE BoomerAMG or GAMG, with `rtol = 1e-3`.
 - **Same Newton algorithm** as the other custom solvers: golden-section line search on $[-0.5, 2]$, `tolf = 1e-5`, `tolg = 1e-3`, via `tools_petsc4py/minimizers.py`.
 - `OMP_NUM_THREADS=1` and `xla_cpu_multi_thread_eigen=false` enforced (workload is memory-bandwidth limited; critical for Hypre AMG to avoid thread oversubscription).
 
 **Note on mesh levels**: The JAX+PETSc solver uses its own mesh numbering from HDF5 files. JAX level $\ell$ corresponds to FEniCS level $\ell - 1$ (e.g. JAX level 9 = FEniCS level 8 = 784 385 DOFs).
 
-Script: [`pLaplace2D_jax_petsc/solve_pLaplace_dof.py`](pLaplace2D_jax_petsc/solve_pLaplace_dof.py)
+Script: [`pLaplace2D_jax_petsc/solve_pLaplace_dof.py`](pLaplace2D_jax_petsc/solve_pLaplace_dof.py) with `--local-coloring`
 
 For a detailed technical description of the DOF decomposition, P2P ghost exchange, and individual operation benchmarks, see [`jax_parallel_partitioning.md`](jax_parallel_partitioning.md).
 
 #### Full Newton Solve — Hypre BoomerAMG
 
-Level 9 (784 385 free DOFs, 1 572 864 elements, 8–9 graph colors). All configurations converge in **7 Newton iterations** to **$J(u) = -7.960006$**.
+Level 9 (784 385 free DOFs, 1 572 864 elements, 7–8 graph colors). All configurations converge in **7 Newton iterations** to **$J(u) = -7.960006$**. Median of 3 repeats.
 
 | np  | Setup (s) | Solve (s) | Total (s) | Newton its | KSP its | Solve speedup |
 | --- | --------- | --------- | --------- | ---------- | ------- | ------------- |
-| 1   | 2.78      | 10.31     | 13.09     | 7          | 27      | 1.00×         |
-| 2   | 2.09      | 6.68      | 8.78      | 7          | 27      | 1.54×         |
-| 4   | 1.83      | **4.72**  | 6.56      | 7          | 27      | **2.18×**     |
-| 8   | 2.02      | **3.68**  | 5.71      | 7          | 26      | **2.80×**     |
-| 16  | 2.62      | **3.09**  | 5.71      | 7          | 28      | **3.34×**     |
+| 1   | 4.01      | 9.51      | 13.52     | 7          | 27      | 1.00×         |
+| 2   | 2.32      | 6.07      | 8.30      | 7          | 27      | 1.57×         |
+| 4   | 1.57      | **4.50**  | 6.02      | 7          | 27      | **2.12×**     |
+| 8   | 1.25      | **3.35**  | 4.59      | 7          | 26      | **2.84×**     |
+| 16  | 1.28      | **2.63**  | 3.90      | 7          | 28      | **3.62×**     |
+| 32  | 1.82      | **3.51**  | 5.45      | 7          | 27      | **2.71×**     |
 
 #### Full Newton Solve — GAMG
 
 | np  | Setup (s) | Solve (s) | Total (s) | Newton its | KSP its | Solve speedup |
 | --- | --------- | --------- | --------- | ---------- | ------- | ------------- |
-| 1   | 2.78      | 6.32      | 9.10      | 7          | 53      | 1.00×         |
-| 2   | 2.10      | 4.49      | 6.59      | 7          | 53      | 1.41×         |
-| 4   | 1.85      | **3.41**  | 5.26      | 7          | 57      | **1.86×**     |
-| 8   | 2.04      | **2.87**  | 4.92      | 7          | 54      | **2.20×**     |
-| 16  | 2.62      | **2.63**  | 5.25      | 7          | 54      | **2.40×**     |
-
-#### Timing Breakdown (16 ranks, Hypre)
-
-| Component            | Time (s) | % of solve |
-| -------------------- | -------- | ---------- |
-| Gradient (P2P + JAX) | 0.17     | 5%         |
-| Hessian assembly     | 0.77     | 25%        |
-| KSP solves           | 1.18     | 38%        |
-| Line search          | 0.78     | 25%        |
-| Other (update, etc.) | 0.19     | 6%         |
-| **Total solve**      | **3.09** | **100%**   |
+| 1   | 4.01      | 5.61      | 9.61      | 7          | 53      | 1.00×         |
+| 2   | 2.30      | 3.86      | 6.16      | 7          | 53      | 1.45×         |
+| 4   | 1.53      | **3.03**  | 4.56      | 7          | 57      | **1.85×**     |
+| 8   | 1.25      | **2.60**  | 3.82      | 7          | 54      | **2.16×**     |
+| 16  | 1.30      | **2.18**  | 3.47      | 7          | 54      | **2.58×**     |
+| 32  | 1.81      | **3.24**  | 5.10      | 7          | 52      | **1.73×**     |
 
 #### Key Observations
 
-- **Monotonic scaling.** More MPI ranks always help — unlike the earlier replicated-data approach which _degraded_ beyond 4 ranks due to `Allgatherv` + memory-bandwidth contention.
-- **GAMG is faster in absolute time** (2.63 s vs 3.09 s at 16 ranks) but **Hypre scales better** (3.34× vs 2.40× at 16 ranks). Hypre is recommended for larger rank counts.
-- **KSP dominates at high rank counts** (38% at 16 ranks), shifting the bottleneck from JAX assembly (which scales well) to PETSc linear algebra — a healthy sign for scalability.
-- **Setup is rank-independent** (~2.0–2.6 s), dominated by JIT warmup and graph coloring. For repeated solves it is amortised.
+- **Monotonic scaling up to 16 ranks.** More MPI ranks help up to 16 — unlike the earlier replicated-data approach which _degraded_ beyond 4 ranks due to `Allgatherv` + memory-bandwidth contention. At 32 ranks, KSP and line-search costs on this problem size begin to dominate.
+- **GAMG is faster in absolute time** (2.18 s vs 2.63 s at 16 ranks) but **Hypre scales better** (3.62× vs 2.58× at 16 ranks). Hypre is recommended for larger rank counts.
+- **KSP dominates at high rank counts**, shifting the bottleneck from JAX assembly (which scales well) to PETSc linear algebra — a healthy sign for scalability.
+- **Setup scales well** — from 4.01 s (serial, full graph coloring) to 1.28 s (16 ranks, local coloring on smaller subgraphs). No adjacency broadcast needed.
 - **Numerically exact** — energy, gradient, and HVP match serial reference to machine epsilon at all rank counts (see [`jax_parallel_partitioning.md`](jax_parallel_partitioning.md) §5.1).
 
 #### Comparison with FEniCS Custom Newton (16 ranks, ~785 K DOFs)
@@ -154,28 +146,28 @@ Both solvers use the same Newton algorithm (golden-section line search, CG + HYP
 
 | Metric               | FEniCS Custom (5 its) | JAX+PETSc DOF (7 its) | Ratio |
 | :------------------- | --------------------: | --------------------: | ----: |
-| Solve time (np = 1)  |               11.10 s |               10.31 s | 0.93× |
-| Solve time (np = 16) |                1.53 s |                3.09 s | 2.02× |
-| Scaling (16 / 1)     |                  7.3× |                 3.34× |       |
-| KSP time (np = 16)   |                1.00 s |                1.18 s | 1.18× |
+| Solve time (np = 1)  |               11.10 s |                9.51 s | 0.86× |
+| Solve time (np = 16) |                1.53 s |                2.63 s | 1.72× |
+| Scaling (16 / 1)     |                  7.3× |                 3.62× |       |
+| KSP time (np = 16)   |                1.00 s |                ~1.1 s | 1.10× |
 
-The KSP linear solve is nearly identical (1.18× ratio), confirming that RCM reordering produces equivalent partition quality to FEniCS's ParMETIS. The remaining 2× total gap comes from: (1) more Newton iterations (7 vs 5), (2) SFD Hessian assembly vs compiled UFL forms, (3) line search overhead (17 energy evaluations per step, each using local JAX + P2P vs FEniCS's native distributed assembly). **At serial, JAX+PETSc is actually competitive** (10.31 s vs 11.10 s).
+The KSP linear solve is nearly identical (~1.1× ratio), confirming that RCM reordering produces equivalent partition quality to FEniCS's ParMETIS. The remaining gap comes from: (1) more Newton iterations (7 vs 5), (2) SFD Hessian assembly vs compiled UFL forms, (3) line search overhead (17 energy evaluations per step). **At serial, JAX+PETSc is faster** (9.51 s vs 11.10 s).
 
 #### Reproducing the Results
 
 ```bash
-# Serial
-mpirun -n 1 python3 pLaplace2D_jax_petsc/solve_pLaplace_dof.py --level 9
+# Serial (local coloring, recommended)
+mpirun -n 1 python3 -m pLaplace2D_jax_petsc.solve_pLaplace_dof --local-coloring --level 9
 
 # Parallel (4 / 8 / 16 ranks), with Hypre (default)
-mpirun -n 4  python3 pLaplace2D_jax_petsc/solve_pLaplace_dof.py --level 9
-mpirun -n 16 python3 pLaplace2D_jax_petsc/solve_pLaplace_dof.py --level 9
+mpirun -n 4  python3 -m pLaplace2D_jax_petsc.solve_pLaplace_dof --local-coloring --level 9
+mpirun -n 16 python3 -m pLaplace2D_jax_petsc.solve_pLaplace_dof --local-coloring --level 9
 
 # Use GAMG instead
-mpirun -n 16 python3 pLaplace2D_jax_petsc/solve_pLaplace_dof.py --level 9 --pc-type gamg
+mpirun -n 16 python3 -m pLaplace2D_jax_petsc.solve_pLaplace_dof --local-coloring --level 9 --pc-type gamg
 
 # Save JSON output
-mpirun -n 16 python3 pLaplace2D_jax_petsc/solve_pLaplace_dof.py --level 9 --json results/dof_np16.json
+mpirun -n 16 python3 -m pLaplace2D_jax_petsc.solve_pLaplace_dof --local-coloring --level 9 --json results/dof_np16.json
 ```
 
 **Environment**: Docker (`fenics_test:latest`) with DOLFINx 0.10.0, JAX 0.9.0.1, PETSc 3.24.0, HYPRE, mpi4py (MPICH), h5py, scipy. See Makefile for Docker build targets.
@@ -223,8 +215,8 @@ Same DOLFINx assembly as above, but uses a custom Newton loop (`tools_petsc4py/m
 **3. JAX Newton — serial** (`pLaplace2D_jax/solve_pLaplace_jax_newton.py`):
 Pure JAX implementation. Energy function JIT-compiled. Gradient via `jax.grad`. Hessian assembled by sparse finite differences (SFD) with graph coloring: directional derivatives approximate Hessian-vector products for each color group, then scattered into a CSR matrix. Preconditioner: PyAMG smoothed aggregation. Same Newton algorithm and tolerances as variant 2.
 
-**4. JAX + PETSc DOF-Partitioned Newton — MPI-parallel** (`pLaplace2D_jax_petsc/solve_pLaplace_dof.py`):
-The main solver studied in this document. Uses DOF-based overlapping domain decomposition with P2P ghost exchange for energy/gradient/HVP, local SFD Hessian assembly via PETSc COO fast-path, and RCM reordering for locality-aware PETSc block distribution. KSP: CG + HYPRE BoomerAMG or GAMG. Same Newton algorithm and tolerances as variant 2. See [`jax_parallel_partitioning.md`](jax_parallel_partitioning.md) for full technical details.
+**4. JAX + PETSc DOF-Partitioned Newton — MPI-parallel** (`pLaplace2D_jax_petsc/solve_pLaplace_dof.py --local-coloring`):
+The main solver studied in this document. Uses DOF-based overlapping domain decomposition with P2P ghost exchange for energy/gradient/HVP, local SFD Hessian assembly via PETSc COO fast-path, and RCM reordering for locality-aware PETSc block distribution. Uses `LocalColoringAssembler` — each rank builds the DOF adjacency directly from local elements (no broadcast), colors locally with igraph, and uses `vmap`-batched HVP. KSP: CG + HYPRE BoomerAMG or GAMG. Same Newton algorithm and tolerances as variant 2. See [`jax_parallel_partitioning.md`](jax_parallel_partitioning.md) for full technical details.
 
 ### 0.3  Newton Algorithm (`tools_petsc4py/minimizers.py`)
 
@@ -308,7 +300,7 @@ docker run --rm --entrypoint mpirun -v "$PWD":/workspace -w /workspace \
 | ------------------------- | --------------------------------------------------------------- |
 | `dof_partition.py`        | `DOFPartition` class: RCM, PETSc block dist, P2P ghost exchange |
 | `mpi_dof_partitioned.py`  | `MPIDOFPartitionedEnergy`: energy / gradient / HVP              |
-| `parallel_hessian_dof.py` | `ParallelDOFHessianAssembler`: sparse Hessian + KSP solve       |
+| `parallel_hessian_dof.py` | `ParallelDOFHessianAssembler` + `LocalColoringAssembler`: sparse Hessian + KSP solve |
 | `solve_pLaplace_dof.py`   | Complete Newton solver with CLI, timing breakdown, JSON output  |
 | `jax_energy.py`           | JAX energy function (full-mesh, used by serial solver)          |
 | `jax_energy_local.py`     | JAX energy function (local domain, weighted for partitioning)   |
