@@ -750,12 +750,11 @@ class LocalColoringAssembler(ParallelDOFHessianAssembler):
             intgrds = (1.0 / p) * (Fx**2 + Fy**2) ** (p / 2.0)
             return jnp.sum(intgrds * vol)
 
-        self._grad_jit = jax.jit(jax.grad(energy_full))
+        grad_fn = jax.grad(energy_full)
+        self._grad_jit = jax.jit(grad_fn)
 
         def hvp_fn(v_local, tangent_local):
-            return jax.jvp(
-                jax.grad(energy_full), (v_local,), (tangent_local,)
-            )[1]
+            return jax.jvp(grad_fn, (v_local,), (tangent_local,))[1]
 
         self._hvp_jit = jax.jit(hvp_fn)  # kept for variant 1 compatibility
 
@@ -788,18 +787,18 @@ class LocalColoringAssembler(ParallelDOFHessianAssembler):
         timings = {}
         t_total = time.perf_counter()
 
-        # 1. P2P ghost exchange → v_local
+        # 1. P2P ghost exchange → build v_local
         t0 = time.perf_counter()
         v_local = self._get_v_local(u_owned)
         timings["p2p_exchange"] = time.perf_counter() - t0
-        timings["allgatherv"] = timings["p2p_exchange"]  # compat key
+        timings["allgatherv"] = timings["p2p_exchange"]
 
-        # 2. Batched HVP: all colors at once
+        # 2. Batched HVP: all colors at once via vmap
         t0 = time.perf_counter()
         all_hvps = self._hvp_batched_jit(
             v_local, self._indicators_stacked
         ).block_until_ready()
-        all_hvps_np = np.asarray(all_hvps)  # (n_colors, n_local)
+        all_hvps_np = np.asarray(all_hvps)
         timings["hvp_compute"] = time.perf_counter() - t0
         timings["n_hvps"] = self.n_colors
 
