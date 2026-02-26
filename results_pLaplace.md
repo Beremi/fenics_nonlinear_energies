@@ -296,15 +296,15 @@ docker run --rm --entrypoint mpirun -v "$PWD":/workspace -w /workspace \
 
 ### 0.9  Code Organisation (`pLaplace2D_jax_petsc/`)
 
-| File                      | Purpose                                                         |
-| ------------------------- | --------------------------------------------------------------- |
-| `dof_partition.py`        | `DOFPartition` class: RCM, PETSc block dist, P2P ghost exchange |
-| `mpi_dof_partitioned.py`  | `MPIDOFPartitionedEnergy`: energy / gradient / HVP              |
+| File                      | Purpose                                                                              |
+| ------------------------- | ------------------------------------------------------------------------------------ |
+| `dof_partition.py`        | `DOFPartition` class: RCM, PETSc block dist, P2P ghost exchange                      |
+| `mpi_dof_partitioned.py`  | `MPIDOFPartitionedEnergy`: energy / gradient / HVP                                   |
 | `parallel_hessian_dof.py` | `ParallelDOFHessianAssembler` + `LocalColoringAssembler`: sparse Hessian + KSP solve |
-| `solve_pLaplace_dof.py`   | Complete Newton solver with CLI, timing breakdown, JSON output  |
-| `jax_energy.py`           | JAX energy function (full-mesh, used by serial solver)          |
-| `jax_energy_local.py`     | JAX energy function (local domain, weighted for partitioning)   |
-| `mesh.py`                 | HDF5 mesh loader                                                |
+| `solve_pLaplace_dof.py`   | Complete Newton solver with CLI, timing breakdown, JSON output                       |
+| `jax_energy.py`           | JAX energy function (full-mesh, used by serial solver)                               |
+| `jax_energy_local.py`     | JAX energy function (local domain, weighted for partitioning)                        |
+| `mesh.py`                 | HDF5 mesh loader                                                                     |
 
 ---
 
