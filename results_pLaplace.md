@@ -144,12 +144,12 @@ Level 9 (784 385 free DOFs, 1 572 864 elements, 7–8 graph colors). All configu
 
 All previous tables use the baseline tolerances (`ksp_rtol = 1e-3`, `linesearch_tol = 1e-3`). Loosening both to `1e-1` retains the same solution accuracy ($J(u) = -7.960006$, same Newton iterations) while significantly reducing KSP iterations and line-search evaluations. Level 9, np = 16, median of 3 repeats.
 
-| PC    | Tolerances       | Setup (s) | Solve (s) | Total (s) | Newton its | KSP its | LS evals | $J(u)$     |
-| ----- | ---------------- | --------- | --------- | --------- | ---------- | ------- | -------- | ---------- |
-| GAMG  | 1e-3 / 1e-3      | 1.37      | 2.33      | 3.70      | 7          | 54      | 119      | -7.960006  |
-| GAMG  | **1e-1 / 1e-1**  | 1.39      | **1.72**  | **3.11**  | 7          | **22**  | **49**   | -7.960006  |
-| Hypre | 1e-3 / 1e-3      | 1.34      | 2.84      | 4.18      | 7          | 28      | 119      | -7.960006  |
-| Hypre | **1e-1 / 1e-1**  | 1.35      | **2.16**  | **3.52**  | 7          | **13**  | **49**   | -7.960006  |
+| PC    | Tolerances      | Setup (s) | Solve (s) | Total (s) | Newton its | KSP its | LS evals | $J(u)$    |
+| ----- | --------------- | --------- | --------- | --------- | ---------- | ------- | -------- | --------- |
+| GAMG  | 1e-3 / 1e-3     | 1.37      | 2.33      | 3.70      | 7          | 54      | 119      | -7.960006 |
+| GAMG  | **1e-1 / 1e-1** | 1.39      | **1.72**  | **3.11**  | 7          | **22**  | **49**   | -7.960006 |
+| Hypre | 1e-3 / 1e-3     | 1.34      | 2.84      | 4.18      | 7          | 28      | 119      | -7.960006 |
+| Hypre | **1e-1 / 1e-1** | 1.35      | **2.16**  | **3.52**  | 7          | **13**  | **49**   | -7.960006 |
 
 **Observations:**
 - **GAMG**: 26% faster solve (2.33 → 1.72 s), KSP iterations drop 59% (54 → 22), LS evaluations drop 59% (119 → 49).
