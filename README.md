@@ -61,16 +61,24 @@ Neo-Hookean energy on a 3D beam with a rotating right-face boundary condition (0
 | **SNES Newton**                 | `HyperElasticity3D_fenics/solve_HE_snes_newton.py`       | 93/96 steps ✓ |
 
 Both solvers use:
-- GMRES + HYPRE BoomerAMG (default coarsening — no explicit `nodal_coarsen` / `vec_interp_variant`)
+- GMRES + AMG preconditioner (HYPRE BoomerAMG or PETSc GAMG)
 - Near-nullspace: 6 rigid-body modes (3 translations + 3 rotations)
 - `ksp_rtol = 1e-1`
 
 The **Custom Newton** uses a golden-section energy line search (`tools_petsc4py/minimizers.py`) and
 `--pc_setup_on_ksp_cap` to reuse the AMG preconditioner across Newton steps.
 
-The **SNES Newton** uses PETSc's built-in `newtonls` SNES solver. The key difference from the
-custom solver is that SNES strictly requires `KSP reason > 0`; using `vec_interp_variant=3` leads to
-a non-symmetric AMG and CG breakdown (`KSP_DIVERGED_BREAKDOWN`). GMRES + HYPRE defaults resolves this.
+**Preconditioner comparison (level 3, 78k DOFs, 16 MPI, 24 load steps):**
+
+| PC | Total time | Newton iters | KSP iters |
+| --- | ---: | ---: | ---: |
+| GAMG (`--pc_type gamg --gamg_threshold 0.05`) | **62.4 s** | 1,123 | 17,868 |
+| HYPRE BoomerAMG (`--pc_type hypre`) | 135.5 s | 669 | 10,347 |
+
+GAMG with `pc_gamg_threshold=0.05` is **2.2× faster** than HYPRE for this problem. The threshold
+is critical for correctness — without it, GAMG converges to wrong solutions for 3D elasticity.
+See [results_HyperElasticity3D.md, Annex F](results_HyperElasticity3D.md#annex-f-gamg-vs-hypre-preconditioner-comparison-level-3-16-mpi-processes)
+for the full investigation.
 
 ### How to run (96 quarter-steps, level 1, single process)
 

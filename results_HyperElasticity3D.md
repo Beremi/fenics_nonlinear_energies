@@ -1145,3 +1145,226 @@ The AMG setup cost scales with mesh size.  At level 3 with 16 MPI processes, one
 > At large meshes/MPI execution: AMG setup cost per Newton iter > Python Newton loop overhead → custom's AMG reuse wins.
 
 The `--pc_setup_on_ksp_cap` strategy is particularly effective here because this is the first step of the trajectory (the initial AMG is a good preconditioner for the un-deformed Jacobian, so KSP never hits the 30-iteration cap across all 11 Newton steps).
+
+---
+
+## Annex F) GAMG vs HYPRE preconditioner comparison (level 3, 16 MPI processes)
+
+**Motivation:** All preceding experiments used HYPRE BoomerAMG as the AMG preconditioner. PETSc also ships GAMG (Geometric-Algebraic MultiGrid), which is a native PETSc implementation with elasticity-aware features (`PCSetCoordinates`, block size, near-nullspace). This annex investigates whether GAMG can match or beat HYPRE for this 3D hyperelasticity problem.
+
+### F.1 Setup
+
+**Problem:** Neo-Hookean 3D elasticity on a beam `[0, 0.4] × [-0.005, 0.005]²`, 24 load steps (each = 15° rotation of right face), level 3 mesh (Nx=320, Ny=8, Nz=8 → 78,003 DOFs), 16 MPI processes.
+
+**Docker environment:**
+```bash
+docker run -d --name bench_container --shm-size=8g \
+  --entrypoint /bin/bash \
+  -v "$PWD":/workdir -w /workdir \
+  fenics_test:latest -c "sleep infinity"
+```
+
+**GAMG elasticity-specific settings (critical for correctness):**
+
+1. **Block size = 3**: `A.setBlockSize(3)` — tells GAMG that the matrix has 3 DOFs per node (vector elasticity). Without this, GAMG treats each scalar DOF independently and produces poor coarse-level interpolation.
+
+2. **Near-nullspace**: 6 rigid-body modes (3 translations + 3 rotations) via `A.setNearNullSpace(...)`, same as HYPRE.
+
+3. **PCSetCoordinates**: Provides nodal coordinates to GAMG for geometry-aware aggregation. Set via `pc.setCoordinates(coords)` after `ksp.setOperators(A)`.
+
+4. **`pc_gamg_threshold = 0.05`**: **This is the critical parameter.** The threshold filters weak connections in the strength-of-connection graph. Default (`-1`, keep all edges) preserves every connection, leading to overly aggressive coarsening that fails to preserve rigid-body modes → solver converges to wrong energy. A threshold of `0.05` filters out weak couplings, producing slower but physically correct coarsening.
+
+5. **`pc_gamg_agg_nsmooths = 1`**: One level of smoothed aggregation (default).
+
+### F.2 Investigation trajectory
+
+Several configurations were tested (intermediate runs not shown in full):
+
+| Run | Block size | Nullspace | Coordinates | Threshold | KSP rtol | Step-1 energy | Correct? |
+| --- | :--------: | :-------: | :---------: | :-------: | :------: | :-----------: | :------: |
+| 1 — Naive GAMG | No | No | No | -1 (default) | 1e-1 | diverged | No |
+| 2 — + block size | 3 | Yes | No | -1 | 1e-3 | 0.3957 | No |
+| 3 — + coordinates | 3 | Yes | Yes | -1 | 1e-6 | 0.1673 | No |
+| 4 — + threshold=0.05 | 3 | Yes | Yes | 0.05 | 1e-6 | **0.1626** | **Yes** |
+
+**Key finding:** Without `pc_gamg_threshold=0.05`, GAMG consistently converged to wrong minima (energies 0.17–0.40 instead of the correct 0.1626). The threshold is the single most important parameter — more important than coordinates or nullspace for this problem.
+
+### F.3 Three-way comparison: HYPRE vs GAMG (tight) vs GAMG (loose)
+
+All runs: level 3, 24 load steps, 16 MPI, `ksp_type=gmres`, near-nullspace ON, `gamg_threshold=0.05`.
+
+| | **HYPRE** | **GAMG (tight)** | **GAMG (loose)** |
+| --- | ---: | ---: | ---: |
+| PC type | `hypre` (BoomerAMG) | `gamg` | `gamg` |
+| `ksp_rtol` | 1e-1 | 1e-6 | 1e-1 |
+| `ksp_max_it` | 30 | 500 | 30 |
+| `pc_setup_on_ksp_cap` | Yes | No | Yes |
+| Total time | **135.5 s** | 211.1 s | **62.4 s** |
+| Total Newton iters | 669 | 536 | 1,123 |
+| Total KSP iters | 10,347 | 190,012 | 17,868 |
+| Avg KSP/Newton | 15.5 | 354.5 | 15.9 |
+| Final energy | 93.7050 | 93.7057 | 93.7048 |
+| All steps converged? | Yes (24/24) | Yes (24/24) | Yes (24/24) |
+
+**Observations:**
+
+- **GAMG (loose) is 2.2× faster than HYPRE** (62.4 s vs 135.5 s) with the same loose-tolerance strategy (`ksp_rtol=1e-1`, `ksp_max_it=30`, `pc_setup_on_ksp_cap`). The time savings come from cheaper AMG setup (GAMG reuses the matrix directly; HYPRE requires data conversion to its internal format).
+
+- **GAMG (tight) is 1.6× slower than HYPRE** (211.1 s vs 135.5 s). With `ksp_rtol=1e-6`, GAMG needs ~355 KSP iterations per Newton step on average. While this reduces Newton iterations (536 vs 669), the vastly increased KSP work dominates.
+
+- **GAMG (tight) + `pc_setup_on_ksp_cap` is unstable**: An earlier test (v2) with both tight tolerance *and* PC reuse diverged at step 7+. Without `pc_setup_on_ksp_cap`, tight GAMG works fine (v3). The tight-tolerance configuration needs fresh PC each Newton step.
+
+- **Final energies** are consistent across all three configurations (93.70±0.01), confirming correctness.
+
+### F.4 Exact replication commands
+
+**HYPRE reference:**
+```bash
+docker exec bench_container mpirun -n 16 python3 \
+  /workdir/HyperElasticity3D_fenics/solve_HE_custom_jaxversion.py \
+  --level 3 --steps 24 --start_step 1 --total_steps 24 \
+  --maxit 100 --ksp_type gmres --pc_type hypre \
+  --ksp_rtol 1e-1 --ksp_max_it 30 --pc_setup_on_ksp_cap \
+  --save_history \
+  --out /workdir/experiment_scripts/he_custom_l3_np16_bench.json
+```
+
+**GAMG (tight tolerance, fresh PC every Newton):**
+```bash
+docker exec bench_container mpirun -n 16 python3 \
+  /workdir/HyperElasticity3D_fenics/solve_HE_custom_jaxversion.py \
+  --level 3 --steps 24 --start_step 1 --total_steps 24 \
+  --maxit 100 --ksp_type gmres --pc_type gamg \
+  --ksp_rtol 1e-6 --ksp_max_it 500 \
+  --gamg_threshold 0.05 \
+  --save_history \
+  --out /workdir/experiment_scripts/he_custom_l3_np16_gamg_full24_v3.json
+```
+
+**GAMG (loose tolerance, HYPRE-like settings):**
+```bash
+docker exec bench_container mpirun -n 16 python3 \
+  /workdir/HyperElasticity3D_fenics/solve_HE_custom_jaxversion.py \
+  --level 3 --steps 24 --start_step 1 --total_steps 24 \
+  --maxit 100 --ksp_type gmres --pc_type gamg \
+  --ksp_rtol 1e-1 --ksp_max_it 30 --pc_setup_on_ksp_cap \
+  --gamg_threshold 0.05 \
+  --save_history \
+  --out /workdir/experiment_scripts/he_custom_l3_np16_gamg_hypre_settings.json
+```
+
+### F.5 Per-step tables
+
+#### Level 3, 16 MPI — HYPRE BoomerAMG (reference)
+
+Artifact: [experiment_scripts/he_custom_l3_np16_bench.json](experiment_scripts/he_custom_l3_np16_bench.json)
+
+| Step | Time [s] | Newton iters | Sum KSP iters |        Energy | Status                  |
+| ---: | -------: | -----------: | ------------: | ------------: | ----------------------- |
+|    1 |      5.0 |           28 |           386 |  0.1625590000 | Energy change converged |
+|    2 |      5.4 |           29 |           403 |  0.6502370000 | Energy change converged |
+|    3 |      5.2 |           28 |           368 |  1.4630840000 | Energy change converged |
+|    4 |      5.0 |           27 |           355 |  2.6011520000 | Energy change converged |
+|    5 |      5.2 |           27 |           370 |  4.0645090000 | Energy change converged |
+|    6 |      5.3 |           28 |           371 |  5.8532780000 | Energy change converged |
+|    7 |      5.2 |           28 |           367 |  7.9675390000 | Energy change converged |
+|    8 |      5.2 |           27 |           364 | 10.4074370000 | Energy change converged |
+|    9 |      5.4 |           28 |           373 | 13.1730770000 | Energy change converged |
+|   10 |      6.0 |           29 |           448 | 16.2645240000 | Energy change converged |
+|   11 |      5.6 |           27 |           422 | 19.6818780000 | Energy change converged |
+|   12 |      5.5 |           27 |           424 | 23.4251620000 | Energy change converged |
+|   13 |      6.1 |           29 |           481 | 27.4943710000 | Energy change converged |
+|   14 |      5.6 |           27 |           440 | 31.8894050000 | Energy change converged |
+|   15 |      5.3 |           27 |           383 | 36.6099940000 | Energy change converged |
+|   16 |      6.0 |           29 |           478 | 41.6554080000 | Energy change converged |
+|   17 |      6.9 |           31 |           575 | 47.0227630000 | Energy change converged |
+|   18 |      5.4 |           27 |           394 | 52.7168590000 | Energy change converged |
+|   19 |      5.8 |           27 |           467 | 58.7367140000 | Energy change converged |
+|   20 |      6.0 |           27 |           496 | 65.0818470000 | Energy change converged |
+|   21 |      6.4 |           28 |           539 | 71.7519170000 | Energy change converged |
+|   22 |      6.2 |           28 |           504 | 78.7463720000 | Energy change converged |
+|   23 |      5.8 |           28 |           447 | 86.0644710000 | Energy change converged |
+|   24 |      6.2 |           28 |           492 | 93.7049960000 | Energy change converged |
+
+Summary: total time = `135.5 s`, total Newton iters = `669`, total KSP iters = `10,347`.
+
+#### Level 3, 16 MPI — GAMG (tight: rtol=1e-6, ksp_max_it=500, no PC reuse)
+
+Artifact: [experiment_scripts/he_custom_l3_np16_gamg_full24_v3.json](experiment_scripts/he_custom_l3_np16_gamg_full24_v3.json)
+
+| Step | Time [s] | Newton iters | Sum KSP iters |        Energy | Status                  |
+| ---: | -------: | -----------: | ------------: | ------------: | ----------------------- |
+|    1 |      4.6 |           24 |         3,559 |  0.1625560000 | Energy change converged |
+|    2 |      7.2 |           22 |         6,136 |  0.6502470000 | Energy change converged |
+|    3 |      8.9 |           22 |         7,960 |  1.4630860000 | Energy change converged |
+|    4 |      7.7 |           21 |         6,815 |  2.6011420000 | Energy change converged |
+|    5 |      7.5 |           20 |         6,789 |  4.0645050000 | Energy change converged |
+|    6 |      8.9 |           22 |         7,970 |  5.8532660000 | Energy change converged |
+|    7 |      7.2 |           21 |         6,515 |  7.9675380000 | Energy change converged |
+|    8 |      7.4 |           20 |         6,750 | 10.4074380000 | Energy change converged |
+|    9 |      8.4 |           22 |         7,689 | 13.1730690000 | Energy change converged |
+|   10 |      8.7 |           22 |         7,942 | 16.2645240000 | Energy change converged |
+|   11 |      8.2 |           20 |         7,398 | 19.6818750000 | Energy change converged |
+|   12 |      8.9 |           21 |         8,132 | 23.4251650000 | Energy change converged |
+|   13 |     10.8 |           24 |         9,783 | 27.4943660000 | Energy change converged |
+|   14 |      9.2 |           21 |         8,208 | 31.8893600000 | Energy change converged |
+|   15 |     10.1 |           23 |         9,071 | 36.6099960000 | Energy change converged |
+|   16 |     12.3 |           28 |        11,119 | 41.6539100000 | Energy change converged |
+|   17 |      9.5 |           23 |         8,634 | 47.0226220000 | Energy change converged |
+|   18 |      9.2 |           23 |         8,262 | 52.7168540000 | Energy change converged |
+|   19 |      9.8 |           23 |         8,875 | 58.7366420000 | Energy change converged |
+|   20 |      9.0 |           22 |         8,053 | 65.0816790000 | Energy change converged |
+|   21 |      8.8 |           21 |         7,971 | 71.7515970000 | Energy change converged |
+|   22 |      9.2 |           23 |         8,443 | 78.7460100000 | Energy change converged |
+|   23 |      9.7 |           24 |         8,841 | 86.0643780000 | Energy change converged |
+|   24 |      9.9 |           24 |         9,097 | 93.7056510000 | Energy change converged |
+
+Summary: total time = `211.1 s`, total Newton iters = `536`, total KSP iters = `190,012`.
+
+#### Level 3, 16 MPI — GAMG (loose: rtol=1e-1, ksp_max_it=30, PC reuse)
+
+Artifact: [experiment_scripts/he_custom_l3_np16_gamg_hypre_settings.json](experiment_scripts/he_custom_l3_np16_gamg_hypre_settings.json)
+
+| Step | Time [s] | Newton iters | Sum KSP iters |        Energy | Status                  |
+| ---: | -------: | -----------: | ------------: | ------------: | ----------------------- |
+|    1 |      2.1 |           41 |           445 |  0.1626540000 | Energy change converged |
+|    2 |      2.6 |           48 |           733 |  0.6503650000 | Energy change converged |
+|    3 |      2.7 |           49 |           759 |  1.4634650000 | Energy change converged |
+|    4 |      2.7 |           50 |           718 |  2.6012100000 | Energy change converged |
+|    5 |      2.8 |           50 |           785 |  4.0645420000 | Energy change converged |
+|    6 |      2.6 |           47 |           703 |  5.8534710000 | Energy change converged |
+|    7 |      2.6 |           49 |           705 |  7.9676180000 | Energy change converged |
+|    8 |      2.6 |           46 |           761 | 10.4074830000 | Energy change converged |
+|    9 |      2.7 |           48 |           757 | 13.1731180000 | Energy change converged |
+|   10 |      2.5 |           45 |           726 | 16.2646650000 | Energy change converged |
+|   11 |      2.6 |           46 |           752 | 19.6819970000 | Energy change converged |
+|   12 |      2.8 |           50 |           807 | 23.4252460000 | Energy change converged |
+|   13 |      2.8 |           51 |           835 | 27.4944180000 | Energy change converged |
+|   14 |      2.5 |           44 |           725 | 31.8895290000 | Energy change converged |
+|   15 |      2.6 |           45 |           791 | 36.6101750000 | Energy change converged |
+|   16 |      2.8 |           46 |           756 | 41.6551670000 | Energy change converged |
+|   17 |      2.9 |           50 |           932 | 47.0231150000 | Energy change converged |
+|   18 |      2.5 |           45 |           725 | 52.7169870000 | Energy change converged |
+|   19 |      2.6 |           47 |           733 | 58.7367000000 | Energy change converged |
+|   20 |      2.5 |           45 |           720 | 65.0819070000 | Energy change converged |
+|   21 |      2.5 |           45 |           698 | 71.7519250000 | Energy change converged |
+|   22 |      2.4 |           43 |           722 | 78.7464080000 | Energy change converged |
+|   23 |      2.7 |           47 |           834 | 86.0646010000 | Energy change converged |
+|   24 |      2.6 |           46 |           746 | 93.7048460000 | Energy change converged |
+
+Summary: total time = `62.4 s`, total Newton iters = `1,123`, total KSP iters = `17,868`.
+
+### F.6 Conclusions
+
+1. **GAMG with `pc_gamg_threshold=0.05` + loose tolerance (`ksp_rtol=1e-1`) + PC reuse (`pc_setup_on_ksp_cap`) is the fastest configuration tested** — 2.2× faster than HYPRE with identical settings, 3.4× faster than GAMG with tight tolerance.
+
+2. **The `pc_gamg_threshold` parameter is critical.** Without it (default `-1`), GAMG converges to wrong solutions for 3D elasticity regardless of block size, nullspace, or coordinates. The threshold `0.05` filters weak graph connections and produces correct coarsening.
+
+3. **Trade-off:** GAMG (loose) needs ~1.7× more Newton iterations (1,123 vs 669) due to the inexpensive-but-inexact preconditioner. However, each Newton step is much cheaper (2.6 s vs 5.6 s) because GAMG setup and application costs are lower than HYPRE's at this problem size.
+
+4. **Recommended GAMG configuration for 3D elasticity:**
+   ```
+   --pc_type gamg --ksp_rtol 1e-1 --ksp_max_it 30 --pc_setup_on_ksp_cap
+   --gamg_threshold 0.05
+   ```
+   Plus: `A.setBlockSize(3)`, near-nullspace (6 rigid-body modes), `PCSetCoordinates` — all handled automatically by the solver when `--pc_type gamg` is specified.

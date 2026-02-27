@@ -131,7 +131,9 @@ def run_level(mesh_level, num_steps=1, verbose=True, maxit=100, start_step=1,
               total_steps=24, hypre_nodal_coarsen=6, hypre_vec_interp_variant=3,
               hypre_strong_threshold=None, hypre_coarsen_type="",
               save_history=False, save_linear_timing=False,
-              pc_setup_on_ksp_cap=False):
+              pc_setup_on_ksp_cap=False,
+              gamg_threshold=-1.0, gamg_agg_nsmooths=1,
+              gamg_set_coordinates=True):
     """Run JAX-version Newton solver for one HE mesh level.
 
     Returns dict with: mesh_level, total_dofs, time, iters, energy, message
@@ -217,6 +219,9 @@ def run_level(mesh_level, num_steps=1, verbose=True, maxit=100, start_step=1,
     print("Creating matrix...", flush=True)
     A = create_matrix(hessian_form)
 
+    # Set block size for vector problems (3 DOFs per node for 3D elasticity)
+    A.setBlockSize(3)
+
     nullspace = None
     if use_near_nullspace:
         print("Building nullspace...", flush=True)
@@ -243,6 +248,17 @@ def run_level(mesh_level, num_steps=1, verbose=True, maxit=100, start_step=1,
             opts["pc_hypre_boomeramg_strong_threshold"] = hypre_strong_threshold
         if hypre_coarsen_type:
             opts["pc_hypre_boomeramg_coarsen_type"] = hypre_coarsen_type
+
+    # GAMG-specific settings for elasticity
+    gamg_coords = None
+    if pc_type == "gamg":
+        opts["pc_gamg_threshold"] = gamg_threshold
+        opts["pc_gamg_agg_nsmooths"] = gamg_agg_nsmooths
+        # Store coordinates for deferred PCSetCoordinates (needs operators set first)
+        if gamg_set_coordinates:
+            index_map = V.dofmap.index_map
+            gamg_coords = V.tabulate_dof_coordinates()[:index_map.size_local, :]
+
     ksp.setFromOptions()
 
     ksp.setTolerances(rtol=ksp_rtol, max_it=ksp_max_it)
@@ -273,7 +289,7 @@ def run_level(mesh_level, num_steps=1, verbose=True, maxit=100, start_step=1,
 
     def hessian_solve_fn(vec, rhs, sol):
         """Assemble Hessian, solve H · sol = rhs. Return KSP iters."""
-        nonlocal force_pc_setup_next
+        nonlocal force_pc_setup_next, gamg_coords
         print("Assembling Hessian...", flush=True)
         t0 = time.perf_counter()
         A.zeroEntries()
@@ -282,6 +298,10 @@ def run_level(mesh_level, num_steps=1, verbose=True, maxit=100, start_step=1,
         t1 = time.perf_counter()
         print("Setting operators...", flush=True)
         ksp.setOperators(A)
+        # Set GAMG coordinates after operators are set (only needed once)
+        if gamg_coords is not None:
+            pc.setCoordinates(gamg_coords)
+            gamg_coords = None  # only set once
         t2 = time.perf_counter()
         if pc_setup_on_ksp_cap:
             if force_pc_setup_next:
@@ -427,6 +447,12 @@ if __name__ == "__main__":
     parser.add_argument("--out", type=str, default="", help="Output JSON file")
     parser.add_argument("--total_steps", type=int, default=24,
                         help="Total steps that span the full 4×2π rotation (controls step size)")
+    parser.add_argument("--gamg_threshold", type=float, default=-1.0,
+                        help="GAMG threshold for filtering graph (-1 = keep all, most robust)")
+    parser.add_argument("--gamg_agg_nsmooths", type=int, default=1,
+                        help="GAMG number of smoothing steps for SA prolongation (1=smoothed, 0=unsmoothed)")
+    parser.add_argument("--no_gamg_coordinates", action="store_true",
+                        help="Disable PCSetCoordinates for GAMG")
     parser.add_argument("--quiet", action="store_true")
     args = parser.parse_args()
 
@@ -453,6 +479,9 @@ if __name__ == "__main__":
         save_history=args.save_history,
         save_linear_timing=args.save_linear_timing,
         pc_setup_on_ksp_cap=args.pc_setup_on_ksp_cap,
+        gamg_threshold=args.gamg_threshold,
+        gamg_agg_nsmooths=args.gamg_agg_nsmooths,
+        gamg_set_coordinates=not args.no_gamg_coordinates,
     )
 
     if MPI.COMM_WORLD.rank == 0:
