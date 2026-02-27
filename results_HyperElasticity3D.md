@@ -1180,12 +1180,12 @@ docker run -d --name bench_container --shm-size=8g \
 
 Several configurations were tested (intermediate runs not shown in full):
 
-| Run | Block size | Nullspace | Coordinates | Threshold | KSP rtol | Step-1 energy | Correct? |
-| --- | :--------: | :-------: | :---------: | :-------: | :------: | :-----------: | :------: |
-| 1 — Naive GAMG | No | No | No | -1 (default) | 1e-1 | diverged | No |
-| 2 — + block size | 3 | Yes | No | -1 | 1e-3 | 0.3957 | No |
-| 3 — + coordinates | 3 | Yes | Yes | -1 | 1e-6 | 0.1673 | No |
-| 4 — + threshold=0.05 | 3 | Yes | Yes | 0.05 | 1e-6 | **0.1626** | **Yes** |
+| Run                  | Block size | Nullspace | Coordinates |  Threshold   | KSP rtol | Step-1 energy | Correct? |
+| -------------------- | :--------: | :-------: | :---------: | :----------: | :------: | :-----------: | :------: |
+| 1 — Naive GAMG       |     No     |    No     |     No      | -1 (default) |   1e-1   |   diverged    |    No    |
+| 2 — + block size     |     3      |    Yes    |     No      |      -1      |   1e-3   |    0.3957     |    No    |
+| 3 — + coordinates    |     3      |    Yes    |     Yes     |      -1      |   1e-6   |    0.1673     |    No    |
+| 4 — + threshold=0.05 |     3      |    Yes    |     Yes     |     0.05     |   1e-6   |  **0.1626**   | **Yes**  |
 
 **Key finding:** Without `pc_gamg_threshold=0.05`, GAMG consistently converged to wrong minima (energies 0.17–0.40 instead of the correct 0.1626). The threshold is the single most important parameter — more important than coordinates or nullspace for this problem.
 
@@ -1193,18 +1193,18 @@ Several configurations were tested (intermediate runs not shown in full):
 
 All runs: level 3, 24 load steps, 16 MPI, `ksp_type=gmres`, near-nullspace ON, `gamg_threshold=0.05`.
 
-| | **HYPRE** | **GAMG (tight)** | **GAMG (loose)** |
-| --- | ---: | ---: | ---: |
-| PC type | `hypre` (BoomerAMG) | `gamg` | `gamg` |
-| `ksp_rtol` | 1e-1 | 1e-6 | 1e-1 |
-| `ksp_max_it` | 30 | 500 | 30 |
-| `pc_setup_on_ksp_cap` | Yes | No | Yes |
-| Total time | **135.5 s** | 211.1 s | **62.4 s** |
-| Total Newton iters | 669 | 536 | 1,123 |
-| Total KSP iters | 10,347 | 190,012 | 17,868 |
-| Avg KSP/Newton | 15.5 | 354.5 | 15.9 |
-| Final energy | 93.7050 | 93.7057 | 93.7048 |
-| All steps converged? | Yes (24/24) | Yes (24/24) | Yes (24/24) |
+|                       |           **HYPRE** | **GAMG (tight)** | **GAMG (loose)** |
+| --------------------- | ------------------: | ---------------: | ---------------: |
+| PC type               | `hypre` (BoomerAMG) |           `gamg` |           `gamg` |
+| `ksp_rtol`            |                1e-1 |             1e-6 |             1e-1 |
+| `ksp_max_it`          |                  30 |              500 |               30 |
+| `pc_setup_on_ksp_cap` |                 Yes |               No |              Yes |
+| Total time            |         **135.5 s** |          211.1 s |       **62.4 s** |
+| Total Newton iters    |                 669 |              536 |            1,123 |
+| Total KSP iters       |              10,347 |          190,012 |           17,868 |
+| Avg KSP/Newton        |                15.5 |            354.5 |             15.9 |
+| Final energy          |             93.7050 |          93.7057 |          93.7048 |
+| All steps converged?  |         Yes (24/24) |      Yes (24/24) |      Yes (24/24) |
 
 **Observations:**
 

@@ -70,10 +70,10 @@ The **Custom Newton** uses a golden-section energy line search (`tools_petsc4py/
 
 **Preconditioner comparison (level 3, 78k DOFs, 16 MPI, 24 load steps):**
 
-| PC | Total time | Newton iters | KSP iters |
-| --- | ---: | ---: | ---: |
-| GAMG (`--pc_type gamg --gamg_threshold 0.05`) | **62.4 s** | 1,123 | 17,868 |
-| HYPRE BoomerAMG (`--pc_type hypre`) | 135.5 s | 669 | 10,347 |
+| PC                                            | Total time | Newton iters | KSP iters |
+| --------------------------------------------- | ---------: | -----------: | --------: |
+| GAMG (`--pc_type gamg --gamg_threshold 0.05`) | **62.4 s** |        1,123 |    17,868 |
+| HYPRE BoomerAMG (`--pc_type hypre`)           |    135.5 s |          669 |    10,347 |
 
 GAMG with `pc_gamg_threshold=0.05` is **2.2× faster** than HYPRE for this problem. The threshold
 is critical for correctness — without it, GAMG converges to wrong solutions for 3D elasticity.
