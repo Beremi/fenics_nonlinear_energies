@@ -86,6 +86,45 @@ is critical for correctness — without it, GAMG converges to wrong solutions fo
 See [results_HyperElasticity3D.md, Annex F](results_HyperElasticity3D.md#annex-f-gamg-vs-hypre-preconditioner-comparison-level-3-16-mpi-processes)
 for the full investigation.
 
+### SNES+GAMG continuation check (level 3, 16 MPI)
+
+Using the best SNES+GAMG base setting found in the latest sweep:
+
+- `--snes_type newtonls --linesearch basic`
+- `--ksp_type fgmres --pc_type gamg`
+- `--ksp_rtol 1e-1 --ksp_max_it 2000 --snes_atol 1e-3`
+- `PETSC_OPTIONS='-he_pc_gamg_threshold 0.05 -he_pc_gamg_agg_nsmooths 1'`
+- near-nullspace ON (default), `--stop_on_fail`
+
+We then reduced the load increment by increasing the number of steps while keeping the same horizon (`--total_steps = --steps`):
+
+| Requested steps | Recorded | Converged | First fail step | First fail angle [rad] | Reason | Time [s] | Newton | Linear |
+| --------------: | -------: | --------: | --------------: | ---------------------: | -----: | -------: | -----: | -----: |
+|          `96/96` |       60 |        59 |              60 |              15.707963 |     -3 |    78.69 |   1092 |  48696 |
+|        `192/192` |      119 |       118 |             119 |              15.577064 |     -3 |   131.68 |   1820 |  82410 |
+|        `384/384` |      237 |       236 |             237 |              15.511614 |     -3 |   225.93 |   3070 | 138544 |
+
+Finding: smaller increments significantly delay failure in step index, but all tested runs still end with `SNES_DIVERGED_LINEAR_SOLVE` (`reason=-3`) near the same physical angle.
+
+Artifacts:
+- [experiment_scripts/he_snes_l3_np16_gamg_96_fgmres_r1e1_k2000_a1e3_basic.json](experiment_scripts/he_snes_l3_np16_gamg_96_fgmres_r1e1_k2000_a1e3_basic.json)
+- [experiment_scripts/he_snes_l3_np16_gamg_192_fgmres_base.json](experiment_scripts/he_snes_l3_np16_gamg_192_fgmres_base.json)
+- [experiment_scripts/he_snes_l3_np16_gamg_384_fgmres_base.json](experiment_scripts/he_snes_l3_np16_gamg_384_fgmres_base.json)
+
+Run template (set `<N>=96|192|384`):
+```bash
+docker exec -u ubuntu bench_container bash -lc '
+cd /workdir &&
+PETSC_OPTIONS="-he_pc_gamg_threshold 0.05 -he_pc_gamg_agg_nsmooths 1" \
+mpirun -n 16 python3 HyperElasticity3D_fenics/solve_HE_snes_newton.py \
+  --level 3 --steps <N> --total_steps <N> --stop_on_fail --quiet \
+  --snes_type newtonls --linesearch basic \
+  --pc_type gamg --ksp_type fgmres \
+  --ksp_rtol 1e-1 --ksp_max_it 2000 --snes_atol 1e-3 \
+  --out experiment_scripts/he_snes_l3_np16_gamg_<N>_fgmres_base.json
+'
+```
+
 ### How to run (96 quarter-steps, level 1, single process)
 
 **Custom Newton:**
