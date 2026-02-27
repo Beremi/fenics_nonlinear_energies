@@ -55,18 +55,15 @@ def build_nullspace(V, A):
     index_map = V.dofmap.index_map
     x_owned = x[:index_map.size_local, :]
 
-    print("Creating vectors...", flush=True)
     vecs = [A.createVecLeft() for _ in range(6)]
 
     for vec in vecs:
         vec.getArray()[:] = 0.0
 
-    print("Setting translations...", flush=True)
     # Translations
     for i in range(3):
         vecs[i].getArray()[i::3] = 1.0
 
-    print("Setting rotations...", flush=True)
     # Rotations
     # Mode 3: rotation about x-axis
     vecs[3].getArray()[1::3] = -x_owned[:, 2]
@@ -80,7 +77,6 @@ def build_nullspace(V, A):
     vecs[5].getArray()[0::3] = -x_owned[:, 1]
     vecs[5].getArray()[1::3] = x_owned[:, 0]
 
-    print("Creating NullSpace...", flush=True)
     return PETSc.NullSpace().create(vectors=vecs)
 
 # ---------------------------------------------------------------------------
@@ -130,10 +126,15 @@ def run_level(mesh_level, num_steps=1, verbose=True, maxit=100, start_step=1,
               ksp_rtol=1e-3, ksp_max_it=10000, use_near_nullspace=True,
               total_steps=24, hypre_nodal_coarsen=6, hypre_vec_interp_variant=3,
               hypre_strong_threshold=None, hypre_coarsen_type="",
+              tolf=1e-4, tolg=1e-3, tolg_rel=1e-3, tolx_rel=1e-3, tolx_abs=1e-10,
               save_history=False, save_linear_timing=False,
               pc_setup_on_ksp_cap=False,
               gamg_threshold=-1.0, gamg_agg_nsmooths=1,
-              gamg_set_coordinates=True):
+              gamg_set_coordinates=True,
+              fail_fast=True, retry_on_nonfinite=True,
+              retry_on_maxit=True,
+              nonfinite_retry_rtol_factor=0.1, nonfinite_retry_linesearch_b=1.0,
+              retry_ksp_max_it_factor=2.0):
     """Run JAX-version Newton solver for one HE mesh level.
 
     Returns dict with: mesh_level, total_dofs, time, iters, energy, message
@@ -216,7 +217,8 @@ def run_level(mesh_level, num_steps=1, verbose=True, maxit=100, start_step=1,
     x.assemble()
 
     # ---- pre-allocate Hessian matrix and KSP ----
-    print("Creating matrix...", flush=True)
+    if rank == 0 and verbose:
+        print("Creating matrix...", flush=True)
     A = create_matrix(hessian_form)
 
     # Set block size for vector problems (3 DOFs per node for 3D elasticity)
@@ -224,12 +226,15 @@ def run_level(mesh_level, num_steps=1, verbose=True, maxit=100, start_step=1,
 
     nullspace = None
     if use_near_nullspace:
-        print("Building nullspace...", flush=True)
+        if rank == 0 and verbose:
+            print("Building nullspace...", flush=True)
         nullspace = build_nullspace(V, A)
-        print("Setting near nullspace...", flush=True)
+        if rank == 0 and verbose:
+            print("Setting near nullspace...", flush=True)
         A.setNearNullSpace(nullspace)
 
-    print("Creating KSP...", flush=True)
+    if rank == 0 and verbose:
+        print("Creating KSP...", flush=True)
     ksp = PETSc.KSP().create(msh.comm)
     ksp.setType(ksp_type)
     pc = ksp.getPC()
@@ -290,13 +295,15 @@ def run_level(mesh_level, num_steps=1, verbose=True, maxit=100, start_step=1,
     def hessian_solve_fn(vec, rhs, sol):
         """Assemble Hessian, solve H · sol = rhs. Return KSP iters."""
         nonlocal force_pc_setup_next, gamg_coords
-        print("Assembling Hessian...", flush=True)
+        if rank == 0 and verbose:
+            print("Assembling Hessian...", flush=True)
         t0 = time.perf_counter()
         A.zeroEntries()
         assemble_matrix(A, hessian_form, bcs=bcs)
         A.assemble()
         t1 = time.perf_counter()
-        print("Setting operators...", flush=True)
+        if rank == 0 and verbose:
+            print("Setting operators...", flush=True)
         ksp.setOperators(A)
         # Set GAMG coordinates after operators are set (only needed once)
         if gamg_coords is not None:
@@ -311,10 +318,12 @@ def run_level(mesh_level, num_steps=1, verbose=True, maxit=100, start_step=1,
         else:
             ksp.setUp()
             t3 = time.perf_counter()
-        print("Solving KSP...", flush=True)
+        if rank == 0 and verbose:
+            print("Solving KSP...", flush=True)
         ksp.solve(rhs, sol)
         t4 = time.perf_counter()
-        print("KSP solved.", flush=True)
+        if rank == 0 and verbose:
+            print("KSP solved.", flush=True)
 
         ksp_its = ksp.getIterationNumber()
         if pc_setup_on_ksp_cap and ksp_its >= ksp_max_it:
@@ -336,6 +345,7 @@ def run_level(mesh_level, num_steps=1, verbose=True, maxit=100, start_step=1,
     rotation_per_iter = 4 * 2 * np.pi / total_steps
 
     results = []
+    x_step_start = x.duplicate()
 
     for step in range(start_step, start_step + num_steps):
         angle = step * rotation_per_iter
@@ -355,27 +365,89 @@ def run_level(mesh_level, num_steps=1, verbose=True, maxit=100, start_step=1,
         set_bc(x, bcs)
         _ghost_update(x)
         x.assemble()
+        x.copy(x_step_start)
 
         if rank == 0 and verbose:
             print(f"--- Step {step}/{num_steps}, Angle: {angle:.4f} ---")
 
-        t_start = time.perf_counter()
-        result = newton(
-            energy_fn,
-            gradient_fn,
-            hessian_solve_fn,
-            x,
-            tolf=1e-4,
-            tolg=1e-3,
-            linesearch_tol=1e-3,
-            linesearch_interval=linesearch_interval,
-            maxit=maxit,
-            verbose=verbose,
-            comm=comm,
-            ghost_update_fn=_ghost_update,
-            save_history=save_history,
-        )
-        total_time = time.perf_counter() - t_start
+        attempt_configs = [
+            ("primary", linesearch_interval, ksp_rtol, ksp_max_it),
+        ]
+        if retry_on_nonfinite or retry_on_maxit:
+            ls_a, ls_b = linesearch_interval
+            retry_ls_b = min(ls_b, nonfinite_retry_linesearch_b)
+            if retry_ls_b <= ls_a:
+                retry_ls_b = ls_b
+            retry_rtol = max(1e-8, ksp_rtol * nonfinite_retry_rtol_factor)
+            retry_kmax = max(ksp_max_it + 1, int(round(ksp_max_it * retry_ksp_max_it_factor)))
+            if retry_ls_b < ls_b or retry_rtol < ksp_rtol or retry_kmax > ksp_max_it:
+                attempt_configs.append(
+                    ("repair", (ls_a, retry_ls_b), retry_rtol, retry_kmax)
+                )
+
+        result = None
+        total_time = 0.0
+        used_attempt = "primary"
+        used_linesearch = linesearch_interval
+        used_ksp_rtol = ksp_rtol
+        used_ksp_max_it = ksp_max_it
+
+        for attempt_idx, (attempt_name, ls_interval, ksp_rtol_attempt, ksp_max_it_attempt) in enumerate(attempt_configs):
+            # Restore step-start state for each attempt.
+            x_step_start.copy(x)
+            set_bc(x, bcs)
+            _ghost_update(x)
+            x.assemble()
+
+            # Ensure the first Newton linear solve in each attempt performs setup.
+            force_pc_setup_next = True
+            ksp.setTolerances(rtol=ksp_rtol_attempt, max_it=ksp_max_it_attempt)
+            if save_linear_timing:
+                linear_timing_records.clear()
+
+            t_start = time.perf_counter()
+            result = newton(
+                energy_fn,
+                gradient_fn,
+                hessian_solve_fn,
+                x,
+                tolf=tolf,
+                tolg=tolg,
+                tolg_rel=tolg_rel,
+                linesearch_tol=1e-3,
+                linesearch_interval=ls_interval,
+                maxit=maxit,
+                tolx_rel=tolx_rel,
+                tolx_abs=tolx_abs,
+                require_all_convergence=True,
+                fail_on_nonfinite=True,
+                verbose=verbose,
+                comm=comm,
+                ghost_update_fn=_ghost_update,
+                save_history=save_history,
+            )
+            total_time = time.perf_counter() - t_start
+            used_attempt = attempt_name
+            used_linesearch = ls_interval
+            used_ksp_rtol = ksp_rtol_attempt
+            used_ksp_max_it = ksp_max_it_attempt
+
+            msg_lower = result["message"].lower()
+            has_nonfinite = "non-finite" in msg_lower or "nan" in msg_lower
+            hit_newton_maxit = "maximum number of iterations reached" in msg_lower
+            need_retry = (retry_on_nonfinite and has_nonfinite) or (retry_on_maxit and hit_newton_maxit)
+            if need_retry and attempt_idx + 1 < len(attempt_configs):
+                if rank == 0 and verbose:
+                    reason = "non-finite state" if has_nonfinite else "max Newton iterations"
+                    print(
+                        f"Step {step}: {attempt_name} failed with {reason}, "
+                        f"retrying with tighter linear solve / safer line-search."
+                    )
+                continue
+            break
+
+        # Restore baseline KSP tolerance for the next load step.
+        ksp.setTolerances(rtol=ksp_rtol, max_it=ksp_max_it)
 
         final_energy = result["fun"]
 
@@ -386,6 +458,10 @@ def run_level(mesh_level, num_steps=1, verbose=True, maxit=100, start_step=1,
             "iters": result["nit"],
             "energy": round(final_energy, 6),
             "message": result["message"],
+            "attempt": used_attempt,
+            "ksp_rtol_used": used_ksp_rtol,
+            "ksp_max_it_used": int(used_ksp_max_it),
+            "linesearch_interval_used": [float(used_linesearch[0]), float(used_linesearch[1])],
         }
         if save_history:
             step_record["history"] = result.get("history", [])
@@ -396,8 +472,13 @@ def run_level(mesh_level, num_steps=1, verbose=True, maxit=100, start_step=1,
 
         if rank == 0 and verbose:
             print(f"Step {step} finished: Energy = {final_energy:.6f}, Iters = {result['nit']}")
+        if fail_fast and "converged" not in result["message"].lower():
+            if rank == 0 and verbose:
+                print(f"Stopping early at step {step} due to solver message: {result['message']}")
+            break
 
     # ---- clean up PETSc objects ----
+    x_step_start.destroy()
     ksp.destroy()
     A.destroy()
     if nullspace is not None:
@@ -425,6 +506,12 @@ if __name__ == "__main__":
     parser.add_argument("--pc_type", type=str, default="hypre", help="PETSc PC type")
     parser.add_argument("--ksp_rtol", type=float, default=1e-3, help="KSP relative tolerance")
     parser.add_argument("--ksp_max_it", type=int, default=10000, help="KSP maximum iterations per Newton step")
+    parser.add_argument("--tolf", type=float, default=1e-4, help="Newton energy-change tolerance")
+    parser.add_argument("--tolg", type=float, default=1e-3, help="Newton gradient-norm tolerance")
+    parser.add_argument("--tolg_rel", type=float, default=1e-3,
+                        help="Newton relative gradient tolerance (scaled by initial gradient)")
+    parser.add_argument("--tolx_rel", type=float, default=1e-3, help="Newton relative step-size tolerance")
+    parser.add_argument("--tolx_abs", type=float, default=1e-10, help="Newton absolute step-size tolerance")
     parser.add_argument("--no_near_nullspace", action="store_true", help="Disable elasticity near-nullspace on Hessian")
     parser.add_argument("--hypre_nodal_coarsen", type=int, default=6,
                         help="BoomerAMG nodal coarsen (-1 to skip setting)")
@@ -453,6 +540,18 @@ if __name__ == "__main__":
                         help="GAMG number of smoothing steps for SA prolongation (1=smoothed, 0=unsmoothed)")
     parser.add_argument("--no_gamg_coordinates", action="store_true",
                         help="Disable PCSetCoordinates for GAMG")
+    parser.add_argument("--no_fail_fast", action="store_true",
+                        help="Do not stop trajectory early on Newton non-convergence")
+    parser.add_argument("--no_retry_on_nonfinite", action="store_true",
+                        help="Disable non-finite repair attempt with tighter settings")
+    parser.add_argument("--nonfinite_retry_rtol_factor", type=float, default=0.1,
+                        help="Multiplier for KSP rtol in non-finite repair attempt")
+    parser.add_argument("--nonfinite_retry_linesearch_b", type=float, default=1.0,
+                        help="Upper bound of line-search interval in non-finite repair attempt")
+    parser.add_argument("--no_retry_on_maxit", action="store_true",
+                        help="Disable repair attempt when Newton reaches max iterations")
+    parser.add_argument("--retry_ksp_max_it_factor", type=float, default=2.0,
+                        help="Multiplier for KSP max_it in repair attempt")
     parser.add_argument("--quiet", action="store_true")
     args = parser.parse_args()
 
@@ -470,6 +569,11 @@ if __name__ == "__main__":
         pc_type=args.pc_type,
         ksp_rtol=args.ksp_rtol,
         ksp_max_it=args.ksp_max_it,
+        tolf=args.tolf,
+        tolg=args.tolg,
+        tolg_rel=args.tolg_rel,
+        tolx_rel=args.tolx_rel,
+        tolx_abs=args.tolx_abs,
         use_near_nullspace=not args.no_near_nullspace,
         total_steps=args.total_steps,
         hypre_nodal_coarsen=args.hypre_nodal_coarsen,
@@ -482,6 +586,12 @@ if __name__ == "__main__":
         gamg_threshold=args.gamg_threshold,
         gamg_agg_nsmooths=args.gamg_agg_nsmooths,
         gamg_set_coordinates=not args.no_gamg_coordinates,
+        fail_fast=not args.no_fail_fast,
+        retry_on_nonfinite=not args.no_retry_on_nonfinite,
+        retry_on_maxit=not args.no_retry_on_maxit,
+        nonfinite_retry_rtol_factor=args.nonfinite_retry_rtol_factor,
+        nonfinite_retry_linesearch_b=args.nonfinite_retry_linesearch_b,
+        retry_ksp_max_it_factor=args.retry_ksp_max_it_factor,
     )
 
     if MPI.COMM_WORLD.rank == 0:

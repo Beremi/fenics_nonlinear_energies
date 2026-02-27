@@ -68,6 +68,12 @@ Both solvers use:
 The **Custom Newton** uses a golden-section energy line search (`tools_petsc4py/minimizers.py`) and
 `--pc_setup_on_ksp_cap` to reuse the AMG preconditioner across Newton steps.
 
+Recent update: the PETSc minimizer was hardened against false convergence / NaN propagation.
+The HE path now uses a 3-part nonlinear stop criterion (energy + step + gradient), non-finite
+rollback checks, and per-step repair retries with tighter linear settings on failure.
+See [results_HyperElasticity3D.md](results_HyperElasticity3D.md) Annex F.8–F.10 for the full
+before/after sweep comparisons and tolerance sensitivity (`tolg_rel=1e-3`, `1e-4`, `1e-2`).
+
 **Preconditioner comparison (level 3, 78k DOFs, 16 MPI, 24 load steps):**
 
 | PC                                            | Total time | Newton iters | KSP iters |

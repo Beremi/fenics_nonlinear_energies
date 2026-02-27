@@ -31,7 +31,14 @@ Reference artifacts used in tables:
 - Nonlinear tolerances:
   - `tolf = 1e-4`
   - `tolg = 1e-3`
+  - `tolg_rel = 1e-3`
+  - `tolx_rel = 1e-3`
+  - `tolx_abs = 1e-10`
   - `maxit = 100`
+  - convergence requires **all three** criteria:
+    - energy change (`|dE| < tolf`)
+    - step size (`step_rel < tolx_rel` or `step_norm < tolx_abs`)
+    - gradient (`||g|| < max(tolg, tolg_rel * ||g_0||)`)
 - Line search:
   - golden-section
   - `linesearch_tol = 1e-3`
@@ -47,6 +54,44 @@ Reference artifacts used in tables:
     - first Newton linear solve runs `ksp.setUp()`
     - subsequent solves reuse PC
     - rebuild PC only when previous solve hit `ksp_max_it`
+  - nonlinear repair mode enabled:
+    - retry on non-finite state and on Newton `maxit` stall
+    - retry uses tighter linear solve (`ksp_rtol *= 0.1`), higher linear cap (`ksp_max_it *= 2`)
+    - retry clamps line-search upper bound to `1.0`
+
+### 1.2.1 Detailed minimizer changes (custom PETSc Newton)
+
+The minimizer in `tools_petsc4py/minimizers.py` was hardened to prevent silent false convergence and NaN propagation observed in `r1e-2_k50_fresh`:
+
+1. **Stopping logic changed from energy-only to multi-criterion support**
+   - Previous practical behavior in HE runs: most steps ended with `"Energy change converged"` even when gradient was still large.
+   - Current HE path requires `energy + step + gradient` together.
+
+2. **Relative gradient target support**
+   - Added `tolg_rel`, using
+     `grad_target = max(tolg, tolg_rel * initial_grad_norm)`.
+   - This avoids brittle behavior from using one absolute gradient threshold across all load steps.
+
+3. **Step-size convergence criteria added**
+   - Added `tolx_rel`, `tolx_abs`.
+   - Convergence can no longer be declared on tiny `dE` alone when steps are still too large (or vice versa).
+
+4. **Non-finite fail-fast + rollback**
+   - Detect non-finite energy/gradient/direction.
+   - Keep a rollback copy of the previous iterate and restore on non-finite update.
+   - Return explicit failure message instead of propagating NaNs.
+
+5. **Line-search non-finite repair**
+   - If golden-section candidate is non-finite, backtrack `alpha` toward zero.
+   - If no finite trial is found, terminate with explicit message.
+
+6. **Per-iteration diagnostics expanded**
+   - History now includes `step_rel`, `step_norm`, `grad_target`, `grad_norm_post`, `ls_repaired`.
+   - This enabled identifying the step-16 stall mechanism (`ksp_its` repeatedly at cap with gradient plateau).
+
+7. **Load-step retry strategy in HE driver**
+   - Added per-step retry attempt in `solve_HE_custom_jaxversion.py`.
+   - Retry is triggered by non-finite failure or Newton max-iteration stall, with tighter/safer linear and line-search settings.
 
 **How to run (96 quarter-steps, level 1, single process):**
 ```bash
@@ -1368,3 +1413,192 @@ Summary: total time = `62.4 s`, total Newton iters = `1,123`, total KSP iters = 
    --gamg_threshold 0.05
    ```
    Plus: `A.setBlockSize(3)`, near-nullspace (6 rigid-body modes), `PCSetCoordinates` — all handled automatically by the solver when `--pc_type gamg` is specified.
+
+### F.7 GAMG sweep targeting HYPRE-like iteration counts (L3, np=16)
+
+To tune GAMG toward the HYPRE iteration profile, we swept:
+- `ksp_rtol`
+- `ksp_max_it`
+- preconditioner rebuild policy (`--pc_setup_on_ksp_cap` ON/OFF)
+
+Fixed across all runs:
+- `--pc_type gamg`
+- `--ksp_type gmres`
+- `--gamg_threshold 0.05` (required for correctness)
+- level 3, 24 load steps, 16 MPI, near-nullspace ON, GAMG coordinates ON.
+
+HYPRE reference (for comparison): total time `135.5444 s`, Newton `669`, KSP `10347`.
+
+#### How to run single test runs
+
+Run one GAMG test point (replace `<...>`):
+```bash
+docker exec bench_container mpirun -n 16 python3 \
+  /workdir/HyperElasticity3D_fenics/solve_HE_custom_jaxversion.py \
+  --level 3 --steps 24 --start_step 1 --total_steps 24 \
+  --maxit 100 --ksp_type gmres --pc_type gamg \
+  --ksp_rtol <rtol> --ksp_max_it <ksp_max_it> \
+  --gamg_threshold 0.05 --gamg_agg_nsmooths 1 \
+  [--pc_setup_on_ksp_cap] \
+  --save_history --quiet \
+  --out /workdir/experiment_scripts/he_gamg_hypre_like_sweep_l3_np16/<case_id>.json
+```
+
+Requested fresh-`ksp_max_it=50` cases (PC setup fresh every Newton):
+```bash
+# rtol = 1e-1
+docker exec bench_container mpirun -n 16 python3 \
+  /workdir/HyperElasticity3D_fenics/solve_HE_custom_jaxversion.py \
+  --level 3 --steps 24 --start_step 1 --total_steps 24 \
+  --maxit 100 --ksp_type gmres --pc_type gamg \
+  --ksp_rtol 1e-1 --ksp_max_it 50 \
+  --gamg_threshold 0.05 --gamg_agg_nsmooths 1 \
+  --save_history --quiet \
+  --out /workdir/experiment_scripts/he_gamg_hypre_like_sweep_l3_np16/r1e-1_k50_fresh.json
+
+# rtol = 1e-2
+docker exec bench_container mpirun -n 16 python3 \
+  /workdir/HyperElasticity3D_fenics/solve_HE_custom_jaxversion.py \
+  --level 3 --steps 24 --start_step 1 --total_steps 24 \
+  --maxit 100 --ksp_type gmres --pc_type gamg \
+  --ksp_rtol 1e-2 --ksp_max_it 50 \
+  --gamg_threshold 0.05 --gamg_agg_nsmooths 1 \
+  --save_history --quiet \
+  --out /workdir/experiment_scripts/he_gamg_hypre_like_sweep_l3_np16/r1e-2_k50_fresh.json
+
+# rtol = 1e-3
+docker exec bench_container mpirun -n 16 python3 \
+  /workdir/HyperElasticity3D_fenics/solve_HE_custom_jaxversion.py \
+  --level 3 --steps 24 --start_step 1 --total_steps 24 \
+  --maxit 100 --ksp_type gmres --pc_type gamg \
+  --ksp_rtol 1e-3 --ksp_max_it 50 \
+  --gamg_threshold 0.05 --gamg_agg_nsmooths 1 \
+  --save_history --quiet \
+  --out /workdir/experiment_scripts/he_gamg_hypre_like_sweep_l3_np16/r1e-3_k50_fresh.json
+```
+
+Run the prepared sweep script:
+```bash
+python3 experiment_scripts/sweep_he_gamg_hypre_like_l3_np16.py --case_set default
+```
+
+#### Combined sweep table (all tested points)
+
+| Case | rtol | ksp_max_it | PC reuse on cap | Conv steps | Time [s] | Newton | KSP | Avg KSP/Newton | Final energy | Score to HYPRE | Speedup vs HYPRE |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| r2e-2_k30_fresh | 2e-02 | 30 | No | 24/24 | 47.0968 | 720 | 19027 | 26.4264 | 93.704946 | 0.9151 | 2.878x |
+| r5e-2_k30_reuse | 5e-02 | 30 | Yes | 24/24 | 51.5617 | 849 | 17447 | 20.5501 | 93.721554 | 0.9552 | 2.629x |
+| r1e-2_k30_reuse | 1e-02 | 30 | Yes | 24/24 | 50.4301 | 730 | 20484 | 28.0603 | 93.705067 | 1.0709 | 2.688x |
+| r1e-2_k20_reuse | 1e-02 | 20 | Yes | 24/24 | 52.7889 | 910 | 17796 | 19.5560 | 93.705406 | 1.0802 | 2.568x |
+| r1e-1_k20_reuse | 1e-01 | 20 | Yes | 24/24 | 59.1073 | 1108 | 14961 | 13.5027 | 93.704985 | 1.1021 | 2.293x |
+| r5e-2_k20_fresh | 5e-02 | 20 | No | 24/24 | 55.9024 | 985 | 17151 | 17.4122 | 93.705143 | 1.1299 | 2.425x |
+| r1e-2_k30_fresh | 1e-02 | 30 | No | 24/24 | 50.2838 | 756 | 21168 | 28.0000 | 93.705292 | 1.1759 | 2.696x |
+| r1e-1_k30_reuse | 1e-01 | 30 | Yes | 24/24 | 58.5355 | 1044 | 16725 | 16.0201 | 93.766002 | 1.1769 | 2.316x |
+| r2e-2_k30_reuse | 2e-02 | 30 | Yes | 24/24 | 51.0453 | 779 | 20828 | 26.7368 | 93.705076 | 1.1774 | 2.655x |
+| r5e-3_k30_reuse | 5e-03 | 30 | Yes | 24/24 | 52.7780 | 752 | 21809 | 29.0013 | 93.705377 | 1.2318 | 2.568x |
+| r2e-2_k20_reuse | 2e-02 | 20 | Yes | 24/24 | 57.7245 | 986 | 18758 | 19.0243 | 93.705381 | 1.2867 | 2.348x |
+| r5e-2_k20_reuse | 5e-02 | 20 | Yes | 24/24 | 59.2221 | 1042 | 17994 | 17.2687 | 93.705446 | 1.2966 | 2.289x |
+| r2e-2_k20_fresh | 2e-02 | 20 | No | 24/24 | 60.0793 | 1021 | 19551 | 19.1489 | 93.705356 | 1.4157 | 2.256x |
+| r2e-2_k50_reuse | 2e-02 | 50 | Yes | 24/24 | 54.3331 | 700 | 27912 | 39.8743 | 93.705209 | 1.7439 | 2.495x |
+| r1e-1_k50_fresh | 1e-01 | 50 | No | 24/24 | 65.3242 | 1032 | 24593 | 23.8304 | 93.704684 | 1.9194 | 2.075x |
+| r1e-2_k50_reuse | 1e-02 | 50 | Yes | 24/24 | 55.0011 | 692 | 29905 | 43.2153 | 93.705339 | 1.9246 | 2.464x |
+| r5e-3_k50_reuse | 5e-03 | 50 | Yes | 24/24 | 58.4888 | 675 | 31223 | 46.2563 | 93.705761 | 2.0266 | 2.317x |
+| r1e-3_k50_fresh | 1e-03 | 50 | No | 24/24 | 55.4752 | 640 | 31168 | 48.7000 | 93.705743 | 2.0556 | 2.443x |
+| r1e-2_k50_fresh | 1e-02 | 50 | No | 15/24 | 115.5878 | 1290 | 50663 | 39.2736 | nan | 4.8246 | 1.173x |
+
+Note: `r1e-2_k50_fresh` did not complete the full trajectory (only 15/24 converged steps; final energy is `nan`).
+
+Artifacts:
+- [experiment_scripts/he_gamg_hypre_like_sweep_l3_np16/summary_all.md](experiment_scripts/he_gamg_hypre_like_sweep_l3_np16/summary_all.md)
+- [experiment_scripts/he_gamg_hypre_like_sweep_l3_np16/summary_all.csv](experiment_scripts/he_gamg_hypre_like_sweep_l3_np16/summary_all.csv)
+- [experiment_scripts/he_gamg_hypre_like_sweep_l3_np16/summary_all.json](experiment_scripts/he_gamg_hypre_like_sweep_l3_np16/summary_all.json)
+
+### F.8 Hardened nonlinear solver impact (same 16-case GAMG sweep)
+
+This sweep repeats the same 16 GAMG points as F.7, but with the hardened nonlinear minimizer settings:
+
+- `tolf=1e-4`, `tolg=1e-3`, `tolg_rel=1e-3`
+- `tolx_rel=1e-3`, `tolx_abs=1e-10`
+- convergence requires energy + step + gradient
+- per-step retry enabled for non-finite/maxit (`rtol*0.1`, `ksp_max_it*2`, line-search `b<=1.0`)
+
+Side-by-side against F.7:
+
+| Case | rtol | ksp_max_it | PC policy | Time old→new [s] | Newton old→new | KSP old→new | Score old→new |
+|---|---:|---:|---|---:|---:|---:|---:|
+| r2e-2_k30_fresh | 2e-02 | 30 | fresh | 47.0968 -> 60.3509 (+13.2541) | 720 -> 898 (+178) | 19027 -> 23965 (+4938) | 0.9151 -> 1.6584 (+0.7433) |
+| r5e-2_k30_reuse | 5e-02 | 30 | reuse | 51.5617 -> 64.9344 (+13.3727) | 849 -> 1040 (+191) | 17447 -> 25095 (+7648) | 0.9552 -> 1.9799 (+1.0247) |
+| r1e-2_k30_reuse | 1e-02 | 30 | reuse | 50.4301 -> 63.2170 (+12.7869) | 730 -> 922 (+192) | 20484 -> 26313 (+5829) | 1.0709 -> 1.9212 (+0.8503) |
+| r1e-2_k20_reuse | 1e-02 | 20 | reuse | 52.7889 -> 68.9125 (+16.1236) | 910 -> 1122 (+212) | 17796 -> 24510 (+6714) | 1.0802 -> 2.0459 (+0.9658) |
+| r1e-1_k20_reuse | 1e-01 | 20 | reuse | 59.1073 -> 71.1030 (+11.9957) | 1108 -> 1222 (+114) | 14961 -> 22645 (+7684) | 1.1021 -> 2.0152 (+0.9130) |
+| r5e-2_k20_fresh | 5e-02 | 20 | fresh | 55.9024 -> 71.7011 (+15.7987) | 985 -> 1187 (+202) | 17151 -> 23875 (+6724) | 1.1299 -> 2.0817 (+0.9518) |
+| r1e-2_k30_fresh | 1e-02 | 30 | fresh | 50.2838 -> 65.5587 (+15.2749) | 756 -> 944 (+188) | 21168 -> 27712 (+6544) | 1.1759 -> 2.0893 (+0.9135) |
+| r1e-1_k30_reuse | 1e-01 | 30 | reuse | 58.5355 -> 65.1899 (+6.6544) | 1044 -> 1111 (+67) | 16725 -> 20736 (+4011) | 1.1769 -> 1.6647 (+0.4878) |
+| r2e-2_k30_reuse | 2e-02 | 30 | reuse | 51.0453 -> 59.5231 (+8.4778) | 779 -> 897 (+118) | 20828 -> 25031 (+4203) | 1.1774 -> 1.7600 (+0.5826) |
+| r5e-3_k30_reuse | 5e-03 | 30 | reuse | 52.7780 -> 62.8697 (+10.0917) | 752 -> 910 (+158) | 21809 -> 26545 (+4736) | 1.2318 -> 1.9257 (+0.6939) |
+| r2e-2_k20_reuse | 2e-02 | 20 | reuse | 57.7245 -> 64.4587 (+6.7342) | 986 -> 1063 (+77) | 18758 -> 24122 (+5364) | 1.2867 -> 1.9202 (+0.6335) |
+| r5e-2_k20_reuse | 5e-02 | 20 | reuse | 59.2221 -> 68.7061 (+9.4840) | 1042 -> 1133 (+91) | 17994 -> 24823 (+6829) | 1.2966 -> 2.0926 (+0.7960) |
+| r2e-2_k20_fresh | 2e-02 | 20 | fresh | 60.0793 -> 67.1476 (+7.0683) | 1021 -> 1096 (+75) | 19551 -> 22467 (+2916) | 1.4157 -> 1.8096 (+0.3939) |
+| r2e-2_k50_reuse | 2e-02 | 50 | reuse | 54.3331 -> 69.2173 (+14.8842) | 700 -> 862 (+162) | 27912 -> 37593 (+9681) | 1.7439 -> 2.9217 (+1.1778) |
+| r1e-2_k50_reuse | 1e-02 | 50 | reuse | 55.0011 -> 70.1919 (+15.1908) | 692 -> 831 (+139) | 29905 -> 38005 (+8100) | 1.9246 -> 2.9152 (+0.9906) |
+| r5e-3_k50_reuse | 5e-03 | 50 | reuse | 58.4888 -> 71.6575 (+13.1687) | 675 -> 831 (+156) | 31223 -> 38866 (+7643) | 2.0266 -> 2.9984 (+0.9719) |
+
+Best-by-score in hardened sweep: `r2e-2_k30_fresh` (`score=1.6584`, time `60.3509 s`).
+
+### F.9 Gradient tolerance sensitivity: 10x tighter (`tolg=tolg_rel=1e-4`)
+
+Compared to the hardened baseline (`1e-3`), tightening gradient tolerance by 10x reduced scores for many cases, but triggered earlier non-converged stop in most cases due fail-fast at the first problematic step.
+
+| Case | rtol | ksp_max_it | PC | Conv prev→new | Time prev→new [s] | Newton prev→new | KSP prev→new | Score prev→new |
+|---|---:|---:|---|---|---:|---:|---:|---:|
+| r2e-2_k30_fresh | 2e-02 | 30 | fresh | 24/24 -> 15/16 | 60.3509 -> 52.2256 (-8.1253) | 898 -> 695 (-203) | 23965 -> 24142 (+177) | 1.6584 -> 1.3721 (-0.2863) ▲ |
+| r5e-2_k30_reuse | 5e-02 | 30 | reuse | 24/24 -> 15/16 | 64.9344 -> 58.1126 (-6.8218) | 1040 -> 827 (-213) | 25095 -> 24876 (-219) | 1.9799 -> 1.6403 (-0.3396) ▲ |
+| r1e-2_k30_reuse | 1e-02 | 30 | reuse | 24/24 -> 15/16 | 63.2170 -> 50.5609 (-12.6561) | 922 -> 704 (-218) | 26313 -> 23139 (-3174) | 1.9212 -> 1.2886 (-0.6326) ▲ |
+| r1e-2_k20_reuse | 1e-02 | 20 | reuse | 24/24 -> 15/16 | 68.9125 -> 58.6215 (-10.2910) | 1122 -> 925 (-197) | 24510 -> 22491 (-2019) | 2.0459 -> 1.5563 (-0.4896) ▲ |
+| r1e-1_k20_reuse | 1e-01 | 20 | reuse | 24/24 -> 15/16 | 71.1030 -> 65.2696 (-5.8334) | 1222 -> 1122 (-100) | 22645 -> 20268 (-2377) | 2.0152 -> 1.6360 (-0.3792) ▲ |
+| r5e-2_k20_fresh | 5e-02 | 20 | fresh | 24/24 -> 15/16 | 71.7011 -> 52.8871 (-18.8140) | 1187 -> 788 (-399) | 23875 -> 22000 (-1875) | 2.0817 -> 1.3041 (-0.7776) ▲ |
+| r1e-2_k30_fresh | 1e-02 | 30 | fresh | 24/24 -> 15/16 | 65.5587 -> 52.9102 (-12.6485) | 944 -> 742 (-202) | 27712 -> 24245 (-3467) | 2.0893 -> 1.4523 (-0.6370) ▲ |
+| r1e-1_k30_reuse | 1e-01 | 30 | reuse | 24/24 -> 15/16 | 65.1899 -> 55.6522 (-9.5377) | 1111 -> 915 (-196) | 20736 -> 19121 (-1615) | 1.6647 -> 1.2157 (-0.4491) ▲ |
+| r2e-2_k30_reuse | 2e-02 | 30 | reuse | 24/24 -> 15/16 | 59.5231 -> 49.9245 (-9.5986) | 897 -> 703 (-194) | 25031 -> 21990 (-3041) | 1.7600 -> 1.1761 (-0.5839) ▲ |
+| r5e-3_k30_reuse | 5e-03 | 30 | reuse | 24/24 -> 15/16 | 62.8697 -> 52.2764 (-10.5933) | 910 -> 720 (-190) | 26545 -> 23980 (-2565) | 1.9257 -> 1.3938 (-0.5319) ▲ |
+| r2e-2_k20_reuse | 2e-02 | 20 | reuse | 24/24 -> 15/16 | 64.4587 -> 55.3289 (-9.1298) | 1063 -> 840 (-223) | 24122 -> 22526 (-1596) | 1.9202 -> 1.4327 (-0.4876) ▲ |
+| r5e-2_k20_reuse | 5e-02 | 20 | reuse | 24/24 -> 15/16 | 68.7061 -> 61.6159 (-7.0902) | 1133 -> 991 (-142) | 24823 -> 21951 (-2872) | 2.0926 -> 1.6028 (-0.4898) ▲ |
+| r2e-2_k20_fresh | 2e-02 | 20 | fresh | 24/24 -> 15/16 | 67.1476 -> 64.3657 (-2.7819) | 1096 -> 1011 (-85) | 22467 -> 22259 (-208) | 1.8096 -> 1.6625 (-0.1472) ▲ |
+| r2e-2_k50_reuse | 2e-02 | 50 | reuse | 24/24 -> 23/24 | 69.2173 -> 90.0922 (+20.8749) | 862 -> 999 (+137) | 37593 -> 52055 (+14462) | 2.9217 -> 4.5242 (+1.6025) ▼ |
+| r1e-2_k50_reuse | 1e-02 | 50 | reuse | 24/24 -> 15/16 | 70.1919 -> 60.1159 (-10.0760) | 831 -> 655 (-176) | 38005 -> 34294 (-3711) | 2.9152 -> 2.3353 (-0.5799) ▲ |
+| r5e-3_k50_reuse | 5e-03 | 50 | reuse | 24/24 -> 15/16 | 71.6575 -> 57.4704 (-14.1871) | 831 -> 611 (-220) | 38866 -> 34863 (-4003) | 2.9984 -> 2.4561 (-0.5423) ▲ |
+
+Best score in this test: `r2e-2_k30_reuse` (`1.1761`), but only `15/16` steps were processed before fail-fast stop.
+
+### F.10 Gradient tolerance sensitivity: looser (`tolg=tolg_rel=1e-2`)
+
+Loosening gradient tolerance from `1e-3` to `1e-2` recovered full convergence (`24/24`) for all 16 cases and improved score for every row relative to the hardened baseline.
+
+| Case | rtol | ksp_max_it | PC | Conv prev→new | Time prev→new [s] | Newton prev→new | KSP prev→new | Score prev→new |
+|---|---:|---:|---|---|---:|---:|---:|---:|
+| r2e-2_k30_fresh | 2e-02 | 30 | fresh | 24/24 -> 24/24 | 60.3509 -> 55.0945 (-5.2564) | 898 -> 849 (-49) | 23965 -> 22572 (-1393) | 1.6584 -> 1.4506 (-0.2079) ▲ |
+| r5e-2_k30_reuse | 5e-02 | 30 | reuse | 24/24 -> 24/24 | 64.9344 -> 60.1198 (-4.8146) | 1040 -> 923 (-117) | 25095 -> 23419 (-1676) | 1.9799 -> 1.6430 (-0.3369) ▲ |
+| r1e-2_k30_reuse | 1e-02 | 30 | reuse | 24/24 -> 24/24 | 63.2170 -> 62.7460 (-0.4710) | 922 -> 900 (-22) | 26313 -> 26383 (+70) | 1.9212 -> 1.8951 (-0.0261) ▲ |
+| r1e-2_k20_reuse | 1e-02 | 20 | reuse | 24/24 -> 24/24 | 68.9125 -> 63.8089 (-5.1036) | 1122 -> 1088 (-34) | 24510 -> 21985 (-2525) | 2.0459 -> 1.7511 (-0.2949) ▲ |
+| r1e-1_k20_reuse | 1e-01 | 20 | reuse | 24/24 -> 24/24 | 71.1030 -> 64.2889 (-6.8141) | 1222 -> 1204 (-18) | 22645 -> 16642 (-6003) | 2.0152 -> 1.4081 (-0.6071) ▲ |
+| r5e-2_k20_fresh | 5e-02 | 20 | fresh | 24/24 -> 24/24 | 71.7011 -> 64.2422 (-7.4589) | 1187 -> 1126 (-61) | 23875 -> 20810 (-3065) | 2.0817 -> 1.6943 (-0.3874) ▲ |
+| r1e-2_k30_fresh | 1e-02 | 30 | fresh | 24/24 -> 24/24 | 65.5587 -> 63.0000 (-2.5587) | 944 -> 916 (-28) | 27712 -> 26125 (-1587) | 2.0893 -> 1.8941 (-0.1952) ▲ |
+| r1e-1_k30_reuse | 1e-01 | 30 | reuse | 24/24 -> 24/24 | 65.1899 -> 62.4068 (-2.7831) | 1111 -> 1104 (-7) | 20736 -> 19322 (-1414) | 1.6647 -> 1.5176 (-0.1471) ▲ |
+| r2e-2_k30_reuse | 2e-02 | 30 | reuse | 24/24 -> 24/24 | 59.5231 -> 60.7418 (+1.2187) | 897 -> 913 (+16) | 25031 -> 24676 (-355) | 1.7600 -> 1.7496 (-0.0104) ▲ |
+| r5e-3_k30_reuse | 5e-03 | 30 | reuse | 24/24 -> 24/24 | 62.8697 -> 61.0602 (-1.8095) | 910 -> 894 (-16) | 26545 -> 26097 (-448) | 1.9257 -> 1.8585 (-0.0672) ▲ |
+| r2e-2_k20_reuse | 2e-02 | 20 | reuse | 24/24 -> 24/24 | 64.4587 -> 64.9997 (+0.5410) | 1063 -> 1062 (-1) | 24122 -> 22057 (-2065) | 1.9202 -> 1.7192 (-0.2011) ▲ |
+| r5e-2_k20_reuse | 5e-02 | 20 | reuse | 24/24 -> 24/24 | 68.7061 -> 64.7543 (-3.9518) | 1133 -> 1092 (-41) | 24823 -> 19603 (-5220) | 2.0926 -> 1.5268 (-0.5658) ▲ |
+| r2e-2_k20_fresh | 2e-02 | 20 | fresh | 24/24 -> 24/24 | 67.1476 -> 64.8894 (-2.2582) | 1096 -> 1105 (+9) | 22467 -> 21845 (-622) | 1.8096 -> 1.7630 (-0.0467) ▲ |
+| r2e-2_k50_reuse | 2e-02 | 50 | reuse | 24/24 -> 24/24 | 69.2173 -> 58.2413 (-10.9760) | 862 -> 744 (-118) | 37593 -> 29437 (-8156) | 2.9217 -> 1.9571 (-0.9646) ▲ |
+| r1e-2_k50_reuse | 1e-02 | 50 | reuse | 24/24 -> 24/24 | 70.1919 -> 68.5931 (-1.5988) | 831 -> 830 (-1) | 38005 -> 36700 (-1305) | 2.9152 -> 2.7876 (-0.1276) ▲ |
+| r5e-3_k50_reuse | 5e-03 | 50 | reuse | 24/24 -> 24/24 | 71.6575 -> 68.2217 (-3.4358) | 831 -> 791 (-40) | 38866 -> 36851 (-2015) | 2.9984 -> 2.7439 (-0.2545) ▲ |
+
+Best score in this test: `r1e-1_k20_reuse` (`score=1.4081`, time `64.2889 s`).
+
+Artifacts:
+- [experiment_scripts/he_gamg_hypre_like_sweep_l3_np16_hardened16/summary_hardened16.json](experiment_scripts/he_gamg_hypre_like_sweep_l3_np16_hardened16/summary_hardened16.json)
+- [experiment_scripts/he_gamg_hypre_like_sweep_l3_np16_hardened16/paired_old_vs_hardened.md](experiment_scripts/he_gamg_hypre_like_sweep_l3_np16_hardened16/paired_old_vs_hardened.md)
+- [experiment_scripts/he_gamg_hypre_like_sweep_l3_np16_hardened16_gradx10/summary_hardened16_gradx10.json](experiment_scripts/he_gamg_hypre_like_sweep_l3_np16_hardened16_gradx10/summary_hardened16_gradx10.json)
+- [experiment_scripts/he_gamg_hypre_like_sweep_l3_np16_hardened16_gradx10/paired_prev_vs_gradx10.md](experiment_scripts/he_gamg_hypre_like_sweep_l3_np16_hardened16_gradx10/paired_prev_vs_gradx10.md)
+- [experiment_scripts/he_gamg_hypre_like_sweep_l3_np16_hardened16_grad1e2/summary_hardened16_grad1e2.json](experiment_scripts/he_gamg_hypre_like_sweep_l3_np16_hardened16_grad1e2/summary_hardened16_grad1e2.json)
+- [experiment_scripts/he_gamg_hypre_like_sweep_l3_np16_hardened16_grad1e2/paired_prev_vs_grad1e2.md](experiment_scripts/he_gamg_hypre_like_sweep_l3_np16_hardened16_grad1e2/paired_prev_vs_grad1e2.md)

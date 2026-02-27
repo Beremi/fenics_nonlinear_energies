@@ -75,9 +75,14 @@ def newton(
     x,
     tolf=1e-5,
     tolg=1e-3,
+    tolg_rel=0.0,
     linesearch_tol=1e-3,
     linesearch_interval=(-0.5, 2.0),
     maxit=100,
+    tolx_rel=1e-6,
+    tolx_abs=1e-10,
+    require_all_convergence=False,
+    fail_on_nonfinite=True,
     verbose=False,
     comm=None,
     ghost_update_fn=None,
@@ -107,12 +112,18 @@ def newton(
         Stop when  ``|J(x_new) − J(x_old)| < tolf``.
     tolg : float
         Stop when  ``‖∇J‖₂ < tolg``  (checked *before* the linear solve).
+    tolg_rel : float
+        Optional relative gradient target for all-criteria convergence:
+        ``‖∇J‖₂ < max(tolg, tolg_rel * ‖∇J(x0)‖₂)``.
     linesearch_tol : float
         Golden-section interval tolerance.
     linesearch_interval : (float, float)
         Search interval for the step-size α.
     maxit : int
         Maximum Newton iterations.
+    require_all_convergence : bool
+        If true, stop only when energy-change, step-size, and gradient
+        criteria are all satisfied.
     verbose : bool
         Print one line per iteration (rank 0 only).
     comm : MPI communicator (mpi4py) or None
@@ -139,18 +150,24 @@ def newton(
         rank = comm.Get_rank()
 
     # Work vectors — allocated once and reused every iteration.
-    g = x.duplicate()           # gradient
-    h = x.duplicate()           # Newton direction  (= −H⁻¹ g)
+    g = x.duplicate()          # gradient
+    h = x.duplicate()          # Newton direction  (= −H⁻¹ g)
     x_trial = x.duplicate()    # scratch for line search
+    x_prev = x.duplicate()     # rollback buffer for non-finite updates
 
     start = time.perf_counter()
     fx = energy_fn(x)
     nit = 0
     message = "Maximum number of iterations reached"
     history = []
+    initial_grad_norm = None
 
     for _ in range(maxit):
         t_iter_start = time.perf_counter()
+
+        if fail_on_nonfinite and not np.isfinite(fx):
+            message = f"Non-finite energy before Newton iteration {nit + 1}"
+            break
 
         # ---- gradient ----
         t0 = time.perf_counter()
@@ -158,7 +175,18 @@ def newton(
         normg = g.norm(PETSc.NormType.NORM_2)
         t_grad = time.perf_counter() - t0
 
-        if normg < tolg:
+        if fail_on_nonfinite and not np.isfinite(normg):
+            message = f"Non-finite gradient norm at Newton iteration {nit + 1}"
+            break
+
+        if initial_grad_norm is None:
+            initial_grad_norm = normg
+
+        grad_target = tolg
+        if tolg_rel > 0.0 and np.isfinite(initial_grad_norm):
+            grad_target = max(tolg, tolg_rel * initial_grad_norm)
+
+        if (not require_all_convergence) and normg < grad_target:
             message = "Gradient norm converged"
             break
 
@@ -169,7 +197,12 @@ def newton(
         g.scale(-1.0)
         ksp_its = hessian_solve_fn(x, g, h)
         ghost_update_fn(h)
+        hnorm = h.norm(PETSc.NormType.NORM_2)
         t_hess = time.perf_counter() - t0
+
+        if fail_on_nonfinite and not np.isfinite(hnorm):
+            message = f"Non-finite Newton direction norm at Newton iteration {nit}"
+            break
 
         # ---- line search: minimise  J(x + α h) ----
         t0 = time.perf_counter()
@@ -190,44 +223,75 @@ def newton(
         # Guard against non-finite trial energies (e.g. det(F) <= 0 in hyperelasticity).
         # If golden-section ends in a non-finite region, backtrack toward zero.
         trial_val = _energy_at_alpha(alpha)
+        ls_repaired = False
         if not np.isfinite(trial_val):
             alpha_bt = min(1.0, max(0.0, ls_b))
             if alpha_bt <= 0.0:
                 alpha_bt = 1.0
+            found_finite = False
             while alpha_bt > 1e-12:
                 trial_val = _energy_at_alpha(alpha_bt)
                 if np.isfinite(trial_val):
                     alpha = alpha_bt
+                    found_finite = True
+                    ls_repaired = True
                     break
                 alpha_bt *= 0.5
+            if not found_finite and fail_on_nonfinite:
+                message = (
+                    f"Line search failed: no finite trial energy at Newton iteration {nit}"
+                )
+                break
         t_ls = time.perf_counter() - t0
 
         # ---- update ----
         t0 = time.perf_counter()
+        x.copy(x_prev)
+        x_prev_norm = x_prev.norm(PETSc.NormType.NORM_2)
+        step_norm = abs(alpha) * hnorm
+        step_rel = step_norm / max(1.0, x_prev_norm)
         x.axpy(alpha, h)
         ghost_update_fn(x)
 
         fx_old = fx
         fx = energy_fn(x)
+        dE = fx_old - fx
         t_update = time.perf_counter() - t0
         t_iter_total = time.perf_counter() - t_iter_start
 
         if verbose and rank == 0:
             print(
-                f"it={nit}, J={fx:.5f}, dJ={fx_old - fx:.5e}, "
+                f"it={nit}, J={fx:.5f}, dJ={dE:.5e}, "
                 f"||g||={normg:.5e}, alpha={alpha:.5e}, "
                 f"ksp_its={ksp_its}, ls_evals={ls_evals}"
             )
+
+        post_grad_norm = np.nan
+        converged_energy = np.isfinite(dE) and abs(dE) < tolf
+        converged_step = step_norm < tolx_abs or step_rel < tolx_rel
+        if require_all_convergence and converged_energy and converged_step:
+            gradient_fn(x, g)
+            post_grad_norm = g.norm(PETSc.NormType.NORM_2)
+            if fail_on_nonfinite and not np.isfinite(post_grad_norm):
+                x_prev.copy(x)
+                ghost_update_fn(x)
+                message = f"Non-finite post-update gradient norm at Newton iteration {nit}"
+                break
 
         if save_history:
             history.append({
                 "it": int(nit),
                 "energy": float(fx),
-                "dE": float(fx_old - fx),
+                "dE": float(dE),
                 "grad_norm": float(normg),
+                "grad_target": float(grad_target),
+                "grad_norm_post": float(post_grad_norm),
                 "alpha": float(alpha),
                 "ksp_its": int(ksp_its),
                 "ls_evals": int(ls_evals),
+                "ls_repaired": bool(ls_repaired),
+                "step_norm": float(step_norm),
+                "step_rel": float(step_rel),
                 "t_grad": float(t_grad),
                 "t_hess": float(t_hess),
                 "t_ls": float(t_ls),
@@ -235,7 +299,17 @@ def newton(
                 "t_iter": float(t_iter_total),
             })
 
-        if abs(fx - fx_old) < tolf:
+        if fail_on_nonfinite and not np.isfinite(fx):
+            x_prev.copy(x)
+            ghost_update_fn(x)
+            message = f"Non-finite energy after update at Newton iteration {nit}"
+            break
+
+        if require_all_convergence:
+            if converged_energy and converged_step and post_grad_norm < grad_target:
+                message = "Converged (energy, step, gradient)"
+                break
+        elif converged_energy:
             message = "Energy change converged"
             break
 
@@ -245,6 +319,7 @@ def newton(
     g.destroy()
     h.destroy()
     x_trial.destroy()
+    x_prev.destroy()
 
     return {
         "x": x,
@@ -253,4 +328,5 @@ def newton(
         "time": runtime,
         "message": message,
         "history": history,
+        "success": "converged" in message.lower(),
     }
