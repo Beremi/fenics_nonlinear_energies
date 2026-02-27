@@ -65,6 +65,13 @@ class DOFHessianAssemblerBase:
     pc_options : dict or None
         Additional PETSc options for the preconditioner
         (e.g., ``{"pc_hypre_boomeramg_nodal_coarsen": 6}``).
+    reorder : bool
+        Whether to apply RCM DOF reordering in the partition.  Keep
+        ``True`` for scalar problems; vector elasticity may prefer
+        ``False`` to preserve natural block ordering.
+    ownership_block_size : int
+        Ownership distribution block size.  Use 1 for scalar unknowns,
+        3 for 3D vector DOFs when local ownership must preserve xyz blocks.
     """
 
     def __init__(
@@ -83,6 +90,8 @@ class DOFHessianAssemblerBase:
         ksp_max_it=None,
         near_nullspace_vecs=None,
         pc_options=None,
+        reorder=True,
+        ownership_block_size=1,
     ):
         self.comm = comm
         self.rank = comm.Get_rank()
@@ -98,8 +107,9 @@ class DOFHessianAssemblerBase:
         from tools_petsc4py.dof_partition import DOFPartition
         self.part = DOFPartition(
             freedofs, elems, u_0, comm,
-            adjacency=adjacency, reorder=True,
+            adjacency=adjacency, reorder=reorder,
             f=f, elem_data=elem_data,
+            ownership_block_size=ownership_block_size,
         )
         self.timings["partition"] = time.perf_counter() - t0
 
@@ -277,7 +287,7 @@ class DOFHessianAssemblerBase:
             for mode_orig in near_nullspace_vecs:
                 mode_orig = np.asarray(mode_orig, dtype=np.float64)
                 mode_reord = mode_orig[perm]
-                pv = PETSc.Vec().createMPI(n, comm=self.comm)
+                pv = PETSc.Vec().createMPI((hi - lo, n), comm=self.comm)
                 pv.array[:] = mode_reord[lo:hi]
                 pv.assemble()
                 petsc_vecs.append(pv)
@@ -384,6 +394,8 @@ class DOFHessianAssemblerBase:
             owned_vals.astype(PETSc.ScalarType),
             addv=PETSc.InsertMode.INSERT_VALUES,
         )
+        # Finalise matrix values explicitly to avoid hidden assembly cost in KSP.solve.
+        self.A.assemble()
         timings["coo_assembly"] = time.perf_counter() - t0
 
         timings["total"] = time.perf_counter() - t_total
@@ -456,6 +468,8 @@ class DOFHessianAssemblerBase:
             owned_vals.astype(PETSc.ScalarType),
             addv=PETSc.InsertMode.INSERT_VALUES,
         )
+        # Finalise matrix values explicitly to avoid hidden assembly cost in KSP.solve.
+        self.A.assemble()
         timings["coo_assembly"] = time.perf_counter() - t0
 
         timings["total"] = time.perf_counter() - t_total
@@ -545,9 +559,9 @@ class DOFHessianAssemblerBase:
             Must be in **reordered** DOF ordering.
         """
         n = self.part.n_free
-        v = PETSc.Vec().createMPI(n, comm=self.comm)
+        lo, hi = self.part.lo, self.part.hi
+        v = PETSc.Vec().createMPI((hi - lo, n), comm=self.comm)
         if full_array_reordered is not None:
-            lo, hi = self.part.lo, self.part.hi
             arr = np.asarray(full_array_reordered, dtype=np.float64)
             v.array[:] = arr[lo:hi]
             v.assemble()
@@ -750,6 +764,10 @@ class LocalColoringAssemblerBase(DOFHessianAssemblerBase):
     def _compile_jax(self):
         """JIT-compile energy, gradient, and vmapped HVP for the local domain."""
         energy_weighted, energy_full = self._make_local_energy_fns()
+        hvp_mode = getattr(self, "_hvp_eval_mode", "batched")
+        if hvp_mode not in {"batched", "sequential"}:
+            raise ValueError(f"Unsupported _hvp_eval_mode={hvp_mode!r}")
+        self._hvp_eval_mode = hvp_mode
 
         self._energy_jit = jax.jit(energy_weighted)
 
@@ -761,21 +779,24 @@ class LocalColoringAssemblerBase(DOFHessianAssemblerBase):
 
         self._hvp_jit = jax.jit(hvp_fn)  # kept for variant 1 compatibility
 
-        # --- Batched HVP via vmap (primary for assembly) ---
-        def hvp_batched(v_local, tangents):
-            """tangents: (n_colors, n_local) → (n_colors, n_local)"""
-            return jax.vmap(lambda t: hvp_fn(v_local, t))(tangents)
-
-        self._hvp_batched_jit = jax.jit(hvp_batched)
-
         # Warmup (trigger JIT compilation)
         v_dummy = jnp.zeros(self.part.n_local, dtype=jnp.float64)
         _ = self._energy_jit(v_dummy).block_until_ready()
         _ = self._grad_jit(v_dummy).block_until_ready()
-        dummy_tangents = jnp.zeros(
-            (self.n_colors, self.part.n_local), dtype=jnp.float64
-        )
-        _ = self._hvp_batched_jit(v_dummy, dummy_tangents).block_until_ready()
+        if self._hvp_eval_mode == "batched":
+            # --- Batched HVP via vmap (primary for assembly) ---
+            def hvp_batched(v_local, tangents):
+                """tangents: (n_colors, n_local) → (n_colors, n_local)"""
+                return jax.vmap(lambda t: hvp_fn(v_local, t))(tangents)
+
+            self._hvp_batched_jit = jax.jit(hvp_batched)
+            dummy_tangents = jnp.zeros(
+                (self.n_colors, self.part.n_local), dtype=jnp.float64
+            )
+            _ = self._hvp_batched_jit(v_dummy, dummy_tangents).block_until_ready()
+        else:
+            self._hvp_batched_jit = None
+            _ = self._hvp_jit(v_dummy, v_dummy).block_until_ready()
 
     # ------------------------------------------------------------------
     # Assembly (vmap-based, P2P ghost exchange)
@@ -792,23 +813,43 @@ class LocalColoringAssemblerBase(DOFHessianAssemblerBase):
         timings["p2p_exchange"] = time.perf_counter() - t0
         timings["allgatherv"] = timings["p2p_exchange"]
 
-        # 2. Batched HVP: all colors at once via vmap
-        t0 = time.perf_counter()
-        all_hvps = self._hvp_batched_jit(
-            v_local, self._indicators_stacked
-        ).block_until_ready()
-        all_hvps_np = np.asarray(all_hvps)
-        timings["hvp_compute"] = time.perf_counter() - t0
-        timings["n_hvps"] = self.n_colors
-
-        # 3. Extract owned entries
-        t0 = time.perf_counter()
+        # 2. HVP + extraction (batched or sequential, both local-only)
         owned_vals = np.zeros(self._n_owned_nnz, dtype=np.float64)
-        for c in range(self.n_colors):
-            positions, local_rows = self._color_nz[c]
-            if len(positions) > 0:
-                owned_vals[positions] = all_hvps_np[c, local_rows]
-        timings["extraction"] = time.perf_counter() - t0
+        if self._hvp_eval_mode == "batched":
+            t0 = time.perf_counter()
+            all_hvps = self._hvp_batched_jit(
+                v_local, self._indicators_stacked
+            ).block_until_ready()
+            all_hvps_np = np.asarray(all_hvps)
+            timings["hvp_compute"] = time.perf_counter() - t0
+
+            t0 = time.perf_counter()
+            for c in range(self.n_colors):
+                positions, local_rows = self._color_nz[c]
+                if len(positions) > 0:
+                    owned_vals[positions] = all_hvps_np[c, local_rows]
+            timings["extraction"] = time.perf_counter() - t0
+        else:
+            t_hvp = 0.0
+            t_extract = 0.0
+            for c in range(self.n_colors):
+                t0 = time.perf_counter()
+                hvp_result = np.asarray(
+                    self._hvp_jit(v_local, self._indicators_local[c]).block_until_ready(),
+                    dtype=np.float64,
+                )
+                t_hvp += time.perf_counter() - t0
+
+                t0 = time.perf_counter()
+                positions, local_rows = self._color_nz[c]
+                if len(positions) > 0:
+                    owned_vals[positions] = hvp_result[local_rows]
+                t_extract += time.perf_counter() - t0
+            timings["hvp_compute"] = t_hvp
+            timings["extraction"] = t_extract
+
+        timings["n_hvps"] = self.n_colors
+        timings["hvp_mode"] = self._hvp_eval_mode
 
         # 4. COO assembly — NO Allreduce!
         t0 = time.perf_counter()
@@ -816,6 +857,8 @@ class LocalColoringAssemblerBase(DOFHessianAssemblerBase):
             owned_vals.astype(PETSc.ScalarType),
             addv=PETSc.InsertMode.INSERT_VALUES,
         )
+        # Finalise matrix values explicitly to avoid hidden assembly cost in KSP.solve.
+        self.A.assemble()
         timings["coo_assembly"] = time.perf_counter() - t0
 
         timings["total"] = time.perf_counter() - t_total

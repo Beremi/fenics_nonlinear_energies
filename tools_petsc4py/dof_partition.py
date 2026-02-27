@@ -24,13 +24,27 @@ import time
 from mpi4py import MPI
 
 
-def petsc_ownership_range(n, rank, size):
-    """Compute PETSc-style default block ownership range [lo, hi).
+def petsc_ownership_range(n, rank, size, block_size=1):
+    """Compute PETSc-style ownership range [lo, hi).
 
     PETSc distributes N items across P ranks:
       floor(N/P)+1  items to the first  N%P ranks,
       floor(N/P)    items to the remaining ranks.
+
+    If ``block_size > 1``, distribution is performed in block space first
+    (``n / block_size`` blocks), then mapped back to scalar indices.
     """
+    if block_size < 1:
+        raise ValueError("block_size must be >= 1")
+    if block_size > 1:
+        if n % block_size != 0:
+            raise ValueError(
+                f"n={n} not divisible by block_size={block_size} for ownership split"
+            )
+        n_blocks = n // block_size
+        lo_b, hi_b = petsc_ownership_range(n_blocks, rank, size, block_size=1)
+        return lo_b * block_size, hi_b * block_size
+
     q, r = divmod(n, size)
     if rank < r:
         lo = rank * (q + 1)
@@ -76,7 +90,7 @@ class DOFPartition:
     """
 
     def __init__(self, freedofs, elems, u_0, comm, adjacency=None, reorder=True,
-                 f=None, elem_data=None):
+                 f=None, elem_data=None, ownership_block_size=1):
         self.comm = comm
         self.rank = comm.Get_rank()
         self.size = comm.Get_size()
@@ -96,6 +110,9 @@ class DOFPartition:
         self.n_free = n_free
         self.n_total = n_total
         self.freedofs_np = freedofs
+        self.ownership_block_size = int(ownership_block_size)
+        if self.ownership_block_size < 1:
+            raise ValueError("ownership_block_size must be >= 1")
 
         # ---- 2. RCM reordering (rank 0 computes, broadcast) ----
         t0 = time.perf_counter()
@@ -121,7 +138,9 @@ class DOFPartition:
 
         # ---- 3. DOF ownership (PETSc block distribution in reordered space) ----
         t0 = time.perf_counter()
-        lo, hi = petsc_ownership_range(n_free, self.rank, self.size)
+        lo, hi = petsc_ownership_range(
+            n_free, self.rank, self.size, block_size=self.ownership_block_size
+        )
         self.lo = lo
         self.hi = hi
         self.n_owned = hi - lo
@@ -162,7 +181,12 @@ class DOFPartition:
         self.elem_weights = np.zeros(n_local_elems, dtype=np.float64)
         valid = elem_min_reord < n_free
         if np.any(valid):
-            owners = _rank_of_dof_vec(elem_min_reord[valid], n_free, self.size)
+            owners = _rank_of_dof_vec(
+                elem_min_reord[valid],
+                n_free,
+                self.size,
+                block_size=self.ownership_block_size,
+            )
             self.elem_weights[valid] = np.where(owners == self.rank, 1.0, 0.0)
 
         # ---- 8. Local node space ----
@@ -256,13 +280,20 @@ class DOFPartition:
         send_requests = {}
 
         if len(ghost_global) > 0:
-            ghost_owners = _rank_of_dof_vec(ghost_global, n_free, self.size)
+            ghost_owners = _rank_of_dof_vec(
+                ghost_global,
+                n_free,
+                self.size,
+                block_size=self.ownership_block_size,
+            )
             for r in np.unique(ghost_owners):
                 r = int(r)
                 if r == self.rank:
                     continue
                 mask_r = ghost_owners == r
-                r_lo, _ = petsc_ownership_range(n_free, r, self.size)
+                r_lo, _ = petsc_ownership_range(
+                    n_free, r, self.size, block_size=self.ownership_block_size
+                )
                 self._ghost_recv[r] = ghost_local[mask_r]
                 send_requests[r] = (ghost_global[mask_r] - r_lo).astype(np.int64)
 
@@ -428,8 +459,19 @@ class DOFPartition:
         return u_orig
 
 
-def _rank_of_dof_vec(dof_indices, n_total, size):
-    """Vectorised: determine owning rank for each DOF index (PETSc block dist)."""
+def _rank_of_dof_vec(dof_indices, n_total, size, block_size=1):
+    """Vectorised: determine owning rank for each DOF index (PETSc dist)."""
+    if block_size < 1:
+        raise ValueError("block_size must be >= 1")
+    if block_size > 1:
+        if n_total % block_size != 0:
+            raise ValueError(
+                f"n_total={n_total} not divisible by block_size={block_size}"
+            )
+        dof_indices = np.asarray(dof_indices, dtype=np.int64)
+        block_idx = dof_indices // block_size
+        return _rank_of_dof_vec(block_idx, n_total // block_size, size, block_size=1)
+
     q, r = divmod(n_total, size)
     boundary = r * (q + 1)
     result = np.empty(len(dof_indices), dtype=np.int64)
