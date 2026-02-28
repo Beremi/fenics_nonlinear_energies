@@ -1602,3 +1602,111 @@ Artifacts:
 - [experiment_scripts/he_gamg_hypre_like_sweep_l3_np16_hardened16_gradx10/paired_prev_vs_gradx10.md](experiment_scripts/he_gamg_hypre_like_sweep_l3_np16_hardened16_gradx10/paired_prev_vs_gradx10.md)
 - [experiment_scripts/he_gamg_hypre_like_sweep_l3_np16_hardened16_grad1e2/summary_hardened16_grad1e2.json](experiment_scripts/he_gamg_hypre_like_sweep_l3_np16_hardened16_grad1e2/summary_hardened16_grad1e2.json)
 - [experiment_scripts/he_gamg_hypre_like_sweep_l3_np16_hardened16_grad1e2/paired_prev_vs_grad1e2.md](experiment_scripts/he_gamg_hypre_like_sweep_l3_np16_hardened16_grad1e2/paired_prev_vs_grad1e2.md)
+
+### F.11 JAX+PETSc full trajectory benchmark (L3, np=16, 2026-02-28)
+
+This section records the current end-to-end JAX+PETSc result for the full 24-step
+level-3 trajectory and the matrix-layout isolation experiment.
+
+#### Full run performance (24/24 steps)
+
+Configuration:
+- Solver: `HyperElasticity3D_jax_petsc/solve_HE_dof.py`
+- Level: `3`
+- MPI ranks: `16`
+- Steps: `24` (`--total_steps 24`)
+- Profile/options: `gmres + gamg`, `ksp_rtol=1e-1`, `ksp_max_it=30`,
+  `pc_setup_on_ksp_cap`, `hvp_eval_mode=sequential`
+
+Measured results:
+- Wall clock (wrapper): `851.35 s`
+- Sum of step times (JSON): `771.85 s`
+- Average step time: `32.16 s`
+- Step time range: `22.65 s` to `38.94 s`
+- Total Newton iterations: `1064`
+- Total linear iterations: `18299`
+- Final energy: `93.7048601512`
+- Final message: `Converged (energy, step, gradient)`
+
+Artifact:
+- [experiment_scripts/he_jaxpetsc_full_l3_np16_20260228_062459.json](experiment_scripts/he_jaxpetsc_full_l3_np16_20260228_062459.json)
+
+#### Matrix-layout isolation (FEniCS partition + JAX values)
+
+Goal: separate partition/layout effects from value effects.
+
+Step-1 fixed-state KSP results (`np=16`, `L3`):
+- FEniCS matrix (FEniCS values): `ksp_its=1`, `solve_time=0.003520 s`
+- FEniCS matrix layout + JAX values: `ksp_its=4`, `solve_time=0.006525 s`
+
+Control check (same values + same layout):
+- FEniCS matrix: `ksp_its=2`, `solve_time=0.004138 s`
+- Direct matrix copy: `ksp_its=2`, `solve_time=0.004382 s`
+
+Conclusion:
+- Layout parity alone does not recover FEniCS solve behavior.
+- When values are also identical, KSP behavior matches (as expected).
+
+Per-rank Hessian value compute time (JAX HVP only, `np=16`, step-1):
+- `min=0.0852 s`, `max=0.4618 s`, `mean=0.3162 s`, `std=0.1347 s`
+- imbalance ratio (`max/min`) = `5.42x`
+
+Artifacts:
+- [experiment_scripts/he_fenics_partition_jax_values_l3_np16_run2.json](experiment_scripts/he_fenics_partition_jax_values_l3_np16_run2.json)
+- [experiment_scripts/he_fenics_same_values_control_l3_np16.json](experiment_scripts/he_fenics_same_values_control_l3_np16.json)
+- [experiment_scripts/he_fenics_partition_jax_values_results.md](experiment_scripts/he_fenics_partition_jax_values_results.md)
+
+#### Implementation notes (current JAX+PETSc path)
+
+- Uses `LocalColoringAssembler` with local SFD coloring and sequential per-color HVP.
+- PETSc matrix uses block size `3`, elasticity near-nullspace, and GAMG coordinates.
+- For exact mapping experiments, FEniCS mesh must be constructed from HDF5 cells/coords
+  (`--fenics_mesh_source h5`), because `create_box` tetrahedralization does not match
+  the HDF5 topology exactly.
+
+Reference implementation document:
+- [HyperElasticity3D_jax_petsc_IMPLEMENTATION.md](HyperElasticity3D_jax_petsc_IMPLEMENTATION.md)
+
+#### How to run
+
+Full 24-step JAX+PETSc benchmark:
+```bash
+docker exec bench_container bash -lc "cd /workdir && \
+  mpirun -np 16 python3 HyperElasticity3D_jax_petsc/solve_HE_dof.py \
+    --level 3 --steps 24 --total_steps 24 \
+    --profile performance \
+    --ksp_type gmres --pc_type gamg \
+    --ksp_rtol 1e-1 --ksp_max_it 30 \
+    --gamg_threshold 0.05 --gamg_agg_nsmooths 1 \
+    --pc_setup_on_ksp_cap \
+    --hvp_eval_mode sequential \
+    --quiet \
+    --out /workdir/experiment_scripts/he_jaxpetsc_full_l3_np16_<timestamp>.json"
+```
+
+FEniCS-layout/JAX-values isolation benchmark:
+```bash
+docker exec bench_container bash -lc "cd /workdir && \
+  mpirun -np 16 python3 experiment_scripts/bench_he_fenics_partition_jax_values.py \
+    --level 3 --step 1 --total_steps 24 \
+    --fenics_mesh_source h5 \
+    --ksp_type gmres --pc_type gamg \
+    --ksp_rtol 1e-1 --ksp_max_it 30 \
+    --gamg_threshold 0.05 --gamg_agg_nsmooths 1 \
+    --quiet \
+    --out /workdir/experiment_scripts/he_fenics_partition_jax_values_l3_np16_run2.json"
+```
+
+#### Comparison vs original JAX trajectory references
+
+Current repository has original-JAX full trajectories for L1/L2 (serial), but not L3.
+
+| Solver | Level | np | Steps | Total time [s] | Total Newton iters | Final energy |
+|---|---:|---:|---:|---:|---:|---:|
+| Original JAX | 1 | 1 | 24 | 28.8091 | 513 | 197.748635 |
+| Original JAX | 2 | 1 | 24 | 264.6954 | 531 | 116.336331 |
+| JAX+PETSc | 3 | 16 | 24 | 771.8495 (step sum) | 1064 | 93.704860 |
+
+Original-JAX artifacts:
+- [experiment_scripts/he_jax_evolution_l1_recompute_gmres_compare.json](experiment_scripts/he_jax_evolution_l1_recompute_gmres_compare.json)
+- [experiment_scripts/he_jax_evolution_l2.json](experiment_scripts/he_jax_evolution_l2.json)
