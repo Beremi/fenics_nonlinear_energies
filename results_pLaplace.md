@@ -236,16 +236,16 @@ Same solver as `experiment_001` (DOF-based overlapping decomposition, local grap
 
 #### Key Observations (Native vs Docker)
 
-| Metric                      | Docker (exp. 001) | Native (exp. 002) |
-| :-------------------------- | ----------------: | ----------------: |
-| Hypre solve, np=1           |            9.51 s |           12.58 s |
-| Hypre solve, np=16          |            2.63 s |            1.61 s |
-| Hypre solve, np=32          |            3.51 s |            1.00 s |
-| Hypre speedup, np=16        |             3.62× |             7.81× |
-| Hypre speedup, np=32        |             2.71× |            12.58× |
-| GAMG solve, np=16           |            2.18 s |            1.17 s |
-| GAMG solve, np=32           |            3.24 s |            0.62 s |
-| GAMG speedup, np=32         |             1.73× |            13.37× |
+| Metric               | Docker (exp. 001) | Native (exp. 002) |
+| :------------------- | ----------------: | ----------------: |
+| Hypre solve, np=1    |            9.51 s |           12.58 s |
+| Hypre solve, np=16   |            2.63 s |            1.61 s |
+| Hypre solve, np=32   |            3.51 s |            1.00 s |
+| Hypre speedup, np=16 |             3.62× |             7.81× |
+| Hypre speedup, np=32 |             2.71× |            12.58× |
+| GAMG solve, np=16    |            2.18 s |            1.17 s |
+| GAMG solve, np=32    |            3.24 s |            0.62 s |
+| GAMG speedup, np=32  |             1.73× |            13.37× |
 
 - **Serial is slower** on the native build (~12.6 s vs 9.5 s for Hypre) — likely due to different Hypre/PETSc compilation flags in the DOLFINx Docker image.
 - **Parallel scaling is dramatically better**: Hypre reaches 12.6× at 32 ranks (vs 2.7× in Docker); GAMG reaches 13.4× (vs 1.7× in Docker). The Docker MPICH shared-memory transport was the primary bottleneck.
