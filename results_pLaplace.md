@@ -191,6 +191,69 @@ mpirun -n 16 python3 -m pLaplace2D_jax_petsc.solve_pLaplace_dof --local-coloring
 
 ---
 
+## Experiment `experiment_002` — Native Build (no Docker)
+
+- **Date**: 2026-03-03
+- **CPU**: AMD Ryzen Threadripper PRO 7975WX 32-Core Processor (64 threads)
+- **OS**: Arch Linux x86_64 (kernel 6.18.13-arch1-1, bare metal — no Docker)
+- **MPI**: OpenMPI 5.0.10
+- **DOLFINx**: 0.10.0.post5
+- **PETSc**: 3.24.2 (with Hypre, METIS, ParMETIS, MUMPS, SuperLU_dist, SuiteSparse)
+- **JAX**: 0.9.0.1
+- **Python**: 3.12.10 (built from source)
+- **Git commit**: `main`
+- **Repetitions**: 3 (median time reported)
+
+> **Note**: These results use a native (non-Docker) build with OpenMPI instead of MPICH.
+> The previous `experiment_001` used Docker with MPICH, where shared-memory overhead
+> caused scaling degradation beyond 16 ranks. The native build eliminates this bottleneck.
+
+### JAX + PETSc DOF-Partitioned Newton — Native Build
+
+Same solver as `experiment_001` (DOF-based overlapping decomposition, local graph coloring, SFD Hessian, PETSc COO assembly). Level 9 (784 385 free DOFs). All configurations converge in **7 Newton iterations** to **$J(u) = -7.960006$**. Median of 3 repeats.
+
+#### Full Newton Solve — Hypre BoomerAMG
+
+| np  | Setup (s) | Solve (s) | Total (s) | Newton its | KSP its | Solve speedup |
+| --- | --------- | --------- | --------- | ---------- | ------- | ------------- |
+| 1   | 5.46      | 12.58     | 18.04     | 7          | 27      | 1.00×         |
+| 2   | 3.09      | 7.18      | 10.27     | 7          | 27      | 1.75×         |
+| 4   | 2.07      | **4.59**  | 6.65      | 7          | 27      | **2.74×**     |
+| 8   | 1.73      | **3.45**  | 5.18      | 7          | 26      | **3.65×**     |
+| 16  | 1.25      | **1.61**  | 2.86      | 7          | 28      | **7.81×**     |
+| 32  | 1.08      | **1.00**  | 2.09      | 7          | 27      | **12.58×**    |
+
+#### Full Newton Solve — GAMG
+
+| np  | Setup (s) | Solve (s) | Total (s) | Newton its | KSP its | Solve speedup |
+| --- | --------- | --------- | --------- | ---------- | ------- | ------------- |
+| 1   | 5.56      | 8.29      | 13.85     | 7          | 53      | 1.00×         |
+| 2   | 3.11      | 4.74      | 7.85      | 7          | 53      | 1.75×         |
+| 4   | 2.08      | **3.17**  | 5.25      | 7          | 57      | **2.62×**     |
+| 8   | 1.72      | **2.74**  | 4.47      | 7          | 54      | **3.02×**     |
+| 16  | 1.25      | **1.17**  | 2.41      | 7          | 54      | **7.09×**     |
+| 32  | 1.06      | **0.62**  | 1.68      | 7          | 52      | **13.37×**    |
+
+#### Key Observations (Native vs Docker)
+
+| Metric                      | Docker (exp. 001) | Native (exp. 002) |
+| :-------------------------- | ----------------: | ----------------: |
+| Hypre solve, np=1           |            9.51 s |           12.58 s |
+| Hypre solve, np=16          |            2.63 s |            1.61 s |
+| Hypre solve, np=32          |            3.51 s |            1.00 s |
+| Hypre speedup, np=16        |             3.62× |             7.81× |
+| Hypre speedup, np=32        |             2.71× |            12.58× |
+| GAMG solve, np=16           |            2.18 s |            1.17 s |
+| GAMG solve, np=32           |            3.24 s |            0.62 s |
+| GAMG speedup, np=32         |             1.73× |            13.37× |
+
+- **Serial is slower** on the native build (~12.6 s vs 9.5 s for Hypre) — likely due to different Hypre/PETSc compilation flags in the DOLFINx Docker image.
+- **Parallel scaling is dramatically better**: Hypre reaches 12.6× at 32 ranks (vs 2.7× in Docker); GAMG reaches 13.4× (vs 1.7× in Docker). The Docker MPICH shared-memory transport was the primary bottleneck.
+- **No degradation at 32 ranks**: Both preconditioners show monotonic improvement through 32 ranks, unlike Docker where performance degraded beyond 16 ranks.
+- **GAMG is again faster** in absolute time at high rank counts (0.62 s vs 1.00 s at np=32), and also scales better on the native build (13.4× vs 12.6×).
+
+---
+
 ## Annex 0 — Problem Description, Solvers, and Implementation
 
 This annex collects all information about the benchmark problem, the solver variants, and key implementation details needed to reproduce the results or adapt the approach to other problems.
