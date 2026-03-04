@@ -54,7 +54,7 @@ def _ghost_update(v):
 # Solver for a single mesh level
 # ---------------------------------------------------------------------------
 
-def run_level(mesh_level, verbose=True):
+def run_level(mesh_level, verbose=True, pc_type="hypre", ksp_rtol=1e-3):
     """Run JAX-version Newton solver for one mesh level.
 
     Returns dict with: mesh_level, total_dofs, time, iters, energy, message
@@ -69,10 +69,8 @@ def run_level(mesh_level, verbose=True):
             points = f["nodes"][:]
             triangles = f["elems"][:].astype(np.int64)
     else:
-        points = None
-        triangles = None
-    points = comm.bcast(points, root=0)
-    triangles = comm.bcast(triangles, root=0)
+        points = np.empty((0, 2), dtype=np.float64)
+        triangles = np.empty((0, 3), dtype=np.int64)
     c_el = ufl.Mesh(basix.ufl.element("Lagrange", "triangle", 1, shape=(2,)))
     msh = mesh.create_mesh(comm, triangles, c_el, points)
 
@@ -122,8 +120,11 @@ def run_level(mesh_level, verbose=True):
     A = create_matrix(hessian_form)
     ksp = PETSc.KSP().create(msh.comm)
     ksp.setType(PETSc.KSP.Type.CG)
-    ksp.getPC().setType(PETSc.PC.Type.HYPRE)
-    ksp.setTolerances(rtol=1e-3)
+    if pc_type == "gamg":
+        ksp.getPC().setType(PETSc.PC.Type.GAMG)
+    else:
+        ksp.getPC().setType(PETSc.PC.Type.HYPRE)
+    ksp.setTolerances(rtol=ksp_rtol)
 
     # ------------------------------------------------------------------
     # Callbacks for tools_petsc4py.minimizers.newton
@@ -255,6 +256,14 @@ def main():
         "--quiet", action="store_true",
         help="Suppress per-iteration output",
     )
+    parser.add_argument(
+        "--pc-type", type=str, default="hypre", choices=["hypre", "gamg"],
+        help="Preconditioner type (default: hypre)",
+    )
+    parser.add_argument(
+        "--ksp-rtol", type=float, default=1e-3,
+        help="KSP relative tolerance (default: 1e-3)",
+    )
     args = parser.parse_args()
 
     comm = MPI.COMM_WORLD
@@ -274,7 +283,7 @@ def main():
             sys.stdout.write(f"  --- Mesh level {mesh_lvl} ---\n")
             sys.stdout.flush()
 
-        result = run_level(mesh_lvl, verbose=(not args.quiet))
+        result = run_level(mesh_lvl, verbose=(not args.quiet), pc_type=args.pc_type, ksp_rtol=args.ksp_rtol)
         all_results.append(result)
 
         if rank == 0:
@@ -299,14 +308,14 @@ def main():
                 "solver": "custom_jaxversion",
                 "description": (
                     "Custom Newton (JAX-version algorithm): "
-                    "golden-section line search [-0.5, 2], CG + HYPRE AMG"
+                    f"golden-section line search [-0.5, 2], CG + {args.pc_type.upper()} AMG"
                 ),
                 "dolfinx_version": dolfinx.__version__,
                 "nprocs": nprocs,
                 "linear_solver": {
                     "ksp_type": "cg",
-                    "pc_type": "hypre",
-                    "ksp_rtol": 1e-3,
+                    "pc_type": args.pc_type,
+                    "ksp_rtol": args.ksp_rtol,
                 },
                 "newton_params": {
                     "tolf": 1e-5,

@@ -252,6 +252,31 @@ Same solver as `experiment_001` (DOF-based overlapping decomposition, local grap
 - **No degradation at 32 ranks**: Both preconditioners show monotonic improvement through 32 ranks, unlike Docker where performance degraded beyond 16 ranks.
 - **GAMG is again faster** in absolute time at high rank counts (0.62 s vs 1.00 s at np=32), and also scales better on the native build (13.4× vs 12.6×).
 
+### FEniCS Custom Newton — Native Build
+
+Same custom Newton algorithm as `experiment_001` (`tools_petsc4py/minimizers.py`: golden-section line search on $[-0.5, 2]$, `tolf = 1e-5`, `tolg = 1e-3`), but running natively on the Threadripper PRO. The solver loads meshes from HDF5 (rank-0 only, empty arrays on other ranks to avoid the parallel h5py crash).
+
+Script: [`pLaplace2D_fenics/solve_pLaplace_custom_jaxversion.py`](pLaplace2D_fenics/solve_pLaplace_custom_jaxversion.py) with `--pc-type gamg --ksp-rtol 1e-5`
+
+Level 9 (788 481 DOFs). All configurations converge in **6 Newton iterations** to **$J(u) = -7.9600$**. Median of 3 repeats.
+
+#### Custom Newton — GAMG vs Hypre (32 MPI ranks)
+
+| PC    | ksp_rtol | Time (s) | Iters | Total KSP its | J(u)    |
+| ----- | -------- | -------- | ----- | ------------- | ------- |
+| GAMG  | 1e-5     | **0.785**| 6     | 77            | -7.9600 |
+| Hypre | 1e-3     | 1.061    | 6     | 24            | -7.9600 |
+
+**GAMG is ~26% faster** than Hypre at 32 ranks despite requiring a tighter KSP tolerance and more KSP iterations per solve (12–14 vs 4).
+
+> **Note on GAMG KSP tolerance**: GAMG requires `ksp_rtol = 1e-5` for correct convergence. With the default `1e-3`, GAMG produces inaccurate Newton search directions that cause overshooting (10 iterations, wrong final energy $J = -8.0$). Hypre works correctly at `1e-3`.
+
+```bash
+# Reproduce:
+mpirun -n 32 python3 pLaplace2D_fenics/solve_pLaplace_custom_jaxversion.py --levels 9 --pc-type gamg --ksp-rtol 1e-5
+mpirun -n 32 python3 pLaplace2D_fenics/solve_pLaplace_custom_jaxversion.py --levels 9 --pc-type hypre
+```
+
 ---
 
 ## Annex 0 — Problem Description, Solvers, and Implementation

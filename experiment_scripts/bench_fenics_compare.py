@@ -14,6 +14,8 @@ from tools_petsc4py.minimizers import newton
 import argparse
 parser = argparse.ArgumentParser()
 parser.add_argument("--N", type=int, default=441, help="Grid dimension (DOFs ≈ (N+1)^2)")
+parser.add_argument("--pc-type", type=str, default="hypre", choices=["hypre", "gamg"],
+                    help="Preconditioner type (default: hypre)")
 args = parser.parse_args()
 
 comm = MPI.COMM_WORLD
@@ -21,7 +23,7 @@ rank = comm.rank
 size = comm.size
 N = args.N
 
-msh = mesh.create_unit_square(comm, N, N)
+msh = mesh.create_rectangle(comm, [[0.0, 0.0], [2.0, 2.0]], [N, N])
 V = fem.functionspace(msh, ("Lagrange", 1))
 total_dofs = V.dofmap.index_map.size_global
 
@@ -60,7 +62,7 @@ set_bc(x, [bc])
 A = create_matrix(hessian_form)
 ksp = PETSc.KSP().create(comm)
 ksp.setType("cg")
-ksp.getPC().setType("hypre")
+ksp.getPC().setType(args.pc_type)
 ksp.setTolerances(rtol=1e-3)
 
 
