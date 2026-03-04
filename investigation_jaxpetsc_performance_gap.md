@@ -208,3 +208,87 @@ JAX+PETSc step-1:  42.19s total (unpatched) / 28.08s (patched)
 | **Reduce COO finalization cost** (use `ADD_VALUES` with preallocation hints, or switch to `setValuesBlocked`) | Reduce 12.8s → closer to 1s | Medium |
 | **Cache HVP JIT compilation** across Newton steps | Minor (JIT already cached) | Low |
 | **Use element-level assembly** instead of DOF-level SFD | Match FEniCS approach, eliminate coloring | High (redesign) |
+
+---
+
+## 8) Experiment: Element-Level Analytical Hessian Assembly
+
+### 8.1 Approach
+
+Instead of 63 SFD HVP evaluations per Newton step, compute the **12×12 element Hessian** analytically via `jax.hessian(element_energy)` + `jax.vmap` over all elements in a single pass. Then pre-aggregate element contributions and write into `self.A` using the **same SFD COO pattern** with `INSERT_VALUES`.
+
+**Implementation**: `--assembly_mode element` flag in `solve_HE_dof.py`. Code in `LocalColoringAssembler.setup_element_hessian()` and `assemble_hessian_element()`.
+
+### 8.2 Correctness Verification
+
+Matrices match to machine precision (relative Frobenius norm difference = 2.12e-14 at L3 np=4). Solver converges to identical energy and identical Newton/KSP iteration counts.
+
+### 8.3 Evolution: Two Iterations of the Element Assembly Approach
+
+**Iteration 1 (separate `A_elem` matrix with duplicate COO + ADD_VALUES)**:
+The first implementation created a separate PETSc matrix `A_elem` with an element-based COO pattern containing duplicates. Assembly was 3.5–5× faster, but KSP solve regressed ~1.5× despite identical matrices. Overall speedup was limited (1.08× at np=32).
+
+**Root cause of KSP regression**: PETSc's `setPreallocationCOO` with duplicate entries produces a different internal matrix storage layout than the SFD's unique-entry COO. This made matrix-vector products less cache-efficient.
+
+**Iteration 2 (reuse `self.A` with pre-aggregated SFD COO pattern)**:
+The fix pre-aggregates element contributions into the same COO pattern as the SFD matrix using `np.add.at`, then writes into `self.A` with `INSERT_VALUES`. This preserves PETSc's internal storage layout.
+
+**Bug discovered**: PETSc's `setPreallocationCOO` for MPIAIJ matrices modifies the input column array in-place (remapping off-process columns). The original COO arrays must be reconstructed from the adjacency data (`_row_adj`, `_col_adj`) to build the correct element→COO position mapping.
+
+### 8.4 Step-1 Benchmark Results (L3, GAMG, native build, Iteration 2)
+
+| np | Mode | Step time [s] | Assembly [s] | Compute [s] | COO [s] | PC setup [s] | KSP solve [s] | Newton | KSP | Energy |
+| ---: | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| 4 | SFD | 26.163 | 18.200 | 11.660 | 6.273 | 0.815 | 5.060 | 38 | 500 | 0.1625951097 |
+| 4 | Element | 12.224 | 4.219 | 1.852 | 1.580 | 0.819 | 5.129 | 38 | 500 | 0.1625951097 |
+| 16 | SFD | 23.123 | 12.184 | 3.679 | 8.419 | 0.387 | 7.935 | 39 | 402 | 0.1626936687 |
+| 16 | Element | 7.990 | 1.643 | 0.508 | 1.001 | 0.299 | 4.455 | 39 | 402 | 0.1626936687 |
+| 32 | SFD | 17.540 | 8.070 | 1.949 | 6.065 | 0.325 | 6.665 | 40 | 413 | 0.1626156380 |
+| 32 | Element | 10.725 | 1.521 | 0.398 | 1.019 | 0.341 | 6.574 | 40 | 413 | 0.1626156379 |
+
+### 8.5 Speedup Summary
+
+| np | SFD step [s] | Element step [s] | Overall speedup | Assembly speedup | Compute speedup | KSP solve ratio |
+| ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| 4 | 26.16 | 12.22 | **2.14×** | 4.31× | 6.30× | 1.01× (no regression) |
+| 16 | 23.12 | 7.99 | **2.89×** | 7.42× | 7.24× | 0.56× (elem faster!) |
+| 32 | 17.54 | 10.73 | **1.64×** | 5.31× | 4.90× | 0.99× (no regression) |
+
+### 8.6 Analysis
+
+**Assembly speedup is now 4–7×** across rank counts. The element Hessian pass (`jax.vmap(jax.hessian(...))`) replaces 63 sequential HVP evaluations with a single vmapped computation.
+
+**COO finalization** also improved **~6× at np=16** (8.4s → 1.0s). Pre-aggregation via `np.add.at` is much faster than PETSc's internal duplicate-handling ADD_VALUES path.
+
+**KSP solve regression is eliminated**: solve times now match between SFD and element assembly (e.g., 6.57s vs 6.67s at np=32). At np=16, element is even faster (4.5s vs 7.9s), likely due to reduced memory pressure from not maintaining a separate matrix.
+
+**Overall speedup is 1.6–2.9×**: a major improvement over the previous iteration (1.08–1.79×).
+
+### 8.7 Remaining Gap vs FEniCS
+
+FEniCS custom + GAMG at np=32: **step 1 ≈ 1.6 s** (from Annex G.4).
+JAX+PETSc + Element at np=32: **step 1 = 10.7 s** → still **~6.7× slower**.
+
+The remaining gap is dominated by:
+- **KSP solve**: 6.6s (JAX+PETSc) vs ~0.8s (FEniCS estimated) — possibly different GAMG setup quality or matrix storage efficiency
+- **Line search**: each energy probe requires JAX computation + MPI Allreduce
+- **Gradient**: JAX AD vs compiled UFL forms
+
+### 8.8 Reproducing
+
+```bash
+source local_env/activate.sh
+export OMP_NUM_THREADS=1
+
+# Element Hessian assembly (Iteration 2 — reuses self.A)
+mpirun -n 16 python3 HyperElasticity3D_jax_petsc/solve_HE_dof.py \
+    --level 3 --steps 1 --total_steps 24 \
+    --profile performance --assembly_mode element \
+    --save_linear_timing --quiet
+
+# SFD baseline
+mpirun -n 16 python3 HyperElasticity3D_jax_petsc/solve_HE_dof.py \
+    --level 3 --steps 1 --total_steps 24 \
+    --profile performance --assembly_mode sfd \
+    --save_linear_timing --quiet
+```

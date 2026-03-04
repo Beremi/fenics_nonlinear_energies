@@ -119,6 +119,13 @@ def _build_parser():
         default=10,
         help="Coloring trials per rank (global-coloring mode)",
     )
+    parser.add_argument(
+        "--assembly_mode",
+        choices=("sfd", "element"),
+        default="sfd",
+        help="Hessian assembly mode: 'sfd' (graph coloring + HVP) or "
+             "'element' (analytical element Hessians via jax.hessian)",
+    )
 
     parser.add_argument("--tolf", type=float, default=1e-4, help="Energy-change tolerance")
     parser.add_argument("--tolg", type=float, default=1e-3, help="Gradient-norm tolerance")
@@ -291,6 +298,11 @@ def run(args):
     setup_start = time.perf_counter()
     assembler = assembler_cls(**assembler_kwargs)
     assembler.A.setBlockSize(3)
+
+    use_element_assembly = (args.assembly_mode == "element")
+    if use_element_assembly:
+        assembler.setup_element_hessian()
+
     setup_time = time.perf_counter() - setup_start
 
     u_init_reordered = np.asarray(u_init, dtype=np.float64)[assembler.part.perm]
@@ -375,7 +387,10 @@ def run(args):
 
                     t_asm0 = time.perf_counter()
                     u_owned = np.array(vec.array[:], dtype=np.float64)
-                    assembler.assemble_hessian(u_owned, variant=2)
+                    if use_element_assembly:
+                        assembler.assemble_hessian_element(u_owned)
+                    else:
+                        assembler.assemble_hessian(u_owned, variant=2)
                     asm_total_time = time.perf_counter() - t_asm0
                     asm_details = {}
                     if assembler.iter_timings:
@@ -540,6 +555,7 @@ def run(args):
                 "matrix_block_size": 3,
                 "reorder": bool(settings["reorder"]),
                 "hvp_eval_mode": str(getattr(assembler, "_hvp_eval_mode", "batched")),
+                "assembly_mode": str(args.assembly_mode),
             },
             "newton": {
                 "tolf": float(args.tolf),

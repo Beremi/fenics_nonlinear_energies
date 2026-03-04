@@ -58,6 +58,10 @@ Additional vector-problem handling for HE:
 - optional GAMG coordinates from owned xyz triplets
 - default `reorder=False` (preserve xyz triplets for block-aware handling)
 
+HE 3D vector P1 elements produce **63 graph colors** (vs 8 for 2D scalar P1 pLaplace), making
+the SFD approach ~8× more expensive in assembly. Use `--assembly_mode element` to bypass coloring
+entirely.
+
 ## 5. Energy, Gradient, Hessian
 
 Energy model is Neo-Hookean:
@@ -68,10 +72,26 @@ Local JAX functions:
 - weighted local energy for global energy reduction
 - full local energy for exact local grad/HVP at owned rows
 
-Hessian assembly:
-- sparse finite differences via coloring/HVP extraction
-- COO insertion through `setValuesCOO`
-- explicit `A.assemble()` after COO insertion (to avoid hidden matrix-finalization cost inside KSP solve)
+### Hessian assembly modes (selected via `--assembly_mode`)
+
+**SFD** (default, `--assembly_mode sfd`):
+- Sparse finite differences via graph coloring + HVP extraction
+- 63 sequential `jax.jvp(grad, v, indicator)` calls per Newton step
+- COO insertion into `self.A` via `setValuesCOO(INSERT_VALUES)`
+- Explicit `A.assemble()` after COO insertion
+
+**Element** (`--assembly_mode element`):
+- Analytical element Hessians via `jax.hessian(element_energy)` + `jax.vmap`
+- Single JIT-compiled call produces all (n_elem, 12, 12) element Hessians
+- Contributions pre-aggregated with `numpy.add.at` into the SFD COO pattern
+- Same `self.A` reused — preserves PETSc internal storage, no KSP regression
+- Call `assembler.setup_element_hessian()` after construction to enable
+
+**Key implementation note for element mode:**
+PETSc's `MatSetPreallocationCOO` modifies the input column index array in-place for MPIAIJ
+matrices (remapping off-process columns to local indices). The element→COO position lookup
+table must therefore be built from the original adjacency arrays (`_row_adj`, `_col_adj` via
+`iperm`) before this remapping occurs — not from `self._coo_cols` which is already modified.
 
 ## 6. Nonlinear Solver Parity (Custom FEniCS)
 
@@ -130,15 +150,28 @@ Performance profile:
 
 ## 9. Current Performance Findings
 
-Step-1 (level 3, np=16, GAMG) from recent profiling:
-- Sequential local HVP mode (`--hvp_eval_mode sequential`) is significantly faster than batched vmap for HE in this environment.
-- Explicit `A.assemble()` moved hidden matrix-finalization work out of `ksp.solve` into assembly accounting.
-- Resulting total step time improved substantially versus prior batched baseline, but remains much slower than custom FEniCS.
+Step-1 (level 3, GAMG, native build — Threadripper PRO 7975WX):
 
-Observed remaining bottlenecks:
-- Hessian assembly still dominates (`hvp_compute` + COO/finalization)
-- Linear phase time distribution differs from FEniCS despite similar iteration counts
-- Shared-memory CPU utilization does not scale linearly with MPI rank count on this workload
+| np | Mode | Step [s] | Assembly [s] | KSP solve [s] | Newton | KSP iters |
+| ---: | --- | ---: | ---: | ---: | ---: | ---: |
+| 4 | SFD | 26.16 | 18.20 | 5.06 | 38 | 500 |
+| 4 | Element | 12.22 | 4.22 | 5.13 | 38 | 500 |
+| 16 | SFD | 23.12 | 12.18 | 7.94 | 39 | 402 |
+| 16 | Element | 7.99 | 1.64 | 4.46 | 39 | 402 |
+| 32 | SFD | 17.54 | 8.07 | 6.67 | 40 | 413 |
+| 32 | Element | 10.73 | 1.52 | 6.57 | 40 | 413 |
+
+FEniCS custom + GAMG np=32: step 1 = **1.6 s** (assembly ~0.5 s, KSP ~0.7 s).
+
+Key findings:
+- Sequential local HVP mode (`--hvp_eval_mode sequential`) is faster than batched vmap for HE.
+- Explicit `A.assemble()` moved hidden matrix-finalization work out of `ksp.solve`.
+- Element assembly (`--assembly_mode element`) is **4–7× faster** in assembly and **1.6–2.9×
+  faster** overall than SFD, with no KSP solve regression.
+- Remaining ~6.7× gap vs FEniCS at np=32 is dominated by KSP solve (6.6 s vs ~0.7 s),
+  pointing to matrix-vector product efficiency differences from the COO assembly path.
+
+Full analysis: [investigation_jaxpetsc_performance_gap.md](investigation_jaxpetsc_performance_gap.md)
 
 ## 10. Important References
 
