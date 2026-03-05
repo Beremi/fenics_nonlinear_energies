@@ -119,10 +119,9 @@ class DOFPartition:
         if reorder:
             if self.rank == 0:
 
-
                 import pymetis
                 adj_csr = adjacency.tocsr()
-                
+
                 if self.ownership_block_size > 1:
                     bs = self.ownership_block_size
                     pass
@@ -139,14 +138,15 @@ class DOFPartition:
                     ).tocsr()
                     # make boolean
                     block_mat.data = np.ones_like(block_mat.data)
-                    
+
                     n_parts = self.size
-                    n_cuts, block_partition = pymetis.part_graph(n_parts, xadj=block_mat.indptr, adjncy=block_mat.indices)
+                    n_cuts, block_partition = pymetis.part_graph(
+                        n_parts, xadj=block_mat.indptr, adjncy=block_mat.indices)
                     block_partition = np.array(block_partition, dtype=np.int64)
-                    
+
                     # Expand back to DOFs
                     partition = np.repeat(block_partition, bs)
-                    
+
                     # Sort blocks so 0,1,2 stay together, but grouped by partition
                     # We can argsort block_partition, then expand
                     block_perm = np.argsort(block_partition)
@@ -160,7 +160,6 @@ class DOFPartition:
                     partition = np.array(partition, dtype=np.int64)
                     perm = np.argsort(partition)
                     perm = np.ascontiguousarray(perm, dtype=np.int64)
-
 
             else:
                 perm = np.empty(n_free, dtype=np.int64)

@@ -258,7 +258,6 @@ def _build_gamg_coordinates(part, freedofs, nodes2coord):
 
 
 def run(args):
-    from petsc4py import PETSc
 
     from HyperElasticity3D_jax_petsc.mesh import MeshHyperElasticity3D
     from HyperElasticity3D_jax_petsc.parallel_hessian_dof import (

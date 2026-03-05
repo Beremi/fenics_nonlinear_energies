@@ -395,7 +395,8 @@ def run_level(mesh_level, num_steps=1, verbose=True, maxit=100, start_step=1,
         used_ksp_rtol = ksp_rtol
         used_ksp_max_it = ksp_max_it
 
-        for attempt_idx, (attempt_name, ls_interval, ksp_rtol_attempt, ksp_max_it_attempt) in enumerate(attempt_configs):
+        for attempt_idx, (attempt_name, ls_interval, ksp_rtol_attempt,
+                          ksp_max_it_attempt) in enumerate(attempt_configs):
             # Restore step-start state for each attempt.
             x_step_start.copy(x)
             set_bc(x, bcs)
