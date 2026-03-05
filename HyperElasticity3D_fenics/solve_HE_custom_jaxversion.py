@@ -79,6 +79,17 @@ def build_nullspace(V, A):
 
     return PETSc.NullSpace().create(vectors=vecs)
 
+
+def _snes_reason_label(reason_code):
+    """Return PETSc SNES converged/diverged reason label for an integer code."""
+    reason_int = int(reason_code)
+    for name, value in PETSc.SNES.ConvergedReason.__dict__.items():
+        if name.startswith("_"):
+            continue
+        if isinstance(value, int) and int(value) == reason_int:
+            return name
+    return "UNKNOWN"
+
 # ---------------------------------------------------------------------------
 # Solver for a single mesh level
 # ---------------------------------------------------------------------------
@@ -134,7 +145,20 @@ def run_level(mesh_level, num_steps=1, verbose=True, maxit=100, start_step=1,
               fail_fast=True, retry_on_nonfinite=True,
               retry_on_maxit=True,
               nonfinite_retry_rtol_factor=0.1, nonfinite_retry_linesearch_b=1.0,
-              retry_ksp_max_it_factor=2.0):
+              retry_ksp_max_it_factor=2.0,
+              use_trust_region=True,
+              trust_radius_init=1.0,
+              trust_radius_min=1e-8,
+              trust_radius_max=1e6,
+              trust_shrink=0.5,
+              trust_expand=1.5,
+              trust_eta_shrink=0.05,
+              trust_eta_expand=0.75,
+              trust_max_reject=6,
+              trust_region_retry_on_maxit=False,
+              trust_region_retry_maxit=100,
+              trust_region_retry_rtol_factor=0.1,
+              trust_region_retry_ksp_max_it_factor=2.0):
     """Run JAX-version Newton solver for one HE mesh level.
 
     Returns dict with: mesh_level, total_dofs, time, iters, energy, message
@@ -344,6 +368,122 @@ def run_level(mesh_level, num_steps=1, verbose=True, maxit=100, start_step=1,
             )
         return ksp_its
 
+    def hessian_matvec_fn(_x_current, vin, vout):
+        """Apply currently assembled Hessian to a vector."""
+        A.mult(vin, vout)
+
+    def trust_region_retry_fn(ksp_rtol_attempt, ksp_max_it_attempt, maxit_attempt):
+        """Fallback solve via SNES trust-region Newton."""
+        tr_prefix = "hetr_"
+
+        # Dedicated SNES objects so custom-Newton KSP state is untouched.
+        A_tr = create_matrix(hessian_form)
+        A_tr.setBlockSize(3)
+        if nullspace is not None:
+            A_tr.setNearNullSpace(nullspace)
+        b_tr = x.duplicate()
+
+        snes = PETSc.SNES().create(comm)
+        snes.setType("newtontr")
+        snes.setOptionsPrefix(tr_prefix)
+
+        g0 = x.duplicate()
+        gradient_fn(x, g0)
+        grad0 = g0.norm(PETSc.NormType.NORM_2)
+        g0.destroy()
+        grad_target = max(tolg, tolg_rel * grad0) if tolg_rel > 0.0 else tolg
+        snes.setTolerances(atol=grad_target, rtol=1e-50, stol=1e-50, max_it=maxit_attempt)
+
+        ksp_tr = snes.getKSP()
+        ksp_tr.setType(ksp_type)
+        pc_tr = ksp_tr.getPC()
+        pc_tr.setType(pc_type)
+        if pc_type == "hypre":
+            pc_tr.setHYPREType("boomeramg")
+            if hypre_nodal_coarsen >= 0:
+                opts[f"{tr_prefix}pc_hypre_boomeramg_nodal_coarsen"] = hypre_nodal_coarsen
+            if hypre_vec_interp_variant >= 0:
+                opts[f"{tr_prefix}pc_hypre_boomeramg_vec_interp_variant"] = hypre_vec_interp_variant
+            if hypre_strong_threshold is not None:
+                opts[f"{tr_prefix}pc_hypre_boomeramg_strong_threshold"] = hypre_strong_threshold
+            if hypre_coarsen_type:
+                opts[f"{tr_prefix}pc_hypre_boomeramg_coarsen_type"] = hypre_coarsen_type
+        elif pc_type == "gamg":
+            opts[f"{tr_prefix}pc_gamg_threshold"] = float(gamg_threshold)
+            opts[f"{tr_prefix}pc_gamg_agg_nsmooths"] = int(gamg_agg_nsmooths)
+        ksp_tr.setTolerances(rtol=ksp_rtol_attempt, max_it=ksp_max_it_attempt)
+
+        tr_coords = None
+        tr_coords_pending = False
+        if pc_type == "gamg" and gamg_set_coordinates:
+            index_map = V.dofmap.index_map
+            tr_coords = V.tabulate_dof_coordinates()[:index_map.size_local, :]
+            tr_coords_pending = True
+
+        def snes_residual(_snes, vec, f):
+            vec.copy(u.x.petsc_vec)
+            _ghost_update(u.x.petsc_vec)
+            with f.localForm() as f_loc:
+                f_loc.set(0.0)
+            assemble_vector(f, grad_form)
+            apply_lifting(f, [hessian_form], [bcs], x0=[u.x.petsc_vec], alpha=1.0)
+            f.ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
+            set_bc(f, bcs, u.x.petsc_vec, alpha=1.0)
+
+        def snes_jacobian(_snes, vec, J_mat, P_mat):
+            nonlocal tr_coords_pending
+            vec.copy(u.x.petsc_vec)
+            _ghost_update(u.x.petsc_vec)
+            J_mat.zeroEntries()
+            assemble_matrix(J_mat, hessian_form, bcs=bcs)
+            J_mat.assemble()
+            if P_mat.handle != J_mat.handle:
+                P_mat.zeroEntries()
+                assemble_matrix(P_mat, hessian_form, bcs=bcs)
+                P_mat.assemble()
+            if nullspace is not None:
+                J_mat.setNearNullSpace(nullspace)
+                if P_mat.handle != J_mat.handle:
+                    P_mat.setNearNullSpace(nullspace)
+            if tr_coords_pending and tr_coords is not None:
+                pc_tr.setCoordinates(tr_coords)
+                tr_coords_pending = False
+
+        snes.setFunction(snes_residual, b_tr)
+        snes.setJacobian(snes_jacobian, A_tr, A_tr)
+        snes.setFromOptions()
+
+        t_start = time.perf_counter()
+        snes.solve(None, x)
+        total_time = time.perf_counter() - t_start
+
+        final_energy = energy_fn(x)
+        snes_reason = int(snes.getConvergedReason())
+        if snes_reason > 0:
+            message = "Converged (trust-region SNES)"
+        elif snes_reason == int(PETSc.SNES.ConvergedReason.DIVERGED_MAX_IT):
+            message = "Maximum number of iterations reached (trust-region SNES)"
+        else:
+            reason_label = _snes_reason_label(snes_reason)
+            message = f"Trust-region SNES failed ({reason_label}, reason={snes_reason})"
+
+        out = {
+            "x": x,
+            "fun": final_energy,
+            "nit": int(snes.getIterationNumber()),
+            "time": float(total_time),
+            "message": message,
+            "history": [],
+            "success": snes_reason > 0,
+            "linear_iters": int(snes.getLinearSolveIterations()),
+            "snes_reason": snes_reason,
+        }
+
+        snes.destroy()
+        A_tr.destroy()
+        b_tr.destroy()
+        return out
+
     # ---- time evolution ----
     rotation_per_iter = 4 * 2 * np.pi / total_steps
 
@@ -374,8 +514,28 @@ def run_level(mesh_level, num_steps=1, verbose=True, maxit=100, start_step=1,
             print(f"--- Step {step}/{num_steps}, Angle: {angle:.4f} ---")
 
         attempt_configs = [
-            ("primary", linesearch_interval, ksp_rtol, ksp_max_it),
+            {
+                "name": "primary",
+                "mode": "newton",
+                "linesearch_interval": linesearch_interval,
+                "ksp_rtol": ksp_rtol,
+                "ksp_max_it": int(ksp_max_it),
+                "maxit": int(maxit),
+            },
         ]
+        if trust_region_retry_on_maxit and retry_on_maxit:
+            tr_retry_rtol = max(1e-8, ksp_rtol * trust_region_retry_rtol_factor)
+            tr_retry_kmax = max(ksp_max_it + 1, int(round(ksp_max_it * trust_region_retry_ksp_max_it_factor)))
+            attempt_configs.append(
+                {
+                    "name": "trust_region",
+                    "mode": "snes_newtontr",
+                    "linesearch_interval": None,
+                    "ksp_rtol": tr_retry_rtol,
+                    "ksp_max_it": int(tr_retry_kmax),
+                    "maxit": int(max(1, trust_region_retry_maxit)),
+                }
+            )
         if retry_on_nonfinite or retry_on_maxit:
             ls_a, ls_b = linesearch_interval
             retry_ls_b = min(ls_b, nonfinite_retry_linesearch_b)
@@ -385,68 +545,114 @@ def run_level(mesh_level, num_steps=1, verbose=True, maxit=100, start_step=1,
             retry_kmax = max(ksp_max_it + 1, int(round(ksp_max_it * retry_ksp_max_it_factor)))
             if retry_ls_b < ls_b or retry_rtol < ksp_rtol or retry_kmax > ksp_max_it:
                 attempt_configs.append(
-                    ("repair", (ls_a, retry_ls_b), retry_rtol, retry_kmax)
+                    {
+                        "name": "repair",
+                        "mode": "newton",
+                        "linesearch_interval": (ls_a, retry_ls_b),
+                        "ksp_rtol": retry_rtol,
+                        "ksp_max_it": int(retry_kmax),
+                        "maxit": int(maxit),
+                    }
                 )
 
         result = None
         total_time = 0.0
         used_attempt = "primary"
+        used_mode = "newton"
         used_linesearch = linesearch_interval
         used_ksp_rtol = ksp_rtol
         used_ksp_max_it = ksp_max_it
+        attempt_log = []
 
-        for attempt_idx, (attempt_name, ls_interval, ksp_rtol_attempt,
-                          ksp_max_it_attempt) in enumerate(attempt_configs):
+        for attempt_idx, attempt in enumerate(attempt_configs):
+            attempt_name = attempt["name"]
+            attempt_mode = attempt["mode"]
+            ls_interval = attempt.get("linesearch_interval")
+            ksp_rtol_attempt = float(attempt["ksp_rtol"])
+            ksp_max_it_attempt = int(attempt["ksp_max_it"])
+            maxit_attempt = int(attempt.get("maxit", maxit))
+
             # Restore step-start state for each attempt.
             x_step_start.copy(x)
             set_bc(x, bcs)
             _ghost_update(x)
             x.assemble()
 
-            # Ensure the first Newton linear solve in each attempt performs setup.
-            force_pc_setup_next = True
-            ksp.setTolerances(rtol=ksp_rtol_attempt, max_it=ksp_max_it_attempt)
-            if save_linear_timing:
-                linear_timing_records.clear()
+            if attempt_mode == "newton":
+                # Ensure the first Newton linear solve in each attempt performs setup.
+                force_pc_setup_next = True
+                ksp.setTolerances(rtol=ksp_rtol_attempt, max_it=ksp_max_it_attempt)
+                if save_linear_timing:
+                    linear_timing_records.clear()
 
-            t_start = time.perf_counter()
-            result = newton(
-                energy_fn,
-                gradient_fn,
-                hessian_solve_fn,
-                x,
-                tolf=tolf,
-                tolg=tolg,
-                tolg_rel=tolg_rel,
-                linesearch_tol=1e-3,
-                linesearch_interval=ls_interval,
-                maxit=maxit,
-                tolx_rel=tolx_rel,
-                tolx_abs=tolx_abs,
-                require_all_convergence=True,
-                fail_on_nonfinite=True,
-                verbose=verbose,
-                comm=comm,
-                ghost_update_fn=_ghost_update,
-                save_history=save_history,
-            )
-            total_time = time.perf_counter() - t_start
+                t_start = time.perf_counter()
+                result = newton(
+                    energy_fn,
+                    gradient_fn,
+                    hessian_solve_fn,
+                    x,
+                    tolf=tolf,
+                    tolg=tolg,
+                    tolg_rel=tolg_rel,
+                    linesearch_tol=1e-3,
+                    linesearch_interval=ls_interval,
+                    maxit=maxit_attempt,
+                    tolx_rel=tolx_rel,
+                    tolx_abs=tolx_abs,
+                    require_all_convergence=True,
+                    fail_on_nonfinite=True,
+                    verbose=verbose,
+                    comm=comm,
+                    ghost_update_fn=_ghost_update,
+                    project_fn=lambda vec: set_bc(vec, bcs),
+                    hessian_matvec_fn=hessian_matvec_fn,
+                    save_history=save_history,
+                    trust_region=use_trust_region,
+                    trust_radius_init=trust_radius_init,
+                    trust_radius_min=trust_radius_min,
+                    trust_radius_max=trust_radius_max,
+                    trust_shrink=trust_shrink,
+                    trust_expand=trust_expand,
+                    trust_eta_shrink=trust_eta_shrink,
+                    trust_eta_expand=trust_eta_expand,
+                    trust_max_reject=trust_max_reject,
+                )
+                total_time = time.perf_counter() - t_start
+            elif attempt_mode == "snes_newtontr":
+                if save_linear_timing:
+                    linear_timing_records.clear()
+                result = trust_region_retry_fn(
+                    ksp_rtol_attempt=ksp_rtol_attempt,
+                    ksp_max_it_attempt=ksp_max_it_attempt,
+                    maxit_attempt=maxit_attempt,
+                )
+                total_time = float(result["time"])
+            else:
+                raise RuntimeError(f"Unknown attempt mode: {attempt_mode}")
+
             used_attempt = attempt_name
+            used_mode = attempt_mode
             used_linesearch = ls_interval
             used_ksp_rtol = ksp_rtol_attempt
             used_ksp_max_it = ksp_max_it_attempt
+            attempt_log.append(
+                {
+                    "name": attempt_name,
+                    "mode": attempt_mode,
+                    "time": round(float(total_time), 4),
+                    "iters": int(result.get("nit", 0)),
+                    "message": str(result.get("message", "")),
+                    "ksp_rtol": float(ksp_rtol_attempt),
+                    "ksp_max_it": int(ksp_max_it_attempt),
+                }
+            )
 
             msg_lower = result["message"].lower()
-            has_nonfinite = "non-finite" in msg_lower or "nan" in msg_lower
-            hit_newton_maxit = "maximum number of iterations reached" in msg_lower
-            need_retry = (retry_on_nonfinite and has_nonfinite) or (retry_on_maxit and hit_newton_maxit)
+            converged = "converged" in msg_lower
+            need_retry = not converged
             if need_retry and attempt_idx + 1 < len(attempt_configs):
                 if rank == 0 and verbose:
-                    reason = "non-finite state" if has_nonfinite else "max Newton iterations"
-                    print(
-                        f"Step {step}: {attempt_name} failed with {reason}, "
-                        f"retrying with tighter linear solve / safer line-search."
-                    )
+                    print(f"Step {step}: {attempt_name} did not converge, retrying with next fallback.")
                 continue
             break
 
@@ -463,10 +669,17 @@ def run_level(mesh_level, num_steps=1, verbose=True, maxit=100, start_step=1,
             "energy": round(final_energy, 6),
             "message": result["message"],
             "attempt": used_attempt,
+            "solver_mode": used_mode,
             "ksp_rtol_used": used_ksp_rtol,
             "ksp_max_it_used": int(used_ksp_max_it),
-            "linesearch_interval_used": [float(used_linesearch[0]), float(used_linesearch[1])],
+            "attempt_log": attempt_log,
         }
+        if used_linesearch is not None:
+            step_record["linesearch_interval_used"] = [float(used_linesearch[0]), float(used_linesearch[1])]
+        if "linear_iters" in result:
+            step_record["linear_iters"] = int(result["linear_iters"])
+        if "snes_reason" in result:
+            step_record["snes_reason"] = int(result["snes_reason"])
         if save_history:
             step_record["history"] = result.get("history", [])
         if save_linear_timing:
@@ -556,6 +769,32 @@ if __name__ == "__main__":
                         help="Disable repair attempt when Newton reaches max iterations")
     parser.add_argument("--retry_ksp_max_it_factor", type=float, default=2.0,
                         help="Multiplier for KSP max_it in repair attempt")
+    parser.add_argument("--no_trust_region", action="store_true",
+                        help="Disable trust-region control inside custom Newton")
+    parser.add_argument("--trust_radius_init", type=float, default=1.0,
+                        help="Initial trust-region radius for custom Newton")
+    parser.add_argument("--trust_radius_min", type=float, default=1e-8,
+                        help="Minimum trust-region radius for custom Newton")
+    parser.add_argument("--trust_radius_max", type=float, default=1e6,
+                        help="Maximum trust-region radius for custom Newton")
+    parser.add_argument("--trust_shrink", type=float, default=0.5,
+                        help="Trust-region shrink factor after rejected trial")
+    parser.add_argument("--trust_expand", type=float, default=1.5,
+                        help="Trust-region expansion factor after successful trial")
+    parser.add_argument("--trust_eta_shrink", type=float, default=0.05,
+                        help="Minimum rho acceptance threshold for trust-region step")
+    parser.add_argument("--trust_eta_expand", type=float, default=0.75,
+                        help="Rho threshold for trust-region radius expansion")
+    parser.add_argument("--trust_max_reject", type=int, default=6,
+                        help="Maximum rejected trust-region trials per Newton iteration")
+    parser.add_argument("--trust_region_retry_on_maxit", action="store_true",
+                        help="Retry non-converged Newton step with SNES trust-region (newtontr)")
+    parser.add_argument("--trust_region_retry_maxit", type=int, default=100,
+                        help="Maximum trust-region SNES iterations in fallback attempt")
+    parser.add_argument("--trust_region_retry_rtol_factor", type=float, default=0.1,
+                        help="Multiplier for KSP rtol in trust-region fallback")
+    parser.add_argument("--trust_region_retry_ksp_max_it_factor", type=float, default=2.0,
+                        help="Multiplier for KSP max_it in trust-region fallback")
     parser.add_argument("--quiet", action="store_true")
     args = parser.parse_args()
 
@@ -596,6 +835,19 @@ if __name__ == "__main__":
         nonfinite_retry_rtol_factor=args.nonfinite_retry_rtol_factor,
         nonfinite_retry_linesearch_b=args.nonfinite_retry_linesearch_b,
         retry_ksp_max_it_factor=args.retry_ksp_max_it_factor,
+        use_trust_region=not args.no_trust_region,
+        trust_radius_init=args.trust_radius_init,
+        trust_radius_min=args.trust_radius_min,
+        trust_radius_max=args.trust_radius_max,
+        trust_shrink=args.trust_shrink,
+        trust_expand=args.trust_expand,
+        trust_eta_shrink=args.trust_eta_shrink,
+        trust_eta_expand=args.trust_eta_expand,
+        trust_max_reject=args.trust_max_reject,
+        trust_region_retry_on_maxit=args.trust_region_retry_on_maxit,
+        trust_region_retry_maxit=args.trust_region_retry_maxit,
+        trust_region_retry_rtol_factor=args.trust_region_retry_rtol_factor,
+        trust_region_retry_ksp_max_it_factor=args.trust_region_retry_ksp_max_it_factor,
     )
 
     if MPI.COMM_WORLD.rank == 0:
