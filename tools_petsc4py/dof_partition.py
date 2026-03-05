@@ -114,13 +114,54 @@ class DOFPartition:
         if self.ownership_block_size < 1:
             raise ValueError("ownership_block_size must be >= 1")
 
-        # ---- 2. RCM reordering (rank 0 computes, broadcast) ----
+        # ---- 2. Partitioning (rank 0 computes, broadcast) ----
         t0 = time.perf_counter()
         if reorder:
             if self.rank == 0:
-                from scipy.sparse.csgraph import reverse_cuthill_mckee
-                perm = reverse_cuthill_mckee(adjacency.tocsr())
-                perm = np.ascontiguousarray(perm, dtype=np.int64)
+
+
+                import pymetis
+                adj_csr = adjacency.tocsr()
+                
+                if self.ownership_block_size > 1:
+                    bs = self.ownership_block_size
+                    pass
+                    if adj_csr.shape[0] % bs != 0:
+                        raise ValueError("Graph size not divisible by block size")
+                    n_blocks = adj_csr.shape[0] // bs
+                    # Compress graph quickly: just sample every bs-th row, divide indices by bs
+                    # (this works well if blocks are dense fully coupled)
+                    import scipy.sparse as sp
+                    row_ptrs = adj_csr.indptr[::bs]
+                    # We need actual block graph. A correct way is to sum blocks:
+                    block_mat = sp.coo_matrix(
+                        (np.ones_like(adj_csr.data), (adj_csr.nonzero()[0] // bs, adj_csr.nonzero()[1] // bs))
+                    ).tocsr()
+                    # make boolean
+                    block_mat.data = np.ones_like(block_mat.data)
+                    
+                    n_parts = self.size
+                    n_cuts, block_partition = pymetis.part_graph(n_parts, xadj=block_mat.indptr, adjncy=block_mat.indices)
+                    block_partition = np.array(block_partition, dtype=np.int64)
+                    
+                    # Expand back to DOFs
+                    partition = np.repeat(block_partition, bs)
+                    
+                    # Sort blocks so 0,1,2 stay together, but grouped by partition
+                    # We can argsort block_partition, then expand
+                    block_perm = np.argsort(block_partition)
+                    # perm is block_perm expanded * bs + offset
+                    perm = np.empty(n_free, dtype=np.int64)
+                    for i in range(bs):
+                        perm[i::bs] = block_perm * bs + i
+                else:
+                    n_parts = self.size
+                    n_cuts, partition = pymetis.part_graph(n_parts, xadj=adj_csr.indptr, adjncy=adj_csr.indices)
+                    partition = np.array(partition, dtype=np.int64)
+                    perm = np.argsort(partition)
+                    perm = np.ascontiguousarray(perm, dtype=np.int64)
+
+
             else:
                 perm = np.empty(n_free, dtype=np.int64)
             comm.Bcast(perm, root=0)

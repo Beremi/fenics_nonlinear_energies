@@ -256,6 +256,7 @@ def run_level(mesh_level, num_steps=1, verbose=True, maxit=100, start_step=1,
 
     # GAMG-specific settings for elasticity
     gamg_coords = None
+    gamg_coords_kept = None
     if pc_type == "gamg":
         opts["pc_gamg_threshold"] = gamg_threshold
         opts["pc_gamg_agg_nsmooths"] = gamg_agg_nsmooths
@@ -294,7 +295,7 @@ def run_level(mesh_level, num_steps=1, verbose=True, maxit=100, start_step=1,
 
     def hessian_solve_fn(vec, rhs, sol):
         """Assemble Hessian, solve H · sol = rhs. Return KSP iters."""
-        nonlocal force_pc_setup_next, gamg_coords
+        nonlocal force_pc_setup_next, gamg_coords, gamg_coords_kept
         if rank == 0 and verbose:
             print("Assembling Hessian...", flush=True)
         t0 = time.perf_counter()
@@ -308,6 +309,7 @@ def run_level(mesh_level, num_steps=1, verbose=True, maxit=100, start_step=1,
         # Set GAMG coordinates after operators are set (only needed once)
         if gamg_coords is not None:
             pc.setCoordinates(gamg_coords)
+            gamg_coords_kept = gamg_coords  # attach to outer scope to prevent GC!
             gamg_coords = None  # only set once
         t2 = time.perf_counter()
         if pc_setup_on_ksp_cap:
@@ -336,6 +338,7 @@ def run_level(mesh_level, num_steps=1, verbose=True, maxit=100, start_step=1,
                     "setop_time": round(t2 - t1, 6),
                     "pc_setup_time": round(t3 - t2, 6),
                     "solve_time": round(t4 - t3, 6),
+                    "ksp_its": ksp_its,
                     "linear_total_time": round(t4 - t0, 6),
                 }
             )

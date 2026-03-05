@@ -399,8 +399,10 @@ def run(args):
 
                     t_setop0 = time.perf_counter()
                     ksp.setOperators(A)
+                    nonlocal gamg_coords
                     if gamg_coords is not None:
                         pc.setCoordinates(gamg_coords)
+                        gamg_coords = None
                     t_setop = time.perf_counter() - t_setop0
 
                     t_tol0 = time.perf_counter()

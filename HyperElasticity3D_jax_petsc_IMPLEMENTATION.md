@@ -190,3 +190,12 @@ HE benchmarking and solver behavior:
 - `experiment_scripts/he_step1_timing_breakdown_fenics_vs_jaxpetsc.md`
 - `experiment_scripts/he_step1_timing_investigation_fix1.md`
 
+
+### Advanced Command Line Options (Optimizations)
+
+The `solve_HE_dof.py` entrypoint includes advanced flags geared toward peak high-deformation performance:
+
+- `--assembly_mode element`: (Recommended). Configures JAX to evaluate exact analytical block Hessians evaluating via `@jax.jit(jax.vmap(compute_elem_hessians))`. Cuts matrix assembly latency by >50% compared to typical `sfd` computation.
+- `--retry_on_failure`: Wraps the Newton solver in a robust fallback loop. Highly recommended for severe twisting boundaries. If gradients or line searches explode, dynamically expands line search alpha boundaries `[-0.5, 2.0]` and tightens KSP rules safely recovering from what would otherwise be a mathematical termination.
+- `--pc_setup_on_ksp_cap`: Retains the exact GAMG multigrid state over numerous KSP evaluations dropping latency greatly, only strictly rebuilding if the inner loop limits run out continuously.
+
