@@ -1,0 +1,179 @@
+{
+  "mesh_level": 4,
+  "total_dofs": 555747,
+  "free_dofs": 554013,
+  "steps": [
+    {
+      "step": 1,
+      "angle": 0.2617993877991494,
+      "time": 53.654181,
+      "nit": 8,
+      "linear_iters": 728,
+      "energy": 0.00949799270216541,
+      "message": "Converged (energy, step, gradient)",
+      "attempt": "primary",
+      "ksp_rtol_used": 0.001,
+      "ksp_max_it_used": 10000,
+      "linesearch_interval_used": [
+        -0.5,
+        2.0
+      ],
+      "linear_timing": [
+        {
+          "assemble_total_time": 0.647595005997573,
+          "assemble_p2p_exchange": 0.00032679300056770444,
+          "assemble_hvp_compute": 0.570230694989732,
+          "assemble_extraction": 0.011003151004842948,
+          "assemble_coo_assembly": 0.06494175900297705,
+          "setop_time": 4.055997123941779e-06,
+          "set_tolerances_time": 3.064000338781625e-06,
+          "pc_setup_time": 0.7893262639991008,
+          "solve_time": 2.489356399004464,
+          "linear_total_time": 3.9262847889986006,
+          "ksp_its": 52,
+          "attempt": "primary"
+        },
+        {
+          "assemble_total_time": 0.7920266310029547,
+          "assemble_p2p_exchange": 0.00026897600037045777,
+          "assemble_hvp_compute": 0.652496220987814,
+          "assemble_extraction": 0.012080948043148965,
+          "assemble_coo_assembly": 0.12600246000511106,
+          "setop_time": 3.2340030884370208e-06,
+          "set_tolerances_time": 4.006004019174725e-06,
+          "pc_setup_time": 1.0709991329349577e-06,
+          "solve_time": 1.3996872669958975,
+          "linear_total_time": 2.1917222090050927,
+          "ksp_its": 9,
+          "attempt": "primary"
+        },
+        {
+          "assemble_total_time": 0.7850403249976807,
+          "assemble_p2p_exchange": 0.0003551460031303577,
+          "assemble_hvp_compute": 0.617006597967702,
+          "assemble_extraction": 0.011669233004795387,
+          "assemble_coo_assembly": 0.15495726199878845,
+          "setop_time": 2.353001036681235e-06,
+          "set_tolerances_time": 2.2129970602691174e-06,
+          "pc_setup_time": 9.520008461549878e-07,
+          "solve_time": 19.081446440002765,
+          "linear_total_time": 19.86649228299939,
+          "ksp_its": 329,
+          "attempt": "primary"
+        },
+        {
+          "assemble_total_time": 0.7320527610063436,
+          "assemble_p2p_exchange": 0.00031800000579096377,
+          "assemble_hvp_compute": 0.645345677039586,
+          "assemble_extraction": 0.012936792001710273,
+          "assemble_coo_assembly": 0.0723793779980042,
+          "setop_time": 1.9130020518787205e-06,
+          "set_tolerances_time": 2.9239963623695076e-06,
+          "pc_setup_time": 6.810005288571119e-07,
+          "solve_time": 4.8954092290005065,
+          "linear_total_time": 5.627467508005793,
+          "ksp_its": 73,
+          "attempt": "primary"
+        },
+        {
+          "assemble_total_time": 0.7819201379970764,
+          "assemble_p2p_exchange": 0.0003388010009075515,
+          "assemble_hvp_compute": 0.6063211769869667,
+          "assemble_extraction": 0.011648316009086557,
+          "assemble_coo_assembly": 0.16252173399698222,
+          "setop_time": 2.3329994291998446e-06,
+          "set_tolerances_time": 3.015004040207714e-06,
+          "pc_setup_time": 1.763000909704715e-06,
+          "solve_time": 2.332156420998217,
+          "linear_total_time": 3.1140836699996726,
+          "ksp_its": 27,
+          "attempt": "primary"
+        },
+        {
+          "assemble_total_time": 0.7783636180029134,
+          "assemble_p2p_exchange": 0.00029533599445130676,
+          "assemble_hvp_compute": 0.5355573729684693,
+          "assemble_extraction": 0.010655663973011542,
+          "assemble_coo_assembly": 0.23072741000214592,
+          "setop_time": 2.553999365773052e-06,
+          "set_tolerances_time": 2.453998604323715e-06,
+          "pc_setup_time": 9.420036803930998e-07,
+          "solve_time": 5.088886197998363,
+          "linear_total_time": 5.867255766002927,
+          "ksp_its": 76,
+          "attempt": "primary"
+        },
+        {
+          "assemble_total_time": 0.7060296420022496,
+          "assemble_p2p_exchange": 0.00027888100157724693,
+          "assemble_hvp_compute": 0.5952823089974117,
+          "assemble_extraction": 0.011581894978007767,
+          "assemble_coo_assembly": 0.09783384800539352,
+          "setop_time": 2.5529952836222947e-06,
+          "set_tolerances_time": 2.56399653153494e-06,
+          "pc_setup_time": 9.809955372475088e-07,
+          "solve_time": 3.5722107449983014,
+          "linear_total_time": 4.278246484987903,
+          "ksp_its": 49,
+          "attempt": "primary"
+        },
+        {
+          "assemble_total_time": 0.7129830899939407,
+          "assemble_p2p_exchange": 0.0002615650009829551,
+          "assemble_hvp_compute": 0.5458869520007283,
+          "assemble_extraction": 0.010335713952372316,
+          "assemble_coo_assembly": 0.15594333500484936,
+          "setop_time": 3.2149982871487737e-06,
+          "set_tolerances_time": 3.2949974411167204e-06,
+          "pc_setup_time": 1.1609954526647925e-06,
+          "solve_time": 7.036771302999114,
+          "linear_total_time": 7.749762063984235,
+          "ksp_its": 113,
+          "attempt": "primary"
+        }
+      ]
+    }
+  ],
+  "metadata": {
+    "profile": "performance",
+    "nprocs": 32,
+    "nproc_threads": 1,
+    "linear_solver": {
+      "ksp_type": "gmres",
+      "pc_type": "hypre",
+      "ksp_rtol": 0.001,
+      "ksp_max_it": 10000,
+      "pc_setup_on_ksp_cap": true,
+      "gamg_threshold": 0.05,
+      "gamg_agg_nsmooths": 1,
+      "gamg_set_coordinates": true,
+      "use_near_nullspace": true,
+      "matrix_block_size": 3,
+      "reorder": true,
+      "hvp_eval_mode": "sequential",
+      "assembly_mode": "sfd"
+    },
+    "newton": {
+      "tolf": 0.0001,
+      "tolg": 0.001,
+      "tolg_rel": 0.001,
+      "tolx_rel": 0.001,
+      "tolx_abs": 1e-10,
+      "maxit": 100,
+      "require_all_convergence": true,
+      "fail_on_nonfinite": true,
+      "linesearch_interval": [
+        -0.5,
+        2.0
+      ],
+      "linesearch_tol": 0.001
+    },
+    "load_stepping": {
+      "start_step": 1,
+      "steps": 1,
+      "total_steps": 96,
+      "rotation_per_iter": 0.2617993877991494,
+      "retry_on_failure": true
+    }
+  }
+}

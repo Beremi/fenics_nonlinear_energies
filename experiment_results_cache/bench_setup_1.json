@@ -1,0 +1,81 @@
+{
+  "mesh_level": 3,
+  "total_dofs": 78003,
+  "free_dofs": 77517,
+  "steps": [
+    {
+      "step": 1,
+      "angle": 25.132741228718345,
+      "time": 3.07024,
+      "nit": 1,
+      "linear_iters": 3,
+      "energy": 1.3936167924902668e-13,
+      "message": "Converged (energy, step, gradient)",
+      "attempt": "primary",
+      "ksp_rtol_used": 0.1,
+      "ksp_max_it_used": 30,
+      "linesearch_interval_used": [
+        -0.5,
+        2.0
+      ],
+      "linear_timing": [
+        {
+          "assemble_total_time": 2.3256916370010003,
+          "assemble_p2p_exchange": 0.0002156650007236749,
+          "assemble_hvp_compute": 2.303435457011801,
+          "assemble_extraction": 0.01826987501408439,
+          "assemble_coo_assembly": 0.0030625750005128793,
+          "setop_time": 0.00012720199447358027,
+          "set_tolerances_time": 3.6450001061894e-06,
+          "pc_setup_time": 0.53896767799597,
+          "solve_time": 0.039870052998594474,
+          "linear_total_time": 2.9046602149901446,
+          "ksp_its": 3,
+          "attempt": "primary"
+        }
+      ]
+    }
+  ],
+  "metadata": {
+    "profile": "performance",
+    "nprocs": 1,
+    "nproc_threads": 1,
+    "linear_solver": {
+      "ksp_type": "cg",
+      "pc_type": "gamg",
+      "ksp_rtol": 0.1,
+      "ksp_max_it": 30,
+      "pc_setup_on_ksp_cap": true,
+      "gamg_threshold": 0.05,
+      "gamg_agg_nsmooths": 1,
+      "gamg_set_coordinates": true,
+      "use_near_nullspace": true,
+      "matrix_block_size": 3,
+      "reorder": false,
+      "hvp_eval_mode": "sequential",
+      "assembly_mode": "sfd"
+    },
+    "newton": {
+      "tolf": 0.0001,
+      "tolg": 0.001,
+      "tolg_rel": 0.001,
+      "tolx_rel": 0.001,
+      "tolx_abs": 1e-10,
+      "maxit": 100,
+      "require_all_convergence": true,
+      "fail_on_nonfinite": true,
+      "linesearch_interval": [
+        -0.5,
+        2.0
+      ],
+      "linesearch_tol": 0.001
+    },
+    "load_stepping": {
+      "start_step": 1,
+      "steps": 1,
+      "total_steps": 1,
+      "rotation_per_iter": 25.132741228718345,
+      "retry_on_failure": true
+    }
+  }
+}

@@ -1,0 +1,823 @@
+{
+  "mesh_level": 4,
+  "total_dofs": 555747,
+  "steps": [
+    {
+      "step": 1,
+      "angle": 0.2617993877991494,
+      "time": 40.8949,
+      "iters": 100,
+      "energy": 0.010356,
+      "message": "Maximum number of iterations reached",
+      "attempt": "repair",
+      "ksp_rtol_used": 0.010000000000000002,
+      "ksp_max_it_used": 20000,
+      "linesearch_interval_used": [
+        -0.5,
+        1.0
+      ],
+      "linear_timing": [
+        {
+          "assemble_time": 0.061312,
+          "setop_time": 4.3e-05,
+          "pc_setup_time": 0.063101,
+          "solve_time": 0.091849,
+          "ksp_its": 9,
+          "linear_total_time": 0.216304
+        },
+        {
+          "assemble_time": 0.061633,
+          "setop_time": 4.5e-05,
+          "pc_setup_time": 0.063445,
+          "solve_time": 0.081982,
+          "ksp_its": 8,
+          "linear_total_time": 0.207105
+        },
+        {
+          "assemble_time": 0.061821,
+          "setop_time": 4.2e-05,
+          "pc_setup_time": 0.064131,
+          "solve_time": 0.266879,
+          "ksp_its": 28,
+          "linear_total_time": 0.392874
+        },
+        {
+          "assemble_time": 0.061744,
+          "setop_time": 4.5e-05,
+          "pc_setup_time": 0.067561,
+          "solve_time": 0.128286,
+          "ksp_its": 13,
+          "linear_total_time": 0.257635
+        },
+        {
+          "assemble_time": 0.061195,
+          "setop_time": 4.6e-05,
+          "pc_setup_time": 0.06303,
+          "solve_time": 0.266543,
+          "ksp_its": 28,
+          "linear_total_time": 0.390815
+        },
+        {
+          "assemble_time": 0.062467,
+          "setop_time": 4.9e-05,
+          "pc_setup_time": 0.078712,
+          "solve_time": 0.233559,
+          "ksp_its": 24,
+          "linear_total_time": 0.374787
+        },
+        {
+          "assemble_time": 0.061406,
+          "setop_time": 4.6e-05,
+          "pc_setup_time": 0.063372,
+          "solve_time": 0.226257,
+          "ksp_its": 24,
+          "linear_total_time": 0.351081
+        },
+        {
+          "assemble_time": 0.061519,
+          "setop_time": 4.3e-05,
+          "pc_setup_time": 0.063492,
+          "solve_time": 0.228778,
+          "ksp_its": 24,
+          "linear_total_time": 0.353831
+        },
+        {
+          "assemble_time": 0.061156,
+          "setop_time": 4.3e-05,
+          "pc_setup_time": 0.063931,
+          "solve_time": 0.230676,
+          "ksp_its": 24,
+          "linear_total_time": 0.355806
+        },
+        {
+          "assemble_time": 0.061666,
+          "setop_time": 4.8e-05,
+          "pc_setup_time": 0.063376,
+          "solve_time": 0.229937,
+          "ksp_its": 24,
+          "linear_total_time": 0.355026
+        },
+        {
+          "assemble_time": 0.061321,
+          "setop_time": 4.4e-05,
+          "pc_setup_time": 0.062961,
+          "solve_time": 0.226672,
+          "ksp_its": 24,
+          "linear_total_time": 0.350997
+        },
+        {
+          "assemble_time": 0.062072,
+          "setop_time": 4e-05,
+          "pc_setup_time": 0.063248,
+          "solve_time": 0.229567,
+          "ksp_its": 24,
+          "linear_total_time": 0.354927
+        },
+        {
+          "assemble_time": 0.061434,
+          "setop_time": 4.7e-05,
+          "pc_setup_time": 0.063401,
+          "solve_time": 0.230116,
+          "ksp_its": 24,
+          "linear_total_time": 0.354998
+        },
+        {
+          "assemble_time": 0.061327,
+          "setop_time": 5.1e-05,
+          "pc_setup_time": 0.062833,
+          "solve_time": 0.228024,
+          "ksp_its": 24,
+          "linear_total_time": 0.352235
+        },
+        {
+          "assemble_time": 0.061285,
+          "setop_time": 4.1e-05,
+          "pc_setup_time": 0.06322,
+          "solve_time": 0.229263,
+          "ksp_its": 24,
+          "linear_total_time": 0.353809
+        },
+        {
+          "assemble_time": 0.061652,
+          "setop_time": 4.5e-05,
+          "pc_setup_time": 0.063818,
+          "solve_time": 0.228759,
+          "ksp_its": 24,
+          "linear_total_time": 0.354273
+        },
+        {
+          "assemble_time": 0.061561,
+          "setop_time": 4.2e-05,
+          "pc_setup_time": 0.063542,
+          "solve_time": 0.228234,
+          "ksp_its": 24,
+          "linear_total_time": 0.35338
+        },
+        {
+          "assemble_time": 0.061575,
+          "setop_time": 4e-05,
+          "pc_setup_time": 0.063147,
+          "solve_time": 0.228855,
+          "ksp_its": 24,
+          "linear_total_time": 0.353617
+        },
+        {
+          "assemble_time": 0.061099,
+          "setop_time": 4.2e-05,
+          "pc_setup_time": 0.063742,
+          "solve_time": 0.231215,
+          "ksp_its": 24,
+          "linear_total_time": 0.356098
+        },
+        {
+          "assemble_time": 0.061737,
+          "setop_time": 3.8e-05,
+          "pc_setup_time": 0.063801,
+          "solve_time": 0.227802,
+          "ksp_its": 24,
+          "linear_total_time": 0.353377
+        },
+        {
+          "assemble_time": 0.061531,
+          "setop_time": 4.6e-05,
+          "pc_setup_time": 0.062986,
+          "solve_time": 0.230284,
+          "ksp_its": 24,
+          "linear_total_time": 0.354847
+        },
+        {
+          "assemble_time": 0.061703,
+          "setop_time": 4.6e-05,
+          "pc_setup_time": 0.063649,
+          "solve_time": 0.232584,
+          "ksp_its": 24,
+          "linear_total_time": 0.357982
+        },
+        {
+          "assemble_time": 0.061557,
+          "setop_time": 4.5e-05,
+          "pc_setup_time": 0.06337,
+          "solve_time": 0.227367,
+          "ksp_its": 24,
+          "linear_total_time": 0.35234
+        },
+        {
+          "assemble_time": 0.061917,
+          "setop_time": 4.9e-05,
+          "pc_setup_time": 0.063682,
+          "solve_time": 0.228452,
+          "ksp_its": 24,
+          "linear_total_time": 0.3541
+        },
+        {
+          "assemble_time": 0.062188,
+          "setop_time": 4.6e-05,
+          "pc_setup_time": 0.063212,
+          "solve_time": 0.227491,
+          "ksp_its": 24,
+          "linear_total_time": 0.352937
+        },
+        {
+          "assemble_time": 0.062181,
+          "setop_time": 4.7e-05,
+          "pc_setup_time": 0.063283,
+          "solve_time": 0.228674,
+          "ksp_its": 24,
+          "linear_total_time": 0.354185
+        },
+        {
+          "assemble_time": 0.073513,
+          "setop_time": 3.5e-05,
+          "pc_setup_time": 0.068174,
+          "solve_time": 0.231138,
+          "ksp_its": 24,
+          "linear_total_time": 0.37286
+        },
+        {
+          "assemble_time": 0.061979,
+          "setop_time": 4.2e-05,
+          "pc_setup_time": 0.063176,
+          "solve_time": 0.232388,
+          "ksp_its": 24,
+          "linear_total_time": 0.357584
+        },
+        {
+          "assemble_time": 0.06155,
+          "setop_time": 4.4e-05,
+          "pc_setup_time": 0.063471,
+          "solve_time": 0.229844,
+          "ksp_its": 24,
+          "linear_total_time": 0.35491
+        },
+        {
+          "assemble_time": 0.061855,
+          "setop_time": 5.3e-05,
+          "pc_setup_time": 0.063547,
+          "solve_time": 0.228556,
+          "ksp_its": 24,
+          "linear_total_time": 0.354011
+        },
+        {
+          "assemble_time": 0.06112,
+          "setop_time": 4.1e-05,
+          "pc_setup_time": 0.063318,
+          "solve_time": 0.225081,
+          "ksp_its": 24,
+          "linear_total_time": 0.349561
+        },
+        {
+          "assemble_time": 0.06162,
+          "setop_time": 4.4e-05,
+          "pc_setup_time": 0.068073,
+          "solve_time": 0.238626,
+          "ksp_its": 24,
+          "linear_total_time": 0.368363
+        },
+        {
+          "assemble_time": 0.061405,
+          "setop_time": 4.4e-05,
+          "pc_setup_time": 0.063562,
+          "solve_time": 0.231507,
+          "ksp_its": 24,
+          "linear_total_time": 0.356518
+        },
+        {
+          "assemble_time": 0.061659,
+          "setop_time": 4.7e-05,
+          "pc_setup_time": 0.063774,
+          "solve_time": 0.227118,
+          "ksp_its": 24,
+          "linear_total_time": 0.352599
+        },
+        {
+          "assemble_time": 0.061423,
+          "setop_time": 4.2e-05,
+          "pc_setup_time": 0.063832,
+          "solve_time": 0.227721,
+          "ksp_its": 24,
+          "linear_total_time": 0.353018
+        },
+        {
+          "assemble_time": 0.061734,
+          "setop_time": 4.8e-05,
+          "pc_setup_time": 0.063442,
+          "solve_time": 0.228862,
+          "ksp_its": 24,
+          "linear_total_time": 0.354085
+        },
+        {
+          "assemble_time": 0.061374,
+          "setop_time": 4.2e-05,
+          "pc_setup_time": 0.063266,
+          "solve_time": 0.228671,
+          "ksp_its": 24,
+          "linear_total_time": 0.353354
+        },
+        {
+          "assemble_time": 0.061748,
+          "setop_time": 4.2e-05,
+          "pc_setup_time": 0.063561,
+          "solve_time": 0.229037,
+          "ksp_its": 24,
+          "linear_total_time": 0.354388
+        },
+        {
+          "assemble_time": 0.061679,
+          "setop_time": 4.6e-05,
+          "pc_setup_time": 0.063455,
+          "solve_time": 0.227747,
+          "ksp_its": 24,
+          "linear_total_time": 0.352927
+        },
+        {
+          "assemble_time": 0.061863,
+          "setop_time": 4.6e-05,
+          "pc_setup_time": 0.063928,
+          "solve_time": 0.226774,
+          "ksp_its": 24,
+          "linear_total_time": 0.352611
+        },
+        {
+          "assemble_time": 0.061452,
+          "setop_time": 4.3e-05,
+          "pc_setup_time": 0.06335,
+          "solve_time": 0.229411,
+          "ksp_its": 24,
+          "linear_total_time": 0.354256
+        },
+        {
+          "assemble_time": 0.061926,
+          "setop_time": 4.7e-05,
+          "pc_setup_time": 0.063967,
+          "solve_time": 0.22902,
+          "ksp_its": 24,
+          "linear_total_time": 0.35496
+        },
+        {
+          "assemble_time": 0.061575,
+          "setop_time": 4.5e-05,
+          "pc_setup_time": 0.063652,
+          "solve_time": 0.228605,
+          "ksp_its": 24,
+          "linear_total_time": 0.353876
+        },
+        {
+          "assemble_time": 0.061971,
+          "setop_time": 4.7e-05,
+          "pc_setup_time": 0.06324,
+          "solve_time": 0.226399,
+          "ksp_its": 24,
+          "linear_total_time": 0.351657
+        },
+        {
+          "assemble_time": 0.061714,
+          "setop_time": 4.6e-05,
+          "pc_setup_time": 0.06367,
+          "solve_time": 0.227317,
+          "ksp_its": 24,
+          "linear_total_time": 0.352747
+        },
+        {
+          "assemble_time": 0.061518,
+          "setop_time": 4e-05,
+          "pc_setup_time": 0.063428,
+          "solve_time": 0.226301,
+          "ksp_its": 24,
+          "linear_total_time": 0.351288
+        },
+        {
+          "assemble_time": 0.061274,
+          "setop_time": 4.4e-05,
+          "pc_setup_time": 0.063608,
+          "solve_time": 0.229517,
+          "ksp_its": 24,
+          "linear_total_time": 0.354444
+        },
+        {
+          "assemble_time": 0.061713,
+          "setop_time": 4.2e-05,
+          "pc_setup_time": 0.063987,
+          "solve_time": 0.226606,
+          "ksp_its": 24,
+          "linear_total_time": 0.352348
+        },
+        {
+          "assemble_time": 0.061796,
+          "setop_time": 4.5e-05,
+          "pc_setup_time": 0.063354,
+          "solve_time": 0.227257,
+          "ksp_its": 24,
+          "linear_total_time": 0.352452
+        },
+        {
+          "assemble_time": 0.061798,
+          "setop_time": 4.6e-05,
+          "pc_setup_time": 0.063804,
+          "solve_time": 0.228475,
+          "ksp_its": 24,
+          "linear_total_time": 0.354124
+        },
+        {
+          "assemble_time": 0.061347,
+          "setop_time": 4.1e-05,
+          "pc_setup_time": 0.062964,
+          "solve_time": 0.225218,
+          "ksp_its": 24,
+          "linear_total_time": 0.34957
+        },
+        {
+          "assemble_time": 0.061742,
+          "setop_time": 4.4e-05,
+          "pc_setup_time": 0.064382,
+          "solve_time": 0.225407,
+          "ksp_its": 24,
+          "linear_total_time": 0.351575
+        },
+        {
+          "assemble_time": 0.06346,
+          "setop_time": 4e-05,
+          "pc_setup_time": 0.0635,
+          "solve_time": 0.227464,
+          "ksp_its": 24,
+          "linear_total_time": 0.354464
+        },
+        {
+          "assemble_time": 0.062107,
+          "setop_time": 4.3e-05,
+          "pc_setup_time": 0.063686,
+          "solve_time": 0.228885,
+          "ksp_its": 24,
+          "linear_total_time": 0.35472
+        },
+        {
+          "assemble_time": 0.061963,
+          "setop_time": 4.3e-05,
+          "pc_setup_time": 0.063794,
+          "solve_time": 0.226451,
+          "ksp_its": 24,
+          "linear_total_time": 0.352251
+        },
+        {
+          "assemble_time": 0.061941,
+          "setop_time": 4.6e-05,
+          "pc_setup_time": 0.063512,
+          "solve_time": 0.226156,
+          "ksp_its": 24,
+          "linear_total_time": 0.351654
+        },
+        {
+          "assemble_time": 0.061594,
+          "setop_time": 4.2e-05,
+          "pc_setup_time": 0.063415,
+          "solve_time": 0.233099,
+          "ksp_its": 24,
+          "linear_total_time": 0.358149
+        },
+        {
+          "assemble_time": 0.068599,
+          "setop_time": 4.1e-05,
+          "pc_setup_time": 0.063791,
+          "solve_time": 0.228342,
+          "ksp_its": 24,
+          "linear_total_time": 0.360773
+        },
+        {
+          "assemble_time": 0.06868,
+          "setop_time": 4.1e-05,
+          "pc_setup_time": 0.06373,
+          "solve_time": 0.226239,
+          "ksp_its": 24,
+          "linear_total_time": 0.35869
+        },
+        {
+          "assemble_time": 0.061918,
+          "setop_time": 4.9e-05,
+          "pc_setup_time": 0.064909,
+          "solve_time": 0.231418,
+          "ksp_its": 24,
+          "linear_total_time": 0.358294
+        },
+        {
+          "assemble_time": 0.061752,
+          "setop_time": 4.8e-05,
+          "pc_setup_time": 0.06371,
+          "solve_time": 0.226498,
+          "ksp_its": 24,
+          "linear_total_time": 0.352008
+        },
+        {
+          "assemble_time": 0.062002,
+          "setop_time": 5.4e-05,
+          "pc_setup_time": 0.063344,
+          "solve_time": 0.225958,
+          "ksp_its": 24,
+          "linear_total_time": 0.351358
+        },
+        {
+          "assemble_time": 0.061852,
+          "setop_time": 4.9e-05,
+          "pc_setup_time": 0.063177,
+          "solve_time": 0.228259,
+          "ksp_its": 24,
+          "linear_total_time": 0.353337
+        },
+        {
+          "assemble_time": 0.061873,
+          "setop_time": 4.6e-05,
+          "pc_setup_time": 0.063536,
+          "solve_time": 0.226721,
+          "ksp_its": 24,
+          "linear_total_time": 0.352177
+        },
+        {
+          "assemble_time": 0.062219,
+          "setop_time": 4.4e-05,
+          "pc_setup_time": 0.063232,
+          "solve_time": 0.230067,
+          "ksp_its": 24,
+          "linear_total_time": 0.355562
+        },
+        {
+          "assemble_time": 0.061632,
+          "setop_time": 4.7e-05,
+          "pc_setup_time": 0.063311,
+          "solve_time": 0.228721,
+          "ksp_its": 24,
+          "linear_total_time": 0.353712
+        },
+        {
+          "assemble_time": 0.062068,
+          "setop_time": 4.4e-05,
+          "pc_setup_time": 0.063548,
+          "solve_time": 0.22594,
+          "ksp_its": 24,
+          "linear_total_time": 0.3516
+        },
+        {
+          "assemble_time": 0.062067,
+          "setop_time": 3.9e-05,
+          "pc_setup_time": 0.063343,
+          "solve_time": 0.227205,
+          "ksp_its": 24,
+          "linear_total_time": 0.352653
+        },
+        {
+          "assemble_time": 0.061383,
+          "setop_time": 4e-05,
+          "pc_setup_time": 0.064098,
+          "solve_time": 0.227332,
+          "ksp_its": 24,
+          "linear_total_time": 0.352852
+        },
+        {
+          "assemble_time": 0.062367,
+          "setop_time": 4e-05,
+          "pc_setup_time": 0.063455,
+          "solve_time": 0.232254,
+          "ksp_its": 24,
+          "linear_total_time": 0.358116
+        },
+        {
+          "assemble_time": 0.066159,
+          "setop_time": 4.3e-05,
+          "pc_setup_time": 0.063497,
+          "solve_time": 0.229672,
+          "ksp_its": 24,
+          "linear_total_time": 0.359371
+        },
+        {
+          "assemble_time": 0.06169,
+          "setop_time": 4.1e-05,
+          "pc_setup_time": 0.063189,
+          "solve_time": 0.226991,
+          "ksp_its": 24,
+          "linear_total_time": 0.35191
+        },
+        {
+          "assemble_time": 0.061943,
+          "setop_time": 3.9e-05,
+          "pc_setup_time": 0.06293,
+          "solve_time": 0.227859,
+          "ksp_its": 24,
+          "linear_total_time": 0.352771
+        },
+        {
+          "assemble_time": 0.062118,
+          "setop_time": 4.9e-05,
+          "pc_setup_time": 0.063484,
+          "solve_time": 0.223722,
+          "ksp_its": 24,
+          "linear_total_time": 0.349373
+        },
+        {
+          "assemble_time": 0.061873,
+          "setop_time": 4.2e-05,
+          "pc_setup_time": 0.063069,
+          "solve_time": 0.225831,
+          "ksp_its": 24,
+          "linear_total_time": 0.350815
+        },
+        {
+          "assemble_time": 0.061941,
+          "setop_time": 4.3e-05,
+          "pc_setup_time": 0.063308,
+          "solve_time": 0.226944,
+          "ksp_its": 24,
+          "linear_total_time": 0.352236
+        },
+        {
+          "assemble_time": 0.06188,
+          "setop_time": 4.7e-05,
+          "pc_setup_time": 0.063391,
+          "solve_time": 0.228294,
+          "ksp_its": 24,
+          "linear_total_time": 0.353611
+        },
+        {
+          "assemble_time": 0.061739,
+          "setop_time": 4.6e-05,
+          "pc_setup_time": 0.063296,
+          "solve_time": 0.228984,
+          "ksp_its": 24,
+          "linear_total_time": 0.354066
+        },
+        {
+          "assemble_time": 0.061591,
+          "setop_time": 4.5e-05,
+          "pc_setup_time": 0.063167,
+          "solve_time": 0.225183,
+          "ksp_its": 24,
+          "linear_total_time": 0.349986
+        },
+        {
+          "assemble_time": 0.062037,
+          "setop_time": 4.1e-05,
+          "pc_setup_time": 0.063945,
+          "solve_time": 0.228013,
+          "ksp_its": 24,
+          "linear_total_time": 0.354035
+        },
+        {
+          "assemble_time": 0.061634,
+          "setop_time": 4.3e-05,
+          "pc_setup_time": 0.062954,
+          "solve_time": 0.230099,
+          "ksp_its": 24,
+          "linear_total_time": 0.354731
+        },
+        {
+          "assemble_time": 0.061884,
+          "setop_time": 4.4e-05,
+          "pc_setup_time": 0.063361,
+          "solve_time": 0.229188,
+          "ksp_its": 24,
+          "linear_total_time": 0.354477
+        },
+        {
+          "assemble_time": 0.061797,
+          "setop_time": 4.2e-05,
+          "pc_setup_time": 0.063343,
+          "solve_time": 0.230883,
+          "ksp_its": 24,
+          "linear_total_time": 0.356064
+        },
+        {
+          "assemble_time": 0.062048,
+          "setop_time": 5.1e-05,
+          "pc_setup_time": 0.063846,
+          "solve_time": 0.227753,
+          "ksp_its": 24,
+          "linear_total_time": 0.353698
+        },
+        {
+          "assemble_time": 0.06156,
+          "setop_time": 4.6e-05,
+          "pc_setup_time": 0.063735,
+          "solve_time": 0.228464,
+          "ksp_its": 24,
+          "linear_total_time": 0.353805
+        },
+        {
+          "assemble_time": 0.061837,
+          "setop_time": 3.8e-05,
+          "pc_setup_time": 0.06438,
+          "solve_time": 0.22747,
+          "ksp_its": 24,
+          "linear_total_time": 0.353725
+        },
+        {
+          "assemble_time": 0.061538,
+          "setop_time": 4.5e-05,
+          "pc_setup_time": 0.063369,
+          "solve_time": 0.229584,
+          "ksp_its": 24,
+          "linear_total_time": 0.354537
+        },
+        {
+          "assemble_time": 0.062002,
+          "setop_time": 4.1e-05,
+          "pc_setup_time": 0.065086,
+          "solve_time": 0.236186,
+          "ksp_its": 24,
+          "linear_total_time": 0.363316
+        },
+        {
+          "assemble_time": 0.061508,
+          "setop_time": 4e-05,
+          "pc_setup_time": 0.06343,
+          "solve_time": 0.228251,
+          "ksp_its": 24,
+          "linear_total_time": 0.35323
+        },
+        {
+          "assemble_time": 0.06162,
+          "setop_time": 4e-05,
+          "pc_setup_time": 0.063131,
+          "solve_time": 0.227984,
+          "ksp_its": 24,
+          "linear_total_time": 0.352776
+        },
+        {
+          "assemble_time": 0.072903,
+          "setop_time": 4.1e-05,
+          "pc_setup_time": 0.064375,
+          "solve_time": 0.236764,
+          "ksp_its": 24,
+          "linear_total_time": 0.374083
+        },
+        {
+          "assemble_time": 0.071295,
+          "setop_time": 4.9e-05,
+          "pc_setup_time": 0.064521,
+          "solve_time": 0.227768,
+          "ksp_its": 24,
+          "linear_total_time": 0.363633
+        },
+        {
+          "assemble_time": 0.061753,
+          "setop_time": 4.5e-05,
+          "pc_setup_time": 0.064153,
+          "solve_time": 0.228809,
+          "ksp_its": 24,
+          "linear_total_time": 0.354761
+        },
+        {
+          "assemble_time": 0.062092,
+          "setop_time": 4.4e-05,
+          "pc_setup_time": 0.063492,
+          "solve_time": 0.227755,
+          "ksp_its": 24,
+          "linear_total_time": 0.353383
+        },
+        {
+          "assemble_time": 0.061886,
+          "setop_time": 5e-05,
+          "pc_setup_time": 0.063354,
+          "solve_time": 0.227642,
+          "ksp_its": 24,
+          "linear_total_time": 0.352931
+        },
+        {
+          "assemble_time": 0.062171,
+          "setop_time": 4.6e-05,
+          "pc_setup_time": 0.06278,
+          "solve_time": 0.228857,
+          "ksp_its": 24,
+          "linear_total_time": 0.353853
+        },
+        {
+          "assemble_time": 0.062116,
+          "setop_time": 4.4e-05,
+          "pc_setup_time": 0.063361,
+          "solve_time": 0.226882,
+          "ksp_its": 24,
+          "linear_total_time": 0.352403
+        },
+        {
+          "assemble_time": 0.061982,
+          "setop_time": 5.1e-05,
+          "pc_setup_time": 0.06355,
+          "solve_time": 0.227527,
+          "ksp_its": 24,
+          "linear_total_time": 0.353109
+        },
+        {
+          "assemble_time": 0.061847,
+          "setop_time": 4.7e-05,
+          "pc_setup_time": 0.063575,
+          "solve_time": 0.228523,
+          "ksp_its": 24,
+          "linear_total_time": 0.353991
+        },
+        {
+          "assemble_time": 0.061903,
+          "setop_time": 4.7e-05,
+          "pc_setup_time": 0.063872,
+          "solve_time": 0.227557,
+          "ksp_its": 24,
+          "linear_total_time": 0.353379
+        }
+      ]
+    }
+  ]
+}

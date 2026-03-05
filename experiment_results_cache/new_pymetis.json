@@ -1,0 +1,40 @@
+{
+  "mesh_level": 3,
+  "total_dofs": 78003,
+  "free_dofs": 77517,
+  "steps": [
+    {
+      "step": 1,
+      "angle": 25.132741228718345,
+      "time": 0.354146,
+      "nit": 1,
+      "linear_iters": 3,
+      "energy": 1.3703481458646028e-13,
+      "message": "Converged (energy, step, gradient)",
+      "attempt": "primary",
+      "ksp_rtol_used": 0.1,
+      "ksp_max_it_used": 30,
+      "linesearch_interval_used": [
+        -0.5,
+        2.0
+      ],
+      "linear_timing": [
+        {
+          "assemble_total_time": 0.08940841299772728,
+          "assemble_p2p_exchange": 0.003444005997152999,
+          "assemble_hvp_compute": 0.08383827299985569,
+          "assemble_extraction": 0.001948834004055243,
+          "assemble_coo_assembly": 0.0001099680014885962,
+          "wait_imbalance": 0.016335198997694533,
+          "setop_time": 4.19530006183777e-05,
+          "set_tolerances_time": 3.7380013964138925e-06,
+          "pc_setup_time": 0.20163158300414216,
+          "solve_time": 0.010182604994042777,
+          "linear_total_time": 0.3176084340084344,
+          "ksp_its": 3,
+          "attempt": "primary"
+        }
+      ]
+    }
+  ]
+}

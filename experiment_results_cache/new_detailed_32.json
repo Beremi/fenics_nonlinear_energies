@@ -1,0 +1,179 @@
+{
+  "mesh_level": 3,
+  "total_dofs": 78003,
+  "free_dofs": 77517,
+  "steps": [
+    {
+      "step": 1,
+      "angle": 0.2617993877991494,
+      "time": 0.874759,
+      "nit": 8,
+      "linear_iters": 79,
+      "energy": 0.010165220366931023,
+      "message": "Converged (energy, step, gradient)",
+      "attempt": "primary",
+      "ksp_rtol_used": 0.1,
+      "ksp_max_it_used": 30,
+      "linesearch_interval_used": [
+        -0.5,
+        2.0
+      ],
+      "linear_timing": [
+        {
+          "assemble_total_time": 0.05433430599805433,
+          "assemble_p2p_exchange": 0.0002475340006640181,
+          "assemble_hvp_compute": 0.04583875799289672,
+          "assemble_extraction": 0.0006323660199996084,
+          "assemble_coo_assembly": 0.0075148760006413795,
+          "setop_time": 1.7245998606085777e-05,
+          "set_tolerances_time": 2.934997610282153e-06,
+          "pc_setup_time": 0.0728752950017224,
+          "solve_time": 0.0035892239975510165,
+          "linear_total_time": 0.13081900599354412,
+          "ksp_its": 3,
+          "attempt": "primary"
+        },
+        {
+          "assemble_total_time": 0.055341628001770005,
+          "assemble_p2p_exchange": 0.00013426200166577473,
+          "assemble_hvp_compute": 0.04539028303406667,
+          "assemble_extraction": 0.0008309469558298588,
+          "assemble_coo_assembly": 0.008849252000800334,
+          "setop_time": 2.6740017347037792e-06,
+          "set_tolerances_time": 2.943997969850898e-06,
+          "pc_setup_time": 7.710041245445609e-07,
+          "solve_time": 0.0189844579945202,
+          "linear_total_time": 0.0743324750001193,
+          "ksp_its": 4,
+          "attempt": "primary"
+        },
+        {
+          "assemble_total_time": 0.05535891400359105,
+          "assemble_p2p_exchange": 0.0001340020025963895,
+          "assemble_hvp_compute": 0.044798765004088636,
+          "assemble_extraction": 0.0006366209854604676,
+          "assemble_coo_assembly": 0.00965505999920424,
+          "setop_time": 2.354005118831992e-06,
+          "set_tolerances_time": 2.6339985197409987e-06,
+          "pc_setup_time": 9.520008461549878e-07,
+          "solve_time": 0.023656147001020145,
+          "linear_total_time": 0.07902100100909593,
+          "ksp_its": 11,
+          "attempt": "primary"
+        },
+        {
+          "assemble_total_time": 0.05465724399982719,
+          "assemble_p2p_exchange": 0.0001425950031261891,
+          "assemble_hvp_compute": 0.04485053802636685,
+          "assemble_extraction": 0.0006279459848883562,
+          "assemble_coo_assembly": 0.008940500003518537,
+          "setop_time": 2.2129970602691174e-06,
+          "set_tolerances_time": 2.5840054149739444e-06,
+          "pc_setup_time": 9.809955372475088e-07,
+          "solve_time": 0.020583313998940866,
+          "linear_total_time": 0.07524633599678054,
+          "ksp_its": 6,
+          "attempt": "primary"
+        },
+        {
+          "assemble_total_time": 0.05327073900116375,
+          "assemble_p2p_exchange": 0.00011960999836446717,
+          "assemble_hvp_compute": 0.04489008500240743,
+          "assemble_extraction": 0.0006229709833860397,
+          "assemble_coo_assembly": 0.007518710997828748,
+          "setop_time": 2.063003194052726e-06,
+          "set_tolerances_time": 2.282999048475176e-06,
+          "pc_setup_time": 8.419956429861486e-07,
+          "solve_time": 0.023268732002179604,
+          "linear_total_time": 0.07654465900122887,
+          "ksp_its": 10,
+          "attempt": "primary"
+        },
+        {
+          "assemble_total_time": 0.0529597080021631,
+          "assemble_p2p_exchange": 0.00014401699445443228,
+          "assemble_hvp_compute": 0.044600691966479644,
+          "assemble_extraction": 0.0006236719855223782,
+          "assemble_coo_assembly": 0.0074956470052711666,
+          "setop_time": 2.2230015019886196e-06,
+          "set_tolerances_time": 2.5439949240535498e-06,
+          "pc_setup_time": 1.0020012268796563e-06,
+          "solve_time": 0.02193809099844657,
+          "linear_total_time": 0.07490356799826259,
+          "ksp_its": 9,
+          "attempt": "primary"
+        },
+        {
+          "assemble_total_time": 0.0531708679991425,
+          "assemble_p2p_exchange": 0.00014428799477173015,
+          "assemble_hvp_compute": 0.04485191501589725,
+          "assemble_extraction": 0.0006036079794284888,
+          "assemble_coo_assembly": 0.007482827997591812,
+          "setop_time": 2.192995452787727e-06,
+          "set_tolerances_time": 2.4239998310804367e-06,
+          "pc_setup_time": 8.110000635497272e-07,
+          "solve_time": 0.03177046900236746,
+          "linear_total_time": 0.08494676499685738,
+          "ksp_its": 22,
+          "attempt": "primary"
+        },
+        {
+          "assemble_total_time": 0.05291976800072007,
+          "assemble_p2p_exchange": 0.0001426659946446307,
+          "assemble_hvp_compute": 0.044202958037203643,
+          "assemble_extraction": 0.0006159839540487155,
+          "assemble_coo_assembly": 0.007857823999074753,
+          "setop_time": 2.273001882713288e-06,
+          "set_tolerances_time": 2.553999365773052e-06,
+          "pc_setup_time": 9.419964044354856e-07,
+          "solve_time": 0.026131837999855634,
+          "linear_total_time": 0.07905737499822862,
+          "ksp_its": 14,
+          "attempt": "primary"
+        }
+      ]
+    }
+  ],
+  "metadata": {
+    "profile": "performance",
+    "nprocs": 32,
+    "nproc_threads": 1,
+    "linear_solver": {
+      "ksp_type": "cg",
+      "pc_type": "gamg",
+      "ksp_rtol": 0.1,
+      "ksp_max_it": 30,
+      "pc_setup_on_ksp_cap": true,
+      "gamg_threshold": 0.05,
+      "gamg_agg_nsmooths": 1,
+      "gamg_set_coordinates": true,
+      "use_near_nullspace": true,
+      "matrix_block_size": 3,
+      "reorder": true,
+      "hvp_eval_mode": "sequential",
+      "assembly_mode": "sfd"
+    },
+    "newton": {
+      "tolf": 0.0001,
+      "tolg": 0.001,
+      "tolg_rel": 0.001,
+      "tolx_rel": 0.001,
+      "tolx_abs": 1e-10,
+      "maxit": 100,
+      "require_all_convergence": true,
+      "fail_on_nonfinite": true,
+      "linesearch_interval": [
+        -0.5,
+        2.0
+      ],
+      "linesearch_tol": 0.001
+    },
+    "load_stepping": {
+      "start_step": 1,
+      "steps": 1,
+      "total_steps": 96,
+      "rotation_per_iter": 0.2617993877991494,
+      "retry_on_failure": true
+    }
+  }
+}

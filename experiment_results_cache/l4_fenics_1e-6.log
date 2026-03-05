@@ -1,0 +1,614 @@
+Creating matrix...
+Building nullspace...
+Setting near nullspace...
+Creating KSP...
+--- Step 1/1, Angle: 0.2618 ---
+Assembling Hessian...
+Setting operators...
+Solving KSP...
+KSP solved.
+it=1, J=1.66611, dJ=5.43564e+00, ||g||=7.87155e+02, alpha=6.57130e-01, ksp_its=47, ls_evals=17
+Assembling Hessian...
+Setting operators...
+Solving KSP...
+KSP solved.
+it=2, J=0.03526, dJ=1.63085e+00, ||g||=3.66577e+02, alpha=1.02371e+00, ksp_its=32, ls_evals=17
+Assembling Hessian...
+Setting operators...
+Solving KSP...
+KSP solved.
+it=3, J=0.03264, dJ=2.61158e-03, ||g||=1.68398e+01, alpha=9.21380e-03, ksp_its=19, ls_evals=17
+Assembling Hessian...
+Setting operators...
+Solving KSP...
+KSP solved.
+it=4, J=0.01462, dJ=1.80276e-02, ||g||=1.68520e+01, alpha=7.09213e-01, ksp_its=68, ls_evals=17
+Assembling Hessian...
+Setting operators...
+Solving KSP...
+KSP solved.
+it=5, J=0.01005, dJ=4.57068e-03, ||g||=1.47087e+01, alpha=1.16373e+00, ksp_its=65, ls_evals=17
+Assembling Hessian...
+Setting operators...
+Solving KSP...
+KSP solved.
+it=6, J=0.00979, dJ=2.57885e-04, ||g||=4.45220e+00, alpha=5.89787e-01, ksp_its=77, ls_evals=17
+Assembling Hessian...
+Setting operators...
+Solving KSP...
+KSP solved.
+it=7, J=0.00976, dJ=2.27535e-05, ||g||=6.72344e+00, alpha=-3.63995e-01, ksp_its=72, ls_evals=17
+Assembling Hessian...
+Setting operators...
+Solving KSP...
+KSP solved.
+it=8, J=0.00974, dJ=2.13543e-05, ||g||=4.69578e+00, alpha=3.85389e-01, ksp_its=72, ls_evals=17
+Assembling Hessian...
+Setting operators...
+Solving KSP...
+KSP solved.
+it=9, J=0.00973, dJ=1.59969e-05, ||g||=5.92810e+00, alpha=-3.37038e-01, ksp_its=72, ls_evals=17
+Assembling Hessian...
+Setting operators...
+Solving KSP...
+KSP solved.
+it=10, J=0.00971, dJ=1.51632e-05, ||g||=4.27471e+00, alpha=3.55465e-01, ksp_its=71, ls_evals=17
+Assembling Hessian...
+Setting operators...
+Solving KSP...
+KSP solved.
+it=11, J=0.00970, dJ=1.15168e-05, ||g||=5.33250e+00, alpha=-3.10347e-01, ksp_its=72, ls_evals=17
+Assembling Hessian...
+Setting operators...
+Solving KSP...
+KSP solved.
+it=12, J=0.00969, dJ=1.11010e-05, ||g||=3.96607e+00, alpha=3.26674e-01, ksp_its=72, ls_evals=17
+Assembling Hessian...
+Setting operators...
+Solving KSP...
+KSP solved.
+it=13, J=0.00968, dJ=8.65504e-06, ||g||=4.88412e+00, alpha=-2.87920e-01, ksp_its=72, ls_evals=17
+Assembling Hessian...
+Setting operators...
+Solving KSP...
+KSP solved.
+it=14, J=0.00967, dJ=8.52914e-06, ||g||=3.72627e+00, alpha=3.03382e-01, ksp_its=72, ls_evals=17
+Assembling Hessian...
+Setting operators...
+Solving KSP...
+KSP solved.
+it=15, J=0.00967, dJ=6.84388e-06, ||g||=4.53720e+00, alpha=-2.70827e-01, ksp_its=73, ls_evals=17
+Assembling Hessian...
+Setting operators...
+Solving KSP...
+KSP solved.
+it=16, J=0.00966, dJ=6.87869e-06, ||g||=3.52826e+00, alpha=2.86454e-01, ksp_its=72, ls_evals=17
+Assembling Hessian...
+Setting operators...
+Solving KSP...
+KSP solved.
+it=17, J=0.00965, dJ=5.70685e-06, ||g||=4.25902e+00, alpha=-2.60097e-01, ksp_its=74, ls_evals=17
+Assembling Hessian...
+Setting operators...
+Solving KSP...
+KSP solved.
+it=18, J=0.00965, dJ=5.89396e-06, ||g||=3.35196e+00, alpha=2.76857e-01, ksp_its=72, ls_evals=17
+Assembling Hessian...
+Setting operators...
+Solving KSP...
+KSP solved.
+it=19, J=0.00964, dJ=5.01129e-06, ||g||=4.02530e+00, alpha=-2.55031e-01, ksp_its=75, ls_evals=17
+Assembling Hessian...
+Setting operators...
+Solving KSP...
+KSP solved.
+it=20, J=0.00964, dJ=5.30991e-06, ||g||=3.18679e+00, alpha=2.73892e-01, ksp_its=72, ls_evals=17
+Assembling Hessian...
+Setting operators...
+Solving KSP...
+KSP solved.
+it=21, J=0.00963, dJ=4.63745e-06, ||g||=3.82030e+00, alpha=-2.56164e-01, ksp_its=75, ls_evals=17
+Assembling Hessian...
+Setting operators...
+Solving KSP...
+KSP solved.
+it=22, J=0.00963, dJ=5.05072e-06, ||g||=3.02274e+00, alpha=2.77825e-01, ksp_its=73, ls_evals=17
+Assembling Hessian...
+Setting operators...
+Solving KSP...
+KSP solved.
+it=23, J=0.00962, dJ=4.49454e-06, ||g||=3.63027e+00, alpha=-2.63495e-01, ksp_its=75, ls_evals=17
+Assembling Hessian...
+Setting operators...
+Solving KSP...
+KSP solved.
+it=24, J=0.00962, dJ=5.05444e-06, ||g||=2.85244e+00, alpha=2.90120e-01, ksp_its=74, ls_evals=17
+Assembling Hessian...
+Setting operators...
+Solving KSP...
+KSP solved.
+it=25, J=0.00961, dJ=4.62017e-06, ||g||=3.44692e+00, alpha=-2.79724e-01, ksp_its=75, ls_evals=17
+Assembling Hessian...
+Setting operators...
+Solving KSP...
+KSP solved.
+it=26, J=0.00961, dJ=5.38030e-06, ||g||=2.66467e+00, alpha=3.13412e-01, ksp_its=75, ls_evals=17
+Assembling Hessian...
+Setting operators...
+Solving KSP...
+KSP solved.
+it=27, J=0.00960, dJ=5.02490e-06, ||g||=3.25681e+00, alpha=-3.07814e-01, ksp_its=75, ls_evals=17
+Assembling Hessian...
+Setting operators...
+Solving KSP...
+KSP solved.
+it=28, J=0.00960, dJ=6.13489e-06, ||g||=2.44597e+00, alpha=3.52932e-01, ksp_its=75, ls_evals=17
+Assembling Hessian...
+Setting operators...
+Solving KSP...
+KSP solved.
+it=29, J=0.00959, dJ=5.83208e-06, ||g||=3.04396e+00, alpha=-3.54831e-01, ksp_its=76, ls_evals=17
+Assembling Hessian...
+Setting operators...
+Solving KSP...
+KSP solved.
+it=30, J=0.00958, dJ=7.59198e-06, ||g||=2.17501e+00, alpha=4.20543e-01, ksp_its=75, ls_evals=17
+Assembling Hessian...
+Setting operators...
+Solving KSP...
+KSP solved.
+it=31, J=0.00958, dJ=7.37305e-06, ||g||=2.78113e+00, alpha=-4.38670e-01, ksp_its=76, ls_evals=17
+Assembling Hessian...
+Setting operators...
+Solving KSP...
+KSP solved.
+it=32, J=0.00956, dJ=1.05043e-05, ||g||=1.81176e+00, alpha=5.44768e-01, ksp_its=75, ls_evals=17
+Assembling Hessian...
+Setting operators...
+Solving KSP...
+KSP solved.
+it=33, J=0.00955, dJ=9.98812e-06, ||g||=2.39988e+00, alpha=-4.99650e-01, ksp_its=76, ls_evals=17
+Assembling Hessian...
+Setting operators...
+Solving KSP...
+KSP solved.
+it=34, J=0.00955, dJ=8.27314e-06, ||g||=1.43863e+00, alpha=5.65362e-01, ksp_its=76, ls_evals=17
+Assembling Hessian...
+Setting operators...
+Solving KSP...
+KSP solved.
+it=35, J=0.00954, dJ=8.40900e-06, ||g||=1.88242e+00, alpha=-4.99650e-01, ksp_its=76, ls_evals=17
+Assembling Hessian...
+Setting operators...
+Solving KSP...
+KSP solved.
+it=36, J=0.00953, dJ=4.89135e-06, ||g||=1.13955e+00, alpha=5.19210e-01, ksp_its=77, ls_evals=17
+Assembling Hessian...
+Setting operators...
+Solving KSP...
+KSP solved.
+it=37, J=0.00953, dJ=5.90368e-06, ||g||=1.44042e+00, alpha=-4.99650e-01, ksp_its=77, ls_evals=17
+Assembling Hessian...
+Setting operators...
+Solving KSP...
+KSP solved.
+it=38, J=0.00952, dJ=3.75062e-06, ||g||=9.02754e-01, alpha=5.31073e-01, ksp_its=77, ls_evals=17
+Assembling Hessian...
+Setting operators...
+Solving KSP...
+KSP solved.
+it=39, J=0.00952, dJ=4.75007e-06, ||g||=1.10909e+00, alpha=-4.99650e-01, ksp_its=77, ls_evals=17
+Assembling Hessian...
+Setting operators...
+Solving KSP...
+KSP solved.
+it=40, J=0.00952, dJ=2.27483e-06, ||g||=7.12079e-01, alpha=4.92953e-01, ksp_its=77, ls_evals=17
+Assembling Hessian...
+Setting operators...
+Solving KSP...
+KSP solved.
+it=41, J=0.00951, dJ=3.32542e-06, ||g||=8.38389e-01, alpha=-4.99650e-01, ksp_its=78, ls_evals=17
+Assembling Hessian...
+Setting operators...
+Solving KSP...
+KSP solved.
+it=42, J=0.00951, dJ=1.77524e-06, ||g||=5.66522e-01, alpha=5.07080e-01, ksp_its=77, ls_evals=17
+Assembling Hessian...
+Setting operators...
+Solving KSP...
+KSP solved.
+it=43, J=0.00951, dJ=2.63775e-06, ||g||=6.38513e-01, alpha=-4.99650e-01, ksp_its=72, ls_evals=17
+Assembling Hessian...
+Setting operators...
+Solving KSP...
+KSP solved.
+it=44, J=0.00951, dJ=1.07443e-06, ||g||=4.47965e-01, alpha=4.70793e-01, ksp_its=77, ls_evals=17
+Assembling Hessian...
+Setting operators...
+Solving KSP...
+KSP solved.
+it=45, J=0.00951, dJ=1.82090e-06, ||g||=4.80022e-01, alpha=-4.99650e-01, ksp_its=78, ls_evals=17
+Step 1 finished: Energy = 0.009506, Iters = 45
+{
+  "mesh_level": 4,
+  "total_dofs": 555747,
+  "steps": [
+    {
+      "step": 1,
+      "angle": 0.2617993877991494,
+      "time": 38.5817,
+      "iters": 45,
+      "energy": 0.009506,
+      "message": "Converged (energy, step, gradient)",
+      "attempt": "primary",
+      "ksp_rtol_used": 1e-06,
+      "ksp_max_it_used": 10000,
+      "linesearch_interval_used": [
+        -0.5,
+        2.0
+      ],
+      "linear_timing": [
+        {
+          "assemble_time": 0.067824,
+          "setop_time": 0.000425,
+          "pc_setup_time": 0.221177,
+          "solve_time": 0.442665,
+          "ksp_its": 47,
+          "linear_total_time": 0.732092
+        },
+        {
+          "assemble_time": 0.064034,
+          "setop_time": 3.8e-05,
+          "pc_setup_time": 0.063981,
+          "solve_time": 0.306421,
+          "ksp_its": 32,
+          "linear_total_time": 0.434474
+        },
+        {
+          "assemble_time": 0.062406,
+          "setop_time": 3.5e-05,
+          "pc_setup_time": 0.062642,
+          "solve_time": 0.181684,
+          "ksp_its": 19,
+          "linear_total_time": 0.306766
+        },
+        {
+          "assemble_time": 0.061689,
+          "setop_time": 3.7e-05,
+          "pc_setup_time": 0.063071,
+          "solve_time": 0.638286,
+          "ksp_its": 68,
+          "linear_total_time": 0.763083
+        },
+        {
+          "assemble_time": 0.061596,
+          "setop_time": 3.8e-05,
+          "pc_setup_time": 0.06323,
+          "solve_time": 0.610258,
+          "ksp_its": 65,
+          "linear_total_time": 0.735122
+        },
+        {
+          "assemble_time": 0.061752,
+          "setop_time": 3.7e-05,
+          "pc_setup_time": 0.064389,
+          "solve_time": 0.718688,
+          "ksp_its": 77,
+          "linear_total_time": 0.844866
+        },
+        {
+          "assemble_time": 0.061337,
+          "setop_time": 4.3e-05,
+          "pc_setup_time": 0.063755,
+          "solve_time": 0.675016,
+          "ksp_its": 72,
+          "linear_total_time": 0.800151
+        },
+        {
+          "assemble_time": 0.061701,
+          "setop_time": 6.6e-05,
+          "pc_setup_time": 0.063668,
+          "solve_time": 0.68145,
+          "ksp_its": 72,
+          "linear_total_time": 0.806885
+        },
+        {
+          "assemble_time": 0.0675,
+          "setop_time": 4.5e-05,
+          "pc_setup_time": 0.065974,
+          "solve_time": 0.677411,
+          "ksp_its": 72,
+          "linear_total_time": 0.81093
+        },
+        {
+          "assemble_time": 0.061706,
+          "setop_time": 4.6e-05,
+          "pc_setup_time": 0.064028,
+          "solve_time": 0.670484,
+          "ksp_its": 71,
+          "linear_total_time": 0.796265
+        },
+        {
+          "assemble_time": 0.061606,
+          "setop_time": 4.3e-05,
+          "pc_setup_time": 0.063382,
+          "solve_time": 0.679305,
+          "ksp_its": 72,
+          "linear_total_time": 0.804336
+        },
+        {
+          "assemble_time": 0.061773,
+          "setop_time": 4e-05,
+          "pc_setup_time": 0.063032,
+          "solve_time": 0.673956,
+          "ksp_its": 72,
+          "linear_total_time": 0.798801
+        },
+        {
+          "assemble_time": 0.061767,
+          "setop_time": 4.4e-05,
+          "pc_setup_time": 0.063282,
+          "solve_time": 0.673331,
+          "ksp_its": 72,
+          "linear_total_time": 0.798424
+        },
+        {
+          "assemble_time": 0.061664,
+          "setop_time": 4.6e-05,
+          "pc_setup_time": 0.064364,
+          "solve_time": 0.674715,
+          "ksp_its": 72,
+          "linear_total_time": 0.80079
+        },
+        {
+          "assemble_time": 0.061585,
+          "setop_time": 4e-05,
+          "pc_setup_time": 0.064206,
+          "solve_time": 0.687148,
+          "ksp_its": 73,
+          "linear_total_time": 0.812979
+        },
+        {
+          "assemble_time": 0.061837,
+          "setop_time": 4.1e-05,
+          "pc_setup_time": 0.063089,
+          "solve_time": 0.673938,
+          "ksp_its": 72,
+          "linear_total_time": 0.798906
+        },
+        {
+          "assemble_time": 0.061838,
+          "setop_time": 4.2e-05,
+          "pc_setup_time": 0.06355,
+          "solve_time": 0.694908,
+          "ksp_its": 74,
+          "linear_total_time": 0.820338
+        },
+        {
+          "assemble_time": 0.061438,
+          "setop_time": 4.9e-05,
+          "pc_setup_time": 0.063714,
+          "solve_time": 0.678673,
+          "ksp_its": 72,
+          "linear_total_time": 0.803873
+        },
+        {
+          "assemble_time": 0.078587,
+          "setop_time": 3.9e-05,
+          "pc_setup_time": 0.064229,
+          "solve_time": 0.707158,
+          "ksp_its": 75,
+          "linear_total_time": 0.850013
+        },
+        {
+          "assemble_time": 0.062469,
+          "setop_time": 4.1e-05,
+          "pc_setup_time": 0.070136,
+          "solve_time": 0.678166,
+          "ksp_its": 72,
+          "linear_total_time": 0.810812
+        },
+        {
+          "assemble_time": 0.063094,
+          "setop_time": 4.7e-05,
+          "pc_setup_time": 0.062946,
+          "solve_time": 0.705367,
+          "ksp_its": 75,
+          "linear_total_time": 0.831455
+        },
+        {
+          "assemble_time": 0.061411,
+          "setop_time": 5.9e-05,
+          "pc_setup_time": 0.063665,
+          "solve_time": 0.686564,
+          "ksp_its": 73,
+          "linear_total_time": 0.811699
+        },
+        {
+          "assemble_time": 0.061759,
+          "setop_time": 4.9e-05,
+          "pc_setup_time": 0.063606,
+          "solve_time": 0.701452,
+          "ksp_its": 75,
+          "linear_total_time": 0.826866
+        },
+        {
+          "assemble_time": 0.061506,
+          "setop_time": 4.4e-05,
+          "pc_setup_time": 0.063936,
+          "solve_time": 0.691046,
+          "ksp_its": 74,
+          "linear_total_time": 0.816533
+        },
+        {
+          "assemble_time": 0.06206,
+          "setop_time": 4.2e-05,
+          "pc_setup_time": 0.063883,
+          "solve_time": 0.714127,
+          "ksp_its": 75,
+          "linear_total_time": 0.840112
+        },
+        {
+          "assemble_time": 0.061723,
+          "setop_time": 4.3e-05,
+          "pc_setup_time": 0.063934,
+          "solve_time": 0.707091,
+          "ksp_its": 75,
+          "linear_total_time": 0.832791
+        },
+        {
+          "assemble_time": 0.061778,
+          "setop_time": 4.2e-05,
+          "pc_setup_time": 0.063645,
+          "solve_time": 0.702019,
+          "ksp_its": 75,
+          "linear_total_time": 0.827484
+        },
+        {
+          "assemble_time": 0.061882,
+          "setop_time": 4.2e-05,
+          "pc_setup_time": 0.063852,
+          "solve_time": 0.699277,
+          "ksp_its": 75,
+          "linear_total_time": 0.825053
+        },
+        {
+          "assemble_time": 0.061848,
+          "setop_time": 4.3e-05,
+          "pc_setup_time": 0.062912,
+          "solve_time": 0.709015,
+          "ksp_its": 76,
+          "linear_total_time": 0.833818
+        },
+        {
+          "assemble_time": 0.061979,
+          "setop_time": 4.5e-05,
+          "pc_setup_time": 0.063376,
+          "solve_time": 0.703276,
+          "ksp_its": 75,
+          "linear_total_time": 0.828677
+        },
+        {
+          "assemble_time": 0.061677,
+          "setop_time": 3.9e-05,
+          "pc_setup_time": 0.064217,
+          "solve_time": 0.711157,
+          "ksp_its": 76,
+          "linear_total_time": 0.837089
+        },
+        {
+          "assemble_time": 0.061946,
+          "setop_time": 4e-05,
+          "pc_setup_time": 0.063734,
+          "solve_time": 0.719728,
+          "ksp_its": 75,
+          "linear_total_time": 0.845448
+        },
+        {
+          "assemble_time": 0.062001,
+          "setop_time": 4.1e-05,
+          "pc_setup_time": 0.062907,
+          "solve_time": 0.711003,
+          "ksp_its": 76,
+          "linear_total_time": 0.835952
+        },
+        {
+          "assemble_time": 0.06208,
+          "setop_time": 4.7e-05,
+          "pc_setup_time": 0.063784,
+          "solve_time": 0.710529,
+          "ksp_its": 76,
+          "linear_total_time": 0.83644
+        },
+        {
+          "assemble_time": 0.061955,
+          "setop_time": 3.6e-05,
+          "pc_setup_time": 0.063921,
+          "solve_time": 0.714139,
+          "ksp_its": 76,
+          "linear_total_time": 0.84005
+        },
+        {
+          "assemble_time": 0.062376,
+          "setop_time": 4.3e-05,
+          "pc_setup_time": 0.063614,
+          "solve_time": 0.718823,
+          "ksp_its": 77,
+          "linear_total_time": 0.844855
+        },
+        {
+          "assemble_time": 0.067882,
+          "setop_time": 3.7e-05,
+          "pc_setup_time": 0.06553,
+          "solve_time": 0.719489,
+          "ksp_its": 77,
+          "linear_total_time": 0.852938
+        },
+        {
+          "assemble_time": 0.061907,
+          "setop_time": 4.1e-05,
+          "pc_setup_time": 0.063447,
+          "solve_time": 0.720514,
+          "ksp_its": 77,
+          "linear_total_time": 0.845909
+        },
+        {
+          "assemble_time": 0.061569,
+          "setop_time": 3.9e-05,
+          "pc_setup_time": 0.063593,
+          "solve_time": 0.71728,
+          "ksp_its": 77,
+          "linear_total_time": 0.84248
+        },
+        {
+          "assemble_time": 0.061832,
+          "setop_time": 3.9e-05,
+          "pc_setup_time": 0.063847,
+          "solve_time": 0.731207,
+          "ksp_its": 77,
+          "linear_total_time": 0.856925
+        },
+        {
+          "assemble_time": 0.062079,
+          "setop_time": 3.8e-05,
+          "pc_setup_time": 0.067069,
+          "solve_time": 0.749213,
+          "ksp_its": 78,
+          "linear_total_time": 0.8784
+        },
+        {
+          "assemble_time": 0.079102,
+          "setop_time": 4e-05,
+          "pc_setup_time": 0.065476,
+          "solve_time": 0.739978,
+          "ksp_its": 77,
+          "linear_total_time": 0.884596
+        },
+        {
+          "assemble_time": 0.06261,
+          "setop_time": 4.2e-05,
+          "pc_setup_time": 0.072458,
+          "solve_time": 0.68542,
+          "ksp_its": 72,
+          "linear_total_time": 0.820529
+        },
+        {
+          "assemble_time": 0.061711,
+          "setop_time": 5.5e-05,
+          "pc_setup_time": 0.06399,
+          "solve_time": 0.731623,
+          "ksp_its": 77,
+          "linear_total_time": 0.857379
+        },
+        {
+          "assemble_time": 0.061678,
+          "setop_time": 3.8e-05,
+          "pc_setup_time": 0.065332,
+          "solve_time": 0.7455,
+          "ksp_its": 78,
+          "linear_total_time": 0.872547
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,95 @@
+{
+  "mesh_level": 3,
+  "total_dofs": 78003,
+  "steps": [
+    {
+      "step": 1,
+      "angle": 0.2617993877991494,
+      "time": 0.6527,
+      "iters": 9,
+      "energy": 0.010173,
+      "message": "Converged (energy, step, gradient)",
+      "attempt": "repair",
+      "ksp_rtol_used": 0.0001,
+      "ksp_max_it_used": 20000,
+      "linesearch_interval_used": [
+        -0.5,
+        1.0
+      ],
+      "linear_timing": [
+        {
+          "assemble_time": 0.012944,
+          "setop_time": 3.1e-05,
+          "pc_setup_time": 0.013039,
+          "solve_time": 0.021536,
+          "ksp_its": 22,
+          "linear_total_time": 0.047549
+        },
+        {
+          "assemble_time": 0.012927,
+          "setop_time": 2.8e-05,
+          "pc_setup_time": 0.012866,
+          "solve_time": 0.015797,
+          "ksp_its": 16,
+          "linear_total_time": 0.041618
+        },
+        {
+          "assemble_time": 0.012867,
+          "setop_time": 3.2e-05,
+          "pc_setup_time": 0.012922,
+          "solve_time": 0.038794,
+          "ksp_its": 41,
+          "linear_total_time": 0.064615
+        },
+        {
+          "assemble_time": 0.012904,
+          "setop_time": 3.3e-05,
+          "pc_setup_time": 0.012985,
+          "solve_time": 0.028095,
+          "ksp_its": 29,
+          "linear_total_time": 0.054017
+        },
+        {
+          "assemble_time": 0.012933,
+          "setop_time": 3e-05,
+          "pc_setup_time": 0.012938,
+          "solve_time": 0.042033,
+          "ksp_its": 45,
+          "linear_total_time": 0.067934
+        },
+        {
+          "assemble_time": 0.012934,
+          "setop_time": 2.5e-05,
+          "pc_setup_time": 0.012904,
+          "solve_time": 0.037624,
+          "ksp_its": 40,
+          "linear_total_time": 0.063487
+        },
+        {
+          "assemble_time": 0.012957,
+          "setop_time": 2.9e-05,
+          "pc_setup_time": 0.012962,
+          "solve_time": 0.041089,
+          "ksp_its": 44,
+          "linear_total_time": 0.067036
+        },
+        {
+          "assemble_time": 0.012921,
+          "setop_time": 3.1e-05,
+          "pc_setup_time": 0.01294,
+          "solve_time": 0.040229,
+          "ksp_its": 43,
+          "linear_total_time": 0.066121
+        },
+        {
+          "assemble_time": 0.012948,
+          "setop_time": 3.1e-05,
+          "pc_setup_time": 0.012902,
+          "solve_time": 0.044444,
+          "ksp_its": 47,
+          "linear_total_time": 0.070325
+        }
+      ]
+    }
+  ]
+}

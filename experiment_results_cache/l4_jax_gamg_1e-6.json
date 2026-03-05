@@ -1,0 +1,165 @@
+{
+  "mesh_level": 4,
+  "total_dofs": 555747,
+  "free_dofs": 554013,
+  "steps": [
+    {
+      "step": 1,
+      "angle": 0.2617993877991494,
+      "time": 9.476448,
+      "nit": 7,
+      "linear_iters": 222,
+      "energy": 0.009500741603939905,
+      "message": "Converged (energy, step, gradient)",
+      "attempt": "primary",
+      "ksp_rtol_used": 1e-06,
+      "ksp_max_it_used": 10000,
+      "linesearch_interval_used": [
+        -0.5,
+        2.0
+      ],
+      "linear_timing": [
+        {
+          "assemble_total_time": 0.7905552729935152,
+          "assemble_p2p_exchange": 0.00030854600481688976,
+          "assemble_hvp_compute": 0.5894954769537435,
+          "assemble_extraction": 0.009976250970794354,
+          "assemble_coo_assembly": 0.18965197399666067,
+          "setop_time": 0.00011665600322885439,
+          "set_tolerances_time": 5.018002411816269e-06,
+          "pc_setup_time": 0.3224005920055788,
+          "solve_time": 0.1938171549991239,
+          "linear_total_time": 1.3068946940038586,
+          "ksp_its": 18,
+          "attempt": "primary"
+        },
+        {
+          "assemble_total_time": 0.787453712997376,
+          "assemble_p2p_exchange": 0.0002750549974734895,
+          "assemble_hvp_compute": 0.6280196879743016,
+          "assemble_extraction": 0.012247056045453064,
+          "assemble_coo_assembly": 0.14659019899409031,
+          "setop_time": 3.454995749052614e-06,
+          "set_tolerances_time": 4.437002644408494e-06,
+          "pc_setup_time": 1.1020019883289933e-06,
+          "solve_time": 0.27950876300019445,
+          "linear_total_time": 1.0669714699979522,
+          "ksp_its": 17,
+          "attempt": "primary"
+        },
+        {
+          "assemble_total_time": 0.7506638949998887,
+          "assemble_p2p_exchange": 0.00026444900140631944,
+          "assemble_hvp_compute": 0.6233877980266698,
+          "assemble_extraction": 0.010724508014391176,
+          "assemble_coo_assembly": 0.11516471100185299,
+          "setop_time": 2.6839989004656672e-06,
+          "set_tolerances_time": 3.2149982871487737e-06,
+          "pc_setup_time": 9.319992386735976e-07,
+          "solve_time": 0.27140490100282477,
+          "linear_total_time": 1.0220756269991398,
+          "ksp_its": 17,
+          "attempt": "primary"
+        },
+        {
+          "assemble_total_time": 0.7401003740014858,
+          "assemble_p2p_exchange": 0.00027706800028681755,
+          "assemble_hvp_compute": 0.5516882300071302,
+          "assemble_extraction": 0.009487789997365326,
+          "assemble_coo_assembly": 0.17759434100298677,
+          "setop_time": 2.4839973775669932e-06,
+          "set_tolerances_time": 2.3840038920752704e-06,
+          "pc_setup_time": 8.90999217517674e-07,
+          "solve_time": 0.5173934350023046,
+          "linear_total_time": 1.2574995680042775,
+          "ksp_its": 40,
+          "attempt": "primary"
+        },
+        {
+          "assemble_total_time": 0.7484185849971254,
+          "assemble_p2p_exchange": 0.00029386299866018817,
+          "assemble_hvp_compute": 0.6326812109691673,
+          "assemble_extraction": 0.011864741027238779,
+          "assemble_coo_assembly": 0.10260318799555534,
+          "setop_time": 3.345005097799003e-06,
+          "set_tolerances_time": 3.825996827799827e-06,
+          "pc_setup_time": 1.0220028343610466e-06,
+          "solve_time": 0.5285070419995463,
+          "linear_total_time": 1.2769338200014317,
+          "ksp_its": 40,
+          "attempt": "primary"
+        },
+        {
+          "assemble_total_time": 0.7461141670064535,
+          "assemble_p2p_exchange": 0.00024484899768140167,
+          "assemble_hvp_compute": 0.6161164199802442,
+          "assemble_extraction": 0.011497284991492052,
+          "assemble_coo_assembly": 0.11721453099744394,
+          "setop_time": 7.110997103154659e-06,
+          "set_tolerances_time": 6.950998795218766e-06,
+          "pc_setup_time": 2.372995368205011e-06,
+          "solve_time": 0.5791752049990464,
+          "linear_total_time": 1.3253058069967665,
+          "ksp_its": 47,
+          "attempt": "primary"
+        },
+        {
+          "assemble_total_time": 0.7424348169952282,
+          "assemble_p2p_exchange": 0.00028582099912455305,
+          "assemble_hvp_compute": 0.6540096489770804,
+          "assemble_extraction": 0.012375922051433008,
+          "assemble_coo_assembly": 0.07460226499824785,
+          "setop_time": 2.2930034901946783e-06,
+          "set_tolerances_time": 2.5939953047782183e-06,
+          "pc_setup_time": 8.120041457004845e-07,
+          "solve_time": 0.5374336389941163,
+          "linear_total_time": 1.2798741549922852,
+          "ksp_its": 43,
+          "attempt": "primary"
+        }
+      ]
+    }
+  ],
+  "metadata": {
+    "profile": "performance",
+    "nprocs": 32,
+    "nproc_threads": 1,
+    "linear_solver": {
+      "ksp_type": "cg",
+      "pc_type": "gamg",
+      "ksp_rtol": 1e-06,
+      "ksp_max_it": 10000,
+      "pc_setup_on_ksp_cap": true,
+      "gamg_threshold": 0.05,
+      "gamg_agg_nsmooths": 1,
+      "gamg_set_coordinates": true,
+      "use_near_nullspace": true,
+      "matrix_block_size": 3,
+      "reorder": true,
+      "hvp_eval_mode": "sequential",
+      "assembly_mode": "sfd"
+    },
+    "newton": {
+      "tolf": 0.0001,
+      "tolg": 0.001,
+      "tolg_rel": 0.001,
+      "tolx_rel": 0.001,
+      "tolx_abs": 1e-10,
+      "maxit": 100,
+      "require_all_convergence": true,
+      "fail_on_nonfinite": true,
+      "linesearch_interval": [
+        -0.5,
+        2.0
+      ],
+      "linesearch_tol": 0.001
+    },
+    "load_stepping": {
+      "start_step": 1,
+      "steps": 1,
+      "total_steps": 96,
+      "rotation_per_iter": 0.2617993877991494,
+      "retry_on_failure": true
+    }
+  }
+}

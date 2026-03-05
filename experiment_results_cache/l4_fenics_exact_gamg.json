@@ -1,0 +1,287 @@
+{
+  "mesh_level": 4,
+  "total_dofs": 555747,
+  "steps": [
+    {
+      "step": 1,
+      "angle": 0.2617993877991494,
+      "time": 19.1388,
+      "iters": 33,
+      "energy": 0.009506,
+      "message": "Converged (energy, step, gradient)",
+      "attempt": "primary",
+      "ksp_rtol_used": 0.001,
+      "ksp_max_it_used": 10000,
+      "linesearch_interval_used": [
+        -0.5,
+        2.0
+      ],
+      "linear_timing": [
+        {
+          "assemble_time": 0.066611,
+          "setop_time": 0.000397,
+          "pc_setup_time": 0.217011,
+          "solve_time": 0.130219,
+          "ksp_its": 13,
+          "linear_total_time": 0.414238
+        },
+        {
+          "assemble_time": 0.062447,
+          "setop_time": 4.1e-05,
+          "pc_setup_time": 0.062623,
+          "solve_time": 0.119644,
+          "ksp_its": 12,
+          "linear_total_time": 0.244756
+        },
+        {
+          "assemble_time": 0.064654,
+          "setop_time": 4e-05,
+          "pc_setup_time": 0.062788,
+          "solve_time": 0.181848,
+          "ksp_its": 19,
+          "linear_total_time": 0.30933
+        },
+        {
+          "assemble_time": 0.061151,
+          "setop_time": 4.2e-05,
+          "pc_setup_time": 0.06176,
+          "solve_time": 0.380458,
+          "ksp_its": 40,
+          "linear_total_time": 0.50341
+        },
+        {
+          "assemble_time": 0.062156,
+          "setop_time": 3.4e-05,
+          "pc_setup_time": 0.064169,
+          "solve_time": 0.348301,
+          "ksp_its": 37,
+          "linear_total_time": 0.47466
+        },
+        {
+          "assemble_time": 0.06251,
+          "setop_time": 4.7e-05,
+          "pc_setup_time": 0.062272,
+          "solve_time": 0.459944,
+          "ksp_its": 49,
+          "linear_total_time": 0.584773
+        },
+        {
+          "assemble_time": 0.063355,
+          "setop_time": 4.1e-05,
+          "pc_setup_time": 0.062331,
+          "solve_time": 0.406117,
+          "ksp_its": 43,
+          "linear_total_time": 0.531843
+        },
+        {
+          "assemble_time": 0.067051,
+          "setop_time": 3.8e-05,
+          "pc_setup_time": 0.067917,
+          "solve_time": 0.435607,
+          "ksp_its": 46,
+          "linear_total_time": 0.570614
+        },
+        {
+          "assemble_time": 0.061383,
+          "setop_time": 4.7e-05,
+          "pc_setup_time": 0.064218,
+          "solve_time": 0.408416,
+          "ksp_its": 43,
+          "linear_total_time": 0.534064
+        },
+        {
+          "assemble_time": 0.062776,
+          "setop_time": 3.9e-05,
+          "pc_setup_time": 0.062936,
+          "solve_time": 0.436053,
+          "ksp_its": 46,
+          "linear_total_time": 0.561805
+        },
+        {
+          "assemble_time": 0.06141,
+          "setop_time": 3.8e-05,
+          "pc_setup_time": 0.062547,
+          "solve_time": 0.411672,
+          "ksp_its": 44,
+          "linear_total_time": 0.535667
+        },
+        {
+          "assemble_time": 0.062459,
+          "setop_time": 4.5e-05,
+          "pc_setup_time": 0.062903,
+          "solve_time": 0.432568,
+          "ksp_its": 46,
+          "linear_total_time": 0.557975
+        },
+        {
+          "assemble_time": 0.061255,
+          "setop_time": 4.2e-05,
+          "pc_setup_time": 0.063053,
+          "solve_time": 0.414031,
+          "ksp_its": 44,
+          "linear_total_time": 0.538382
+        },
+        {
+          "assemble_time": 0.060943,
+          "setop_time": 3.8e-05,
+          "pc_setup_time": 0.063068,
+          "solve_time": 0.449233,
+          "ksp_its": 47,
+          "linear_total_time": 0.573282
+        },
+        {
+          "assemble_time": 0.060977,
+          "setop_time": 4.4e-05,
+          "pc_setup_time": 0.063018,
+          "solve_time": 0.415967,
+          "ksp_its": 44,
+          "linear_total_time": 0.540006
+        },
+        {
+          "assemble_time": 0.061553,
+          "setop_time": 4e-05,
+          "pc_setup_time": 0.063263,
+          "solve_time": 0.44418,
+          "ksp_its": 47,
+          "linear_total_time": 0.569035
+        },
+        {
+          "assemble_time": 0.062404,
+          "setop_time": 4e-05,
+          "pc_setup_time": 0.062681,
+          "solve_time": 0.416262,
+          "ksp_its": 44,
+          "linear_total_time": 0.541387
+        },
+        {
+          "assemble_time": 0.061317,
+          "setop_time": 4.9e-05,
+          "pc_setup_time": 0.063026,
+          "solve_time": 0.449891,
+          "ksp_its": 47,
+          "linear_total_time": 0.574284
+        },
+        {
+          "assemble_time": 0.061171,
+          "setop_time": 4.7e-05,
+          "pc_setup_time": 0.06346,
+          "solve_time": 0.416248,
+          "ksp_its": 44,
+          "linear_total_time": 0.540926
+        },
+        {
+          "assemble_time": 0.063611,
+          "setop_time": 4e-05,
+          "pc_setup_time": 0.062736,
+          "solve_time": 0.436353,
+          "ksp_its": 47,
+          "linear_total_time": 0.56274
+        },
+        {
+          "assemble_time": 0.061228,
+          "setop_time": 4.1e-05,
+          "pc_setup_time": 0.063314,
+          "solve_time": 0.408539,
+          "ksp_its": 44,
+          "linear_total_time": 0.533122
+        },
+        {
+          "assemble_time": 0.061045,
+          "setop_time": 4.2e-05,
+          "pc_setup_time": 0.062962,
+          "solve_time": 0.428069,
+          "ksp_its": 46,
+          "linear_total_time": 0.552119
+        },
+        {
+          "assemble_time": 0.062564,
+          "setop_time": 4.2e-05,
+          "pc_setup_time": 0.063594,
+          "solve_time": 0.416915,
+          "ksp_its": 45,
+          "linear_total_time": 0.543116
+        },
+        {
+          "assemble_time": 0.061096,
+          "setop_time": 4.4e-05,
+          "pc_setup_time": 0.063212,
+          "solve_time": 0.404431,
+          "ksp_its": 43,
+          "linear_total_time": 0.528783
+        },
+        {
+          "assemble_time": 0.061259,
+          "setop_time": 3.9e-05,
+          "pc_setup_time": 0.062849,
+          "solve_time": 0.412012,
+          "ksp_its": 44,
+          "linear_total_time": 0.536159
+        },
+        {
+          "assemble_time": 0.061081,
+          "setop_time": 4.1e-05,
+          "pc_setup_time": 0.063185,
+          "solve_time": 0.437219,
+          "ksp_its": 47,
+          "linear_total_time": 0.561525
+        },
+        {
+          "assemble_time": 0.061164,
+          "setop_time": 3.2e-05,
+          "pc_setup_time": 0.062923,
+          "solve_time": 0.406894,
+          "ksp_its": 44,
+          "linear_total_time": 0.531013
+        },
+        {
+          "assemble_time": 0.061319,
+          "setop_time": 4e-05,
+          "pc_setup_time": 0.062883,
+          "solve_time": 0.435889,
+          "ksp_its": 47,
+          "linear_total_time": 0.560131
+        },
+        {
+          "assemble_time": 0.061534,
+          "setop_time": 3.6e-05,
+          "pc_setup_time": 0.063049,
+          "solve_time": 0.40312,
+          "ksp_its": 43,
+          "linear_total_time": 0.52774
+        },
+        {
+          "assemble_time": 0.061609,
+          "setop_time": 4.3e-05,
+          "pc_setup_time": 0.062914,
+          "solve_time": 0.433947,
+          "ksp_its": 47,
+          "linear_total_time": 0.558514
+        },
+        {
+          "assemble_time": 0.062297,
+          "setop_time": 4.2e-05,
+          "pc_setup_time": 0.062995,
+          "solve_time": 0.407042,
+          "ksp_its": 44,
+          "linear_total_time": 0.532376
+        },
+        {
+          "assemble_time": 0.061397,
+          "setop_time": 3.8e-05,
+          "pc_setup_time": 0.062775,
+          "solve_time": 0.435159,
+          "ksp_its": 47,
+          "linear_total_time": 0.559369
+        },
+        {
+          "assemble_time": 0.061254,
+          "setop_time": 4e-05,
+          "pc_setup_time": 0.062546,
+          "solve_time": 0.417804,
+          "ksp_its": 45,
+          "linear_total_time": 0.541643
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,221 @@
+{
+  "mesh_level": 3,
+  "total_dofs": 78003,
+  "free_dofs": 77517,
+  "steps": [
+    {
+      "step": 1,
+      "angle": 0.2617993877991494,
+      "time": 2.745635,
+      "nit": 11,
+      "linear_iters": 148,
+      "energy": 0.0101678078004537,
+      "message": "Converged (energy, step, gradient)",
+      "attempt": "primary",
+      "ksp_rtol_used": 0.1,
+      "ksp_max_it_used": 30,
+      "linesearch_interval_used": [
+        -0.5,
+        2.0
+      ],
+      "linear_timing": [
+        {
+          "assemble_total_time": 0.05667125999752898,
+          "assemble_p2p_exchange": 0.00021660600032191724,
+          "assemble_hvp_compute": 0.045076754031470045,
+          "assemble_extraction": 0.0007592729962198064,
+          "assemble_coo_assembly": 0.010481561999768019,
+          "setop_time": 3.6249984987080097e-06,
+          "set_tolerances_time": 2.963999577332288e-06,
+          "pc_setup_time": 0.09283113499986939,
+          "solve_time": 0.02521979399898555,
+          "linear_total_time": 0.17472877799445996,
+          "ksp_its": 4,
+          "attempt": "primary"
+        },
+        {
+          "assemble_total_time": 0.05598028099484509,
+          "assemble_p2p_exchange": 0.0001576169961481355,
+          "assemble_hvp_compute": 0.044523969023430254,
+          "assemble_extraction": 0.0006458519856096245,
+          "assemble_coo_assembly": 0.010563625000941101,
+          "setop_time": 3.225002728868276e-06,
+          "set_tolerances_time": 3.1750023481436074e-06,
+          "pc_setup_time": 8.709976100362837e-07,
+          "solve_time": 0.1260222370037809,
+          "linear_total_time": 0.18200978900131304,
+          "ksp_its": 6,
+          "attempt": "primary"
+        },
+        {
+          "assemble_total_time": 0.053056273005495314,
+          "assemble_p2p_exchange": 0.0001384190036333166,
+          "assemble_hvp_compute": 0.04464209201250924,
+          "assemble_extraction": 0.0006263010000111535,
+          "assemble_coo_assembly": 0.007528160000219941,
+          "setop_time": 2.2630047169514e-06,
+          "set_tolerances_time": 2.5839981390163302e-06,
+          "pc_setup_time": 7.609996828250587e-07,
+          "solve_time": 0.1478543869961868,
+          "linear_total_time": 0.2009162680042209,
+          "ksp_its": 10,
+          "attempt": "primary"
+        },
+        {
+          "assemble_total_time": 0.053429765001055785,
+          "assemble_p2p_exchange": 0.00014650999946752563,
+          "assemble_hvp_compute": 0.04469348501152126,
+          "assemble_extraction": 0.000633084011496976,
+          "assemble_coo_assembly": 0.00786197299748892,
+          "setop_time": 2.253000275231898e-06,
+          "set_tolerances_time": 2.163003955502063e-06,
+          "pc_setup_time": 8.010028977878392e-07,
+          "solve_time": 0.16688419300044188,
+          "linear_total_time": 0.2203191750086262,
+          "ksp_its": 13,
+          "attempt": "primary"
+        },
+        {
+          "assemble_total_time": 0.053502465001656674,
+          "assemble_p2p_exchange": 0.00012868300109403208,
+          "assemble_hvp_compute": 0.044761321994883474,
+          "assemble_extraction": 0.0006718640070175752,
+          "assemble_coo_assembly": 0.00781961900065653,
+          "setop_time": 2.043001586571336e-06,
+          "set_tolerances_time": 2.1229934645816684e-06,
+          "pc_setup_time": 7.810012903064489e-07,
+          "solve_time": 0.17536067999753868,
+          "linear_total_time": 0.22886809199553682,
+          "ksp_its": 14,
+          "attempt": "primary"
+        },
+        {
+          "assemble_total_time": 0.05358292500022799,
+          "assemble_p2p_exchange": 0.00013120700168656185,
+          "assemble_hvp_compute": 0.045083517994498834,
+          "assemble_extraction": 0.0006406740139937028,
+          "assemble_coo_assembly": 0.007619308002176695,
+          "setop_time": 2.3529937607236207e-06,
+          "set_tolerances_time": 2.5129993446171284e-06,
+          "pc_setup_time": 8.420029189437628e-07,
+          "solve_time": 0.1849121329942136,
+          "linear_total_time": 0.23850076599046588,
+          "ksp_its": 16,
+          "attempt": "primary"
+        },
+        {
+          "assemble_total_time": 0.052913468003680464,
+          "assemble_p2p_exchange": 0.00014107199967838824,
+          "assemble_hvp_compute": 0.04516343295836123,
+          "assemble_extraction": 0.0006532290353788994,
+          "assemble_coo_assembly": 0.006851282996649388,
+          "setop_time": 2.1329979063011706e-06,
+          "set_tolerances_time": 2.5740009732544422e-06,
+          "pc_setup_time": 1.1719967005774379e-06,
+          "solve_time": 0.16624332900391892,
+          "linear_total_time": 0.2191626760031795,
+          "ksp_its": 11,
+          "attempt": "primary"
+        },
+        {
+          "assemble_total_time": 0.052967019997595344,
+          "assemble_p2p_exchange": 0.00014983499568188563,
+          "assemble_hvp_compute": 0.04518552799709141,
+          "assemble_extraction": 0.0006699370424030349,
+          "assemble_coo_assembly": 0.0068666759980260395,
+          "setop_time": 2.4330001906491816e-06,
+          "set_tolerances_time": 2.5839981390163302e-06,
+          "pc_setup_time": 6.510017556138337e-07,
+          "solve_time": 0.23251569700369146,
+          "linear_total_time": 0.2854883850013721,
+          "ksp_its": 24,
+          "attempt": "primary"
+        },
+        {
+          "assemble_total_time": 0.05349694599863142,
+          "assemble_p2p_exchange": 0.00013526299881050363,
+          "assemble_hvp_compute": 0.04489406500943005,
+          "assemble_extraction": 0.0006392429932020605,
+          "assemble_coo_assembly": 0.007731165998848155,
+          "setop_time": 2.4039982235990465e-06,
+          "set_tolerances_time": 2.363005478400737e-06,
+          "pc_setup_time": 5.300025804899633e-07,
+          "solve_time": 0.18055841499881353,
+          "linear_total_time": 0.23406065800372744,
+          "ksp_its": 13,
+          "attempt": "primary"
+        },
+        {
+          "assemble_total_time": 0.05823118500120472,
+          "assemble_p2p_exchange": 0.0001222139981109649,
+          "assemble_hvp_compute": 0.04523229602637002,
+          "assemble_extraction": 0.0006251140075619332,
+          "assemble_coo_assembly": 0.012135479002608918,
+          "setop_time": 2.453001798130572e-06,
+          "set_tolerances_time": 2.4230030248872936e-06,
+          "pc_setup_time": 6.00004568696022e-07,
+          "solve_time": 0.24888116600050125,
+          "linear_total_time": 0.3071178270110977,
+          "ksp_its": 25,
+          "attempt": "primary"
+        },
+        {
+          "assemble_total_time": 0.05530594599986216,
+          "assemble_p2p_exchange": 0.0001265499959117733,
+          "assemble_hvp_compute": 0.04451123199396534,
+          "assemble_extraction": 0.0006423899831133895,
+          "assemble_coo_assembly": 0.009921149001456797,
+          "setop_time": 2.182998287025839e-06,
+          "set_tolerances_time": 2.474000211805105e-06,
+          "pc_setup_time": 6.710033630952239e-07,
+          "solve_time": 0.16712833999918075,
+          "linear_total_time": 0.22243961400090484,
+          "ksp_its": 12,
+          "attempt": "primary"
+        }
+      ]
+    }
+  ],
+  "metadata": {
+    "profile": "reference",
+    "nprocs": 32,
+    "nproc_threads": 1,
+    "linear_solver": {
+      "ksp_type": "gmres",
+      "pc_type": "hypre",
+      "ksp_rtol": 0.1,
+      "ksp_max_it": 30,
+      "pc_setup_on_ksp_cap": true,
+      "gamg_threshold": 0.05,
+      "gamg_agg_nsmooths": 1,
+      "gamg_set_coordinates": true,
+      "use_near_nullspace": true,
+      "matrix_block_size": 3,
+      "reorder": true,
+      "hvp_eval_mode": "sequential",
+      "assembly_mode": "sfd"
+    },
+    "newton": {
+      "tolf": 0.0001,
+      "tolg": 0.001,
+      "tolg_rel": 0.001,
+      "tolx_rel": 0.001,
+      "tolx_abs": 1e-10,
+      "maxit": 100,
+      "require_all_convergence": true,
+      "fail_on_nonfinite": true,
+      "linesearch_interval": [
+        -0.5,
+        2.0
+      ],
+      "linesearch_tol": 0.001
+    },
+    "load_stepping": {
+      "start_step": 1,
+      "steps": 1,
+      "total_steps": 96,
+      "rotation_per_iter": 0.2617993877991494,
+      "retry_on_failure": true
+    }
+  }
+}

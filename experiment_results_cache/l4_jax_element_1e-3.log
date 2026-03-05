@@ -1,0 +1,208 @@
+An NVIDIA GPU may be present on this machine, but a CUDA-enabled jaxlib is not installed. Falling back to cpu.
+An NVIDIA GPU may be present on this machine, but a CUDA-enabled jaxlib is not installed. Falling back to cpu.
+An NVIDIA GPU may be present on this machine, but a CUDA-enabled jaxlib is not installed. Falling back to cpu.
+An NVIDIA GPU may be present on this machine, but a CUDA-enabled jaxlib is not installed. Falling back to cpu.
+An NVIDIA GPU may be present on this machine, but a CUDA-enabled jaxlib is not installed. Falling back to cpu.
+An NVIDIA GPU may be present on this machine, but a CUDA-enabled jaxlib is not installed. Falling back to cpu.
+An NVIDIA GPU may be present on this machine, but a CUDA-enabled jaxlib is not installed. Falling back to cpu.
+An NVIDIA GPU may be present on this machine, but a CUDA-enabled jaxlib is not installed. Falling back to cpu.
+An NVIDIA GPU may be present on this machine, but a CUDA-enabled jaxlib is not installed. Falling back to cpu.
+An NVIDIA GPU may be present on this machine, but a CUDA-enabled jaxlib is not installed. Falling back to cpu.
+An NVIDIA GPU may be present on this machine, but a CUDA-enabled jaxlib is not installed. Falling back to cpu.
+An NVIDIA GPU may be present on this machine, but a CUDA-enabled jaxlib is not installed. Falling back to cpu.
+An NVIDIA GPU may be present on this machine, but a CUDA-enabled jaxlib is not installed. Falling back to cpu.
+An NVIDIA GPU may be present on this machine, but a CUDA-enabled jaxlib is not installed. Falling back to cpu.
+An NVIDIA GPU may be present on this machine, but a CUDA-enabled jaxlib is not installed. Falling back to cpu.
+An NVIDIA GPU may be present on this machine, but a CUDA-enabled jaxlib is not installed. Falling back to cpu.
+An NVIDIA GPU may be present on this machine, but a CUDA-enabled jaxlib is not installed. Falling back to cpu.
+An NVIDIA GPU may be present on this machine, but a CUDA-enabled jaxlib is not installed. Falling back to cpu.
+An NVIDIA GPU may be present on this machine, but a CUDA-enabled jaxlib is not installed. Falling back to cpu.
+An NVIDIA GPU may be present on this machine, but a CUDA-enabled jaxlib is not installed. Falling back to cpu.
+An NVIDIA GPU may be present on this machine, but a CUDA-enabled jaxlib is not installed. Falling back to cpu.
+An NVIDIA GPU may be present on this machine, but a CUDA-enabled jaxlib is not installed. Falling back to cpu.
+An NVIDIA GPU may be present on this machine, but a CUDA-enabled jaxlib is not installed. Falling back to cpu.
+An NVIDIA GPU may be present on this machine, but a CUDA-enabled jaxlib is not installed. Falling back to cpu.
+An NVIDIA GPU may be present on this machine, but a CUDA-enabled jaxlib is not installed. Falling back to cpu.
+An NVIDIA GPU may be present on this machine, but a CUDA-enabled jaxlib is not installed. Falling back to cpu.
+An NVIDIA GPU may be present on this machine, but a CUDA-enabled jaxlib is not installed. Falling back to cpu.
+An NVIDIA GPU may be present on this machine, but a CUDA-enabled jaxlib is not installed. Falling back to cpu.
+An NVIDIA GPU may be present on this machine, but a CUDA-enabled jaxlib is not installed. Falling back to cpu.
+An NVIDIA GPU may be present on this machine, but a CUDA-enabled jaxlib is not installed. Falling back to cpu.
+An NVIDIA GPU may be present on this machine, but a CUDA-enabled jaxlib is not installed. Falling back to cpu.
+An NVIDIA GPU may be present on this machine, but a CUDA-enabled jaxlib is not installed. Falling back to cpu.
+  Element Hessian: 4435344 contributions → 732411 unique SFD COO entries
+  Element Hessian setup: 3.069s (JIT warmup: 0.633s)
+HE 3D DOF solver | level=4 np=32 profile=performance ksp=cg pc=gamg setup=5.977s
+it=1, J=1.66453, dJ=5.43723e+00, ||g||=7.87155e+02, alpha=6.57398e-01, ksp_its=8, ls_evals=17
+it=2, J=0.03523, dJ=1.62930e+00, ||g||=3.66399e+02, alpha=1.02371e+00, ksp_its=9, ls_evals=17
+it=3, J=0.03286, dJ=2.36866e-03, ||g||=1.68220e+01, alpha=2.58251e-03, ksp_its=17, ls_evals=17
+it=4, J=0.01508, dJ=1.77820e-02, ||g||=1.72232e+01, alpha=6.68828e-01, ksp_its=27, ls_evals=17
+it=5, J=0.00995, dJ=5.12769e-03, ||g||=1.52291e+01, alpha=1.16006e+00, ksp_its=25, ls_evals=17
+it=6, J=0.00958, dJ=3.70053e-04, ||g||=1.35007e+00, alpha=6.19443e-01, ksp_its=36, ls_evals=17
+it=7, J=0.00950, dJ=8.18395e-05, ||g||=1.79940e+00, alpha=1.21581e+00, ksp_its=33, ls_evals=17
+step=  1 angle=0.261799 time=4.387s nit=  7 ksp=  155 energy=9.501211e-03 [Converged (energy, step, gradient)]
+{
+  "mesh_level": 4,
+  "total_dofs": 555747,
+  "free_dofs": 554013,
+  "steps": [
+    {
+      "step": 1,
+      "angle": 0.2617993877991494,
+      "time": 4.386645,
+      "nit": 7,
+      "linear_iters": 155,
+      "energy": 0.00950121116926781,
+      "message": "Converged (energy, step, gradient)",
+      "attempt": "primary",
+      "ksp_rtol_used": 0.001,
+      "ksp_max_it_used": 10000,
+      "linesearch_interval_used": [
+        -0.5,
+        2.0
+      ],
+      "linear_timing": [
+        {
+          "assemble_total_time": 0.12934411999594886,
+          "assemble_p2p_exchange": 0.0003341940027894452,
+          "assemble_hvp_compute": 0.05894494499807479,
+          "assemble_extraction": 0.0,
+          "assemble_coo_assembly": 0.009945707002771087,
+          "setop_time": 6.491800013463944e-05,
+          "set_tolerances_time": 4.766996426042169e-06,
+          "pc_setup_time": 0.30977228000119794,
+          "solve_time": 0.09201957499317359,
+          "linear_total_time": 0.5312056599868811,
+          "ksp_its": 8,
+          "attempt": "primary"
+        },
+        {
+          "assemble_total_time": 0.13096620500436984,
+          "assemble_p2p_exchange": 0.00026099300157511607,
+          "assemble_hvp_compute": 0.058514816002571024,
+          "assemble_extraction": 0.0,
+          "assemble_coo_assembly": 0.010009382996940985,
+          "setop_time": 9.565002983435988e-06,
+          "set_tolerances_time": 8.933006029110402e-06,
+          "pc_setup_time": 1.9329963834024966e-06,
+          "solve_time": 0.20056128900614567,
+          "linear_total_time": 0.33154792501591146,
+          "ksp_its": 9,
+          "attempt": "primary"
+        },
+        {
+          "assemble_total_time": 0.13215208199835615,
+          "assemble_p2p_exchange": 0.0002853900004993193,
+          "assemble_hvp_compute": 0.058732124998641666,
+          "assemble_extraction": 0.0,
+          "assemble_coo_assembly": 0.011539387996890582,
+          "setop_time": 7.120004738681018e-06,
+          "set_tolerances_time": 5.579000571742654e-06,
+          "pc_setup_time": 2.5940025807358325e-06,
+          "solve_time": 0.2725548169983085,
+          "linear_total_time": 0.40472219200455584,
+          "ksp_its": 17,
+          "attempt": "primary"
+        },
+        {
+          "assemble_total_time": 0.12923641800443875,
+          "assemble_p2p_exchange": 0.00028156400367151946,
+          "assemble_hvp_compute": 0.05930971499765292,
+          "assemble_extraction": 0.0,
+          "assemble_coo_assembly": 0.00754968699766323,
+          "setop_time": 8.372997399419546e-06,
+          "set_tolerances_time": 6.649999704677612e-06,
+          "pc_setup_time": 2.6039997464977205e-06,
+          "solve_time": 0.3811123939958634,
+          "linear_total_time": 0.5103664389971527,
+          "ksp_its": 27,
+          "attempt": "primary"
+        },
+        {
+          "assemble_total_time": 0.13295276799908606,
+          "assemble_p2p_exchange": 0.0002652990006026812,
+          "assemble_hvp_compute": 0.05856015499739442,
+          "assemble_extraction": 0.0,
+          "assemble_coo_assembly": 0.014132226002402604,
+          "setop_time": 8.923998393584043e-06,
+          "set_tolerances_time": 6.900998414494097e-06,
+          "pc_setup_time": 2.5240005925297737e-06,
+          "solve_time": 0.3636762300011469,
+          "linear_total_time": 0.4966473469976336,
+          "ksp_its": 25,
+          "attempt": "primary"
+        },
+        {
+          "assemble_total_time": 0.13197258099535247,
+          "assemble_p2p_exchange": 0.0002539220004109666,
+          "assemble_hvp_compute": 0.05844325899670366,
+          "assemble_extraction": 0.0,
+          "assemble_coo_assembly": 0.013703930002520792,
+          "setop_time": 7.451002602465451e-06,
+          "set_tolerances_time": 7.100999937392771e-06,
+          "pc_setup_time": 2.2339954739436507e-06,
+          "solve_time": 0.47063153099588817,
+          "linear_total_time": 0.6026208979892544,
+          "ksp_its": 36,
+          "attempt": "primary"
+        },
+        {
+          "assemble_total_time": 0.12995972800126765,
+          "assemble_p2p_exchange": 0.0002551040015532635,
+          "assemble_hvp_compute": 0.05779592299950309,
+          "assemble_extraction": 0.0,
+          "assemble_coo_assembly": 0.010984412001562305,
+          "setop_time": 7.962000381667167e-06,
+          "set_tolerances_time": 7.020003977231681e-06,
+          "pc_setup_time": 2.592998498585075e-06,
+          "solve_time": 0.4363753799989354,
+          "linear_total_time": 0.5663526830030605,
+          "ksp_its": 33,
+          "attempt": "primary"
+        }
+      ]
+    }
+  ],
+  "metadata": {
+    "profile": "performance",
+    "nprocs": 32,
+    "nproc_threads": 1,
+    "linear_solver": {
+      "ksp_type": "cg",
+      "pc_type": "gamg",
+      "ksp_rtol": 0.001,
+      "ksp_max_it": 10000,
+      "pc_setup_on_ksp_cap": true,
+      "gamg_threshold": 0.05,
+      "gamg_agg_nsmooths": 1,
+      "gamg_set_coordinates": true,
+      "use_near_nullspace": true,
+      "matrix_block_size": 3,
+      "reorder": true,
+      "hvp_eval_mode": "sequential",
+      "assembly_mode": "element"
+    },
+    "newton": {
+      "tolf": 0.0001,
+      "tolg": 0.001,
+      "tolg_rel": 0.001,
+      "tolx_rel": 0.001,
+      "tolx_abs": 1e-10,
+      "maxit": 100,
+      "require_all_convergence": true,
+      "fail_on_nonfinite": true,
+      "linesearch_interval": [
+        -0.5,
+        2.0
+      ],
+      "linesearch_tol": 0.001
+    },
+    "load_stepping": {
+      "start_step": 1,
+      "steps": 1,
+      "total_steps": 96,
+      "rotation_per_iter": 0.2617993877991494,
+      "retry_on_failure": true
+    }
+  }
+}

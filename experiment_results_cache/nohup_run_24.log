@@ -1,0 +1,7 @@
+nohup: ignoring input
+FEniCSx local environment activated.
+  Python:  Python 3.12.10
+  PETSc:   (3, 24, 2)
+  DOLFINx: 0.10.0.post5
+Running JAX Element GAMG (24 steps) - lvl 4, n=32, 1e-3, with retry on fail
+Done!
