@@ -33,10 +33,12 @@ if __name__ == "__main__":
     parser.add_argument("--ksp_max_it", type=int, default=10000, help="KSP maximum iterations per Newton step")
     parser.add_argument("--tolf", type=float, default=1e-4, help="Newton energy-change tolerance")
     parser.add_argument("--tolg", type=float, default=1e-3, help="Newton gradient-norm tolerance")
-    parser.add_argument("--tolg_rel", type=float, default=1e-3,
+    parser.add_argument("--tolg_rel", type=float, default=0.0,
                         help="Newton relative gradient tolerance (scaled by initial gradient)")
-    parser.add_argument("--tolx_rel", type=float, default=1e-3, help="Newton relative step-size tolerance")
+    parser.add_argument("--tolx_rel", type=float, default=1e-6, help="Newton relative step-size tolerance")
     parser.add_argument("--tolx_abs", type=float, default=1e-10, help="Newton absolute step-size tolerance")
+    parser.add_argument("--require_all_convergence", action="store_true",
+                        help="Require energy, step, and gradient convergence together")
     parser.add_argument("--no_near_nullspace", action="store_true", help="Disable elasticity near-nullspace on Hessian")
     parser.add_argument("--hypre_nodal_coarsen", type=int, default=6,
                         help="BoomerAMG nodal coarsen (-1 to skip setting)")
@@ -93,6 +95,7 @@ if __name__ == "__main__":
         tolg_rel=args.tolg_rel,
         tolx_rel=args.tolx_rel,
         tolx_abs=args.tolx_abs,
+        require_all_convergence=args.require_all_convergence,
         use_near_nullspace=not args.no_near_nullspace,
         total_steps=args.total_steps,
         hypre_nodal_coarsen=args.hypre_nodal_coarsen,

@@ -32,11 +32,26 @@ C1 = 38461538.461538464
 D1 = 83333333.33333333
 
 
-def build_nullspace(V, A):
+def _owned_bc_dofs(*bcs):
+    """Return the owned local DOF indices constrained by the given BCs."""
+    owned = []
+    for bc in bcs:
+        dofs, pos = bc.dof_indices()
+        if pos:
+            owned.append(np.asarray(dofs[:pos], dtype=np.int32))
+    if not owned:
+        return np.empty(0, dtype=np.int32)
+    return np.unique(np.concatenate(owned))
+
+
+def build_nullspace(V, A, constrained_dofs=None):
     """Build the 6 rigid body modes for 3D elasticity."""
     x = V.tabulate_dof_coordinates()
     index_map = V.dofmap.index_map
     x_owned = x[:index_map.size_local, :]
+    constrained = np.empty(0, dtype=np.int32)
+    if constrained_dofs is not None:
+        constrained = np.asarray(constrained_dofs, dtype=np.int32)
 
     vecs = [A.createVecLeft() for _ in range(6)]
 
@@ -56,6 +71,12 @@ def build_nullspace(V, A):
 
     vecs[5].getArray()[0::3] = -x_owned[:, 1]
     vecs[5].getArray()[1::3] = x_owned[:, 0]
+
+    if constrained.size:
+        n_local = vecs[0].getLocalSize()
+        constrained = constrained[(constrained >= 0) & (constrained < n_local)]
+        for vec in vecs:
+            vec.getArray()[constrained] = 0.0
 
     return PETSc.NullSpace().create(vectors=vecs)
 
@@ -101,11 +122,12 @@ def run_level(mesh_level, num_steps=1, verbose=True, maxit=100, start_step=1,
               ksp_rtol=1e-3, ksp_max_it=10000, use_near_nullspace=True,
               total_steps=24, hypre_nodal_coarsen=6, hypre_vec_interp_variant=3,
               hypre_strong_threshold=None, hypre_coarsen_type="",
-              tolf=1e-4, tolg=1e-3, tolg_rel=1e-3, tolx_rel=1e-3, tolx_abs=1e-10,
+              tolf=1e-4, tolg=1e-3, tolg_rel=0.0, tolx_rel=1e-6, tolx_abs=1e-10,
               save_history=False, save_linear_timing=False,
               pc_setup_on_ksp_cap=False,
               gamg_threshold=-1.0, gamg_agg_nsmooths=1,
               gamg_set_coordinates=True,
+              require_all_convergence=False,
               fail_fast=True, retry_on_nonfinite=True,
               retry_on_maxit=True,
               nonfinite_retry_rtol_factor=0.1, nonfinite_retry_linesearch_b=1.0,
@@ -159,6 +181,7 @@ def run_level(mesh_level, num_steps=1, verbose=True, maxit=100, start_step=1,
     bc_right = fem.dirichletbc(u_right, right_dofs)
 
     bcs = [bc_left, bc_right]
+    constrained_dofs = _owned_bc_dofs(*bcs)
 
     # ---- variational forms ----
     u = fem.Function(V)
@@ -202,13 +225,22 @@ def run_level(mesh_level, num_steps=1, verbose=True, maxit=100, start_step=1,
     if rank == 0 and verbose:
         print("Creating matrix...", flush=True)
     A = create_matrix(hessian_form)
-    A.setBlockSize(3)
+    use_hypre_system_amg = (
+        pc_type == "hypre"
+        and hypre_nodal_coarsen >= 0
+        and hypre_vec_interp_variant >= 0
+    )
+    if pc_type != "hypre" or use_hypre_system_amg:
+        # Keep the old fast HYPRE-default path scalar unless the user explicitly
+        # requests systems AMG (or we are using a different PC that benefits from
+        # the natural vector block size).
+        A.setBlockSize(3)
 
     nullspace = None
     if use_near_nullspace:
         if rank == 0 and verbose:
             print("Building nullspace...", flush=True)
-        nullspace = build_nullspace(V, A)
+        nullspace = build_nullspace(V, A, constrained_dofs=constrained_dofs)
         if rank == 0 and verbose:
             print("Setting near nullspace...", flush=True)
         A.setNearNullSpace(nullspace)
@@ -232,6 +264,17 @@ def run_level(mesh_level, num_steps=1, verbose=True, maxit=100, start_step=1,
             opts["pc_hypre_boomeramg_strong_threshold"] = hypre_strong_threshold
         if hypre_coarsen_type:
             opts["pc_hypre_boomeramg_coarsen_type"] = hypre_coarsen_type
+        if (
+            use_near_nullspace
+            and rank == 0
+            and verbose
+            and (hypre_nodal_coarsen < 0 or hypre_vec_interp_variant < 0)
+        ):
+            print(
+                "Warning: HYPRE BoomerAMG ignores MatSetNearNullSpace() unless "
+                "both hypre_nodal_coarsen and hypre_vec_interp_variant are set.",
+                flush=True,
+            )
 
     gamg_coords = None
     gamg_coords_kept = None
@@ -278,6 +321,10 @@ def run_level(mesh_level, num_steps=1, verbose=True, maxit=100, start_step=1,
         A.zeroEntries()
         assemble_matrix(A, hessian_form, bcs=bcs)
         A.assemble()
+        if nullspace is not None:
+            # Mirror the SNES Jacobian path and make the intent explicit:
+            # the assembled operator passed to KSP always carries the RBM modes.
+            A.setNearNullSpace(nullspace)
         t1 = time.perf_counter()
         if rank == 0 and verbose:
             print("Setting operators...", flush=True)
@@ -394,7 +441,7 @@ def run_level(mesh_level, num_steps=1, verbose=True, maxit=100, start_step=1,
                 maxit=maxit,
                 tolx_rel=tolx_rel,
                 tolx_abs=tolx_abs,
-                require_all_convergence=True,
+                require_all_convergence=require_all_convergence,
                 fail_on_nonfinite=True,
                 verbose=verbose,
                 comm=comm,

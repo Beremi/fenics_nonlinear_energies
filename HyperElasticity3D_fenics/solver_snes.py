@@ -26,11 +26,26 @@ C1 = 38461538.461538464
 D1 = 83333333.33333333
 
 
-def build_nullspace(V, A, gram_schmidt=False):
+def _owned_bc_dofs(*bcs):
+    """Return the owned local DOF indices constrained by the given BCs."""
+    owned = []
+    for bc in bcs:
+        dofs, pos = bc.dof_indices()
+        if pos:
+            owned.append(np.asarray(dofs[:pos], dtype=np.int32))
+    if not owned:
+        return np.empty(0, dtype=np.int32)
+    return np.unique(np.concatenate(owned))
+
+
+def build_nullspace(V, A, constrained_dofs=None, gram_schmidt=False):
     """Build the 6 rigid body modes for 3D elasticity."""
     x = V.tabulate_dof_coordinates()
     index_map = V.dofmap.index_map
     x_owned = x[:index_map.size_local, :]
+    constrained = np.empty(0, dtype=np.int32)
+    if constrained_dofs is not None:
+        constrained = np.asarray(constrained_dofs, dtype=np.int32)
 
     if gram_schmidt:
         x_mean = np.zeros(3)
@@ -60,6 +75,12 @@ def build_nullspace(V, A, gram_schmidt=False):
 
     vecs[5].getArray()[0::3] = -xc[:, 1]
     vecs[5].getArray()[1::3] = xc[:, 0]
+
+    if constrained.size:
+        n_local = vecs[0].getLocalSize()
+        constrained = constrained[(constrained >= 0) & (constrained < n_local)]
+        for vec in vecs:
+            vec.getArray()[constrained] = 0.0
 
     if gram_schmidt:
         for i, v in enumerate(vecs):
@@ -115,6 +136,7 @@ def run_level(mesh_level, num_steps=1, total_steps=None, snes_type="newtonls", l
     bc_right = fem.dirichletbc(u_right, right_dofs)
 
     bcs = [bc_left, bc_right]
+    constrained_dofs = _owned_bc_dofs(*bcs)
 
     u = fem.Function(V)
     v = ufl.TestFunction(V)
@@ -145,7 +167,12 @@ def run_level(mesh_level, num_steps=1, total_steps=None, snes_type="newtonls", l
     A = create_matrix(hessian_form)
     nullspace = None
     if use_near_nullspace:
-        nullspace = build_nullspace(V, A, gram_schmidt=nullspace_gram_schmidt)
+        nullspace = build_nullspace(
+            V,
+            A,
+            constrained_dofs=constrained_dofs,
+            gram_schmidt=nullspace_gram_schmidt,
+        )
         A.setNearNullSpace(nullspace)
 
     b = x.duplicate()

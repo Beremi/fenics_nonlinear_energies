@@ -348,9 +348,15 @@ Summary: total time = `82.7012 s`, total Newton iters = `632`, total linear iter
 
 ## 4) Parallel custom FEniCS tables (np=4,8,16)
 
-These runs use the same custom setup as the final serial configuration except `--no_near_nullspace` was required for MPI runs because current near-nullspace construction crashes in parallel (PETSc SEGV during nullspace build).
+These runs use the same custom setup as the final serial configuration except
+the historical note below recorded `--no_near_nullspace` for the MPI runs.
 
 Common settings for all tables below: `ksp_type=gmres`, `pc_type=hypre`, `ksp_rtol=1e-1`, `ksp_max_it=30`, skip explicit `nodal/vec`, `--pc_setup_on_ksp_cap`, `--no_near_nullspace`.
+
+Current 2026-03-06 step-1 reruns on the refactored tree did not reproduce a
+nullspace crash for this case. Both `--no_near_nullspace` and the default
+near-nullspace-on configuration converged; see the added comparison rows in the
+level-4 `np=16` table below.
 
 > **⚠ Docker environment requirements for MPI runs**
 >
@@ -606,12 +612,16 @@ Summary: total time = `143.5721 s`, total Newton iters = `666`, total linear ite
 
 Artifact:
 - [experiment_scripts/he_fenics_custom_evolution_l4_skip_ksp30_pc_cap_np16.json](experiment_scripts/he_fenics_custom_evolution_l4_skip_ksp30_pc_cap_np16.json)
+- [experiment_results_cache/he_custom_hypre_loose_nonull_l4s1of24_np16.json](experiment_results_cache/he_custom_hypre_loose_nonull_l4s1of24_np16.json) (2026-03-06 rerun, current tree)
+- [experiment_results_cache/he_custom_hypre_loose_null_l4s1of24_np16.json](experiment_results_cache/he_custom_hypre_loose_null_l4s1of24_np16.json) (2026-03-06 rerun, current tree)
 
 No level-4 JAX reference trajectory is available in this report yet, so relative error vs JAX is reported as `—`.
 
 | Step | Time [s] | Newton iters | Sum linear iters |        Energy | Relative error vs JAX | Status                               |
 | ---: | -------: | -----------: | ---------------: | ------------: | --------------------: | ------------------------------------ |
 |    1 |  91.7594 |           28 |              350 |  0.1519710000 |                     — | Energy change converged              |
+| 1 (2026 rerun, no-null) | 186.5641 | 31 | 442 | 0.1519690000 | — | Converged (energy, step, gradient) |
+| 1 (2026 rerun, null) | 187.7254 | 31 | 442 | 0.1519690000 | — | Converged (energy, step, gradient) |
 |    2 | 133.1481 |           31 |              491 |  0.6078930000 |                     — | Energy change converged              |
 |    3 | 101.2237 |           28 |              378 |  1.3678100000 |                     — | Energy change converged              |
 |    4 | 102.3104 |           28 |              373 |  2.4318070000 |                     — | Energy change converged              |

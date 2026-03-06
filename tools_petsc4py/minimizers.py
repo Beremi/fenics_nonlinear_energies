@@ -122,7 +122,22 @@ def newton(
     trust_max_reject=6,
 ):
     """Newton's method for energy minimisation on PETSc vectors."""
-    del trust_shrink, trust_expand, trust_eta_shrink, trust_eta_expand, trust_max_reject
+    trust_shrink = float(trust_shrink)
+    trust_expand = float(trust_expand)
+    trust_eta_shrink = float(trust_eta_shrink)
+    trust_eta_expand = float(trust_eta_expand)
+    trust_max_reject = max(0, int(trust_max_reject))
+
+    if not np.isfinite(trust_shrink) or trust_shrink <= 0.0 or trust_shrink >= 1.0:
+        trust_shrink = 0.5
+    if not np.isfinite(trust_expand) or trust_expand < 1.0:
+        trust_expand = 1.5
+    if not np.isfinite(trust_eta_shrink):
+        trust_eta_shrink = 0.05
+    if not np.isfinite(trust_eta_expand):
+        trust_eta_expand = 0.75
+    trust_eta_shrink = min(max(trust_eta_shrink, 0.0), 1.0)
+    trust_eta_expand = min(max(trust_eta_expand, trust_eta_shrink), 1.0)
 
     if ghost_update_fn is None:
         def ghost_update_fn(_v):
@@ -208,8 +223,13 @@ def newton(
         step_norm = 0.0
         step_rel = 0.0
         trust_qp = np.nan
+        pred_reduction = np.nan
+        actual_reduction = np.nan
+        trust_rejects = 0
         accepted_step = False
         used_gradient_fallback = False
+        terminate_after_iter = False
+        terminate_message = None
 
         t_ls_start = time.perf_counter()
         ls_a, ls_b = linesearch_interval
@@ -226,7 +246,6 @@ def newton(
             return val
 
         if trust_region:
-            dump = 10.0
             trust_radius = min(max(trust_radius, trust_radius_min), trust_radius_max)
 
             z1 = x.duplicate()
@@ -235,6 +254,10 @@ def newton(
             hz2 = x.duplicate()
             sg = x.duplicate()
             has_z2 = False
+            rhs_red = None
+            mm = None
+            rhs_g = np.nan
+            curv_g = np.nan
 
             if np.isfinite(hnorm) and hnorm > 1e-20:
                 h.copy(z1)
@@ -290,55 +313,159 @@ def newton(
                 ghost_update_fn(hz2)
                 rhs_g = float(g.dot(sg))
                 curv_g = float(sg.dot(hz2))
-                tg = _solve_trust_1d(rhs_g, curv_g, trust_radius)
-                sg.scale(tg)
-                qp2 = float(rhs_g * tg + 0.5 * curv_g * tg * tg)
-                sg_norm = abs(tg)
-            else:
-                qp2 = np.inf
-                sg_norm = 0.0
 
-            if qp2 <= qp1:
-                sg.copy(p)
-                snod_norm = sg_norm
-                trust_qp = qp2
-                used_gradient_fallback = True
-            else:
-                trust_qp = qp1
+            def _build_trust_step(delta_local):
+                p.set(0.0)
+                step_norm_local = 0.0
+                q_local = np.inf
+                step_linear_local = np.nan
+                step_curv_local = np.nan
+                used_grad_local = False
 
-            alpha, ls_eval_local = golden_section_search(
-                _energy_at_alpha, ls_a, ls_b, linesearch_tol
-            )
-            ls_evals += ls_eval_local
-            newval = _energy_at_alpha(alpha)
-            step_size = abs(alpha) * snod_norm
+                if has_z2:
+                    st, q2d = _solve_trust_2d(rhs_red, mm, delta_local)
+                    p.axpy(float(st[0]), z1)
+                    p.axpy(float(st[1]), z2)
+                    step_norm_local = float(np.linalg.norm(st))
+                    step_linear_local = float(rhs_red.dot(st))
+                    step_curv_local = float(st.dot(mm.dot(st)))
+                    q_local = float(q2d)
+                else:
+                    rhs1 = float(g.dot(z1))
+                    curv1 = float(z1.dot(hz1))
+                    t1 = _solve_trust_1d(rhs1, curv1, delta_local)
+                    z1.copy(p)
+                    p.scale(t1)
+                    step_norm_local = abs(t1)
+                    step_linear_local = float(rhs1 * t1)
+                    step_curv_local = float(curv1 * t1 * t1)
+                    q_local = float(step_linear_local + 0.5 * step_curv_local)
 
-            if np.isfinite(newval) and newval < fx_old:
-                trust_radius = trust_radius * (1.0 / dump) + step_size * (1.0 - 1.0 / dump)
-            else:
-                trust_radius = trust_radius / dump
-            trust_radius = min(max(trust_radius, trust_radius_min), trust_radius_max)
+                if normg > 1e-20:
+                    tg = _solve_trust_1d(rhs_g, curv_g, delta_local)
+                    qp_grad = float(rhs_g * tg + 0.5 * curv_g * tg * tg)
+                    if qp_grad <= q_local:
+                        g.copy(sg)
+                        sg.scale(1.0 / normg)
+                        sg.scale(tg)
+                        sg.copy(p)
+                        step_norm_local = abs(tg)
+                        step_linear_local = float(rhs_g * tg)
+                        step_curv_local = float(curv_g * tg * tg)
+                        q_local = qp_grad
+                        used_grad_local = True
 
-            if np.isfinite(newval) and newval < fx_old:
-                fx = newval
-                dE = fx_old - fx
-                step_norm = step_size
-                step_rel = step_norm / max(1.0, x_prev_norm)
-                t_update0 = time.perf_counter()
-                x_trial.copy(x)
-                project_fn(x)
-                ghost_update_fn(x)
-                t_update = time.perf_counter() - t_update0
-                accepted_step = True
-            else:
-                x_prev.copy(x)
-                project_fn(x)
-                ghost_update_fn(x)
-                alpha = 0.0
-                dE = 0.0
-                step_norm = 0.0
-                step_rel = 0.0
-                t_update = 0.0
+                return (
+                    step_norm_local,
+                    q_local,
+                    step_linear_local,
+                    step_curv_local,
+                    used_grad_local,
+                )
+
+            max_trust_attempts = trust_max_reject + 1
+            for attempt_idx in range(max_trust_attempts):
+                trial_radius = float(min(max(trust_radius, trust_radius_min), trust_radius_max))
+                (
+                    snod_norm,
+                    trust_qp,
+                    step_linear,
+                    step_curv,
+                    used_gradient_fallback,
+                ) = _build_trust_step(trial_radius)
+
+                alpha_lo = float(ls_a)
+                alpha_hi = float(ls_b)
+                if snod_norm > 1e-20:
+                    alpha_cap = trial_radius / snod_norm
+                    alpha_lo = max(alpha_lo, -alpha_cap)
+                    alpha_hi = min(alpha_hi, alpha_cap)
+
+                if (
+                    not np.isfinite(snod_norm)
+                    or snod_norm <= 1e-20
+                    or not np.isfinite(alpha_lo)
+                    or not np.isfinite(alpha_hi)
+                    or alpha_hi <= alpha_lo + 1e-14
+                ):
+                    newval = np.inf
+                    alpha = 0.0
+                    pred_reduction = 0.0
+                    actual_reduction = -np.inf
+                else:
+                    alpha, ls_eval_local = golden_section_search(
+                        _energy_at_alpha, alpha_lo, alpha_hi, linesearch_tol
+                    )
+                    ls_evals += ls_eval_local
+                    newval = _energy_at_alpha(alpha)
+                    pred_reduction = -(
+                        alpha * step_linear + 0.5 * (alpha ** 2) * step_curv
+                    )
+                    actual_reduction = fx_old - newval if np.isfinite(newval) else -np.inf
+
+                rho = np.nan
+                if (
+                    np.isfinite(pred_reduction)
+                    and pred_reduction > 0.0
+                    and np.isfinite(actual_reduction)
+                ):
+                    rho = actual_reduction / pred_reduction
+
+                step_size = abs(alpha) * snod_norm if np.isfinite(snod_norm) else 0.0
+
+                if (
+                    np.isfinite(newval)
+                    and np.isfinite(rho)
+                    and rho >= trust_eta_shrink
+                    and actual_reduction > 0.0
+                ):
+                    fx = newval
+                    dE = actual_reduction
+                    step_norm = step_size
+                    step_rel = step_norm / max(1.0, x_prev_norm)
+                    t_update0 = time.perf_counter()
+                    x_trial.copy(x)
+                    project_fn(x)
+                    ghost_update_fn(x)
+                    t_update = time.perf_counter() - t_update0
+                    accepted_step = True
+
+                    if rho >= trust_eta_expand and step_norm >= 0.9 * trial_radius:
+                        trust_radius = min(trust_radius_max, trial_radius * trust_expand)
+                    else:
+                        trust_radius = trial_radius
+                    break
+
+                trust_rejects = attempt_idx + 1
+                trust_radius = max(trust_radius_min, trial_radius * trust_shrink)
+
+                if attempt_idx + 1 >= max_trust_attempts:
+                    x_prev.copy(x)
+                    project_fn(x)
+                    ghost_update_fn(x)
+                    alpha = 0.0
+                    dE = 0.0
+                    step_norm = 0.0
+                    step_rel = 0.0
+                    t_update = 0.0
+                    terminate_after_iter = True
+                    step_tol = max(tolx_abs, tolx_rel * max(1.0, x_prev_norm))
+                    small_step = np.isfinite(step_size) and step_size <= step_tol
+                    small_pred = np.isfinite(pred_reduction) and abs(pred_reduction) <= max(
+                        tolf, 1e-16
+                    )
+                    if small_step or small_pred:
+                        if require_all_convergence and normg >= grad_target:
+                            terminate_message = (
+                                "Trust-region radius exhausted before full convergence"
+                            )
+                        else:
+                            terminate_message = "Trust-region step converged"
+                    else:
+                        terminate_message = (
+                            f"Trust-region rejected all candidate steps at Newton iteration {nit}"
+                        )
+                    break
 
             z1.destroy()
             z2.destroy()
@@ -418,6 +545,9 @@ def newton(
                     "accepted_step": bool(accepted_step),
                     "step_norm": float(step_norm),
                     "step_rel": float(step_rel),
+                    "pred_reduction": float(pred_reduction),
+                    "actual_reduction": float(actual_reduction),
+                    "trust_rejects": int(trust_rejects),
                     "t_grad": float(t_grad),
                     "t_hess": float(t_hess),
                     "t_ls": float(t_ls),
@@ -428,6 +558,10 @@ def newton(
                     "trust_qp": float(trust_qp),
                 }
             )
+
+        if terminate_after_iter:
+            message = terminate_message
+            break
 
         if fail_on_nonfinite and not np.isfinite(fx):
             x_prev.copy(x)

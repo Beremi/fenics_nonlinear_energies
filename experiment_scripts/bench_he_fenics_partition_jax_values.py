@@ -562,9 +562,9 @@ def main() -> None:
 
     _configure_thread_env(args.nproc)
 
-    from HyperElasticity3D_jax_petsc.mesh import MeshHyperElasticity3D
+    from HyperElasticity3D_petsc_support.mesh import MeshHyperElasticity3D
     from HyperElasticity3D_jax_petsc.parallel_hessian_dof import LocalColoringAssembler
-    from HyperElasticity3D_jax_petsc.rotate_boundary import rotate_right_face_from_reference
+    from HyperElasticity3D_petsc_support.rotate_boundary import rotate_right_face_from_reference
 
     mesh_obj = MeshHyperElasticity3D(args.level)
     params, adjacency, u_init = mesh_obj.get_data()

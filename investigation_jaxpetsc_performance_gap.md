@@ -292,3 +292,89 @@ mpirun -n 16 python3 HyperElasticity3D_jax_petsc/solve_HE_dof.py \
     --profile performance --assembly_mode sfd \
     --save_linear_timing --quiet
 ```
+
+---
+
+## 9) Current Fine-Case Breakdown (L4, np=32, step 1 / 96, matched GMRES + GAMG)
+
+This section uses the **current codebase** and compares:
+
+- `HyperElasticity3D_fenics/solve_HE_custom_jaxversion.py`
+- `HyperElasticity3D_jax_petsc/solve_HE_dof.py --assembly_mode element`
+- `HyperElasticity3D_jax_petsc/solve_HE_dof.py --assembly_mode sfd`
+
+All three runs used the same solver settings:
+
+- finest mesh: `level 4`
+- load step: `step 1 / 96`
+- MPI ranks: `32`
+- linear solver: `GMRES + GAMG`
+- `ksp_rtol=1e-1`
+- `ksp_max_it=30`
+- `pc_setup_on_ksp_cap=True`
+- `pc_gamg_threshold=0.05`
+- `pc_gamg_agg_nsmooths=1`
+- nonlinear globalization: plain golden-section line search on `[-0.5, 2.0]`
+- nonlinear termination: `require_all_convergence=True`, `tolg_rel=1e-3`, `tolx_rel=1e-3`
+
+### 9.1 End-to-End Summary
+
+| Variant | Newton | Sum KSP | Setup [s] | Step [s] | Total [s] | Final energy |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| FEniCS custom | 18 | 102 | 0.192 | 5.142 | 5.334 | 0.0094980000 |
+| JAX+PETSc element | 12 | 75 | 6.722 | 16.397 | 23.120 | 0.0095525029 |
+| JAX+PETSc sfd | 12 | 75 | 3.340 | 31.803 | 35.142 | 0.0095525029 |
+
+### 9.2 Step-Time Breakdown
+
+These numbers sum the per-Newton `history` timings.
+
+| Variant | Gradient [s] | Hessian callback [s] | Line search [s] | Update [s] | Step total [s] |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| FEniCS custom | 0.078 | 4.216 | 0.837 | 0.001 | 5.142 |
+| JAX+PETSc element | 0.330 | 12.981 | 3.052 | 0.000 | 16.397 |
+| JAX+PETSc sfd | 0.326 | 28.377 | 3.062 | 0.000 | 31.803 |
+
+The key point is that **element** and **sfd** have the same Newton and KSP counts, so the large difference between them is almost entirely in the Hessian path.
+
+### 9.3 Hessian / Linear Solve Sub-Breakdown
+
+For the JAX+PETSc variants, the linear timing records expose the internal Hessian-assembly phases:
+
+| Variant | Assembly total [s] | P2P [s] | JAX compute [s] | Extraction [s] | COO assembly [s] | PC setup [s] | KSP solve [s] | Hessian total [s] |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| JAX+PETSc element | 2.163 | 0.007 | 0.672 | 0.000 | 1.292 | 1.267 | 9.550 | 12.981 |
+| JAX+PETSc sfd | 17.281 | 0.007 | 5.198 | 0.126 | 11.940 | 1.426 | 9.669 | 28.377 |
+
+For the custom FEniCS path:
+
+| Variant | Form assembly [s] | PC setup [s] | KSP solve [s] | Hessian total [s] |
+| --- | ---: | ---: | ---: | ---: |
+| FEniCS custom | 1.141 | 0.299 | 2.774 | 4.216 |
+
+### 9.4 What This Says
+
+1. `sfd` is no longer the interesting comparison for this case. It is dominated by Hessian assembly: `17.28 s` versus `2.16 s` for `element`. The extra `15.1 s` is almost entirely assembly work.
+
+2. After switching to `element`, the remaining JAX+PETSc cost is mostly **not assembly**. The dominant bucket becomes:
+   - `KSP solve = 9.55 s`
+   - `Line search = 3.05 s`
+   - `PC setup = 1.27 s`
+
+3. Relative to FEniCS custom, `JAX+PETSc element` is still much slower even though it needs fewer nonlinear and linear iterations:
+   - Newton: `12` vs `18`
+   - KSP: `75` vs `102`
+   - KSP solve time: `9.55 s` vs `2.77 s`
+
+4. So on the current fine `step 1 / 96` case, the main residual gap is **solve-path cost per Krylov iteration**, not convergence count and not SFD assembly.
+
+5. JAX setup/JIT is also material on one-step runs:
+   - `element` setup: `6.72 s`
+   - `sfd` setup: `3.34 s`
+   - custom setup: `0.19 s`
+
+### 9.5 Raw Result Files
+
+- `experiment_results_cache/he_breakdown_custom_l4_s1of96_np32_gamg.json`
+- `experiment_results_cache/he_breakdown_jax_element_l4_s1of96_np32_gamg.json`
+- `experiment_results_cache/he_breakdown_jax_sfd_l4_s1of96_np32_gamg.json`
