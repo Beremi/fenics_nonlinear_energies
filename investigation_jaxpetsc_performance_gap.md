@@ -4,6 +4,32 @@
 
 For the **pLaplace** problem, the JAX+PETSc solver is roughly **on par with or faster than** the FEniCS custom solver. But for **HyperElasticity**, JAX+PETSc is **5–19× slower** despite using the same solver infrastructure, the same Newton algorithm, and the same preconditioner (GAMG). This report investigates the root causes.
 
+## Status Update (2026-03-06)
+
+This note explains the gap in the older HE JAX+PETSc path. That diagnosis has
+now been partially acted on in production.
+
+The important follow-up result is:
+
+- the large HE gap was traced mainly to the PETSc operator ownership/layout of
+  the old JAX element path
+- the winning reordered-overlap element strategy is now implemented in
+  `HyperElasticity3D_jax_petsc/reordered_element_assembler.py`
+- on the main fine check (`level 4`, `step 1 / 96`, `np=32`, `GMRES + GAMG`)
+  the production element path reduces the old JAX element step from `16.397 s`
+  to `5.856 s`
+
+| Variant | Setup [s] | Step [s] | Assembly [s] | PC setup [s] | Solve [s] |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| FEniCS custom | 0.192 | 5.142 | 1.141 | 0.299 | 2.774 |
+| Old JAX+PETSc element | 6.722 | 16.397 | 2.163 | 1.267 | 9.550 |
+| Production reordered element | 7.499 | 5.856 | 1.978 | 0.346 | 1.818 |
+
+So the conclusions below are still useful for understanding the original gap,
+but the production status is now better than the older sections alone suggest.
+For the layout/distribution follow-up and full tables, see
+`HE_ELEMENT_DISTRIBUTION_INVESTIGATION.md`.
+
 ---
 
 ## 1) pLaplace Comparison (finest level, np=32, GAMG)
@@ -375,6 +401,5 @@ For the custom FEniCS path:
 
 ### 9.5 Raw Result Files
 
-- `experiment_results_cache/he_breakdown_custom_l4_s1of96_np32_gamg.json`
-- `experiment_results_cache/he_breakdown_jax_element_l4_s1of96_np32_gamg.json`
-- `experiment_results_cache/he_breakdown_jax_sfd_l4_s1of96_np32_gamg.json`
+- The detailed rerun numbers in this section came from temporary local JSON
+  outputs during the investigation and are summarized in the tables above.

@@ -10,10 +10,8 @@ import os
 
 from mpi4py import MPI
 
-from HyperElasticity3D_jax_petsc.solver import PROFILE_DEFAULTS, run
 
-
-def _build_parser():
+def _build_parser(profile_defaults):
     parser = argparse.ArgumentParser(
         description="HyperElasticity3D DOF-partitioned JAX + PETSc solver"
     )
@@ -30,7 +28,7 @@ def _build_parser():
 
     parser.add_argument(
         "--profile",
-        choices=sorted(PROFILE_DEFAULTS.keys()),
+        choices=sorted(profile_defaults.keys()),
         default="reference",
         help="Linear solver profile",
     )
@@ -101,6 +99,13 @@ def _build_parser():
         help="Hessian assembly mode: 'sfd' (graph coloring + HVP) or "
              "'element' (analytical element Hessians via jax.hessian)",
     )
+    parser.add_argument(
+        "--element_reorder_mode",
+        choices=("none", "block_rcm", "block_xyz", "block_metis"),
+        default=None,
+        help="Element mode only: reorder free DOFs before PETSc ownership split "
+             "(default: block_xyz)",
+    )
 
     parser.add_argument("--tolf", type=float, default=1e-4, help="Energy-change tolerance")
     parser.add_argument("--tolg", type=float, default=1e-3, help="Gradient-norm tolerance")
@@ -161,13 +166,18 @@ def _configure_thread_env(nproc):
 
 
 def main():
-    parser = _build_parser()
+    pre_parser = argparse.ArgumentParser(add_help=False)
+    pre_parser.add_argument("--nproc", type=int, default=1)
+    pre_args, _ = pre_parser.parse_known_args()
+    _configure_thread_env(pre_args.nproc)
+
+    from HyperElasticity3D_jax_petsc.solver import PROFILE_DEFAULTS, run
+
+    parser = _build_parser(PROFILE_DEFAULTS)
     args = parser.parse_args()
 
     if args.total_steps is None:
         args.total_steps = args.steps
-
-    _configure_thread_env(args.nproc)
 
     result = run(args)
 

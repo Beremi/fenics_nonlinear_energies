@@ -612,8 +612,9 @@ Summary: total time = `143.5721 s`, total Newton iters = `666`, total linear ite
 
 Artifact:
 - [experiment_scripts/he_fenics_custom_evolution_l4_skip_ksp30_pc_cap_np16.json](experiment_scripts/he_fenics_custom_evolution_l4_skip_ksp30_pc_cap_np16.json)
-- [experiment_results_cache/he_custom_hypre_loose_nonull_l4s1of24_np16.json](experiment_results_cache/he_custom_hypre_loose_nonull_l4s1of24_np16.json) (2026-03-06 rerun, current tree)
-- [experiment_results_cache/he_custom_hypre_loose_null_l4s1of24_np16.json](experiment_results_cache/he_custom_hypre_loose_null_l4s1of24_np16.json) (2026-03-06 rerun, current tree)
+- 2026-03-06 reruns for the added `step 1` rows were recorded as temporary
+  local JSON outputs during the investigation and are summarized directly in
+  the table below.
 
 No level-4 JAX reference trajectory is available in this report yet, so relative error vs JAX is reported as `—`.
 
@@ -771,6 +772,9 @@ Artifacts for L2 and MPI-16 validation:
   - convergence count on early L1 steps: Candidate H,
   - finite full L1 trajectory (but non-converged SNES reasons): Candidate A.
 - For production-quality trajectories in this project, the custom solver path remains the recommended method.
+- For the later HE JAX+PETSc element-path distribution/layout follow-up and the
+  production reordered-overlap implementation, see
+  [HE_ELEMENT_DISTRIBUTION_INVESTIGATION.md](/home/michal/repos/fenics_nonlinear_energies/HE_ELEMENT_DISTRIBUTION_INVESTIGATION.md).
 
 ### B.4 Continuation rerun for iterative SNES (half step size)
 

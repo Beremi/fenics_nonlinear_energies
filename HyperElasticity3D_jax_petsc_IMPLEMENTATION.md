@@ -32,6 +32,7 @@ Main targets:
 Implemented package:
 - `HyperElasticity3D_jax_petsc/__init__.py`
 - `HyperElasticity3D_jax_petsc/parallel_hessian_dof.py`
+- `HyperElasticity3D_jax_petsc/reordered_element_assembler.py`
 - `HyperElasticity3D_jax_petsc/solve_HE_dof.py`
 - `HyperElasticity3D_jax_petsc/solver.py`
 - `HyperElasticity3D_petsc_support/mesh.py`
@@ -61,7 +62,8 @@ This expansion is required so partitioning, local overlap construction, coloring
 
 ## 4. Partitioning and Local Coloring
 
-The local-coloring path (`LocalColoringAssembler`) follows the same design as pLaplace:
+The SFD path still uses the shared local-coloring infrastructure
+(`LocalColoringAssembler`) and follows the same design as pLaplace:
 - Per-rank local domain from owned DOFs + overlap
 - Per-rank local coloring on `A^2|_J` (no global coloring broadcast)
 - P2P ghost exchange for local vector reconstruction
@@ -77,9 +79,24 @@ Additional vector-problem handling for HE:
 - optional GAMG coordinates from owned xyz triplets
 - default `reorder=False` (preserve xyz triplets for block-aware handling)
 
-HE 3D vector P1 elements produce **63 graph colors** (vs 8 for 2D scalar P1 pLaplace), making
-the SFD approach ~8× more expensive in assembly. Use `--assembly_mode element` to bypass coloring
-entirely.
+HE 3D vector P1 elements produce **63 graph colors** (vs 8 for 2D scalar P1
+pLaplace), making the SFD approach expensive in assembly.
+
+The production **element** path no longer goes through the generic local-coloring
+assembler. It uses `HEReorderedElementAssembler` in
+`reordered_element_assembler.py`:
+
+- reorder free DOFs first (`block_xyz` default for element mode)
+- derive PETSc row ownership from that reordered free-DOF layout
+- build a larger overlap domain per rank so each owned row can be assembled
+  locally
+- rebuild the current free vector by `Allgatherv`
+- compute exact per-element gradients and Hessians by vmapped JAX kernels
+- scatter directly into the owned COO row pattern
+
+This is a HE-specific production path because the whole point is to fix the
+matrix ownership/layout regression observed in the older reduced-operator
+element implementation.
 
 ## 5. Energy, Gradient, Hessian
 
@@ -100,17 +117,23 @@ Local JAX functions:
 - Explicit `A.assemble()` after COO insertion
 
 **Element** (`--assembly_mode element`):
-- Analytical element Hessians via `jax.hessian(element_energy)` + `jax.vmap`
-- Single JIT-compiled call produces all (n_elem, 12, 12) element Hessians
-- Contributions pre-aggregated with `numpy.add.at` into the SFD COO pattern
-- Same `self.A` reused — preserves PETSc internal storage, no KSP regression
-- Call `assembler.setup_element_hessian()` after construction to enable
+- dedicated `HEReorderedElementAssembler` selected directly in `solver.py`
+- analytical element Hessians via `jax.hessian(element_energy)` + `jax.vmap`
+- analytical element gradients via `jax.grad(element_energy)` + `jax.vmap`
+- default distribution strategy: overlap domain + `Allgatherv`
+- default reorder for production element mode: `block_xyz`
+- alternative reorder modes: `none`, `block_rcm`, `block_metis`
 
-**Key implementation note for element mode:**
-PETSc's `MatSetPreallocationCOO` modifies the input column index array in-place for MPIAIJ
-matrices (remapping off-process columns to local indices). The element→COO position lookup
-table must therefore be built from the original adjacency arrays (`_row_adj`, `_col_adj` via
-`iperm`) before this remapping occurs — not from `self._coo_cols` which is already modified.
+**Key implementation notes for element mode:**
+
+- The large performance gap on HE was traced mainly to the PETSc row
+  distribution / operator layout, not just to Hessian values.
+- The production element path therefore couples the exact element Hessian with
+  a different ownership/subdomain build than the SFD path.
+- PETSc's `MatSetPreallocationCOO` modifies the input column index array
+  in-place for MPIAIJ matrices (remapping off-process columns to local
+  indices). The element→COO position lookup must therefore be built from the
+  original adjacency-derived indices before this remapping occurs.
 
 ## 6. Nonlinear Solver Parity (Custom FEniCS)
 
@@ -175,28 +198,36 @@ Performance profile:
 
 ## 9. Current Performance Findings
 
-Step-1 (level 3, GAMG, native build — Threadripper PRO 7975WX):
+The historical progression is:
 
-| np | Mode | Step [s] | Assembly [s] | KSP solve [s] | Newton | KSP iters |
-| ---: | --- | ---: | ---: | ---: | ---: | ---: |
-| 4 | SFD | 26.16 | 18.20 | 5.06 | 38 | 500 |
-| 4 | Element | 12.22 | 4.22 | 5.13 | 38 | 500 |
-| 16 | SFD | 23.12 | 12.18 | 7.94 | 39 | 402 |
-| 16 | Element | 7.99 | 1.64 | 4.46 | 39 | 402 |
-| 32 | SFD | 17.54 | 8.07 | 6.67 | 40 | 413 |
-| 32 | Element | 10.73 | 1.52 | 6.57 | 40 | 413 |
+1. `sfd` was much too expensive because HE needs 63 colors.
+2. the first analytical element implementation removed most assembly cost but
+   still kept the old PETSc ownership/layout penalty.
+3. the reordered overlap element path removed most of that layout penalty and
+   is now the production `--assembly_mode element` implementation.
 
-FEniCS custom + GAMG np=32: step 1 = **1.6 s** (assembly ~0.5 s, KSP ~0.7 s).
+Current fine-case reference point (`level 4`, `step 1 / 96`, `np=32`,
+`GMRES + GAMG`):
+
+| Variant | Setup [s] | Step [s] | Assembly [s] | PC setup [s] | KSP solve [s] | Newton | KSP iters |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| FEniCS custom | 0.192 | 5.142 | 1.141 | 0.299 | 2.774 | 18 | 102 |
+| Old JAX element path | 6.722 | 16.397 | 2.163 | 1.267 | 9.550 | 12 | 75 |
+| Production reordered element path | 7.499 | 5.856 | 1.978 | 0.346 | 1.818 | 13 | 53 |
 
 Key findings:
-- Sequential local HVP mode (`--hvp_eval_mode sequential`) is faster than batched vmap for HE.
-- Explicit `A.assemble()` moved hidden matrix-finalization work out of `ksp.solve`.
-- Element assembly (`--assembly_mode element`) is **4–7× faster** in assembly and **1.6–2.9×
-  faster** overall than SFD, with no KSP solve regression.
-- Remaining ~6.7× gap vs FEniCS at np=32 is dominated by KSP solve (6.6 s vs ~0.7 s),
-  pointing to matrix-vector product efficiency differences from the COO assembly path.
+- `sfd` remains mainly a comparison/debug path for HE.
+- The production element path has largely removed the old solve-side gap on the
+  fine `step 1 / 96` case.
+- The remaining difference to FEniCS is no longer dominated by `pc_setup` or
+  `ksp.solve`; it is now mostly in end-to-end setup/JIT cost.
+- `block_xyz` is the default production reorder because it was the best fine
+  `np=32` candidate in the distribution study, with `block_rcm` as the next
+  alternative to recheck.
 
-Full analysis: [investigation_jaxpetsc_performance_gap.md](investigation_jaxpetsc_performance_gap.md)
+Full analysis:
+- [investigation_jaxpetsc_performance_gap.md](/home/michal/repos/fenics_nonlinear_energies/investigation_jaxpetsc_performance_gap.md)
+- [HE_ELEMENT_DISTRIBUTION_INVESTIGATION.md](/home/michal/repos/fenics_nonlinear_energies/HE_ELEMENT_DISTRIBUTION_INVESTIGATION.md)
 
 ## 10. Important References
 
@@ -211,6 +242,7 @@ Design background:
 
 HE benchmarking and solver behavior:
 - `results_HyperElasticity3D.md`
+- `HE_ELEMENT_DISTRIBUTION_INVESTIGATION.md`
 - `experiment_scripts/he_l3_24_comparison_jax_fenics_jaxpetsc.md`
 - `experiment_scripts/he_step1_timing_breakdown_fenics_vs_jaxpetsc.md`
 - `experiment_scripts/he_step1_timing_investigation_fix1.md`

@@ -204,7 +204,7 @@ The solver supports two Hessian assembly strategies selected via `--assembly_mod
 | Mode | Flag | Method | Per-Newton-step cost |
 | --- | --- | --- | --- |
 | **SFD** (default) | `--assembly_mode sfd` | Graph coloring + HVPs | 63 sequential JAX HVP evaluations (= 63 graph colors for HE 3D vector P1) |
-| **Element** | `--assembly_mode element` | Analytical element Hessians | 1 vmapped `jax.hessian` call over all elements |
+| **Element** | `--assembly_mode element` | Analytical element Hessians | 1 vmapped `jax.hessian` call over all local elements |
 
 **SFD (Sparse Finite Differences):** builds a distance-2 graph coloring of the DOF adjacency,
 then recovers each column group of the sparse Hessian via one Hessian-vector product (HVP) per
@@ -212,36 +212,41 @@ color. The HVP is computed as `jax.jvp(grad_energy, v, indicator)`. The coloring
 for 3D vector P1 elements (vs 8 for 2D scalar P1 pLaplace), making this approach relatively
 expensive for HE.
 
-**Element assembly:** computes the dense 12×12 Hessian of the Neo-Hookean element energy
-analytically via `jax.hessian(element_energy)`, vmapped over all local elements in a single
-JIT-compiled call. Contributions are pre-aggregated with `numpy.add.at` into the same sparse
-COO pattern used by SFD, then inserted into `self.A` with `INSERT_VALUES`. This preserves the
-PETSc internal matrix storage layout and avoids any KSP solve regression.
+**Element assembly:** the production HE path now uses a dedicated reordered-overlap assembler.
+It computes exact 12×12 element Hessians analytically via `jax.hessian(element_energy)`,
+vmapped over all local elements in a single JIT-compiled call, but it also:
+
+- reorders free DOFs before PETSc ownership is assigned,
+- builds larger overlap subdomains from that ownership,
+- rebuilds the current state by `Allgatherv`,
+- assembles owned rows locally without a matrix-value reduction step.
+
+This change was needed because the older HE element path still suffered from a
+PETSc matrix ownership/layout regression even after the SFD coloring cost was
+removed.
 
 > **Implementation note:** PETSc's `MatSetPreallocationCOO` modifies the column index array
 > in-place for MPIAIJ matrices (off-process column remapping). The element→COO position mapping
 > must be built from the original adjacency arrays (`_row_adj`, `_col_adj`) before this
 > modification, not from `_coo_cols` after it.
 
-#### Performance comparison (L3, 77k DOFs, step 1, GAMG, native build)
+#### Current HE status
 
-| np | Mode | Step [s] | Assembly [s] | KSP solve [s] | Newton | KSP iters |
-| ---: | --- | ---: | ---: | ---: | ---: | ---: |
-| 4 | SFD | 26.16 | 18.20 | 5.06 | 38 | 500 |
-| 4 | Element | 12.22 | 4.22 | 5.13 | 38 | 500 |
-| 16 | SFD | 23.12 | 12.18 | 7.94 | 39 | 402 |
-| 16 | Element | 7.99 | 1.64 | 4.46 | 39 | 402 |
-| 32 | SFD | 17.54 | 8.07 | 6.67 | 40 | 413 |
-| 32 | Element | 10.73 | 1.52 | 6.57 | 40 | 413 |
+On the main fine check (`level 4`, `step 1 / 96`, `np=32`, `GMRES + GAMG`):
 
-Element assembly is **4–7× faster** in assembly and **1.6–2.9× faster** overall vs SFD.
-KSP solve times match between both modes (no regression), confirming identical matrix structure.
+| Variant | Setup [s] | Step [s] | Assembly [s] | PC setup [s] | Solve [s] |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| FEniCS custom | 0.192 | 5.142 | 1.141 | 0.299 | 2.774 |
+| Old JAX+PETSc element | 6.722 | 16.397 | 2.163 | 1.267 | 9.550 |
+| Production reordered element | 7.499 | 5.856 | 1.978 | 0.346 | 1.818 |
 
-FEniCS custom + GAMG at np=32 runs step 1 in **1.6 s** (assembly ~0.5 s, KSP solve ~0.7 s).
-The remaining ~6.7× gap is dominated by KSP solve time (6.6 s vs ~0.7 s), likely reflecting
-matrix-vector product efficiency differences between PETSc's COO assembly path and FEniCS's
-native CSR assembly. See [investigation_jaxpetsc_performance_gap.md](investigation_jaxpetsc_performance_gap.md)
-for the full analysis.
+So the old HE JAX+PETSc solve gap is largely gone in the production element
+path. The main remaining difference is end-to-end setup/JIT cost rather than
+the linear solve itself.
+
+Detailed notes:
+- [investigation_jaxpetsc_performance_gap.md](investigation_jaxpetsc_performance_gap.md)
+- [HE_ELEMENT_DISTRIBUTION_INVESTIGATION.md](HE_ELEMENT_DISTRIBUTION_INVESTIGATION.md)
 
 #### How to run
 
@@ -252,7 +257,8 @@ export OMP_NUM_THREADS=1
 # Element Hessian assembly (recommended — 2–3× faster than SFD)
 mpirun -n 16 python3 HyperElasticity3D_jax_petsc/solve_HE_dof.py \
     --level 3 --steps 24 --total_steps 24 \
-    --profile performance --assembly_mode element --quiet
+    --profile performance --assembly_mode element \
+    --element_reorder_mode block_xyz --quiet
 
 # SFD assembly (baseline)
 mpirun -n 16 python3 HyperElasticity3D_jax_petsc/solve_HE_dof.py \
@@ -261,13 +267,15 @@ mpirun -n 16 python3 HyperElasticity3D_jax_petsc/solve_HE_dof.py \
 
 # With detailed linear timing breakdown
 mpirun -n 32 python3 HyperElasticity3D_jax_petsc/solve_HE_dof.py \
-    --level 3 --steps 1 --total_steps 24 \
+    --level 4 --steps 1 --total_steps 96 \
     --profile performance --assembly_mode element \
+    --element_reorder_mode block_xyz \
     --save_linear_timing --quiet
 ```
 
 Benchmark results and investigation: [results_HyperElasticity3D.md](results_HyperElasticity3D.md),
-[investigation_jaxpetsc_performance_gap.md](investigation_jaxpetsc_performance_gap.md)
+[investigation_jaxpetsc_performance_gap.md](investigation_jaxpetsc_performance_gap.md),
+[HE_ELEMENT_DISTRIBUTION_INVESTIGATION.md](HE_ELEMENT_DISTRIBUTION_INVESTIGATION.md)
 
 ## Prerequisites
 

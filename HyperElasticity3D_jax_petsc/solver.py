@@ -15,6 +15,9 @@ from HyperElasticity3D_jax_petsc.parallel_hessian_dof import (
     LocalColoringAssembler,
     ParallelDOFHessianAssembler,
 )
+from HyperElasticity3D_jax_petsc.reordered_element_assembler import (
+    HEReorderedElementAssembler,
+)
 from HyperElasticity3D_petsc_support.rotate_boundary import rotate_right_face_from_reference
 from tools_petsc4py.minimizers import newton
 
@@ -125,36 +128,53 @@ def run(args):
 
     settings = _resolve_linear_settings(args)
     pc_options = _pc_options(settings)
+    use_element_assembly = args.assembly_mode == "element"
+    element_reorder_mode = str(
+        getattr(args, "element_reorder_mode", None) or "block_xyz"
+    )
 
     mesh_obj = MeshHyperElasticity3D(args.level)
     params, adjacency, u_init = mesh_obj.get_data()
 
-    assembler_cls = LocalColoringAssembler if args.local_coloring else ParallelDOFHessianAssembler
-    assembler_kwargs = dict(
-        params=params,
-        comm=comm,
-        adjacency=adjacency,
-        coloring_trials_per_rank=args.coloring_trials,
-        ksp_rtol=float(settings["ksp_rtol"]),
-        ksp_type=str(settings["ksp_type"]),
-        pc_type=str(settings["pc_type"]),
-        ksp_max_it=int(settings["ksp_max_it"]),
-        use_near_nullspace=bool(settings["use_near_nullspace"]),
-        pc_options=pc_options,
-        reorder=bool(settings["reorder"]),
-        use_abs_det=bool(args.use_abs_det),
-    )
-    if args.local_coloring:
-        assembler_kwargs["hvp_eval_mode"] = str(args.hvp_eval_mode)
     setup_start = time.perf_counter()
-    assembler = assembler_cls(**assembler_kwargs)
-    assembler.A.setBlockSize(3)
-
-    use_element_assembly = (args.assembly_mode == "element")
     if use_element_assembly:
         if not args.local_coloring:
             raise ValueError("--assembly_mode element requires --local_coloring")
-        assembler.setup_element_hessian()
+        assembler = HEReorderedElementAssembler(
+            params=params,
+            comm=comm,
+            adjacency=adjacency,
+            ksp_rtol=float(settings["ksp_rtol"]),
+            ksp_type=str(settings["ksp_type"]),
+            pc_type=str(settings["pc_type"]),
+            ksp_max_it=int(settings["ksp_max_it"]),
+            use_near_nullspace=bool(settings["use_near_nullspace"]),
+            pc_options=pc_options,
+            reorder_mode=element_reorder_mode,
+            use_abs_det=bool(args.use_abs_det),
+        )
+    else:
+        assembler_cls = (
+            LocalColoringAssembler if args.local_coloring else ParallelDOFHessianAssembler
+        )
+        assembler_kwargs = dict(
+            params=params,
+            comm=comm,
+            adjacency=adjacency,
+            coloring_trials_per_rank=args.coloring_trials,
+            ksp_rtol=float(settings["ksp_rtol"]),
+            ksp_type=str(settings["ksp_type"]),
+            pc_type=str(settings["pc_type"]),
+            ksp_max_it=int(settings["ksp_max_it"]),
+            use_near_nullspace=bool(settings["use_near_nullspace"]),
+            pc_options=pc_options,
+            reorder=bool(settings["reorder"]),
+            use_abs_det=bool(args.use_abs_det),
+        )
+        if args.local_coloring:
+            assembler_kwargs["hvp_eval_mode"] = str(args.hvp_eval_mode)
+        assembler = assembler_cls(**assembler_kwargs)
+        assembler.A.setBlockSize(3)
 
     setup_time = time.perf_counter() - setup_start
 
@@ -430,6 +450,13 @@ def run(args):
                 "reorder": bool(settings["reorder"]),
                 "hvp_eval_mode": str(getattr(assembler, "_hvp_eval_mode", "batched")),
                 "assembly_mode": str(args.assembly_mode),
+                "element_reorder_mode": (
+                    element_reorder_mode if use_element_assembly else None
+                ),
+                "distribution_strategy": str(
+                    getattr(assembler, "distribution_strategy", "reduced_free_dofs")
+                ),
+                "assembler": assembler.__class__.__name__,
             },
             "newton": {
                 "tolf": float(args.tolf),
