@@ -1,106 +1,92 @@
 """
-pLaplace-specific parallel Hessian assemblers.
+pLaplace-specific configuration for the generic JAX/PETSc assemblers.
 
-Thin subclasses of the generic assemblers from
-``tools_petsc4py.parallel_assembler``, providing the pLaplace energy
-function via ``_make_local_energy_fns()``.
-
-Usage
------
->>> from pLaplace2D_jax_petsc.parallel_hessian_dof import LocalColoringAssembler
->>> assembler = LocalColoringAssembler(params=params, comm=comm, adjacency=adj)
+Thin subclasses of the shared generic assemblers keep only the problem
+definition here: local energy kernels and problem metadata.
 """
 
-import numpy as np
+import jax
 import jax.numpy as jnp
+import numpy as np
 from jax import config
 
 config.update("jax_enable_x64", True)
 
-from tools_petsc4py.parallel_assembler import (  # noqa: E402
-    DOFHessianAssemblerBase,
-    LocalColoringAssemblerBase,
+from tools_petsc4py.jax_tools.parallel_assembler import (  # noqa: E402
+    JaxProblemSpec,
+    ProblemDOFHessianAssembler,
+    ProblemLocalColoringAssembler,
 )
 
 
-class _PLaplaceMixin:
-    """Mixin providing pLaplace energy function via _make_local_energy_fns().
-
-    Expects ``self._p`` to be set before ``_compile_jax()`` is called,
-    and ``self.part`` to have ``elems_local_np``, ``local_elem_data``
-    with keys "dvx", "dvy", "vol", and ``elem_weights``.
-    """
-
-    def _make_local_energy_fns(self):
-        """Return (energy_weighted, energy_full) for pLaplace."""
-        p = self._p
-        elems = jnp.array(self.part.elems_local_np, dtype=jnp.int32)
-        dvx = jnp.array(self.part.local_elem_data["dvx"], dtype=jnp.float64)
-        dvy = jnp.array(self.part.local_elem_data["dvy"], dtype=jnp.float64)
-        vol = jnp.array(self.part.local_elem_data["vol"], dtype=jnp.float64)
-        vol_w = jnp.array(
-            self.part.local_elem_data["vol"] * self.part.elem_weights,
-            dtype=jnp.float64,
-        )
-
-        def energy_weighted(v_local):
-            v_e = v_local[elems]
-            Fx = jnp.sum(v_e * dvx, axis=1)
-            Fy = jnp.sum(v_e * dvy, axis=1)
-            intgrds = (1.0 / p) * (Fx**2 + Fy**2) ** (p / 2.0)
-            return jnp.sum(intgrds * vol_w)
-
-        def energy_full(v_local):
-            v_e = v_local[elems]
-            Fx = jnp.sum(v_e * dvx, axis=1)
-            Fy = jnp.sum(v_e * dvy, axis=1)
-            intgrds = (1.0 / p) * (Fx**2 + Fy**2) ** (p / 2.0)
-            return jnp.sum(intgrds * vol)
-
-        return energy_weighted, energy_full
+def _build_plaplace_state(params, options):
+    """Extract the p exponent for the shared generic layer."""
+    del options
+    return {"p": float(params["p"])}
 
 
-class ParallelDOFHessianAssembler(_PLaplaceMixin, DOFHessianAssemblerBase):
-    """pLaplace assembler with global multi-start coloring.
-
-    Accepts the pLaplace ``params`` dict for backward compatibility.
-    """
-
-    def __init__(
-        self,
-        params,
-        comm,
-        adjacency=None,
-        coloring_trials_per_rank=10,
-        ksp_rtol=1e-3,
-        ksp_type="cg",
-        pc_type="gamg",
-    ):
-        self._p = float(params["p"])
-        super().__init__(
-            freedofs=np.asarray(params["freedofs"]),
-            elems=np.asarray(params["elems"]),
-            u_0=np.asarray(params["u_0"]),
-            comm=comm,
-            adjacency=adjacency,
-            f=np.asarray(params["f"]),
-            elem_data={
-                "dvx": np.asarray(params["dvx"]),
-                "dvy": np.asarray(params["dvy"]),
-                "vol": np.asarray(params["vol"]),
-            },
-            coloring_trials_per_rank=coloring_trials_per_rank,
-            ksp_rtol=ksp_rtol,
-            ksp_type=ksp_type,
-            pc_type=pc_type,
-        )
+def _plaplace_integrand(v_e, dvx_e, dvy_e, p):
+    """Elementwise p-Laplace integrand."""
+    Fx = jnp.sum(v_e * dvx_e, axis=-1)
+    Fy = jnp.sum(v_e * dvy_e, axis=-1)
+    return (1.0 / p) * (Fx**2 + Fy**2) ** (p / 2.0)
 
 
-class LocalColoringAssembler(_PLaplaceMixin, LocalColoringAssemblerBase):
-    """pLaplace assembler with per-rank local coloring + vmap.
+def _make_plaplace_local_energy_fns(part, state):
+    """Return weighted/full local energy closures for the generic assembler."""
+    p = state["p"]
+    elems = jnp.array(part.elems_local_np, dtype=jnp.int32)
+    dvx = jnp.array(part.local_elem_data["dvx"], dtype=jnp.float64)
+    dvy = jnp.array(part.local_elem_data["dvy"], dtype=jnp.float64)
+    vol = jnp.array(part.local_elem_data["vol"], dtype=jnp.float64)
+    vol_w = jnp.array(part.local_elem_data["vol"] * part.elem_weights, dtype=jnp.float64)
 
-    Accepts the pLaplace ``params`` dict for backward compatibility.
-    """
+    def energy_weighted(v_local):
+        v_e = v_local[elems]
+        return jnp.sum(_plaplace_integrand(v_e, dvx, dvy, p) * vol_w)
+
+    def energy_full(v_local):
+        v_e = v_local[elems]
+        return jnp.sum(_plaplace_integrand(v_e, dvx, dvy, p) * vol)
+
+    return energy_weighted, energy_full
+
+
+def _make_plaplace_element_hessian_jit(part, state):
+    """Return a JIT-compiled exact per-element Hessian operator."""
+    p = state["p"]
+
+    dvx_jnp = jnp.array(part.local_elem_data["dvx"], dtype=jnp.float64)
+    dvy_jnp = jnp.array(part.local_elem_data["dvy"], dtype=jnp.float64)
+    vol_jnp = jnp.array(part.local_elem_data["vol"], dtype=jnp.float64)
+    elems_jnp = jnp.array(part.elems_local_np, dtype=jnp.int32)
+
+    def element_energy(v_e, dvx_e, dvy_e, vol_e):
+        return _plaplace_integrand(v_e, dvx_e, dvy_e, p) * vol_e
+
+    vmapped_hess = jax.vmap(jax.hessian(element_energy), in_axes=(0, 0, 0, 0))
+
+    @jax.jit
+    def compute_elem_hessians(v_local):
+        v_e = v_local[elems_jnp]
+        return vmapped_hess(v_e, dvx_jnp, dvy_jnp, vol_jnp)
+
+    return compute_elem_hessians
+
+
+PLAPLACE_PROBLEM_SPEC = JaxProblemSpec(
+    elem_data_keys=("dvx", "dvy", "vol"),
+    make_local_energy_fns=_make_plaplace_local_energy_fns,
+    make_element_hessian_jit=_make_plaplace_element_hessian_jit,
+    build_state=_build_plaplace_state,
+    rhs_key="f",
+)
+
+
+class ParallelDOFHessianAssembler(ProblemDOFHessianAssembler):
+    """pLaplace assembler with global multi-start coloring."""
+
+    problem_spec = PLAPLACE_PROBLEM_SPEC
 
     def __init__(
         self,
@@ -112,21 +98,40 @@ class LocalColoringAssembler(_PLaplaceMixin, LocalColoringAssemblerBase):
         ksp_type="cg",
         pc_type="gamg",
     ):
-        self._p = float(params["p"])
         super().__init__(
-            freedofs=np.asarray(params["freedofs"]),
-            elems=np.asarray(params["elems"]),
-            u_0=np.asarray(params["u_0"]),
+            params=params,
             comm=comm,
             adjacency=adjacency,
-            f=np.asarray(params["f"]),
-            elem_data={
-                "dvx": np.asarray(params["dvx"]),
-                "dvy": np.asarray(params["dvy"]),
-                "vol": np.asarray(params["vol"]),
-            },
             coloring_trials_per_rank=coloring_trials_per_rank,
             ksp_rtol=ksp_rtol,
             ksp_type=ksp_type,
             pc_type=pc_type,
+        )
+
+
+class LocalColoringAssembler(ProblemLocalColoringAssembler):
+    """pLaplace assembler with per-rank local coloring + vmap."""
+
+    problem_spec = PLAPLACE_PROBLEM_SPEC
+
+    def __init__(
+        self,
+        params,
+        comm,
+        adjacency=None,
+        coloring_trials_per_rank=10,
+        ksp_rtol=1e-3,
+        ksp_type="cg",
+        pc_type="gamg",
+        hvp_eval_mode="batched",
+    ):
+        super().__init__(
+            params=params,
+            comm=comm,
+            adjacency=adjacency,
+            coloring_trials_per_rank=coloring_trials_per_rank,
+            ksp_rtol=ksp_rtol,
+            ksp_type=ksp_type,
+            pc_type=pc_type,
+            hvp_eval_mode=hvp_eval_mode,
         )

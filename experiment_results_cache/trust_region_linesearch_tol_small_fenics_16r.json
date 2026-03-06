@@ -1,0 +1,585 @@
+{
+  "metadata": {
+    "nprocs": 16,
+    "cases": [
+      {
+        "name": "pl_ls_tol1e-2",
+        "problem": "pl",
+        "trust_region": false,
+        "ls_a": -0.5,
+        "ls_b": 2.0,
+        "ls_tol": 0.01,
+        "trust_radius_init": 1.0
+      },
+      {
+        "name": "pl_ls_tol1e-3",
+        "problem": "pl",
+        "trust_region": false,
+        "ls_a": -0.5,
+        "ls_b": 2.0,
+        "ls_tol": 0.001,
+        "trust_radius_init": 1.0
+      },
+      {
+        "name": "pl_ls_tol1e-4",
+        "problem": "pl",
+        "trust_region": false,
+        "ls_a": -0.5,
+        "ls_b": 2.0,
+        "ls_tol": 0.0001,
+        "trust_radius_init": 1.0
+      },
+      {
+        "name": "he_tr_best_tol1e-2",
+        "problem": "he",
+        "trust_region": true,
+        "ls_a": 0.0,
+        "ls_b": 1.0,
+        "ls_tol": 0.01,
+        "trust_radius_init": 0.2
+      },
+      {
+        "name": "he_tr_best_tol1e-3",
+        "problem": "he",
+        "trust_region": true,
+        "ls_a": 0.0,
+        "ls_b": 1.0,
+        "ls_tol": 0.001,
+        "trust_radius_init": 0.2
+      },
+      {
+        "name": "he_tr_best_tol1e-4",
+        "problem": "he",
+        "trust_region": true,
+        "ls_a": 0.0,
+        "ls_b": 1.0,
+        "ls_tol": 0.0001,
+        "trust_radius_init": 0.2
+      }
+    ]
+  },
+  "results": {
+    "pl_ls_tol1e-2": {
+      "mesh_level": 7,
+      "total_dofs": 49665,
+      "dofs": 49665,
+      "nprocs": 16,
+      "pc_type": "hypre",
+      "ksp_rtol": 0.001,
+      "assembly_mode": "fenics",
+      "setup_time": 0.0133,
+      "solve_time": 0.2029,
+      "total_time": 0.2162,
+      "iters": 6,
+      "energy": -7.958292416,
+      "message": "Energy change converged",
+      "total_ksp_its": 18,
+      "asm_time_cumulative": 0.0081,
+      "pc_setup_time_cumulative": 0.1104,
+      "linear_solve_time_cumulative": 0.047,
+      "ksp_time_cumulative": 0.1574,
+      "hess_timings": [
+        {
+          "assembly": 0.001637199000469991,
+          "setop": 2.524800038372632e-05,
+          "pc_setup": 0.020047479000822932,
+          "solve": 0.008111926000310632,
+          "ksp": 0.028159405001133564,
+          "ksp_its": 3,
+          "total": 0.02982185200198728
+        },
+        {
+          "assembly": 0.0013114679995851475,
+          "setop": 1.3019998732488602e-06,
+          "pc_setup": 0.018779545999677794,
+          "solve": 0.008337004999702913,
+          "ksp": 0.027116550999380706,
+          "ksp_its": 3,
+          "total": 0.028429320998839103
+        },
+        {
+          "assembly": 0.0013232459996288526,
+          "setop": 1.0809999366756529e-06,
+          "pc_setup": 0.01719401399986964,
+          "solve": 0.0074180000001433655,
+          "ksp": 0.024612014000013005,
+          "ksp_its": 3,
+          "total": 0.025936340999578533
+        },
+        {
+          "assembly": 0.00128221399972972,
+          "setop": 8.719998731976375e-07,
+          "pc_setup": 0.01802345600026456,
+          "solve": 0.007684211000196228,
+          "ksp": 0.025707667000460788,
+          "ksp_its": 3,
+          "total": 0.026990753000063705
+        },
+        {
+          "assembly": 0.001282144000469998,
+          "setop": 8.92000571184326e-07,
+          "pc_setup": 0.01814175400068052,
+          "solve": 0.007729078999545891,
+          "ksp": 0.025870833000226412,
+          "ksp_its": 3,
+          "total": 0.027153869001267594
+        },
+        {
+          "assembly": 0.0012807319999410538,
+          "setop": 7.810003808117472e-07,
+          "pc_setup": 0.018194344000221463,
+          "solve": 0.007722739000200818,
+          "ksp": 0.02591708300042228,
+          "ksp_its": 3,
+          "total": 0.027198596000744146
+        }
+      ]
+    },
+    "pl_ls_tol1e-3": {
+      "mesh_level": 7,
+      "total_dofs": 49665,
+      "dofs": 49665,
+      "nprocs": 16,
+      "pc_type": "hypre",
+      "ksp_rtol": 0.001,
+      "assembly_mode": "fenics",
+      "setup_time": 0.0131,
+      "solve_time": 0.2183,
+      "total_time": 0.2314,
+      "iters": 6,
+      "energy": -7.958292416,
+      "message": "Energy change converged",
+      "total_ksp_its": 18,
+      "asm_time_cumulative": 0.0079,
+      "pc_setup_time_cumulative": 0.1129,
+      "linear_solve_time_cumulative": 0.048,
+      "ksp_time_cumulative": 0.1609,
+      "hess_timings": [
+        {
+          "assembly": 0.0016192920002140454,
+          "setop": 1.931000042532105e-05,
+          "pc_setup": 0.019948629999817058,
+          "solve": 0.008110683000268182,
+          "ksp": 0.02805931300008524,
+          "ksp_its": 3,
+          "total": 0.029697915000724606
+        },
+        {
+          "assembly": 0.0012947830000484828,
+          "setop": 1.692999830993358e-06,
+          "pc_setup": 0.019525962000443542,
+          "solve": 0.008486421000270639,
+          "ksp": 0.02801238300071418,
+          "ksp_its": 3,
+          "total": 0.029308859000593657
+        },
+        {
+          "assembly": 0.0012528990000646445,
+          "setop": 9.710001904750243e-07,
+          "pc_setup": 0.018768990999888047,
+          "solve": 0.008064845000262721,
+          "ksp": 0.026833836000150768,
+          "ksp_its": 3,
+          "total": 0.028087706000405888
+        },
+        {
+          "assembly": 0.0012471009995351778,
+          "setop": 7.509997885790654e-07,
+          "pc_setup": 0.018600176000290958,
+          "solve": 0.007849810000152502,
+          "ksp": 0.02644998600044346,
+          "ksp_its": 3,
+          "total": 0.027697837999767216
+        },
+        {
+          "assembly": 0.0012611829997695168,
+          "setop": 1.0310004654456861e-06,
+          "pc_setup": 0.01854397099941707,
+          "solve": 0.007874408000134281,
+          "ksp": 0.02641837899955135,
+          "ksp_its": 3,
+          "total": 0.027680592999786313
+        },
+        {
+          "assembly": 0.00125201900027605,
+          "setop": 8.709994290256873e-07,
+          "pc_setup": 0.017491263000010804,
+          "solve": 0.007598952000080317,
+          "ksp": 0.02509021500009112,
+          "ksp_its": 3,
+          "total": 0.026343104999796196
+        }
+      ]
+    },
+    "pl_ls_tol1e-4": {
+      "mesh_level": 7,
+      "total_dofs": 49665,
+      "dofs": 49665,
+      "nprocs": 16,
+      "pc_type": "hypre",
+      "ksp_rtol": 0.001,
+      "assembly_mode": "fenics",
+      "setup_time": 0.0133,
+      "solve_time": 0.2414,
+      "total_time": 0.2547,
+      "iters": 6,
+      "energy": -7.958292416,
+      "message": "Energy change converged",
+      "total_ksp_its": 18,
+      "asm_time_cumulative": 0.0083,
+      "pc_setup_time_cumulative": 0.1116,
+      "linear_solve_time_cumulative": 0.0473,
+      "ksp_time_cumulative": 0.1589,
+      "hess_timings": [
+        {
+          "assembly": 0.0016129330006151577,
+          "setop": 7.241000275826082e-06,
+          "pc_setup": 0.019971124000221607,
+          "solve": 0.008095260999652965,
+          "ksp": 0.028066384999874572,
+          "ksp_its": 3,
+          "total": 0.029686559000765556
+        },
+        {
+          "assembly": 0.0013814229996569338,
+          "setop": 1.3419994502328336e-06,
+          "pc_setup": 0.018825905999619863,
+          "solve": 0.008291336000183946,
+          "ksp": 0.02711724199980381,
+          "ksp_its": 3,
+          "total": 0.028500006998910976
+        },
+        {
+          "assembly": 0.0013663910003742785,
+          "setop": 1.0809999366756529e-06,
+          "pc_setup": 0.018624313000145776,
+          "solve": 0.008032957000068564,
+          "ksp": 0.02665727000021434,
+          "ksp_its": 3,
+          "total": 0.028024742000525293
+        },
+        {
+          "assembly": 0.0013468020006257575,
+          "setop": 9.310006134910509e-07,
+          "pc_setup": 0.017538615000376012,
+          "solve": 0.007298368999727245,
+          "ksp": 0.024836984000103257,
+          "ksp_its": 3,
+          "total": 0.026184717001342506
+        },
+        {
+          "assembly": 0.0012693549997493392,
+          "setop": 1.0119993021362461e-06,
+          "pc_setup": 0.01832750399989891,
+          "solve": 0.007815167999979167,
+          "ksp": 0.026142671999878075,
+          "ksp_its": 3,
+          "total": 0.02741303899892955
+        },
+        {
+          "assembly": 0.0013450090000333148,
+          "setop": 1.3819999367115088e-06,
+          "pc_setup": 0.018314455000108865,
+          "solve": 0.0077737760002492,
+          "ksp": 0.026088231000358064,
+          "ksp_its": 3,
+          "total": 0.02743462200032809
+        }
+      ]
+    },
+    "he_tr_best_tol1e-2": {
+      "mesh_level": 2,
+      "total_dofs": 12075,
+      "setup_time": 0.031371,
+      "solve_time_total": 0.1526,
+      "total_time": 0.184434,
+      "steps": [
+        {
+          "step": 1,
+          "angle": 0.2617993877991494,
+          "time": 0.1526,
+          "iters": 9,
+          "energy": 0.012669,
+          "message": "Converged (energy, step, gradient)",
+          "attempt": "primary",
+          "ksp_rtol_used": 0.001,
+          "ksp_max_it_used": 10000,
+          "linesearch_interval_used": [
+            0.0,
+            1.0
+          ],
+          "linear_timing": [
+            {
+              "assemble_time": 0.002403,
+              "setop_time": 9e-06,
+              "pc_setup_time": 0.023269,
+              "solve_time": 0.00273,
+              "ksp_its": 8,
+              "linear_total_time": 0.02841
+            },
+            {
+              "assemble_time": 0.00213,
+              "setop_time": 1e-06,
+              "pc_setup_time": 0.003741,
+              "solve_time": 0.002688,
+              "ksp_its": 9,
+              "linear_total_time": 0.008561
+            },
+            {
+              "assemble_time": 0.00212,
+              "setop_time": 1e-06,
+              "pc_setup_time": 0.003492,
+              "solve_time": 0.005965,
+              "ksp_its": 21,
+              "linear_total_time": 0.011578
+            },
+            {
+              "assemble_time": 0.002039,
+              "setop_time": 1e-06,
+              "pc_setup_time": 0.003497,
+              "solve_time": 0.004778,
+              "ksp_its": 17,
+              "linear_total_time": 0.010314
+            },
+            {
+              "assemble_time": 0.001992,
+              "setop_time": 1e-06,
+              "pc_setup_time": 0.003481,
+              "solve_time": 0.007462,
+              "ksp_its": 27,
+              "linear_total_time": 0.012936
+            },
+            {
+              "assemble_time": 0.002001,
+              "setop_time": 1e-06,
+              "pc_setup_time": 0.003439,
+              "solve_time": 0.00638,
+              "ksp_its": 23,
+              "linear_total_time": 0.011821
+            },
+            {
+              "assemble_time": 0.002,
+              "setop_time": 1e-06,
+              "pc_setup_time": 0.003451,
+              "solve_time": 0.006645,
+              "ksp_its": 24,
+              "linear_total_time": 0.012097
+            },
+            {
+              "assemble_time": 0.001999,
+              "setop_time": 1e-06,
+              "pc_setup_time": 0.003452,
+              "solve_time": 0.006891,
+              "ksp_its": 25,
+              "linear_total_time": 0.012342
+            },
+            {
+              "assemble_time": 0.002014,
+              "setop_time": 1e-06,
+              "pc_setup_time": 0.003461,
+              "solve_time": 0.007986,
+              "ksp_its": 29,
+              "linear_total_time": 0.013462
+            }
+          ]
+        }
+      ]
+    },
+    "he_tr_best_tol1e-3": {
+      "mesh_level": 2,
+      "total_dofs": 12075,
+      "setup_time": 0.03131,
+      "solve_time_total": 0.1535,
+      "total_time": 0.185279,
+      "steps": [
+        {
+          "step": 1,
+          "angle": 0.2617993877991494,
+          "time": 0.1535,
+          "iters": 9,
+          "energy": 0.012669,
+          "message": "Converged (energy, step, gradient)",
+          "attempt": "primary",
+          "ksp_rtol_used": 0.001,
+          "ksp_max_it_used": 10000,
+          "linesearch_interval_used": [
+            0.0,
+            1.0
+          ],
+          "linear_timing": [
+            {
+              "assemble_time": 0.002416,
+              "setop_time": 6e-06,
+              "pc_setup_time": 0.023264,
+              "solve_time": 0.002773,
+              "ksp_its": 8,
+              "linear_total_time": 0.02846
+            },
+            {
+              "assemble_time": 0.002133,
+              "setop_time": 1e-06,
+              "pc_setup_time": 0.003743,
+              "solve_time": 0.002694,
+              "ksp_its": 9,
+              "linear_total_time": 0.008571
+            },
+            {
+              "assemble_time": 0.002106,
+              "setop_time": 1e-06,
+              "pc_setup_time": 0.003448,
+              "solve_time": 0.006025,
+              "ksp_its": 21,
+              "linear_total_time": 0.01158
+            },
+            {
+              "assemble_time": 0.002012,
+              "setop_time": 1e-06,
+              "pc_setup_time": 0.003486,
+              "solve_time": 0.004787,
+              "ksp_its": 17,
+              "linear_total_time": 0.010286
+            },
+            {
+              "assemble_time": 0.001999,
+              "setop_time": 1e-06,
+              "pc_setup_time": 0.003472,
+              "solve_time": 0.007489,
+              "ksp_its": 27,
+              "linear_total_time": 0.012961
+            },
+            {
+              "assemble_time": 0.001998,
+              "setop_time": 1e-06,
+              "pc_setup_time": 0.003433,
+              "solve_time": 0.006393,
+              "ksp_its": 23,
+              "linear_total_time": 0.011825
+            },
+            {
+              "assemble_time": 0.002011,
+              "setop_time": 1e-06,
+              "pc_setup_time": 0.003464,
+              "solve_time": 0.006685,
+              "ksp_its": 24,
+              "linear_total_time": 0.012161
+            },
+            {
+              "assemble_time": 0.002006,
+              "setop_time": 1e-06,
+              "pc_setup_time": 0.00345,
+              "solve_time": 0.007051,
+              "ksp_its": 25,
+              "linear_total_time": 0.012507
+            },
+            {
+              "assemble_time": 0.002011,
+              "setop_time": 1e-06,
+              "pc_setup_time": 0.003421,
+              "solve_time": 0.008284,
+              "ksp_its": 29,
+              "linear_total_time": 0.013716
+            }
+          ]
+        }
+      ]
+    },
+    "he_tr_best_tol1e-4": {
+      "mesh_level": 2,
+      "total_dofs": 12075,
+      "setup_time": 0.031674,
+      "solve_time_total": 0.1539,
+      "total_time": 0.186055,
+      "steps": [
+        {
+          "step": 1,
+          "angle": 0.2617993877991494,
+          "time": 0.1539,
+          "iters": 9,
+          "energy": 0.012669,
+          "message": "Converged (energy, step, gradient)",
+          "attempt": "primary",
+          "ksp_rtol_used": 0.001,
+          "ksp_max_it_used": 10000,
+          "linesearch_interval_used": [
+            0.0,
+            1.0
+          ],
+          "linear_timing": [
+            {
+              "assemble_time": 0.002445,
+              "setop_time": 8e-06,
+              "pc_setup_time": 0.023373,
+              "solve_time": 0.002819,
+              "ksp_its": 8,
+              "linear_total_time": 0.028644
+            },
+            {
+              "assemble_time": 0.002159,
+              "setop_time": 1e-06,
+              "pc_setup_time": 0.00379,
+              "solve_time": 0.002754,
+              "ksp_its": 9,
+              "linear_total_time": 0.008703
+            },
+            {
+              "assemble_time": 0.002145,
+              "setop_time": 1e-06,
+              "pc_setup_time": 0.003509,
+              "solve_time": 0.006194,
+              "ksp_its": 21,
+              "linear_total_time": 0.011849
+            },
+            {
+              "assemble_time": 0.002072,
+              "setop_time": 1e-06,
+              "pc_setup_time": 0.003512,
+              "solve_time": 0.004844,
+              "ksp_its": 17,
+              "linear_total_time": 0.010429
+            },
+            {
+              "assemble_time": 0.002043,
+              "setop_time": 1e-06,
+              "pc_setup_time": 0.003505,
+              "solve_time": 0.007483,
+              "ksp_its": 27,
+              "linear_total_time": 0.013032
+            },
+            {
+              "assemble_time": 0.002036,
+              "setop_time": 1e-06,
+              "pc_setup_time": 0.003498,
+              "solve_time": 0.006389,
+              "ksp_its": 23,
+              "linear_total_time": 0.011924
+            },
+            {
+              "assemble_time": 0.002031,
+              "setop_time": 1e-06,
+              "pc_setup_time": 0.003464,
+              "solve_time": 0.006646,
+              "ksp_its": 24,
+              "linear_total_time": 0.012142
+            },
+            {
+              "assemble_time": 0.002055,
+              "setop_time": 1e-06,
+              "pc_setup_time": 0.003483,
+              "solve_time": 0.006914,
+              "ksp_its": 25,
+              "linear_total_time": 0.012453
+            },
+            {
+              "assemble_time": 0.002032,
+              "setop_time": 1e-06,
+              "pc_setup_time": 0.00349,
+              "solve_time": 0.008031,
+              "ksp_its": 29,
+              "linear_total_time": 0.013554
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

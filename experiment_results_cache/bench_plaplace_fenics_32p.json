@@ -1,0 +1,107 @@
+{
+  "metadata": {
+    "solver": "custom_jaxversion",
+    "description": "Custom Newton (JAX-version algorithm): golden-section line search [-0.5, 2], CG + GAMG AMG",
+    "dolfinx_version": "0.10.0.post5",
+    "nprocs": 32,
+    "linear_solver": {
+      "ksp_type": "cg",
+      "pc_type": "gamg",
+      "ksp_rtol": 0.001
+    },
+    "newton_params": {
+      "tolf": 1e-05,
+      "tolg": 0.001,
+      "linesearch_interval": [
+        -0.5,
+        2.0
+      ],
+      "linesearch_tol": 0.001,
+      "maxit": 100
+    },
+    "p": 3,
+    "rhs_f": -10.0
+  },
+  "results": [
+    {
+      "mesh_level": 9,
+      "total_dofs": 788481,
+      "dofs": 788481,
+      "nprocs": 32,
+      "pc_type": "gamg",
+      "ksp_rtol": 0.001,
+      "assembly_mode": "fenics",
+      "setup_time": 0.0222,
+      "solve_time": 1.2928,
+      "total_time": 1.315,
+      "iters": 10,
+      "energy": -7.9996311756,
+      "message": "Energy change converged",
+      "total_ksp_its": 75,
+      "asm_time_cumulative": 0.1202,
+      "ksp_time_cumulative": 0.5245,
+      "hess_timings": [
+        {
+          "assembly": 0.01190272999519948,
+          "ksp": 0.10762704000808299,
+          "ksp_its": 7,
+          "total": 0.11952977000328247
+        },
+        {
+          "assembly": 0.010572055005468428,
+          "ksp": 0.03228153599775396,
+          "ksp_its": 8,
+          "total": 0.04285359100322239
+        },
+        {
+          "assembly": 0.011318911012494937,
+          "ksp": 0.02698018599767238,
+          "ksp_its": 7,
+          "total": 0.038299097010167316
+        },
+        {
+          "assembly": 0.011298819998046383,
+          "ksp": 0.02928066199820023,
+          "ksp_its": 8,
+          "total": 0.040579481996246614
+        },
+        {
+          "assembly": 0.011058467993279919,
+          "ksp": 0.028862502993433736,
+          "ksp_its": 8,
+          "total": 0.039920970986713655
+        },
+        {
+          "assembly": 0.011261253006523475,
+          "ksp": 0.028982674004510045,
+          "ksp_its": 8,
+          "total": 0.04024392701103352
+        },
+        {
+          "assembly": 0.010723692990723066,
+          "ksp": 0.0337634600000456,
+          "ksp_its": 8,
+          "total": 0.044487152990768664
+        },
+        {
+          "assembly": 0.01480037800502032,
+          "ksp": 0.05030735500622541,
+          "ksp_its": 7,
+          "total": 0.06510773301124573
+        },
+        {
+          "assembly": 0.01085955799499061,
+          "ksp": 0.0338609659957001,
+          "ksp_its": 7,
+          "total": 0.04472052399069071
+        },
+        {
+          "assembly": 0.0164468689908972,
+          "ksp": 0.15256140699784737,
+          "ksp_its": 7,
+          "total": 0.16900827598874457
+        }
+      ]
+    }
+  ]
+}

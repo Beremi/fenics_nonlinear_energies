@@ -2,6 +2,21 @@
 
 This document describes the current `HyperElasticity3D_jax_petsc/` implementation, how it mirrors the `pLaplace2D_jax_petsc/` design, and what is currently limiting performance.
 
+## Current Layout Note
+
+The repo has since been refactored away from the original single-file layout.
+
+Current structure:
+
+- CLI wrapper: `HyperElasticity3D_jax_petsc/solve_HE_dof.py`
+- solver logic: `HyperElasticity3D_jax_petsc/solver.py`
+- problem-specific assembler glue: `HyperElasticity3D_jax_petsc/parallel_hessian_dof.py`
+- shared mesh / boundary helpers: `HyperElasticity3D_petsc_support/`
+- shared JAX+PETSc assembler infrastructure: `tools_petsc4py/jax_tools/parallel_assembler.py`
+
+Where this note refers to the older `mesh.py` / `rotate_boundary.py` layout, read that as the
+current support-package split above.
+
 ## 1. Scope and Goal
 
 The solver is a thin MPI-parallel JAX+PETSc implementation intended to reproduce the **custom FEniCS Newton behavior** (not SNES behavior) for HyperElasticity 3D.
@@ -16,15 +31,18 @@ Main targets:
 
 Implemented package:
 - `HyperElasticity3D_jax_petsc/__init__.py`
-- `HyperElasticity3D_jax_petsc/mesh.py`
-- `HyperElasticity3D_jax_petsc/rotate_boundary.py`
 - `HyperElasticity3D_jax_petsc/parallel_hessian_dof.py`
 - `HyperElasticity3D_jax_petsc/solve_HE_dof.py`
+- `HyperElasticity3D_jax_petsc/solver.py`
+- `HyperElasticity3D_petsc_support/mesh.py`
+- `HyperElasticity3D_petsc_support/rotate_boundary.py`
+- `HyperElasticity3D_petsc_support/__init__.py`
 
 Reused shared infrastructure:
 - `tools_petsc4py/dof_partition.py`
-- `tools_petsc4py/parallel_assembler.py`
+- `tools_petsc4py/jax_tools/parallel_assembler.py`
 - `tools_petsc4py/minimizers.py`
+- `tools_petsc4py/jax_tools/__init__.py`
 
 Reference implementation mirrored:
 - `pLaplace2D_jax_petsc/parallel_hessian_dof.py`
@@ -34,7 +52,8 @@ Reference implementation mirrored:
 
 HyperElasticity mesh is node-based, but `DOFPartition` and assemblers operate in flat DOF space.
 
-In `mesh.py`, each tet connectivity is expanded from scalar-node to DOF connectivity:
+In `HyperElasticity3D_petsc_support/mesh.py`, each tet connectivity is expanded from scalar-node
+to DOF connectivity:
 - scalar: `[n0, n1, n2, n3]`
 - dof: `[3*n0, 3*n0+1, 3*n0+2, ..., 3*n3+2]` (12 entries)
 
@@ -95,7 +114,7 @@ table must therefore be built from the original adjacency arrays (`_row_adj`, `_
 
 ## 6. Nonlinear Solver Parity (Custom FEniCS)
 
-`solve_HE_dof.py` uses `tools_petsc4py.minimizers.newton()` with:
+`HyperElasticity3D_jax_petsc/solver.py` uses `tools_petsc4py.minimizers.newton()` with:
 - `tolf=1e-4`
 - `tolg=1e-3`
 - `tolg_rel=1e-3`
@@ -105,6 +124,12 @@ table must therefore be built from the original adjacency arrays (`_row_adj`, `_
 - `require_all_convergence=True`
 - `fail_on_nonfinite=True`
 - line search interval `(-0.5, 2.0)`, tolerance `1e-3`
+
+Optional trust-region path:
+
+- enabled via `use_trust_region=True`
+- current practical tuning depends strongly on problem size
+- see `TRUST_REGION_LINESEARCH_TUNING.md` for tested settings and current recommendations
 
 Load-step retry policy:
 - on non-finite or max-iteration stall, retry once with:
@@ -198,4 +223,3 @@ The `solve_HE_dof.py` entrypoint includes advanced flags geared toward peak high
 - `--assembly_mode element`: (Recommended). Configures JAX to evaluate exact analytical block Hessians evaluating via `@jax.jit(jax.vmap(compute_elem_hessians))`. Cuts matrix assembly latency by >50% compared to typical `sfd` computation.
 - `--retry_on_failure`: Wraps the Newton solver in a robust fallback loop. Highly recommended for severe twisting boundaries. If gradients or line searches explode, dynamically expands line search alpha boundaries `[-0.5, 2.0]` and tightens KSP rules safely recovering from what would otherwise be a mathematical termination.
 - `--pc_setup_on_ksp_cap`: Retains the exact GAMG multigrid state over numerous KSP evaluations dropping latency greatly, only strictly rebuilding if the inner loop limits run out continuously.
-

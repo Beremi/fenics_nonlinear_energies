@@ -69,6 +69,16 @@ FEniCS solvers use:
 The **Custom Newton** uses a golden-section energy line search (`tools_petsc4py/minimizers.py`) and
 `--pc_setup_on_ksp_cap` to reuse the AMG preconditioner across Newton steps.
 
+Current practical tuning notes:
+
+- large HE cases strongly prefer a forward-only line-search interval `[0, 1]`
+- if the optional trust-region path is enabled, large-case HE currently works best with
+  `trust_radius_init` around `0.5` to `1.0`
+- small-case and large-case trust-region settings are not the same
+
+See [TRUST_REGION_LINESEARCH_TUNING.md](TRUST_REGION_LINESEARCH_TUNING.md) for the current tested
+settings and large-case sweep results.
+
 Recent update: the PETSc minimizer was hardened against false convergence / NaN propagation.
 The HE path now uses a 3-part nonlinear stop criterion (energy + step + gradient), non-finite
 rollback checks, and per-step repair retries with tighter linear settings on failure.
@@ -304,6 +314,23 @@ FEniCS solvers require **DOLFINx >= 0.10** with PETSc. JAX solvers require **JAX
 │   ├── jax_energy.py, mesh.py         #   Energy + mesh loader
 │   └── rotate_boundary.py             #   Boundary rotation utility
 │
+├── HyperElasticity3D_jax_petsc/       # JAX + PETSc Hyperelasticity solver
+│   ├── parallel_hessian_dof.py        #   Problem-specific assembler glue
+│   ├── solver.py                      #   Solver logic
+│   └── solve_HE_dof.py                #   CLI wrapper
+│
+├── HyperElasticity3D_petsc_support/   # Shared HE mesh / BC helpers
+│   ├── mesh.py                        #   PETSc-compatible HE mesh loader
+│   └── rotate_boundary.py             #   Boundary rotation utility
+│
+├── pLaplace2D_jax_petsc/              # JAX + PETSc p-Laplace solver
+│   ├── parallel_hessian_dof.py        #   Problem-specific assembler glue
+│   ├── solver.py                      #   Solver logic
+│   └── solve_pLaplace_dof.py          #   CLI wrapper
+│
+├── pLaplace2D_petsc_support/          # Shared p-Laplace PETSc support
+│   └── mesh.py                        #   PETSc-compatible p-Laplace mesh loader
+│
 ├── tools/                             # Shared JAX utilities
 │   ├── jax_diff.py                    #   Auto-diff + sparse Hessian assembly
 │   ├── minimizers.py                  #   Newton solver with line search
@@ -311,6 +338,8 @@ FEniCS solvers require **DOLFINx >= 0.10** with PETSc. JAX solvers require **JAX
 │   └── graph_sfd.py                   #   Graph coloring for sparse finite differences
 │
 ├── tools_petsc4py/                    # Shared PETSc Newton utilities
+│   ├── fenics_tools/                  #   FEniCS-side helpers
+│   ├── jax_tools/                     #   Shared JAX + PETSc assembler layer
 │   └── minimizers.py                  #   Newton solver (PETSc Vec interface)
 │
 ├── results/                           # p-Laplace experiment results + processing scripts

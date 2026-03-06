@@ -1,5 +1,20 @@
 # HyperElasticity 3D — JAX + PETSc Implementation Prompt
 
+## Current Repo Note
+
+This prompt describes the original implementation plan. The codebase has since been refactored.
+
+Current locations:
+
+- CLI wrapper: `HyperElasticity3D_jax_petsc/solve_HE_dof.py`
+- solver logic: `HyperElasticity3D_jax_petsc/solver.py`
+- problem-specific assembler glue: `HyperElasticity3D_jax_petsc/parallel_hessian_dof.py`
+- shared mesh / BC helpers: `HyperElasticity3D_petsc_support/`
+- shared JAX assembler infrastructure: `tools_petsc4py/jax_tools/parallel_assembler.py`
+
+For current solver-parameter behavior, especially the optional trust-region path, see
+`TRUST_REGION_LINESEARCH_TUNING.md`.
+
 ## Goal
 
 Create `HyperElasticity3D_jax_petsc/` — a MPI-parallel solver for 3D
@@ -11,12 +26,13 @@ thin problem-specific subclasses + a CLI solver script.
 
 ## Architecture (already implemented — just reuse)
 
-The generic infrastructure lives in `tools_petsc4py/`:
+The generic infrastructure now lives across `tools_petsc4py/` and
+`tools_petsc4py/jax_tools/`:
 
 | File                                   | Purpose                                                                                                                                                                    |
 | -------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `tools_petsc4py/dof_partition.py`      | `DOFPartition` — RCM reordering, PETSc block ownership, P2P ghost exchange, element weight assignment, `update_dirichlet()`                                                |
-| `tools_petsc4py/parallel_assembler.py` | `DOFHessianAssemblerBase` (global coloring) and `LocalColoringAssemblerBase` (local coloring + vmap) — abstract base classes requiring `_make_local_energy_fns()` override |
+| `tools_petsc4py/jax_tools/parallel_assembler.py` | `DOFHessianAssemblerBase` (global coloring) and `LocalColoringAssemblerBase` (local coloring + vmap) plus generic problem-spec wrappers |
 | `tools_petsc4py/minimizers.py`         | `newton()` — golden-section line search, compatible callbacks                                                                                                              |
 
 The base assembler constructor already supports:
@@ -38,7 +54,7 @@ pLaplace2D_jax_petsc/
   solve_pLaplace_dof.py # CLI solver script
 ```
 
-For HyperElasticity, create:
+The original plan was to create:
 
 ```
 HyperElasticity3D_jax_petsc/
@@ -49,9 +65,29 @@ HyperElasticity3D_jax_petsc/
   solve_HE_dof.py            # CLI solver with load stepping
 ```
 
+Current refactored layout is:
+
+```
+HyperElasticity3D_jax_petsc/
+  __init__.py
+  parallel_hessian_dof.py
+  solver.py
+  solve_HE_dof.py
+
+HyperElasticity3D_petsc_support/
+  __init__.py
+  mesh.py
+  rotate_boundary.py
+```
+
 ---
 
-## Files to Create
+## Historical Implementation Sketch
+
+The sections below describe the original implementation plan. Read the file
+paths through the current layout above: the mesh and boundary helpers now live
+in `HyperElasticity3D_petsc_support/`, and the shared assembler lives in
+`tools_petsc4py/jax_tools/parallel_assembler.py`.
 
 ### 1. `HyperElasticity3D_jax_petsc/parallel_hessian_dof.py`
 
@@ -71,7 +107,7 @@ import jax.numpy as jnp
 from jax import config
 config.update("jax_enable_x64", True)
 
-from tools_petsc4py.parallel_assembler import (
+from tools_petsc4py.jax_tools.parallel_assembler import (
     DOFHessianAssemblerBase,
     LocalColoringAssemblerBase,
 )
@@ -188,7 +224,7 @@ class LocalColoringAssembler(_HyperElasticityMixin, LocalColoringAssemblerBase):
         )
 ```
 
-### 2. `HyperElasticity3D_jax_petsc/mesh.py`
+### 2. `HyperElasticity3D_petsc_support/mesh.py`
 
 Copy from `HyperElasticity3D_jax/mesh.py` with minimal changes.
 The `get_data_jax()` method returns `(params, adjacency, u_init)` — same
@@ -198,7 +234,7 @@ interface as pLaplace.
 - `elastic_kernel` — `(n_free, 6)` array of rigid body modes restricted to free DOFs
 - These become `near_nullspace_vecs` for the assembler (one column per mode)
 
-### 3. `HyperElasticity3D_jax_petsc/rotate_boundary.py`
+### 3. `HyperElasticity3D_petsc_support/rotate_boundary.py`
 
 Copy from `HyperElasticity3D_jax/rotate_boundary.py`. Use numpy instead of jax
 since this runs outside JAX:
@@ -435,19 +471,19 @@ H5 keys: `u0`, `dofsMinim`, `elems2nodes`, `dphix`, `dphiy`, `dphiz`,
 
 ### Already done (just import and use):
 - `tools_petsc4py.dof_partition.DOFPartition` — generic partitioning
-- `tools_petsc4py.parallel_assembler.LocalColoringAssemblerBase` — abstract base
-- `tools_petsc4py.parallel_assembler.DOFHessianAssemblerBase` — abstract base  
+- `tools_petsc4py.jax_tools.parallel_assembler.LocalColoringAssemblerBase` — abstract base
+- `tools_petsc4py.jax_tools.parallel_assembler.DOFHessianAssemblerBase` — abstract base
 - `tools_petsc4py.minimizers.newton` — Newton solver with line search
 - Near-nullspace support in `_setup_petsc`
 - `update_dirichlet()` in base assembler
 - `pc_options` dict support
 
-### To create:
+### Current implementation targets:
 1. `HyperElasticity3D_jax_petsc/__init__.py` — docstring
-2. `HyperElasticity3D_jax_petsc/mesh.py` — HDF5 mesh loader (adapt from `HyperElasticity3D_jax/mesh.py`)
-3. `HyperElasticity3D_jax_petsc/rotate_boundary.py` — numpy boundary rotation
+2. `HyperElasticity3D_petsc_support/mesh.py` — HDF5 mesh loader (adapt from `HyperElasticity3D_jax/mesh.py`)
+3. `HyperElasticity3D_petsc_support/rotate_boundary.py` — numpy boundary rotation
 4. `HyperElasticity3D_jax_petsc/parallel_hessian_dof.py` — thin subclasses (~110 lines)
-5. `HyperElasticity3D_jax_petsc/solve_HE_dof.py` — CLI solver with load stepping
+5. `HyperElasticity3D_jax_petsc/solver.py` / `solve_HE_dof.py` — solver logic + CLI wrapper
 
 The problem-specific code is ~300 lines total. All the heavy infrastructure
 (~1300 lines) is reused from `tools_petsc4py/`.

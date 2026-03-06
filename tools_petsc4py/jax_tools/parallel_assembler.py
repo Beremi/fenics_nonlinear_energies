@@ -20,6 +20,8 @@ problem-specific energy functions.
 """
 
 import time
+from collections.abc import Callable, Mapping
+from dataclasses import dataclass
 import numpy as np
 import jax
 import jax.numpy as jnp
@@ -28,6 +30,31 @@ from petsc4py import PETSc
 from jax import config
 
 config.update("jax_enable_x64", True)
+
+
+def _empty_problem_state(params, options):
+    """Default problem-state builder."""
+    del params, options
+    return {}
+
+
+@dataclass(frozen=True)
+class JaxProblemSpec:
+    """Problem-specific hooks for generic JAX/PETSc assemblers.
+
+    Only the energy kernels and optional problem metadata should vary per
+    problem. The distributed assembly, coloring, PETSc setup, and Newton
+    callback plumbing stay generic.
+    """
+
+    elem_data_keys: tuple[str, ...]
+    make_local_energy_fns: Callable[[object, Mapping[str, object]], tuple[Callable, Callable]]
+    make_element_hessian_jit: Callable[[object, Mapping[str, object]], Callable] | None = None
+    build_state: Callable[[Mapping[str, object], Mapping[str, object]], Mapping[str, object]] = _empty_problem_state
+    make_near_nullspace: Callable[[Mapping[str, object], Mapping[str, object]], list[np.ndarray] | None] | None = None
+    rhs_key: str | None = None
+    ownership_block_size: int = 1
+    default_reorder: bool = True
 
 
 class DOFHessianAssemblerBase:
@@ -611,8 +638,15 @@ class LocalColoringAssemblerBase(DOFHessianAssemblerBase):
     ``_make_local_energy_fns()``.
     """
 
+    def _make_element_hessian_jit(self):
+        """Return a JIT-compiled ``v_local -> (n_elem, npe, npe)`` Hessian."""
+        raise NotImplementedError(
+            "Subclass must implement _make_element_hessian_jit() to provide "
+            "problem-specific per-element Hessians."
+        )
+
     def _setup_coloring(self, comm, trials_per_rank):
-        """Per-rank local graph coloring on A²|_J (Variant B) — no broadcast.
+        """Per-rank local graph coloring on A²|_J (Variant B) - no broadcast.
 
         J = owned_DOFs ∪ N_A(owned_DOFs) in original free-DOF space.
         Each rank builds A|_J directly from its local element connectivity,
@@ -865,9 +899,287 @@ class LocalColoringAssemblerBase(DOFHessianAssemblerBase):
         self.iter_timings.append(timings)
         return timings
 
+    # ------------------------------------------------------------------
+    # Optional element-Hessian assembly (generic mapping, problem kernel only)
+    # ------------------------------------------------------------------
+
+    def setup_element_hessian(self):
+        """Prepare analytical element-Hessian assembly on top of the SFD COO pattern."""
+        t_setup_start = time.perf_counter()
+        part = self.part
+        comm = self.comm
+
+        self._elem_hessian_jit = self._make_element_hessian_jit()
+
+        lo, hi = part.lo, part.hi
+        freedofs_np = part.freedofs_np
+        iperm = part.iperm
+
+        total_to_freedof = np.full(part.n_total, -1, dtype=np.int64)
+        total_to_freedof[freedofs_np] = np.arange(part.n_free, dtype=np.int64)
+
+        elems_local = part.elems_local_np
+        n_elem = len(elems_local)
+
+        elems_total = part.local_to_total[elems_local]
+        elems_freedof = total_to_freedof[elems_total]
+        elems_reordered = np.where(
+            elems_freedof >= 0,
+            iperm[np.maximum(elems_freedof, 0)],
+            -1,
+        )
+
+        eff_rows_orig = iperm[self._row_adj]
+        eff_cols_orig = iperm[self._col_adj]
+        owned_mask_orig = (eff_rows_orig >= lo) & (eff_rows_orig < hi)
+        sfd_coo_rows = eff_rows_orig[owned_mask_orig].astype(np.int64)
+        sfd_coo_cols = eff_cols_orig[owned_mask_orig].astype(np.int64)
+        n_sfd_nnz = len(sfd_coo_rows)
+
+        n_global = part.n_free
+        sfd_keys = sfd_coo_rows * n_global + sfd_coo_cols
+        sfd_pos_map = {int(sfd_keys[k]): k for k in range(n_sfd_nnz)}
+
+        all_sfd_pos = []
+        all_scatter_e = []
+        all_scatter_i = []
+        all_scatter_j = []
+        n_dropped = 0
+
+        chunk_size = 10000
+        for start in range(0, n_elem, chunk_size):
+            end = min(start + chunk_size, n_elem)
+            chunk = elems_reordered[start:end]
+
+            row_all = chunk[:, :, None]
+            col_all = chunk[:, None, :]
+            row_valid = (row_all >= lo) & (row_all < hi)
+            col_valid = col_all >= 0
+            pair_valid = row_valid & col_valid
+
+            vi = np.where(pair_valid)
+            rows = chunk[vi[0], vi[1]]
+            cols = chunk[vi[0], vi[2]]
+            keys = rows.astype(np.int64) * n_global + cols.astype(np.int64)
+
+            for idx in range(len(keys)):
+                pos = sfd_pos_map.get(int(keys[idx]), -1)
+                if pos >= 0:
+                    all_sfd_pos.append(pos)
+                    all_scatter_e.append(int(vi[0][idx]) + start)
+                    all_scatter_i.append(int(vi[1][idx]))
+                    all_scatter_j.append(int(vi[2][idx]))
+                else:
+                    n_dropped += 1
+
+        n_dropped_total = comm.allreduce(n_dropped)
+        if n_dropped_total > 0 and comm.Get_rank() == 0:
+            print(
+                f"  WARNING: {n_dropped_total} element contributions not "
+                f"found in SFD COO pattern",
+                flush=True,
+            )
+
+        self._elem_to_sfd_pos = np.array(all_sfd_pos, dtype=np.int64)
+        self._elem_scatter_e = np.array(all_scatter_e, dtype=np.int64)
+        self._elem_scatter_i = np.array(all_scatter_i, dtype=np.int64)
+        self._elem_scatter_j = np.array(all_scatter_j, dtype=np.int64)
+        self._n_sfd_nnz = n_sfd_nnz
+
+        n_mapped = len(self._elem_to_sfd_pos)
+        if comm.Get_rank() == 0:
+            print(
+                f"  Element Hessian: {n_mapped} contributions -> "
+                f"{n_sfd_nnz} unique SFD COO entries",
+                flush=True,
+            )
+
+        t_jit0 = time.perf_counter()
+        v_dummy = jnp.zeros(part.n_local, dtype=jnp.float64)
+        _ = self._elem_hessian_jit(v_dummy).block_until_ready()
+        t_jit = time.perf_counter() - t_jit0
+
+        self._elem_hessian_setup_time = time.perf_counter() - t_setup_start
+        if comm.Get_rank() == 0:
+            print(
+                f"  Element Hessian setup: {self._elem_hessian_setup_time:.3f}s "
+                f"(JIT warmup: {t_jit:.3f}s)",
+                flush=True,
+            )
+
+    def assemble_hessian_element(self, u_owned):
+        """Assemble Hessian via exact per-element Hessians into the SFD matrix."""
+        timings = {}
+        t_total = time.perf_counter()
+
+        t0 = time.perf_counter()
+        v_local = self._get_v_local(u_owned)
+        timings["p2p_exchange"] = time.perf_counter() - t0
+
+        t0 = time.perf_counter()
+        elem_hess = self._elem_hessian_jit(v_local).block_until_ready()
+        timings["elem_hessian_compute"] = time.perf_counter() - t0
+
+        t0 = time.perf_counter()
+        elem_hess_np = np.asarray(elem_hess)
+        contrib = elem_hess_np[
+            self._elem_scatter_e, self._elem_scatter_i, self._elem_scatter_j
+        ]
+        owned_vals = np.zeros(self._n_sfd_nnz, dtype=np.float64)
+        np.add.at(owned_vals, self._elem_to_sfd_pos, contrib)
+        timings["scatter"] = time.perf_counter() - t0
+
+        t0 = time.perf_counter()
+        self.A.zeroEntries()
+        self.A.setValuesCOO(
+            owned_vals.astype(PETSc.ScalarType),
+            addv=PETSc.InsertMode.ADD_VALUES,
+        )
+        self.A.assemble()
+        timings["coo_assembly"] = time.perf_counter() - t0
+
+        timings["total"] = time.perf_counter() - t_total
+        timings["hvp_compute"] = timings["elem_hessian_compute"]
+        timings["n_hvps"] = 0
+        timings["assembly_mode"] = "element"
+        self.iter_timings.append(timings)
+        return timings
+
     def get_timing_report(self):
         """Return summary dict with local coloring info."""
         report = super().get_timing_report()
         report["coloring_method"] = "local_variant_B"
         report["n_J_dofs"] = len(self._J_dofs)
         return report
+
+
+class _ProblemAssemblerMixin:
+    """Shared adapter from a :class:`JaxProblemSpec` to the generic bases."""
+
+    problem_spec: JaxProblemSpec | None = None
+
+    def _get_problem_spec(self):
+        spec = self.problem_spec
+        if spec is None:
+            raise RuntimeError(
+                f"{type(self).__name__} must define a 'problem_spec' class attribute"
+            )
+        return spec
+
+    def _init_problem_state(self, params, problem_options):
+        spec = self._get_problem_spec()
+        options = dict(problem_options or {})
+        self._problem_state = dict(spec.build_state(params, options))
+        return spec
+
+    def _problem_rhs(self, params, spec):
+        if spec.rhs_key is None:
+            return None
+        return np.asarray(params[spec.rhs_key], dtype=np.float64)
+
+    def _problem_elem_data(self, params, spec):
+        return {
+            key: np.asarray(params[key], dtype=np.float64)
+            for key in spec.elem_data_keys
+        }
+
+    def _problem_near_nullspace(self, params, spec):
+        if spec.make_near_nullspace is None:
+            return None
+        return spec.make_near_nullspace(params, self._problem_state)
+
+    def _make_local_energy_fns(self):
+        spec = self._get_problem_spec()
+        return spec.make_local_energy_fns(self.part, self._problem_state)
+
+
+class ProblemDOFHessianAssembler(_ProblemAssemblerMixin, DOFHessianAssemblerBase):
+    """Generic global-coloring assembler driven by a :class:`JaxProblemSpec`."""
+
+    def __init__(
+        self,
+        params,
+        comm,
+        adjacency=None,
+        coloring_trials_per_rank=10,
+        ksp_rtol=1e-3,
+        ksp_type="cg",
+        pc_type="gamg",
+        ksp_max_it=None,
+        pc_options=None,
+        reorder=None,
+        problem_options=None,
+    ):
+        spec = self._init_problem_state(params, problem_options)
+        if reorder is None:
+            reorder = spec.default_reorder
+
+        super().__init__(
+            freedofs=np.asarray(params["freedofs"], dtype=np.int64),
+            elems=np.asarray(params["elems"], dtype=np.int64),
+            u_0=np.asarray(params["u_0"], dtype=np.float64),
+            comm=comm,
+            adjacency=adjacency,
+            f=self._problem_rhs(params, spec),
+            elem_data=self._problem_elem_data(params, spec),
+            coloring_trials_per_rank=coloring_trials_per_rank,
+            ksp_rtol=ksp_rtol,
+            ksp_type=ksp_type,
+            pc_type=pc_type,
+            ksp_max_it=ksp_max_it,
+            near_nullspace_vecs=self._problem_near_nullspace(params, spec),
+            pc_options=pc_options,
+            reorder=reorder,
+            ownership_block_size=spec.ownership_block_size,
+        )
+
+
+class ProblemLocalColoringAssembler(_ProblemAssemblerMixin, LocalColoringAssemblerBase):
+    """Generic local-coloring assembler driven by a :class:`JaxProblemSpec`."""
+
+    def __init__(
+        self,
+        params,
+        comm,
+        adjacency=None,
+        coloring_trials_per_rank=10,
+        ksp_rtol=1e-3,
+        ksp_type="cg",
+        pc_type="gamg",
+        ksp_max_it=None,
+        pc_options=None,
+        reorder=None,
+        hvp_eval_mode="batched",
+        problem_options=None,
+    ):
+        spec = self._init_problem_state(params, problem_options)
+        if reorder is None:
+            reorder = spec.default_reorder
+        self._hvp_eval_mode = str(hvp_eval_mode)
+
+        super().__init__(
+            freedofs=np.asarray(params["freedofs"], dtype=np.int64),
+            elems=np.asarray(params["elems"], dtype=np.int64),
+            u_0=np.asarray(params["u_0"], dtype=np.float64),
+            comm=comm,
+            adjacency=adjacency,
+            f=self._problem_rhs(params, spec),
+            elem_data=self._problem_elem_data(params, spec),
+            coloring_trials_per_rank=coloring_trials_per_rank,
+            ksp_rtol=ksp_rtol,
+            ksp_type=ksp_type,
+            pc_type=pc_type,
+            ksp_max_it=ksp_max_it,
+            near_nullspace_vecs=self._problem_near_nullspace(params, spec),
+            pc_options=pc_options,
+            reorder=reorder,
+            ownership_block_size=spec.ownership_block_size,
+        )
+
+    def _make_element_hessian_jit(self):
+        spec = self._get_problem_spec()
+        if spec.make_element_hessian_jit is None:
+            raise NotImplementedError(
+                f"{type(self).__name__} does not define an element-Hessian kernel"
+            )
+        return spec.make_element_hessian_jit(self.part, self._problem_state)
