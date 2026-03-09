@@ -53,12 +53,15 @@ How to run: [instructions.md](instructions.md)
 
 ## Problem: HyperElasticity 3D
 
-Neo-Hookean energy on a 3D beam with a rotating right-face boundary condition (0°–360° in 96 quarter-degree steps). FEniCS and JAX+PETSc solver variants are provided:
+Neo-Hookean energy on a 3D beam with a rotating right-face boundary condition
+(0°–360° in 96 quarter-degree steps). FEniCS, pure JAX, and JAX+PETSc solver
+variants are provided:
 
 | Solver                          | Location                                                 | Status        |
 | ------------------------------- | -------------------------------------------------------- | ------------- |
 | **Custom Newton** (recommended) | `HyperElasticity3D_fenics/solve_HE_custom_jaxversion.py` | 96/96 steps ✓ |
 | **SNES Newton**                 | `HyperElasticity3D_fenics/solve_HE_snes_newton.py`       | 93/96 steps ✓ |
+| **Pure JAX Newton**             | `HyperElasticity3D_jax/solve_HE_jax_newton.py`           | serial, levels 1–3 |
 | **JAX+PETSc Custom Newton**     | `HyperElasticity3D_jax_petsc/solve_HE_dof.py`           | MPI parallel  |
 
 Current default PETSc HE setting for both `fenics_custom` and
@@ -95,6 +98,20 @@ into the like-for-like comparison.
 See [final_HE_results.md](final_HE_results.md) for the completed benchmark
 report and [TRUST_REGION_LINESEARCH_TUNING.md](TRUST_REGION_LINESEARCH_TUNING.md)
 for the tuning trail that led to this default.
+
+Pure JAX serial HE now also uses the same outer trust-region policy through
+`HyperElasticity3D_jax/solve_HE_jax_newton.py`:
+
+- serial Steihaug-Toint trust subproblem solve
+- post trust-subproblem line search ON
+- `linesearch_tol=1e-1`
+- `trust_radius_init=0.5`
+- `trust_shrink=0.5 --trust_expand=1.5`
+- `trust_eta_shrink=0.05 --trust_eta_expand=0.75`
+- PyAMG energy-smoothed aggregation preconditioner
+- linear tolerance `1e-1`, linear max it `30`
+
+It is used in the final HE report as the serial reference path up to level `3`.
 
 Recent update: the PETSc minimizer was hardened against false convergence / NaN propagation.
 The HE path now uses a 3-part nonlinear stop criterion (energy + step + gradient), non-finite
@@ -185,6 +202,18 @@ python3 HyperElasticity3D_jax_petsc/solve_HE_dof.py \
     --local_hessian_mode element \
     --local_coloring \
     --quiet --out experiment_scripts/out_jax_petsc.json
+```
+
+**Pure JAX, current serial reference setting:**
+```bash
+python3 HyperElasticity3D_jax/solve_HE_jax_newton.py \
+    --level 1 --steps 96 --total_steps 96 \
+    --linesearch_tol 1e-1 \
+    --trust_radius_init 0.5 \
+    --trust_shrink 0.5 --trust_expand 1.5 \
+    --trust_eta_shrink 0.05 --trust_eta_expand 0.75 \
+    --ksp_rtol 1e-1 --ksp_max_it 30 \
+    --quiet --out experiment_scripts/out_jax_serial.json
 ```
 
 **SNES Newton:**

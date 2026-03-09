@@ -1,0 +1,76 @@
+{
+  "rows": [
+    {
+      "solver": "pure_jax",
+      "level": 1,
+      "total_steps": 24,
+      "total_dofs": 2187,
+      "free_dofs": 2133,
+      "time": 35.451185029989574,
+      "total_newton_iters": 559,
+      "total_linear_iters": 2284,
+      "max_step_time": 1.7860011690063402,
+      "result": "completed"
+    },
+    {
+      "solver": "pure_jax",
+      "level": 2,
+      "total_steps": 24,
+      "total_dofs": 12075,
+      "free_dofs": 11925,
+      "time": 260.6034442060045,
+      "total_newton_iters": 669,
+      "total_linear_iters": 5176,
+      "max_step_time": 22.919398297031876,
+      "result": "completed"
+    },
+    {
+      "solver": "pure_jax",
+      "level": 3,
+      "total_steps": 24,
+      "total_dofs": 78003,
+      "free_dofs": 77517,
+      "time": 1684.8859473520424,
+      "total_newton_iters": 745,
+      "total_linear_iters": 10257,
+      "max_step_time": 120.98649602400837,
+      "result": "completed"
+    },
+    {
+      "solver": "pure_jax",
+      "level": 1,
+      "total_steps": 96,
+      "total_dofs": 2187,
+      "free_dofs": 2133,
+      "time": 66.518404981005,
+      "total_newton_iters": 1065,
+      "total_linear_iters": 5661,
+      "max_step_time": 1.9558382449904457,
+      "result": "completed"
+    },
+    {
+      "solver": "pure_jax",
+      "level": 2,
+      "total_steps": 96,
+      "total_dofs": 12075,
+      "free_dofs": 11925,
+      "time": 451.62214750703424,
+      "total_newton_iters": 1181,
+      "total_linear_iters": 11186,
+      "max_step_time": 12.932145919010509,
+      "result": "completed"
+    },
+    {
+      "solver": "pure_jax",
+      "level": 3,
+      "total_steps": 96,
+      "total_dofs": 78003,
+      "free_dofs": 77517,
+      "time": 2842.431329067971,
+      "total_newton_iters": 1243,
+      "total_linear_iters": 19792,
+      "max_step_time": 102.11631819303147,
+      "result": "completed"
+    }
+  ]
+}
