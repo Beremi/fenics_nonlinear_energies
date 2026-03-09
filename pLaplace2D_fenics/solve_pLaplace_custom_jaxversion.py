@@ -37,12 +37,24 @@ def main():
         help="Suppress per-iteration output",
     )
     parser.add_argument(
+        "--ksp-type", type=str, default="cg",
+        help="PETSc KSP type (default: cg)",
+    )
+    parser.add_argument(
         "--pc-type", type=str, default="hypre", choices=["hypre", "gamg"],
         help="Preconditioner type (default: hypre)",
     )
     parser.add_argument(
         "--ksp-rtol", type=float, default=1e-3,
         help="KSP relative tolerance (default: 1e-3)",
+    )
+    parser.add_argument(
+        "--ksp-max-it", type=int, default=200,
+        help="KSP maximum iterations (default: 200)",
+    )
+    parser.add_argument(
+        "--linesearch-tol", type=float, default=1e-3,
+        help="Line-search tolerance (default: 1e-3)",
     )
     args = parser.parse_args()
 
@@ -63,7 +75,15 @@ def main():
             sys.stdout.write(f"  --- Mesh level {mesh_lvl} ---\n")
             sys.stdout.flush()
 
-        result = run_level(mesh_lvl, verbose=(not args.quiet), pc_type=args.pc_type, ksp_rtol=args.ksp_rtol)
+        result = run_level(
+            mesh_lvl,
+            verbose=(not args.quiet),
+            ksp_type=args.ksp_type,
+            pc_type=args.pc_type,
+            ksp_rtol=args.ksp_rtol,
+            ksp_max_it=args.ksp_max_it,
+            linesearch_tol=args.linesearch_tol,
+        )
         all_results.append(result)
 
         if rank == 0:
@@ -94,15 +114,16 @@ def main():
                 "dolfinx_version": dolfinx.__version__,
                 "nprocs": nprocs,
                 "linear_solver": {
-                    "ksp_type": "cg",
+                    "ksp_type": args.ksp_type,
                     "pc_type": args.pc_type,
                     "ksp_rtol": args.ksp_rtol,
+                    "ksp_max_it": args.ksp_max_it,
                 },
                 "newton_params": {
                     "tolf": 1e-5,
                     "tolg": 1e-3,
                     "linesearch_interval": [-0.5, 2.0],
-                    "linesearch_tol": 1e-3,
+                    "linesearch_tol": args.linesearch_tol,
                     "maxit": 100,
                 },
                 "p": 3,

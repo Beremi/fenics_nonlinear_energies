@@ -1,0 +1,104 @@
+{
+  "rows": [
+    {
+      "solver": "fenics_custom",
+      "config": "ls_loose",
+      "result": "completed",
+      "total_time_s": 1.532455,
+      "newton_iters": 6,
+      "linear_iters": 12,
+      "final_energy": -7.960005690753492,
+      "message": "Converged (energy, step, gradient)"
+    },
+    {
+      "solver": "fenics_custom",
+      "config": "ls_ref",
+      "result": "completed",
+      "total_time_s": 1.767129,
+      "newton_iters": 5,
+      "linear_iters": 19,
+      "final_energy": -7.960005102695774,
+      "message": "Converged (energy, step, gradient)"
+    },
+    {
+      "solver": "fenics_custom",
+      "config": "tr_stcg_r0_5",
+      "result": "completed",
+      "total_time_s": 4.937989,
+      "newton_iters": 19,
+      "linear_iters": 24,
+      "final_energy": -7.960005436368075,
+      "message": "Converged (energy, step, gradient)"
+    },
+    {
+      "solver": "fenics_custom",
+      "config": "tr_stcg_r1_0",
+      "result": "completed",
+      "total_time_s": 4.470965,
+      "newton_iters": 17,
+      "linear_iters": 21,
+      "final_energy": -7.960005242316884,
+      "message": "Converged (energy, step, gradient)"
+    },
+    {
+      "solver": "fenics_custom",
+      "config": "tr_stcg_r2_0",
+      "result": "completed",
+      "total_time_s": 4.276587,
+      "newton_iters": 16,
+      "linear_iters": 22,
+      "final_energy": -7.96000562873985,
+      "message": "Converged (energy, step, gradient)"
+    },
+    {
+      "solver": "jax_petsc_element",
+      "config": "ls_loose",
+      "result": "completed",
+      "total_time_s": 1.206634,
+      "newton_iters": 6,
+      "linear_iters": 11,
+      "final_energy": -7.9600034469239045,
+      "message": "Converged (energy, step, gradient)"
+    },
+    {
+      "solver": "jax_petsc_element",
+      "config": "ls_ref",
+      "result": "completed",
+      "total_time_s": 1.455286,
+      "newton_iters": 6,
+      "linear_iters": 24,
+      "final_energy": -7.960004280902029,
+      "message": "Converged (energy, step, gradient)"
+    },
+    {
+      "solver": "jax_petsc_element",
+      "config": "tr_stcg_r0_5",
+      "result": "completed",
+      "total_time_s": 2.931393,
+      "newton_iters": 23,
+      "linear_iters": 32,
+      "final_energy": -7.960005663562364,
+      "message": "Converged (energy, step, gradient)"
+    },
+    {
+      "solver": "jax_petsc_element",
+      "config": "tr_stcg_r1_0",
+      "result": "completed",
+      "total_time_s": 2.687204,
+      "newton_iters": 21,
+      "linear_iters": 30,
+      "final_energy": -7.960005608975441,
+      "message": "Converged (energy, step, gradient)"
+    },
+    {
+      "solver": "jax_petsc_element",
+      "config": "tr_stcg_r2_0",
+      "result": "completed",
+      "total_time_s": 2.310302,
+      "newton_iters": 18,
+      "linear_iters": 24,
+      "final_energy": -7.96000558502614,
+      "message": "Converged (energy, step, gradient)"
+    }
+  ]
+}

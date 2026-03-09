@@ -5,6 +5,7 @@ Current documentation lives in this folder.
 Key files:
 
 - [final_HE_results.md](final_HE_results.md) — current HyperElasticity final benchmark report
+- [final_pLaplace_results.md](final_pLaplace_results.md) — current pLaplace final benchmark report
 - [TRUST_REGION_LINESEARCH_TUNING.md](TRUST_REGION_LINESEARCH_TUNING.md) — trust-region tuning trail
 - [TRUST_REGION_LINESEARCH_ALGORITHM.md](TRUST_REGION_LINESEARCH_ALGORITHM.md) — algorithm pseudocode and notes
 - [HyperElasticity3D_jax_petsc_IMPLEMENTATION.md](HyperElasticity3D_jax_petsc_IMPLEMENTATION.md) — current JAX+PETSc HE implementation details

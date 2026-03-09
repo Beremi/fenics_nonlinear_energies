@@ -124,15 +124,45 @@ def _build_parser() -> argparse.ArgumentParser:
 
 
 def _run_plaplace(args):
-    linesearch_interval = (args.linesearch_a, args.linesearch_b)
-    common = dict(
-        mesh_level=args.level,
-        verbose=(not args.quiet),
+    if args.backend == "fenics":
+        from pLaplace2D_fenics.solver_custom_newton import run
+    else:
+        _configure_thread_env(args.nproc_threads)
+        from pLaplace2D_jax_petsc.solver import run
+
+    ns = SimpleNamespace(
+        level=args.level,
+        quiet=args.quiet,
+        save_history=args.save_history,
+        save_linear_timing=args.save_linear_timing,
+        profile=args.profile,
+        ksp_type=args.ksp_type or "cg",
         pc_type=args.pc_type,
         ksp_rtol=args.ksp_rtol,
-        linesearch_interval=linesearch_interval,
-        linesearch_tol=args.linesearch_tol,
+        ksp_max_it=args.ksp_max_it,
+        pc_setup_on_ksp_cap=args.pc_setup_on_ksp_cap,
+        gamg_threshold=args.gamg_threshold,
+        gamg_agg_nsmooths=args.gamg_agg_nsmooths,
+        gamg_set_coordinates=args.gamg_set_coordinates,
+        reorder=args.reorder,
+        local_coloring=bool(args.local_coloring),
+        hvp_eval_mode=args.hvp_eval_mode,
+        coloring_trials=args.coloring_trials,
+        assembly_mode=args.backend,
+        element_reorder_mode=args.element_reorder_mode,
+        local_hessian_mode=args.local_hessian_mode,
+        tolf=args.tolf,
+        tolg=args.tolg,
+        tolg_rel=args.tolg_rel,
+        tolx_rel=args.tolx_rel,
+        tolx_abs=args.tolx_abs,
         maxit=args.maxit,
+        linesearch_a=args.linesearch_a,
+        linesearch_b=args.linesearch_b,
+        linesearch_tol=args.linesearch_tol,
+        retry_on_failure=bool(args.retry_on_failure),
+        nproc=args.nproc_threads,
+        out="",
         use_trust_region=args.use_trust_region,
         trust_radius_init=args.trust_radius_init,
         trust_radius_min=args.trust_radius_min,
@@ -145,23 +175,7 @@ def _run_plaplace(args):
         trust_subproblem_line_search=args.trust_subproblem_line_search,
         step_time_limit_s=args.step_time_limit_s,
     )
-
-    if args.backend == "fenics":
-        from pLaplace2D_fenics.solver_custom_newton import run_level
-
-        return run_level(**common)
-
-    _configure_thread_env(args.nproc_threads)
-    from pLaplace2D_jax_petsc.solver import run_level
-
-    return run_level(
-        comm=MPI.COMM_WORLD,
-        coloring_trials=args.coloring_trials,
-        local_coloring=bool(args.local_coloring),
-        assembly_mode=args.backend,
-        nproc_threads=args.nproc_threads,
-        **common,
-    )
+    return run(ns)
 
 
 def _run_he(args):

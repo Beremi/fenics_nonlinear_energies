@@ -42,6 +42,7 @@ class MeshpLaplace2D:
         config.update("jax_enable_x64", True)
 
         params = {
+            "nodes": jnp.array(self.params["nodes"], dtype=jnp.float64),
             "u_0": jnp.array(self.params["u_0"], dtype=jnp.float64),
             "freedofs": jnp.array(self.params["freedofs"], dtype=jnp.int32),
             "elems": jnp.array(self.params["elems"], dtype=jnp.int32),

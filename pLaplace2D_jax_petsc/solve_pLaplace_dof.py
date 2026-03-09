@@ -34,8 +34,15 @@ parser.add_argument("--nproc", type=int, default=1,
                     help="XLA/OMP thread count per rank (default: 1)")
 parser.add_argument("--coloring-trials", type=int, default=10,
                     help="Graph coloring trials per rank (default: 10)")
+parser.add_argument("--profile", type=str, default="reference",
+                    choices=["reference", "performance"],
+                    help="Linear-solver profile defaults (default: reference)")
+parser.add_argument("--ksp-type", type=str, default="cg",
+                    help="PETSc KSP type (default: cg)")
 parser.add_argument("--ksp-rtol", type=float, default=1e-3,
                     help="KSP relative tolerance (default: 1e-3)")
+parser.add_argument("--ksp-max-it", type=int, default=200,
+                    help="PETSc KSP max iterations (default: 200)")
 parser.add_argument("--pc-type", type=str, default="hypre",
                     choices=["gamg", "hypre"],
                     help="PETSc PC type (default: hypre)")
@@ -47,11 +54,20 @@ parser.add_argument("--tolf", type=float, default=1e-5,
                     help="Energy change tolerance (default: 1e-5)")
 parser.add_argument("--tolg", type=float, default=1e-3,
                     help="Gradient norm tolerance (default: 1e-3)")
+parser.add_argument("--linesearch-tol", type=float, default=1e-3,
+                    help="Line-search tolerance (default: 1e-3)")
 parser.add_argument("--local-coloring", action="store_true",
                     help="Use local per-rank graph coloring + vmap (Variant B)")
 parser.add_argument("--assembly-mode", choices=("sfd", "element"), default="sfd",
                     help="Hessian assembly mode: 'sfd' (graph coloring) or "
                          "'element' (analytical element Hessians via jax.hessian)")
+parser.add_argument("--local-hessian-mode", choices=("element", "sfd_local", "sfd_local_vmap"),
+                    default="element",
+                    help="Local Hessian mode for --assembly-mode element (default: element)")
+parser.add_argument("--element-reorder-mode",
+                    choices=("none", "block_rcm", "block_xyz", "block_metis"),
+                    default="block_xyz",
+                    help="DOF reorder for the reordered element assembler (default: block_xyz)")
 args = parser.parse_args()
 
 comm = MPI.COMM_WORLD
@@ -103,13 +119,19 @@ def main():
                 mesh_lvl, comm,
                 verbose=(not args.quiet),
                 coloring_trials=args.coloring_trials,
+                profile=args.profile,
+                ksp_type=args.ksp_type,
                 ksp_rtol=args.ksp_rtol,
+                ksp_max_it=args.ksp_max_it,
                 pc_type=args.pc_type,
                 tolf=args.tolf,
                 tolg=args.tolg,
                 local_coloring=args.local_coloring,
                 assembly_mode=args.assembly_mode,
                 nproc_threads=_threads,
+                linesearch_tol=args.linesearch_tol,
+                local_hessian_mode=args.local_hessian_mode,
+                element_reorder_mode=args.element_reorder_mode,
             )
             level_results.append(result)
 
@@ -162,15 +184,16 @@ def main():
                 "nproc_threads": _threads,
                 "coloring_trials_per_rank": args.coloring_trials,
                 "linear_solver": {
-                    "ksp_type": "cg",
+                    "ksp_type": args.ksp_type,
                     "pc_type": args.pc_type,
                     "ksp_rtol": args.ksp_rtol,
+                    "ksp_max_it": args.ksp_max_it,
                 },
                 "newton_params": {
                     "tolf": args.tolf,
                     "tolg": args.tolg,
                     "linesearch_interval": [-0.5, 2.0],
-                    "linesearch_tol": 1e-3,
+                    "linesearch_tol": args.linesearch_tol,
                     "maxit": 100,
                 },
             }

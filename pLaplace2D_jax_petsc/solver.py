@@ -1,264 +1,593 @@
-"""
-p-Laplace 2D — solver logic (DOF-partitioned JAX + PETSc).
+"""pLaplace 2D solver logic for JAX + PETSc backends."""
 
-Provides ``run_level()`` which runs the Newton solver for one mesh level
-and returns a result dict. Import ``run_level`` from here; CLI entry point
-is in ``solve_pLaplace_dof.py``.
-"""
+from __future__ import annotations
 
-import sys
 import time
+from types import SimpleNamespace
 
 import numpy as np
 from mpi4py import MPI
 
-from pLaplace2D_petsc_support.mesh import MeshpLaplace2D
 from pLaplace2D_jax_petsc.parallel_hessian_dof import (
     LocalColoringAssembler,
     ParallelDOFHessianAssembler,
 )
+from pLaplace2D_jax_petsc.reordered_element_assembler import (
+    PLaplaceReorderedElementAssembler,
+)
+from pLaplace2D_petsc_support.mesh import MeshpLaplace2D
 from tools_petsc4py.minimizers import newton
+from tools_petsc4py.trust_ksp import ksp_cg_set_radius
 
 
-# ---------------------------------------------------------------------------
-# Printing helpers
-# ---------------------------------------------------------------------------
+PROFILE_DEFAULTS = {
+    "reference": {
+        "ksp_type": "cg",
+        "pc_type": "hypre",
+        "ksp_rtol": 1e-3,
+        "ksp_max_it": 10000,
+        "pc_setup_on_ksp_cap": False,
+        "gamg_threshold": 0.05,
+        "gamg_agg_nsmooths": 1,
+        "gamg_set_coordinates": True,
+        "reorder": True,
+    },
+    "performance": {
+        "ksp_type": "cg",
+        "pc_type": "gamg",
+        "ksp_rtol": 1e-1,
+        "ksp_max_it": 30,
+        "pc_setup_on_ksp_cap": False,
+        "gamg_threshold": 0.05,
+        "gamg_agg_nsmooths": 1,
+        "gamg_set_coordinates": True,
+        "reorder": True,
+    },
+}
 
-def _print_newton_breakdown(history, solve_time):
-    """Print per-iteration Newton-level timing breakdown (rank 0)."""
-    sys.stdout.write("\n  Newton Iteration Breakdown:\n")
-    sys.stdout.write(
-        f"  {'It':>3s} {'grad':>8s} {'hess':>8s} {'LS':>8s} "
-        f"{'update':>8s} {'ls_ev':>6s} {'KSP it':>7s} {'iter':>8s}\n"
+
+def _resolve_linear_settings(args):
+    settings = dict(PROFILE_DEFAULTS[args.profile])
+    overrides = {
+        "ksp_type": args.ksp_type,
+        "pc_type": args.pc_type,
+        "ksp_rtol": args.ksp_rtol,
+        "ksp_max_it": args.ksp_max_it,
+        "pc_setup_on_ksp_cap": args.pc_setup_on_ksp_cap,
+        "gamg_threshold": args.gamg_threshold,
+        "gamg_agg_nsmooths": args.gamg_agg_nsmooths,
+        "gamg_set_coordinates": args.gamg_set_coordinates,
+        "reorder": args.reorder,
+    }
+    for key, value in overrides.items():
+        if value is not None:
+            settings[key] = value
+    return settings
+
+
+def _pc_options(settings):
+    opts = {}
+    if settings["pc_type"] == "gamg":
+        opts["pc_gamg_threshold"] = float(settings["gamg_threshold"])
+        opts["pc_gamg_agg_nsmooths"] = int(settings["gamg_agg_nsmooths"])
+    return opts
+
+
+def _needs_repair(result):
+    msg = str(result.get("message", "")).lower()
+    if not np.isfinite(float(result.get("fun", np.nan))):
+        return True
+    return (
+        "non-finite" in msg
+        or "nonfinite" in msg
+        or "nan" in msg
+        or "maximum number of iterations reached" in msg
     )
-    sys.stdout.write("  " + "-" * 58 + "\n")
-
-    s_grad = s_hess = s_ls = s_update = 0.0
-    for h in history:
-        s_grad += h["t_grad"]
-        s_hess += h["t_hess"]
-        s_ls += h["t_ls"]
-        s_update += h["t_update"]
-        sys.stdout.write(
-            f"  {h['it']:3d} {h['t_grad']:8.4f} {h['t_hess']:8.4f} "
-            f"{h['t_ls']:8.4f} {h['t_update']:8.4f} {h['ls_evals']:6d} "
-            f"{h['ksp_its']:7d} {h['t_iter']:8.4f}\n"
-        )
-
-    sys.stdout.write("  " + "-" * 58 + "\n")
-    s_total = s_grad + s_hess + s_ls + s_update
-    sys.stdout.write(
-        f"  {'SUM':>3s} {s_grad:8.4f} {s_hess:8.4f} "
-        f"{s_ls:8.4f} {s_update:8.4f} {'':>6s} {'':>7s} {s_total:8.4f}\n"
-    )
-    overhead = solve_time - s_total
-    sys.stdout.write(
-        f"\n  grad={s_grad:.4f}s  hess={s_hess:.4f}s  "
-        f"LS={s_ls:.4f}s  update={s_update:.4f}s  "
-        f"overhead={overhead:.4f}s  solve={solve_time:.4f}s\n"
-    )
-    sys.stdout.flush()
 
 
-def _print_assembly_breakdown(assembler_timings, n_iters):
-    """Print Hessian assembly timing breakdown."""
-    if not assembler_timings:
-        return
-    sys.stdout.write("\n  Hessian Assembly Breakdown (per Newton iteration):\n")
-    sys.stdout.write(
-        f"  {'It':>3s} {'allgath':>8s} {'HVP':>8s} {'COO':>8s} "
-        f"{'KSP':>8s} {'KSP it':>7s} {'total':>8s}\n"
-    )
-    sys.stdout.write("  " + "-" * 52 + "\n")
-    for i, d in enumerate(assembler_timings):
-        sys.stdout.write(
-            f"  {i:3d} {d.get('allgatherv', 0):8.4f} "
-            f"{d.get('hvp_compute', 0):8.4f} "
-            f"{d.get('coo_assembly', 0):8.4f} "
-            f"{d.get('ksp', 0):8.4f} {d.get('ksp_its', 0):7d} "
-            f"{d.get('total_with_ksp', d.get('total', 0)):8.4f}\n"
-        )
-    sys.stdout.write("  " + "-" * 52 + "\n")
-    sys.stdout.flush()
+def _sum_step_linear(step: dict) -> int:
+    return int(sum(int(rec.get("ksp_its", 0)) for rec in step.get("linear_timing", [])))
 
 
-# ---------------------------------------------------------------------------
-# Solver for a single mesh level
-# ---------------------------------------------------------------------------
+def _assemble_time(rec: dict) -> float:
+    return float(rec.get("assemble_total_time", rec.get("assemble_time", 0.0)))
 
-def run_level(mesh_level, comm, verbose=True, coloring_trials=10,
-              ksp_rtol=1e-3, pc_type="hypre", tolf=1e-5, tolg=1e-3,
-              local_coloring=False, assembly_mode="sfd", nproc_threads=1,
-              linesearch_interval=(-0.5, 2.0), linesearch_tol=1e-3,
-              maxit=100, use_trust_region=False, trust_radius_init=1.0,
-              trust_radius_min=1e-8, trust_radius_max=1e6,
-              trust_shrink=0.5, trust_expand=1.5,
-              trust_eta_shrink=0.05, trust_eta_expand=0.75,
-              trust_max_reject=6):
-    """Run DOF-partitioned parallel solver for one mesh level.
 
-    Returns dict with timing and convergence info.
-    """
+def _build_gamg_coordinates(part, freedofs, nodes):
+    freedofs = np.asarray(freedofs, dtype=np.int64)
+    owned_orig_free = part.perm[part.lo : part.hi]
+    owned_total_dofs = freedofs[owned_orig_free]
+    if owned_total_dofs.size == 0:
+        return np.zeros((0, 2), dtype=np.float64)
+    return np.asarray(nodes[owned_total_dofs], dtype=np.float64)
+
+
+def run(args):
+    comm = MPI.COMM_WORLD
     rank = comm.Get_rank()
     nprocs = comm.Get_size()
+    total_runtime_start = time.perf_counter()
 
-    # ---- load mesh ----
-    setup_start = time.perf_counter()
-    mesh_obj = MeshpLaplace2D(mesh_level=mesh_level)
-    params, adjacency, u_init = mesh_obj.get_data_jax()
-    n_dofs = len(u_init)
-    t_mesh = time.perf_counter() - setup_start
-
-    # ---- build DOF-partitioned assembler ----
-    t0 = time.perf_counter()
-    AssemblerClass = LocalColoringAssembler if local_coloring else ParallelDOFHessianAssembler
-    assembler = AssemblerClass(
-        params=params,
-        comm=comm,
-        adjacency=adjacency,
-        coloring_trials_per_rank=coloring_trials,
-        ksp_rtol=ksp_rtol,
-        ksp_type="cg",
-        pc_type=pc_type,
+    settings = _resolve_linear_settings(args)
+    pc_options = _pc_options(settings)
+    use_element_assembly = args.assembly_mode == "element"
+    element_reorder_mode = str(
+        getattr(args, "element_reorder_mode", None) or "block_xyz"
     )
-    t_assembler = time.perf_counter() - t0
+    local_hessian_mode = str(
+        getattr(args, "local_hessian_mode", None) or "element"
+    )
 
-    use_element_assembly = (assembly_mode == "element")
+    mesh_obj = MeshpLaplace2D(args.level)
+    params, adjacency, u_init = mesh_obj.get_data_jax()
+
+    setup_start = time.perf_counter()
     if use_element_assembly:
-        if not local_coloring:
-            raise ValueError("--assembly-mode element requires --local-coloring")
-        assembler.setup_element_hessian()
+        assembler = PLaplaceReorderedElementAssembler(
+            params=params,
+            comm=comm,
+            adjacency=adjacency,
+            ksp_rtol=float(settings["ksp_rtol"]),
+            ksp_type=str(settings["ksp_type"]),
+            pc_type=str(settings["pc_type"]),
+            ksp_max_it=int(settings["ksp_max_it"]),
+            pc_options=pc_options,
+            reorder_mode=element_reorder_mode,
+            local_hessian_mode=local_hessian_mode,
+        )
+    else:
+        assembler_cls = (
+            LocalColoringAssembler if args.local_coloring else ParallelDOFHessianAssembler
+        )
+        assembler_kwargs = dict(
+            params=params,
+            comm=comm,
+            adjacency=adjacency,
+            coloring_trials_per_rank=args.coloring_trials,
+            ksp_rtol=float(settings["ksp_rtol"]),
+            ksp_type=str(settings["ksp_type"]),
+            pc_type=str(settings["pc_type"]),
+        )
+        if args.local_coloring:
+            assembler_kwargs["hvp_eval_mode"] = str(args.hvp_eval_mode)
+        assembler = assembler_cls(**assembler_kwargs)
+        if use_element_assembly:
+            assembler.setup_element_hessian()
 
     setup_time = time.perf_counter() - setup_start
 
-    if verbose and rank == 0:
-        n_colors = assembler.n_colors
-        overlap = assembler._sum_local_elems / (params["elems"].shape[0]) - 1.0
-        sys.stdout.write(
-            f"  DOFs={n_dofs}  elements={params['elems'].shape[0]}  "
-            f"np={nprocs}  NPROC={nproc_threads}  pc={pc_type}\n"
+    u_init_reordered = np.asarray(u_init, dtype=np.float64)[assembler.part.perm]
+    x = assembler.create_vec(u_init_reordered)
+    x_initial = x.duplicate()
+    x.copy(x_initial)
+
+    ksp = assembler.ksp
+    A = assembler.A
+    pc = ksp.getPC()
+    gamg_coords = None
+    if settings["pc_type"] == "gamg" and settings["gamg_set_coordinates"]:
+        gamg_coords = _build_gamg_coordinates(
+            assembler.part,
+            np.asarray(params["freedofs"], dtype=np.int64),
+            np.asarray(params["nodes"], dtype=np.float64),
         )
-        sys.stdout.write(
-            f"  Setup: {setup_time:.3f}s  (mesh={t_mesh:.3f}s, "
-            f"assembler={t_assembler:.3f}s)  "
-            f"n_colors={n_colors}  overlap={overlap:.1%}\n"
-        )
-        sys.stdout.flush()
 
-    # ---- initial guess as distributed PETSc Vec ----
-    u_init_reord = np.asarray(u_init, dtype=np.float64)[assembler.part.perm]
-    x = assembler.create_vec(u_init_reord)
+    linesearch_interval = (float(args.linesearch_a), float(args.linesearch_b))
+    use_trust_region = bool(getattr(args, "use_trust_region", False))
+    trust_radius_init = float(getattr(args, "trust_radius_init", 1.0))
+    trust_radius_min = float(getattr(args, "trust_radius_min", 1e-8))
+    trust_radius_max = float(getattr(args, "trust_radius_max", 1e6))
+    trust_shrink = float(getattr(args, "trust_shrink", 0.5))
+    trust_expand = float(getattr(args, "trust_expand", 1.5))
+    trust_eta_shrink = float(getattr(args, "trust_eta_shrink", 0.05))
+    trust_eta_expand = float(getattr(args, "trust_eta_expand", 0.75))
+    trust_max_reject = int(getattr(args, "trust_max_reject", 6))
+    trust_subproblem_line_search = bool(
+        getattr(args, "trust_subproblem_line_search", False)
+    )
+    trust_ksp_subproblem = bool(
+        use_trust_region and str(settings["ksp_type"]).lower() in {"stcg", "nash", "gltr"}
+    )
+    step_time_limit_s = getattr(args, "step_time_limit_s", None)
 
-    # ---- hessian_solve_fn: dispatch sfd vs element ----
-    _linear_iters = []
-    _pc_setup_times = []
-    _linear_solve_times = []
+    linear_timing_records = []
+    linear_iters_this_attempt = []
+    force_pc_setup_next = True
 
-    def hessian_solve_fn(vec, rhs, sol):
+    def _assemble_and_solve(vec, rhs, sol, ksp_rtol_attempt, ksp_max_it_attempt, trust_radius=None):
+        nonlocal force_pc_setup_next, gamg_coords
+
+        t_asm0 = time.perf_counter()
         u_owned = np.array(vec.array[:], dtype=np.float64)
         if use_element_assembly:
-            assembler.assemble_hessian_element(u_owned)
+            assembler.assemble_hessian(u_owned)
         else:
             assembler.assemble_hessian(u_owned, variant=2)
-        assembler.ksp.setOperators(assembler.A)
+        asm_total_time = time.perf_counter() - t_asm0
 
-        t0 = time.perf_counter()
-        assembler.ksp.setUp()
-        _pc_setup_times.append(time.perf_counter() - t0)
-
-        t0 = time.perf_counter()
-        assembler.ksp.solve(rhs, sol)
-        _linear_solve_times.append(time.perf_counter() - t0)
-        ksp_its = int(assembler.ksp.getIterationNumber())
-        _linear_iters.append(ksp_its)
-
+        asm_details = {}
         if assembler.iter_timings:
-            assembler.iter_timings[-1]["pc_setup"] = float(_pc_setup_times[-1])
-            assembler.iter_timings[-1]["solve"] = float(_linear_solve_times[-1])
-            assembler.iter_timings[-1]["ksp"] = float(_pc_setup_times[-1] + _linear_solve_times[-1])
-            assembler.iter_timings[-1]["ksp_its"] = int(ksp_its)
-            assembler.iter_timings[-1]["total_with_ksp"] = float(
-                assembler.iter_timings[-1].get("total", 0.0)
-                + _pc_setup_times[-1]
-                + _linear_solve_times[-1]
-            )
+            asm_details = dict(assembler.iter_timings[-1])
+        asm_details["assembly_total_time"] = float(asm_total_time)
+
+        if trust_radius is not None:
+            ksp_cg_set_radius(ksp, float(trust_radius))
+
+        t_setop0 = time.perf_counter()
+        ksp.setOperators(A)
+        if gamg_coords is not None:
+            pc.setCoordinates(gamg_coords)
+            gamg_coords = None
+        t_setop = time.perf_counter() - t_setop0
+
+        t_tol0 = time.perf_counter()
+        ksp.setTolerances(
+            rtol=float(ksp_rtol_attempt), max_it=int(ksp_max_it_attempt)
+        )
+        t_tol = time.perf_counter() - t_tol0
+
+        t_setup0 = time.perf_counter()
+        if settings["pc_setup_on_ksp_cap"]:
+            if force_pc_setup_next:
+                ksp.setUp()
+                force_pc_setup_next = False
+        else:
+            ksp.setUp()
+        t_setup = time.perf_counter() - t_setup0
+
+        t_solve0 = time.perf_counter()
+        ksp.solve(rhs, sol)
+        t_solve = time.perf_counter() - t_solve0
+        ksp_its = int(ksp.getIterationNumber())
+        linear_iters_this_attempt.append(ksp_its)
+
+        if settings["pc_setup_on_ksp_cap"] and ksp_its >= int(ksp_max_it_attempt):
+            force_pc_setup_next = True
+
+        if args.save_linear_timing:
+            record = {
+                "assemble_total_time": float(asm_total_time),
+                "assemble_p2p_exchange": float(asm_details.get("p2p_exchange", 0.0)),
+                "assemble_hvp_compute": float(asm_details.get("hvp_compute", 0.0)),
+                "assemble_extraction": float(asm_details.get("extraction", 0.0)),
+                "assemble_coo_assembly": float(asm_details.get("coo_assembly", 0.0)),
+                "assemble_n_hvps": int(asm_details.get("n_hvps", 0)),
+                "setop_time": float(t_setop),
+                "set_tolerances_time": float(t_tol),
+                "pc_setup_time": float(t_setup),
+                "solve_time": float(t_solve),
+                "linear_total_time": float(
+                    asm_total_time + t_setop + t_tol + t_setup + t_solve
+                ),
+                "ksp_its": int(ksp_its),
+            }
+            if trust_radius is not None:
+                record["trust_radius"] = float(trust_radius)
+            linear_timing_records.append(record)
+
         return ksp_its
 
-    # ---- solve ----
-    comm.Barrier()
-    solve_start = time.perf_counter()
-    result = newton(
-        energy_fn=assembler.energy_fn,
-        gradient_fn=assembler.gradient_fn,
-        hessian_solve_fn=hessian_solve_fn,
-        x=x,
-        tolf=tolf,
-        tolg=tolg,
-        linesearch_tol=linesearch_tol,
-        linesearch_interval=linesearch_interval,
-        maxit=maxit,
-        verbose=verbose,
-        comm=comm,
-        ghost_update_fn=None,
-        hessian_matvec_fn=lambda _x, vin, vout: assembler.A.mult(vin, vout),
-        save_history=True,
-        trust_region=use_trust_region,
-        trust_radius_init=trust_radius_init,
-        trust_radius_min=trust_radius_min,
-        trust_radius_max=trust_radius_max,
-        trust_shrink=trust_shrink,
-        trust_expand=trust_expand,
-        trust_eta_shrink=trust_eta_shrink,
-        trust_eta_expand=trust_eta_expand,
-        trust_max_reject=trust_max_reject,
-    )
-    solve_time = time.perf_counter() - solve_start
+    def hessian_solve_fn(vec, rhs, sol):
+        return _assemble_and_solve(
+            vec, rhs, sol, used_ksp_rtol, used_ksp_max_it, trust_radius=None
+        )
 
-    # ---- print breakdown (rank 0) ----
-    if verbose and rank == 0:
-        if result.get("history"):
-            _print_newton_breakdown(result["history"], solve_time)
-        if assembler.iter_timings:
-            _print_assembly_breakdown(assembler.iter_timings, result["nit"])
+    def trust_subproblem_solve_fn(vec, rhs, sol, trust_radius):
+        return _assemble_and_solve(
+            vec,
+            rhs,
+            sol,
+            used_ksp_rtol,
+            used_ksp_max_it,
+            trust_radius=float(trust_radius),
+        )
 
-    # ---- extract timing totals from history ----
-    total_grad = sum(h["t_grad"] for h in result.get("history", []))
-    total_hess = sum(h["t_hess"] for h in result.get("history", []))
-    total_ls = sum(h["t_ls"] for h in result.get("history", []))
-    total_ksp_its = sum(_linear_iters)
+    attempt_specs = [
+        (
+            "primary",
+            linesearch_interval,
+            float(settings["ksp_rtol"]),
+            int(settings["ksp_max_it"]),
+        )
+    ]
+    if args.retry_on_failure:
+        attempt_specs.append(
+            (
+                "repair",
+                (linesearch_interval[0], min(linesearch_interval[1], 1.0)),
+                max(1e-12, float(settings["ksp_rtol"]) * 0.1),
+                max(int(settings["ksp_max_it"]) + 1, int(2 * settings["ksp_max_it"])),
+            )
+        )
 
-    asm_cumulative = sum(d.get("total", 0.0) for d in assembler.iter_timings)
-    pc_setup_cumulative = sum(_pc_setup_times)
-    linear_solve_cumulative = sum(_linear_solve_times)
-    ksp_cumulative = sum(d.get("ksp", 0.0) for d in assembler.iter_timings)
+    step_records = []
+    result = None
+    used_attempt = "primary"
+    used_linesearch = linesearch_interval
+    used_ksp_rtol = float(settings["ksp_rtol"])
+    used_ksp_max_it = int(settings["ksp_max_it"])
+    solve_time = 0.0
 
-    # ---- cleanup ----
-    x.destroy()
-    assembler.cleanup()
+    try:
+        for idx, (attempt_name, ls_interval, ksp_rtol_attempt, ksp_max_it_attempt) in enumerate(
+            attempt_specs
+        ):
+            x_initial.copy(x)
+            force_pc_setup_next = True
+            linear_iters_this_attempt = []
+            if args.save_linear_timing:
+                linear_timing_records = []
+
+            used_attempt = attempt_name
+            used_linesearch = ls_interval
+            used_ksp_rtol = float(ksp_rtol_attempt)
+            used_ksp_max_it = int(ksp_max_it_attempt)
+
+            t0 = time.perf_counter()
+            result = newton(
+                energy_fn=assembler.energy_fn,
+                gradient_fn=assembler.gradient_fn,
+                hessian_solve_fn=hessian_solve_fn,
+                x=x,
+                tolf=float(args.tolf),
+                tolg=float(args.tolg),
+                tolg_rel=float(args.tolg_rel),
+                linesearch_tol=float(args.linesearch_tol),
+                linesearch_interval=ls_interval,
+                maxit=int(args.maxit),
+                tolx_rel=float(args.tolx_rel),
+                tolx_abs=float(args.tolx_abs),
+                require_all_convergence=True,
+                fail_on_nonfinite=True,
+                verbose=(not args.quiet),
+                comm=comm,
+                ghost_update_fn=None,
+                hessian_matvec_fn=lambda _x, vin, vout: assembler.A.mult(vin, vout),
+                trust_subproblem_solve_fn=(
+                    trust_subproblem_solve_fn if trust_ksp_subproblem else None
+                ),
+                trust_subproblem_line_search=trust_subproblem_line_search,
+                save_history=bool(args.save_history),
+                trust_region=use_trust_region,
+                trust_radius_init=trust_radius_init,
+                trust_radius_min=trust_radius_min,
+                trust_radius_max=trust_radius_max,
+                trust_shrink=trust_shrink,
+                trust_expand=trust_expand,
+                trust_eta_shrink=trust_eta_shrink,
+                trust_eta_expand=trust_eta_expand,
+                trust_max_reject=trust_max_reject,
+                step_time_limit_s=step_time_limit_s,
+            )
+            solve_time = time.perf_counter() - t0
+
+            needs_repair = _needs_repair(result)
+            if needs_repair and idx + 1 < len(attempt_specs):
+                continue
+            break
+
+        if result is None:
+            raise RuntimeError("Newton solver did not return a result")
+
+        step_record = {
+            "step": 1,
+            "time": float(round(solve_time, 6)),
+            "nit": int(result["nit"]),
+            "linear_iters": int(sum(linear_iters_this_attempt)),
+            "energy": float(result["fun"]),
+            "message": str(result["message"]),
+            "attempt": used_attempt,
+            "ksp_rtol_used": float(used_ksp_rtol),
+            "ksp_max_it_used": int(used_ksp_max_it),
+            "linesearch_interval_used": [
+                float(used_linesearch[0]),
+                float(used_linesearch[1]),
+            ],
+        }
+        if step_time_limit_s is not None:
+            step_record["step_time_limit_s"] = float(step_time_limit_s)
+            step_record["kill_switch_exceeded"] = bool(
+                solve_time > float(step_time_limit_s)
+            )
+        if args.save_history:
+            step_record["history"] = result.get("history", [])
+        if args.save_linear_timing:
+            step_record["linear_timing"] = list(linear_timing_records)
+        step_records.append(step_record)
+
+    finally:
+        x_initial.destroy()
+        x.destroy()
+        assembler.cleanup()
 
     return {
-        "mesh_level": mesh_level,
-        "dofs": n_dofs,
-        "nprocs": nprocs,
-        "nproc_threads": nproc_threads,
-        "pc_type": pc_type,
-        "ksp_rtol": ksp_rtol,
-        "assembly_mode": assembly_mode,
-        "n_colors": assembler.n_colors,
-        "setup_time": round(setup_time, 4),
-        "solve_time": round(solve_time, 4),
-        "total_time": round(setup_time + solve_time, 4),
-        "iters": result["nit"],
-        "energy": round(float(result["fun"]), 10),
-        "message": result["message"],
-        "grad_time": round(total_grad, 4),
-        "hess_time": round(total_hess, 4),
-        "ls_time": round(total_ls, 4),
-        "total_ksp_its": total_ksp_its,
-        "asm_time_cumulative": round(asm_cumulative, 4),
-        "pc_setup_time_cumulative": round(pc_setup_cumulative, 4),
-        "linear_solve_time_cumulative": round(linear_solve_cumulative, 4),
-        "ksp_time_cumulative": round(ksp_cumulative, 4),
-        "history": result.get("history", []),
-        "assembly_details": list(assembler.iter_timings),
+        "mesh_level": int(args.level),
+        "total_dofs": int(len(params["u_0"])),
+        "free_dofs": int(assembler.part.n_free),
+        "setup_time": float(round(setup_time, 6)),
+        "solve_time_total": float(round(sum(step["time"] for step in step_records), 6)),
+        "total_time": float(round(time.perf_counter() - total_runtime_start, 6)),
+        "steps": step_records,
+        "metadata": {
+            "profile": args.profile,
+            "nprocs": nprocs,
+            "nproc_threads": max(1, int(args.nproc)),
+            "linear_solver": {
+                "ksp_type": str(settings["ksp_type"]),
+                "pc_type": str(settings["pc_type"]),
+                "ksp_rtol": float(settings["ksp_rtol"]),
+                "ksp_max_it": int(settings["ksp_max_it"]),
+                "pc_setup_on_ksp_cap": bool(settings["pc_setup_on_ksp_cap"]),
+                "gamg_threshold": float(settings["gamg_threshold"]),
+                "gamg_agg_nsmooths": int(settings["gamg_agg_nsmooths"]),
+                "gamg_set_coordinates": bool(settings["gamg_set_coordinates"]),
+                "reorder": bool(settings["reorder"]),
+                "hvp_eval_mode": str(getattr(assembler, "_hvp_eval_mode", "batched")),
+                "assembly_mode": str(args.assembly_mode),
+                "element_reorder_mode": (
+                    element_reorder_mode if use_element_assembly else None
+                ),
+                "local_hessian_mode": (
+                    local_hessian_mode if use_element_assembly else None
+                ),
+                "distribution_strategy": str(
+                    getattr(assembler, "distribution_strategy", "reduced_free_dofs")
+                ),
+                "assembler": assembler.__class__.__name__,
+                "trust_subproblem_solver": (
+                    "petsc_ksp" if trust_ksp_subproblem else "direct_linear_solve"
+                ),
+                "trust_subproblem_line_search": bool(trust_subproblem_line_search),
+            },
+            "newton": {
+                "tolf": float(args.tolf),
+                "tolg": float(args.tolg),
+                "tolg_rel": float(args.tolg_rel),
+                "tolx_rel": float(args.tolx_rel),
+                "tolx_abs": float(args.tolx_abs),
+                "maxit": int(args.maxit),
+                "require_all_convergence": True,
+                "fail_on_nonfinite": True,
+                "linesearch_interval": [float(args.linesearch_a), float(args.linesearch_b)],
+                "linesearch_tol": float(args.linesearch_tol),
+                "trust_region": bool(use_trust_region),
+                "trust_radius_init": float(trust_radius_init),
+                "trust_radius_min": float(trust_radius_min),
+                "trust_radius_max": float(trust_radius_max),
+                "trust_subproblem_line_search": bool(trust_subproblem_line_search),
+                "step_time_limit_s": (
+                    None if step_time_limit_s is None else float(step_time_limit_s)
+                ),
+            },
+        },
     }
+
+
+def _flatten_result(result: dict) -> dict:
+    steps = list(result.get("steps", []))
+    step = steps[0] if steps else {}
+    linear_timing = step.get("linear_timing", [])
+    asm_cumulative = sum(_assemble_time(rec) for rec in linear_timing)
+    pc_setup_cumulative = sum(float(rec.get("pc_setup_time", 0.0)) for rec in linear_timing)
+    linear_solve_cumulative = sum(float(rec.get("solve_time", 0.0)) for rec in linear_timing)
+    ksp_cumulative = sum(
+        float(rec.get("pc_setup_time", 0.0)) + float(rec.get("solve_time", 0.0))
+        for rec in linear_timing
+    )
+    total_ksp_its = _sum_step_linear(step)
+
+    return {
+        "mesh_level": int(result["mesh_level"]),
+        "dofs": int(result["total_dofs"]),
+        "nprocs": int(result["metadata"]["nprocs"]),
+        "nproc_threads": int(result["metadata"]["nproc_threads"]),
+        "pc_type": str(result["metadata"]["linear_solver"]["pc_type"]),
+        "ksp_rtol": float(result["metadata"]["linear_solver"]["ksp_rtol"]),
+        "assembly_mode": str(result["metadata"]["linear_solver"]["assembly_mode"]),
+        "setup_time": round(float(result["setup_time"]), 4),
+        "solve_time": round(float(result.get("solve_time_total", 0.0)), 4),
+        "total_time": round(float(result["total_time"]), 4),
+        "iters": int(step.get("nit", 0)),
+        "energy": round(float(step.get("energy", np.nan)), 10),
+        "message": str(step.get("message", "")),
+        "total_ksp_its": int(total_ksp_its),
+        "asm_time_cumulative": round(float(asm_cumulative), 4),
+        "pc_setup_time_cumulative": round(float(pc_setup_cumulative), 4),
+        "linear_solve_time_cumulative": round(float(linear_solve_cumulative), 4),
+        "ksp_time_cumulative": round(float(ksp_cumulative), 4),
+        "history": list(step.get("history", [])),
+        "assembly_details": list(linear_timing),
+    }
+
+
+def run_level(
+    mesh_level,
+    comm,
+    verbose=True,
+    coloring_trials=10,
+    ksp_rtol=1e-3,
+    pc_type="hypre",
+    tolf=1e-5,
+    tolg=1e-3,
+    local_coloring=False,
+    assembly_mode="sfd",
+    nproc_threads=1,
+    linesearch_interval=(-0.5, 2.0),
+    linesearch_tol=1e-3,
+    maxit=100,
+    use_trust_region=False,
+    trust_radius_init=1.0,
+    trust_radius_min=1e-8,
+    trust_radius_max=1e6,
+    trust_shrink=0.5,
+    trust_expand=1.5,
+    trust_eta_shrink=0.05,
+    trust_eta_expand=0.75,
+    trust_max_reject=6,
+    ksp_type="cg",
+    ksp_max_it=10000,
+    profile="reference",
+    pc_setup_on_ksp_cap=False,
+    gamg_threshold=0.05,
+    gamg_agg_nsmooths=1,
+    gamg_set_coordinates=True,
+    tolg_rel=1e-3,
+    tolx_rel=1e-3,
+    tolx_abs=1e-10,
+    save_history=True,
+    save_linear_timing=True,
+    quiet=False,
+    retry_on_failure=False,
+    local_hessian_mode="element",
+    element_reorder_mode="block_xyz",
+    hvp_eval_mode="sequential",
+    step_time_limit_s=None,
+    trust_subproblem_line_search=False,
+):
+    del comm
+    ns = SimpleNamespace(
+        level=int(mesh_level),
+        profile=str(profile),
+        ksp_type=str(ksp_type),
+        pc_type=str(pc_type),
+        ksp_rtol=float(ksp_rtol),
+        ksp_max_it=int(ksp_max_it),
+        pc_setup_on_ksp_cap=bool(pc_setup_on_ksp_cap),
+        gamg_threshold=float(gamg_threshold),
+        gamg_agg_nsmooths=int(gamg_agg_nsmooths),
+        gamg_set_coordinates=bool(gamg_set_coordinates),
+        reorder=True,
+        local_coloring=bool(local_coloring),
+        hvp_eval_mode=str(hvp_eval_mode),
+        coloring_trials=int(coloring_trials),
+        assembly_mode=str(assembly_mode),
+        element_reorder_mode=str(element_reorder_mode),
+        local_hessian_mode=str(local_hessian_mode),
+        tolf=float(tolf),
+        tolg=float(tolg),
+        tolg_rel=float(tolg_rel),
+        tolx_rel=float(tolx_rel),
+        tolx_abs=float(tolx_abs),
+        maxit=int(maxit),
+        linesearch_a=float(linesearch_interval[0]),
+        linesearch_b=float(linesearch_interval[1]),
+        linesearch_tol=float(linesearch_tol),
+        retry_on_failure=bool(retry_on_failure),
+        nproc=int(nproc_threads),
+        save_history=bool(save_history),
+        save_linear_timing=bool(save_linear_timing),
+        quiet=bool(quiet or (not verbose)),
+        out="",
+        use_trust_region=bool(use_trust_region),
+        trust_radius_init=float(trust_radius_init),
+        trust_radius_min=float(trust_radius_min),
+        trust_radius_max=float(trust_radius_max),
+        trust_shrink=float(trust_shrink),
+        trust_expand=float(trust_expand),
+        trust_eta_shrink=float(trust_eta_shrink),
+        trust_eta_expand=float(trust_eta_expand),
+        trust_max_reject=int(trust_max_reject),
+        trust_subproblem_line_search=bool(trust_subproblem_line_search),
+        step_time_limit_s=step_time_limit_s,
+    )
+    return _flatten_result(run(ns))
