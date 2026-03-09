@@ -46,6 +46,16 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--coloring-trials", type=int, default=10)
     parser.add_argument("--nproc-threads", type=int, default=1)
     parser.add_argument("--hvp-eval-mode", choices=("batched", "sequential"), default="sequential")
+    parser.add_argument(
+        "--element-reorder-mode",
+        choices=("none", "block_rcm", "block_xyz", "block_metis"),
+        default=None,
+    )
+    parser.add_argument(
+        "--local-hessian-mode",
+        choices=("element", "sfd_local", "sfd_local_vmap"),
+        default=None,
+    )
 
     parser.add_argument("--tolf", type=float, default=1e-4)
     parser.add_argument("--tolg", type=float, default=1e-3)
@@ -53,6 +63,7 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--tolx-rel", type=float, default=1e-3)
     parser.add_argument("--tolx-abs", type=float, default=1e-10)
     parser.add_argument("--maxit", type=int, default=100)
+    parser.add_argument("--step-time-limit-s", type=float, default=None)
 
     parser.add_argument("--linesearch-a", type=float, default=-0.5)
     parser.add_argument("--linesearch-b", type=float, default=2.0)
@@ -71,6 +82,11 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--trust-eta-shrink", type=float, default=0.05)
     parser.add_argument("--trust-eta-expand", type=float, default=0.75)
     parser.add_argument("--trust-max-reject", type=int, default=6)
+    parser.add_argument(
+        "--trust-subproblem-line-search",
+        action=argparse.BooleanOptionalAction,
+        default=False,
+    )
 
     parser.add_argument(
         "--local-coloring",
@@ -126,6 +142,8 @@ def _run_plaplace(args):
         trust_eta_shrink=args.trust_eta_shrink,
         trust_eta_expand=args.trust_eta_expand,
         trust_max_reject=args.trust_max_reject,
+        trust_subproblem_line_search=args.trust_subproblem_line_search,
+        step_time_limit_s=args.step_time_limit_s,
     )
 
     if args.backend == "fenics":
@@ -155,6 +173,7 @@ def _run_he(args):
         maxit=args.maxit,
         start_step=args.start_step,
         linesearch_interval=linesearch_interval,
+        linesearch_tol=args.linesearch_tol,
         ksp_type=args.ksp_type or "gmres",
         pc_type=args.pc_type,
         ksp_rtol=args.ksp_rtol,
@@ -184,6 +203,8 @@ def _run_he(args):
         trust_eta_shrink=args.trust_eta_shrink,
         trust_eta_expand=args.trust_eta_expand,
         trust_max_reject=args.trust_max_reject,
+        trust_subproblem_line_search=args.trust_subproblem_line_search,
+        step_time_limit_s=args.step_time_limit_s,
     )
 
     if args.backend == "fenics":
@@ -214,6 +235,8 @@ def _run_he(args):
         hvp_eval_mode=args.hvp_eval_mode,
         coloring_trials=args.coloring_trials,
         assembly_mode=args.backend,
+        element_reorder_mode=args.element_reorder_mode,
+        local_hessian_mode=args.local_hessian_mode,
         tolf=args.tolf,
         tolg=args.tolg,
         tolg_rel=args.tolg_rel,
@@ -240,6 +263,8 @@ def _run_he(args):
         trust_eta_shrink=args.trust_eta_shrink,
         trust_eta_expand=args.trust_eta_expand,
         trust_max_reject=args.trust_max_reject,
+        trust_subproblem_line_search=args.trust_subproblem_line_search,
+        step_time_limit_s=args.step_time_limit_s,
     )
     return run(ns)
 

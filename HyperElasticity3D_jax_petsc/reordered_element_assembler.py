@@ -52,8 +52,7 @@ class LocalOverlapData:
 
 @dataclass
 class ScatterData:
-    grad_reord: np.ndarray
-    grad_mask_owned: np.ndarray
+    owned_local_pos: np.ndarray
     hess_e: np.ndarray
     hess_i: np.ndarray
     hess_j: np.ndarray
@@ -293,6 +292,7 @@ class HEReorderedElementAssembler:
         pc_options=None,
         reorder_mode="block_xyz",
         use_abs_det=False,
+        local_hessian_mode="element",
     ):
         self.comm = comm
         self.rank = comm.Get_rank()
@@ -302,6 +302,7 @@ class HEReorderedElementAssembler:
         self.use_abs_det = bool(use_abs_det)
         self.use_near_nullspace = bool(use_near_nullspace)
         self.reorder_mode = str(reorder_mode)
+        self.local_hessian_mode = str(local_hessian_mode)
         self.iter_timings = []
         self._f_owned = np.zeros(0, dtype=np.float64)
         self._hvp_eval_mode = "element_overlap"
@@ -325,10 +326,21 @@ class HEReorderedElementAssembler:
         self.local_data = _build_local_overlap_data(params, self.layout, comm)
         (
             self._energy_jit,
-            self._elem_grad_jit,
+            self._grad_jit,
             self._elem_hess_jit,
+            self._local_grad_raw,
         ) = self._make_local_element_kernels()
         self._scatter = self._build_scatter_data()
+        if self.local_hessian_mode == "sfd_local":
+            self._setup_local_sfd()
+            self._hvp_eval_mode = "sfd_local_batched"
+        elif self.local_hessian_mode == "sfd_local_vmap":
+            self._setup_local_sfd()
+            self._hvp_eval_mode = "sfd_local_vmap_hvpjit"
+        elif self.local_hessian_mode != "element":
+            raise ValueError(
+                f"Unsupported local_hessian_mode={self.local_hessian_mode!r}"
+            )
         self._gather_sizes = np.asarray(
             comm.allgather(self.layout.hi - self.layout.lo), dtype=np.int64
         )
@@ -384,8 +396,16 @@ class HEReorderedElementAssembler:
                 * vol_e
             )
 
-        grad_elem = jax.vmap(jax.grad(element_energy), in_axes=(0, 0, 0, 0, 0))
         hess_elem = jax.vmap(jax.hessian(element_energy), in_axes=(0, 0, 0, 0, 0))
+
+        def local_full_energy(v_local):
+            v_e = v_local[elems]
+            e = jax.vmap(element_energy, in_axes=(0, 0, 0, 0, 0))(
+                v_e, dphix, dphiy, dphiz, vol
+            )
+            return jnp.sum(e)
+
+        grad_local = jax.grad(local_full_energy)
 
         @jax.jit
         def energy_fn(v_local):
@@ -396,16 +416,15 @@ class HEReorderedElementAssembler:
             return jnp.sum(e * energy_weights)
 
         @jax.jit
-        def elem_grad_fn(v_local):
-            v_e = v_local[elems]
-            return grad_elem(v_e, dphix, dphiy, dphiz, vol)
+        def local_grad_fn(v_local):
+            return grad_local(v_local)
 
         @jax.jit
         def elem_hess_fn(v_local):
             v_e = v_local[elems]
             return hess_elem(v_e, dphix, dphiy, dphiz, vol)
 
-        return energy_fn, elem_grad_fn, elem_hess_fn
+        return energy_fn, local_grad_fn, elem_hess_fn, grad_local
 
     def _warmup(self):
         v_local = np.asarray(
@@ -413,13 +432,128 @@ class HEReorderedElementAssembler:
         )
         v_local_j = jnp.asarray(v_local, dtype=jnp.float64)
         _ = self._energy_jit(v_local_j).block_until_ready()
-        _ = self._elem_grad_jit(v_local_j).block_until_ready()
+        _ = self._grad_jit(v_local_j).block_until_ready()
         _ = self._elem_hess_jit(v_local_j).block_until_ready()
+        if self.local_hessian_mode == "sfd_local":
+            dummy_tangents = jnp.zeros(
+                (self._sfd_n_colors, v_local.shape[0]), dtype=jnp.float64
+            )
+            _ = self._sfd_hvp_batched_jit(v_local_j, dummy_tangents).block_until_ready()
+        elif self.local_hessian_mode == "sfd_local_vmap":
+            dummy_tangents = jnp.zeros(
+                (self._sfd_n_colors, v_local.shape[0]), dtype=jnp.float64
+            )
+            _ = self._sfd_hvp_vmap(v_local_j, dummy_tangents).block_until_ready()
+
+    def _setup_local_sfd(self):
+        import igraph
+
+        elems_local = self.local_data.elems_local_np
+        local_reord = self.layout.total_to_free_reord[self.local_data.local_total_nodes]
+        elem_fdof = local_reord[elems_local]
+        npe = elems_local.shape[1]
+
+        rows_2d = np.repeat(elem_fdof, npe, axis=1)
+        cols_2d = np.tile(elem_fdof, (1, npe))
+        rows_flat = rows_2d.ravel()
+        cols_flat = cols_2d.ravel()
+        valid = (rows_flat >= 0) & (cols_flat >= 0)
+        row_arr = rows_flat[valid]
+        col_arr = cols_flat[valid]
+
+        J_arr = np.unique(local_reord[local_reord >= 0]).astype(np.int64)
+        n_J = len(J_arr)
+        J_to_idx = np.full(self.layout.n_free, -1, dtype=np.int64)
+        J_to_idx[J_arr] = np.arange(n_J, dtype=np.int64)
+
+        A_J = sparse.csr_matrix(
+            (
+                np.ones(len(row_arr), dtype=np.float64),
+                (J_to_idx[row_arr], J_to_idx[col_arr]),
+            ),
+            shape=(n_J, n_J),
+        )
+        A_J.data[:] = 1.0
+        A_J.eliminate_zeros()
+
+        A2_J = sparse.csr_matrix(A_J @ A_J)
+        A2_J.data[:] = 1.0
+        A2_J.eliminate_zeros()
+
+        A2_J_coo = A2_J.tocoo()
+        lo_tri = A2_J_coo.row > A2_J_coo.col
+        edges = np.column_stack((A2_J_coo.row[lo_tri], A2_J_coo.col[lo_tri]))
+        graph = igraph.Graph(
+            n_J, edges.tolist() if len(edges) > 0 else [], directed=False
+        )
+        coloring_raw = graph.vertex_coloring_greedy()
+        self._sfd_local_coloring = np.array(coloring_raw, dtype=np.int32).ravel()
+        self._sfd_n_colors = (
+            int(self._sfd_local_coloring.max() + 1) if n_J > 0 else 0
+        )
+        self._sfd_J_dofs = J_arr
+        self._sfd_J_to_idx = J_to_idx
+
+        reord_to_local = np.full(self.layout.n_free, -1, dtype=np.int64)
+        free_mask = local_reord >= 0
+        reord_to_local[local_reord[free_mask]] = np.where(free_mask)[0]
+
+        owned_local_rows = reord_to_local[self.layout.owned_rows]
+        if np.any(owned_local_rows < 0):
+            raise RuntimeError("Owned reordered rows are missing from the overlap domain")
+        owned_col_J_idx = J_to_idx[self.layout.owned_cols]
+        if np.any(owned_col_J_idx < 0):
+            raise RuntimeError("Owned reordered columns are missing from the local SFD set")
+        owned_col_colors = self._sfd_local_coloring[owned_col_J_idx]
+
+        self._sfd_color_nz = {}
+        for c in range(self._sfd_n_colors):
+            mask_c = owned_col_colors == c
+            positions = np.where(mask_c)[0].astype(np.int64)
+            local_rows = owned_local_rows[positions].astype(np.int64)
+            self._sfd_color_nz[c] = (positions, local_rows)
+
+        indicators_local = []
+        for c in range(self._sfd_n_colors):
+            indicator = np.zeros(len(local_reord), dtype=np.float64)
+            J_dofs_c = self._sfd_J_dofs[self._sfd_local_coloring == c]
+            local_idx = reord_to_local[J_dofs_c]
+            indicator[local_idx] = 1.0
+            indicators_local.append(jnp.array(indicator))
+        self._sfd_indicators_local = indicators_local
+        if indicators_local:
+            self._sfd_indicators_stacked = jnp.stack(indicators_local)
+        else:
+            self._sfd_indicators_stacked = jnp.zeros(
+                (0, len(local_reord)), dtype=jnp.float64
+            )
+
+        def hvp_fn(v_local, tangent_local):
+            return jax.jvp(self._local_grad_raw, (v_local,), (tangent_local,))[1]
+
+        self._sfd_hvp_jit = jax.jit(hvp_fn)
+
+        def hvp_batched(v_local, tangents):
+            return jax.vmap(lambda t: hvp_fn(v_local, t))(tangents)
+
+        self._sfd_hvp_batched_jit = jax.jit(hvp_batched)
+
+        def hvp_vmap(v_local, tangents):
+            return jax.vmap(lambda t: self._sfd_hvp_jit(v_local, t))(tangents)
+
+        self._sfd_hvp_vmap = hvp_vmap
 
     def _build_scatter_data(self) -> ScatterData:
         elems_reordered = self.local_data.elems_reordered
-        grad_reord = elems_reordered.reshape(-1)
-        grad_mask_owned = (grad_reord >= self.layout.lo) & (grad_reord < self.layout.hi)
+        local_reord = self.layout.total_to_free_reord[self.local_data.local_total_nodes]
+        owned_mask_local = (local_reord >= self.layout.lo) & (local_reord < self.layout.hi)
+        owned_rows = local_reord[owned_mask_local] - self.layout.lo
+        owned_local_pos = np.full(self.layout.hi - self.layout.lo, -1, dtype=np.int64)
+        owned_local_pos[owned_rows] = np.where(owned_mask_local)[0].astype(np.int64)
+        if np.any(owned_local_pos < 0):
+            raise RuntimeError(
+                "Failed to map all owned reordered DOFs to overlap-local indices"
+            )
 
         rows = elems_reordered[:, :, None]
         cols = elems_reordered[:, None, :]
@@ -436,8 +570,7 @@ class HEReorderedElementAssembler:
             count=len(keys),
         )
         return ScatterData(
-            grad_reord=grad_reord,
-            grad_mask_owned=grad_mask_owned,
+            owned_local_pos=owned_local_pos,
             hess_e=np.asarray(vi[0], dtype=np.int64),
             hess_i=np.asarray(vi[1], dtype=np.int64),
             hess_j=np.asarray(vi[2], dtype=np.int64),
@@ -486,19 +619,94 @@ class HEReorderedElementAssembler:
     def gradient_fn(self, vec, g):
         full, _ = self._allgather_full_owned(np.asarray(vec.array[:], dtype=np.float64))
         v_local, _ = self._build_v_local(full)
-        elem_grad = np.asarray(self._elem_grad_jit(jnp.asarray(v_local)).block_until_ready())
-        grad_vals = elem_grad.reshape(-1)
-        grad_owned = np.zeros(self.layout.hi - self.layout.lo, dtype=np.float64)
-        np.add.at(
-            grad_owned,
-            self._scatter.grad_reord[self._scatter.grad_mask_owned] - self.layout.lo,
-            grad_vals[self._scatter.grad_mask_owned],
-        )
+        grad_local = np.asarray(self._grad_jit(jnp.asarray(v_local)).block_until_ready())
+        grad_owned = grad_local[self._scatter.owned_local_pos]
         g.array[:] = grad_owned
 
     def assemble_hessian(self, u_owned, variant=2):
         del variant
+        if self.local_hessian_mode == "sfd_local":
+            return self._assemble_hessian_sfd_local(u_owned)
+        if self.local_hessian_mode == "sfd_local_vmap":
+            return self._assemble_hessian_sfd_local_vmap(u_owned)
         return self.assemble_hessian_element(u_owned)
+
+    def _finalize_sfd_local_hessian(self, all_hvps_np, t_comm, t_build, t_total):
+        timings = {}
+
+        t0 = time.perf_counter()
+        owned_vals = np.zeros(self.layout.owned_rows.size, dtype=np.float64)
+        for c in range(self._sfd_n_colors):
+            positions, local_rows = self._sfd_color_nz[c]
+            if len(positions) > 0:
+                owned_vals[positions] = all_hvps_np[c, local_rows]
+        timings["extraction"] = time.perf_counter() - t0
+
+        t0 = time.perf_counter()
+        self.A.setValuesCOO(
+            owned_vals.astype(PETSc.ScalarType),
+            addv=PETSc.InsertMode.INSERT_VALUES,
+        )
+        self.A.assemble()
+        timings["coo_assembly"] = time.perf_counter() - t0
+
+        timings["allgatherv"] = float(t_comm)
+        timings["build_v_local"] = float(t_build)
+        timings["p2p_exchange"] = float(t_comm + t_build)
+        timings["n_hvps"] = int(self._sfd_n_colors)
+        timings["total"] = time.perf_counter() - t_total
+        self.iter_timings.append(timings)
+        return timings
+
+    def _assemble_hessian_sfd_local(self, u_owned):
+        t_total = time.perf_counter()
+
+        full, t_comm = self._allgather_full_owned(np.asarray(u_owned, dtype=np.float64))
+        v_local, t_build = self._build_v_local(full)
+
+        timings = {}
+        if self._sfd_n_colors > 0:
+            t0 = time.perf_counter()
+            all_hvps = self._sfd_hvp_batched_jit(
+                jnp.asarray(v_local), self._sfd_indicators_stacked
+            ).block_until_ready()
+            all_hvps_np = np.asarray(all_hvps)
+            timings["hvp_compute"] = time.perf_counter() - t0
+        else:
+            all_hvps_np = np.zeros((0, len(v_local)), dtype=np.float64)
+            timings["hvp_compute"] = 0.0
+
+        timings["assembly_mode"] = "sfd_overlap_local"
+        finalize = self._finalize_sfd_local_hessian(
+            all_hvps_np, t_comm, t_build, t_total
+        )
+        finalize.update(timings)
+        return finalize
+
+    def _assemble_hessian_sfd_local_vmap(self, u_owned):
+        t_total = time.perf_counter()
+
+        full, t_comm = self._allgather_full_owned(np.asarray(u_owned, dtype=np.float64))
+        v_local, t_build = self._build_v_local(full)
+
+        timings = {}
+        if self._sfd_n_colors > 0:
+            t0 = time.perf_counter()
+            all_hvps = self._sfd_hvp_vmap(
+                jnp.asarray(v_local), self._sfd_indicators_stacked
+            )
+            all_hvps_np = np.asarray(all_hvps.block_until_ready())
+            timings["hvp_compute"] = time.perf_counter() - t0
+        else:
+            all_hvps_np = np.zeros((0, len(v_local)), dtype=np.float64)
+            timings["hvp_compute"] = 0.0
+
+        timings["assembly_mode"] = "sfd_overlap_local_vmap_hvpjit"
+        finalize = self._finalize_sfd_local_hessian(
+            all_hvps_np, t_comm, t_build, t_total
+        )
+        finalize.update(timings)
+        return finalize
 
     def assemble_hessian_element(self, u_owned):
         timings = {}

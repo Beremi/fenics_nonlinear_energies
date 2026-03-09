@@ -333,7 +333,8 @@ This was done in production rather than by further mutating the generic
 assembler base because the winning design is currently specific to the HE
 element path:
 
-- exact vmapped element grad/Hessian
+- one whole-local overlap gradient
+- exact vmapped element Hessian
 - reordered PETSc ownership
 - overlap domain large enough to compute all owned rows locally
 - `Allgatherv`-based state reconstruction
@@ -353,13 +354,16 @@ One production verification run was repeated on the main fine case:
 | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
 | `FEniCS custom` | 18 | 102 | 0.192 | 1.141 | 0.299 | 2.774 | 5.142 | 5.334 |
 | `JAX element current` | 12 | 75 | 6.722 | 2.163 | 1.267 | 9.550 | 16.397 | 23.120 |
-| `JAX element production` | 13 | 53 | 7.499 | 1.978 | 0.346 | 1.818 | 5.856 | 14.112 |
+| `JAX element production` | 13 | 53 | 7.556 | 1.937 | 0.333 | 1.653 | 5.473 | 13.678 |
 
 Notes:
 
 - The production `Step [s]` nearly closes the old gap to FEniCS custom.
 - The linear part is now much closer to FEniCS than to the old JAX element
   implementation.
+- Replacing the production gradient callback with one whole-local overlap
+  gradient gave another small improvement over the earlier production row,
+  without changing Newton or KSP counts.
 - The production `Setup [s]` is not directly comparable to the stage-2
   prototype `Setup [s]` column. The prototype setup tables started later and
   did not include the full reorder/layout/subdomain build cost that the real

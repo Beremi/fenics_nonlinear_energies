@@ -106,6 +106,13 @@ def _build_parser(profile_defaults):
         help="Element mode only: reorder free DOFs before PETSc ownership split "
              "(default: block_xyz)",
     )
+    parser.add_argument(
+        "--local_hessian_mode",
+        choices=("element", "sfd_local", "sfd_local_vmap"),
+        default=None,
+        help="Element mode only: local Hessian assembly kernel "
+             "('element', 'sfd_local', or 'sfd_local_vmap')",
+    )
 
     parser.add_argument("--tolf", type=float, default=1e-4, help="Energy-change tolerance")
     parser.add_argument("--tolg", type=float, default=1e-3, help="Gradient-norm tolerance")
@@ -118,6 +125,12 @@ def _build_parser(profile_defaults):
     parser.add_argument("--tolx_rel", type=float, default=1e-3, help="Relative step tolerance")
     parser.add_argument("--tolx_abs", type=float, default=1e-10, help="Absolute step tolerance")
     parser.add_argument("--maxit", type=int, default=100, help="Maximum Newton iterations")
+    parser.add_argument(
+        "--step_time_limit_s",
+        type=float,
+        default=None,
+        help="Optional per-step wall-time limit passed into the Newton loop",
+    )
 
     parser.add_argument("--linesearch_a", type=float, default=-0.5, help="Line-search lower bound")
     parser.add_argument("--linesearch_b", type=float, default=2.0, help="Line-search upper bound")
@@ -126,6 +139,12 @@ def _build_parser(profile_defaults):
         type=float,
         default=1e-3,
         help="Golden-section line-search tolerance",
+    )
+    parser.add_argument(
+        "--trust_subproblem_line_search",
+        action=argparse.BooleanOptionalAction,
+        default=False,
+        help="When using PETSc trust-region KSPs (stcg/nash/gltr), apply a post-KSP line search",
     )
 
     parser.add_argument(

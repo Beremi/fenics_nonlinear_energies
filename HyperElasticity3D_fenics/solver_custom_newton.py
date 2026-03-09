@@ -24,6 +24,7 @@ from dolfinx.fem.petsc import (
 
 from tools_petsc4py.minimizers import newton
 from tools_petsc4py.fenics_tools import ghost_update as _ghost_update
+from tools_petsc4py.trust_ksp import ksp_cg_set_radius
 
 # ---------------------------------------------------------------------------
 # Physical parameters
@@ -118,6 +119,7 @@ def _set_initial_from_jax_npz(V, u, npz_path, init_step):
 
 def run_level(mesh_level, num_steps=1, verbose=True, maxit=100, start_step=1,
               init_npz="", init_step=0, linesearch_interval=(-0.5, 2.0),
+              linesearch_tol=1e-3,
               use_abs_det=False, ksp_type="gmres", pc_type="hypre",
               ksp_rtol=1e-3, ksp_max_it=10000, use_near_nullspace=True,
               total_steps=24, hypre_nodal_coarsen=6, hypre_vec_interp_variant=3,
@@ -140,7 +142,9 @@ def run_level(mesh_level, num_steps=1, verbose=True, maxit=100, start_step=1,
               trust_expand=1.5,
               trust_eta_shrink=0.05,
               trust_eta_expand=0.75,
-              trust_max_reject=6):
+              trust_max_reject=6,
+              trust_subproblem_line_search=False,
+              step_time_limit_s=None):
     """Run JAX-version Newton solver for one HE mesh level.
 
     Returns dict with: mesh_level, total_dofs, time, iters, energy, message
@@ -287,6 +291,9 @@ def run_level(mesh_level, num_steps=1, verbose=True, maxit=100, start_step=1,
 
     ksp.setFromOptions()
     ksp.setTolerances(rtol=ksp_rtol, max_it=ksp_max_it)
+    trust_ksp_subproblem = (
+        use_trust_region and str(ksp_type).lower() in {"stcg", "nash", "gltr"}
+    )
 
     # ------------------------------------------------------------------
     # Callbacks for tools_petsc4py.minimizers.newton
@@ -312,7 +319,7 @@ def run_level(mesh_level, num_steps=1, verbose=True, maxit=100, start_step=1,
         g.ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
         set_bc(g, bcs, vec)
 
-    def hessian_solve_fn(vec, rhs, sol):
+    def _assemble_and_solve(rhs, sol, trust_radius=None):
         """Assemble Hessian, solve H · sol = rhs. Return KSP iters."""
         nonlocal force_pc_setup_next, gamg_coords, gamg_coords_kept
         if rank == 0 and verbose:
@@ -329,6 +336,8 @@ def run_level(mesh_level, num_steps=1, verbose=True, maxit=100, start_step=1,
         if rank == 0 and verbose:
             print("Setting operators...", flush=True)
         ksp.setOperators(A)
+        if trust_radius is not None:
+            ksp_cg_set_radius(ksp, float(trust_radius))
         if gamg_coords is not None:
             pc.setCoordinates(gamg_coords)
             gamg_coords_kept = gamg_coords
@@ -362,9 +371,18 @@ def run_level(mesh_level, num_steps=1, verbose=True, maxit=100, start_step=1,
                     "solve_time": round(t4 - t3, 6),
                     "ksp_its": ksp_its,
                     "linear_total_time": round(t4 - t0, 6),
+                    "trust_radius": (
+                        None if trust_radius is None else round(float(trust_radius), 12)
+                    ),
                 }
             )
         return ksp_its
+
+    def hessian_solve_fn(vec, rhs, sol):
+        return _assemble_and_solve(rhs, sol, trust_radius=None)
+
+    def trust_subproblem_solve_fn(vec, rhs, sol, trust_radius):
+        return _assemble_and_solve(rhs, sol, trust_radius=trust_radius)
 
     # ---- time evolution ----
     rotation_per_iter = 4 * 2 * np.pi / total_steps
@@ -436,7 +454,7 @@ def run_level(mesh_level, num_steps=1, verbose=True, maxit=100, start_step=1,
                 tolf=tolf,
                 tolg=tolg,
                 tolg_rel=tolg_rel,
-                linesearch_tol=1e-3,
+                linesearch_tol=linesearch_tol,
                 linesearch_interval=ls_interval,
                 maxit=maxit,
                 tolx_rel=tolx_rel,
@@ -448,6 +466,10 @@ def run_level(mesh_level, num_steps=1, verbose=True, maxit=100, start_step=1,
                 ghost_update_fn=_ghost_update,
                 project_fn=lambda vec: set_bc(vec, bcs),
                 hessian_matvec_fn=lambda _x, vin, vout: A.mult(vin, vout),
+                trust_subproblem_solve_fn=(
+                    trust_subproblem_solve_fn if trust_ksp_subproblem else None
+                ),
+                trust_subproblem_line_search=trust_subproblem_line_search,
                 save_history=save_history,
                 trust_region=use_trust_region,
                 trust_radius_init=trust_radius_init,
@@ -458,6 +480,7 @@ def run_level(mesh_level, num_steps=1, verbose=True, maxit=100, start_step=1,
                 trust_eta_shrink=trust_eta_shrink,
                 trust_eta_expand=trust_eta_expand,
                 trust_max_reject=trust_max_reject,
+                step_time_limit_s=step_time_limit_s,
             )
             total_time = time.perf_counter() - t_start
             used_attempt = attempt_name
@@ -495,6 +518,9 @@ def run_level(mesh_level, num_steps=1, verbose=True, maxit=100, start_step=1,
             "ksp_max_it_used": int(used_ksp_max_it),
             "linesearch_interval_used": [float(used_linesearch[0]), float(used_linesearch[1])],
         }
+        if step_time_limit_s is not None:
+            step_record["step_time_limit_s"] = float(step_time_limit_s)
+            step_record["kill_switch_exceeded"] = bool(total_time > float(step_time_limit_s))
         if save_history:
             step_record["history"] = result.get("history", [])
         if save_linear_timing:
@@ -504,6 +530,13 @@ def run_level(mesh_level, num_steps=1, verbose=True, maxit=100, start_step=1,
 
         if rank == 0 and verbose:
             print(f"Step {step} finished: Energy = {final_energy:.6f}, Iters = {result['nit']}")
+        if step_time_limit_s is not None and total_time > float(step_time_limit_s):
+            if rank == 0 and verbose:
+                print(
+                    f"Stopping early at step {step}: step time {total_time:.3f}s "
+                    f"exceeded limit {float(step_time_limit_s):.3f}s"
+                )
+            break
         if fail_fast and "converged" not in result["message"].lower():
             if rank == 0 and verbose:
                 print(f"Stopping early at step {step} due to solver message: {result['message']}")

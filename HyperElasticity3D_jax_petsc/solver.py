@@ -20,6 +20,7 @@ from HyperElasticity3D_jax_petsc.reordered_element_assembler import (
 )
 from HyperElasticity3D_petsc_support.rotate_boundary import rotate_right_face_from_reference
 from tools_petsc4py.minimizers import newton
+from tools_petsc4py.trust_ksp import ksp_cg_set_radius
 
 
 PROFILE_DEFAULTS = {
@@ -132,6 +133,9 @@ def run(args):
     element_reorder_mode = str(
         getattr(args, "element_reorder_mode", None) or "block_xyz"
     )
+    local_hessian_mode = str(
+        getattr(args, "local_hessian_mode", None) or "element"
+    )
 
     mesh_obj = MeshHyperElasticity3D(args.level)
     params, adjacency, u_init = mesh_obj.get_data()
@@ -151,6 +155,7 @@ def run(args):
             use_near_nullspace=bool(settings["use_near_nullspace"]),
             pc_options=pc_options,
             reorder_mode=element_reorder_mode,
+            local_hessian_mode=local_hessian_mode,
             use_abs_det=bool(args.use_abs_det),
         )
     else:
@@ -203,6 +208,13 @@ def run(args):
     trust_eta_shrink = float(getattr(args, "trust_eta_shrink", 0.05))
     trust_eta_expand = float(getattr(args, "trust_eta_expand", 0.75))
     trust_max_reject = int(getattr(args, "trust_max_reject", 6))
+    trust_subproblem_line_search = bool(
+        getattr(args, "trust_subproblem_line_search", False)
+    )
+    step_time_limit_s = getattr(args, "step_time_limit_s", None)
+    trust_ksp_subproblem = bool(
+        use_trust_region and str(settings["ksp_type"]).lower() in {"stcg", "nash", "gltr"}
+    )
 
     if rank == 0 and not args.quiet:
         print(
@@ -267,7 +279,7 @@ def run(args):
                     t_asm0 = time.perf_counter()
                     u_owned = np.array(vec.array[:], dtype=np.float64)
                     if use_element_assembly:
-                        assembler.assemble_hessian_element(u_owned)
+                        assembler.assemble_hessian(u_owned)
                     else:
                         assembler.assemble_hessian(u_owned, variant=2)
                     asm_total_time = time.perf_counter() - t_asm0
@@ -315,6 +327,7 @@ def run(args):
                             "assemble_hvp_compute": float(asm_details.get("hvp_compute", 0.0)),
                             "assemble_extraction": float(asm_details.get("extraction", 0.0)),
                             "assemble_coo_assembly": float(asm_details.get("coo_assembly", 0.0)),
+                            "assemble_n_hvps": int(asm_details.get("n_hvps", 0)),
                             "setop_time": float(t_setop),
                             "set_tolerances_time": float(t_tol),
                             "pc_setup_time": float(t_setup),
@@ -324,6 +337,78 @@ def run(args):
                             ),
                             "ksp_its": int(ksp_its),
                             "attempt": attempt_name,
+                        }
+                        linear_timing_records.append(record)
+
+                    return ksp_its
+
+                def trust_subproblem_solve_fn(vec, rhs, sol, trust_radius):
+                    nonlocal force_pc_setup_next
+
+                    ksp_cg_set_radius(ksp, float(trust_radius))
+
+                    t_asm0 = time.perf_counter()
+                    u_owned = np.array(vec.array[:], dtype=np.float64)
+                    if use_element_assembly:
+                        assembler.assemble_hessian(u_owned)
+                    else:
+                        assembler.assemble_hessian(u_owned, variant=2)
+                    asm_total_time = time.perf_counter() - t_asm0
+                    asm_details = {}
+                    if assembler.iter_timings:
+                        asm_details = dict(assembler.iter_timings[-1])
+                    asm_details["assembly_total_time"] = float(asm_total_time)
+
+                    t_setop0 = time.perf_counter()
+                    ksp.setOperators(A)
+                    nonlocal gamg_coords
+                    if gamg_coords is not None:
+                        pc.setCoordinates(gamg_coords)
+                        gamg_coords = None
+                    t_setop = time.perf_counter() - t_setop0
+
+                    t_tol0 = time.perf_counter()
+                    ksp.setTolerances(
+                        rtol=float(ksp_rtol_attempt), max_it=int(ksp_max_it_attempt)
+                    )
+                    t_tol = time.perf_counter() - t_tol0
+
+                    t_setup0 = time.perf_counter()
+                    if settings["pc_setup_on_ksp_cap"]:
+                        if force_pc_setup_next:
+                            ksp.setUp()
+                            force_pc_setup_next = False
+                    else:
+                        ksp.setUp()
+                    t_setup = time.perf_counter() - t_setup0
+
+                    t_solve0 = time.perf_counter()
+                    ksp.solve(rhs, sol)
+                    t_solve = time.perf_counter() - t_solve0
+                    ksp_its = int(ksp.getIterationNumber())
+                    linear_iters_this_attempt.append(ksp_its)
+
+                    if settings["pc_setup_on_ksp_cap"] and ksp_its >= int(ksp_max_it_attempt):
+                        force_pc_setup_next = True
+
+                    if args.save_linear_timing:
+                        record = {
+                            "assemble_total_time": float(asm_total_time),
+                            "assemble_p2p_exchange": float(asm_details.get("p2p_exchange", 0.0)),
+                            "assemble_hvp_compute": float(asm_details.get("hvp_compute", 0.0)),
+                            "assemble_extraction": float(asm_details.get("extraction", 0.0)),
+                            "assemble_coo_assembly": float(asm_details.get("coo_assembly", 0.0)),
+                            "assemble_n_hvps": int(asm_details.get("n_hvps", 0)),
+                            "setop_time": float(t_setop),
+                            "set_tolerances_time": float(t_tol),
+                            "pc_setup_time": float(t_setup),
+                            "solve_time": float(t_solve),
+                            "linear_total_time": float(
+                                asm_total_time + t_setop + t_tol + t_setup + t_solve
+                            ),
+                            "ksp_its": int(ksp_its),
+                            "attempt": attempt_name,
+                            "trust_radius": float(trust_radius),
                         }
                         linear_timing_records.append(record)
 
@@ -349,6 +434,10 @@ def run(args):
                     comm=comm,
                     ghost_update_fn=None,
                     hessian_matvec_fn=lambda _x, vin, vout: assembler.A.mult(vin, vout),
+                    trust_subproblem_solve_fn=(
+                        trust_subproblem_solve_fn if trust_ksp_subproblem else None
+                    ),
+                    trust_subproblem_line_search=trust_subproblem_line_search,
                     save_history=bool(args.save_history),
                     trust_region=use_trust_region,
                     trust_radius_init=trust_radius_init,
@@ -359,6 +448,7 @@ def run(args):
                     trust_eta_shrink=trust_eta_shrink,
                     trust_eta_expand=trust_eta_expand,
                     trust_max_reject=trust_max_reject,
+                    step_time_limit_s=step_time_limit_s,
                 )
                 step_time = time.perf_counter() - t0
 
@@ -398,6 +488,11 @@ def run(args):
                     float(used_linesearch[1]),
                 ],
             }
+            if step_time_limit_s is not None:
+                step_record["step_time_limit_s"] = float(step_time_limit_s)
+                step_record["kill_switch_exceeded"] = bool(
+                    step_time > float(step_time_limit_s)
+                )
             if args.save_history:
                 step_record["history"] = result.get("history", [])
             if args.save_linear_timing:
@@ -417,6 +512,14 @@ def run(args):
             if args.stop_on_fail and "converged" not in step_record["message"].lower():
                 if rank == 0 and not args.quiet:
                     print(f"Stopping at step {step} due to failure message.", flush=True)
+                break
+            if step_time_limit_s is not None and step_time > float(step_time_limit_s):
+                if rank == 0 and not args.quiet:
+                    print(
+                        f"Stopping at step {step} because step time "
+                        f"{step_time:.3f}s exceeded limit {float(step_time_limit_s):.3f}s",
+                        flush=True,
+                    )
                 break
 
     finally:
@@ -453,10 +556,17 @@ def run(args):
                 "element_reorder_mode": (
                     element_reorder_mode if use_element_assembly else None
                 ),
+                "local_hessian_mode": (
+                    local_hessian_mode if use_element_assembly else None
+                ),
                 "distribution_strategy": str(
                     getattr(assembler, "distribution_strategy", "reduced_free_dofs")
                 ),
                 "assembler": assembler.__class__.__name__,
+                "trust_subproblem_solver": (
+                    "petsc_ksp" if trust_ksp_subproblem else "reduced_2d"
+                ),
+                "trust_subproblem_line_search": bool(trust_subproblem_line_search),
             },
             "newton": {
                 "tolf": float(args.tolf),
@@ -473,6 +583,10 @@ def run(args):
                 "trust_radius_init": float(trust_radius_init),
                 "trust_radius_min": float(trust_radius_min),
                 "trust_radius_max": float(trust_radius_max),
+                "trust_subproblem_line_search": bool(trust_subproblem_line_search),
+                "step_time_limit_s": (
+                    None if step_time_limit_s is None else float(step_time_limit_s)
+                ),
             },
             "load_stepping": {
                 "start_step": int(args.start_step),

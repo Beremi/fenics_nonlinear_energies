@@ -17,13 +17,13 @@ The important follow-up result is:
   `HyperElasticity3D_jax_petsc/reordered_element_assembler.py`
 - on the main fine check (`level 4`, `step 1 / 96`, `np=32`, `GMRES + GAMG`)
   the production element path reduces the old JAX element step from `16.397 s`
-  to `5.856 s`
+  to `5.473 s`
 
 | Variant | Setup [s] | Step [s] | Assembly [s] | PC setup [s] | Solve [s] |
 | --- | ---: | ---: | ---: | ---: | ---: |
 | FEniCS custom | 0.192 | 5.142 | 1.141 | 0.299 | 2.774 |
 | Old JAX+PETSc element | 6.722 | 16.397 | 2.163 | 1.267 | 9.550 |
-| Production reordered element | 7.499 | 5.856 | 1.978 | 0.346 | 1.818 |
+| Production reordered element | 7.556 | 5.473 | 1.937 | 0.333 | 1.653 |
 
 So the conclusions below are still useful for understanding the original gap,
 but the production status is now better than the older sections alone suggest.

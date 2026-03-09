@@ -1,0 +1,37 @@
+[
+  {
+    "case": "ls_only",
+    "steps_requested": 3,
+    "returncode": 0,
+    "json": "/home/michal/repos/fenics_nonlinear_energies/experiment_results_cache/he_fenics_trust_annex_l4_np32_detail/ls_only.json",
+    "log": "/home/michal/repos/fenics_nonlinear_energies/experiment_results_cache/he_fenics_trust_annex_l4_np32_detail/ls_only.log"
+  },
+  {
+    "case": "tr_r0_2",
+    "steps_requested": 4,
+    "returncode": 0,
+    "json": "/home/michal/repos/fenics_nonlinear_energies/experiment_results_cache/he_fenics_trust_annex_l4_np32_detail/tr_r0_2.json",
+    "log": "/home/michal/repos/fenics_nonlinear_energies/experiment_results_cache/he_fenics_trust_annex_l4_np32_detail/tr_r0_2.log"
+  },
+  {
+    "case": "tr_r0_5",
+    "steps_requested": 4,
+    "returncode": 0,
+    "json": "/home/michal/repos/fenics_nonlinear_energies/experiment_results_cache/he_fenics_trust_annex_l4_np32_detail/tr_r0_5.json",
+    "log": "/home/michal/repos/fenics_nonlinear_energies/experiment_results_cache/he_fenics_trust_annex_l4_np32_detail/tr_r0_5.log"
+  },
+  {
+    "case": "tr_r1_0",
+    "steps_requested": 4,
+    "returncode": 0,
+    "json": "/home/michal/repos/fenics_nonlinear_energies/experiment_results_cache/he_fenics_trust_annex_l4_np32_detail/tr_r1_0.json",
+    "log": "/home/michal/repos/fenics_nonlinear_energies/experiment_results_cache/he_fenics_trust_annex_l4_np32_detail/tr_r1_0.log"
+  },
+  {
+    "case": "tr_r2_0",
+    "steps_requested": 4,
+    "returncode": 0,
+    "json": "/home/michal/repos/fenics_nonlinear_energies/experiment_results_cache/he_fenics_trust_annex_l4_np32_detail/tr_r2_0.json",
+    "log": "/home/michal/repos/fenics_nonlinear_energies/experiment_results_cache/he_fenics_trust_annex_l4_np32_detail/tr_r2_0.log"
+  }
+]

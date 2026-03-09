@@ -2,6 +2,55 @@ import numpy as np
 import time
 
 
+def _trial_value(f, x, direction, alpha):
+    val = f(x + alpha * direction)
+    return val if np.isfinite(val) else np.inf
+
+
+def _repair_interval(f, a, b, x, direction, tol, center=0.0, center_value=None, max_bisect=60):
+    center = float(center)
+    a = float(a)
+    b = float(b)
+    tol = max(float(tol), 1e-12)
+    n_evals = 0
+
+    if center_value is None:
+        center_value = _trial_value(f, x, direction, center)
+        n_evals += 1
+    if not np.isfinite(center_value):
+        return a, b, n_evals
+
+    def _repair_side(bound, side_sign):
+        nonlocal n_evals
+        if side_sign < 0 and not (bound < center):
+            return bound
+        if side_sign > 0 and not (bound > center):
+            return bound
+
+        f_bound = _trial_value(f, x, direction, bound)
+        n_evals += 1
+        if np.isfinite(f_bound):
+            return bound
+
+        finite = center
+        nonfinite = bound
+        for _ in range(max_bisect):
+            mid = 0.5 * (finite + nonfinite)
+            f_mid = _trial_value(f, x, direction, mid)
+            n_evals += 1
+            if np.isfinite(f_mid):
+                finite = mid
+            else:
+                nonfinite = mid
+            if abs(nonfinite - finite) <= tol:
+                break
+        return finite
+
+    a = _repair_side(a, -1.0)
+    b = _repair_side(b, +1.0)
+    return a, b, n_evals
+
+
 def zlatyrez(f, a, b, x, ddd, tol):
     """
     Find the minimum of a function f using the Golden section method.
@@ -27,6 +76,8 @@ def zlatyrez(f, a, b, x, ddd, tol):
         Tuple of the argument of minimum and number of iterations.
     """
 
+    a, b, _ = _repair_interval(f, a, b, x, ddd, tol, center=0.0, center_value=f(x))
+
     # Golden ratio
     gamma = 1 / 2 + np.sqrt(5) / 2
 
@@ -44,8 +95,8 @@ def zlatyrez(f, a, b, x, ddd, tol):
     bn = b0
     cn = c0
     dn = d0
-    fcn = f(x + cn * ddd)
-    fdn = f(x + dn * ddd)
+    fcn = _trial_value(f, x, ddd, cn)
+    fdn = _trial_value(f, x, ddd, dn)
 
     while bn - an > tol:
         # Store the values of the interval and the function
@@ -64,7 +115,7 @@ def zlatyrez(f, a, b, x, ddd, tol):
             cn = an + bn - dn
 
             # Update the function value
-            fcn = f(x + cn * ddd)
+            fcn = _trial_value(f, x, ddd, cn)
             fdn = fc
         else:
             # Update the interval
@@ -75,7 +126,7 @@ def zlatyrez(f, a, b, x, ddd, tol):
 
             # Update the function value
             fcn = fd
-            fdn = f(x + dn * ddd)
+            fdn = _trial_value(f, x, ddd, dn)
 
         # Increment the iteration counter
         it += 1

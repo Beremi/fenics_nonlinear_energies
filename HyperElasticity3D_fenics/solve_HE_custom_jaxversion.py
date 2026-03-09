@@ -26,6 +26,7 @@ if __name__ == "__main__":
     parser.add_argument("--init_step", type=int, default=0, help="Step index in init_npz to use as initial guess")
     parser.add_argument("--linesearch_a", type=float, default=-0.5, help="Line-search interval lower bound")
     parser.add_argument("--linesearch_b", type=float, default=2.0, help="Line-search interval upper bound")
+    parser.add_argument("--linesearch_tol", type=float, default=1e-3, help="Line-search tolerance")
     parser.add_argument("--use_abs_det", action="store_true", help="Use abs(det(F)) in energy (JAX-compatible)")
     parser.add_argument("--ksp_type", type=str, default="gmres", help="PETSc KSP type")
     parser.add_argument("--pc_type", type=str, default="hypre", help="PETSc PC type")
@@ -73,6 +74,8 @@ if __name__ == "__main__":
                         help="Disable repair attempt when Newton reaches max iterations")
     parser.add_argument("--retry_ksp_max_it_factor", type=float, default=2.0,
                         help="Multiplier for KSP max_it in repair attempt")
+    parser.add_argument("--trust_subproblem_line_search", action="store_true",
+                        help="Apply a post-KSP line search when using PETSc trust-region KSPs")
     parser.add_argument("--quiet", action="store_true")
     args = parser.parse_args()
 
@@ -85,6 +88,7 @@ if __name__ == "__main__":
         init_npz=args.init_npz,
         init_step=args.init_step,
         linesearch_interval=(args.linesearch_a, args.linesearch_b),
+        linesearch_tol=args.linesearch_tol,
         use_abs_det=args.use_abs_det,
         ksp_type=args.ksp_type,
         pc_type=args.pc_type,
@@ -114,6 +118,7 @@ if __name__ == "__main__":
         nonfinite_retry_rtol_factor=args.nonfinite_retry_rtol_factor,
         nonfinite_retry_linesearch_b=args.nonfinite_retry_linesearch_b,
         retry_ksp_max_it_factor=args.retry_ksp_max_it_factor,
+        trust_subproblem_line_search=args.trust_subproblem_line_search,
     )
 
     if MPI.COMM_WORLD.rank == 0:

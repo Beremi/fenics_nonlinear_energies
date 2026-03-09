@@ -91,7 +91,8 @@ assembler. It uses `HEReorderedElementAssembler` in
 - build a larger overlap domain per rank so each owned row can be assembled
   locally
 - rebuild the current free vector by `Allgatherv`
-- compute exact per-element gradients and Hessians by vmapped JAX kernels
+- compute the local gradient from one overlap-subdomain energy functional and
+  exact per-element Hessians by vmapped JAX kernels
 - scatter directly into the owned COO row pattern
 
 This is a HE-specific production path because the whole point is to fix the
@@ -119,7 +120,8 @@ Local JAX functions:
 **Element** (`--assembly_mode element`):
 - dedicated `HEReorderedElementAssembler` selected directly in `solver.py`
 - analytical element Hessians via `jax.hessian(element_energy)` + `jax.vmap`
-- analytical element gradients via `jax.grad(element_energy)` + `jax.vmap`
+- whole-local gradient via `jax.grad(local_full_energy)` on the overlap
+  subdomain, then direct extraction of owned rows
 - default distribution strategy: overlap domain + `Allgatherv`
 - default reorder for production element mode: `block_xyz`
 - alternative reorder modes: `none`, `block_rcm`, `block_metis`
@@ -137,7 +139,11 @@ Local JAX functions:
 
 ## 6. Nonlinear Solver Parity (Custom FEniCS)
 
-`HyperElasticity3D_jax_petsc/solver.py` uses `tools_petsc4py.minimizers.newton()` with:
+`HyperElasticity3D_jax_petsc/solver.py` uses `tools_petsc4py.minimizers.newton()`.
+
+The completed HE PETSc benchmark campaign used the following default nonlinear
+policy:
+
 - `tolf=1e-4`
 - `tolg=1e-3`
 - `tolg_rel=1e-3`
@@ -146,13 +152,26 @@ Local JAX functions:
 - `maxit=100`
 - `require_all_convergence=True`
 - `fail_on_nonfinite=True`
-- line search interval `(-0.5, 2.0)`, tolerance `1e-3`
+- `use_trust_region=True`
+- PETSc trust-subproblem solve via `ksp_type=stcg`
+- post trust-subproblem line search ON
+- line-search interval `(-0.5, 2.0)`
+- `linesearch_tol=1e-1`
+- `trust_radius_init=0.5`
+- `trust_shrink=0.5`, `trust_expand=1.5`
+- `trust_eta_shrink=0.05`, `trust_eta_expand=0.75`
+- `trust_max_reject=6`
 
-Optional trust-region path:
+The best backend-specific radii from the STCG sweep were:
 
-- enabled via `use_trust_region=True`
-- current practical tuning depends strongly on problem size
-- see `TRUST_REGION_LINESEARCH_TUNING.md` for tested settings and current recommendations
+- `fenics_custom`: `1.0`
+- `jax_petsc_element`: `0.5`
+
+The shared final default stays at `0.5` to preserve a single like-for-like
+nonlinear policy across the PETSc backends.
+
+See `TRUST_REGION_LINESEARCH_TUNING.md` and `final_HE_results.md` for the sweep
+results and the finished benchmark report.
 
 Load-step retry policy:
 - on non-finite or max-iteration stall, retry once with:
@@ -167,7 +186,7 @@ Load stepping:
 
 ## 7. Linear Profiles
 
-Profiles exposed via CLI:
+Historical profiles exposed via CLI:
 
 Reference profile:
 - `ksp_type=gmres`
@@ -185,6 +204,19 @@ Performance profile:
 - `ksp_max_it=30`
 - `pc_setup_on_ksp_cap=True`
 - block size 3 + near-nullspace + `pc.setCoordinates(...)`
+
+Final completed benchmark default:
+
+- `ksp_type=stcg`
+- `pc_type=gamg`
+- `gamg_threshold=0.05`
+- `gamg_agg_nsmooths=1`
+- `ksp_rtol=1e-1`
+- `ksp_max_it=30`
+- `pc_setup_on_ksp_cap=False`
+- near-nullspace ON
+- GAMG coordinates ON
+- trust-region ON with post line search
 
 ## 8. Timing Instrumentation
 
@@ -213,12 +245,15 @@ Current fine-case reference point (`level 4`, `step 1 / 96`, `np=32`,
 | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
 | FEniCS custom | 0.192 | 5.142 | 1.141 | 0.299 | 2.774 | 18 | 102 |
 | Old JAX element path | 6.722 | 16.397 | 2.163 | 1.267 | 9.550 | 12 | 75 |
-| Production reordered element path | 7.499 | 5.856 | 1.978 | 0.346 | 1.818 | 13 | 53 |
+| Production reordered element path | 7.556 | 5.473 | 1.937 | 0.333 | 1.653 | 13 | 53 |
 
 Key findings:
 - `sfd` remains mainly a comparison/debug path for HE.
 - The production element path has largely removed the old solve-side gap on the
   fine `step 1 / 96` case.
+- Switching the production overlap gradient from per-element scatter to one
+  whole-local gradient provided another small step-time win on top of the
+  reordered ownership change.
 - The remaining difference to FEniCS is no longer dominated by `pc_setup` or
   `ksp.solve`; it is now mostly in end-to-end setup/JIT cost.
 - `block_xyz` is the default production reorder because it was the best fine
@@ -254,4 +289,7 @@ The `solve_HE_dof.py` entrypoint includes advanced flags geared toward peak high
 
 - `--assembly_mode element`: (Recommended). Configures JAX to evaluate exact analytical block Hessians evaluating via `@jax.jit(jax.vmap(compute_elem_hessians))`. Cuts matrix assembly latency by >50% compared to typical `sfd` computation.
 - `--retry_on_failure`: Wraps the Newton solver in a robust fallback loop. Highly recommended for severe twisting boundaries. If gradients or line searches explode, dynamically expands line search alpha boundaries `[-0.5, 2.0]` and tightens KSP rules safely recovering from what would otherwise be a mathematical termination.
-- `--pc_setup_on_ksp_cap`: Retains the exact GAMG multigrid state over numerous KSP evaluations dropping latency greatly, only strictly rebuilding if the inner loop limits run out continuously.
+- `--pc_setup_on_ksp_cap`: Retains the same GAMG setup until the previous KSP
+  hit `ksp_max_it`. This is **not** part of the final best-choice HE PETSc
+  setting, which rebuilds the PC every Newton iteration by leaving this flag
+  off.

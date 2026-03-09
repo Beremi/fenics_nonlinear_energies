@@ -4,6 +4,34 @@ Date: 2026-03-06
 
 ## TL;DR
 
+Current HE PETSc default after the full STCG tuning and completed benchmark
+campaign:
+
+- `--ksp_type stcg --pc_type gamg`
+- `--use_trust_region --trust_subproblem_line_search`
+- `--linesearch_tol 1e-1`
+- `--trust_radius_init 0.5`
+- `--trust_shrink 0.5 --trust_expand 1.5`
+- `--trust_eta_shrink 0.05 --trust_eta_expand 0.75`
+- `--ksp_rtol 1e-1 --ksp_max_it 30`
+- rebuild the PC every Newton iteration:
+  leave `--pc_setup_on_ksp_cap` off
+
+Backend-specific best radii from the STCG sweep:
+
+- `fenics_custom`: `trust_radius_init=1.0`
+- `jax_petsc_element`: `trust_radius_init=0.5`
+
+The shared final default is `0.5` because it was the best JAX setting and
+still near-best on FEniCS while keeping one common nonlinear policy.
+
+Historical note:
+
+- the earlier `trust_radius_init=0.2`, `linesearch_interval=[0, 1]` HE
+  recommendation below predates the final STCG-based campaign default and is
+  preserved here as part of the tuning trail, not as the final recommended
+  setting.
+
 Current recommendations after the `rho`-based trust-region implementation:
 
 - p-Laplace:
@@ -258,6 +286,140 @@ Recommended for the small case:
 Recommended for the coarse `1/24` follow-up:
 
 - same as above
+
+## STCG follow-up: level 3, 32 ranks, full `24/24` trajectory
+
+This rerun remakes the HE trust-region tuning on the new PETSc trust-subproblem
+path:
+
+- backends: `fenics_custom`, `jax_petsc_element`
+- mesh: `level 3`
+- MPI: `32`
+- full `24/24` trajectory
+- trust region on, `trust_radius_init=2.0`
+- `ksp_type=stcg`, `pc_type=gamg`
+- `ksp_rtol=1e-1`, `ksp_max_it=100`
+- rebuild PC every Newton iteration (`pc_setup_on_ksp_cap=False`)
+- line-search interval `[-0.5, 2.0]`
+- post line search toggled on/off
+- tested `linesearch_tol`: `1e-1`, `1e-3`, `1e-6`
+
+Summary:
+
+| Backend | Variant | All 24 converged | Total [s] | Newton | Linear | Final energy | Max KSP it | KSP cap hits |
+|---|---|---|---:|---:|---:|---:|---:|---:|
+| `fenics_custom` | `stcg_only` | yes | 41.883 | 743 | 17235 | 93.705064 | 79 | 0 |
+| `fenics_custom` | `stcg_postls_tol1e-1` | yes | 37.526 | 645 | 20716 | 93.704397 | 100 | 3 |
+| `fenics_custom` | `stcg_postls_tol1e-3` | yes | 40.019 | 653 | 21173 | 93.704601 | 100 | 4 |
+| `fenics_custom` | `stcg_postls_tol1e-6` | yes | 45.946 | 656 | 21263 | 93.704637 | 100 | 7 |
+| `jax_petsc_element` | `stcg_only` | no | 57.329 | 843 | 21029 | 93.705020 | 99 | 0 |
+| `jax_petsc_element` | `stcg_postls_tol1e-1` | yes | 54.887 | 711 | 25364 | 93.704737 | 100 | 24 |
+| `jax_petsc_element` | `stcg_postls_tol1e-3` | yes | 62.076 | 711 | 24951 | 93.704693 | 100 | 18 |
+| `jax_petsc_element` | `stcg_postls_tol1e-6` | yes | 69.343 | 713 | 25032 | 93.704234 | 100 | 17 |
+
+Readout:
+
+- FEniCS custom prefers `stcg + post LS` with `linesearch_tol=1e-1`.
+  It is the fastest of the tested variants and still converges all `24` steps.
+- JAX + PETSc also needs the post-STCG line search on this trajectory.
+  The plain `stcg_only` run does not complete the full trajectory:
+  step `10` ends with `Trust-region radius exhausted before full convergence`.
+- For JAX + PETSc, the best tested setting is also
+  `stcg + post LS`, `linesearch_tol=1e-1`.
+- Tightening `linesearch_tol` hurts both backends.
+  `1e-6` is clearly the worst of the tested post-line-search settings.
+- All converged post-line-search variants hit the KSP cap `100` at least a few
+  times, so these are not “easy” solves even though the trajectories complete.
+
+Artifacts:
+
+- sweep summary:
+  `experiment_results_cache/he_stcg_tuning_l3_np32/summary.md`
+- machine-readable summary:
+  `experiment_results_cache/he_stcg_tuning_l3_np32/summary.json`
+
+## STCG trust-parameter tuning: level 3, 32 ranks, full `24/24` trajectory
+
+This follow-up keeps the new PETSc trust-subproblem path and the winning
+post-line-search tolerance fixed:
+
+- backends: `fenics_custom`, `jax_petsc_element`
+- mesh: `level 3`
+- MPI: `32`
+- full `24/24` trajectory
+- `ksp_type=stcg`, `pc_type=gamg`
+- `ksp_rtol=1e-1`, `ksp_max_it=100`
+- rebuild PC every Newton iteration (`pc_setup_on_ksp_cap=False`)
+- post-STCG line search on
+- `linesearch_interval=[-0.5, 2.0]`
+- `linesearch_tol=1e-1`
+
+The sweep was staged:
+
+1. tune `trust_radius_init` with the current update parameters
+2. for each backend, tune `trust_shrink`, `trust_expand`,
+   `trust_eta_shrink`, and `trust_eta_expand` around that backend's best radius
+
+### Radius stage
+
+| Backend | Radius init | All 24 converged | Total [s] | Newton | Linear | Used max it |
+|---|---:|---|---:|---:|---:|---|
+| `fenics_custom` | `0.5` | yes | 40.188 | 668 | 20154 | no |
+| `fenics_custom` | `1.0` | yes | 39.069 | 655 | 20397 | yes |
+| `fenics_custom` | `2.0` | yes | 41.348 | 654 | 21568 | yes |
+| `fenics_custom` | `4.0` | yes | 41.075 | 643 | 21448 | yes |
+| `jax_petsc_element` | `0.5` | yes | 54.769 | 720 | 23509 | yes |
+| `jax_petsc_element` | `1.0` | yes | 57.259 | 716 | 23553 | yes |
+| `jax_petsc_element` | `2.0` | yes | 57.957 | 712 | 25470 | yes |
+| `jax_petsc_element` | `4.0` | yes | 59.322 | 711 | 26877 | yes |
+
+Readout:
+
+- Best FEniCS radius: `trust_radius_init=1.0`
+- Best JAX + PETSc radius: `trust_radius_init=0.5`
+
+### Update-parameter stage
+
+FEniCS update tuning at `trust_radius_init=1.0`:
+
+| Variant | `shrink` | `expand` | `eta_shrink` | `eta_expand` | Total [s] | Newton | Linear | Used max it |
+|---|---:|---:|---:|---:|---:|---:|---:|---|
+| `base` | `0.5` | `1.5` | `0.05` | `0.75` | 39.745 | 660 | 20922 | yes |
+| `expand2` | `0.5` | `2.0` | `0.05` | `0.75` | 42.091 | 647 | 20216 | yes |
+| `stricter` | `0.5` | `1.5` | `0.1` | `0.9` | 42.430 | 659 | 20771 | yes |
+| `strong_shrink` | `0.25` | `1.5` | `0.1` | `0.75` | 42.907 | 659 | 20542 | yes |
+
+JAX + PETSc update tuning at `trust_radius_init=0.5`:
+
+| Variant | `shrink` | `expand` | `eta_shrink` | `eta_expand` | Total [s] | Newton | Linear | Used max it |
+|---|---:|---:|---:|---:|---:|---:|---:|---|
+| `base` | `0.5` | `1.5` | `0.05` | `0.75` | 58.091 | 707 | 22880 | yes |
+| `expand2` | `0.5` | `2.0` | `0.05` | `0.75` | 60.405 | 725 | 23832 | yes |
+| `stricter` | `0.5` | `1.5` | `0.1` | `0.9` | 59.243 | 718 | 23236 | yes |
+| `strong_shrink` | `0.25` | `1.5` | `0.1` | `0.75` | 59.508 | 722 | 23917 | yes |
+
+Readout:
+
+- Best FEniCS setting on this stage remains the base updater:
+  `trust_radius_init=1.0`, `trust_shrink=0.5`, `trust_expand=1.5`,
+  `trust_eta_shrink=0.05`, `trust_eta_expand=0.75`
+- Best JAX + PETSc setting on this stage also remains the base updater:
+  `trust_radius_init=0.5`, `trust_shrink=0.5`, `trust_expand=1.5`,
+  `trust_eta_shrink=0.05`, `trust_eta_expand=0.75`
+- So the main useful tuning knob here is the initial trust radius.
+  The update-parameter variations tested here all made things worse.
+- FEniCS has one robust no-cap option in the sweep:
+  `trust_radius_init=0.5` in the radius stage did not hit `ksp_max_it=100`.
+- Every converged JAX + PETSc candidate in this sweep used `ksp_max_it=100`
+  at least some times, so the solve remains KSP-cap-limited even when the
+  full trajectory converges.
+
+Artifacts:
+
+- sweep summary:
+  `experiment_results_cache/he_stcg_trust_params_l3_np32/summary.md`
+- machine-readable summary:
+  `experiment_results_cache/he_stcg_trust_params_l3_np32/summary.json`
 
 Recommended for the fine `1/96` case:
 

@@ -61,23 +61,40 @@ Neo-Hookean energy on a 3D beam with a rotating right-face boundary condition (0
 | **SNES Newton**                 | `HyperElasticity3D_fenics/solve_HE_snes_newton.py`       | 93/96 steps ✓ |
 | **JAX+PETSc Custom Newton**     | `HyperElasticity3D_jax_petsc/solve_HE_dof.py`           | MPI parallel  |
 
-FEniCS solvers use:
-- GMRES + AMG preconditioner (HYPRE BoomerAMG or PETSc GAMG)
-- Near-nullspace: 6 rigid-body modes (3 translations + 3 rotations)
-- `ksp_rtol = 1e-1`
+Current default PETSc HE setting for both `fenics_custom` and
+`jax_petsc_element`:
 
-The **Custom Newton** uses a golden-section energy line search (`tools_petsc4py/minimizers.py`) and
-`--pc_setup_on_ksp_cap` to reuse the AMG preconditioner across Newton steps.
+- `--ksp_type stcg --pc_type gamg`
+- `--use_trust_region --trust_subproblem_line_search`
+- `--linesearch_tol 1e-1`
+- `--trust_radius_init 0.5`
+- `--trust_shrink 0.5 --trust_expand 1.5`
+- `--trust_eta_shrink 0.05 --trust_eta_expand 0.75`
+- `--ksp_rtol 1e-1 --ksp_max_it 30`
+- rebuild the PC every Newton iteration:
+  leave `--pc_setup_on_ksp_cap` **off**
+- near-nullspace ON
+- GAMG coordinates ON
 
-Current practical tuning notes:
+JAX + PETSc implementation defaults on top of that:
 
-- large HE cases strongly prefer a forward-only line-search interval `[0, 1]`
-- if the optional trust-region path is enabled, large-case HE currently works best with
-  `trust_radius_init` around `0.5` to `1.0`
-- small-case and large-case trust-region settings are not the same
+- `--assembly_mode element`
+- `--element_reorder_mode block_xyz`
+- `--local_hessian_mode element`
+- `--local_coloring`
 
-See [TRUST_REGION_LINESEARCH_TUNING.md](TRUST_REGION_LINESEARCH_TUNING.md) for the current tested
-settings and large-case sweep results.
+The backend-specific best radii from the STCG sweep were:
+
+- `fenics_custom`: `trust_radius_init=1.0`
+- `jax_petsc_element`: `trust_radius_init=0.5`
+
+The shared campaign default is `0.5` because it is the best JAX setting, still
+near-best on FEniCS, and avoids introducing a backend-specific nonlinear policy
+into the like-for-like comparison.
+
+See [final_HE_results.md](final_HE_results.md) for the completed benchmark
+report and [TRUST_REGION_LINESEARCH_TUNING.md](TRUST_REGION_LINESEARCH_TUNING.md)
+for the tuning trail that led to this default.
 
 Recent update: the PETSc minimizer was hardened against false convergence / NaN propagation.
 The HE path now uses a 3-part nonlinear stop criterion (energy + step + gradient), non-finite
@@ -138,13 +155,36 @@ mpirun -n 16 python3 HyperElasticity3D_fenics/solve_HE_snes_newton.py \
 
 ### How to run (96 quarter-steps, level 1, single process)
 
-**Custom Newton:**
+**Custom Newton, current default PETSc setting:**
 ```bash
 python3 HyperElasticity3D_fenics/solve_HE_custom_jaxversion.py \
     --level 1 --steps 96 --total_steps 96 \
+    --ksp_type stcg --pc_type gamg \
     --ksp_rtol 1e-1 --ksp_max_it 30 \
-    --pc_setup_on_ksp_cap \
+    --use_trust_region --trust_subproblem_line_search \
+    --linesearch_tol 1e-1 \
+    --trust_radius_init 0.5 \
+    --trust_shrink 0.5 --trust_expand 1.5 \
+    --trust_eta_shrink 0.05 --trust_eta_expand 0.75 \
     --quiet --out experiment_scripts/out_custom.json
+```
+
+**JAX + PETSc, current default PETSc setting:**
+```bash
+python3 HyperElasticity3D_jax_petsc/solve_HE_dof.py \
+    --level 1 --steps 96 --total_steps 96 \
+    --ksp_type stcg --pc_type gamg \
+    --ksp_rtol 1e-1 --ksp_max_it 30 \
+    --use_trust_region --trust_subproblem_line_search \
+    --linesearch_tol 1e-1 \
+    --trust_radius_init 0.5 \
+    --trust_shrink 0.5 --trust_expand 1.5 \
+    --trust_eta_shrink 0.05 --trust_eta_expand 0.75 \
+    --assembly_mode element \
+    --element_reorder_mode block_xyz \
+    --local_hessian_mode element \
+    --local_coloring \
+    --quiet --out experiment_scripts/out_jax_petsc.json
 ```
 
 **SNES Newton:**
@@ -238,11 +278,15 @@ On the main fine check (`level 4`, `step 1 / 96`, `np=32`, `GMRES + GAMG`):
 | --- | ---: | ---: | ---: | ---: | ---: |
 | FEniCS custom | 0.192 | 5.142 | 1.141 | 0.299 | 2.774 |
 | Old JAX+PETSc element | 6.722 | 16.397 | 2.163 | 1.267 | 9.550 |
-| Production reordered element | 7.499 | 5.856 | 1.978 | 0.346 | 1.818 |
+| Production reordered element | 7.556 | 5.473 | 1.937 | 0.333 | 1.653 |
 
 So the old HE JAX+PETSc solve gap is largely gone in the production element
 path. The main remaining difference is end-to-end setup/JIT cost rather than
 the linear solve itself.
+
+The current production element path also uses a whole-local overlap gradient
+rather than per-element gradient scatter, which gives a small additional win on
+top of the reordered ownership change.
 
 Detailed notes:
 - [investigation_jaxpetsc_performance_gap.md](investigation_jaxpetsc_performance_gap.md)

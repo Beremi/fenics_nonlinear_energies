@@ -1,0 +1,1 @@
+run: /usr/bin/python experiment_scripts/run_he_final_case.py --solver fenics_custom --level 4 --total-steps 24 --nprocs 16 --step-time-limit-s 300.0 --trust-radius-init 2.0 --max-case-wall-s 21600.0 --out-dir experiment_results_cache/he_final_suite_r2_0
