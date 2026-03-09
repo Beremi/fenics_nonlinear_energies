@@ -774,7 +774,7 @@ Artifacts for L2 and MPI-16 validation:
 - For production-quality trajectories in this project, the custom solver path remains the recommended method.
 - For the later HE JAX+PETSc element-path distribution/layout follow-up and the
   production reordered-overlap implementation, see
-  [HE_ELEMENT_DISTRIBUTION_INVESTIGATION.md](/home/michal/repos/fenics_nonlinear_energies/HE_ELEMENT_DISTRIBUTION_INVESTIGATION.md).
+  [HE_ELEMENT_DISTRIBUTION_INVESTIGATION.md](HE_ELEMENT_DISTRIBUTION_INVESTIGATION.md).
 
 ### B.4 Continuation rerun for iterative SNES (half step size)
 
@@ -1679,7 +1679,7 @@ Artifacts:
   the HDF5 topology exactly.
 
 Reference implementation document:
-- [HyperElasticity3D_jax_petsc_IMPLEMENTATION.md](HyperElasticity3D_jax_petsc_IMPLEMENTATION.md)
+- [HyperElasticity3D_jax_petsc_IMPLEMENTATION.md](../docs/HyperElasticity3D_jax_petsc_IMPLEMENTATION.md)
 
 #### How to run
 

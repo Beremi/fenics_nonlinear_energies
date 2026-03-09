@@ -6,7 +6,7 @@ $$J(u) = \int_\Omega \frac{\varepsilon}{2} |\nabla u|^2 + \frac{1}{4}(u^2 - 1)^2
 
 This is a **non-convex** energy — the Hessian is indefinite, so CG cannot be used for the linear solve; GMRES/FGMRES is required. The non-convexity makes most standard SNES configurations unreliable, especially in parallel. An extensive configuration survey (see [Appendix](#appendix--snes-configuration-survey-sine-initial-guess)) identified trust-region Newton with ASM/ILU and loose KSP tolerance as the only fully reliable SNES setup.
 
-Raw data is stored as JSON files in [results_GL/](results_GL/). See [instructions.md](instructions.md) for how to run new experiments.
+Raw data is stored as JSON files in [results_GL/](../results_GL/). See [instructions.md](../docs/instructions.md) for how to run new experiments.
 
 ---
 

@@ -66,7 +66,7 @@ Target policy for the final benchmark campaign:
 ### Trust-region candidate to start from
 
 Current best tested HyperElasticity setting from
-`TRUST_REGION_LINESEARCH_TUNING.md`:
+`../docs/TRUST_REGION_LINESEARCH_TUNING.md`:
 
 - `use_trust_region=True`
 - `trust_radius_init=0.2`

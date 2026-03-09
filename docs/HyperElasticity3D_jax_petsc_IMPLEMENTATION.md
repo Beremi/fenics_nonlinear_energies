@@ -261,23 +261,23 @@ Key findings:
   alternative to recheck.
 
 Full analysis:
-- [investigation_jaxpetsc_performance_gap.md](/home/michal/repos/fenics_nonlinear_energies/investigation_jaxpetsc_performance_gap.md)
-- [HE_ELEMENT_DISTRIBUTION_INVESTIGATION.md](/home/michal/repos/fenics_nonlinear_energies/HE_ELEMENT_DISTRIBUTION_INVESTIGATION.md)
+- [investigation_jaxpetsc_performance_gap.md](../archive/investigation_jaxpetsc_performance_gap.md)
+- [HE_ELEMENT_DISTRIBUTION_INVESTIGATION.md](../archive/HE_ELEMENT_DISTRIBUTION_INVESTIGATION.md)
 
 ## 10. Important References
 
 Project context and run setup:
 - `README.md`
 - `instructions.md`
-- `HyperElasticity3D_jax_petsc_prompt.md`
+- `../archive/HyperElasticity3D_jax_petsc_prompt.md`
 
 Design background:
 - `jax_parallel_partitioning.md`
 - `graph_coloring_implementation.md`
 
 HE benchmarking and solver behavior:
-- `results_HyperElasticity3D.md`
-- `HE_ELEMENT_DISTRIBUTION_INVESTIGATION.md`
+- `../archive/results_HyperElasticity3D.md`
+- `../archive/HE_ELEMENT_DISTRIBUTION_INVESTIGATION.md`
 - `experiment_scripts/he_l3_24_comparison_jax_fenics_jaxpetsc.md`
 - `experiment_scripts/he_step1_timing_breakdown_fenics_vs_jaxpetsc.md`
 - `experiment_scripts/he_step1_timing_investigation_fix1.md`

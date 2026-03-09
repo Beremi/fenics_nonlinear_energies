@@ -31,8 +31,8 @@ with $p = 3$, $f = -10$ on the unit square. Three solver variants are provided:
 
 The **Custom Newton** re-implements the JAX minimisation algorithm (golden-section on [−0.5, 2], tighter tolerances) on top of PETSc, matching JAX iteration counts while supporting MPI parallelism.
 
-Benchmark results: [results_pLaplace.md](results_pLaplace.md)
-How to run: [instructions.md](instructions.md)
+Benchmark results: [results_pLaplace.md](archive/results_pLaplace.md)
+How to run: [instructions.md](docs/instructions.md)
 
 ## Problem: Ginzburg-Landau 2D
 
@@ -46,10 +46,10 @@ with $\varepsilon = 0.01$ on $[-1,1]^2$. This is a **non-convex** energy (indefi
 | **SNES Newton**                    | `GinzburgLandau2D_fenics/solve_GL_snes_newton.py`              | MPI         |
 | **JAX Newton** (auto-diff + PyAMG) | `GinzburgLandau2D_jax/` + `example_GinzburgLandau2D_jax.ipynb` | single CPU  |
 
-The **SNES Newton** uses trust-region Newton (`newtontr`) with FGMRES + ASM/ILU preconditioning and loose inner tolerance (`ksp_rtol=1e-1`). This was the only SNES configuration found to be reliable across all mesh sizes and MPI decompositions (see [results_GinzburgLandau2D.md](results_GinzburgLandau2D.md) for the full configuration survey). The **Custom Newton** uses a golden-section energy line search and remains the fastest option (6 iterations at all levels).
+The **SNES Newton** uses trust-region Newton (`newtontr`) with FGMRES + ASM/ILU preconditioning and loose inner tolerance (`ksp_rtol=1e-1`). This was the only SNES configuration found to be reliable across all mesh sizes and MPI decompositions (see [results_GinzburgLandau2D.md](archive/results_GinzburgLandau2D.md) for the full configuration survey). The **Custom Newton** uses a golden-section energy line search and remains the fastest option (6 iterations at all levels).
 
-Benchmark results: [results_GinzburgLandau2D.md](results_GinzburgLandau2D.md)
-How to run: [instructions.md](instructions.md)
+Benchmark results: [results_GinzburgLandau2D.md](archive/results_GinzburgLandau2D.md)
+How to run: [instructions.md](docs/instructions.md)
 
 ## Problem: HyperElasticity 3D
 
@@ -95,8 +95,8 @@ The shared campaign default is `0.5` because it is the best JAX setting, still
 near-best on FEniCS, and avoids introducing a backend-specific nonlinear policy
 into the like-for-like comparison.
 
-See [final_HE_results.md](final_HE_results.md) for the completed benchmark
-report and [TRUST_REGION_LINESEARCH_TUNING.md](TRUST_REGION_LINESEARCH_TUNING.md)
+See [final_HE_results.md](docs/final_HE_results.md) for the completed benchmark
+report and [TRUST_REGION_LINESEARCH_TUNING.md](docs/TRUST_REGION_LINESEARCH_TUNING.md)
 for the tuning trail that led to this default.
 
 Pure JAX serial HE now also uses the same outer trust-region policy through
@@ -116,7 +116,7 @@ It is used in the final HE report as the serial reference path up to level `3`.
 Recent update: the PETSc minimizer was hardened against false convergence / NaN propagation.
 The HE path now uses a 3-part nonlinear stop criterion (energy + step + gradient), non-finite
 rollback checks, and per-step repair retries with tighter linear settings on failure.
-See [results_HyperElasticity3D.md](results_HyperElasticity3D.md) Annex F.8–F.10 for the full
+See [results_HyperElasticity3D.md](archive/results_HyperElasticity3D.md) Annex F.8–F.10 for the full
 before/after sweep comparisons and tolerance sensitivity (`tolg_rel=1e-3`, `1e-4`, `1e-2`).
 
 **Preconditioner comparison (level 3, 78k DOFs, 16 MPI, 24 load steps):**
@@ -128,7 +128,7 @@ before/after sweep comparisons and tolerance sensitivity (`tolg_rel=1e-3`, `1e-4
 
 GAMG with `pc_gamg_threshold=0.05` is **2.2× faster** than HYPRE for this problem. The threshold
 is critical for correctness — without it, GAMG converges to wrong solutions for 3D elasticity.
-See [results_HyperElasticity3D.md, Annex F](results_HyperElasticity3D.md#annex-f-gamg-vs-hypre-preconditioner-comparison-level-3-16-mpi-processes)
+See [results_HyperElasticity3D.md, Annex F](archive/results_HyperElasticity3D.md#annex-f-gamg-vs-hypre-preconditioner-comparison-level-3-16-mpi-processes)
 for the full investigation.
 
 ### SNES+GAMG continuation check (level 3, 16 MPI)
@@ -245,7 +245,7 @@ docker run --rm --shm-size=8g --entrypoint mpirun -v "$PWD":/work -w /work fenic
 > **⚠ Docker shared-memory**: The image uses MPICH, which requires shared memory
 > for inter-process communication. Docker defaults to 64 MB, which causes
 > **SIGBUS (exit 135)** or OOM kills with ≥8 MPI processes. Always pass
-> `--shm-size=8g` for parallel runs. See [instructions.md](instructions.md) for
+> `--shm-size=8g` for parallel runs. See [instructions.md](docs/instructions.md) for
 > details and a persistent-container pattern for long benchmarks.
 
 ### Summary results (level 1, 96 quarter-steps)
@@ -257,7 +257,7 @@ docker run --rm --shm-size=8g --entrypoint mpirun -v "$PWD":/work -w /work fenic
 
 Steps 94–96 fail in the SNES solver due to AMG degradation at extreme deformation (the near-nullspace
 is working correctly — confirmed by matching KSP/Newton ratio). See
-[results_HyperElasticity3D.md](results_HyperElasticity3D.md) for full per-step tables and all
+[results_HyperElasticity3D.md](archive/results_HyperElasticity3D.md) for full per-step tables and all
 experimental details (Annexes A–D).
 
 ### JAX+PETSc solver for HyperElasticity 3D
@@ -318,8 +318,8 @@ rather than per-element gradient scatter, which gives a small additional win on
 top of the reordered ownership change.
 
 Detailed notes:
-- [investigation_jaxpetsc_performance_gap.md](investigation_jaxpetsc_performance_gap.md)
-- [HE_ELEMENT_DISTRIBUTION_INVESTIGATION.md](HE_ELEMENT_DISTRIBUTION_INVESTIGATION.md)
+- [investigation_jaxpetsc_performance_gap.md](archive/investigation_jaxpetsc_performance_gap.md)
+- [HE_ELEMENT_DISTRIBUTION_INVESTIGATION.md](archive/HE_ELEMENT_DISTRIBUTION_INVESTIGATION.md)
 
 #### How to run
 
@@ -346,13 +346,13 @@ mpirun -n 32 python3 HyperElasticity3D_jax_petsc/solve_HE_dof.py \
     --save_linear_timing --quiet
 ```
 
-Benchmark results and investigation: [results_HyperElasticity3D.md](results_HyperElasticity3D.md),
-[investigation_jaxpetsc_performance_gap.md](investigation_jaxpetsc_performance_gap.md),
-[HE_ELEMENT_DISTRIBUTION_INVESTIGATION.md](HE_ELEMENT_DISTRIBUTION_INVESTIGATION.md)
+Benchmark results and investigation: [results_HyperElasticity3D.md](archive/results_HyperElasticity3D.md),
+[investigation_jaxpetsc_performance_gap.md](archive/investigation_jaxpetsc_performance_gap.md),
+[HE_ELEMENT_DISTRIBUTION_INVESTIGATION.md](archive/HE_ELEMENT_DISTRIBUTION_INVESTIGATION.md)
 
 ## Prerequisites
 
-FEniCS solvers require **DOLFINx >= 0.10** with PETSc. JAX solvers require **JAX**, **h5py**, **PyAMG**. The included devcontainer provides everything — see [instructions.md](instructions.md).
+FEniCS solvers require **DOLFINx >= 0.10** with PETSc. JAX solvers require **JAX**, **h5py**, **PyAMG**. The included devcontainer provides everything — see [instructions.md](docs/instructions.md).
 
 ## Repository Structure
 
@@ -364,9 +364,14 @@ FEniCS solvers require **DOLFINx >= 0.10** with PETSc. JAX solvers require **JAX
 ├── benchmark_pLaplace2D_fenics.ipynb  # ★ FEniCS p-Laplace benchmark notebook
 │
 ├── README.md                          # This file
-├── instructions.md                    # How to run, store results, generate tables
-├── results_pLaplace.md                # Compiled p-Laplace benchmark results
-├── results_GinzburgLandau2D.md        # Compiled Ginzburg-Landau benchmark results
+├── docs/                              # Current documentation and benchmark reports
+│   ├── instructions.md                # How to run, store results, generate tables
+│   ├── final_HE_results.md            # Current final HyperElasticity report
+│   └── HyperElasticity3D_jax_petsc_IMPLEMENTATION.md
+├── archive/                           # Historical result notes and superseded investigations
+│   ├── results_pLaplace.md            # Compiled p-Laplace benchmark results
+│   ├── results_GinzburgLandau2D.md    # Compiled Ginzburg-Landau benchmark results
+│   └── results_HyperElasticity3D.md   # Historical HyperElasticity notes
 │
 ├── mesh_data/                         # Shared mesh files (all problems)
 │   ├── pLaplace/                      #   HDF5 source + FEniCS XDMF, levels 1–9

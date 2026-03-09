@@ -13,7 +13,7 @@ Current locations:
 - shared JAX assembler infrastructure: `tools_petsc4py/jax_tools/parallel_assembler.py`
 
 For current solver-parameter behavior, especially the optional trust-region path, see
-`TRUST_REGION_LINESEARCH_TUNING.md`.
+`../docs/TRUST_REGION_LINESEARCH_TUNING.md`.
 
 ## Goal
 

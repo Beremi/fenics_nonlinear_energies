@@ -12,7 +12,7 @@ Your goal is to understand the implementations and, if the user requests, to rer
 #### 1. What to Read First:
 Please start by checking these two freshly minted markdown files the previous agent made.
 - **[JAX_PETSC_OPTIMIZATION_REPORT.md](JAX_PETSC_OPTIMIZATION_REPORT.md)** - A highly concise business-view of exactly why the `Element` assembly mode and `retry_on_failure` loops were created and how FEniCS mathematically differed.
-- **[HyperElasticity3D_jax_petsc_IMPLEMENTATION.md](HyperElasticity3D_jax_petsc_IMPLEMENTATION.md)** - Check the very bottom specifically ("Advanced Command Line Options"). This lays out the exact new `argparse` flags (`--assembly_mode element`, `--retry_on_failure`, `--pc_setup_on_ksp_cap`) built to execute extreme tests.
+- **[HyperElasticity3D_jax_petsc_IMPLEMENTATION.md](../docs/HyperElasticity3D_jax_petsc_IMPLEMENTATION.md)** - Check the very bottom specifically ("Advanced Command Line Options"). This lays out the exact new `argparse` flags (`--assembly_mode element`, `--retry_on_failure`, `--pc_setup_on_ksp_cap`) built to execute extreme tests.
 
 #### 2. Where to Look For Benchmark Scripts & Traces:
 The workspace was cleaned up. All old `.json` trace logs, `.log` terminal dumps, and impromptu bash loops (`run_XXX.sh`) were grouped compactly into exactly two folders:

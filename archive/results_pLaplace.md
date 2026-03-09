@@ -2,7 +2,7 @@
 
 Benchmark results for the 2D p-Laplacian problem ($p = 3$, $f = -10$, homogeneous Dirichlet BCs on the unit square).
 
-Raw data is stored as JSON files in [results/](results/). See [instructions.md](instructions.md) for how to run new experiments and store results.
+Raw data is stored as JSON files in [results/](../results/). See [instructions.md](../docs/instructions.md) for how to run new experiments and store results.
 
 ---
 
@@ -106,7 +106,7 @@ A hybrid solver that uses **JAX** for automatic differentiation (energy, gradien
 
 Script: [`pLaplace2D_jax_petsc/solve_pLaplace_dof.py`](pLaplace2D_jax_petsc/solve_pLaplace_dof.py) with `--local-coloring`
 
-For a detailed technical description of the DOF decomposition, P2P ghost exchange, and individual operation benchmarks, see [`jax_parallel_partitioning.md`](jax_parallel_partitioning.md).
+For a detailed technical description of the DOF decomposition, P2P ghost exchange, and individual operation benchmarks, see [`jax_parallel_partitioning.md`](../docs/jax_parallel_partitioning.md).
 
 #### Full Newton Solve — Hypre BoomerAMG
 
@@ -138,7 +138,7 @@ Level 9 (784 385 free DOFs, 1 572 864 elements, 7–8 graph colors). All configu
 - **GAMG is faster in absolute time** (2.18 s vs 2.63 s at 16 ranks) but **Hypre scales better** (3.62× vs 2.58× at 16 ranks). Hypre is recommended for larger rank counts.
 - **KSP dominates at high rank counts**, shifting the bottleneck from JAX assembly (which scales well) to PETSc linear algebra — a healthy sign for scalability.
 - **Setup scales well** — from 4.01 s (serial, full graph coloring) to 1.28 s (16 ranks, local coloring on smaller subgraphs). No adjacency broadcast needed.
-- **Numerically exact** — energy, gradient, and HVP match serial reference to machine epsilon at all rank counts (see [`jax_parallel_partitioning.md`](jax_parallel_partitioning.md) §5.1).
+- **Numerically exact** — energy, gradient, and HVP match serial reference to machine epsilon at all rank counts (see [`jax_parallel_partitioning.md`](../docs/jax_parallel_partitioning.md) §5.1).
 
 #### Effect of Looser Tolerances (ksp\_rtol = 1e-1, linesearch\_tol = 1e-1)
 
@@ -321,7 +321,7 @@ Same DOLFINx assembly as above, but uses a custom Newton loop (`tools_petsc4py/m
 Pure JAX implementation. Energy function JIT-compiled. Gradient via `jax.grad`. Hessian assembled by sparse finite differences (SFD) with graph coloring: directional derivatives approximate Hessian-vector products for each color group, then scattered into a CSR matrix. Preconditioner: PyAMG smoothed aggregation. Same Newton algorithm and tolerances as variant 2.
 
 **4. JAX + PETSc DOF-Partitioned Newton — MPI-parallel** (`pLaplace2D_jax_petsc/solve_pLaplace_dof.py --local-coloring`):
-The main solver studied in this document. Uses DOF-based overlapping domain decomposition with P2P ghost exchange for energy/gradient/HVP, local SFD Hessian assembly via PETSc COO fast-path, and RCM reordering for locality-aware PETSc block distribution. Uses `LocalColoringAssembler` — each rank builds the DOF adjacency directly from local elements (no broadcast), colors locally with igraph, and uses `vmap`-batched HVP. KSP: CG + HYPRE BoomerAMG or GAMG. Same Newton algorithm and tolerances as variant 2. See [`jax_parallel_partitioning.md`](jax_parallel_partitioning.md) for full technical details.
+The main solver studied in this document. Uses DOF-based overlapping domain decomposition with P2P ghost exchange for energy/gradient/HVP, local SFD Hessian assembly via PETSc COO fast-path, and RCM reordering for locality-aware PETSc block distribution. Uses `LocalColoringAssembler` — each rank builds the DOF adjacency directly from local elements (no broadcast), colors locally with igraph, and uses `vmap`-batched HVP. KSP: CG + HYPRE BoomerAMG or GAMG. Same Newton algorithm and tolerances as variant 2. See [`jax_parallel_partitioning.md`](../docs/jax_parallel_partitioning.md) for full technical details.
 
 ### 0.3  Newton Algorithm (`tools_petsc4py/minimizers.py`)
 

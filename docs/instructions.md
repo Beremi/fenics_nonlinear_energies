@@ -376,7 +376,7 @@ docker run --rm --entrypoint python3 -v "$PWD":/work -w /work fenics_test \
 
 ## SNES Configuration Testing (Ginzburg-Landau)
 
-The `experiment_scripts/` directory contains standalone Python and shell scripts used for systematic testing of PETSc SNES configurations on the non-convex Ginzburg-Landau problem. These are **not polished tools** — they are a collection of mini-experiments kept for reproducibility and reference. Results are documented in [`results_GinzburgLandau2D.md`](results_GinzburgLandau2D.md).
+The `experiment_scripts/` directory contains standalone Python and shell scripts used for systematic testing of PETSc SNES configurations on the non-convex Ginzburg-Landau problem. These are **not polished tools** — they are a collection of mini-experiments kept for reproducibility and reference. Results are documented in [`results_GinzburgLandau2D.md`](../archive/results_GinzburgLandau2D.md).
 
 ### Directory structure
 
