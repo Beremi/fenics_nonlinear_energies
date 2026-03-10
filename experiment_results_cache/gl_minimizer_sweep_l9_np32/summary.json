@@ -1,0 +1,104 @@
+{
+  "rows": [
+    {
+      "solver": "fenics_custom",
+      "config": "ls_loose",
+      "result": "completed",
+      "total_time_s": 0.994611,
+      "newton_iters": 6,
+      "linear_iters": 8,
+      "final_energy": 0.3456264688838302,
+      "message": "Converged (energy, step, gradient)"
+    },
+    {
+      "solver": "fenics_custom",
+      "config": "ls_ref",
+      "result": "completed",
+      "total_time_s": 2.299056,
+      "newton_iters": 8,
+      "linear_iters": 37,
+      "final_energy": 0.3456264684259207,
+      "message": "Converged (energy, step, gradient)"
+    },
+    {
+      "solver": "fenics_custom",
+      "config": "tr_stcg_r0_5",
+      "result": "failed",
+      "total_time_s": 15.187099,
+      "newton_iters": 100,
+      "linear_iters": 100,
+      "final_energy": 0.6645500986756423,
+      "message": "Maximum number of iterations reached"
+    },
+    {
+      "solver": "fenics_custom",
+      "config": "tr_stcg_r1_0",
+      "result": "failed",
+      "total_time_s": 20.812361,
+      "newton_iters": 100,
+      "linear_iters": 100,
+      "final_energy": 0.6641124660793722,
+      "message": "Maximum number of iterations reached"
+    },
+    {
+      "solver": "fenics_custom",
+      "config": "tr_stcg_r2_0",
+      "result": "failed",
+      "total_time_s": 13.87832,
+      "newton_iters": 100,
+      "linear_iters": 100,
+      "final_energy": 0.6641954434203531,
+      "message": "Maximum number of iterations reached"
+    },
+    {
+      "solver": "jax_petsc_element",
+      "config": "ls_loose",
+      "result": "completed",
+      "total_time_s": 1.257081,
+      "newton_iters": 6,
+      "linear_iters": 9,
+      "final_energy": 0.34562646862688284,
+      "message": "Converged (energy, step, gradient)"
+    },
+    {
+      "solver": "jax_petsc_element",
+      "config": "ls_ref",
+      "result": "completed",
+      "total_time_s": 2.125669,
+      "newton_iters": 7,
+      "linear_iters": 39,
+      "final_energy": 0.3456264684118114,
+      "message": "Converged (energy, step, gradient)"
+    },
+    {
+      "solver": "jax_petsc_element",
+      "config": "tr_stcg_r0_5",
+      "result": "failed",
+      "total_time_s": 16.525476,
+      "newton_iters": 100,
+      "linear_iters": 100,
+      "final_energy": 0.664494021647201,
+      "message": "Maximum number of iterations reached"
+    },
+    {
+      "solver": "jax_petsc_element",
+      "config": "tr_stcg_r1_0",
+      "result": "failed",
+      "total_time_s": 16.443776,
+      "newton_iters": 100,
+      "linear_iters": 100,
+      "final_energy": 0.6643924583803994,
+      "message": "Maximum number of iterations reached"
+    },
+    {
+      "solver": "jax_petsc_element",
+      "config": "tr_stcg_r2_0",
+      "result": "failed",
+      "total_time_s": 16.601878,
+      "newton_iters": 100,
+      "linear_iters": 100,
+      "final_energy": 0.6646784582383227,
+      "message": "Maximum number of iterations reached"
+    }
+  ]
+}

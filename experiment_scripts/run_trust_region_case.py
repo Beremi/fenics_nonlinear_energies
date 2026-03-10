@@ -26,7 +26,7 @@ def _build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description="Run one trust-region benchmark case",
     )
-    parser.add_argument("--problem", choices=("plaplace", "he"), required=True)
+    parser.add_argument("--problem", choices=("plaplace", "gl", "he"), required=True)
     parser.add_argument("--backend", choices=("fenics", "sfd", "element"), required=True)
     parser.add_argument("--level", type=int, required=True)
     parser.add_argument("--out", type=str, required=True)
@@ -137,6 +137,61 @@ def _run_plaplace(args):
         save_linear_timing=args.save_linear_timing,
         profile=args.profile,
         ksp_type=args.ksp_type or "cg",
+        pc_type=args.pc_type,
+        ksp_rtol=args.ksp_rtol,
+        ksp_max_it=args.ksp_max_it,
+        pc_setup_on_ksp_cap=args.pc_setup_on_ksp_cap,
+        gamg_threshold=args.gamg_threshold,
+        gamg_agg_nsmooths=args.gamg_agg_nsmooths,
+        gamg_set_coordinates=args.gamg_set_coordinates,
+        reorder=args.reorder,
+        local_coloring=bool(args.local_coloring),
+        hvp_eval_mode=args.hvp_eval_mode,
+        coloring_trials=args.coloring_trials,
+        assembly_mode=args.backend,
+        element_reorder_mode=args.element_reorder_mode,
+        local_hessian_mode=args.local_hessian_mode,
+        tolf=args.tolf,
+        tolg=args.tolg,
+        tolg_rel=args.tolg_rel,
+        tolx_rel=args.tolx_rel,
+        tolx_abs=args.tolx_abs,
+        maxit=args.maxit,
+        linesearch_a=args.linesearch_a,
+        linesearch_b=args.linesearch_b,
+        linesearch_tol=args.linesearch_tol,
+        retry_on_failure=bool(args.retry_on_failure),
+        nproc=args.nproc_threads,
+        out="",
+        use_trust_region=args.use_trust_region,
+        trust_radius_init=args.trust_radius_init,
+        trust_radius_min=args.trust_radius_min,
+        trust_radius_max=args.trust_radius_max,
+        trust_shrink=args.trust_shrink,
+        trust_expand=args.trust_expand,
+        trust_eta_shrink=args.trust_eta_shrink,
+        trust_eta_expand=args.trust_eta_expand,
+        trust_max_reject=args.trust_max_reject,
+        trust_subproblem_line_search=args.trust_subproblem_line_search,
+        step_time_limit_s=args.step_time_limit_s,
+    )
+    return run(ns)
+
+
+def _run_gl(args):
+    if args.backend == "fenics":
+        from GinzburgLandau2D_fenics.solver_custom_newton import run
+    else:
+        _configure_thread_env(args.nproc_threads)
+        from GinzburgLandau2D_jax_petsc.solver import run
+
+    ns = SimpleNamespace(
+        level=args.level,
+        quiet=args.quiet,
+        save_history=args.save_history,
+        save_linear_timing=args.save_linear_timing,
+        profile=args.profile,
+        ksp_type=args.ksp_type or "gmres",
         pc_type=args.pc_type,
         ksp_rtol=args.ksp_rtol,
         ksp_max_it=args.ksp_max_it,
@@ -289,6 +344,8 @@ def main() -> None:
 
     if args.problem == "plaplace":
         result = _run_plaplace(args)
+    elif args.problem == "gl":
+        result = _run_gl(args)
     else:
         result = _run_he(args)
 

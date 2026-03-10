@@ -1,0 +1,404 @@
+An NVIDIA GPU may be present on this machine, but a CUDA-enabled jaxlib is not installed. Falling back to cpu.
+An NVIDIA GPU may be present on this machine, but a CUDA-enabled jaxlib is not installed. Falling back to cpu.
+An NVIDIA GPU may be present on this machine, but a CUDA-enabled jaxlib is not installed. Falling back to cpu.
+An NVIDIA GPU may be present on this machine, but a CUDA-enabled jaxlib is not installed. Falling back to cpu.
+An NVIDIA GPU may be present on this machine, but a CUDA-enabled jaxlib is not installed. Falling back to cpu.
+An NVIDIA GPU may be present on this machine, but a CUDA-enabled jaxlib is not installed. Falling back to cpu.
+An NVIDIA GPU may be present on this machine, but a CUDA-enabled jaxlib is not installed. Falling back to cpu.
+An NVIDIA GPU may be present on this machine, but a CUDA-enabled jaxlib is not installed. Falling back to cpu.
+An NVIDIA GPU may be present on this machine, but a CUDA-enabled jaxlib is not installed. Falling back to cpu.
+An NVIDIA GPU may be present on this machine, but a CUDA-enabled jaxlib is not installed. Falling back to cpu.
+An NVIDIA GPU may be present on this machine, but a CUDA-enabled jaxlib is not installed. Falling back to cpu.
+An NVIDIA GPU may be present on this machine, but a CUDA-enabled jaxlib is not installed. Falling back to cpu.
+An NVIDIA GPU may be present on this machine, but a CUDA-enabled jaxlib is not installed. Falling back to cpu.
+An NVIDIA GPU may be present on this machine, but a CUDA-enabled jaxlib is not installed. Falling back to cpu.
+An NVIDIA GPU may be present on this machine, but a CUDA-enabled jaxlib is not installed. Falling back to cpu.
+An NVIDIA GPU may be present on this machine, but a CUDA-enabled jaxlib is not installed. Falling back to cpu.
+An NVIDIA GPU may be present on this machine, but a CUDA-enabled jaxlib is not installed. Falling back to cpu.
+An NVIDIA GPU may be present on this machine, but a CUDA-enabled jaxlib is not installed. Falling back to cpu.
+An NVIDIA GPU may be present on this machine, but a CUDA-enabled jaxlib is not installed. Falling back to cpu.
+An NVIDIA GPU may be present on this machine, but a CUDA-enabled jaxlib is not installed. Falling back to cpu.
+An NVIDIA GPU may be present on this machine, but a CUDA-enabled jaxlib is not installed. Falling back to cpu.
+An NVIDIA GPU may be present on this machine, but a CUDA-enabled jaxlib is not installed. Falling back to cpu.
+An NVIDIA GPU may be present on this machine, but a CUDA-enabled jaxlib is not installed. Falling back to cpu.
+An NVIDIA GPU may be present on this machine, but a CUDA-enabled jaxlib is not installed. Falling back to cpu.
+An NVIDIA GPU may be present on this machine, but a CUDA-enabled jaxlib is not installed. Falling back to cpu.
+An NVIDIA GPU may be present on this machine, but a CUDA-enabled jaxlib is not installed. Falling back to cpu.
+An NVIDIA GPU may be present on this machine, but a CUDA-enabled jaxlib is not installed. Falling back to cpu.
+An NVIDIA GPU may be present on this machine, but a CUDA-enabled jaxlib is not installed. Falling back to cpu.
+An NVIDIA GPU may be present on this machine, but a CUDA-enabled jaxlib is not installed. Falling back to cpu.
+An NVIDIA GPU may be present on this machine, but a CUDA-enabled jaxlib is not installed. Falling back to cpu.
+An NVIDIA GPU may be present on this machine, but a CUDA-enabled jaxlib is not installed. Falling back to cpu.
+An NVIDIA GPU may be present on this machine, but a CUDA-enabled jaxlib is not installed. Falling back to cpu.
+{
+  "case": {
+    "problem": "gl",
+    "backend": "element",
+    "level": 9,
+    "out": "/home/michal/repos/fenics_nonlinear_energies/experiment_results_cache/gl_minimizer_sweep_l9_np32/jax_petsc_element_ls_loose.json",
+    "quiet": true,
+    "save_history": true,
+    "save_linear_timing": true,
+    "steps": 1,
+    "start_step": 1,
+    "total_steps": 24,
+    "ksp_type": "gmres",
+    "pc_type": "hypre",
+    "ksp_rtol": 0.1,
+    "ksp_max_it": 30,
+    "profile": "performance",
+    "coloring_trials": 10,
+    "nproc_threads": 1,
+    "hvp_eval_mode": "sequential",
+    "element_reorder_mode": "block_xyz",
+    "local_hessian_mode": "element",
+    "tolf": 1e-06,
+    "tolg": 1e-05,
+    "tolg_rel": 0.001,
+    "tolx_rel": 0.001,
+    "tolx_abs": 1e-10,
+    "maxit": 100,
+    "step_time_limit_s": null,
+    "linesearch_a": -0.5,
+    "linesearch_b": 2.0,
+    "linesearch_tol": 0.1,
+    "use_trust_region": false,
+    "trust_radius_init": 1.0,
+    "trust_radius_min": 1e-08,
+    "trust_radius_max": 1000000.0,
+    "trust_shrink": 0.5,
+    "trust_expand": 1.5,
+    "trust_eta_shrink": 0.05,
+    "trust_eta_expand": 0.75,
+    "trust_max_reject": 6,
+    "trust_subproblem_line_search": false,
+    "local_coloring": true,
+    "retry_on_failure": false,
+    "pc_setup_on_ksp_cap": false,
+    "use_near_nullspace": true,
+    "reorder": null,
+    "gamg_threshold": 0.05,
+    "gamg_agg_nsmooths": 1,
+    "gamg_set_coordinates": true
+  },
+  "result": {
+    "mesh_level": 9,
+    "total_dofs": 1050625,
+    "free_dofs": 1046529,
+    "setup_time": 1.808054,
+    "solve_time_total": 1.257081,
+    "total_time": 3.696742,
+    "steps": [
+      {
+        "step": 1,
+        "time": 1.257081,
+        "nit": 6,
+        "linear_iters": 9,
+        "energy": 0.34562646862688284,
+        "message": "Converged (energy, step, gradient)",
+        "attempt": "primary",
+        "ksp_rtol_used": 0.1,
+        "ksp_max_it_used": 30,
+        "linesearch_interval_used": [
+          -0.5,
+          2.0
+        ],
+        "history": [
+          {
+            "it": 1,
+            "energy": 0.5074920682702674,
+            "dE": 0.1578076096989064,
+            "grad_norm": 0.0009261996570956121,
+            "grad_target": 1e-05,
+            "grad_norm_post": NaN,
+            "alpha": -0.4569476828142093,
+            "ksp_its": 2,
+            "ls_evals": 9,
+            "ls_repaired": false,
+            "used_gradient_fallback": false,
+            "accepted_step": true,
+            "step_norm": 194.39724209370885,
+            "step_rel": 0.3796821134642751,
+            "pred_reduction": NaN,
+            "actual_reduction": NaN,
+            "trust_rejects": 0,
+            "t_grad": 0.006529051985125989,
+            "t_hess": 0.1399461849941872,
+            "t_ls": 0.06995279103284702,
+            "t_update": 3.7958030588924885e-05,
+            "t_iter": 0.21659206796903163,
+            "trust_radius": 1.0,
+            "trust_ratio": NaN,
+            "trust_qp": NaN
+          },
+          {
+            "it": 2,
+            "energy": 0.43038432394073717,
+            "dE": 0.07710774432953021,
+            "grad_norm": 0.001055076793445163,
+            "grad_target": 1e-05,
+            "grad_norm_post": NaN,
+            "alpha": 0.047117626563683346,
+            "ksp_its": 3,
+            "ls_evals": 9,
+            "ls_repaired": false,
+            "used_gradient_fallback": false,
+            "accepted_step": true,
+            "step_norm": 153.32393744971398,
+            "step_rel": 0.24211659907896194,
+            "pred_reduction": NaN,
+            "actual_reduction": NaN,
+            "trust_rejects": 0,
+            "t_grad": 0.007457610976416618,
+            "t_hess": 0.1464180479524657,
+            "t_ls": 0.07025647500995547,
+            "t_update": 3.996101440861821e-05,
+            "t_iter": 0.22428210399812087,
+            "trust_radius": 1.0,
+            "trust_ratio": NaN,
+            "trust_qp": NaN
+          },
+          {
+            "it": 3,
+            "energy": 0.34750922574363596,
+            "dE": 0.0828750981971012,
+            "grad_norm": 0.000952305643296292,
+            "grad_target": 1e-05,
+            "grad_norm_post": NaN,
+            "alpha": 0.551182935941576,
+            "ksp_its": 1,
+            "ls_evals": 9,
+            "ls_repaired": false,
+            "used_gradient_fallback": false,
+            "accepted_step": true,
+            "step_norm": 177.87797328692074,
+            "step_rel": 0.24591153764650375,
+            "pred_reduction": NaN,
+            "actual_reduction": NaN,
+            "trust_rejects": 0,
+            "t_grad": 0.006696346972603351,
+            "t_hess": 0.12702437001280487,
+            "t_ls": 0.06929743004729971,
+            "t_update": 3.8017984479665756e-05,
+            "t_iter": 0.2031758480006829,
+            "trust_radius": 1.0,
+            "trust_ratio": NaN,
+            "trust_qp": NaN
+          },
+          {
+            "it": 4,
+            "energy": 0.34564072160130405,
+            "dE": 0.001868504142331917,
+            "grad_norm": 0.00033094237261378936,
+            "grad_target": 1e-05,
+            "grad_norm_post": NaN,
+            "alpha": 1.002032654688946,
+            "ksp_its": 1,
+            "ls_evals": 9,
+            "ls_repaired": false,
+            "used_gradient_fallback": false,
+            "accepted_step": true,
+            "step_norm": 21.527871205023526,
+            "step_rel": 0.024659021015657777,
+            "pred_reduction": NaN,
+            "actual_reduction": NaN,
+            "trust_rejects": 0,
+            "t_grad": 0.007338818977586925,
+            "t_hess": 0.12291447701863945,
+            "t_ls": 0.06889956101076677,
+            "t_update": 3.752700285986066e-05,
+            "t_iter": 0.19930001196917146,
+            "trust_radius": 1.0,
+            "trust_ratio": NaN,
+            "trust_qp": NaN
+          },
+          {
+            "it": 5,
+            "energy": 0.345626517554064,
+            "dE": 1.4204047240062856e-05,
+            "grad_norm": 3.834201536488546e-05,
+            "grad_target": 1e-05,
+            "grad_norm_post": NaN,
+            "alpha": 1.002032654688946,
+            "ksp_its": 1,
+            "ls_evals": 9,
+            "ls_repaired": false,
+            "used_gradient_fallback": false,
+            "accepted_step": true,
+            "step_norm": 2.119420456187564,
+            "step_rel": 0.0024151142204221145,
+            "pred_reduction": NaN,
+            "actual_reduction": NaN,
+            "trust_rejects": 0,
+            "t_grad": 0.00670229597017169,
+            "t_hess": 0.12012775597395375,
+            "t_ls": 0.06926287699025124,
+            "t_update": 3.675598418340087e-05,
+            "t_iter": 0.19623471598606557,
+            "trust_radius": 1.0,
+            "trust_ratio": NaN,
+            "trust_qp": NaN
+          },
+          {
+            "it": 6,
+            "energy": 0.34562646862688284,
+            "dE": 4.892718113991279e-08,
+            "grad_norm": 3.6251110459647828e-06,
+            "grad_target": 1e-05,
+            "grad_norm_post": 2.714196549359683e-07,
+            "alpha": 1.002032654688946,
+            "ksp_its": 1,
+            "ls_evals": 9,
+            "ls_repaired": false,
+            "used_gradient_fallback": false,
+            "accepted_step": true,
+            "step_norm": 0.11099742634714858,
+            "step_rel": 0.0001266228639100352,
+            "pred_reduction": NaN,
+            "actual_reduction": NaN,
+            "trust_rejects": 0,
+            "t_grad": 0.006710788991767913,
+            "t_hess": 0.12762659398140386,
+            "t_ls": 0.06931600498501211,
+            "t_update": 3.8157973904162645e-05,
+            "t_iter": 0.20379686797969043,
+            "trust_radius": 1.0,
+            "trust_ratio": NaN,
+            "trust_qp": NaN
+          }
+        ],
+        "linear_timing": [
+          {
+            "assemble_total_time": 0.024566657026298344,
+            "assemble_p2p_exchange": 0.003164067049510777,
+            "assemble_hvp_compute": 0.006272900034673512,
+            "assemble_extraction": 0.013127219048328698,
+            "assemble_coo_assembly": 0.0019234510255046189,
+            "assemble_n_hvps": 0,
+            "setop_time": 3.6549754440784454e-06,
+            "set_tolerances_time": 2.9139919206500053e-06,
+            "pc_setup_time": 0.09160790703026578,
+            "solve_time": 0.023639238032046705,
+            "linear_total_time": 0.13982037105597556,
+            "ksp_its": 2
+          },
+          {
+            "assemble_total_time": 0.02506781299598515,
+            "assemble_p2p_exchange": 0.003084405034314841,
+            "assemble_hvp_compute": 0.006542691960930824,
+            "assemble_extraction": 0.014072152029257268,
+            "assemble_coo_assembly": 0.0012973729753866792,
+            "assemble_n_hvps": 0,
+            "setop_time": 2.7139903977513313e-06,
+            "set_tolerances_time": 3.054039552807808e-06,
+            "pc_setup_time": 0.08665760897565633,
+            "solve_time": 0.03457508696010336,
+            "linear_total_time": 0.1463062769616954,
+            "ksp_its": 3
+          },
+          {
+            "assemble_total_time": 0.02491985697997734,
+            "assemble_p2p_exchange": 0.0030617910088039935,
+            "assemble_hvp_compute": 0.00660356500884518,
+            "assemble_extraction": 0.01261297200107947,
+            "assemble_coo_assembly": 0.0025730340275913477,
+            "assemble_n_hvps": 0,
+            "setop_time": 2.5840126909315586e-06,
+            "set_tolerances_time": 2.9149814508855343e-06,
+            "pc_setup_time": 0.08550367498537526,
+            "solve_time": 0.016479553014505655,
+            "linear_total_time": 0.12690858397400007,
+            "ksp_its": 1
+          },
+          {
+            "assemble_total_time": 0.02482277899980545,
+            "assemble_p2p_exchange": 0.0031572769512422383,
+            "assemble_hvp_compute": 0.0066037659998983145,
+            "assemble_extraction": 0.01263028895482421,
+            "assemble_coo_assembly": 0.0023561419802717865,
+            "assemble_n_hvps": 0,
+            "setop_time": 2.3939646780490875e-06,
+            "set_tolerances_time": 2.9349466785788536e-06,
+            "pc_setup_time": 0.08229238505009562,
+            "solve_time": 0.015662254008930176,
+            "linear_total_time": 0.12278274697018787,
+            "ksp_its": 1
+          },
+          {
+            "assemble_total_time": 0.02445451496168971,
+            "assemble_p2p_exchange": 0.003127430973108858,
+            "assemble_hvp_compute": 0.006560179986990988,
+            "assemble_extraction": 0.01277564000338316,
+            "assemble_coo_assembly": 0.0019139759824611247,
+            "assemble_n_hvps": 0,
+            "setop_time": 3.4249969758093357e-06,
+            "set_tolerances_time": 2.974993549287319e-06,
+            "pc_setup_time": 0.08018104697111994,
+            "solve_time": 0.015380922995973378,
+            "linear_total_time": 0.12002288491930813,
+            "ksp_its": 1
+          },
+          {
+            "assemble_total_time": 0.02474590903148055,
+            "assemble_p2p_exchange": 0.003141933062579483,
+            "assemble_hvp_compute": 0.0061843039584346116,
+            "assemble_extraction": 0.012768469983711839,
+            "assemble_coo_assembly": 0.002577690000180155,
+            "assemble_n_hvps": 0,
+            "setop_time": 3.4159747883677483e-06,
+            "set_tolerances_time": 2.854038029909134e-06,
+            "pc_setup_time": 0.08651564799947664,
+            "solve_time": 0.016251063032541424,
+            "linear_total_time": 0.1275188900763169,
+            "ksp_its": 1
+          }
+        ]
+      }
+    ],
+    "metadata": {
+      "profile": "performance",
+      "nprocs": 32,
+      "nproc_threads": 1,
+      "linear_solver": {
+        "ksp_type": "gmres",
+        "pc_type": "hypre",
+        "ksp_rtol": 0.1,
+        "ksp_max_it": 30,
+        "pc_setup_on_ksp_cap": false,
+        "gamg_threshold": 0.05,
+        "gamg_agg_nsmooths": 1,
+        "gamg_set_coordinates": true,
+        "reorder": true,
+        "hvp_eval_mode": "element_overlap",
+        "assembly_mode": "element",
+        "element_reorder_mode": "block_xyz",
+        "local_hessian_mode": "element",
+        "distribution_strategy": "overlap_allgather",
+        "assembler": "GLReorderedElementAssembler",
+        "trust_subproblem_solver": "direct_linear_solve",
+        "trust_subproblem_line_search": false
+      },
+      "newton": {
+        "tolf": 1e-06,
+        "tolg": 1e-05,
+        "tolg_rel": 0.001,
+        "tolx_rel": 0.001,
+        "tolx_abs": 1e-10,
+        "maxit": 100,
+        "require_all_convergence": true,
+        "fail_on_nonfinite": true,
+        "linesearch_interval": [
+          -0.5,
+          2.0
+        ],
+        "linesearch_tol": 0.1,
+        "trust_region": false,
+        "trust_radius_init": 1.0,
+        "trust_radius_min": 1e-08,
+        "trust_radius_max": 1000000.0,
+        "trust_subproblem_line_search": false,
+        "step_time_limit_s": null
+      }
+    }
+  }
+}
