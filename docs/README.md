@@ -4,6 +4,7 @@ Current documentation lives in this folder.
 
 Key files:
 
+- [problem_formulation_brief.md](problem_formulation_brief.md) — handoff brief describing what a new problem must satisfy to fit the JAX / JAX+PETSc solvers
 - [final_HE_results.md](final_HE_results.md) — current HyperElasticity final benchmark report
 - [final_pLaplace_results.md](final_pLaplace_results.md) — current pLaplace final benchmark report
 - [TRUST_REGION_LINESEARCH_TUNING.md](TRUST_REGION_LINESEARCH_TUNING.md) — trust-region tuning trail
