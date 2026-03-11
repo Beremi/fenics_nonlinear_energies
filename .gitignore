@@ -4,3 +4,7 @@ __pycache__/
 h5py
 /local_env/
 /.venv/
+topological_optimisation_jax/report_assets/*.csv
+topological_optimisation_jax/report_assets/*.json
+topological_optimisation_jax/report_assets/*.npz
+topological_optimisation_jax/description.md
