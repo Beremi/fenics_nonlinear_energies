@@ -12,7 +12,7 @@ import jax.numpy as jnp
 import numpy as np
 
 from tools.jax_diff import EnergyDerivator
-from tools.minimizers import newton
+from tools.minimizers import gradient_descent, newton
 from tools.sparse_solvers import HessSolverGenerator
 from topological_optimisation_jax.jax_energy import (
     compliance,
@@ -27,7 +27,7 @@ from topological_optimisation_jax.mesh import CantileverTopologyMesh
 
 
 LINESEARCH_INTERVAL = (-0.25, 1.5)
-LINESEARCH_TOL = 1e-2
+LINESEARCH_TOL = 1e-1
 DESIGN_SOLVER = "direct"
 USE_TRUST_REGION = True
 TRUST_RADIUS_INIT = 1.0
@@ -88,7 +88,41 @@ def _relative_state_change(current, previous, freedofs):
     )
 
 
-def _run_newton(fun, grad, hess_solver, x0, *, maxit: int, tolf: float, tolg: float, verbose: bool):
+def _summarise_newton_work(result: dict) -> dict:
+    history = result.get("history", [])
+    linear_timing = result.get("linear_timing", [])
+    accepted = [row for row in history if bool(row.get("accepted_step", False))]
+    alpha_values = [float(row.get("alpha", np.nan)) for row in accepted]
+    linear_iters = int(sum(int(row.get("ksp_its", 0)) for row in linear_timing))
+    linear_time = float(sum(float(row.get("linear_total_time", 0.0)) for row in linear_timing))
+    maxit_hits = int(sum(bool(row.get("hit_ksp_max_it", False)) for row in linear_timing))
+    return {
+        "linear_iters": linear_iters,
+        "linear_time": linear_time,
+        "ksp_maxit_hits": maxit_hits,
+        "accepted_steps": int(len(accepted)),
+        "alpha_mean": float(np.mean(alpha_values)) if alpha_values else np.nan,
+        "alpha_min": float(np.min(alpha_values)) if alpha_values else np.nan,
+        "alpha_max": float(np.max(alpha_values)) if alpha_values else np.nan,
+        "last_alpha": float(history[-1]["alpha"]) if history else np.nan,
+        "ls_evals": int(sum(int(row.get("ls_evals", 0)) for row in history)),
+    }
+
+
+def _run_newton(
+    fun,
+    grad,
+    hess_solver,
+    x0,
+    *,
+    maxit: int,
+    tolf: float,
+    tolg: float,
+    linesearch_tol: float,
+    verbose: bool,
+    linesearch_interval: tuple[float, float],
+    use_trust_region: bool,
+):
     return newton(
         fun,
         grad,
@@ -97,10 +131,10 @@ def _run_newton(fun, grad, hess_solver, x0, *, maxit: int, tolf: float, tolg: fl
         maxit=maxit,
         tolf=tolf,
         tolg=tolg,
-        linesearch_tol=LINESEARCH_TOL,
-        linesearch_interval=LINESEARCH_INTERVAL,
+        linesearch_tol=linesearch_tol,
+        linesearch_interval=linesearch_interval,
         verbose=verbose,
-        trust_region=USE_TRUST_REGION,
+        trust_region=use_trust_region,
         trust_radius_init=TRUST_RADIUS_INIT,
         trust_radius_min=TRUST_RADIUS_MIN,
         trust_radius_max=TRUST_RADIUS_MAX,
@@ -110,6 +144,41 @@ def _run_newton(fun, grad, hess_solver, x0, *, maxit: int, tolf: float, tolg: fl
         trust_eta_expand=TRUST_ETA_EXPAND,
         trust_max_reject=TRUST_MAX_REJECT,
         trust_subproblem_line_search=TRUST_SUBPROBLEM_LINE_SEARCH,
+        save_history=True,
+        save_linear_timing=True,
+    )
+
+
+def _run_gradient_descent(
+    fun,
+    grad,
+    x0,
+    *,
+    maxit: int,
+    tolf: float,
+    tolg: float,
+    linesearch_tol: float,
+    verbose: bool,
+    line_search: str,
+    adaptive_alpha0: float,
+    adaptive_window_scale: float,
+    adaptive_nonnegative: bool,
+):
+    return gradient_descent(
+        fun,
+        grad,
+        x0,
+        maxit=maxit,
+        tolf=tolf,
+        tolg=tolg,
+        linesearch_tol=linesearch_tol,
+        line_search=line_search,
+        adaptive_alpha0=adaptive_alpha0,
+        adaptive_window_scale=adaptive_window_scale,
+        adaptive_nonnegative=adaptive_nonnegative,
+        linesearch_interval=(0.0, 2.0),
+        verbose=verbose,
+        save_history=True,
     )
 
 
@@ -147,7 +216,30 @@ def run_topology_optimisation(
     tolg: float = 1e-3,
     ksp_rtol: float = 1e-2,
     ksp_max_it: int = 80,
+    linesearch_tol: float = LINESEARCH_TOL,
+    linesearch_interval: tuple[float, float] = LINESEARCH_INTERVAL,
+    use_trust_region: bool = USE_TRUST_REGION,
+    mechanics_solver_type: str = "petsc_gamg",
+    mechanics_ksp_type: str = "cg",
+    mechanics_use_near_nullspace: bool = True,
+    design_solver_type: str = DESIGN_SOLVER,
+    design_nonlinear_method: str = "gd_golden_adaptive",
+    design_gd_adaptive_alpha0: float = 1.0,
+    design_gd_adaptive_window_scale: float = 2.0,
+    design_gd_adaptive_nonnegative: bool = True,
+    design_ksp_type: str = "gmres",
+    design_pc_type: str = "ilu",
+    design_norm_type: str = "unpreconditioned",
+    design_ksp_rtol: float | None = None,
+    design_ksp_max_it: int | None = None,
+    design_pc_factor_levels: int = 1,
+    gamg_threshold: float = 0.05,
+    gamg_agg_nsmooths: int = 1,
+    gamg_set_coordinates: bool = False,
     save_outer_state_history: bool = False,
+    capture_last_design_snapshot: bool = False,
+    capture_design_snapshot_iters: tuple[int, ...] | None = None,
+    capture_design_solver_history_iters: tuple[int, ...] | None = None,
     verbose: bool = False,
 ) -> tuple[dict, dict]:
     total_start = time.perf_counter()
@@ -186,6 +278,9 @@ def run_topology_optimisation(
 
     p_penal = float(p_start)
     lambda_volume = float(lambda_init)
+    design_linear_tol = float(ksp_rtol if design_ksp_rtol is None else design_ksp_rtol)
+    design_linear_maxit = int(ksp_max_it if design_ksp_max_it is None else design_ksp_max_it)
+    design_adaptive_alpha = float(max(abs(design_gd_adaptive_alpha0), linesearch_tol))
 
     material_scale0 = np.asarray(
         material_scale_from_design(
@@ -214,11 +309,18 @@ def run_topology_optimisation(
     mechanics_F, mechanics_dF, mechanics_ddF = mechanics_drv.get_derivatives()
     mechanics_hess_solver = HessSolverGenerator(
         ddf=mechanics_ddF,
-        solver_type="amg",
+        solver_type=mechanics_solver_type,
         elastic_kernel=mesh.elastic_kernel,
         verbose=verbose,
         tol=ksp_rtol,
         maxiter=ksp_max_it,
+        coordinates=mesh.coords[mesh.freedofs_u[0::2] // 2],
+        block_size=2,
+        ksp_type=mechanics_ksp_type,
+        gamg_threshold=gamg_threshold,
+        gamg_agg_nsmooths=gamg_agg_nsmooths,
+        gamg_set_coordinates=gamg_set_coordinates,
+        use_near_nullspace=mechanics_use_near_nullspace,
     )
 
     design_params = {
@@ -243,13 +345,20 @@ def run_topology_optimisation(
         jnp.asarray(z_free, dtype=jnp.float64),
     )
     design_F, design_dF, design_ddF = design_drv.get_derivatives()
-    design_hess_solver = HessSolverGenerator(
-        ddf=design_ddF,
-        solver_type=DESIGN_SOLVER,
-        verbose=verbose,
-        tol=ksp_rtol,
-        maxiter=ksp_max_it,
-    )
+    design_hess_solver = None
+    if design_nonlinear_method == "newton_trust":
+        design_hess_solver = HessSolverGenerator(
+            ddf=design_ddF,
+            solver_type=design_solver_type,
+            verbose=verbose,
+            tol=design_linear_tol,
+            maxiter=design_linear_maxit,
+            ksp_type=design_ksp_type,
+            pc_type=design_pc_type,
+            norm_type=design_norm_type,
+            mat_symmetric=True,
+            petsc_options={"pc_factor_levels": int(design_pc_factor_levels)},
+        )
 
     setup_time = time.perf_counter() - setup_start
     history = []
@@ -257,6 +366,13 @@ def run_topology_optimisation(
     outer_converged = False
     prev_compliance = np.nan
     prev_theta_state = None
+    last_design_snapshot = None
+    capture_snapshot_set = set() if capture_design_snapshot_iters is None else set(capture_design_snapshot_iters)
+    capture_design_solver_history_set = (
+        set() if capture_design_solver_history_iters is None else set(capture_design_solver_history_iters)
+    )
+    design_snapshots = {}
+    design_solver_histories = {}
 
     final_theta = np.asarray(theta_from_latent(jnp.asarray(z_full, dtype=jnp.float64), theta_min))
     final_u = mesh.expand_u(u_free)
@@ -306,10 +422,14 @@ def run_topology_optimisation(
             maxit=mechanics_maxit,
             tolf=tolf,
             tolg=tolg,
+            linesearch_tol=linesearch_tol,
             verbose=verbose,
+            linesearch_interval=linesearch_interval,
+            use_trust_region=use_trust_region,
         )
         u_free = np.asarray(mechanics_res["x"], dtype=np.float64)
         u_full = mesh.expand_u(u_free)
+        mechanics_work = _summarise_newton_work(mechanics_res)
 
         if not _message_is_converged(str(mechanics_res["message"])):
             status = "failed_mechanics"
@@ -319,6 +439,12 @@ def run_topology_optimisation(
                 {
                     "outer_iter": outer_it,
                     "p_penal": float(p_penal),
+                    "mechanics_iters": int(mechanics_res["nit"]),
+                    "mechanics_linear_iters": int(mechanics_work["linear_iters"]),
+                    "mechanics_linear_time": float(mechanics_work["linear_time"]),
+                    "mechanics_ksp_maxit_hits": int(mechanics_work["ksp_maxit_hits"]),
+                    "mechanics_alpha_mean": float(mechanics_work["alpha_mean"]),
+                    "mechanics_alpha_last": float(mechanics_work["last_alpha"]),
                     "mechanics_message": str(mechanics_res["message"]),
                     "design_message": "not_run",
                 }
@@ -353,19 +479,62 @@ def run_topology_optimisation(
         design_params["lambda_volume"] = lambda_effective
         design_params["p_penal"] = float(p_penal)
 
-        design_res = _run_newton(
-            design_F,
-            design_dF,
-            design_hess_solver,
-            z_free,
-            maxit=design_maxit,
-            tolf=tolf,
-            tolg=tolg,
-            verbose=verbose,
-        )
+        if design_nonlinear_method == "newton_trust":
+            design_res = _run_newton(
+                design_F,
+                design_dF,
+                design_hess_solver,
+                z_free,
+                maxit=design_maxit,
+                tolf=tolf,
+                tolg=tolg,
+                linesearch_tol=linesearch_tol,
+                verbose=verbose,
+                linesearch_interval=linesearch_interval,
+                use_trust_region=use_trust_region,
+            )
+            if outer_it in capture_design_solver_history_set:
+                design_solver_histories[int(outer_it)] = {
+                    "outer_iter": int(outer_it),
+                    "method": str(design_nonlinear_method),
+                    "history": list(design_res.get("history", [])),
+                }
+        elif design_nonlinear_method == "gd_golden_adaptive":
+            design_adaptive_alpha_before = float(design_adaptive_alpha)
+            design_res = _run_gradient_descent(
+                design_F,
+                design_dF,
+                z_free,
+                maxit=design_maxit,
+                tolf=tolf,
+                tolg=tolg,
+                linesearch_tol=linesearch_tol,
+                verbose=verbose,
+                line_search="golden_adaptive",
+                adaptive_alpha0=design_adaptive_alpha,
+                adaptive_window_scale=design_gd_adaptive_window_scale,
+                adaptive_nonnegative=design_gd_adaptive_nonnegative,
+            )
+            design_adaptive_alpha_after = float(
+                max(abs(design_res.get("last_alpha_abs", design_adaptive_alpha)), linesearch_tol)
+            )
+            if outer_it in capture_design_solver_history_set:
+                design_solver_histories[int(outer_it)] = {
+                    "outer_iter": int(outer_it),
+                    "method": str(design_nonlinear_method),
+                    "adaptive_alpha_before": float(design_adaptive_alpha_before),
+                    "adaptive_alpha_after": float(design_adaptive_alpha_after),
+                    "adaptive_window_scale": float(design_gd_adaptive_window_scale),
+                    "adaptive_nonnegative": bool(design_gd_adaptive_nonnegative),
+                    "history": list(design_res.get("history", [])),
+                }
+            design_adaptive_alpha = float(design_adaptive_alpha_after)
+        else:
+            raise ValueError(f"Unknown design_nonlinear_method {design_nonlinear_method!r}")
         z_free_new = np.asarray(design_res["x"], dtype=np.float64)
         z_full_new = mesh.expand_z(z_free_new, z_template)
         theta_after = np.asarray(theta_from_latent(jnp.asarray(z_full_new, dtype=jnp.float64), theta_min))
+        design_work = _summarise_newton_work(design_res)
 
         final_u = u_full
         final_theta = theta_after
@@ -383,6 +552,22 @@ def run_topology_optimisation(
                     "volume_fraction_before": volume_before,
                     "volume_residual_before": volume_residual_before,
                     "theta_state_change": theta_state_change,
+                    "mechanics_iters": int(mechanics_res["nit"]),
+                    "design_iters": int(design_res["nit"]),
+                    "mechanics_linear_iters": int(mechanics_work["linear_iters"]),
+                    "design_linear_iters": int(design_work["linear_iters"]),
+                    "mechanics_linear_time": float(mechanics_work["linear_time"]),
+                    "design_linear_time": float(design_work["linear_time"]),
+                    "mechanics_ksp_maxit_hits": int(mechanics_work["ksp_maxit_hits"]),
+                    "design_ksp_maxit_hits": int(design_work["ksp_maxit_hits"]),
+                    "mechanics_alpha_mean": float(mechanics_work["alpha_mean"]),
+                    "design_alpha_mean": float(design_work["alpha_mean"]),
+                    "mechanics_alpha_last": float(mechanics_work["last_alpha"]),
+                    "design_alpha_last": float(design_work["last_alpha"]),
+                    "mechanics_ls_evals": int(mechanics_work["ls_evals"]),
+                    "design_ls_evals": int(design_work["ls_evals"]),
+                    "mechanics_energy": float(mechanics_res["fun"]),
+                    "design_energy": float(design_res["fun"]),
                     "mechanics_message": str(mechanics_res["message"]),
                     "design_message": str(design_res["message"]),
                 }
@@ -434,12 +619,54 @@ def run_topology_optimisation(
                 "compliance_change": compliance_change,
                 "mechanics_iters": int(mechanics_res["nit"]),
                 "design_iters": int(design_res["nit"]),
+                "mechanics_linear_iters": int(mechanics_work["linear_iters"]),
+                "design_linear_iters": int(design_work["linear_iters"]),
+                "mechanics_linear_time": float(mechanics_work["linear_time"]),
+                "design_linear_time": float(design_work["linear_time"]),
+                "mechanics_ksp_maxit_hits": int(mechanics_work["ksp_maxit_hits"]),
+                "design_ksp_maxit_hits": int(design_work["ksp_maxit_hits"]),
+                "mechanics_alpha_mean": float(mechanics_work["alpha_mean"]),
+                "design_alpha_mean": float(design_work["alpha_mean"]),
+                "mechanics_alpha_last": float(mechanics_work["last_alpha"]),
+                "design_alpha_last": float(design_work["last_alpha"]),
+                "mechanics_ls_evals": int(mechanics_work["ls_evals"]),
+                "design_ls_evals": int(design_work["ls_evals"]),
                 "mechanics_energy": float(mechanics_res["fun"]),
                 "design_energy": float(design_res["fun"]),
                 "mechanics_message": str(mechanics_res["message"]),
                 "design_message": str(design_res["message"]),
             }
         )
+
+        if capture_last_design_snapshot:
+            last_design_snapshot = {
+                "outer_iter": int(outer_it),
+                "p_penal": float(p_penal),
+                "lambda_effective": float(lambda_effective),
+                "lambda_reference": float(lambda_reference),
+                "lambda_penalty": float(lambda_penalty),
+                "lambda_correction": float(lambda_volume),
+                "z_old_full": np.asarray(z_full, dtype=np.float64).copy(),
+                "z_full": np.asarray(z_full_new, dtype=np.float64).copy(),
+                "e_frozen": np.asarray(e_frozen, dtype=np.float64).copy(),
+                "u_full": np.asarray(u_full, dtype=np.float64).copy(),
+            }
+        if outer_it in capture_snapshot_set:
+            design_snapshots[int(outer_it)] = {
+                "outer_iter": int(outer_it),
+                "p_penal": float(p_penal),
+                "lambda_effective": float(lambda_effective),
+                "lambda_reference": float(lambda_reference),
+                "lambda_penalty": float(lambda_penalty),
+                "lambda_correction": float(lambda_volume),
+                "volume_fraction": float(volume_value),
+                "volume_residual": float(volume_residual),
+                "compliance": float(compliance_value),
+                "z_old_full": np.asarray(z_full, dtype=np.float64).copy(),
+                "z_full": np.asarray(z_full_new, dtype=np.float64).copy(),
+                "e_frozen": np.asarray(e_frozen, dtype=np.float64).copy(),
+                "u_full": np.asarray(u_full, dtype=np.float64).copy(),
+            }
 
         z_free = z_free_new
         z_full = z_full_new
@@ -490,7 +717,10 @@ def run_topology_optimisation(
             maxit=mechanics_maxit,
             tolf=tolf,
             tolg=tolg,
+            linesearch_tol=linesearch_tol,
             verbose=verbose,
+            linesearch_interval=linesearch_interval,
+            use_trust_region=use_trust_region,
         )
         if _message_is_converged(str(final_mechanics_res["message"])):
             u_free = np.asarray(final_mechanics_res["x"], dtype=np.float64)
@@ -547,14 +777,30 @@ def run_topology_optimisation(
             "volume_tol": float(volume_tol),
         },
         "solver_options": {
+            "mechanics_solver_type": str(mechanics_solver_type),
+            "mechanics_ksp_type": str(mechanics_ksp_type),
+            "mechanics_use_near_nullspace": bool(mechanics_use_near_nullspace),
+            "gamg_threshold": float(gamg_threshold),
+            "gamg_agg_nsmooths": int(gamg_agg_nsmooths),
+            "gamg_set_coordinates": bool(gamg_set_coordinates),
             "mechanics_maxit": int(mechanics_maxit),
             "design_maxit": int(design_maxit),
             "tolf": float(tolf),
             "tolg": float(tolg),
-            "linesearch_interval": [float(LINESEARCH_INTERVAL[0]), float(LINESEARCH_INTERVAL[1])],
-            "linesearch_tol": float(LINESEARCH_TOL),
-            "design_solver": DESIGN_SOLVER,
-            "use_trust_region": USE_TRUST_REGION,
+            "linesearch_interval": [float(linesearch_interval[0]), float(linesearch_interval[1])],
+            "linesearch_tol": float(linesearch_tol),
+            "design_solver": str(design_solver_type),
+            "design_nonlinear_method": str(design_nonlinear_method),
+            "design_gd_adaptive_alpha0": float(design_gd_adaptive_alpha0),
+            "design_gd_adaptive_window_scale": float(design_gd_adaptive_window_scale),
+            "design_gd_adaptive_nonnegative": bool(design_gd_adaptive_nonnegative),
+            "design_ksp_type": str(design_ksp_type),
+            "design_pc_type": str(design_pc_type),
+            "design_norm_type": str(design_norm_type),
+            "design_ksp_rtol": float(design_linear_tol),
+            "design_ksp_max_it": int(design_linear_maxit),
+            "design_pc_factor_levels": int(design_pc_factor_levels),
+            "use_trust_region": bool(use_trust_region),
             "trust_radius_init": float(TRUST_RADIUS_INIT),
             "trust_radius_min": float(TRUST_RADIUS_MIN),
             "trust_radius_max": float(TRUST_RADIUS_MAX),
@@ -591,6 +837,12 @@ def run_topology_optimisation(
     }
     if save_outer_state_history:
         state["theta_history"] = theta_history
+    if capture_last_design_snapshot:
+        state["last_design_snapshot"] = last_design_snapshot
+    if capture_snapshot_set:
+        state["design_snapshots"] = design_snapshots
+    if capture_design_solver_history_set:
+        state["design_solver_histories"] = design_solver_histories
     return result, state
 
 
@@ -628,6 +880,35 @@ def _build_arg_parser() -> argparse.ArgumentParser:
     parser.add_argument("--tolg", type=float, default=1e-3)
     parser.add_argument("--ksp_rtol", type=float, default=1e-2)
     parser.add_argument("--ksp_max_it", type=int, default=80)
+    parser.add_argument("--linesearch_tol", type=float, default=LINESEARCH_TOL)
+    parser.add_argument("--linesearch_a", type=float, default=LINESEARCH_INTERVAL[0])
+    parser.add_argument("--linesearch_b", type=float, default=LINESEARCH_INTERVAL[1])
+    parser.add_argument("--use_trust_region", action=argparse.BooleanOptionalAction, default=USE_TRUST_REGION)
+    parser.add_argument("--mechanics_solver_type", choices=("amg", "petsc_gamg"), default="petsc_gamg")
+    parser.add_argument("--mechanics_ksp_type", type=str, default="cg")
+    parser.add_argument("--mechanics_use_near_nullspace", action=argparse.BooleanOptionalAction, default=True)
+    parser.add_argument("--design_solver_type", choices=("direct", "amg", "petsc_gamg"), default=DESIGN_SOLVER)
+    parser.add_argument(
+        "--design_nonlinear_method",
+        choices=("newton_trust", "gd_golden_adaptive"),
+        default="gd_golden_adaptive",
+    )
+    parser.add_argument("--design_gd_adaptive_alpha0", type=float, default=1.0)
+    parser.add_argument("--design_gd_adaptive_window_scale", type=float, default=2.0)
+    parser.add_argument(
+        "--design_gd_adaptive_nonnegative",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+    )
+    parser.add_argument("--design_ksp_type", type=str, default="gmres")
+    parser.add_argument("--design_pc_type", type=str, default="ilu")
+    parser.add_argument("--design_norm_type", choices=("default", "unpreconditioned"), default="unpreconditioned")
+    parser.add_argument("--design_ksp_rtol", type=float, default=None)
+    parser.add_argument("--design_ksp_max_it", type=int, default=None)
+    parser.add_argument("--design_pc_factor_levels", type=int, default=1)
+    parser.add_argument("--gamg_threshold", type=float, default=0.05)
+    parser.add_argument("--gamg_agg_nsmooths", type=int, default=1)
+    parser.add_argument("--gamg_set_coordinates", action=argparse.BooleanOptionalAction, default=False)
     parser.add_argument("--state_out", type=str, default="")
     parser.add_argument("--json_out", type=str, default="")
     parser.add_argument("--save_outer_state_history", action="store_true")
@@ -672,6 +953,26 @@ def main() -> None:
         tolg=args.tolg,
         ksp_rtol=args.ksp_rtol,
         ksp_max_it=args.ksp_max_it,
+        linesearch_tol=args.linesearch_tol,
+        linesearch_interval=(args.linesearch_a, args.linesearch_b),
+        use_trust_region=args.use_trust_region,
+        mechanics_solver_type=args.mechanics_solver_type,
+        mechanics_ksp_type=args.mechanics_ksp_type,
+        mechanics_use_near_nullspace=args.mechanics_use_near_nullspace,
+        design_solver_type=args.design_solver_type,
+        design_nonlinear_method=args.design_nonlinear_method,
+        design_gd_adaptive_alpha0=args.design_gd_adaptive_alpha0,
+        design_gd_adaptive_window_scale=args.design_gd_adaptive_window_scale,
+        design_gd_adaptive_nonnegative=args.design_gd_adaptive_nonnegative,
+        design_ksp_type=args.design_ksp_type,
+        design_pc_type=args.design_pc_type,
+        design_norm_type=args.design_norm_type,
+        design_ksp_rtol=args.design_ksp_rtol,
+        design_ksp_max_it=args.design_ksp_max_it,
+        design_pc_factor_levels=args.design_pc_factor_levels,
+        gamg_threshold=args.gamg_threshold,
+        gamg_agg_nsmooths=args.gamg_agg_nsmooths,
+        gamg_set_coordinates=args.gamg_set_coordinates,
         save_outer_state_history=args.save_outer_state_history or bool(args.state_out),
         verbose=not args.quiet,
     )

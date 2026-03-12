@@ -2,6 +2,10 @@
 
 Date: 2026-03-11
 
+This document is the historical pure-JAX reference benchmark. The current
+working solver path chosen for the next implementation stage is recorded in
+[docs/JAX_TOPOLOGY_CURRENT_STATE.md](/home/michal/repos/fenics_nonlinear_energies/docs/JAX_TOPOLOGY_CURRENT_STATE.md).
+
 This report fixes the JAX topology benchmark to a single clean reference
 configuration: a fine `192 x 96` cantilever mesh, a staggered
 displacement/design solve, and a fixed staircase SIMP continuation.

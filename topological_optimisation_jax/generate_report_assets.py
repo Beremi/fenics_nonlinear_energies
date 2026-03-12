@@ -67,8 +67,11 @@ CASE_PARAMS = {
     "design_maxit": 400,
     "tolf": 1e-6,
     "tolg": 1e-3,
+    "linesearch_tol": 1e-2,
     "ksp_rtol": 1e-2,
     "ksp_max_it": 80,
+    "mechanics_solver_type": "amg",
+    "design_nonlinear_method": "newton_trust",
     "verbose": False,
 }
 

@@ -523,3 +523,243 @@ def newton(
     if save_linear_timing:
         result["linear_timing"] = linear_timing
     return result
+
+
+def gradient_descent(
+    f,
+    df,
+    x0,
+    *,
+    tolf=1e-6,
+    tolg=1e-3,
+    tolg_rel=0.0,
+    linesearch_tol=1e-3,
+    linesearch_interval=(0.0, 2.0),
+    line_search="armijo",
+    adaptive_alpha0=1.0,
+    adaptive_window_scale=2.0,
+    adaptive_nonnegative=False,
+    armijo_alpha0=1.0,
+    armijo_c1=1e-4,
+    armijo_shrink=0.5,
+    armijo_max_ls=40,
+    maxit=200,
+    tolx_rel=1e-6,
+    tolx_abs=1e-10,
+    require_all_convergence=False,
+    fail_on_nonfinite=True,
+    verbose=False,
+    save_history=False,
+):
+    x = np.asarray(x0, dtype=np.float64).copy()
+    fx = float(f(x))
+    nit = 0
+    message = "Maximum number of iterations reached"
+    start = time.perf_counter()
+
+    history = []
+    initial_grad_norm = None
+    last_alpha_abs = max(abs(float(adaptive_alpha0)), linesearch_tol)
+
+    for _ in range(maxit):
+        t_iter_start = time.perf_counter()
+        if fail_on_nonfinite and not np.isfinite(fx):
+            message = f"Non-finite energy before gradient iteration {nit + 1}"
+            break
+
+        t0 = time.perf_counter()
+        g = np.asarray(df(x), dtype=np.float64)
+        normg = float(np.linalg.norm(g))
+        t_grad = time.perf_counter() - t0
+
+        if fail_on_nonfinite and not np.isfinite(normg):
+            message = f"Non-finite gradient norm at gradient iteration {nit + 1}"
+            break
+
+        if initial_grad_norm is None:
+            initial_grad_norm = normg
+
+        grad_target = float(tolg)
+        if tolg_rel > 0.0 and np.isfinite(initial_grad_norm):
+            grad_target = max(float(tolg), float(tolg_rel) * initial_grad_norm)
+
+        if (not require_all_convergence) and normg < grad_target:
+            message = "Gradient norm converged"
+            break
+
+        nit += 1
+        x_prev = x.copy()
+        x_prev_norm = float(np.linalg.norm(x_prev))
+        fx_old = fx
+        direction = -g
+        dnorm = float(np.linalg.norm(direction))
+        if fail_on_nonfinite and not np.isfinite(dnorm):
+            message = f"Non-finite descent direction norm at gradient iteration {nit}"
+            break
+        if dnorm <= 1e-20:
+            message = f"Zero descent direction at gradient iteration {nit}"
+            break
+
+        alpha = 0.0
+        ls_evals = 0
+        ls_repaired = False
+        dE = 0.0
+        step_norm = 0.0
+        step_rel = 0.0
+        accepted_step = False
+
+        def _energy_at_alpha(alpha_local):
+            return _trial_value(f, x_prev, direction, alpha_local)
+
+        t_ls0 = time.perf_counter()
+        if line_search == "armijo":
+            alpha_trial = float(max(armijo_alpha0, 1e-12))
+            directional_derivative = float(np.dot(g, direction))
+            for _ls_it in range(max(1, int(armijo_max_ls))):
+                trial_value = _energy_at_alpha(alpha_trial)
+                ls_evals += 1
+                if np.isfinite(trial_value) and trial_value <= fx_old + armijo_c1 * alpha_trial * directional_derivative:
+                    alpha = float(alpha_trial)
+                    fx = float(trial_value)
+                    accepted_step = True
+                    break
+                alpha_trial *= float(armijo_shrink)
+            if not accepted_step:
+                message = f"Armijo line search failed at gradient iteration {nit}"
+        else:
+            if line_search == "golden_adaptive":
+                horizon = max(float(last_alpha_abs), float(linesearch_tol))
+                if adaptive_nonnegative:
+                    ls_a = 0.0
+                    ls_b = float(adaptive_window_scale) * horizon
+                else:
+                    ls_a = -float(adaptive_window_scale) * horizon
+                    ls_b = float(adaptive_window_scale) * horizon
+            elif line_search == "golden_fixed":
+                ls_a, ls_b = linesearch_interval
+            else:
+                raise ValueError(f"Unknown gradient line search mode: {line_search}")
+
+            if ls_b <= ls_a:
+                ls_a, ls_b = 0.0, 2.0
+
+            ls_a_eff, ls_b_eff, repair_evals, ls_repaired = _repair_interval(
+                f,
+                ls_a,
+                ls_b,
+                x_prev,
+                direction,
+                linesearch_tol,
+                center=0.0,
+                center_value=fx_old,
+            )
+            ls_evals += repair_evals
+            alpha, ls_eval_local = golden_section_search(
+                _energy_at_alpha, ls_a_eff, ls_b_eff, linesearch_tol
+            )
+            ls_evals += ls_eval_local
+            fx_trial = _energy_at_alpha(alpha)
+            if np.isfinite(fx_trial) and fx_trial < fx_old:
+                fx = float(fx_trial)
+                accepted_step = True
+            else:
+                message = f"Golden-section line search failed at gradient iteration {nit}"
+
+        t_ls = time.perf_counter() - t_ls0
+
+        if accepted_step:
+            x = x_prev + alpha * direction
+            dE = float(fx_old - fx)
+            step_norm = float(abs(alpha) * dnorm)
+            step_rel = float(step_norm / max(1.0, x_prev_norm))
+            last_alpha_abs = max(abs(float(alpha)), float(linesearch_tol))
+        else:
+            x = x_prev.copy()
+
+        t_iter_total = time.perf_counter() - t_iter_start
+
+        converged_energy = accepted_step and np.isfinite(dE) and abs(dE) < tolf
+        converged_step = accepted_step and (step_norm < tolx_abs or step_rel < tolx_rel)
+
+        if require_all_convergence and accepted_step and converged_energy and converged_step:
+            g_post = np.asarray(df(x), dtype=np.float64)
+            if float(np.linalg.norm(g_post)) < grad_target:
+                message = "Converged (energy, step, gradient)"
+                if save_history:
+                    history.append(
+                        {
+                            "it": int(nit),
+                            "energy": float(fx),
+                            "dE": float(dE),
+                            "grad_norm": float(normg),
+                            "grad_target": float(grad_target),
+                            "alpha": float(alpha),
+                            "step_norm": float(step_norm),
+                            "step_rel": float(step_rel),
+                            "ls_evals": int(ls_evals),
+                            "ls_repaired": bool(ls_repaired),
+                            "accepted_step": bool(accepted_step),
+                            "t_grad": float(t_grad),
+                            "t_ls": float(t_ls),
+                            "t_iter_total": float(t_iter_total),
+                            "message": message,
+                            "line_search": str(line_search),
+                            "adaptive_nonnegative": bool(adaptive_nonnegative),
+                        }
+                    )
+                break
+
+        terminate_after_iter = False
+        if not require_all_convergence and converged_energy:
+            message = "Stopping condition for f is satisfied"
+            terminate_after_iter = True
+        elif accepted_step and converged_step:
+            message = "Stopping condition for step size is satisfied"
+            terminate_after_iter = True
+        elif not accepted_step:
+            terminate_after_iter = True
+
+        if verbose:
+            print(
+                f"gd it={nit}, f={fx:.5f}, dE={dE:.5e}, ||g||={normg:.5e}, "
+                f"alpha={alpha:.5e}, ls={line_search}"
+            )
+
+        if save_history:
+            history.append(
+                {
+                    "it": int(nit),
+                    "energy": float(fx),
+                    "dE": float(dE),
+                    "grad_norm": float(normg),
+                    "grad_target": float(grad_target),
+                    "alpha": float(alpha),
+                    "step_norm": float(step_norm),
+                    "step_rel": float(step_rel),
+                    "ls_evals": int(ls_evals),
+                    "ls_repaired": bool(ls_repaired),
+                    "accepted_step": bool(accepted_step),
+                    "t_grad": float(t_grad),
+                    "t_ls": float(t_ls),
+                    "t_iter_total": float(t_iter_total),
+                    "message": message if terminate_after_iter else "",
+                    "line_search": str(line_search),
+                    "adaptive_nonnegative": bool(adaptive_nonnegative),
+                }
+            )
+
+        if terminate_after_iter:
+            break
+
+    runtime = time.perf_counter() - start
+    result = {
+        "x": x,
+        "fun": float(fx),
+        "nit": int(nit),
+        "time": float(runtime),
+        "message": message,
+        "last_alpha_abs": float(last_alpha_abs),
+    }
+    if save_history:
+        result["history"] = history
+    return result
