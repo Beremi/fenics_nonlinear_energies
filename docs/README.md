@@ -4,6 +4,9 @@ Current documentation lives in this folder.
 
 Key files:
 
+- [JAX_TOPOLOGY_CURRENT_STATE.md](JAX_TOPOLOGY_CURRENT_STATE.md) — current topology status note; points from the historical pure-JAX path to the retained JAX+PETSc parallel path
+- [JAX_TOPOLOGY_jax_petsc_IMPLEMENTATION.md](JAX_TOPOLOGY_jax_petsc_IMPLEMENTATION.md) — detailed implementation notes for the retained topology JAX+PETSc stack
+- [final_JAX_TOPOLOGY_parallel_results.md](final_JAX_TOPOLOGY_parallel_results.md) — cleaned final topology benchmark and scaling report
 - [problem_formulation_brief.md](problem_formulation_brief.md) — handoff brief describing what a new problem must satisfy to fit the JAX / JAX+PETSc solvers
 - [final_HE_results.md](final_HE_results.md) — current HyperElasticity final benchmark report
 - [final_pLaplace_results.md](final_pLaplace_results.md) — current pLaplace final benchmark report

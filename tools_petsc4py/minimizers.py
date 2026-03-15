@@ -5,7 +5,6 @@ This module mirrors the JAX minimizer in ``tools/minimizers.py`` but operates
 on PETSc vectors, enabling MPI-parallel execution. It depends only on
 ``petsc4py`` and ``numpy``. Problem-specific assembly stays in callbacks.
 """
-
 import time
 
 import numpy as np
@@ -36,6 +35,15 @@ def golden_section_search(f, a, b, tol):
         n_evals += 1
 
     return (an + bn) / 2.0, n_evals
+
+
+def _effective_linesearch_tol(base_tol, a, b, relative_to_bound=False):
+    """Return the absolute interval-width tolerance used by 1D line search."""
+    tol = max(float(base_tol), 1e-12)
+    if not relative_to_bound:
+        return tol
+    bound_scale = max(abs(float(a)), abs(float(b)), 1e-16)
+    return max(tol * bound_scale, 1e-12)
 
 
 def _repair_linesearch_interval(
@@ -824,5 +832,387 @@ def newton(
         "time": runtime,
         "message": message,
         "history": history,
+        "success": "converged" in message.lower(),
+    }
+
+
+def gradient_descent(
+    energy_fn,
+    gradient_fn,
+    x,
+    *,
+    tolf=1e-6,
+    tolg=1e-3,
+    tolg_rel=0.0,
+    linesearch_tol=1e-3,
+    linesearch_interval=(0.0, 2.0),
+    line_search="golden_adaptive",
+    adaptive_alpha0=1.0,
+    adaptive_window_scale=2.0,
+    adaptive_nonnegative=False,
+    linesearch_relative_to_bound=False,
+    armijo_alpha0=1.0,
+    armijo_c1=1e-4,
+    armijo_shrink=0.5,
+    armijo_max_ls=40,
+    maxit=200,
+    tolx_rel=1e-6,
+    tolx_abs=1e-10,
+    require_all_convergence=False,
+    fail_on_nonfinite=True,
+    verbose=False,
+    comm=None,
+    ghost_update_fn=None,
+    project_fn=None,
+    save_history=False,
+):
+    """Gradient descent with PETSc vectors and line search."""
+    if ghost_update_fn is None:
+        def ghost_update_fn(_v):
+            return None
+
+    if project_fn is None:
+        def project_fn(_v):
+            return None
+
+    rank = 0
+    if comm is not None:
+        rank = comm.Get_rank()
+
+    def _copy_vec(src, dst):
+        src_arr = np.asarray(src.getArray(readonly=True), dtype=np.float64)
+        dst_arr = dst.getArray(readonly=False)
+        dst_arr[:] = src_arr
+        del dst_arr
+        del src_arr
+
+    def _waxpy_vec(dst, alpha, x1, x2):
+        x2_arr = np.asarray(x2.getArray(readonly=True), dtype=np.float64)
+        x1_arr = np.asarray(x1.getArray(readonly=True), dtype=np.float64)
+        dst_arr = dst.getArray(readonly=False)
+        dst_arr[:] = x2_arr + float(alpha) * x1_arr
+        del dst_arr
+        del x1_arr
+        del x2_arr
+
+    g = x.duplicate()
+    direction = x.duplicate()
+    x_trial = x.duplicate()
+    x_prev = x.duplicate()
+
+    start = time.perf_counter()
+    fx = energy_fn(x)
+    nit = 0
+    message = "Maximum number of iterations reached"
+    history = []
+    initial_grad_norm = None
+    last_alpha_abs = max(abs(float(adaptive_alpha0)), float(linesearch_tol))
+    last_gamma_scaled = max(abs(float(adaptive_alpha0)), float(linesearch_tol))
+
+    for _ in range(maxit):
+        t_iter_start = time.perf_counter()
+        if verbose and rank == 0:
+            print(f"gd it={nit + 1} start", flush=True)
+
+        if fail_on_nonfinite and not np.isfinite(fx):
+            message = f"Non-finite energy before gradient iteration {nit + 1}"
+            break
+
+        t0 = time.perf_counter()
+        gradient_fn(x, g)
+        normg = g.norm(PETSc.NormType.NORM_2)
+        beta_inf = g.norm(PETSc.NormType.NORM_INFINITY)
+        t_grad = time.perf_counter() - t0
+        if verbose and rank == 0:
+            print(
+                f"gd it={nit + 1} grad ready, ||g||={normg:.5e}, t_grad={t_grad:.3f}s",
+                flush=True,
+            )
+
+        if fail_on_nonfinite and (not np.isfinite(normg) or not np.isfinite(beta_inf)):
+            message = f"Non-finite gradient norm at gradient iteration {nit + 1}"
+            break
+
+        if initial_grad_norm is None:
+            initial_grad_norm = normg
+
+        grad_target = tolg
+        if tolg_rel > 0.0 and np.isfinite(initial_grad_norm):
+            grad_target = max(tolg, tolg_rel * initial_grad_norm)
+
+        if (not require_all_convergence) and normg < grad_target:
+            message = "Gradient norm converged"
+            break
+
+        nit += 1
+        _copy_vec(x, x_prev)
+        x_prev_norm = x_prev.norm(PETSc.NormType.NORM_2)
+        fx_old = fx
+
+        _copy_vec(g, direction)
+        direction.scale(-1.0)
+        pnorm = direction.norm(PETSc.NormType.NORM_2)
+        if fail_on_nonfinite and not np.isfinite(pnorm):
+            message = f"Non-finite descent direction norm at gradient iteration {nit}"
+            break
+        if pnorm <= 1e-20:
+            message = f"Zero descent direction at gradient iteration {nit}"
+            break
+
+        alpha = 0.0
+        ls_evals = 0
+        ls_repaired = False
+        dE = 0.0
+        step_norm = 0.0
+        step_rel = 0.0
+        accepted_step = False
+        terminate_after_iter = False
+        t_update = 0.0
+        ls_eval_counter = 0
+        ls_a_eff = float("nan")
+        ls_b_eff = float("nan")
+
+        def _energy_at_alpha(alpha_local):
+            nonlocal ls_eval_counter
+            ls_eval_counter += 1
+            if verbose and rank == 0:
+                print(
+                    f"gd it={nit} ls eval {ls_eval_counter} start alpha={float(alpha_local):.5e}",
+                    flush=True,
+                )
+            t_alpha0 = time.perf_counter()
+            _waxpy_vec(x_trial, alpha_local, direction, x_prev)
+            project_fn(x_trial)
+            ghost_update_fn(x_trial)
+            val = energy_fn(x_trial)
+            if verbose and rank == 0:
+                print(
+                    f"gd it={nit} ls eval {ls_eval_counter} done alpha={float(alpha_local):.5e} "
+                    f"f={float(val):.5e} t={time.perf_counter() - t_alpha0:.3f}s",
+                    flush=True,
+                )
+            if not np.isfinite(val):
+                return np.inf
+            return val
+
+        t_ls_start = time.perf_counter()
+        if verbose and rank == 0:
+            print(f"gd it={nit} line search start", flush=True)
+        if line_search == "armijo":
+            alpha_trial = float(max(armijo_alpha0, 1e-12))
+            directional_derivative = -float(normg * normg)
+            for _ls_it in range(max(1, int(armijo_max_ls))):
+                trial_value = _energy_at_alpha(alpha_trial)
+                ls_evals += 1
+                if (
+                    np.isfinite(trial_value)
+                    and trial_value <= fx_old + armijo_c1 * alpha_trial * directional_derivative
+                ):
+                    alpha = float(alpha_trial)
+                    fx = float(trial_value)
+                    accepted_step = True
+                    break
+                alpha_trial *= float(armijo_shrink)
+            if not accepted_step:
+                message = f"Armijo line search failed at gradient iteration {nit}"
+        else:
+            if line_search == "golden_adaptive":
+                horizon = max(float(last_alpha_abs), float(linesearch_tol))
+                if adaptive_nonnegative:
+                    ls_a = 0.0
+                    ls_b = float(adaptive_window_scale) * horizon
+                else:
+                    ls_a = -float(adaptive_window_scale) * horizon
+                    ls_b = float(adaptive_window_scale) * horizon
+            elif line_search == "golden_linf":
+                beta_safe = max(float(beta_inf), 1e-16)
+                ls_a = 0.0
+                ls_b = 1.0 / beta_safe
+            elif line_search == "golden_gamma_beta":
+                beta_safe = max(float(beta_inf), 1e-16)
+                ls_a = 0.0
+                ls_b = float(adaptive_window_scale) * max(float(last_gamma_scaled), 1e-16) / beta_safe
+            elif line_search == "golden_fixed":
+                ls_a, ls_b = linesearch_interval
+            else:
+                raise ValueError(f"Unknown gradient line search mode: {line_search}")
+
+            if ls_b <= ls_a:
+                ls_a, ls_b = 0.0, 2.0
+
+            ls_a_eff, ls_b_eff, repair_evals, ls_repaired = _repair_linesearch_interval(
+                _energy_at_alpha,
+                ls_a,
+                ls_b,
+                center=0.0,
+                center_value=fx_old,
+                tol=_effective_linesearch_tol(
+                    linesearch_tol,
+                    ls_a,
+                    ls_b,
+                    relative_to_bound=linesearch_relative_to_bound,
+                ),
+            )
+            ls_evals += repair_evals
+            max_contract_loops = 64
+            for contract_it in range(max_contract_loops):
+                ls_tol_eff = _effective_linesearch_tol(
+                    linesearch_tol,
+                    ls_a_eff,
+                    ls_b_eff,
+                    relative_to_bound=linesearch_relative_to_bound,
+                )
+                alpha, ls_eval_local = golden_section_search(
+                    _energy_at_alpha, ls_a_eff, ls_b_eff, ls_tol_eff
+                )
+                ls_evals += ls_eval_local
+                fx_trial = _energy_at_alpha(alpha)
+                width = float(ls_b_eff - ls_a_eff)
+                if np.isfinite(fx_trial) and fx_trial < fx_old:
+                    fx = float(fx_trial)
+                    accepted_step = True
+                    break
+
+                # The bracket was numerically resolved but still did not
+                # produce a decrease. Contract it toward zero and retry.
+                if ls_a_eff >= 0.0:
+                    ls_a_eff = 0.0
+                    ls_b_eff = max(1e-16, 0.5 * max(float(alpha), 0.0))
+                elif ls_b_eff <= 0.0:
+                    ls_b_eff = 0.0
+                    ls_a_eff = min(-1e-16, 0.5 * min(float(alpha), 0.0))
+                else:
+                    radius = max(1e-16, 0.5 * min(abs(ls_a_eff), abs(ls_b_eff), abs(float(alpha))))
+                    ls_a_eff = -radius
+                    ls_b_eff = radius
+            else:
+                message = f"Golden-section line search failed at gradient iteration {nit}"
+
+        t_ls = time.perf_counter() - t_ls_start
+
+        if accepted_step:
+            t_update0 = time.perf_counter()
+            _copy_vec(x_trial, x)
+            project_fn(x)
+            ghost_update_fn(x)
+            t_update = time.perf_counter() - t_update0
+            dE = float(fx_old - fx)
+            step_norm = float(abs(alpha) * pnorm)
+            step_rel = float(step_norm / max(1.0, x_prev_norm))
+            last_alpha_abs = max(abs(float(alpha)), float(linesearch_tol))
+            if line_search == "golden_gamma_beta":
+                last_gamma_scaled = max(abs(float(alpha)) * max(float(beta_inf), 1e-16), 1e-16)
+        else:
+            _copy_vec(x_prev, x)
+            project_fn(x)
+            ghost_update_fn(x)
+
+        t_iter_total = time.perf_counter() - t_iter_start
+
+        converged_energy = accepted_step and np.isfinite(dE) and abs(dE) < tolf
+        converged_step = accepted_step and (step_norm < tolx_abs or step_rel < tolx_rel)
+
+        if require_all_convergence and accepted_step and converged_energy and converged_step:
+            gradient_fn(x, g)
+            post_grad_norm = g.norm(PETSc.NormType.NORM_2)
+            if float(post_grad_norm) < grad_target:
+                message = "Converged (energy, step, gradient)"
+                if save_history:
+                    history.append(
+                        {
+                            "it": int(nit),
+                            "energy": float(fx),
+                            "dE": float(dE),
+                            "grad_norm": float(normg),
+                            "grad_inf_norm": float(beta_inf),
+                            "grad_target": float(grad_target),
+                            "alpha": float(alpha),
+                            "step_norm": float(step_norm),
+                            "step_rel": float(step_rel),
+                            "ls_a": float(ls_a_eff),
+                            "ls_b": float(ls_b_eff),
+                            "ls_evals": int(ls_evals),
+                            "ls_repaired": bool(ls_repaired),
+                            "accepted_step": bool(accepted_step),
+                            "t_grad": float(t_grad),
+                            "t_ls": float(t_ls),
+                            "t_update": float(t_update),
+                            "t_iter": float(t_iter_total),
+                            "line_search": str(line_search),
+                            "adaptive_nonnegative": bool(adaptive_nonnegative),
+                            "message": message,
+                        }
+                    )
+                break
+
+        if not require_all_convergence and converged_energy:
+            message = "Stopping condition for f is satisfied"
+            terminate_after_iter = True
+        elif accepted_step and converged_step:
+            message = "Stopping condition for step size is satisfied"
+            terminate_after_iter = True
+        elif not accepted_step:
+            terminate_after_iter = True
+
+        if verbose and rank == 0:
+            print(
+                f"gd it={nit}, f={fx:.5f}, dE={dE:.5e}, ||g||={normg:.5e}, "
+                f"alpha={alpha:.5e}, ls={line_search}, ls_evals={ls_evals}, "
+                f"t_grad={t_grad:.3f}s, t_ls={t_ls:.3f}s, t_update={t_update:.3f}s",
+                flush=True,
+            )
+
+        if save_history:
+            history.append(
+                {
+                    "it": int(nit),
+                    "energy": float(fx),
+                    "dE": float(dE),
+                    "grad_norm": float(normg),
+                    "grad_inf_norm": float(beta_inf),
+                    "grad_target": float(grad_target),
+                    "alpha": float(alpha),
+                    "step_norm": float(step_norm),
+                    "step_rel": float(step_rel),
+                    "ls_a": float(ls_a_eff) if "ls_a_eff" in locals() else float("nan"),
+                    "ls_b": float(ls_b_eff) if "ls_b_eff" in locals() else float("nan"),
+                    "ls_evals": int(ls_evals),
+                    "ls_repaired": bool(ls_repaired),
+                    "accepted_step": bool(accepted_step),
+                    "t_grad": float(t_grad),
+                    "t_ls": float(t_ls),
+                    "t_update": float(t_update),
+                    "t_iter": float(t_iter_total),
+                    "line_search": str(line_search),
+                    "adaptive_nonnegative": bool(adaptive_nonnegative),
+                    "message": message if terminate_after_iter else "",
+                }
+            )
+
+        if terminate_after_iter:
+            break
+
+        if fail_on_nonfinite and not np.isfinite(fx):
+            _copy_vec(x_prev, x)
+            ghost_update_fn(x)
+            message = f"Non-finite energy after update at gradient iteration {nit}"
+            break
+
+    runtime = time.perf_counter() - start
+
+    g.destroy()
+    direction.destroy()
+    x_trial.destroy()
+    x_prev.destroy()
+
+    return {
+        "x": x,
+        "fun": float(fx),
+        "nit": int(nit),
+        "time": float(runtime),
+        "message": message,
+        "history": history,
+        "last_alpha_abs": float(last_alpha_abs),
+        "last_gamma_scaled": float(last_gamma_scaled),
         "success": "converged" in message.lower(),
     }

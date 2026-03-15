@@ -8,3 +8,6 @@ topological_optimisation_jax/report_assets/*.csv
 topological_optimisation_jax/report_assets/*.json
 topological_optimisation_jax/report_assets/*.npz
 topological_optimisation_jax/description.md
+jax_topology_parallel_*.md
+topological_optimisation_jax/report_runs/
+topological_optimisation_jax/report_assets_parallel*/

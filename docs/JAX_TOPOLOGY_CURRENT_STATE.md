@@ -1,88 +1,70 @@
 # JAX Topology Current State
 
-Date: 2026-03-12
+Date: 2026-03-15
 
-This note records the working configuration we are carrying forward for the
-next implementation phase. It supersedes the exploratory comparison reports
-that were used to get here.
+This note records the topology configuration we are carrying forward after the
+JAX and JAX+PETSc parallel implementation work.
 
-## Chosen Solver Path
+## Recommended Active Path
 
-- Mechanics subproblem:
-  - nonlinear method: existing Newton / trust-region mechanics solve
-  - linear/preconditioning path: PETSc `GAMG`
-  - elasticity metadata: 2D rigid-body near-nullspace enabled
-- Design subproblem:
-  - nonlinear method: gradient descent
-  - line search: adaptive golden-section search
-  - carried state: the absolute value of the last accepted `alpha` is reused as
-    the horizon scale `a` in the next outer design solve
-  - adaptive bracket: `[0, 2a]`
-- Outer continuation:
-  - staircase SIMP schedule
-  - `p_start = 1.0`
-  - `p_increment = 0.5`
-  - `continuation_interval = 20`
-  - `p_max = 4.0`
+- Historical/reference path:
+  - `topological_optimisation_jax/solve_topopt_jax.py`
+  - kept as the serial pure-JAX reference and for comparison with older reports
+- Recommended active path:
+  - `topological_optimisation_jax/solve_topopt_parallel.py`
+  - distributed JAX+PETSc topology solve
+  - this is the topology implementation to treat as current
 
-## Default Working Settings In Code
+## Chosen Default Solver Policy
 
-These are now the intended defaults in
-`topological_optimisation_jax/solve_topopt_jax.py`:
+The code defaults for the parallel path are normalized to the stable solver
+policy, not to the full fine-grid benchmark recipe.
 
-- `mechanics_solver_type = "petsc_gamg"`
-- `mechanics_use_near_nullspace = True`
-- `design_nonlinear_method = "gd_golden_adaptive"`
-- `design_gd_adaptive_nonnegative = True`
-- `linesearch_tol = 1e-1`
+- Mechanics:
+  - PETSc `fgmres + gamg`
+  - rigid-body near-nullspace enabled
+  - `mechanics_ksp_rtol = 1e-4`
+  - `mechanics_ksp_max_it = 100`
+  - fallback mechanics retries remain enabled
+- Design:
+  - distributed gradient descent
+  - supported default line search: `golden_adaptive`
+  - relative line-search tolerance against the active bracket bound enabled
+  - `design_maxit = 20`
+  - `tolg = 1e-3`
+  - line-search fail-safe retained: a failed golden search is accepted only when
+    the last gradient norm is already small enough
+- Continuation / outer logic:
+  - `theta_min = 1e-6`
+  - staircase continuation with `p_increment = 0.2`
+  - continuation interval `= 1`
+  - `p_max = 10.0`
+  - max-it gate over the recent outer history retained
+  - graceful stall stop retained with:
+    - `stall_theta_tol = 1e-6`
+    - `stall_p_min = 4.0`
 
-The older `generate_report_assets.py` benchmark is intentionally pinned to the
-historical pure-JAX / Newton reference settings so that report remains
-reproducible.
+## What Is Intentionally Not The Default State
 
-## Final Benchmark Snapshot Used For Direction
+These are documented benchmark choices, not generic CLI defaults:
 
-Fine benchmark: `192 x 96`
+- fine benchmark mesh `768 x 384`
+- `32` MPI ranks
+- very large outer iteration caps used for long benchmark campaigns
+- exploratory line-search variants:
+  - `golden_linf`
+  - `golden_gamma_beta`
+- abandoned mechanics-cutout / floating-DOF experiments
 
-Reference Newton design solve:
+## Current Reporting Convention
 
-- result: `completed`
-- outer iterations: `172`
-- wall time: `360.029 s`
-- final compliance: `4.193275`
-- final volume fraction: `0.400892`
+- Implementation details:
+  - [`JAX_TOPOLOGY_jax_petsc_IMPLEMENTATION.md`](JAX_TOPOLOGY_jax_petsc_IMPLEMENTATION.md)
+- Final benchmark and scaling report:
+  - [`final_JAX_TOPOLOGY_parallel_results.md`](final_JAX_TOPOLOGY_parallel_results.md)
 
-Adaptive GD, symmetric bracket `[-2a, 2a]`:
+## Current Recommendation
 
-- result: `completed`
-- outer iterations: `160`
-- wall time: `298.185 s`
-- total design line-search evaluations: `9182`
-- final compliance: `4.153689`
-- final volume fraction: `0.399862`
-
-Adaptive GD, positive bracket `[0, 2a]`:
-
-- result: `completed`
-- outer iterations: `148`
-- wall time: `298.974 s`
-- total design line-search evaluations: `8436`
-- final compliance: `4.138879`
-- final volume fraction: `0.400590`
-
-The positive-only bracket is the selected design-side setting.
-
-## Why This Is The Next-Step Configuration
-
-- Mechanics is the naturally parallel block and already has a viable PETSc
-  multigrid path.
-- Design does not currently benefit from forcing a Hessian-based linear solve.
-  The adaptive GD path is simpler, robust on the full benchmark, and parallel
-  enough for the next stage because it only needs energy/gradient evaluations.
-- This keeps the implementation compact while still matching the long-term
-  direction toward distributed execution.
-
-## Next Step
-
-Focus new work on the parallel mechanics/GAMG path and keep the design block on
-the GD formulation unless a clearly better distributed design solve appears.
+Use the parallel JAX+PETSc solver as the maintained topology path, keep the
+pure-JAX solver as a reference implementation, and treat the final benchmark
+report as the authoritative summary of the current stable behavior and scaling.
