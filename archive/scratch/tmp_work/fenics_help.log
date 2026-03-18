@@ -1,0 +1,98 @@
+usage: solve_HE_custom_jaxversion.py [-h] [--level LEVEL] [--steps STEPS]
+                                     [--start_step START_STEP] [--maxit MAXIT]
+                                     [--init_npz INIT_NPZ]
+                                     [--init_step INIT_STEP]
+                                     [--linesearch_a LINESEARCH_A]
+                                     [--linesearch_b LINESEARCH_B]
+                                     [--use_abs_det] [--ksp_type KSP_TYPE]
+                                     [--pc_type PC_TYPE] [--ksp_rtol KSP_RTOL]
+                                     [--ksp_max_it KSP_MAX_IT] [--tolf TOLF]
+                                     [--tolg TOLG] [--tolg_rel TOLG_REL]
+                                     [--tolx_rel TOLX_REL]
+                                     [--tolx_abs TOLX_ABS]
+                                     [--no_near_nullspace]
+                                     [--hypre_nodal_coarsen HYPRE_NODAL_COARSEN]
+                                     [--hypre_vec_interp_variant HYPRE_VEC_INTERP_VARIANT]
+                                     [--hypre_strong_threshold HYPRE_STRONG_THRESHOLD]
+                                     [--hypre_coarsen_type HYPRE_COARSEN_TYPE]
+                                     [--save_history] [--save_linear_timing]
+                                     [--pc_setup_on_ksp_cap] [--out OUT]
+                                     [--total_steps TOTAL_STEPS]
+                                     [--gamg_threshold GAMG_THRESHOLD]
+                                     [--gamg_agg_nsmooths GAMG_AGG_NSMOOTHS]
+                                     [--no_gamg_coordinates] [--no_fail_fast]
+                                     [--no_retry_on_nonfinite]
+                                     [--nonfinite_retry_rtol_factor NONFINITE_RETRY_RTOL_FACTOR]
+                                     [--nonfinite_retry_linesearch_b NONFINITE_RETRY_LINESEARCH_B]
+                                     [--no_retry_on_maxit]
+                                     [--retry_ksp_max_it_factor RETRY_KSP_MAX_IT_FACTOR]
+                                     [--quiet]
+
+options:
+  -h, --help            show this help message and exit
+  --level LEVEL         Mesh level (1-4)
+  --steps STEPS         Number of time steps
+  --start_step START_STEP
+                        Global step index to start from
+  --maxit MAXIT         Maximum Newton iterations
+  --init_npz INIT_NPZ   NPZ from JAX test data with coords and u_full_steps
+  --init_step INIT_STEP
+                        Step index in init_npz to use as initial guess
+  --linesearch_a LINESEARCH_A
+                        Line-search interval lower bound
+  --linesearch_b LINESEARCH_B
+                        Line-search interval upper bound
+  --use_abs_det         Use abs(det(F)) in energy (JAX-compatible)
+  --ksp_type KSP_TYPE   PETSc KSP type
+  --pc_type PC_TYPE     PETSc PC type
+  --ksp_rtol KSP_RTOL   KSP relative tolerance
+  --ksp_max_it KSP_MAX_IT
+                        KSP maximum iterations per Newton step
+  --tolf TOLF           Newton energy-change tolerance
+  --tolg TOLG           Newton gradient-norm tolerance
+  --tolg_rel TOLG_REL   Newton relative gradient tolerance (scaled by initial
+                        gradient)
+  --tolx_rel TOLX_REL   Newton relative step-size tolerance
+  --tolx_abs TOLX_ABS   Newton absolute step-size tolerance
+  --no_near_nullspace   Disable elasticity near-nullspace on Hessian
+  --hypre_nodal_coarsen HYPRE_NODAL_COARSEN
+                        BoomerAMG nodal coarsen (-1 to skip setting)
+  --hypre_vec_interp_variant HYPRE_VEC_INTERP_VARIANT
+                        BoomerAMG vector interpolation variant (-1 to skip
+                        setting)
+  --hypre_strong_threshold HYPRE_STRONG_THRESHOLD
+                        BoomerAMG strong threshold
+  --hypre_coarsen_type HYPRE_COARSEN_TYPE
+                        BoomerAMG coarsen type (e.g. HMIS, PMIS)
+  --save_history        Include per-iteration Newton profile in output JSON
+  --save_linear_timing  Include per-Newton linear timing breakdown in output
+                        JSON
+  --pc_setup_on_ksp_cap
+                        Only run KSP/PC setup when previous linear solve hit
+                        ksp_max_it (first solve always sets up)
+  --out OUT             Output JSON file
+  --total_steps TOTAL_STEPS
+                        Total steps that span the full 4×2π rotation (controls
+                        step size)
+  --gamg_threshold GAMG_THRESHOLD
+                        GAMG threshold for filtering graph (-1 = keep all,
+                        most robust)
+  --gamg_agg_nsmooths GAMG_AGG_NSMOOTHS
+                        GAMG number of smoothing steps for SA prolongation
+                        (1=smoothed, 0=unsmoothed)
+  --no_gamg_coordinates
+                        Disable PCSetCoordinates for GAMG
+  --no_fail_fast        Do not stop trajectory early on Newton non-convergence
+  --no_retry_on_nonfinite
+                        Disable non-finite repair attempt with tighter
+                        settings
+  --nonfinite_retry_rtol_factor NONFINITE_RETRY_RTOL_FACTOR
+                        Multiplier for KSP rtol in non-finite repair attempt
+  --nonfinite_retry_linesearch_b NONFINITE_RETRY_LINESEARCH_B
+                        Upper bound of line-search interval in non-finite
+                        repair attempt
+  --no_retry_on_maxit   Disable repair attempt when Newton reaches max
+                        iterations
+  --retry_ksp_max_it_factor RETRY_KSP_MAX_IT_FACTOR
+                        Multiplier for KSP max_it in repair attempt
+  --quiet

@@ -1,0 +1,11 @@
+case_id,implementation,mpi_ranks,median_wall_time_s,median_newton_iters,median_linear_iters,median_final_energy,status
+l1_steps24_np1,fenics_custom,1,7.792,798,0,197.755003,completed
+l1_steps24_np1,fenics_snes,1,0.0,1445,5064,,failed
+l1_steps24_np1,jax_petsc_element,1,8.485423,793,10595,197.75458224162878,completed
+l1_steps24_np1,jax_serial,1,29.257710368023254,559,2284,197.74950930751214,completed
+l1_steps24_np2,fenics_custom,2,7.0474,795,0,197.754815,completed
+l1_steps24_np2,fenics_snes,2,0.0,2068,5783,,failed
+l1_steps24_np2,jax_petsc_element,2,9.174584,794,10631,197.7549562894938,completed
+l1_steps24_np4,fenics_custom,4,6.7045,796,0,197.75479,completed
+l1_steps24_np4,fenics_snes,4,0.0,2318,2621,,failed
+l1_steps24_np4,jax_petsc_element,4,9.273028,798,10726,197.75492916776358,completed

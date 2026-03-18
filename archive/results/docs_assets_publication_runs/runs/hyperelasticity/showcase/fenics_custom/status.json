@@ -1,0 +1,29 @@
+{
+  "command": "/home/michal/repos/fenics_nonlinear_energies/.venv/bin/python -u src/problems/hyperelasticity/fenics/solve_HE_custom_jaxversion.py --level 1 --steps 24 --total-steps 24 --quiet --out overview/img/runs/hyperelasticity/showcase/fenics_custom/output.json",
+  "command_argv": [
+    "/home/michal/repos/fenics_nonlinear_energies/.venv/bin/python",
+    "-u",
+    "src/problems/hyperelasticity/fenics/solve_HE_custom_jaxversion.py",
+    "--level",
+    "1",
+    "--steps",
+    "24",
+    "--total-steps",
+    "24",
+    "--quiet",
+    "--out",
+    "overview/img/runs/hyperelasticity/showcase/fenics_custom/output.json"
+  ],
+  "cwd": "/home/michal/repos/fenics_nonlinear_energies",
+  "duration_s": 9.76249402097892,
+  "exit_code": 0,
+  "finished_at": "2026-03-16T20:34:27Z",
+  "log_path": "/home/michal/repos/fenics_nonlinear_energies/overview/img/runs/hyperelasticity/showcase/fenics_custom/run.log",
+  "notes": "",
+  "outputs": [
+    "/home/michal/repos/fenics_nonlinear_energies/overview/img/runs/hyperelasticity/showcase/fenics_custom/output.json"
+  ],
+  "skipped": true,
+  "started_at": "2026-03-16T20:34:17Z",
+  "success": true
+}

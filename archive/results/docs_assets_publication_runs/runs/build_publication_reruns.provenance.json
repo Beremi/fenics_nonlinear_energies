@@ -1,0 +1,10 @@
+{
+  "command": "./.venv/bin/python overview/img/scripts/build_publication_reruns.py --resume",
+  "cwd": ".",
+  "inputs": [],
+  "notes": "Runs the small showcase commands and topology mesh-scaling commands used by the overview package.",
+  "outputs": [
+    "overview/img/runs/manifest.json"
+  ],
+  "script": "overview/img/scripts/build_publication_reruns.py"
+}

@@ -1,0 +1,23 @@
+# cwd: /home/michal/repos/fenics_nonlinear_energies
+# env BLIS_NUM_THREADS=1
+# env JAX_PLATFORMS=cpu
+# env MKL_NUM_THREADS=1
+# env NUMEXPR_NUM_THREADS=1
+# env OMP_NUM_THREADS=1
+# env OPENBLAS_NUM_THREADS=1
+# env VECLIB_MAXIMUM_THREADS=1
+# env XLA_FLAGS=--xla_cpu_multi_thread_eigen=false intra_op_parallelism_threads=1
+# command: /home/michal/repos/fenics_nonlinear_energies/.venv/bin/python -u src/problems/plaplace/jax_petsc/solve_pLaplace_dof.py --level 5 --profile reference --assembly-mode element --local-hessian-mode element --element-reorder-mode block_xyz --local-coloring --nproc 1 --quiet --json overview/img/runs/plaplace/showcase/jax_petsc_element/output.json
+
+p-Laplace 2D DOF-partitioned solver | 1 MPI rank(s) | NPROC=1 | PC=hypre
+================================================================================
+
+  --- Level 5 ---
+  [RESULT] level=5 dofs=3201 np=1 solve=0.080s setup=0.229s iters=6 ksp_its_total=17 J=-7.942969 [Converged (energy, step, gradient)]
+
+================================================================================
+Summary:
+  level     dofs  np   setup   solve   total  its    ksp         energy
+      5     3201   1   0.229   0.080   0.354    6     17      -7.942969
+Done.
+Results saved to overview/img/runs/plaplace/showcase/jax_petsc_element/output.json

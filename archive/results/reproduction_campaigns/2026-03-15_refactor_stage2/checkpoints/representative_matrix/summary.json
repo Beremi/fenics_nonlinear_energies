@@ -1,0 +1,136 @@
+{
+  "campaign": "2026-03-15_refactor_stage2",
+  "checkpoint": "representative_matrix",
+  "cases": [
+    {
+      "case": "pLaplace pure JAX level 5 np=1",
+      "result": "completed",
+      "status": "Stopping condition for f is satisfied",
+      "key_metrics": {
+        "dofs": 2945,
+        "solve_time_s": 0.1025,
+        "newton_iters": 6,
+        "energy": -7.943
+      },
+      "json_path": "artifacts/reproduction/2026-03-15_refactor_stage2/checkpoints/representative_matrix/json/plaplace_jax_l5_np1.json"
+    },
+    {
+      "case": "pLaplace FEniCS custom level 5 np=2",
+      "result": "completed",
+      "status": "Converged (energy, step, gradient)",
+      "key_metrics": {
+        "dofs": 3201,
+        "solve_time_s": 0.0603,
+        "newton_iters": 5,
+        "linear_iters": 15,
+        "energy": -7.9429687182
+      },
+      "json_path": "artifacts/reproduction/2026-03-15_refactor_stage2/checkpoints/representative_matrix/json/plaplace_fenics_custom_l5_np2.json"
+    },
+    {
+      "case": "pLaplace JAX+PETSc level 5 np=2",
+      "result": "completed",
+      "status": "Converged (energy, step, gradient)",
+      "key_metrics": {
+        "dofs": 3201,
+        "solve_time_s": 0.1746,
+        "newton_iters": 6,
+        "linear_iters": 17,
+        "energy": -7.9429687193
+      },
+      "json_path": "artifacts/reproduction/2026-03-15_refactor_stage2/checkpoints/representative_matrix/json/plaplace_jax_petsc_l5_np2.json"
+    },
+    {
+      "case": "GL FEniCS custom level 5 np=2",
+      "result": "completed",
+      "status": "Converged (energy, step, gradient)",
+      "key_metrics": {
+        "dofs": 4225,
+        "solve_time_s": 0.0797,
+        "newton_iters": 7,
+        "linear_iters": 28,
+        "energy": 0.3462323651
+      },
+      "json_path": "artifacts/reproduction/2026-03-15_refactor_stage2/checkpoints/representative_matrix/json/gl_fenics_custom_l5_np2.json"
+    },
+    {
+      "case": "GL JAX+PETSc level 5 np=2",
+      "result": "completed",
+      "status": "Converged (energy, step, gradient)",
+      "key_metrics": {
+        "dofs": 4225,
+        "solve_time_s": 0.240322,
+        "newton_iters": 12,
+        "linear_iters": null,
+        "energy": 0.34598730315972287
+      },
+      "json_path": "artifacts/reproduction/2026-03-15_refactor_stage2/checkpoints/representative_matrix/json/gl_jax_petsc_l5_np2.json"
+    },
+    {
+      "case": "HE pure JAX level 1 steps 24/24 np=1",
+      "result": "completed",
+      "status": "completed",
+      "key_metrics": {
+        "dofs": 2187,
+        "solve_time_s": 41.59549137495924,
+        "newton_iters": 559,
+        "linear_iters": 2284
+      },
+      "json_path": "artifacts/reproduction/2026-03-15_refactor_stage2/checkpoints/representative_matrix/json/he_jax_l1_steps24_np1.json"
+    },
+    {
+      "case": "HE FEniCS custom level 1 steps 24/24 np=2",
+      "result": "failed",
+      "status": "PETSc SIGSEGV",
+      "key_metrics": {
+        "failure_mode": "PETSc signal 11 / MPI abort (no JSON output)"
+      },
+      "log_path": "artifacts/reproduction/2026-03-15_refactor_stage2/checkpoints/representative_matrix/logs/he_fenics_custom_l1_steps24_np2.log"
+    },
+    {
+      "case": "HE JAX+PETSc level 1 steps 24/24 np=2",
+      "result": "completed",
+      "status": "Converged (energy, step, gradient)",
+      "key_metrics": {
+        "dofs": 2187,
+        "solve_time_s": 20.66314,
+        "newton_iters": 528,
+        "linear_iters": null
+      },
+      "json_path": "artifacts/reproduction/2026-03-15_refactor_stage2/checkpoints/representative_matrix/json/he_jax_petsc_l1_steps24_np2.json"
+    },
+    {
+      "case": "Topology pure JAX 192x96 np=1",
+      "result": "completed",
+      "status": "completed",
+      "key_metrics": {
+        "wall_time_s": 17.787321283947676,
+        "outer_iterations": 121,
+        "final_p": 4.0,
+        "final_compliance": 4.155705577015535,
+        "final_volume_fraction": 0.40000000000006014
+      },
+      "comparison_note": "Current direct CLI result differs from the existing benchmark markdown values; the markdown report is stale relative to the maintained solver path.",
+      "json_path": "artifacts/reproduction/2026-03-15_refactor_stage2/checkpoints/representative_matrix/json/topology_serial_nx192_ny96_np1.json"
+    },
+    {
+      "case": "Topology parallel 768x384 np=2",
+      "result": "completed",
+      "status": "completed",
+      "key_metrics": {
+        "wall_time_s": 138.60156961006578,
+        "outer_iterations": 72,
+        "final_p": 5.600000000000002,
+        "final_compliance": 8.947270662878754,
+        "final_volume_fraction": 0.39320397728290735
+      },
+      "comparison_note": "Matches the current parallel benchmark qualitative state and final metrics; only wall time drifted.",
+      "json_path": "artifacts/reproduction/2026-03-15_refactor_stage2/checkpoints/representative_matrix/json/topology_parallel_nx768_ny384_np2.json"
+    }
+  ],
+  "findings": [
+    "Nine of the ten representative direct-entrypoint cases completed successfully.",
+    "The maintained HE FEniCS direct CLI crashed on the 24-step level-1 np=2 case with a PETSc SIGSEGV before writing JSON.",
+    "The current pure-JAX topology serial benchmark no longer matches the existing markdown report numerically, so that report is stale until the refactored reproduction pass refreshes it."
+  ]
+}

@@ -1,0 +1,9 @@
+solver,level,problem_size,nprocs,total_time_s,final_energy,total_newton_iters,total_linear_iters,result
+fenics_custom,1,2187,32,9.8938,197.773044,666,8570,completed
+fenics_custom,2,12075,32,14.6608,116.334941,638,11370,completed
+fenics_custom,3,78003,32,36.9261,93.705043,633,14075,completed
+fenics_custom,4,555747,32,515.1309,87.722767,711,16016,completed
+jax_petsc_element,1,2133,32,15.406813,197.75496400330795,793,10570,completed
+jax_petsc_element,2,11925,32,21.129013,116.32408573075952,739,13359,completed
+jax_petsc_element,3,77517,32,56.305637,93.70484185674378,684,15565,completed
+jax_petsc_element,4,554013,32,528.832896,87.72201387004978,831,18940,completed

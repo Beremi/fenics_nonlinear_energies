@@ -1,0 +1,14 @@
+FEniCSx local environment activated.
+  Python:  Python 3.12.10
+  PETSc:   (3, 24, 2)
+  DOLFINx: 0.10.0.post5
+Running JAX+PETSc SFD...
+Parsing...
+Total Time: 0.000
+Newton: 0
+KSP: 0
+Assembly: 0.000
+HVP: 0.000
+COO: 0.000
+PC: 0.000
+Solve: 0.000

@@ -1,0 +1,18 @@
+# cwd: /home/michal/repos/fenics_nonlinear_energies
+# env BLIS_NUM_THREADS=1
+# env JAX_PLATFORMS=cpu
+# env MKL_NUM_THREADS=1
+# env NUMEXPR_NUM_THREADS=1
+# env OMP_NUM_THREADS=1
+# env OPENBLAS_NUM_THREADS=1
+# env VECLIB_MAXIMUM_THREADS=1
+# env XLA_FLAGS=--xla_cpu_multi_thread_eigen=false intra_op_parallelism_threads=1
+# command: /home/michal/repos/fenics_nonlinear_energies/.venv/bin/python -u src/problems/plaplace/fenics/solve_pLaplace_custom_jaxversion.py --levels 5 --quiet --json overview/img/runs/plaplace/showcase/fenics_custom/output.json --state-out overview/img/runs/plaplace/showcase/fenics_custom/state.npz
+
+p-Laplace 2D Custom Newton (JAX-version) | 1 MPI process(es)
+================================================================================
+  --- Mesh level 5 ---
+  RESULT mesh_level=5 dofs=3201 setup=0.015s solve=0.078s iters=5 ksp=15 asm=0.006s J(u)=-7.942969 [Converged (energy, step, gradient)]
+================================================================================
+Done.
+Results saved to overview/img/runs/plaplace/showcase/fenics_custom/output.json

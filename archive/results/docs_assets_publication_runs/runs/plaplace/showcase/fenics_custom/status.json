@@ -1,0 +1,28 @@
+{
+  "command": "/home/michal/repos/fenics_nonlinear_energies/.venv/bin/python -u src/problems/plaplace/fenics/solve_pLaplace_custom_jaxversion.py --levels 5 --quiet --json overview/img/runs/plaplace/showcase/fenics_custom/output.json --state-out overview/img/runs/plaplace/showcase/fenics_custom/state.npz",
+  "command_argv": [
+    "/home/michal/repos/fenics_nonlinear_energies/.venv/bin/python",
+    "-u",
+    "src/problems/plaplace/fenics/solve_pLaplace_custom_jaxversion.py",
+    "--levels",
+    "5",
+    "--quiet",
+    "--json",
+    "overview/img/runs/plaplace/showcase/fenics_custom/output.json",
+    "--state-out",
+    "overview/img/runs/plaplace/showcase/fenics_custom/state.npz"
+  ],
+  "cwd": "/home/michal/repos/fenics_nonlinear_energies",
+  "duration_s": 2.0405618380755186,
+  "exit_code": 0,
+  "finished_at": "2026-03-16T20:33:57Z",
+  "log_path": "/home/michal/repos/fenics_nonlinear_energies/overview/img/runs/plaplace/showcase/fenics_custom/run.log",
+  "notes": "Showcase parity and sample-state rerun",
+  "outputs": [
+    "/home/michal/repos/fenics_nonlinear_energies/overview/img/runs/plaplace/showcase/fenics_custom/output.json",
+    "/home/michal/repos/fenics_nonlinear_energies/overview/img/runs/plaplace/showcase/fenics_custom/state.npz"
+  ],
+  "skipped": true,
+  "started_at": "2026-03-16T20:33:55Z",
+  "success": true
+}

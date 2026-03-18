@@ -1,0 +1,18 @@
+# cwd: /home/michal/repos/fenics_nonlinear_energies
+# env BLIS_NUM_THREADS=1
+# env JAX_PLATFORMS=cpu
+# env MKL_NUM_THREADS=1
+# env NUMEXPR_NUM_THREADS=1
+# env OMP_NUM_THREADS=1
+# env OPENBLAS_NUM_THREADS=1
+# env VECLIB_MAXIMUM_THREADS=1
+# env XLA_FLAGS=--xla_cpu_multi_thread_eigen=false intra_op_parallelism_threads=1
+# command: /home/michal/repos/fenics_nonlinear_energies/.venv/bin/python -u src/problems/plaplace/jax/solve_pLaplace_jax_newton.py --levels 5 --quiet --json overview/img/runs/plaplace/showcase/jax_serial/output.json
+
+p-Laplace 2D JAX Newton (single process)
+================================================================================
+  --- Mesh level 5 ---
+  RESULT mesh_level=5 dofs=2945 setup=0.248s solve=0.098s iters=6 J(u)=-7.9430 [Stopping condition for f is satisfied]
+================================================================================
+Done.
+Results saved to overview/img/runs/plaplace/showcase/jax_serial/output.json

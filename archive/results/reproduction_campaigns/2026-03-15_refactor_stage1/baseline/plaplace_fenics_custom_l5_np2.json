@@ -1,0 +1,95 @@
+{
+  "metadata": {
+    "solver": "custom_jaxversion",
+    "description": "Custom Newton (JAX-version algorithm): golden-section line search [-0.5, 2], CG + HYPRE AMG",
+    "dolfinx_version": "0.10.0.post5",
+    "nprocs": 2,
+    "linear_solver": {
+      "ksp_type": "cg",
+      "pc_type": "hypre",
+      "ksp_rtol": 0.001,
+      "ksp_max_it": 200
+    },
+    "newton_params": {
+      "tolf": 1e-05,
+      "tolg": 0.001,
+      "linesearch_interval": [
+        -0.5,
+        2.0
+      ],
+      "linesearch_tol": 0.001,
+      "maxit": 100
+    },
+    "p": 3,
+    "rhs_f": -10.0
+  },
+  "results": [
+    {
+      "mesh_level": 5,
+      "total_dofs": 3201,
+      "dofs": 3201,
+      "nprocs": 2,
+      "pc_type": "hypre",
+      "ksp_rtol": 0.001,
+      "assembly_mode": "fenics",
+      "setup_time": 0.0474,
+      "solve_time": 0.0911,
+      "total_time": 0.1386,
+      "iters": 5,
+      "energy": -7.9429687182,
+      "message": "Converged (energy, step, gradient)",
+      "total_ksp_its": 15,
+      "asm_time_cumulative": 0.0065,
+      "pc_setup_time_cumulative": 0.035,
+      "linear_solve_time_cumulative": 0.0157,
+      "ksp_time_cumulative": 0.0507,
+      "hess_timings": [
+        {
+          "assemble_total_time": 0.0016937890322878957,
+          "setop_time": 1.801992766559124e-06,
+          "set_tolerances_time": 1.4820834621787071e-06,
+          "pc_setup_time": 0.007428621058352292,
+          "solve_time": 0.0030076770344749093,
+          "linear_total_time": 0.012133371201343834,
+          "ksp_its": 3
+        },
+        {
+          "assemble_total_time": 0.0012374429497867823,
+          "setop_time": 1.4229444786906242e-06,
+          "set_tolerances_time": 2.262997440993786e-06,
+          "pc_setup_time": 0.006637740065343678,
+          "solve_time": 0.0027813860215246677,
+          "linear_total_time": 0.010660254978574812,
+          "ksp_its": 3
+        },
+        {
+          "assemble_total_time": 0.0011097498936578631,
+          "setop_time": 1.8730061128735542e-06,
+          "set_tolerances_time": 2.0640436559915543e-06,
+          "pc_setup_time": 0.006971672992222011,
+          "solve_time": 0.0033185050124302506,
+          "linear_total_time": 0.01140386494807899,
+          "ksp_its": 3
+        },
+        {
+          "assemble_total_time": 0.0012021699221804738,
+          "setop_time": 1.593027263879776e-06,
+          "set_tolerances_time": 2.062995918095112e-06,
+          "pc_setup_time": 0.007086316007189453,
+          "solve_time": 0.003274178015999496,
+          "linear_total_time": 0.011566319968551397,
+          "ksp_its": 3
+        },
+        {
+          "assemble_total_time": 0.001216200995258987,
+          "setop_time": 9.719515219330788e-07,
+          "set_tolerances_time": 1.3120006769895554e-06,
+          "pc_setup_time": 0.00689069100189954,
+          "solve_time": 0.003331835032440722,
+          "linear_total_time": 0.011441010981798172,
+          "ksp_its": 3
+        }
+      ]
+    }
+  ]
+}

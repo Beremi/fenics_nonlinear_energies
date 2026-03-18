@@ -1,0 +1,36 @@
+{
+  "command": "/home/michal/repos/fenics_nonlinear_energies/.venv/bin/python -u src/problems/plaplace/jax_petsc/solve_pLaplace_dof.py --level 5 --profile reference --assembly-mode element --local-hessian-mode element --element-reorder-mode block_xyz --local-coloring --nproc 1 --quiet --json overview/img/runs/plaplace/showcase/jax_petsc_element/output.json",
+  "command_argv": [
+    "/home/michal/repos/fenics_nonlinear_energies/.venv/bin/python",
+    "-u",
+    "src/problems/plaplace/jax_petsc/solve_pLaplace_dof.py",
+    "--level",
+    "5",
+    "--profile",
+    "reference",
+    "--assembly-mode",
+    "element",
+    "--local-hessian-mode",
+    "element",
+    "--element-reorder-mode",
+    "block_xyz",
+    "--local-coloring",
+    "--nproc",
+    "1",
+    "--quiet",
+    "--json",
+    "overview/img/runs/plaplace/showcase/jax_petsc_element/output.json"
+  ],
+  "cwd": "/home/michal/repos/fenics_nonlinear_energies",
+  "duration_s": 2.484913901076652,
+  "exit_code": 0,
+  "finished_at": "2026-03-16T20:34:04Z",
+  "log_path": "/home/michal/repos/fenics_nonlinear_energies/overview/img/runs/plaplace/showcase/jax_petsc_element/run.log",
+  "notes": "",
+  "outputs": [
+    "/home/michal/repos/fenics_nonlinear_energies/overview/img/runs/plaplace/showcase/jax_petsc_element/output.json"
+  ],
+  "skipped": true,
+  "started_at": "2026-03-16T20:34:02Z",
+  "success": true
+}

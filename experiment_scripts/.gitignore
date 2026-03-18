@@ -1,8 +1,0 @@
-# Ignore raw output files (reproducible from scripts)
-*.txt
-*.log
-*.json
-
-# Keep all Python and shell scripts
-!*.py
-!*.sh

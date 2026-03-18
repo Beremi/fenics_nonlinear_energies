@@ -1,0 +1,25 @@
+{
+  "command": "./.venv/bin/python overview/img/scripts/build_overview_pages.py",
+  "cwd": ".",
+  "inputs": [
+    "overview/img/data/plaplace",
+    "overview/img/data/ginzburg_landau",
+    "overview/img/data/hyperelasticity",
+    "overview/img/data/topology",
+    "replications/2026-03-16_maintained_refresh/manifest.json"
+  ],
+  "notes": "Generates the publication-ready overview markdown package.",
+  "outputs": [
+    "overview/index.md",
+    "overview/commands.md",
+    "overview/pLaplace_problem.md",
+    "overview/pLaplace_comparison.md",
+    "overview/GinzburgLandau_problem.md",
+    "overview/GinzburgLandau_comparison.md",
+    "overview/HyperElasticity_problem.md",
+    "overview/HyperElasticity_comparison.md",
+    "overview/Topology_problem.md",
+    "overview/Topology_comparison.md"
+  ],
+  "script": "overview/img/scripts/build_overview_pages.py"
+}

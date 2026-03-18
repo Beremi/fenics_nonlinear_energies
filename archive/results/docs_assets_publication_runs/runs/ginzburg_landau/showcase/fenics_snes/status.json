@@ -1,0 +1,24 @@
+{
+  "command": "/home/michal/repos/fenics_nonlinear_energies/.venv/bin/python -u src/problems/ginzburg_landau/fenics/solve_GL_snes_newton.py --levels 5 --json overview/img/runs/ginzburg_landau/showcase/fenics_snes/output.json",
+  "command_argv": [
+    "/home/michal/repos/fenics_nonlinear_energies/.venv/bin/python",
+    "-u",
+    "src/problems/ginzburg_landau/fenics/solve_GL_snes_newton.py",
+    "--levels",
+    "5",
+    "--json",
+    "overview/img/runs/ginzburg_landau/showcase/fenics_snes/output.json"
+  ],
+  "cwd": "/home/michal/repos/fenics_nonlinear_energies",
+  "duration_s": 1.8368572479812428,
+  "exit_code": 0,
+  "finished_at": "2026-03-16T20:34:11Z",
+  "log_path": "/home/michal/repos/fenics_nonlinear_energies/overview/img/runs/ginzburg_landau/showcase/fenics_snes/run.log",
+  "notes": "",
+  "outputs": [
+    "/home/michal/repos/fenics_nonlinear_energies/overview/img/runs/ginzburg_landau/showcase/fenics_snes/output.json"
+  ],
+  "skipped": true,
+  "started_at": "2026-03-16T20:34:09Z",
+  "success": true
+}

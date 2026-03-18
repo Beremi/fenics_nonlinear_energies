@@ -1,0 +1,7 @@
+p-Laplace 2D Custom Newton (JAX-version) | 2 MPI process(es)
+================================================================================
+  --- Mesh level 5 ---
+  RESULT mesh_level=5 dofs=3201 setup=0.047s solve=0.091s iters=5 ksp=15 asm=0.006s J(u)=-7.942969 [Converged (energy, step, gradient)]
+================================================================================
+Done.
+Results saved to artifacts/reproduction/2026-03-15_refactor_stage1/baseline/plaplace_fenics_custom_l5_np2.json

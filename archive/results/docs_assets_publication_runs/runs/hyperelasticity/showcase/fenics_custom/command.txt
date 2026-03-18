@@ -1,0 +1,1 @@
+/home/michal/repos/fenics_nonlinear_energies/.venv/bin/python -u src/problems/hyperelasticity/fenics/solve_HE_custom_jaxversion.py --level 1 --steps 24 --total-steps 24 --quiet --out overview/img/runs/hyperelasticity/showcase/fenics_custom/output.json

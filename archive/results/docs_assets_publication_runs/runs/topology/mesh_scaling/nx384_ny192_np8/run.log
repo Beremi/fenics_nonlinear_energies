@@ -1,0 +1,11 @@
+# cwd: /home/michal/repos/fenics_nonlinear_energies
+# env BLIS_NUM_THREADS=1
+# env JAX_PLATFORMS=cpu
+# env MKL_NUM_THREADS=1
+# env NUMEXPR_NUM_THREADS=1
+# env OMP_NUM_THREADS=1
+# env OPENBLAS_NUM_THREADS=1
+# env VECLIB_MAXIMUM_THREADS=1
+# env XLA_FLAGS=--xla_cpu_multi_thread_eigen=false intra_op_parallelism_threads=1
+# command: /usr/bin/mpiexec -n 8 /home/michal/repos/fenics_nonlinear_energies/.venv/bin/python -u src/problems/topology/jax/solve_topopt_parallel.py --nx 384 --ny 192 --length 2.0 --height 1.0 --traction 1.0 --load_fraction 0.2 --fixed_pad_cells 16 --load_pad_cells 16 --volume_fraction_target 0.4 --theta_min 1e-6 --solid_latent 10.0 --young 1.0 --poisson 0.3 --alpha_reg 0.005 --ell_pf 0.08 --mu_move 0.01 --beta_lambda 12.0 --volume_penalty 10.0 --p_start 1.0 --p_max 10.0 --p_increment 0.2 --continuation_interval 1 --outer_maxit 2000 --outer_tol 0.02 --volume_tol 0.001 --stall_theta_tol 1e-6 --stall_p_min 4.0 --design_maxit 20 --tolf 1e-6 --tolg 1e-3 --linesearch_tol 0.1 --linesearch_relative_to_bound --design_gd_line_search golden_adaptive --design_gd_adaptive_window_scale 2.0 --mechanics_ksp_type fgmres --mechanics_pc_type gamg --mechanics_ksp_rtol 1e-4 --mechanics_ksp_max_it 100 --quiet --json_out overview/img/runs/topology/mesh_scaling/nx384_ny192_np8/output.json
+

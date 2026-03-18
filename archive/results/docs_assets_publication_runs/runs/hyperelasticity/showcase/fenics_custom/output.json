@@ -1,0 +1,369 @@
+{
+  "mesh_level": 1,
+  "total_dofs": 2187,
+  "setup_time": 0.018327,
+  "solve_time_total": 7.9587,
+  "total_time": 7.986777,
+  "steps": [
+    {
+      "step": 1,
+      "angle": 1.0471975511965976,
+      "time": 0.2782,
+      "iters": 28,
+      "energy": 0.34642,
+      "message": "Converged (energy, step, gradient)",
+      "attempt": "primary",
+      "ksp_rtol_used": 0.1,
+      "ksp_max_it_used": 30,
+      "linesearch_interval_used": [
+        -0.5,
+        2.0
+      ]
+    },
+    {
+      "step": 2,
+      "angle": 2.0943951023931953,
+      "time": 0.3485,
+      "iters": 34,
+      "energy": 1.385667,
+      "message": "Converged (energy, step, gradient)",
+      "attempt": "primary",
+      "ksp_rtol_used": 0.1,
+      "ksp_max_it_used": 30,
+      "linesearch_interval_used": [
+        -0.5,
+        2.0
+      ]
+    },
+    {
+      "step": 3,
+      "angle": 3.141592653589793,
+      "time": 0.3539,
+      "iters": 34,
+      "energy": 3.117377,
+      "message": "Converged (energy, step, gradient)",
+      "attempt": "primary",
+      "ksp_rtol_used": 0.1,
+      "ksp_max_it_used": 30,
+      "linesearch_interval_used": [
+        -0.5,
+        2.0
+      ]
+    },
+    {
+      "step": 4,
+      "angle": 4.1887902047863905,
+      "time": 0.33,
+      "iters": 32,
+      "energy": 5.540167,
+      "message": "Converged (energy, step, gradient)",
+      "attempt": "primary",
+      "ksp_rtol_used": 0.1,
+      "ksp_max_it_used": 30,
+      "linesearch_interval_used": [
+        -0.5,
+        2.0
+      ]
+    },
+    {
+      "step": 5,
+      "angle": 5.235987755982988,
+      "time": 0.3345,
+      "iters": 33,
+      "energy": 8.650517,
+      "message": "Converged (energy, step, gradient)",
+      "attempt": "primary",
+      "ksp_rtol_used": 0.1,
+      "ksp_max_it_used": 30,
+      "linesearch_interval_used": [
+        -0.5,
+        2.0
+      ]
+    },
+    {
+      "step": 6,
+      "angle": 6.283185307179586,
+      "time": 0.3245,
+      "iters": 33,
+      "energy": 12.442309,
+      "message": "Converged (energy, step, gradient)",
+      "attempt": "primary",
+      "ksp_rtol_used": 0.1,
+      "ksp_max_it_used": 30,
+      "linesearch_interval_used": [
+        -0.5,
+        2.0
+      ]
+    },
+    {
+      "step": 7,
+      "angle": 7.330382858376184,
+      "time": 0.3434,
+      "iters": 35,
+      "energy": 16.911586,
+      "message": "Converged (energy, step, gradient)",
+      "attempt": "primary",
+      "ksp_rtol_used": 0.1,
+      "ksp_max_it_used": 30,
+      "linesearch_interval_used": [
+        -0.5,
+        2.0
+      ]
+    },
+    {
+      "step": 8,
+      "angle": 8.377580409572781,
+      "time": 0.3363,
+      "iters": 34,
+      "energy": 22.061756,
+      "message": "Converged (energy, step, gradient)",
+      "attempt": "primary",
+      "ksp_rtol_used": 0.1,
+      "ksp_max_it_used": 30,
+      "linesearch_interval_used": [
+        -0.5,
+        2.0
+      ]
+    },
+    {
+      "step": 9,
+      "angle": 9.42477796076938,
+      "time": 0.3257,
+      "iters": 33,
+      "energy": 27.899013,
+      "message": "Converged (energy, step, gradient)",
+      "attempt": "primary",
+      "ksp_rtol_used": 0.1,
+      "ksp_max_it_used": 30,
+      "linesearch_interval_used": [
+        -0.5,
+        2.0
+      ]
+    },
+    {
+      "step": 10,
+      "angle": 10.471975511965976,
+      "time": 0.3128,
+      "iters": 32,
+      "energy": 34.426555,
+      "message": "Converged (energy, step, gradient)",
+      "attempt": "primary",
+      "ksp_rtol_used": 0.1,
+      "ksp_max_it_used": 30,
+      "linesearch_interval_used": [
+        -0.5,
+        2.0
+      ]
+    },
+    {
+      "step": 11,
+      "angle": 11.519173063162574,
+      "time": 0.3465,
+      "iters": 34,
+      "energy": 41.644111,
+      "message": "Converged (energy, step, gradient)",
+      "attempt": "primary",
+      "ksp_rtol_used": 0.1,
+      "ksp_max_it_used": 30,
+      "linesearch_interval_used": [
+        -0.5,
+        2.0
+      ]
+    },
+    {
+      "step": 12,
+      "angle": 12.566370614359172,
+      "time": 0.3325,
+      "iters": 34,
+      "energy": 49.550092,
+      "message": "Converged (energy, step, gradient)",
+      "attempt": "primary",
+      "ksp_rtol_used": 0.1,
+      "ksp_max_it_used": 30,
+      "linesearch_interval_used": [
+        -0.5,
+        2.0
+      ]
+    },
+    {
+      "step": 13,
+      "angle": 13.613568165555769,
+      "time": 0.3467,
+      "iters": 34,
+      "energy": 58.142703,
+      "message": "Converged (energy, step, gradient)",
+      "attempt": "primary",
+      "ksp_rtol_used": 0.1,
+      "ksp_max_it_used": 30,
+      "linesearch_interval_used": [
+        -0.5,
+        2.0
+      ]
+    },
+    {
+      "step": 14,
+      "angle": 14.660765716752367,
+      "time": 0.3167,
+      "iters": 32,
+      "energy": 67.420829,
+      "message": "Converged (energy, step, gradient)",
+      "attempt": "primary",
+      "ksp_rtol_used": 0.1,
+      "ksp_max_it_used": 30,
+      "linesearch_interval_used": [
+        -0.5,
+        2.0
+      ]
+    },
+    {
+      "step": 15,
+      "angle": 15.707963267948964,
+      "time": 0.3264,
+      "iters": 33,
+      "energy": 77.383101,
+      "message": "Converged (energy, step, gradient)",
+      "attempt": "primary",
+      "ksp_rtol_used": 0.1,
+      "ksp_max_it_used": 30,
+      "linesearch_interval_used": [
+        -0.5,
+        2.0
+      ]
+    },
+    {
+      "step": 16,
+      "angle": 16.755160819145562,
+      "time": 0.3427,
+      "iters": 35,
+      "energy": 88.018088,
+      "message": "Converged (energy, step, gradient)",
+      "attempt": "primary",
+      "ksp_rtol_used": 0.1,
+      "ksp_max_it_used": 30,
+      "linesearch_interval_used": [
+        -0.5,
+        2.0
+      ]
+    },
+    {
+      "step": 17,
+      "angle": 17.80235837034216,
+      "time": 0.3233,
+      "iters": 33,
+      "energy": 99.327005,
+      "message": "Converged (energy, step, gradient)",
+      "attempt": "primary",
+      "ksp_rtol_used": 0.1,
+      "ksp_max_it_used": 30,
+      "linesearch_interval_used": [
+        -0.5,
+        2.0
+      ]
+    },
+    {
+      "step": 18,
+      "angle": 18.84955592153876,
+      "time": 0.3362,
+      "iters": 34,
+      "energy": 111.326248,
+      "message": "Converged (energy, step, gradient)",
+      "attempt": "primary",
+      "ksp_rtol_used": 0.1,
+      "ksp_max_it_used": 30,
+      "linesearch_interval_used": [
+        -0.5,
+        2.0
+      ]
+    },
+    {
+      "step": 19,
+      "angle": 19.896753472735355,
+      "time": 0.326,
+      "iters": 33,
+      "energy": 124.015641,
+      "message": "Converged (energy, step, gradient)",
+      "attempt": "primary",
+      "ksp_rtol_used": 0.1,
+      "ksp_max_it_used": 30,
+      "linesearch_interval_used": [
+        -0.5,
+        2.0
+      ]
+    },
+    {
+      "step": 20,
+      "angle": 20.94395102393195,
+      "time": 0.3513,
+      "iters": 35,
+      "energy": 137.392394,
+      "message": "Converged (energy, step, gradient)",
+      "attempt": "primary",
+      "ksp_rtol_used": 0.1,
+      "ksp_max_it_used": 30,
+      "linesearch_interval_used": [
+        -0.5,
+        2.0
+      ]
+    },
+    {
+      "step": 21,
+      "angle": 21.991148575128552,
+      "time": 0.3285,
+      "iters": 33,
+      "energy": 151.455279,
+      "message": "Converged (energy, step, gradient)",
+      "attempt": "primary",
+      "ksp_rtol_used": 0.1,
+      "ksp_max_it_used": 30,
+      "linesearch_interval_used": [
+        -0.5,
+        2.0
+      ]
+    },
+    {
+      "step": 22,
+      "angle": 23.03834612632515,
+      "time": 0.3465,
+      "iters": 35,
+      "energy": 166.204305,
+      "message": "Converged (energy, step, gradient)",
+      "attempt": "primary",
+      "ksp_rtol_used": 0.1,
+      "ksp_max_it_used": 30,
+      "linesearch_interval_used": [
+        -0.5,
+        2.0
+      ]
+    },
+    {
+      "step": 23,
+      "angle": 24.085543677521745,
+      "time": 0.3276,
+      "iters": 33,
+      "energy": 181.638849,
+      "message": "Converged (energy, step, gradient)",
+      "attempt": "primary",
+      "ksp_rtol_used": 0.1,
+      "ksp_max_it_used": 30,
+      "linesearch_interval_used": [
+        -0.5,
+        2.0
+      ]
+    },
+    {
+      "step": 24,
+      "angle": 25.132741228718345,
+      "time": 0.32,
+      "iters": 32,
+      "energy": 197.755003,
+      "message": "Converged (energy, step, gradient)",
+      "attempt": "primary",
+      "ksp_rtol_used": 0.1,
+      "ksp_max_it_used": 30,
+      "linesearch_interval_used": [
+        -0.5,
+        2.0
+      ]
+    }
+  ]
+}

@@ -1,0 +1,27 @@
+{
+  "metadata": {
+    "solver": "jax_newton",
+    "description": "JAX Newton with golden-section line search, PyAMG CG solver",
+    "jax_version": "0.9.1",
+    "nprocs": 1,
+    "solver_options": {
+      "tolf": 1e-05,
+      "linesearch_tol": 0.001,
+      "hess_solver": "amg",
+      "hess_tol": 0.001
+    },
+    "p": 3,
+    "rhs_f": -10.0
+  },
+  "results": [
+    {
+      "mesh_level": 5,
+      "dofs": 2945,
+      "setup_time": 0.2478,
+      "time": 0.0976,
+      "iters": 6,
+      "energy": -7.943,
+      "message": "Stopping condition for f is satisfied"
+    }
+  ]
+}

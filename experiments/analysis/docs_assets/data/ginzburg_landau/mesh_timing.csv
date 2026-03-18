@@ -1,0 +1,16 @@
+solver,level,problem_size,nprocs,total_time_s,final_energy,total_newton_iters,total_linear_iters,result
+fenics_custom,5,4225,32,0.329869,0.3462323651267445,10,38,completed
+fenics_custom,6,16630,32,0.348221,0.34577666911035265,8,34,completed
+fenics_custom,7,66049,32,0.499032,0.3456622611128811,8,35,completed
+fenics_custom,8,263169,32,0.815443,0.34563362849873513,8,35,completed
+fenics_custom,9,1050285,32,2.00096,0.3456264684259207,8,37,completed
+jax_petsc_element,5,3969,32,0.395066,0.3462314437821438,8,38,completed
+jax_petsc_element,6,16129,32,0.42476,0.34577661109023916,8,35,completed
+jax_petsc_element,7,65025,32,0.522341,0.34566225747971896,7,32,completed
+jax_petsc_element,8,261121,32,12.709327,0.4446508032213421,100,798,failed
+jax_petsc_element,9,1046529,32,2.097343,0.3456264684118114,7,39,completed
+jax_petsc_local_sfd,5,3969,32,0.573585,0.3462314437821439,8,38,completed
+jax_petsc_local_sfd,6,16129,32,0.587965,0.34577661109023916,8,35,completed
+jax_petsc_local_sfd,7,65025,32,0.7492,0.34566225747971896,7,32,completed
+jax_petsc_local_sfd,8,261121,32,13.27343,0.4446508032214685,100,798,failed
+jax_petsc_local_sfd,9,1046529,32,2.722982,0.3456264684118114,7,39,completed

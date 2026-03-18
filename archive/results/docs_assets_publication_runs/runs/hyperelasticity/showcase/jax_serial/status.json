@@ -1,0 +1,32 @@
+{
+  "command": "/home/michal/repos/fenics_nonlinear_energies/.venv/bin/python -u src/problems/hyperelasticity/jax/solve_HE_jax_newton.py --level 1 --steps 24 --total_steps 24 --quiet --out overview/img/runs/hyperelasticity/showcase/jax_serial/output.json --state-out overview/img/runs/hyperelasticity/showcase/jax_serial/state.npz",
+  "command_argv": [
+    "/home/michal/repos/fenics_nonlinear_energies/.venv/bin/python",
+    "-u",
+    "src/problems/hyperelasticity/jax/solve_HE_jax_newton.py",
+    "--level",
+    "1",
+    "--steps",
+    "24",
+    "--total_steps",
+    "24",
+    "--quiet",
+    "--out",
+    "overview/img/runs/hyperelasticity/showcase/jax_serial/output.json",
+    "--state-out",
+    "overview/img/runs/hyperelasticity/showcase/jax_serial/state.npz"
+  ],
+  "cwd": "/home/michal/repos/fenics_nonlinear_energies",
+  "duration_s": 31.439842293038964,
+  "exit_code": 0,
+  "finished_at": "2026-03-16T20:35:10Z",
+  "log_path": "/home/michal/repos/fenics_nonlinear_energies/overview/img/runs/hyperelasticity/showcase/jax_serial/run.log",
+  "notes": "Showcase parity and sample-state rerun",
+  "outputs": [
+    "/home/michal/repos/fenics_nonlinear_energies/overview/img/runs/hyperelasticity/showcase/jax_serial/output.json",
+    "/home/michal/repos/fenics_nonlinear_energies/overview/img/runs/hyperelasticity/showcase/jax_serial/state.npz"
+  ],
+  "skipped": true,
+  "started_at": "2026-03-16T20:34:38Z",
+  "success": true
+}

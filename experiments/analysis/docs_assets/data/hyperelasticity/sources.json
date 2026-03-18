@@ -1,0 +1,7 @@
+{
+  "campaign_root": "artifacts/reproduction/2026-03-17_local_canonical_resync",
+  "pure_jax_summary": "artifacts/reproduction/2026-03-17_local_canonical_resync/runs/hyperelasticity/pure_jax_suite_best/summary.json",
+  "showcase_command": "mpiexec -n 32 ./.venv/bin/python -u src/problems/hyperelasticity/jax_petsc/solve_HE_dof.py --level 4 --steps 24 --total_steps 24 --profile performance --ksp_type stcg --pc_type gamg --ksp_rtol 1e-1 --ksp_max_it 30 --gamg_threshold 0.05 --gamg_agg_nsmooths 1 --gamg_set_coordinates --use_near_nullspace --assembly_mode element --element_reorder_mode block_xyz --local_hessian_mode element --local_coloring --use_trust_region --trust_subproblem_line_search --linesearch_tol 1e-1 --trust_radius_init 0.5 --trust_radius_min 1e-8 --trust_radius_max 1e6 --trust_shrink 0.5 --trust_expand 1.5 --trust_eta_shrink 0.05 --trust_eta_expand 0.75 --trust_max_reject 6 --tolf 1e-4 --tolg 1e-3 --tolg_rel 1e-3 --tolx_rel 1e-3 --tolx_abs 1e-10 --maxit 100 --quiet --out artifacts/reproduction/2026-03-17_local_canonical_resync/runs/readme_docs_smoke/cases/he_jax_petsc_element_l4_np32_showcase/output.json --state-out artifacts/reproduction/2026-03-17_local_canonical_resync/runs/readme_docs_smoke/cases/he_jax_petsc_element_l4_np32_showcase/state.npz",
+  "smoke_summary": "artifacts/reproduction/2026-03-17_local_canonical_resync/runs/readme_docs_smoke/summary.json",
+  "suite_summary": "artifacts/reproduction/2026-03-17_local_canonical_resync/runs/hyperelasticity/final_suite_best/summary.json"
+}

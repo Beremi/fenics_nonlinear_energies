@@ -1,0 +1,75 @@
+An NVIDIA GPU may be present on this machine, but a CUDA-enabled jaxlib is not installed. Falling back to cpu.
+An NVIDIA GPU may be present on this machine, but a CUDA-enabled jaxlib is not installed. Falling back to cpu.
+{
+  "mesh_level": 5,
+  "total_dofs": 4225,
+  "free_dofs": 3969,
+  "setup_time": 0.680982,
+  "solve_time_total": 0.239963,
+  "total_time": 0.964014,
+  "steps": [
+    {
+      "step": 1,
+      "time": 0.239963,
+      "nit": 12,
+      "linear_iters": 41,
+      "energy": 0.34598730315972287,
+      "message": "Converged (energy, step, gradient)",
+      "attempt": "primary",
+      "ksp_rtol_used": 0.001,
+      "ksp_max_it_used": 200,
+      "linesearch_interval_used": [
+        -0.5,
+        2.0
+      ]
+    }
+  ],
+  "metadata": {
+    "profile": "reference",
+    "nprocs": 2,
+    "nproc_threads": 1,
+    "problem": {
+      "name": "GinzburgLandau2D"
+    },
+    "linear_solver": {
+      "ksp_type": "gmres",
+      "pc_type": "hypre",
+      "ksp_rtol": 0.001,
+      "ksp_max_it": 200,
+      "pc_setup_on_ksp_cap": false,
+      "gamg_threshold": 0.05,
+      "gamg_agg_nsmooths": 1,
+      "gamg_set_coordinates": true,
+      "reorder": true,
+      "hvp_eval_mode": "sequential",
+      "assembly_mode": "sfd",
+      "element_reorder_mode": null,
+      "local_hessian_mode": null,
+      "distribution_strategy": "reduced_free_dofs",
+      "assembler": "LocalColoringAssembler",
+      "trust_subproblem_solver": "direct_linear_solve",
+      "trust_subproblem_line_search": false
+    },
+    "newton": {
+      "tolf": 1e-06,
+      "tolg": 1e-05,
+      "tolg_rel": 0.001,
+      "tolx_rel": 0.001,
+      "tolx_abs": 1e-10,
+      "maxit": 100,
+      "require_all_convergence": true,
+      "fail_on_nonfinite": true,
+      "linesearch_interval": [
+        -0.5,
+        2.0
+      ],
+      "linesearch_tol": 0.001,
+      "trust_region": false,
+      "trust_radius_init": 1.0,
+      "trust_radius_min": 1e-08,
+      "trust_radius_max": 1000000.0,
+      "trust_subproblem_line_search": false,
+      "step_time_limit_s": null
+    }
+  }
+}

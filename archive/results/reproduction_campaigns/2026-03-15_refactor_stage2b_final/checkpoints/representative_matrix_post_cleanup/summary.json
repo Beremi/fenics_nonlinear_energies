@@ -1,0 +1,158 @@
+{
+  "cases": [
+    {
+      "case": "plaplace_jax_l5_np1.json",
+      "pre": {
+        "status": "completed",
+        "iters": 6,
+        "energy": -7.943
+      },
+      "post": {
+        "status": "completed",
+        "iters": 6,
+        "energy": -7.943
+      },
+      "note": "energy_rel_diff=0.000e+00"
+    },
+    {
+      "case": "plaplace_fenics_custom_l5_np2.json",
+      "pre": {
+        "status": "completed",
+        "iters": 5,
+        "energy": -7.9429687182
+      },
+      "post": {
+        "status": "completed",
+        "iters": 5,
+        "energy": -7.9429687182
+      },
+      "note": "energy_rel_diff=0.000e+00"
+    },
+    {
+      "case": "plaplace_jax_petsc_l5_np2.json",
+      "pre": {
+        "status": "completed",
+        "iters": 6,
+        "energy": -7.9429687193
+      },
+      "post": {
+        "status": "completed",
+        "iters": 6,
+        "energy": -7.9429687193
+      },
+      "note": "energy_rel_diff=0.000e+00"
+    },
+    {
+      "case": "gl_fenics_custom_l5_np2.json",
+      "pre": {
+        "status": "completed",
+        "iters": 7,
+        "energy": 0.3462323651
+      },
+      "post": {
+        "status": "completed",
+        "iters": 7,
+        "energy": 0.3462323651
+      },
+      "note": "energy_rel_diff=0.000e+00"
+    },
+    {
+      "case": "gl_jax_petsc_l5_np2.json",
+      "pre": {
+        "status": "completed",
+        "steps": 1,
+        "newton_iters": 12,
+        "energy": 0.34598730315972287
+      },
+      "post": {
+        "status": "completed",
+        "steps": 1,
+        "newton_iters": 12,
+        "energy": 0.34598730315972287
+      },
+      "note": "energy_rel_diff=0.000e+00"
+    },
+    {
+      "case": "he_jax_l1_steps24_np1.json",
+      "pre": {
+        "status": "completed",
+        "steps": 24,
+        "newton_iters": 559,
+        "energy": 197.74950930751214
+      },
+      "post": {
+        "status": "completed",
+        "steps": 24,
+        "newton_iters": 559,
+        "energy": 197.74950930751214
+      },
+      "note": "energy_rel_diff=0.000e+00"
+    },
+    {
+      "case": "he_fenics_custom_l1_steps24_np2.json",
+      "pre": {
+        "status": "failed",
+        "note": "no-json"
+      },
+      "post": {
+        "status": "completed",
+        "steps": 24,
+        "newton_iters": 795,
+        "energy": 197.754815
+      },
+      "note": "new JSON after previously crashing case"
+    },
+    {
+      "case": "he_jax_petsc_l1_steps24_np2.json",
+      "pre": {
+        "status": "completed",
+        "steps": 24,
+        "newton_iters": 528,
+        "energy": 197.75512338531667
+      },
+      "post": {
+        "status": "completed",
+        "steps": 24,
+        "newton_iters": 528,
+        "energy": 197.75512338531667
+      },
+      "note": "energy_rel_diff=0.000e+00"
+    },
+    {
+      "case": "topology_serial_nx192_ny96_np1.json",
+      "pre": {
+        "status": "completed",
+        "outer_iterations": 121,
+        "compliance": 4.155705577015535,
+        "volume_fraction": 0.40000000000006014,
+        "final_p": NaN
+      },
+      "post": {
+        "status": "completed",
+        "outer_iterations": 121,
+        "compliance": 4.155705577015535,
+        "volume_fraction": 0.40000000000006014,
+        "final_p": NaN
+      },
+      "note": "compliance_rel_diff=0.000e+00"
+    },
+    {
+      "case": "topology_parallel_nx768_ny384_np2.json",
+      "pre": {
+        "status": "completed",
+        "outer_iterations": 72,
+        "compliance": 8.947270662878754,
+        "volume_fraction": 0.39320397728290735,
+        "final_p": NaN
+      },
+      "post": {
+        "status": "completed",
+        "outer_iterations": 72,
+        "compliance": 8.947270662878754,
+        "volume_fraction": 0.39320397728290735,
+        "final_p": NaN
+      },
+      "note": "compliance_rel_diff=0.000e+00"
+    }
+  ]
+}

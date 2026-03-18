@@ -1,0 +1,7 @@
+solver,nprocs,total_time_s,final_energy,total_newton_iters,total_linear_iters,result
+fenics_custom,8,1234.3072,87.722826,705,16117,completed
+fenics_custom,16,620.8624,87.722535,689,16032,completed
+fenics_custom,32,515.1309,87.722767,711,16016,completed
+jax_petsc_element,8,1894.18765,87.7219924919751,813,18932,completed
+jax_petsc_element,16,902.409286,87.7220374607937,783,18775,completed
+jax_petsc_element,32,528.832896,87.72201387004978,831,18940,completed

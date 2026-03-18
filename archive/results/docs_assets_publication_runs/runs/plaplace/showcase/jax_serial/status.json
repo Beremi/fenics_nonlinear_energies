@@ -1,0 +1,25 @@
+{
+  "command": "/home/michal/repos/fenics_nonlinear_energies/.venv/bin/python -u src/problems/plaplace/jax/solve_pLaplace_jax_newton.py --levels 5 --quiet --json overview/img/runs/plaplace/showcase/jax_serial/output.json",
+  "command_argv": [
+    "/home/michal/repos/fenics_nonlinear_energies/.venv/bin/python",
+    "-u",
+    "src/problems/plaplace/jax/solve_pLaplace_jax_newton.py",
+    "--levels",
+    "5",
+    "--quiet",
+    "--json",
+    "overview/img/runs/plaplace/showcase/jax_serial/output.json"
+  ],
+  "cwd": "/home/michal/repos/fenics_nonlinear_energies",
+  "duration_s": 2.7344635389745235,
+  "exit_code": 0,
+  "finished_at": "2026-03-16T20:34:02Z",
+  "log_path": "/home/michal/repos/fenics_nonlinear_energies/overview/img/runs/plaplace/showcase/jax_serial/run.log",
+  "notes": "",
+  "outputs": [
+    "/home/michal/repos/fenics_nonlinear_energies/overview/img/runs/plaplace/showcase/jax_serial/output.json"
+  ],
+  "skipped": true,
+  "started_at": "2026-03-16T20:33:59Z",
+  "success": true
+}

@@ -1,0 +1,884 @@
+{
+  "mesh_level": 1,
+  "total_dofs": 2187,
+  "config": {
+    "snes_type": "newtonls",
+    "linesearch": "basic",
+    "ksp_type": "gmres",
+    "pc_type": "hypre",
+    "ksp_rtol": 0.1,
+    "ksp_max_it": 500,
+    "snes_atol": 0.001,
+    "use_objective": false,
+    "use_near_nullspace": true,
+    "hypre_nodal_coarsen": -1,
+    "hypre_vec_interp_variant": -1,
+    "nullspace_gram_schmidt": false
+  },
+  "steps": [
+    {
+      "step": 1,
+      "angle": 0.2617993877991494,
+      "time": 0.1474,
+      "iters": 12,
+      "linear_iters": 147,
+      "energy": 0.02165,
+      "reason": 2
+    },
+    {
+      "step": 2,
+      "angle": 0.5235987755982988,
+      "time": 0.1565,
+      "iters": 12,
+      "linear_iters": 169,
+      "energy": 0.086602,
+      "reason": 2
+    },
+    {
+      "step": 3,
+      "angle": 0.7853981633974483,
+      "time": 0.1781,
+      "iters": 13,
+      "linear_iters": 187,
+      "energy": 0.194855,
+      "reason": 2
+    },
+    {
+      "step": 4,
+      "angle": 1.0471975511965976,
+      "time": 0.1802,
+      "iters": 13,
+      "linear_iters": 193,
+      "energy": 0.346411,
+      "reason": 2
+    },
+    {
+      "step": 5,
+      "angle": 1.308996938995747,
+      "time": 0.1806,
+      "iters": 13,
+      "linear_iters": 187,
+      "energy": 0.541268,
+      "reason": 2
+    },
+    {
+      "step": 6,
+      "angle": 1.5707963267948966,
+      "time": 0.1891,
+      "iters": 13,
+      "linear_iters": 193,
+      "energy": 0.779427,
+      "reason": 2
+    },
+    {
+      "step": 7,
+      "angle": 1.832595714594046,
+      "time": 0.1777,
+      "iters": 12,
+      "linear_iters": 170,
+      "energy": 1.060884,
+      "reason": 2
+    },
+    {
+      "step": 8,
+      "angle": 2.0943951023931953,
+      "time": 0.1896,
+      "iters": 13,
+      "linear_iters": 176,
+      "energy": 1.385634,
+      "reason": 2
+    },
+    {
+      "step": 9,
+      "angle": 2.356194490192345,
+      "time": 0.187,
+      "iters": 12,
+      "linear_iters": 183,
+      "energy": 1.753669,
+      "reason": 2
+    },
+    {
+      "step": 10,
+      "angle": 2.617993877991494,
+      "time": 0.1789,
+      "iters": 12,
+      "linear_iters": 164,
+      "energy": 2.164977,
+      "reason": 2
+    },
+    {
+      "step": 11,
+      "angle": 2.8797932657906435,
+      "time": 0.2021,
+      "iters": 13,
+      "linear_iters": 189,
+      "energy": 2.619541,
+      "reason": 2
+    },
+    {
+      "step": 12,
+      "angle": 3.141592653589793,
+      "time": 0.202,
+      "iters": 13,
+      "linear_iters": 188,
+      "energy": 3.117339,
+      "reason": 2
+    },
+    {
+      "step": 13,
+      "angle": 3.4033920413889422,
+      "time": 0.1919,
+      "iters": 12,
+      "linear_iters": 187,
+      "energy": 3.658341,
+      "reason": 2
+    },
+    {
+      "step": 14,
+      "angle": 3.665191429188092,
+      "time": 0.1906,
+      "iters": 12,
+      "linear_iters": 181,
+      "energy": 4.24251,
+      "reason": 2
+    },
+    {
+      "step": 15,
+      "angle": 3.926990816987241,
+      "time": 0.2015,
+      "iters": 13,
+      "linear_iters": 182,
+      "energy": 4.869798,
+      "reason": 2
+    },
+    {
+      "step": 16,
+      "angle": 4.1887902047863905,
+      "time": 0.1726,
+      "iters": 11,
+      "linear_iters": 160,
+      "energy": 5.540148,
+      "reason": 2
+    },
+    {
+      "step": 17,
+      "angle": 4.45058959258554,
+      "time": 0.1888,
+      "iters": 12,
+      "linear_iters": 181,
+      "energy": 6.253485,
+      "reason": 2
+    },
+    {
+      "step": 18,
+      "angle": 4.71238898038469,
+      "time": 0.1996,
+      "iters": 12,
+      "linear_iters": 196,
+      "energy": 7.009724,
+      "reason": 2
+    },
+    {
+      "step": 19,
+      "angle": 4.974188368183839,
+      "time": 0.1808,
+      "iters": 11,
+      "linear_iters": 162,
+      "energy": 7.808765,
+      "reason": 2
+    },
+    {
+      "step": 20,
+      "angle": 5.235987755982988,
+      "time": 0.2187,
+      "iters": 13,
+      "linear_iters": 211,
+      "energy": 8.650499,
+      "reason": 2
+    },
+    {
+      "step": 21,
+      "angle": 5.497787143782138,
+      "time": 0.183,
+      "iters": 12,
+      "linear_iters": 167,
+      "energy": 9.534812,
+      "reason": 2
+    },
+    {
+      "step": 22,
+      "angle": 5.759586531581287,
+      "time": 0.1975,
+      "iters": 12,
+      "linear_iters": 174,
+      "energy": 10.461598,
+      "reason": 2
+    },
+    {
+      "step": 23,
+      "angle": 6.021385919380436,
+      "time": 0.2281,
+      "iters": 13,
+      "linear_iters": 224,
+      "energy": 11.430769,
+      "reason": 2
+    },
+    {
+      "step": 24,
+      "angle": 6.283185307179586,
+      "time": 0.2235,
+      "iters": 13,
+      "linear_iters": 216,
+      "energy": 12.442265,
+      "reason": 2
+    },
+    {
+      "step": 25,
+      "angle": 6.544984694978735,
+      "time": 0.1929,
+      "iters": 12,
+      "linear_iters": 171,
+      "energy": 13.496062,
+      "reason": 2
+    },
+    {
+      "step": 26,
+      "angle": 6.8067840827778845,
+      "time": 0.1941,
+      "iters": 12,
+      "linear_iters": 166,
+      "energy": 14.592174,
+      "reason": 2
+    },
+    {
+      "step": 27,
+      "angle": 7.068583470577034,
+      "time": 0.1873,
+      "iters": 12,
+      "linear_iters": 153,
+      "energy": 15.730648,
+      "reason": 2
+    },
+    {
+      "step": 28,
+      "angle": 7.330382858376184,
+      "time": 0.1796,
+      "iters": 11,
+      "linear_iters": 157,
+      "energy": 16.911564,
+      "reason": 2
+    },
+    {
+      "step": 29,
+      "angle": 7.592182246175333,
+      "time": 0.2009,
+      "iters": 12,
+      "linear_iters": 184,
+      "energy": 18.135021,
+      "reason": 2
+    },
+    {
+      "step": 30,
+      "angle": 7.853981633974482,
+      "time": 0.1879,
+      "iters": 12,
+      "linear_iters": 159,
+      "energy": 19.401129,
+      "reason": 2
+    },
+    {
+      "step": 31,
+      "angle": 8.115781021773632,
+      "time": 0.1888,
+      "iters": 12,
+      "linear_iters": 152,
+      "energy": 20.71,
+      "reason": 2
+    },
+    {
+      "step": 32,
+      "angle": 8.377580409572781,
+      "time": 0.2168,
+      "iters": 13,
+      "linear_iters": 194,
+      "energy": 22.061739,
+      "reason": 2
+    },
+    {
+      "step": 33,
+      "angle": 8.63937979737193,
+      "time": 0.2064,
+      "iters": 13,
+      "linear_iters": 178,
+      "energy": 23.456438,
+      "reason": 2
+    },
+    {
+      "step": 34,
+      "angle": 8.90117918517108,
+      "time": 0.2067,
+      "iters": 13,
+      "linear_iters": 171,
+      "energy": 24.894175,
+      "reason": 2
+    },
+    {
+      "step": 35,
+      "angle": 9.162978572970228,
+      "time": 0.2083,
+      "iters": 13,
+      "linear_iters": 176,
+      "energy": 26.375007,
+      "reason": 2
+    },
+    {
+      "step": 36,
+      "angle": 9.42477796076938,
+      "time": 0.2228,
+      "iters": 13,
+      "linear_iters": 204,
+      "energy": 27.898976,
+      "reason": 2
+    },
+    {
+      "step": 37,
+      "angle": 9.686577348568528,
+      "time": 0.1992,
+      "iters": 12,
+      "linear_iters": 180,
+      "energy": 29.466105,
+      "reason": 2
+    },
+    {
+      "step": 38,
+      "angle": 9.948376736367678,
+      "time": 0.2092,
+      "iters": 13,
+      "linear_iters": 180,
+      "energy": 31.076406,
+      "reason": 2
+    },
+    {
+      "step": 39,
+      "angle": 10.210176124166827,
+      "time": 0.2252,
+      "iters": 13,
+      "linear_iters": 204,
+      "energy": 32.729874,
+      "reason": 2
+    },
+    {
+      "step": 40,
+      "angle": 10.471975511965976,
+      "time": 0.1875,
+      "iters": 11,
+      "linear_iters": 161,
+      "energy": 34.426499,
+      "reason": 2
+    },
+    {
+      "step": 41,
+      "angle": 10.733774899765125,
+      "time": 0.2296,
+      "iters": 13,
+      "linear_iters": 205,
+      "energy": 36.16626,
+      "reason": 2
+    },
+    {
+      "step": 42,
+      "angle": 10.995574287564276,
+      "time": 0.2218,
+      "iters": 13,
+      "linear_iters": 189,
+      "energy": 37.949134,
+      "reason": 2
+    },
+    {
+      "step": 43,
+      "angle": 11.257373675363425,
+      "time": 0.2007,
+      "iters": 12,
+      "linear_iters": 160,
+      "energy": 39.775091,
+      "reason": 2
+    },
+    {
+      "step": 44,
+      "angle": 11.519173063162574,
+      "time": 0.2215,
+      "iters": 13,
+      "linear_iters": 179,
+      "energy": 41.644101,
+      "reason": 2
+    },
+    {
+      "step": 45,
+      "angle": 11.780972450961723,
+      "time": 0.2053,
+      "iters": 12,
+      "linear_iters": 172,
+      "energy": 43.556135,
+      "reason": 2
+    },
+    {
+      "step": 46,
+      "angle": 12.042771838760872,
+      "time": 0.2288,
+      "iters": 13,
+      "linear_iters": 197,
+      "energy": 45.51116,
+      "reason": 2
+    },
+    {
+      "step": 47,
+      "angle": 12.304571226560022,
+      "time": 0.2242,
+      "iters": 13,
+      "linear_iters": 191,
+      "energy": 47.509147,
+      "reason": 2
+    },
+    {
+      "step": 48,
+      "angle": 12.566370614359172,
+      "time": 0.2098,
+      "iters": 12,
+      "linear_iters": 183,
+      "energy": 49.550069,
+      "reason": 2
+    },
+    {
+      "step": 49,
+      "angle": 12.828170002158322,
+      "time": 0.2087,
+      "iters": 12,
+      "linear_iters": 176,
+      "energy": 51.633902,
+      "reason": 2
+    },
+    {
+      "step": 50,
+      "angle": 13.08996938995747,
+      "time": 0.1954,
+      "iters": 12,
+      "linear_iters": 156,
+      "energy": 53.760623,
+      "reason": 2
+    },
+    {
+      "step": 51,
+      "angle": 13.35176877775662,
+      "time": 0.189,
+      "iters": 11,
+      "linear_iters": 162,
+      "energy": 55.930214,
+      "reason": 2
+    },
+    {
+      "step": 52,
+      "angle": 13.613568165555769,
+      "time": 0.2007,
+      "iters": 12,
+      "linear_iters": 168,
+      "energy": 58.142661,
+      "reason": 2
+    },
+    {
+      "step": 53,
+      "angle": 13.875367553354918,
+      "time": 0.2068,
+      "iters": 12,
+      "linear_iters": 179,
+      "energy": 60.397952,
+      "reason": 2
+    },
+    {
+      "step": 54,
+      "angle": 14.137166941154067,
+      "time": 0.2316,
+      "iters": 13,
+      "linear_iters": 193,
+      "energy": 62.696077,
+      "reason": 2
+    },
+    {
+      "step": 55,
+      "angle": 14.398966328953218,
+      "time": 0.2272,
+      "iters": 13,
+      "linear_iters": 185,
+      "energy": 65.037028,
+      "reason": 2
+    },
+    {
+      "step": 56,
+      "angle": 14.660765716752367,
+      "time": 0.2189,
+      "iters": 12,
+      "linear_iters": 193,
+      "energy": 67.420791,
+      "reason": 2
+    },
+    {
+      "step": 57,
+      "angle": 14.922565104551516,
+      "time": 0.2196,
+      "iters": 12,
+      "linear_iters": 193,
+      "energy": 69.847343,
+      "reason": 2
+    },
+    {
+      "step": 58,
+      "angle": 15.184364492350666,
+      "time": 0.1937,
+      "iters": 11,
+      "linear_iters": 165,
+      "energy": 72.316642,
+      "reason": 2
+    },
+    {
+      "step": 59,
+      "angle": 15.446163880149815,
+      "time": 0.219,
+      "iters": 12,
+      "linear_iters": 194,
+      "energy": 74.828603,
+      "reason": 2
+    },
+    {
+      "step": 60,
+      "angle": 15.707963267948964,
+      "time": 0.2036,
+      "iters": 11,
+      "linear_iters": 180,
+      "energy": 77.383059,
+      "reason": 2
+    },
+    {
+      "step": 61,
+      "angle": 15.969762655748115,
+      "time": 0.2338,
+      "iters": 12,
+      "linear_iters": 216,
+      "energy": 79.979686,
+      "reason": 2
+    },
+    {
+      "step": 62,
+      "angle": 16.231562043547264,
+      "time": 0.2581,
+      "iters": 13,
+      "linear_iters": 244,
+      "energy": 82.61792,
+      "reason": 2
+    },
+    {
+      "step": 63,
+      "angle": 16.49336143134641,
+      "time": 0.2446,
+      "iters": 12,
+      "linear_iters": 221,
+      "energy": 85.297273,
+      "reason": 2
+    },
+    {
+      "step": 64,
+      "angle": 16.755160819145562,
+      "time": 0.2425,
+      "iters": 12,
+      "linear_iters": 228,
+      "energy": 88.018058,
+      "reason": 2
+    },
+    {
+      "step": 65,
+      "angle": 17.016960206944713,
+      "time": 0.2567,
+      "iters": 13,
+      "linear_iters": 238,
+      "energy": 90.780995,
+      "reason": 2
+    },
+    {
+      "step": 66,
+      "angle": 17.27875959474386,
+      "time": 0.2398,
+      "iters": 12,
+      "linear_iters": 222,
+      "energy": 93.586617,
+      "reason": 2
+    },
+    {
+      "step": 67,
+      "angle": 17.54055898254301,
+      "time": 0.2201,
+      "iters": 11,
+      "linear_iters": 196,
+      "energy": 96.435229,
+      "reason": 2
+    },
+    {
+      "step": 68,
+      "angle": 17.80235837034216,
+      "time": 0.2689,
+      "iters": 13,
+      "linear_iters": 267,
+      "energy": 99.326987,
+      "reason": 2
+    },
+    {
+      "step": 69,
+      "angle": 18.06415775814131,
+      "time": 0.2376,
+      "iters": 12,
+      "linear_iters": 218,
+      "energy": 102.261962,
+      "reason": 2
+    },
+    {
+      "step": 70,
+      "angle": 18.325957145940457,
+      "time": 0.2353,
+      "iters": 12,
+      "linear_iters": 208,
+      "energy": 105.24017,
+      "reason": 2
+    },
+    {
+      "step": 71,
+      "angle": 18.587756533739608,
+      "time": 0.2429,
+      "iters": 12,
+      "linear_iters": 225,
+      "energy": 108.261595,
+      "reason": 2
+    },
+    {
+      "step": 72,
+      "angle": 18.84955592153876,
+      "time": 0.2136,
+      "iters": 11,
+      "linear_iters": 190,
+      "energy": 111.326203,
+      "reason": 2
+    },
+    {
+      "step": 73,
+      "angle": 19.111355309337906,
+      "time": 0.2108,
+      "iters": 11,
+      "linear_iters": 181,
+      "energy": 114.433949,
+      "reason": 2
+    },
+    {
+      "step": 74,
+      "angle": 19.373154697137057,
+      "time": 0.2177,
+      "iters": 11,
+      "linear_iters": 193,
+      "energy": 117.584785,
+      "reason": 2
+    },
+    {
+      "step": 75,
+      "angle": 19.634954084936204,
+      "time": 0.2459,
+      "iters": 12,
+      "linear_iters": 222,
+      "energy": 120.778663,
+      "reason": 2
+    },
+    {
+      "step": 76,
+      "angle": 19.896753472735355,
+      "time": 0.2546,
+      "iters": 13,
+      "linear_iters": 228,
+      "energy": 124.015539,
+      "reason": 2
+    },
+    {
+      "step": 77,
+      "angle": 20.158552860534506,
+      "time": 0.2749,
+      "iters": 13,
+      "linear_iters": 255,
+      "energy": 127.295372,
+      "reason": 2
+    },
+    {
+      "step": 78,
+      "angle": 20.420352248333653,
+      "time": 0.2712,
+      "iters": 13,
+      "linear_iters": 244,
+      "energy": 130.618131,
+      "reason": 2
+    },
+    {
+      "step": 79,
+      "angle": 20.682151636132804,
+      "time": 0.2504,
+      "iters": 12,
+      "linear_iters": 231,
+      "energy": 133.98379,
+      "reason": 2
+    },
+    {
+      "step": 80,
+      "angle": 20.94395102393195,
+      "time": 0.2315,
+      "iters": 11,
+      "linear_iters": 223,
+      "energy": 137.392333,
+      "reason": 2
+    },
+    {
+      "step": 81,
+      "angle": 21.205750411731103,
+      "time": 0.217,
+      "iters": 11,
+      "linear_iters": 193,
+      "energy": 140.84375,
+      "reason": 2
+    },
+    {
+      "step": 82,
+      "angle": 21.46754979953025,
+      "time": 0.2602,
+      "iters": 13,
+      "linear_iters": 234,
+      "energy": 144.338037,
+      "reason": 2
+    },
+    {
+      "step": 83,
+      "angle": 21.7293491873294,
+      "time": 0.2844,
+      "iters": 13,
+      "linear_iters": 281,
+      "energy": 147.875196,
+      "reason": 2
+    },
+    {
+      "step": 84,
+      "angle": 21.991148575128552,
+      "time": 0.2662,
+      "iters": 12,
+      "linear_iters": 267,
+      "energy": 151.455232,
+      "reason": 2
+    },
+    {
+      "step": 85,
+      "angle": 22.2529479629277,
+      "time": 0.2934,
+      "iters": 13,
+      "linear_iters": 297,
+      "energy": 155.078151,
+      "reason": 2
+    },
+    {
+      "step": 86,
+      "angle": 22.51474735072685,
+      "time": 0.2799,
+      "iters": 12,
+      "linear_iters": 284,
+      "energy": 158.743957,
+      "reason": 2
+    },
+    {
+      "step": 87,
+      "angle": 22.776546738525997,
+      "time": 0.2905,
+      "iters": 13,
+      "linear_iters": 280,
+      "energy": 162.452649,
+      "reason": 2
+    },
+    {
+      "step": 88,
+      "angle": 23.03834612632515,
+      "time": 0.2855,
+      "iters": 12,
+      "linear_iters": 289,
+      "energy": 166.20422,
+      "reason": 2
+    },
+    {
+      "step": 89,
+      "angle": 23.300145514124296,
+      "time": 0.3497,
+      "iters": 13,
+      "linear_iters": 387,
+      "energy": 169.998649,
+      "reason": 2
+    },
+    {
+      "step": 90,
+      "angle": 23.561944901923447,
+      "time": 0.3599,
+      "iters": 13,
+      "linear_iters": 408,
+      "energy": 173.835907,
+      "reason": 2
+    },
+    {
+      "step": 91,
+      "angle": 23.823744289722598,
+      "time": 0.4092,
+      "iters": 13,
+      "linear_iters": 494,
+      "energy": 177.715946,
+      "reason": 2
+    },
+    {
+      "step": 92,
+      "angle": 24.085543677521745,
+      "time": 0.4501,
+      "iters": 14,
+      "linear_iters": 543,
+      "energy": 181.638706,
+      "reason": 2
+    },
+    {
+      "step": 93,
+      "angle": 24.347343065320896,
+      "time": 0.843,
+      "iters": 15,
+      "linear_iters": 1213,
+      "energy": 185.604108,
+      "reason": 2
+    },
+    {
+      "step": 94,
+      "angle": 24.609142453120043,
+      "time": 0.5997,
+      "iters": 10,
+      "linear_iters": 867,
+      "energy": 189.612062,
+      "reason": -3
+    },
+    {
+      "step": 95,
+      "angle": 24.870941840919194,
+      "time": 0.4856,
+      "iters": 11,
+      "linear_iters": 654,
+      "energy": 193.662454,
+      "reason": -3
+    },
+    {
+      "step": 96,
+      "angle": 25.132741228718345,
+      "time": 0.4232,
+      "iters": 8,
+      "linear_iters": 597,
+      "energy": 197.755131,
+      "reason": -3
+    }
+  ]
+}

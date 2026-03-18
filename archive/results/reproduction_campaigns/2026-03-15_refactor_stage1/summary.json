@@ -1,0 +1,123 @@
+{
+  "campaign_id": "2026-03-15_refactor_stage1",
+  "date": "2026-03-15",
+  "stage": "baseline_smoke",
+  "cases": [
+    {
+      "name": "gl_fenics_custom_l5_np2",
+      "status": "pass",
+      "backend": "custom_jaxversion",
+      "nprocs": 2,
+      "message": "Converged (energy, step, gradient)",
+      "dofs": 4225,
+      "iterations": 7,
+      "energy": 0.3462323651,
+      "setup_time": 0.0387,
+      "solve_time": 0.1267
+    },
+    {
+      "name": "gl_jax_petsc_l5_np2",
+      "status": "pass",
+      "backend": "unknown",
+      "nprocs": 2,
+      "message": "Converged (energy, step, gradient)",
+      "dofs": 3969,
+      "iterations": 12,
+      "energy": 0.34598730315972287,
+      "setup_time": 0.669394,
+      "solve_time": 0.240243
+    },
+    {
+      "name": "he_fenics_custom_l1_steps1_np2",
+      "status": "pass",
+      "backend": "unknown",
+      "nprocs": 2,
+      "message": "Energy change converged",
+      "dofs": 2187,
+      "iterations": null,
+      "energy": 0.021651,
+      "setup_time": 0.018741,
+      "solve_time": 2.0186
+    },
+    {
+      "name": "he_jax_l1_steps1_np1",
+      "status": "pass",
+      "backend": "serial",
+      "nprocs": 1,
+      "message": "Converged (energy, step, gradient)",
+      "dofs": 2133,
+      "iterations": null,
+      "energy": 0.02165050592499907,
+      "setup_time": 0.3871582919964567,
+      "solve_time": 1.125302853062749
+    },
+    {
+      "name": "he_jax_petsc_l1_steps1_np2",
+      "status": "pass",
+      "backend": "unknown",
+      "nprocs": 2,
+      "message": "Converged (energy, step, gradient)",
+      "dofs": 2133,
+      "iterations": 9,
+      "energy": 0.02165233056157962,
+      "setup_time": 0.853416,
+      "solve_time": 0.431001
+    },
+    {
+      "name": "plaplace_fenics_custom_l5_np2",
+      "status": "pass",
+      "backend": "custom_jaxversion",
+      "nprocs": 2,
+      "message": "Converged (energy, step, gradient)",
+      "dofs": 3201,
+      "iterations": 5,
+      "energy": -7.9429687182,
+      "setup_time": 0.0474,
+      "solve_time": 0.0911
+    },
+    {
+      "name": "plaplace_jax_l5_np1",
+      "status": "pass",
+      "backend": "jax_newton",
+      "nprocs": 1,
+      "message": "Stopping condition for f is satisfied",
+      "dofs": 2945,
+      "iterations": 6,
+      "energy": -7.943,
+      "setup_time": 0.2525,
+      "solve_time": 0.1018
+    },
+    {
+      "name": "plaplace_jax_petsc_l5_np2",
+      "status": "pass",
+      "backend": "jax_petsc_dof_partitioned",
+      "nprocs": 2,
+      "message": "Converged (energy, step, gradient)",
+      "dofs": 3201,
+      "iterations": 6,
+      "energy": -7.9429687193,
+      "setup_time": 0.2981,
+      "solve_time": 0.1761
+    },
+    {
+      "name": "topology_parallel_nx24_ny12_np2",
+      "status": "pass",
+      "backend": "mpi",
+      "nprocs": 2,
+      "message": "max_outer_iterations",
+      "outer_iterations": 3,
+      "setup_time": 0.7070774208987132,
+      "solve_time": 1.042653581011109
+    },
+    {
+      "name": "topology_serial_nx24_ny12_np1",
+      "status": "pass",
+      "backend": "serial",
+      "nprocs": 1,
+      "message": "max_outer_iterations",
+      "outer_iterations": 3,
+      "setup_time": 0.7995454019401222,
+      "solve_time": 1.145038170972839
+    }
+  ]
+}

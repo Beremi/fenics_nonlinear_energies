@@ -1,0 +1,32 @@
+{
+  "metadata": {
+    "solver": "snes_newton",
+    "description": "PETSc SNES trust-region Newton (newtontr) + FGMRES + ASM/ILU",
+    "dolfinx_version": "0.10.0.post5",
+    "nprocs": 1,
+    "petsc_options": {
+      "snes_type": "newtontr",
+      "snes_atol": 1e-05,
+      "snes_rtol": 1e-08,
+      "snes_max_it": 100,
+      "ksp_type": "fgmres",
+      "ksp_rtol": 0.1,
+      "ksp_max_it": 200,
+      "pc_type": "asm",
+      "pc_asm_overlap": 2,
+      "sub_pc_type": "ilu",
+      "sub_pc_factor_levels": 1
+    },
+    "eps": 0.01
+  },
+  "results": [
+    {
+      "mesh_level": 5,
+      "total_dofs": 4225,
+      "time": 0.0354,
+      "iters": 10,
+      "energy": 0.3462,
+      "converged_reason": 2
+    }
+  ]
+}

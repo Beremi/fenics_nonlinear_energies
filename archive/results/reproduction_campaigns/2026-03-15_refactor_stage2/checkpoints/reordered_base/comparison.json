@@ -1,0 +1,75 @@
+{
+  "checkpoint": "reordered_base",
+  "date": "2026-03-15",
+  "comparisons": [
+    {
+      "case": "plaplace_jax_petsc_l5_np2",
+      "baseline": {
+        "mesh_level": 5,
+        "dofs": 3201,
+        "iters": 6,
+        "energy": -7.9429687193,
+        "message": "Converged (energy, step, gradient)",
+        "linear_iters": 17
+      },
+      "current": {
+        "mesh_level": 5,
+        "dofs": 3201,
+        "iters": 6,
+        "energy": -7.9429687193,
+        "message": "Converged (energy, step, gradient)",
+        "linear_iters": 17
+      },
+      "status_match": true,
+      "iters_match": true,
+      "energy_rel_diff": 0.0,
+      "ksp_match": true
+    },
+    {
+      "case": "gl_jax_petsc_l5_np2",
+      "baseline": {
+        "mesh_level": 5,
+        "dofs": 4225,
+        "iters": 12,
+        "energy": 0.34598730315972287,
+        "message": "Converged (energy, step, gradient)",
+        "linear_iters": 41
+      },
+      "current": {
+        "mesh_level": 5,
+        "dofs": 4225,
+        "iters": 12,
+        "energy": 0.34598730315972287,
+        "message": "Converged (energy, step, gradient)",
+        "linear_iters": 41
+      },
+      "status_match": true,
+      "iters_match": true,
+      "energy_rel_diff": 0.0,
+      "ksp_match": true
+    },
+    {
+      "case": "he_jax_petsc_l1_steps1_np2",
+      "baseline": {
+        "mesh_level": 1,
+        "dofs": 2187,
+        "iters": 9,
+        "energy": 0.02165233056157962,
+        "message": "Converged (energy, step, gradient)",
+        "linear_iters": 108
+      },
+      "current": {
+        "mesh_level": 1,
+        "dofs": 2187,
+        "iters": 9,
+        "energy": 0.02165233056157962,
+        "message": "Converged (energy, step, gradient)",
+        "linear_iters": 108
+      },
+      "status_match": true,
+      "iters_match": true,
+      "energy_rel_diff": 0.0,
+      "ksp_match": true
+    }
+  ]
+}

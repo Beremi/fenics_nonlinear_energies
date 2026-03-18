@@ -1,0 +1,87 @@
+Traceback (most recent call last):
+  File "/home/michal/repos/fenics_nonlinear_energies/tmp_work/check_distribution.py", line 10, in <module>
+    mesh_obj = MeshHyperElasticity3D(comm, 3)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: MeshHyperElasticity3D.__init__() takes 2 positional arguments but 3 were given
+Traceback (most recent call last):
+  File "/home/michal/repos/fenics_nonlinear_energies/tmp_work/check_distribution.py", line 10, in <module>
+    mesh_obj = MeshHyperElasticity3D(comm, 3)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: MeshHyperElasticity3D.__init__() takes 2 positional arguments but 3 were given
+Traceback (most recent call last):
+  File "/home/michal/repos/fenics_nonlinear_energies/tmp_work/check_distribution.py", line 10, in <module>
+Traceback (most recent call last):
+  File "/home/michal/repos/fenics_nonlinear_energies/tmp_work/check_distribution.py", line 10, in <module>
+    mesh_obj = MeshHyperElasticity3D(comm, 3)
+    mesh_obj = MeshHyperElasticity3D(comm, 3)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: MeshHyperElasticity3D.__init__() takes 2 positional arguments but 3 were given
+TypeError: MeshHyperElasticity3D.__init__() takes 2 positional arguments but 3 were given
+Traceback (most recent call last):
+  File "/home/michal/repos/fenics_nonlinear_energies/tmp_work/check_distribution.py", line 10, in <module>
+    mesh_obj = MeshHyperElasticity3D(comm, 3)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: MeshHyperElasticity3D.__init__() takes 2 positional arguments but 3 were given
+Traceback (most recent call last):
+  File "/home/michal/repos/fenics_nonlinear_energies/tmp_work/check_distribution.py", line 10, in <module>
+    mesh_obj = MeshHyperElasticity3D(comm, 3)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: MeshHyperElasticity3D.__init__() takes 2 positional arguments but 3 were given
+Traceback (most recent call last):
+  File "/home/michal/repos/fenics_nonlinear_energies/tmp_work/check_distribution.py", line 10, in <module>
+    mesh_obj = MeshHyperElasticity3D(comm, 3)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: MeshHyperElasticity3D.__init__() takes 2 positional arguments but 3 were given
+Traceback (most recent call last):
+  File "/home/michal/repos/fenics_nonlinear_energies/tmp_work/check_distribution.py", line 10, in <module>
+    mesh_obj = MeshHyperElasticity3D(comm, 3)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: MeshHyperElasticity3D.__init__() takes 2 positional arguments but 3 were given
+Traceback (most recent call last):
+  File "/home/michal/repos/fenics_nonlinear_energies/tmp_work/check_distribution.py", line 10, in <module>
+    mesh_obj = MeshHyperElasticity3D(comm, 3)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: MeshHyperElasticity3D.__init__() takes 2 positional arguments but 3 were given
+Traceback (most recent call last):
+  File "/home/michal/repos/fenics_nonlinear_energies/tmp_work/check_distribution.py", line 10, in <module>
+    mesh_obj = MeshHyperElasticity3D(comm, 3)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: MeshHyperElasticity3D.__init__() takes 2 positional arguments but 3 were given
+Traceback (most recent call last):
+  File "/home/michal/repos/fenics_nonlinear_energies/tmp_work/check_distribution.py", line 10, in <module>
+    mesh_obj = MeshHyperElasticity3D(comm, 3)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: MeshHyperElasticity3D.__init__() takes 2 positional arguments but 3 were given
+Traceback (most recent call last):
+  File "/home/michal/repos/fenics_nonlinear_energies/tmp_work/check_distribution.py", line 10, in <module>
+    mesh_obj = MeshHyperElasticity3D(comm, 3)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: MeshHyperElasticity3D.__init__() takes 2 positional arguments but 3 were given
+Traceback (most recent call last):
+  File "/home/michal/repos/fenics_nonlinear_energies/tmp_work/check_distribution.py", line 10, in <module>
+    mesh_obj = MeshHyperElasticity3D(comm, 3)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: MeshHyperElasticity3D.__init__() takes 2 positional arguments but 3 were given
+Traceback (most recent call last):
+  File "/home/michal/repos/fenics_nonlinear_energies/tmp_work/check_distribution.py", line 10, in <module>
+    mesh_obj = MeshHyperElasticity3D(comm, 3)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: MeshHyperElasticity3D.__init__() takes 2 positional arguments but 3 were given
+Traceback (most recent call last):
+  File "/home/michal/repos/fenics_nonlinear_energies/tmp_work/check_distribution.py", line 10, in <module>
+    mesh_obj = MeshHyperElasticity3D(comm, 3)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: MeshHyperElasticity3D.__init__() takes 2 positional arguments but 3 were given
+Traceback (most recent call last):
+  File "/home/michal/repos/fenics_nonlinear_energies/tmp_work/check_distribution.py", line 10, in <module>
+    mesh_obj = MeshHyperElasticity3D(comm, 3)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: MeshHyperElasticity3D.__init__() takes 2 positional arguments but 3 were given
+--------------------------------------------------------------------------
+prterun detected that one or more processes exited with non-zero status,
+thus causing the job to be terminated. The first process to do so was:
+
+   Process name: [prterun-k470ws-65906@1,3]
+   Exit code:    1
+--------------------------------------------------------------------------

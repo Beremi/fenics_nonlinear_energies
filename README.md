@@ -2,18 +2,50 @@
 
 This repository contains solvers for nonlinear energy minimization problems using both **FEniCSx (DOLFINx)** and **JAX**, with infrastructure for reproducible benchmarking.
 
+## Canonical Layout
+
+- `src/` — core solver implementations and shared backend infrastructure
+- `experiments/` — benchmark runners, sweeps, diagnostics, and analysis scripts
+- `notebooks/` — demos and benchmark walkthrough notebooks
+- `docs/` — canonical setup, problem, result, implementation, and reference docs
+- `data/meshes/` — checked-in mesh/problem inputs
+- `artifacts/` — generated reproduction outputs, raw result caches, and figures
+
+## Documentation
+
+Current documentation now lives under `docs/`:
+
+- index: [docs/README.md](docs/README.md)
+- quickstart: [docs/setup/quickstart.md](docs/setup/quickstart.md)
+- problem pages:
+  - [docs/problems/pLaplace.md](docs/problems/pLaplace.md)
+  - [docs/problems/GinzburgLandau.md](docs/problems/GinzburgLandau.md)
+  - [docs/problems/HyperElasticity.md](docs/problems/HyperElasticity.md)
+  - [docs/problems/Topology.md](docs/problems/Topology.md)
+- current maintained results:
+  - [docs/results/pLaplace.md](docs/results/pLaplace.md)
+  - [docs/results/GinzburgLandau.md](docs/results/GinzburgLandau.md)
+  - [docs/results/HyperElasticity.md](docs/results/HyperElasticity.md)
+  - [docs/results/Topology.md](docs/results/Topology.md)
+
 ## Quick Start — Example Notebooks
 
-The best way to explore the solvers is through the **Jupyter notebooks in the repository root**:
+The best way to explore the solvers is through the **Jupyter notebooks in `notebooks/`**:
 
 | Notebook                                                                             | Problem            | Framework        |
 | ------------------------------------------------------------------------------------ | ------------------ | ---------------- |
-| [example_pLaplace2D_jax.ipynb](example_pLaplace2D_jax.ipynb)                         | p-Laplacian 2D     | JAX              |
-| [example_GinzburgLandau2D_jax.ipynb](example_GinzburgLandau2D_jax.ipynb)             | Ginzburg-Landau 2D | JAX              |
-| [example_HyperElasticity3D_jax.ipynb](example_HyperElasticity3D_jax.ipynb)           | Hyperelasticity 3D | JAX              |
-| [benchmark_pLaplace2D_fenics.ipynb](benchmark_pLaplace2D_fenics.ipynb)               | p-Laplacian 2D     | FEniCS (DOLFINx) |
-| [benchmark_GinzburgLandau2D_fenics.ipynb](benchmark_GinzburgLandau2D_fenics.ipynb)   | Ginzburg-Landau 2D | FEniCS (DOLFINx) |
-| [benchmark_HyperElasticity3D_fenics.ipynb](benchmark_HyperElasticity3D_fenics.ipynb) | Hyperelasticity 3D | FEniCS (DOLFINx) |
+| [plaplace_jax_api.ipynb](notebooks/demos/plaplace_jax_api.ipynb) | p-Laplacian 2D | JAX |
+| [ginzburg_landau_jax_api.ipynb](notebooks/demos/ginzburg_landau_jax_api.ipynb) | Ginzburg-Landau 2D | JAX |
+| [hyperelasticity_jax_api.ipynb](notebooks/demos/hyperelasticity_jax_api.ipynb) | Hyperelasticity 3D | JAX |
+| [plaplace_jax_petsc_api.ipynb](notebooks/demos/plaplace_jax_petsc_api.ipynb) | p-Laplacian 2D | JAX + PETSc |
+| [plaplace_fenics_benchmark.ipynb](notebooks/benchmarks/plaplace_fenics_benchmark.ipynb) | p-Laplacian 2D | FEniCS (DOLFINx) |
+| [ginzburg_landau_fenics_benchmark.ipynb](notebooks/benchmarks/ginzburg_landau_fenics_benchmark.ipynb) | Ginzburg-Landau 2D | FEniCS (DOLFINx) |
+| [hyperelasticity_fenics_benchmark.ipynb](notebooks/benchmarks/hyperelasticity_fenics_benchmark.ipynb) | Hyperelasticity 3D | FEniCS (DOLFINx) |
+| [topology_parallel_benchmark.ipynb](notebooks/benchmarks/topology_parallel_benchmark.ipynb) | Topology optimisation | JAX + PETSc |
+
+Canonical implementation code lives under `src/core/` and `src/problems/`.
+Use the canonical `src/problems/...` paths directly in scripts, notebooks, and
+reproduction commands.
 
 Open in VS Code devcontainer and run — everything is pre-configured.
 
@@ -25,14 +57,15 @@ with $p = 3$, $f = -10$ on the unit square. Three solver variants are provided:
 
 | Solver                             | Location                                                | Parallelism |
 | ---------------------------------- | ------------------------------------------------------- | ----------- |
-| **SNES Newton** (recommended)      | `pLaplace2D_fenics/solve_pLaplace_snes_newton.py`       | MPI         |
-| **Custom Newton** (JAX algorithm)  | `pLaplace2D_fenics/solve_pLaplace_custom_jaxversion.py` | MPI         |
-| **JAX Newton** (auto-diff + PyAMG) | `pLaplace2D_jax/solve_pLaplace_jax_newton.py`           | single CPU  |
+| **SNES Newton** (recommended)      | `src/problems/plaplace/fenics/solve_pLaplace_snes_newton.py`       | MPI         |
+| **Custom Newton** (JAX algorithm)  | `src/problems/plaplace/fenics/solve_pLaplace_custom_jaxversion.py` | MPI         |
+| **JAX Newton** (auto-diff + PyAMG) | `src/problems/plaplace/jax/solve_pLaplace_jax_newton.py`           | single CPU  |
 
 The **Custom Newton** re-implements the JAX minimisation algorithm (golden-section on [−0.5, 2], tighter tolerances) on top of PETSc, matching JAX iteration counts while supporting MPI parallelism.
 
-Benchmark results: [results_pLaplace.md](archive/results_pLaplace.md)
-How to run: [instructions.md](docs/instructions.md)
+Problem overview: [docs/problems/pLaplace.md](docs/problems/pLaplace.md)  
+Current results: [docs/results/pLaplace.md](docs/results/pLaplace.md)  
+How to run: [docs/setup/quickstart.md](docs/setup/quickstart.md)
 
 ## Problem: Ginzburg-Landau 2D
 
@@ -42,14 +75,15 @@ with $\varepsilon = 0.01$ on $[-1,1]^2$. This is a **non-convex** energy (indefi
 
 | Solver                             | Location                                                       | Parallelism |
 | ---------------------------------- | -------------------------------------------------------------- | ----------- |
-| **Custom Newton** (recommended)    | `GinzburgLandau2D_fenics/solve_GL_custom_jaxversion.py`        | MPI         |
-| **SNES Newton**                    | `GinzburgLandau2D_fenics/solve_GL_snes_newton.py`              | MPI         |
-| **JAX Newton** (auto-diff + PyAMG) | `GinzburgLandau2D_jax/` + `example_GinzburgLandau2D_jax.ipynb` | single CPU  |
+| **Custom Newton** (recommended)    | `src/problems/ginzburg_landau/fenics/solve_GL_custom_jaxversion.py`        | MPI         |
+| **SNES Newton**                    | `src/problems/ginzburg_landau/fenics/solve_GL_snes_newton.py`              | MPI         |
+| **JAX Newton** (auto-diff + PyAMG) | `src/problems/ginzburg_landau/jax/` + `notebooks/demos/ginzburg_landau_jax_api.ipynb` | single CPU  |
 
 The **SNES Newton** uses trust-region Newton (`newtontr`) with FGMRES + ASM/ILU preconditioning and loose inner tolerance (`ksp_rtol=1e-1`). This was the only SNES configuration found to be reliable across all mesh sizes and MPI decompositions (see [results_GinzburgLandau2D.md](archive/results_GinzburgLandau2D.md) for the full configuration survey). The **Custom Newton** uses a golden-section energy line search and remains the fastest option (6 iterations at all levels).
 
-Benchmark results: [results_GinzburgLandau2D.md](archive/results_GinzburgLandau2D.md)
-How to run: [instructions.md](docs/instructions.md)
+Problem overview: [docs/problems/GinzburgLandau.md](docs/problems/GinzburgLandau.md)  
+Current results: [docs/results/GinzburgLandau.md](docs/results/GinzburgLandau.md)  
+How to run: [docs/setup/quickstart.md](docs/setup/quickstart.md)
 
 ## Problem: HyperElasticity 3D
 
@@ -59,10 +93,10 @@ variants are provided:
 
 | Solver                          | Location                                                 | Status        |
 | ------------------------------- | -------------------------------------------------------- | ------------- |
-| **Custom Newton** (recommended) | `HyperElasticity3D_fenics/solve_HE_custom_jaxversion.py` | 96/96 steps ✓ |
-| **SNES Newton**                 | `HyperElasticity3D_fenics/solve_HE_snes_newton.py`       | 93/96 steps ✓ |
-| **Pure JAX Newton**             | `HyperElasticity3D_jax/solve_HE_jax_newton.py`           | serial, levels 1–3 |
-| **JAX+PETSc Custom Newton**     | `HyperElasticity3D_jax_petsc/solve_HE_dof.py`           | MPI parallel  |
+| **Custom Newton** (recommended) | `src/problems/hyperelasticity/fenics/solve_HE_custom_jaxversion.py` | 96/96 steps ✓ |
+| **SNES Newton**                 | `src/problems/hyperelasticity/fenics/solve_HE_snes_newton.py`       | 93/96 steps ✓ |
+| **Pure JAX Newton**             | `src/problems/hyperelasticity/jax/solve_HE_jax_newton.py`           | serial, levels 1–3 |
+| **JAX+PETSc Custom Newton**     | `src/problems/hyperelasticity/jax_petsc/solve_HE_dof.py`            | MPI parallel  |
 
 Current default PETSc HE setting for both `fenics_custom` and
 `jax_petsc_element`:
@@ -95,12 +129,12 @@ The shared campaign default is `0.5` because it is the best JAX setting, still
 near-best on FEniCS, and avoids introducing a backend-specific nonlinear policy
 into the like-for-like comparison.
 
-See [final_HE_results.md](docs/final_HE_results.md) for the completed benchmark
-report and [TRUST_REGION_LINESEARCH_TUNING.md](docs/TRUST_REGION_LINESEARCH_TUNING.md)
-for the tuning trail that led to this default.
+See [docs/results/HyperElasticity.md](docs/results/HyperElasticity.md) for the current maintained benchmark
+summary and [archive/docs/tuning/trust_region_linesearch_tuning.md](archive/docs/tuning/trust_region_linesearch_tuning.md)
+for the archived tuning trail that led to this default.
 
 Pure JAX serial HE now also uses the same outer trust-region policy through
-`HyperElasticity3D_jax/solve_HE_jax_newton.py`:
+`src/problems/hyperelasticity/jax/solve_HE_jax_newton.py`:
 
 - serial Steihaug-Toint trust subproblem solve
 - post trust-subproblem line search ON
@@ -145,36 +179,33 @@ We then reduced the load increment by increasing the number of steps while keepi
 
 | Requested steps | Recorded | Converged | First fail step | First fail angle [rad] | Reason | Time [s] | Newton | Linear |
 | --------------: | -------: | --------: | --------------: | ---------------------: | -----: | -------: | -----: | -----: |
-|          `96/96` |       60 |        59 |              60 |              15.707963 |     -3 |    78.69 |   1092 |  48696 |
-|        `192/192` |      119 |       118 |             119 |              15.577064 |     -3 |   131.68 |   1820 |  82410 |
-|        `384/384` |      237 |       236 |             237 |              15.511614 |     -3 |   225.93 |   3070 | 138544 |
+|          `96/96` |       60 |        59 |              60 |              15.707963 |     -3 |   118.47 |   1079 |  50010 |
+|        `192/192` |      117 |       116 |             117 |              15.315264 |     -3 |   193.51 |   1783 |  78389 |
+|        `384/384` |      236 |       235 |             236 |              15.446164 |     -3 |   320.65 |   3055 | 137445 |
 
 Finding: smaller increments significantly delay failure in step index, but all tested runs still end with `SNES_DIVERGED_LINEAR_SOLVE` (`reason=-3`) near the same physical angle.
 
-Artifacts:
-- [experiment_scripts/he_snes_l3_np16_gamg_96_fgmres_r1e1_k2000_a1e3_basic.json](experiment_scripts/he_snes_l3_np16_gamg_96_fgmres_r1e1_k2000_a1e3_basic.json)
-- [experiment_scripts/he_snes_l3_np16_gamg_192_fgmres_base.json](experiment_scripts/he_snes_l3_np16_gamg_192_fgmres_base.json)
-- [experiment_scripts/he_snes_l3_np16_gamg_384_fgmres_base.json](experiment_scripts/he_snes_l3_np16_gamg_384_fgmres_base.json)
+Archived sweep artifacts:
+- [he_snes_l3_np16_gamg_96_fgmres_r1e1_k2000_a1e3_basic.json](experiments/legacy/he_snes_l3_np16_gamg_96_fgmres_r1e1_k2000_a1e3_basic.json)
+- [he_snes_l3_np16_gamg_192_fgmres_base.json](experiments/legacy/he_snes_l3_np16_gamg_192_fgmres_base.json)
+- [he_snes_l3_np16_gamg_384_fgmres_base.json](experiments/legacy/he_snes_l3_np16_gamg_384_fgmres_base.json)
 
 Run template (set `<N>=96|192|384`):
 ```bash
-docker exec -u ubuntu bench_container bash -lc '
-cd /workdir &&
 PETSC_OPTIONS="-he_pc_gamg_threshold 0.05 -he_pc_gamg_agg_nsmooths 1" \
-mpirun -n 16 python3 HyperElasticity3D_fenics/solve_HE_snes_newton.py \
+mpiexec -n 16 ./.venv/bin/python -u src/problems/hyperelasticity/fenics/solve_HE_snes_newton.py \
   --level 3 --steps <N> --total_steps <N> --stop_on_fail --quiet \
   --snes_type newtonls --linesearch basic \
   --pc_type gamg --ksp_type fgmres \
   --ksp_rtol 1e-1 --ksp_max_it 2000 --snes_atol 1e-3 \
-  --out experiment_scripts/he_snes_l3_np16_gamg_<N>_fgmres_base.json
-'
+  --out artifacts/raw_results/example_runs/he_snes_l3_np16_gamg_<N>_fgmres_base.json
 ```
 
 ### How to run (96 quarter-steps, level 1, single process)
 
 **Custom Newton, current default PETSc setting:**
 ```bash
-python3 HyperElasticity3D_fenics/solve_HE_custom_jaxversion.py \
+python3 src/problems/hyperelasticity/fenics/solve_HE_custom_jaxversion.py \
     --level 1 --steps 96 --total_steps 96 \
     --ksp_type stcg --pc_type gamg \
     --ksp_rtol 1e-1 --ksp_max_it 30 \
@@ -183,12 +214,12 @@ python3 HyperElasticity3D_fenics/solve_HE_custom_jaxversion.py \
     --trust_radius_init 0.5 \
     --trust_shrink 0.5 --trust_expand 1.5 \
     --trust_eta_shrink 0.05 --trust_eta_expand 0.75 \
-    --quiet --out experiment_scripts/out_custom.json
+    --quiet --out artifacts/raw_results/example_runs/he/out_custom.json
 ```
 
 **JAX + PETSc, current default PETSc setting:**
 ```bash
-python3 HyperElasticity3D_jax_petsc/solve_HE_dof.py \
+python3 src/problems/hyperelasticity/jax_petsc/solve_HE_dof.py \
     --level 1 --steps 96 --total_steps 96 \
     --ksp_type stcg --pc_type gamg \
     --ksp_rtol 1e-1 --ksp_max_it 30 \
@@ -201,51 +232,49 @@ python3 HyperElasticity3D_jax_petsc/solve_HE_dof.py \
     --element_reorder_mode block_xyz \
     --local_hessian_mode element \
     --local_coloring \
-    --quiet --out experiment_scripts/out_jax_petsc.json
+    --quiet --out artifacts/raw_results/example_runs/he/out_jax_petsc.json
 ```
 
 **Pure JAX, current serial reference setting:**
 ```bash
-python3 HyperElasticity3D_jax/solve_HE_jax_newton.py \
+python3 src/problems/hyperelasticity/jax/solve_HE_jax_newton.py \
     --level 1 --steps 96 --total_steps 96 \
     --linesearch_tol 1e-1 \
     --trust_radius_init 0.5 \
     --trust_shrink 0.5 --trust_expand 1.5 \
     --trust_eta_shrink 0.05 --trust_eta_expand 0.75 \
     --ksp_rtol 1e-1 --ksp_max_it 30 \
-    --quiet --out experiment_scripts/out_jax_serial.json
+    --quiet --out artifacts/raw_results/example_runs/he/out_jax_serial.json
 ```
 
 **SNES Newton:**
 ```bash
-python3 HyperElasticity3D_fenics/solve_HE_snes_newton.py \
+python3 src/problems/hyperelasticity/fenics/solve_HE_snes_newton.py \
     --level 1 --steps 96 \
     --ksp_type gmres --pc_type hypre \
     --ksp_rtol 1e-1 --ksp_max_it 500 --snes_atol 1e-3 \
-    --quiet --out experiment_scripts/out_snes.json
+    --quiet --out artifacts/raw_results/example_runs/he/out_snes.json
 ```
 
 **With Docker (from repository root):**
 ```bash
 # Serial (no special flags needed)
-docker run --rm --entrypoint "" -v "$PWD":/work -w /work fenics_test \
-    python3 HyperElasticity3D_fenics/solve_HE_custom_jaxversion.py \
+docker run --rm --entrypoint "" -v "$PWD":/repo -w /repo fenics_test \
+    python3 src/problems/hyperelasticity/fenics/solve_HE_custom_jaxversion.py \
     --level 1 --steps 96 --total_steps 96 \
-    --ksp_rtol 1e-1 --ksp_max_it 30 --pc_setup_on_ksp_cap \
-    --quiet --out experiment_scripts/out_custom.json
+    --quiet --out artifacts/raw_results/example_runs/he/he_custom_serial.json
 
 # Parallel — MUST use --shm-size for multi-process MPI (MPICH needs shared memory)
-docker run --rm --shm-size=8g --entrypoint mpirun -v "$PWD":/work -w /work fenics_test \
-    -n 16 python3 /work/HyperElasticity3D_fenics/solve_HE_custom_jaxversion.py \
+docker run --rm --shm-size=8g --entrypoint mpirun -v "$PWD":/repo -w /repo fenics_test \
+    -n 16 python3 src/problems/hyperelasticity/fenics/solve_HE_custom_jaxversion.py \
     --level 3 --steps 24 --total_steps 24 \
-    --ksp_rtol 1e-1 --ksp_max_it 30 --pc_setup_on_ksp_cap \
-    --quiet --out experiment_scripts/out_custom.json
+    --quiet --out artifacts/raw_results/example_runs/he/he_custom_parallel.json
 ```
 
 > **⚠ Docker shared-memory**: The image uses MPICH, which requires shared memory
 > for inter-process communication. Docker defaults to 64 MB, which causes
 > **SIGBUS (exit 135)** or OOM kills with ≥8 MPI processes. Always pass
-> `--shm-size=8g` for parallel runs. See [instructions.md](docs/instructions.md) for
+> `--shm-size=8g` for parallel runs. See [docs/setup/quickstart.md](docs/setup/quickstart.md) for
 > details and a persistent-container pattern for long benchmarks.
 
 ### Summary results (level 1, 96 quarter-steps)
@@ -262,7 +291,7 @@ experimental details (Annexes A–D).
 
 ### JAX+PETSc solver for HyperElasticity 3D
 
-`HyperElasticity3D_jax_petsc/solve_HE_dof.py` is an MPI-parallel re-implementation of the
+`src/problems/hyperelasticity/jax_petsc/solve_HE_dof.py` is an MPI-parallel re-implementation of the
 Custom Newton solver using JAX automatic differentiation and PETSc linear algebra. It targets
 full parity with the FEniCS custom solver.
 
@@ -328,18 +357,18 @@ source local_env/activate.sh
 export OMP_NUM_THREADS=1
 
 # Element Hessian assembly (recommended — 2–3× faster than SFD)
-mpirun -n 16 python3 HyperElasticity3D_jax_petsc/solve_HE_dof.py \
+mpirun -n 16 python3 src/problems/hyperelasticity/jax_petsc/solve_HE_dof.py \
     --level 3 --steps 24 --total_steps 24 \
     --profile performance --assembly_mode element \
     --element_reorder_mode block_xyz --quiet
 
 # SFD assembly (baseline)
-mpirun -n 16 python3 HyperElasticity3D_jax_petsc/solve_HE_dof.py \
+mpirun -n 16 python3 src/problems/hyperelasticity/jax_petsc/solve_HE_dof.py \
     --level 3 --steps 24 --total_steps 24 \
     --profile performance --assembly_mode sfd --quiet
 
 # With detailed linear timing breakdown
-mpirun -n 32 python3 HyperElasticity3D_jax_petsc/solve_HE_dof.py \
+mpirun -n 32 python3 src/problems/hyperelasticity/jax_petsc/solve_HE_dof.py \
     --level 4 --steps 1 --total_steps 96 \
     --profile performance --assembly_mode element \
     --element_reorder_mode block_xyz \
@@ -352,98 +381,47 @@ Benchmark results and investigation: [results_HyperElasticity3D.md](archive/resu
 
 ## Prerequisites
 
-FEniCS solvers require **DOLFINx >= 0.10** with PETSc. JAX solvers require **JAX**, **h5py**, **PyAMG**. The included devcontainer provides everything — see [instructions.md](docs/instructions.md).
+FEniCS solvers require **DOLFINx >= 0.10** with PETSc. JAX solvers require **JAX**, **h5py**, **PyAMG**. The included devcontainer provides everything — see [docs/setup/quickstart.md](docs/setup/quickstart.md).
 
 ## Repository Structure
 
 ```
 .
-├── example_pLaplace2D_jax.ipynb       # ★ JAX p-Laplace example notebook
-├── example_GinzburgLandau2D_jax.ipynb # ★ JAX Ginzburg-Landau example notebook
-├── example_HyperElasticity3D_jax.ipynb# ★ JAX Hyperelasticity example notebook
-├── benchmark_pLaplace2D_fenics.ipynb  # ★ FEniCS p-Laplace benchmark notebook
-│
-├── README.md                          # This file
-├── docs/                              # Current documentation and benchmark reports
-│   ├── instructions.md                # How to run, store results, generate tables
-│   ├── final_HE_results.md            # Current final HyperElasticity report
-│   └── HyperElasticity3D_jax_petsc_IMPLEMENTATION.md
-├── archive/                           # Historical result notes and superseded investigations
-│   ├── results_pLaplace.md            # Compiled p-Laplace benchmark results
-│   ├── results_GinzburgLandau2D.md    # Compiled Ginzburg-Landau benchmark results
-│   └── results_HyperElasticity3D.md   # Historical HyperElasticity notes
-│
-├── mesh_data/                         # Shared mesh files (all problems)
-│   ├── pLaplace/                      #   HDF5 source + FEniCS XDMF, levels 1–9
-│   ├── GinzburgLandau/                #   HDF5, levels 2–9
-│   └── HyperElasticity/              #   HDF5, levels 1–4
-│
-├── pLaplace2D_fenics/                 # FEniCS solvers for p-Laplace
-│   ├── solve_pLaplace_snes_newton.py  #   SNES Newton (DOLFINx 0.10+)
-│   ├── solve_pLaplace_custom_jaxversion.py # Custom Newton (JAX algorithm via PETSc)
-│   └── export_pLaplace_meshes.py      #   HDF5 → XDMF mesh converter
-│
-├── pLaplace2D_jax/                    # JAX solver for p-Laplace
-│   ├── jax_energy.py                  #   Energy functional in JAX
-│   ├── mesh.py                        #   Mesh loader (HDF5 → JAX arrays)
-│   └── solve_pLaplace_jax_newton.py   #   Benchmark script
-│
-├── GinzburgLandau2D_jax/              # JAX solver for Ginzburg-Landau 2D
-│   └── jax_energy.py, mesh.py         #   Energy + mesh loader
-│
-├── GinzburgLandau2D_fenics/           # FEniCS solvers for Ginzburg-Landau 2D
-│   ├── solve_GL_snes_newton.py        #   SNES Newton (newtontr + ASM/ILU)
-│   ├── solve_GL_custom_jaxversion.py  #   Custom Newton (recommended, uses tools_petsc4py)
-│   └── export_GL_meshes.py            #   HDF5 → XDMF mesh converter
-│
-├── HyperElasticity3D_jax/             # JAX solver for Hyperelasticity 3D
-│   ├── jax_energy.py, mesh.py         #   Energy + mesh loader
-│   └── rotate_boundary.py             #   Boundary rotation utility
-│
-├── HyperElasticity3D_jax_petsc/       # JAX + PETSc Hyperelasticity solver
-│   ├── parallel_hessian_dof.py        #   Problem-specific assembler glue
-│   ├── solver.py                      #   Solver logic
-│   └── solve_HE_dof.py                #   CLI wrapper
-│
-├── HyperElasticity3D_petsc_support/   # Shared HE mesh / BC helpers
-│   ├── mesh.py                        #   PETSc-compatible HE mesh loader
-│   └── rotate_boundary.py             #   Boundary rotation utility
-│
-├── pLaplace2D_jax_petsc/              # JAX + PETSc p-Laplace solver
-│   ├── parallel_hessian_dof.py        #   Problem-specific assembler glue
-│   ├── solver.py                      #   Solver logic
-│   └── solve_pLaplace_dof.py          #   CLI wrapper
-│
-├── pLaplace2D_petsc_support/          # Shared p-Laplace PETSc support
-│   └── mesh.py                        #   PETSc-compatible p-Laplace mesh loader
-│
-├── tools/                             # Shared JAX utilities
-│   ├── jax_diff.py                    #   Auto-diff + sparse Hessian assembly
-│   ├── minimizers.py                  #   Newton solver with line search
-│   ├── sparse_solvers.py              #   PyAMG / direct linear solvers
-│   └── graph_sfd.py                   #   Graph coloring for sparse finite differences
-│
-├── tools_petsc4py/                    # Shared PETSc Newton utilities
-│   ├── fenics_tools/                  #   FEniCS-side helpers
-│   ├── jax_tools/                     #   Shared JAX + PETSc assembler layer
-│   └── minimizers.py                  #   Newton solver (PETSc Vec interface)
-│
-├── results/                           # p-Laplace experiment results + processing scripts
-│   ├── run_experiments.py             #   Automated FEniCS benchmark runner
-│   ├── generate_latex_tables.py       #   Generate LaTeX/Markdown tables from results
-│   ├── generate_scaling_plot.py       #   Generate strong scaling plots
-│   └── experiment_001/                #   Stored benchmark results (JSON + tables + plots)
-│
-├── results_GL/                        # Ginzburg-Landau experiment results
-│   ├── run_experiments.py             #   Automated GL benchmark runner
-│   └── experiment_001/                #   Stored benchmark results (JSON)
-│
-└── .devcontainer/                     # Docker/devcontainer configuration
+├── src/
+│   ├── core/                          # Shared serial, PETSc, CLI, and benchmark helpers
+│   └── problems/                      # Canonical problem implementations
+│       ├── plaplace/
+│       ├── ginzburg_landau/
+│       ├── hyperelasticity/
+│       └── topology/
+├── experiments/
+│   ├── runners/                       # Authoritative benchmark runners
+│   ├── analysis/                      # Report generators and aggregation scripts
+│   ├── diagnostics/                   # Focused investigation helpers
+│   └── sweeps/                        # Parameter sweeps
+├── notebooks/
+│   ├── demos/
+│   └── benchmarks/
+├── docs/
+│   ├── problems/                      # Canonical problem overviews
+│   ├── results/                       # Current maintained results and scaling
+│   ├── setup/                         # Environment and run instructions
+│   ├── implementation/                # Current implementation notes
+│   ├── reference/                     # Cross-problem formulation/reference notes
+│   └── assets/                        # Curated current figures
+├── data/
+│   └── meshes/                        # Checked-in mesh/problem inputs
+├── artifacts/
+│   ├── raw_results/                   # Stored benchmark outputs
+│   ├── reproduction/                  # Reproduction campaign runs
+│   └── figures/                       # Generated figures before curation
+├── archive/                           # Historical reports and retired material
+└── scratch/                           # Local scratch space (gitignored)
 ```
 
 ## Mesh Levels
 
-The meshes in `mesh_data/pLaplace/` (levels 1–9) are pre-generated. The paper table uses levels 4–8, which correspond to **mesh files 5–9**:
+The meshes in `data/meshes/pLaplace/` (levels 1–9) are pre-generated. The paper table uses levels 4–8, which correspond to **mesh files 5–9**:
 
 | Table Level |  Mesh File   | Total DOFs | Free DOFs |
 | :---------: | :----------: | :--------: | :-------: |
@@ -453,4 +431,4 @@ The meshes in `mesh_data/pLaplace/` (levels 1–9) are pre-generated. The paper 
 |      7      | mesh_level_8 |   197633   |  195585   |
 |      8      | mesh_level_9 |   788481   |  784385   |
 
-To regenerate FEniCS XDMF meshes from HDF5 source: `python3 pLaplace2D_fenics/export_pLaplace_meshes.py`
+To regenerate FEniCS XDMF meshes from HDF5 source: `python3 src/problems/plaplace/fenics/export_pLaplace_meshes.py`

@@ -1,0 +1,4 @@
+solver,mesh_label,nx,ny,nprocs,problem_size,wall_time_s,solve_time_s,final_compliance,final_volume_fraction,outer_iterations,result,json_path
+jax_parallel,192x96,192,96,8,54763,20.07996985700447,19.24552512599621,11.494123955507334,0.41062065440097884,237,completed,artifacts/reproduction/2026-03-17_local_canonical_resync/runs/topology/mesh_timing/nx192_ny96_np8/output.json
+jax_parallel,384x192,384,192,8,218007,23.446480787009932,22.375375195988454,9.229592394954777,0.386974310138154,73,completed,artifacts/reproduction/2026-03-17_local_canonical_resync/runs/topology/mesh_timing/nx384_ny192_np8/output.json
+jax_parallel,768x384,768,384,8,870001,82.58588095102459,80.57778936892282,9.217814214369056,0.3931804880288663,67,completed,artifacts/reproduction/2026-03-17_local_canonical_resync/runs/topology/mesh_timing/nx768_ny384_np8/output.json

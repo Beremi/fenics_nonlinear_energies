@@ -1,0 +1,36 @@
+{
+  "command": "/home/michal/repos/fenics_nonlinear_energies/.venv/bin/python -u src/problems/ginzburg_landau/jax_petsc/solve_GL_dof.py --level 5 --profile reference --assembly_mode element --local_hessian_mode sfd_local --element_reorder_mode block_xyz --local_coloring --nproc 1 --quiet --out overview/img/runs/ginzburg_landau/showcase/jax_petsc_local_sfd/output.json",
+  "command_argv": [
+    "/home/michal/repos/fenics_nonlinear_energies/.venv/bin/python",
+    "-u",
+    "src/problems/ginzburg_landau/jax_petsc/solve_GL_dof.py",
+    "--level",
+    "5",
+    "--profile",
+    "reference",
+    "--assembly_mode",
+    "element",
+    "--local_hessian_mode",
+    "sfd_local",
+    "--element_reorder_mode",
+    "block_xyz",
+    "--local_coloring",
+    "--nproc",
+    "1",
+    "--quiet",
+    "--out",
+    "overview/img/runs/ginzburg_landau/showcase/jax_petsc_local_sfd/output.json"
+  ],
+  "cwd": "/home/michal/repos/fenics_nonlinear_energies",
+  "duration_s": 3.250076135969721,
+  "exit_code": 0,
+  "finished_at": "2026-03-16T20:34:17Z",
+  "log_path": "/home/michal/repos/fenics_nonlinear_energies/overview/img/runs/ginzburg_landau/showcase/jax_petsc_local_sfd/run.log",
+  "notes": "",
+  "outputs": [
+    "/home/michal/repos/fenics_nonlinear_energies/overview/img/runs/ginzburg_landau/showcase/jax_petsc_local_sfd/output.json"
+  ],
+  "skipped": true,
+  "started_at": "2026-03-16T20:34:14Z",
+  "success": true
+}

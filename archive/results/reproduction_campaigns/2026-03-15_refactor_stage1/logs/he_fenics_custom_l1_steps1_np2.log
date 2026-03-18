@@ -1,0 +1,24 @@
+{
+  "mesh_level": 1,
+  "total_dofs": 2187,
+  "setup_time": 0.018741,
+  "solve_time_total": 2.0186,
+  "total_time": 2.037747,
+  "steps": [
+    {
+      "step": 1,
+      "angle": 0.2617993877991494,
+      "time": 2.0186,
+      "iters": 8,
+      "energy": 0.021651,
+      "message": "Energy change converged",
+      "attempt": "primary",
+      "ksp_rtol_used": 0.001,
+      "ksp_max_it_used": 10000,
+      "linesearch_interval_used": [
+        -0.5,
+        2.0
+      ]
+    }
+  ]
+}

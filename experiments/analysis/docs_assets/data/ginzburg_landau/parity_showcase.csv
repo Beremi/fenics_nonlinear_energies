@@ -1,0 +1,5 @@
+implementation,result,final_energy,energy_delta_vs_ref,rel_energy_delta_vs_ref,newton_iters,linear_iters,wall_time_s
+fenics_custom,completed,0.3462323651,0.0,0.0,8,33,0.1134
+fenics_snes,completed,0.3462,-3.2365099999986935e-05,3.2365099999986935e-05,10,0,0.0355
+jax_petsc_element,completed,0.3462314437821239,-9.213178761013907e-07,9.213178761013907e-07,8,33,0.094885
+jax_petsc_local_sfd,completed,0.34623144378212395,-9.213178760458796e-07,9.213178760458796e-07,8,33,0.24668

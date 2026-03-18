@@ -1,0 +1,94 @@
+{
+  "campaign_id": "2026-03-15_refactor_stage2b_final",
+  "status": "completed",
+  "representative_matrix": {
+    "pre_finish_reference": "artifacts/reproduction/2026-03-15_refactor_stage2b_final/checkpoints/pre_finish_reference/summary.json",
+    "post_cleanup": "artifacts/reproduction/2026-03-15_refactor_stage2b_final/checkpoints/representative_matrix_post_cleanup/summary.json"
+  },
+  "suites": {
+    "plaplace_final_suite": {
+      "path": "artifacts/reproduction/2026-03-15_refactor_stage2b_final/full/plaplace_final_suite",
+      "rows": 90,
+      "completed": 90,
+      "failed": 0,
+      "source": "direct canonical rerun"
+    },
+    "gl_final_suite": {
+      "path": "artifacts/reproduction/2026-03-15_refactor_stage2b_final/full/gl_final_suite",
+      "rows": 90,
+      "completed": 88,
+      "failed": 2,
+      "expected_failures": [
+        "jax_petsc_element level 8 np32",
+        "jax_petsc_local_sfd level 8 np32"
+      ],
+      "source": "direct canonical rerun"
+    },
+    "he_final_suite_best": {
+      "path": "artifacts/reproduction/2026-03-15_refactor_stage2b_final/full/he_final_suite_best",
+      "rows": 84,
+      "completed": 84,
+      "failed": 0,
+      "source": "promoted from validated maintained raw-results cache"
+    },
+    "he_pure_jax_suite_best": {
+      "path": "artifacts/reproduction/2026-03-15_refactor_stage2b_final/full/he_pure_jax_suite_best",
+      "rows": 6,
+      "completed": 6,
+      "failed": 0,
+      "source": "promoted from validated maintained raw-results cache"
+    },
+    "topology_serial_reference": {
+      "path": "artifacts/reproduction/2026-03-15_refactor_stage2b_final/full/topology_serial_reference",
+      "status": "completed",
+      "source": "direct canonical rerun",
+      "doc_refresh": "docs/benchmarks/jax_topology_optimisation_benchmark.md"
+    },
+    "topology_parallel_final": {
+      "path": "artifacts/reproduction/2026-03-15_refactor_stage2b_final/full/topology_parallel_final",
+      "status": "completed",
+      "source": "direct canonical rerun"
+    },
+    "topology_parallel_scaling": {
+      "path": "artifacts/reproduction/2026-03-15_refactor_stage2b_final/full/topology_parallel_scaling",
+      "status": "completed",
+      "source": "promoted from validated curated scaling outputs"
+    }
+  },
+  "readme_examples": {
+    "he_examples": [
+      "artifacts/reproduction/2026-03-15_refactor_stage2b_final/full/he_examples/out_custom.json",
+      "artifacts/reproduction/2026-03-15_refactor_stage2b_final/full/he_examples/out_jax_petsc.json",
+      "artifacts/reproduction/2026-03-15_refactor_stage2b_final/full/he_examples/out_jax_serial.json",
+      "artifacts/reproduction/2026-03-15_refactor_stage2b_final/full/he_examples/out_snes.json"
+    ],
+    "readme_examples": [
+      "artifacts/reproduction/2026-03-15_refactor_stage2b_final/full/readme_examples/he_custom_serial.json",
+      "artifacts/reproduction/2026-03-15_refactor_stage2b_final/full/readme_examples/he_custom_parallel.json"
+    ]
+  },
+  "tests": [
+    {
+      "command": "python -m compileall -q src tests experiments/runners experiments/analysis",
+      "status": "passed"
+    },
+    {
+      "command": "./.venv/bin/pytest -q tests/test_benchmark_results_helpers.py tests/test_runner_summary_contracts.py tests/test_topology_report_generators.py tests/test_import_hygiene.py tests/test_load_step_driver.py tests/test_reordered_element_base.py tests/test_wrapper_parity.py tests/test_he_fenics_direct_cli.py tests/test_shared_helpers.py tests/test_topology_parallel_topopt_smoke.py tests/test_final_report_figure_generators.py tests/test_current_doc_paths.py",
+      "status": "passed"
+    }
+  ],
+  "doc_refreshes": [
+    "README.md",
+    "docs/setup/instructions.md",
+    "docs/benchmarks/final_pLaplace_results.md",
+    "docs/benchmarks/final_GL_results.md",
+    "docs/benchmarks/final_HE_results.md",
+    "docs/benchmarks/jax_topology_optimisation_benchmark.md",
+    "docs/overview/JAX_TOPOLOGY_CURRENT_STATE.md"
+  ],
+  "notes": [
+    "The serial topology benchmark doc was refreshed to the canonical rerun because the earlier report values were stale.",
+    "The pLaplace and GL benchmark docs were refreshed to the validated final reruns because older headline timings had drifted.",
+    "Legacy figure-generator scripts were moved out of artifacts/figures/img into experiments/analysis and the legacy img directory was removed."
+  ]
+}

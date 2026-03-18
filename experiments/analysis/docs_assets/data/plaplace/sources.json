@@ -1,0 +1,6 @@
+{
+  "campaign_root": "artifacts/reproduction/2026-03-17_local_canonical_resync",
+  "sample_state_case": "./.venv/bin/python -u src/problems/plaplace/fenics/solve_pLaplace_custom_jaxversion.py --levels 5 --quiet --json artifacts/reproduction/2026-03-17_local_canonical_resync/runs/readme_docs_smoke/cases/plaplace_fenics_custom_l5/output.json --state-out artifacts/reproduction/2026-03-17_local_canonical_resync/runs/readme_docs_smoke/cases/plaplace_fenics_custom_l5/state.npz",
+  "smoke_summary": "artifacts/reproduction/2026-03-17_local_canonical_resync/runs/readme_docs_smoke/summary.json",
+  "suite_summary": "artifacts/reproduction/2026-03-17_local_canonical_resync/runs/plaplace/final_suite/summary.json"
+}

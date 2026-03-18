@@ -1,0 +1,8 @@
+p-Laplace 2D JAX Newton (single process)
+================================================================================
+  --- Mesh level 5 ---
+An NVIDIA GPU may be present on this machine, but a CUDA-enabled jaxlib is not installed. Falling back to cpu.
+  RESULT mesh_level=5 dofs=2945 setup=0.253s solve=0.102s iters=6 J(u)=-7.9430 [Stopping condition for f is satisfied]
+================================================================================
+Done.
+Results saved to artifacts/reproduction/2026-03-15_refactor_stage1/baseline/plaplace_jax_l5_np1.json

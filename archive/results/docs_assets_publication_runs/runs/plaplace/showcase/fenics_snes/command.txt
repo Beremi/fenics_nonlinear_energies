@@ -1,0 +1,1 @@
+/home/michal/repos/fenics_nonlinear_energies/.venv/bin/python -u src/problems/plaplace/fenics/solve_pLaplace_snes_newton.py --levels 5 --json overview/img/runs/plaplace/showcase/fenics_snes/output.json

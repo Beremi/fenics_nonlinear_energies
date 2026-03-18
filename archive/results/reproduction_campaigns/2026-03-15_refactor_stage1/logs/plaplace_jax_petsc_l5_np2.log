@@ -1,0 +1,14 @@
+p-Laplace 2D DOF-partitioned solver | 2 MPI rank(s) | NPROC=1 | PC=hypre
+================================================================================
+
+  --- Level 5 ---
+An NVIDIA GPU may be present on this machine, but a CUDA-enabled jaxlib is not installed. Falling back to cpu.
+An NVIDIA GPU may be present on this machine, but a CUDA-enabled jaxlib is not installed. Falling back to cpu.
+  [RESULT] level=5 dofs=3201 np=2 solve=0.176s setup=0.298s iters=6 ksp_its_total=17 J=-7.942969 [Converged (energy, step, gradient)]
+
+================================================================================
+Summary:
+  level     dofs  np   setup   solve   total  its    ksp         energy
+      5     3201   2   0.298   0.176   0.510    6     17      -7.942969
+Done.
+Results saved to artifacts/reproduction/2026-03-15_refactor_stage1/baseline/plaplace_jax_petsc_l5_np2.json

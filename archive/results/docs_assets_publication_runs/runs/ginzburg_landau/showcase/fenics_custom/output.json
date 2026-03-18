@@ -1,0 +1,153 @@
+{
+  "metadata": {
+    "solver": "custom_jaxversion",
+    "description": "Custom Newton (JAX-version algorithm): golden-section line search [-0.5, 2], gmres + hypre",
+    "dolfinx_version": "0.10.0.post5",
+    "nprocs": 1,
+    "linear_solver": {
+      "ksp_type": "gmres",
+      "pc_type": "hypre",
+      "ksp_rtol": 0.001,
+      "ksp_max_it": 200
+    },
+    "newton_params": {
+      "tolf": 1e-06,
+      "tolg": 1e-05,
+      "linesearch_interval": [
+        -0.5,
+        2.0
+      ],
+      "linesearch_tol": 0.001,
+      "maxit": 100
+    },
+    "eps": 0.01
+  },
+  "results": [
+    {
+      "mesh_level": 5,
+      "total_dofs": 4225,
+      "dofs": 4225,
+      "nprocs": 1,
+      "pc_type": "hypre",
+      "ksp_rtol": 0.001,
+      "assembly_mode": "fenics",
+      "setup_time": 0.019,
+      "solve_time": 0.109,
+      "total_time": 0.1449,
+      "iters": 8,
+      "energy": 0.3462323651,
+      "message": "Converged (energy, step, gradient)",
+      "total_ksp_its": 33,
+      "asm_time_cumulative": 0.0141,
+      "pc_setup_time_cumulative": 0.0181,
+      "linear_solve_time_cumulative": 0.0157,
+      "ksp_time_cumulative": 0.0338,
+      "hess_timings": [
+        {
+          "assemble_total_time": 0.0018295749323442578,
+          "setop_time": 1.3819662854075432e-06,
+          "set_tolerances_time": 1.79302878677845e-06,
+          "pc_setup_time": 0.003113230923190713,
+          "solve_time": 0.003988664946518838,
+          "linear_total_time": 0.008934645797125995,
+          "ksp_its": 9,
+          "ksp_reason_code": 2,
+          "ksp_reason_name": "CONVERGED_RTOL",
+          "ksp_residual_norm": 8.430281257746975,
+          "rhs_norm": 0.014805984450788214
+        },
+        {
+          "assemble_total_time": 0.0017004510154947639,
+          "setop_time": 1.0009389370679855e-06,
+          "set_tolerances_time": 1.742970198392868e-06,
+          "pc_setup_time": 0.002105928957462311,
+          "solve_time": 0.0026384780649095774,
+          "linear_total_time": 0.006447601947002113,
+          "ksp_its": 6,
+          "ksp_reason_code": 2,
+          "ksp_reason_name": "CONVERGED_RTOL",
+          "ksp_residual_norm": 0.18592527391298413,
+          "rhs_norm": 0.016134125413774122
+        },
+        {
+          "assemble_total_time": 0.0017068599117919803,
+          "setop_time": 1.251930370926857e-06,
+          "set_tolerances_time": 1.8130522221326828e-06,
+          "pc_setup_time": 0.002178178052417934,
+          "solve_time": 0.002287902985699475,
+          "linear_total_time": 0.0061760059325024486,
+          "ksp_its": 5,
+          "ksp_reason_code": 2,
+          "ksp_reason_name": "CONVERGED_RTOL",
+          "ksp_residual_norm": 0.11700257073177772,
+          "rhs_norm": 0.008904692265352185
+        },
+        {
+          "assemble_total_time": 0.001702893991023302,
+          "setop_time": 1.4320248737931252e-06,
+          "set_tolerances_time": 2.01293732970953e-06,
+          "pc_setup_time": 0.002146760933101177,
+          "solve_time": 0.0018794700736179948,
+          "linear_total_time": 0.005732569959945977,
+          "ksp_its": 4,
+          "ksp_reason_code": 2,
+          "ksp_reason_name": "CONVERGED_RTOL",
+          "ksp_residual_norm": 0.014033053613382893,
+          "rhs_norm": 0.013833635218902329
+        },
+        {
+          "assemble_total_time": 0.001997768064029515,
+          "setop_time": 1.751934178173542e-06,
+          "set_tolerances_time": 1.8719583749771118e-06,
+          "pc_setup_time": 0.0021840359549969435,
+          "solve_time": 0.0015322590479627252,
+          "linear_total_time": 0.005717686959542334,
+          "ksp_its": 3,
+          "ksp_reason_code": 2,
+          "ksp_reason_name": "CONVERGED_RTOL",
+          "ksp_residual_norm": 0.0012605446154081421,
+          "rhs_norm": 0.013332521441869949
+        },
+        {
+          "assemble_total_time": 0.0016939920606091619,
+          "setop_time": 1.201988197863102e-06,
+          "set_tolerances_time": 1.3819662854075432e-06,
+          "pc_setup_time": 0.00211334100458771,
+          "solve_time": 0.0011318379547446966,
+          "linear_total_time": 0.004941754974424839,
+          "ksp_its": 2,
+          "ksp_reason_code": 2,
+          "ksp_reason_name": "CONVERGED_RTOL",
+          "ksp_residual_norm": 0.00020407676356681286,
+          "rhs_norm": 0.007663456990910463
+        },
+        {
+          "assemble_total_time": 0.001782553968951106,
+          "setop_time": 8.309725672006607e-07,
+          "set_tolerances_time": 1.2909295037388802e-06,
+          "pc_setup_time": 0.0021252580918371677,
+          "solve_time": 0.0011446579592302442,
+          "linear_total_time": 0.0050545919220894575,
+          "ksp_its": 2,
+          "ksp_reason_code": 2,
+          "ksp_reason_name": "CONVERGED_RTOL",
+          "ksp_residual_norm": 1.0764841203879226e-05,
+          "rhs_norm": 0.0006736091742814544
+        },
+        {
+          "assemble_total_time": 0.001696525956504047,
+          "setop_time": 7.910421118140221e-07,
+          "set_tolerances_time": 1.3719545677304268e-06,
+          "pc_setup_time": 0.002088674111291766,
+          "solve_time": 0.0011438059154897928,
+          "linear_total_time": 0.00493116897996515,
+          "ksp_its": 2,
+          "ksp_reason_code": 2,
+          "ksp_reason_name": "CONVERGED_RTOL",
+          "ksp_residual_norm": 1.195794240395144e-07,
+          "rhs_norm": 4.1365208896226454e-06
+        }
+      ]
+    }
+  ]
+}

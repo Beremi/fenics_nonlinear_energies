@@ -1,0 +1,17 @@
+# cwd: /home/michal/repos/fenics_nonlinear_energies
+# env BLIS_NUM_THREADS=1
+# env JAX_PLATFORMS=cpu
+# env MKL_NUM_THREADS=1
+# env NUMEXPR_NUM_THREADS=1
+# env OMP_NUM_THREADS=1
+# env OPENBLAS_NUM_THREADS=1
+# env VECLIB_MAXIMUM_THREADS=1
+# env XLA_FLAGS=--xla_cpu_multi_thread_eigen=false intra_op_parallelism_threads=1
+# command: /home/michal/repos/fenics_nonlinear_energies/.venv/bin/python -u src/problems/plaplace/fenics/solve_pLaplace_snes_newton.py --levels 5 --json overview/img/runs/plaplace/showcase/fenics_snes/output.json
+
+p-Laplace 2D SNES Newton | 1 MPI process(es)
+================================================================================
+  mesh_level=5 dofs=3201 time=0.067s iters=10 J(u)=-7.9430 reason=2
+================================================================================
+Done.
+Results saved to overview/img/runs/plaplace/showcase/fenics_snes/output.json

@@ -1,0 +1,5 @@
+case_id,implementation,mpi_ranks,median_wall_time_s,median_final_compliance,median_final_volume_fraction,status
+nx192_ny96_np1,jax_parallel,1,47.085980649106205,29.79524941155877,0.3962743681922173,max_outer_iterations
+nx192_ny96_np1,jax_serial,1,10.03310025704559,4.155705577015529,0.40000000000006014,completed
+nx192_ny96_np2,jax_parallel,2,31.317216298077255,29.644388271095217,0.39455138570634374,max_outer_iterations
+nx192_ny96_np4,jax_parallel,4,22.601392460986972,29.461561588448703,0.3919058169828709,max_outer_iterations

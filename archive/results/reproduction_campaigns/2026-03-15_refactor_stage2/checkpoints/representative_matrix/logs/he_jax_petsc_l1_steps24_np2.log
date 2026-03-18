@@ -1,0 +1,450 @@
+An NVIDIA GPU may be present on this machine, but a CUDA-enabled jaxlib is not installed. Falling back to cpu.
+An NVIDIA GPU may be present on this machine, but a CUDA-enabled jaxlib is not installed. Falling back to cpu.
+{
+  "mesh_level": 1,
+  "total_dofs": 2187,
+  "setup_time": 0.865582,
+  "solve_time_total": 20.66314,
+  "total_time": 21.53553,
+  "steps": [
+    {
+      "step": 1,
+      "angle": 1.0471975511965976,
+      "time": 0.897869,
+      "nit": 21,
+      "linear_iters": 271,
+      "energy": 0.3464154957698756,
+      "message": "Converged (energy, step, gradient)",
+      "attempt": "primary",
+      "ksp_rtol_used": 0.1,
+      "ksp_max_it_used": 30,
+      "linesearch_interval_used": [
+        -0.5,
+        2.0
+      ]
+    },
+    {
+      "step": 2,
+      "angle": 2.0943951023931953,
+      "time": 0.833014,
+      "nit": 22,
+      "linear_iters": 282,
+      "energy": 1.3856367013519006,
+      "message": "Converged (energy, step, gradient)",
+      "attempt": "primary",
+      "ksp_rtol_used": 0.1,
+      "ksp_max_it_used": 30,
+      "linesearch_interval_used": [
+        -0.5,
+        2.0
+      ]
+    },
+    {
+      "step": 3,
+      "angle": 3.141592653589793,
+      "time": 0.848954,
+      "nit": 22,
+      "linear_iters": 324,
+      "energy": 3.117339418215385,
+      "message": "Converged (energy, step, gradient)",
+      "attempt": "primary",
+      "ksp_rtol_used": 0.1,
+      "ksp_max_it_used": 30,
+      "linesearch_interval_used": [
+        -0.5,
+        2.0
+      ]
+    },
+    {
+      "step": 4,
+      "angle": 4.1887902047863905,
+      "time": 0.782827,
+      "nit": 21,
+      "linear_iters": 256,
+      "energy": 5.540148013044259,
+      "message": "Converged (energy, step, gradient)",
+      "attempt": "primary",
+      "ksp_rtol_used": 0.1,
+      "ksp_max_it_used": 30,
+      "linesearch_interval_used": [
+        -0.5,
+        2.0
+      ]
+    },
+    {
+      "step": 5,
+      "angle": 5.235987755982988,
+      "time": 0.979069,
+      "nit": 25,
+      "linear_iters": 372,
+      "energy": 8.650498877558826,
+      "message": "Converged (energy, step, gradient)",
+      "attempt": "primary",
+      "ksp_rtol_used": 0.1,
+      "ksp_max_it_used": 30,
+      "linesearch_interval_used": [
+        -0.5,
+        2.0
+      ]
+    },
+    {
+      "step": 6,
+      "angle": 6.283185307179586,
+      "time": 0.877157,
+      "nit": 23,
+      "linear_iters": 316,
+      "energy": 12.442272175612501,
+      "message": "Converged (energy, step, gradient)",
+      "attempt": "primary",
+      "ksp_rtol_used": 0.1,
+      "ksp_max_it_used": 30,
+      "linesearch_interval_used": [
+        -0.5,
+        2.0
+      ]
+    },
+    {
+      "step": 7,
+      "angle": 7.330382858376184,
+      "time": 0.791311,
+      "nit": 21,
+      "linear_iters": 267,
+      "energy": 16.911567253492002,
+      "message": "Converged (energy, step, gradient)",
+      "attempt": "primary",
+      "ksp_rtol_used": 0.1,
+      "ksp_max_it_used": 30,
+      "linesearch_interval_used": [
+        -0.5,
+        2.0
+      ]
+    },
+    {
+      "step": 8,
+      "angle": 8.377580409572781,
+      "time": 0.804123,
+      "nit": 21,
+      "linear_iters": 261,
+      "energy": 22.061739389531642,
+      "message": "Converged (energy, step, gradient)",
+      "attempt": "primary",
+      "ksp_rtol_used": 0.1,
+      "ksp_max_it_used": 30,
+      "linesearch_interval_used": [
+        -0.5,
+        2.0
+      ]
+    },
+    {
+      "step": 9,
+      "angle": 9.42477796076938,
+      "time": 0.808155,
+      "nit": 21,
+      "linear_iters": 277,
+      "energy": 27.89898107452476,
+      "message": "Converged (energy, step, gradient)",
+      "attempt": "primary",
+      "ksp_rtol_used": 0.1,
+      "ksp_max_it_used": 30,
+      "linesearch_interval_used": [
+        -0.5,
+        2.0
+      ]
+    },
+    {
+      "step": 10,
+      "angle": 10.471975511965976,
+      "time": 0.888666,
+      "nit": 23,
+      "linear_iters": 315,
+      "energy": 34.42650152250434,
+      "message": "Converged (energy, step, gradient)",
+      "attempt": "primary",
+      "ksp_rtol_used": 0.1,
+      "ksp_max_it_used": 30,
+      "linesearch_interval_used": [
+        -0.5,
+        2.0
+      ]
+    },
+    {
+      "step": 11,
+      "angle": 11.519173063162574,
+      "time": 0.883224,
+      "nit": 23,
+      "linear_iters": 313,
+      "energy": 41.64410450477445,
+      "message": "Converged (energy, step, gradient)",
+      "attempt": "primary",
+      "ksp_rtol_used": 0.1,
+      "ksp_max_it_used": 30,
+      "linesearch_interval_used": [
+        -0.5,
+        2.0
+      ]
+    },
+    {
+      "step": 12,
+      "angle": 12.566370614359172,
+      "time": 0.851158,
+      "nit": 22,
+      "linear_iters": 290,
+      "energy": 49.55006981496109,
+      "message": "Converged (energy, step, gradient)",
+      "attempt": "primary",
+      "ksp_rtol_used": 0.1,
+      "ksp_max_it_used": 30,
+      "linesearch_interval_used": [
+        -0.5,
+        2.0
+      ]
+    },
+    {
+      "step": 13,
+      "angle": 13.613568165555769,
+      "time": 0.821386,
+      "nit": 21,
+      "linear_iters": 282,
+      "energy": 58.142660761090994,
+      "message": "Converged (energy, step, gradient)",
+      "attempt": "primary",
+      "ksp_rtol_used": 0.1,
+      "ksp_max_it_used": 30,
+      "linesearch_interval_used": [
+        -0.5,
+        2.0
+      ]
+    },
+    {
+      "step": 14,
+      "angle": 14.660765716752367,
+      "time": 0.904502,
+      "nit": 23,
+      "linear_iters": 323,
+      "energy": 67.42079092309844,
+      "message": "Converged (energy, step, gradient)",
+      "attempt": "primary",
+      "ksp_rtol_used": 0.1,
+      "ksp_max_it_used": 30,
+      "linesearch_interval_used": [
+        -0.5,
+        2.0
+      ]
+    },
+    {
+      "step": 15,
+      "angle": 15.707963267948964,
+      "time": 0.86459,
+      "nit": 22,
+      "linear_iters": 308,
+      "energy": 77.38305928005664,
+      "message": "Converged (energy, step, gradient)",
+      "attempt": "primary",
+      "ksp_rtol_used": 0.1,
+      "ksp_max_it_used": 30,
+      "linesearch_interval_used": [
+        -0.5,
+        2.0
+      ]
+    },
+    {
+      "step": 16,
+      "angle": 16.755160819145562,
+      "time": 0.778444,
+      "nit": 20,
+      "linear_iters": 269,
+      "energy": 88.01806205522412,
+      "message": "Converged (energy, step, gradient)",
+      "attempt": "primary",
+      "ksp_rtol_used": 0.1,
+      "ksp_max_it_used": 30,
+      "linesearch_interval_used": [
+        -0.5,
+        2.0
+      ]
+    },
+    {
+      "step": 17,
+      "angle": 17.80235837034216,
+      "time": 0.947664,
+      "nit": 24,
+      "linear_iters": 340,
+      "energy": 99.32698722839862,
+      "message": "Converged (energy, step, gradient)",
+      "attempt": "primary",
+      "ksp_rtol_used": 0.1,
+      "ksp_max_it_used": 30,
+      "linesearch_interval_used": [
+        -0.5,
+        2.0
+      ]
+    },
+    {
+      "step": 18,
+      "angle": 18.84955592153876,
+      "time": 0.960465,
+      "nit": 24,
+      "linear_iters": 353,
+      "energy": 111.32620344925469,
+      "message": "Converged (energy, step, gradient)",
+      "attempt": "primary",
+      "ksp_rtol_used": 0.1,
+      "ksp_max_it_used": 30,
+      "linesearch_interval_used": [
+        -0.5,
+        2.0
+      ]
+    },
+    {
+      "step": 19,
+      "angle": 19.896753472735355,
+      "time": 0.910712,
+      "nit": 23,
+      "linear_iters": 316,
+      "energy": 124.01553863371424,
+      "message": "Converged (energy, step, gradient)",
+      "attempt": "primary",
+      "ksp_rtol_used": 0.1,
+      "ksp_max_it_used": 30,
+      "linesearch_interval_used": [
+        -0.5,
+        2.0
+      ]
+    },
+    {
+      "step": 20,
+      "angle": 20.94395102393195,
+      "time": 0.836104,
+      "nit": 21,
+      "linear_iters": 301,
+      "energy": 137.39233470343586,
+      "message": "Converged (energy, step, gradient)",
+      "attempt": "primary",
+      "ksp_rtol_used": 0.1,
+      "ksp_max_it_used": 30,
+      "linesearch_interval_used": [
+        -0.5,
+        2.0
+      ]
+    },
+    {
+      "step": 21,
+      "angle": 21.991148575128552,
+      "time": 0.922066,
+      "nit": 23,
+      "linear_iters": 326,
+      "energy": 151.45523223190725,
+      "message": "Converged (energy, step, gradient)",
+      "attempt": "primary",
+      "ksp_rtol_used": 0.1,
+      "ksp_max_it_used": 30,
+      "linesearch_interval_used": [
+        -0.5,
+        2.0
+      ]
+    },
+    {
+      "step": 22,
+      "angle": 23.03834612632515,
+      "time": 0.811418,
+      "nit": 20,
+      "linear_iters": 298,
+      "energy": 166.2042209328653,
+      "message": "Converged (energy, step, gradient)",
+      "attempt": "primary",
+      "ksp_rtol_used": 0.1,
+      "ksp_max_it_used": 30,
+      "linesearch_interval_used": [
+        -0.5,
+        2.0
+      ]
+    },
+    {
+      "step": 23,
+      "angle": 24.085543677521745,
+      "time": 0.857346,
+      "nit": 22,
+      "linear_iters": 275,
+      "energy": 181.638708086406,
+      "message": "Converged (energy, step, gradient)",
+      "attempt": "primary",
+      "ksp_rtol_used": 0.1,
+      "ksp_max_it_used": 30,
+      "linesearch_interval_used": [
+        -0.5,
+        2.0
+      ]
+    },
+    {
+      "step": 24,
+      "angle": 25.132741228718345,
+      "time": 0.802916,
+      "nit": 20,
+      "linear_iters": 285,
+      "energy": 197.75512338531667,
+      "message": "Converged (energy, step, gradient)",
+      "attempt": "primary",
+      "ksp_rtol_used": 0.1,
+      "ksp_max_it_used": 30,
+      "linesearch_interval_used": [
+        -0.5,
+        2.0
+      ]
+    }
+  ],
+  "free_dofs": 2133,
+  "metadata": {
+    "profile": "reference",
+    "nprocs": 2,
+    "nproc_threads": 1,
+    "linear_solver": {
+      "ksp_type": "gmres",
+      "pc_type": "hypre",
+      "ksp_rtol": 0.1,
+      "ksp_max_it": 30,
+      "pc_setup_on_ksp_cap": true,
+      "gamg_threshold": 0.05,
+      "gamg_agg_nsmooths": 1,
+      "gamg_set_coordinates": true,
+      "use_near_nullspace": true,
+      "matrix_block_size": 3,
+      "reorder": false,
+      "hvp_eval_mode": "sequential",
+      "assembly_mode": "sfd",
+      "element_reorder_mode": null,
+      "local_hessian_mode": null,
+      "distribution_strategy": "reduced_free_dofs",
+      "assembler": "LocalColoringAssembler",
+      "trust_subproblem_solver": "reduced_2d",
+      "trust_subproblem_line_search": false
+    },
+    "newton": {
+      "tolf": 0.0001,
+      "tolg": 0.001,
+      "tolg_rel": 0.001,
+      "tolx_rel": 0.001,
+      "tolx_abs": 1e-10,
+      "maxit": 100,
+      "require_all_convergence": true,
+      "fail_on_nonfinite": true,
+      "linesearch_interval": [
+        -0.5,
+        2.0
+      ],
+      "linesearch_tol": 0.001,
+      "trust_region": false,
+      "trust_radius_init": 1.0,
+      "trust_radius_min": 1e-08,
+      "trust_radius_max": 1000000.0,
+      "trust_subproblem_line_search": false,
+      "step_time_limit_s": null
+    },
+    "load_stepping": {
+      "start_step": 1,
+      "steps": 24,
+      "total_steps": 24,
+      "rotation_per_iter": 1.0471975511965976,
+      "retry_on_failure": true
+    }
+  }
+}
