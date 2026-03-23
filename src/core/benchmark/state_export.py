@@ -63,6 +63,39 @@ def export_scalar_function_state_npz(
     np.savez(path, **payload)
 
 
+def export_scalar_mesh_state_npz(
+    path: str | Path,
+    *,
+    coords: np.ndarray,
+    triangles: np.ndarray,
+    u: np.ndarray,
+    mesh_level: int,
+    problem_name: str,
+    energy: float | None = None,
+    metadata: Mapping[str, object] | None = None,
+) -> None:
+    """Export one scalar P1 state directly from mesh arrays and nodal values."""
+    coords = np.asarray(coords, dtype=np.float64).reshape((-1, 2))
+    triangles = np.asarray(triangles, dtype=np.int32)
+    values = np.asarray(u, dtype=np.float64).reshape((-1,))
+
+    payload = _npz_payload(
+        {
+            "coords": coords,
+            "triangles": triangles,
+            "u": values,
+        },
+        metadata={
+            "mesh_level": int(mesh_level),
+            "problem_name": str(problem_name),
+            **({"energy": float(energy)} if energy is not None else {}),
+            **dict(metadata or {}),
+        },
+    )
+    Path(path).parent.mkdir(parents=True, exist_ok=True)
+    np.savez(path, **payload)
+
+
 def export_hyperelasticity_state_npz(
     path: str | Path,
     *,
@@ -90,6 +123,41 @@ def export_hyperelasticity_state_npz(
         metadata={
             "mesh_level": int(mesh_level),
             "total_steps": int(total_steps),
+            **({"energy": float(energy)} if energy is not None else {}),
+            **dict(metadata or {}),
+        },
+    )
+    Path(path).parent.mkdir(parents=True, exist_ok=True)
+    np.savez(path, **payload)
+
+
+def export_planestrain_state_npz(
+    path: str | Path,
+    *,
+    coords_ref: np.ndarray,
+    x_final: np.ndarray,
+    triangles: np.ndarray,
+    case_name: str,
+    lambda_target: float,
+    energy: float | None = None,
+    metadata: Mapping[str, object] | None = None,
+) -> None:
+    """Export one 2D vector state as reference/deformed coordinates and connectivity."""
+    coords_ref = np.asarray(coords_ref, dtype=np.float64).reshape((-1, 2))
+    x_final = np.asarray(x_final, dtype=np.float64).reshape((-1, 2))
+    triangles = np.asarray(triangles, dtype=np.int32)
+    displacement = x_final - coords_ref
+
+    payload = _npz_payload(
+        {
+            "coords_ref": coords_ref,
+            "coords_final": x_final,
+            "displacement": displacement,
+            "triangles": triangles,
+        },
+        metadata={
+            "case_name": str(case_name),
+            "lambda_target": float(lambda_target),
             **({"energy": float(energy)} if energy is not None else {}),
             **dict(metadata or {}),
         },

@@ -163,6 +163,11 @@ def newton(
     tolg_rel=0.0,
     linesearch_tol=1e-3,
     linesearch_interval=(-0.5, 2.0),
+    line_search="golden_fixed",
+    armijo_alpha0=1.0,
+    armijo_c1=1e-4,
+    armijo_shrink=0.5,
+    armijo_max_ls=40,
     maxit=100,
     tolx_rel=1e-6,
     tolx_abs=1e-10,
@@ -316,6 +321,38 @@ def newton(
                 return np.inf
             return val
 
+        def _bounded_armijo(alpha_lo, alpha_hi, directional_derivative):
+            alpha_lo = float(alpha_lo)
+            alpha_hi = float(alpha_hi)
+            if (
+                not np.isfinite(alpha_lo)
+                or not np.isfinite(alpha_hi)
+                or alpha_hi <= max(alpha_lo, 0.0) + 1.0e-14
+            ):
+                return 0.0, np.inf, 0, False
+            alpha_trial = min(
+                max(float(armijo_alpha0), max(alpha_lo, 1.0e-12)),
+                float(alpha_hi),
+            )
+            n_eval = 0
+            for _ls_it in range(max(1, int(armijo_max_ls))):
+                trial_value = _energy_at_alpha(alpha_trial)
+                n_eval += 1
+                if (
+                    np.isfinite(trial_value)
+                    and trial_value <= fx_old + armijo_c1 * alpha_trial * directional_derivative
+                ):
+                    return float(alpha_trial), float(trial_value), int(n_eval), True
+                next_alpha = alpha_trial * float(armijo_shrink)
+                floor_alpha = max(alpha_lo, 1.0e-12)
+                if next_alpha <= floor_alpha + 1.0e-16:
+                    alpha_trial = floor_alpha
+                    if alpha_trial <= floor_alpha + 1.0e-16:
+                        break
+                else:
+                    alpha_trial = next_alpha
+            return 0.0, np.inf, int(n_eval), False
+
         if trust_region:
             trust_radius = min(max(trust_radius, trust_radius_min), trust_radius_max)
 
@@ -356,26 +393,46 @@ def newton(
                                 and np.isfinite(alpha_hi)
                                 and alpha_hi > alpha_lo + 1e-14
                             ):
-                                alpha_lo, alpha_hi, ls_repair_evals, ls_repaired = _repair_linesearch_interval(
-                                    _energy_at_alpha,
-                                    alpha_lo,
-                                    alpha_hi,
-                                    center=0.0,
-                                    center_value=fx_old,
-                                    tol=linesearch_tol,
-                                )
-                                ls_evals += ls_repair_evals
-                                alpha, ls_eval_local = golden_section_search(
-                                    _energy_at_alpha, alpha_lo, alpha_hi, linesearch_tol
-                                )
-                                ls_evals += ls_eval_local
-                                newval = _energy_at_alpha(alpha)
-                                pred_reduction = -(
-                                    alpha * step_linear + 0.5 * (alpha ** 2) * step_curv
-                                )
-                                actual_reduction = (
-                                    fx_old - newval if np.isfinite(newval) else -np.inf
-                                )
+                                if str(line_search) == "armijo":
+                                    alpha, newval, ls_eval_local, accepted_armijo = _bounded_armijo(
+                                        alpha_lo,
+                                        alpha_hi,
+                                        step_linear,
+                                    )
+                                    ls_evals += ls_eval_local
+                                    if accepted_armijo:
+                                        pred_reduction = -(
+                                            alpha * step_linear + 0.5 * (alpha ** 2) * step_curv
+                                        )
+                                        actual_reduction = (
+                                            fx_old - newval if np.isfinite(newval) else -np.inf
+                                        )
+                                    else:
+                                        alpha = 0.0
+                                        newval = np.inf
+                                        pred_reduction = 0.0
+                                        actual_reduction = -np.inf
+                                else:
+                                    alpha_lo, alpha_hi, ls_repair_evals, ls_repaired = _repair_linesearch_interval(
+                                        _energy_at_alpha,
+                                        alpha_lo,
+                                        alpha_hi,
+                                        center=0.0,
+                                        center_value=fx_old,
+                                        tol=linesearch_tol,
+                                    )
+                                    ls_evals += ls_repair_evals
+                                    alpha, ls_eval_local = golden_section_search(
+                                        _energy_at_alpha, alpha_lo, alpha_hi, linesearch_tol
+                                    )
+                                    ls_evals += ls_eval_local
+                                    newval = _energy_at_alpha(alpha)
+                                    pred_reduction = -(
+                                        alpha * step_linear + 0.5 * (alpha ** 2) * step_curv
+                                    )
+                                    actual_reduction = (
+                                        fx_old - newval if np.isfinite(newval) else -np.inf
+                                    )
                             else:
                                 alpha = 0.0
                                 newval = np.inf
@@ -697,20 +754,29 @@ def newton(
             h.copy(p)
             pnorm = p.norm(PETSc.NormType.NORM_2)
             if pnorm > 1e-20:
-                ls_a_eff, ls_b_eff, ls_repair_evals, ls_repaired = _repair_linesearch_interval(
-                    _energy_at_alpha,
-                    ls_a,
-                    ls_b,
-                    center=0.0,
-                    center_value=fx_old,
-                    tol=linesearch_tol,
-                )
-                ls_evals += ls_repair_evals
-                alpha, ls_eval_local = golden_section_search(
-                    _energy_at_alpha, ls_a_eff, ls_b_eff, linesearch_tol
-                )
-                ls_evals += ls_eval_local
-                fx_trial = _energy_at_alpha(alpha)
+                if str(line_search) == "armijo":
+                    directional_derivative = float(g.dot(p))
+                    alpha, fx_trial, ls_eval_local, accepted_armijo = _bounded_armijo(
+                        ls_a,
+                        ls_b,
+                        directional_derivative,
+                    )
+                    ls_evals += ls_eval_local
+                else:
+                    ls_a_eff, ls_b_eff, ls_repair_evals, ls_repaired = _repair_linesearch_interval(
+                        _energy_at_alpha,
+                        ls_a,
+                        ls_b,
+                        center=0.0,
+                        center_value=fx_old,
+                        tol=linesearch_tol,
+                    )
+                    ls_evals += ls_repair_evals
+                    alpha, ls_eval_local = golden_section_search(
+                        _energy_at_alpha, ls_a_eff, ls_b_eff, linesearch_tol
+                    )
+                    ls_evals += ls_eval_local
+                    fx_trial = _energy_at_alpha(alpha)
                 if np.isfinite(fx_trial) and fx_trial < fx_old:
                     fx = fx_trial
                     dE = fx_old - fx
@@ -785,6 +851,7 @@ def newton(
                     "trust_radius": float(trust_radius),
                     "trust_ratio": float(rho),
                     "trust_qp": float(trust_qp),
+                    "line_search": str(line_search),
                 }
             )
 

@@ -1,0 +1,18 @@
+{
+  "state": "/home/michal/repos/fenics_nonlinear_energies/artifacts/raw_results/docs_showcase/mc_plasticity_p4_l5/state.npz",
+  "result": "/home/michal/repos/fenics_nonlinear_energies/artifacts/raw_results/docs_showcase/mc_plasticity_p4_l5/output.json",
+  "out_dir": "/home/michal/repos/fenics_nonlinear_energies/docs/assets/plasticity",
+  "subdivisions": 6,
+  "level": 5,
+  "degree": 4,
+  "nodes": 167361,
+  "elements": 20800,
+  "free_dofs": 332960,
+  "quad_points_per_element": 19,
+  "lambda_target": 1.0,
+  "energy": -212.5376843147904,
+  "omega": 425.5157182510818,
+  "u_max": 0.0766842386532609,
+  "displacement_png": "/home/michal/repos/fenics_nonlinear_energies/docs/assets/plasticity/mc_plasticity_p4_l5_displacement.png",
+  "deviatoric_png": "/home/michal/repos/fenics_nonlinear_energies/docs/assets/plasticity/mc_plasticity_p4_l5_deviatoric_strain_robust.png"
+}

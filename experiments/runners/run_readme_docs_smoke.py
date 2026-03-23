@@ -157,6 +157,28 @@ def _parse_topology_payload(payload: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _parse_slope_stability_payload(payload: dict[str, Any]) -> dict[str, Any]:
+    result = dict(payload.get("result", {}))
+    timings = dict(payload.get("timings", {}))
+    steps = list(result.get("steps", []))
+    if steps:
+        step0 = dict(steps[0])
+        return {
+            "result": str(result.get("status", step0.get("message", "unknown"))),
+            "solver_wall_time_s": float(timings.get("solve_time", math.nan)),
+            "final_energy": float(step0.get("energy", math.nan)),
+            "newton_iters": int(step0.get("nit", 0)),
+            "linear_iters": int(step0.get("linear_iters", 0)),
+        }
+    return {
+        "result": str(result.get("status", "unknown")),
+        "solver_wall_time_s": float(timings.get("solve_time", math.nan)),
+        "final_energy": float(result.get("final_energy", math.nan)),
+        "newton_iters": int(result.get("newton_iters", 0)),
+        "linear_iters": int(result.get("linear_iters", 0)),
+    }
+
+
 def _case_output_exists(case: dict[str, Any]) -> bool:
     output_json = case.get("output_json")
     if output_json is not None and not Path(output_json).exists():
@@ -214,7 +236,7 @@ def _smoke_cases(out_dir: Path) -> list[dict[str, Any]]:
             "--levels",
             "5",
             "--quiet",
-            "--json",
+            "--out",
             str(path / "output.json"),
             "--state-out",
             str(path / "state.npz"),
@@ -285,7 +307,6 @@ def _smoke_cases(out_dir: Path) -> list[dict[str, Any]]:
         output_json=path / "output.json",
         parser="scalar",
     )
-
     # Ginzburg-Landau
     path = case_dir("gl_fenics_custom_l5")
     add_case(
@@ -796,6 +817,52 @@ def _smoke_cases(out_dir: Path) -> list[dict[str, Any]]:
         timeout_s=21600.0,
     )
 
+    path = case_dir("mc_plasticity_p4_pmg")
+    add_case(
+        case_id="mc_plasticity_p4_pmg",
+        source_files=[
+            "README.md",
+            "docs/problems/Plasticity.md",
+            "docs/results/Plasticity.md",
+            "docs/setup/quickstart.md",
+        ],
+        argv=[
+            str(PYTHON),
+            "-u",
+            "src/problems/slope_stability/jax_petsc/solve_slope_stability_dof.py",
+            "--level",
+            "5",
+            "--elem_degree",
+            "4",
+            "--lambda-target",
+            "1.0",
+            "--profile",
+            "performance",
+            "--pc_type",
+            "mg",
+            "--mg_strategy",
+            "same_mesh_p4_p2_p1_lminus1_p1",
+            "--mg_variant",
+            "legacy_pmg",
+            "--ksp_type",
+            "fgmres",
+            "--ksp_rtol",
+            "1e-2",
+            "--ksp_max_it",
+            "100",
+            "--quiet",
+            "--no-use_trust_region",
+            "--json",
+            str(path / "output.json"),
+            "--state-out",
+            str(path / "state.npz"),
+        ],
+        output_json=path / "output.json",
+        state_path=path / "state.npz",
+        parser="slope_stability",
+        note="Featured Mohr-Coulomb plasticity P4 PMG showcase run.",
+    )
+
     # README SNES continuation rows.
     for steps in (96, 192, 384):
         path = case_dir(f"he_snes_l3_np16_steps{steps}")
@@ -856,6 +923,8 @@ def _parse_payload(parser_name: str, payload: dict[str, Any]) -> dict[str, Any]:
         return _parse_he_snes_payload(payload)
     if parser_name == "topology":
         return _parse_topology_payload(payload)
+    if parser_name == "slope_stability":
+        return _parse_slope_stability_payload(payload)
     raise KeyError(parser_name)
 
 

@@ -27,3 +27,8 @@ def test_scalar_publication_export_flags_are_available() -> None:
 
 def test_he_publication_export_flag_is_available() -> None:
     assert "--state-out" in _help_text("src/problems/hyperelasticity/jax/solve_HE_jax_newton.py")
+
+
+def test_slope_stability_publication_export_flag_is_available() -> None:
+    assert "--state-out" in _help_text("src/problems/slope_stability/jax/solve_slope_stability_jax.py")
+    assert "--state-out" in _help_text("src/problems/slope_stability/jax_petsc/solve_slope_stability_dof.py")

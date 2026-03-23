@@ -20,9 +20,10 @@ def needs_solver_repair(
         or "nan" in msg
     )
     hit_newton_maxit = "maximum number of iterations reached" in msg
+    hit_linear_failure = "linear solve failed" in msg
     if retry_on_nonfinite and has_nonfinite:
         return True
-    return bool(retry_on_maxit and hit_newton_maxit)
+    return bool(retry_on_maxit and (hit_newton_maxit or hit_linear_failure))
 
 
 def build_retry_attempts(

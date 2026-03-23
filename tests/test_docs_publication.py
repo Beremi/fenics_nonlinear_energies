@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import subprocess
 from pathlib import Path
 
 from experiments.analysis.docs_assets import common
@@ -7,6 +8,15 @@ from experiments.analysis.docs_assets import common
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 DOCS_ROOT = REPO_ROOT / "docs"
+
+
+def _tracked_doc_names(subdir: str) -> list[str]:
+    output = subprocess.check_output(
+        ["git", "ls-files", f"docs/{subdir}/*.md"],
+        cwd=REPO_ROOT,
+        text=True,
+    )
+    return sorted(Path(line).name for line in output.splitlines() if line)
 ASSETS_ROOT = DOCS_ROOT / "assets"
 BUILD_ROOT = REPO_ROOT / "experiments" / "analysis" / "docs_assets"
 BANNED_SNIPPETS = (
@@ -29,10 +39,12 @@ def test_current_docs_structure_exists() -> None:
         DOCS_ROOT / "problems" / "pLaplace.md",
         DOCS_ROOT / "problems" / "GinzburgLandau.md",
         DOCS_ROOT / "problems" / "HyperElasticity.md",
+        DOCS_ROOT / "problems" / "Plasticity.md",
         DOCS_ROOT / "problems" / "Topology.md",
         DOCS_ROOT / "results" / "pLaplace.md",
         DOCS_ROOT / "results" / "GinzburgLandau.md",
         DOCS_ROOT / "results" / "HyperElasticity.md",
+        DOCS_ROOT / "results" / "Plasticity.md",
         DOCS_ROOT / "results" / "Topology.md",
     ]
     for path in expected:
@@ -44,18 +56,18 @@ def test_retired_overview_markdown_surface_is_gone() -> None:
 
 
 def test_problem_pages_contain_required_sections() -> None:
-    for name in ("pLaplace", "GinzburgLandau", "HyperElasticity", "Topology"):
+    for name in ("pLaplace", "GinzburgLandau", "HyperElasticity", "Plasticity", "Topology"):
         text = (DOCS_ROOT / "problems" / f"{name}.md").read_text(encoding="utf-8")
         assert "## Mathematical Formulation" in text
-        assert "## Maintained Implementations" in text
         assert "## Commands Used" in text
         assert "![" in text
+        assert ("## Maintained Implementations" in text) or ("## Implementation Status" in text)
         assert ("Energy Table Across Levels" in text) or ("Resolution / Objective Table" in text)
     assert ".gif" in (DOCS_ROOT / "problems" / "Topology.md").read_text(encoding="utf-8")
 
 
 def test_results_pages_contain_required_sections() -> None:
-    for name in ("pLaplace", "GinzburgLandau", "HyperElasticity", "Topology"):
+    for name in ("pLaplace", "GinzburgLandau", "HyperElasticity", "Plasticity", "Topology"):
         text = (DOCS_ROOT / "results" / f"{name}.md").read_text(encoding="utf-8")
         assert "## Current Maintained Comparison" in text
         assert "## Reproduction Commands" in text
@@ -76,15 +88,27 @@ def test_current_assets_exist_under_docs_assets() -> None:
         "hyperelasticity/hyperelasticity_energy_levels.pdf",
         "hyperelasticity/hyperelasticity_strong_scaling.pdf",
         "hyperelasticity/hyperelasticity_mesh_timing.pdf",
+        "plasticity/mc_plasticity_p4_l5_displacement.pdf",
+        "plasticity/mc_plasticity_p4_l5_deviatoric_strain_robust.pdf",
         "topology/topology_final_density.pdf",
         "topology/topology_objective_history.pdf",
         "topology/topology_strong_scaling.pdf",
         "topology/topology_mesh_timing.pdf",
     ]
     expected_png = [rel.replace(".pdf", ".png") for rel in expected_pdf]
+    expected_png_only = [
+        "plasticity/plasticity_p4_l7_scaling_overall_loglog.png",
+        "plasticity/plasticity_p4_l7_scaling_per_linear_iteration_loglog.png",
+        "plasticity/plasticity_p4_l7_setup_subparts_loglog.png",
+        "plasticity/plasticity_p4_l7_callback_breakdown_loglog.png",
+        "plasticity/plasticity_p4_l7_linear_breakdown_loglog.png",
+        "plasticity/plasticity_p4_l7_pmg_internal_loglog.png",
+    ]
     for rel in expected_pdf:
         assert (ASSETS_ROOT / rel).exists(), rel
     for rel in expected_png:
+        assert (ASSETS_ROOT / rel).exists(), rel
+    for rel in expected_png_only:
         assert (ASSETS_ROOT / rel).exists(), rel
     assert (ASSETS_ROOT / "topology" / "topology_parallel_final_evolution.gif").exists()
 
@@ -101,10 +125,16 @@ def test_docs_use_only_current_repo_relative_paths() -> None:
 
 
 def test_current_docs_have_one_problem_and_one_results_page_per_family() -> None:
-    problems = sorted(path.name for path in (DOCS_ROOT / "problems").glob("*.md"))
-    results = sorted(path.name for path in (DOCS_ROOT / "results").glob("*.md"))
-    assert problems == ["GinzburgLandau.md", "HyperElasticity.md", "Topology.md", "pLaplace.md"]
-    assert results == ["GinzburgLandau.md", "HyperElasticity.md", "Topology.md", "pLaplace.md"]
+    problems = _tracked_doc_names("problems")
+    results = _tracked_doc_names("results")
+    assert problems == [
+        "GinzburgLandau.md",
+        "HyperElasticity.md",
+        "Plasticity.md",
+        "Topology.md",
+        "pLaplace.md",
+    ]
+    assert results == ["GinzburgLandau.md", "HyperElasticity.md", "Plasticity.md", "Topology.md", "pLaplace.md"]
 
 
 def test_publication_style_constants_remain_locked() -> None:

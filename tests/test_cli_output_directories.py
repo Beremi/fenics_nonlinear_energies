@@ -54,6 +54,24 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
             ],
             ["result"],
         ),
+        (
+            "src/problems/slope_stability/jax/solve_slope_stability_jax.py",
+            "--json",
+            ["--quiet", "--state-out", "__STATE_PLACEHOLDER__"],
+            ["result"],
+        ),
+        (
+            "src/problems/slope_stability/jax_petsc/solve_slope_stability_dof.py",
+            "--out",
+            [
+                "--level",
+                "1",
+                "--quiet",
+                "--state-out",
+                "__STATE_PLACEHOLDER__",
+            ],
+            ["result"],
+        ),
     ],
 )
 def test_cli_creates_missing_output_directories(
@@ -64,7 +82,11 @@ def test_cli_creates_missing_output_directories(
     tmp_path: Path,
 ) -> None:
     out_path = tmp_path / "nested" / "results" / "run.json"
-    cmd = [sys.executable, script_path, *extra_args, output_flag, str(out_path)]
+    resolved_extra_args = list(extra_args)
+    if "__STATE_PLACEHOLDER__" in resolved_extra_args:
+        state_path = tmp_path / "nested" / "state" / "state.npz"
+        resolved_extra_args[resolved_extra_args.index("__STATE_PLACEHOLDER__")] = str(state_path)
+    cmd = [sys.executable, script_path, *resolved_extra_args, output_flag, str(out_path)]
     subprocess.run(
         cmd,
         cwd=REPO_ROOT,

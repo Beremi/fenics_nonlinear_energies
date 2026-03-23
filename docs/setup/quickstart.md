@@ -10,11 +10,13 @@ solvers and maintained benchmark runners.
   - [pLaplace](../problems/pLaplace.md)
   - [GinzburgLandau](../problems/GinzburgLandau.md)
   - [HyperElasticity](../problems/HyperElasticity.md)
+  - [Plasticity](../problems/Plasticity.md)
   - [Topology](../problems/Topology.md)
 - current maintained results:
   - [pLaplace results](../results/pLaplace.md)
   - [GinzburgLandau results](../results/GinzburgLandau.md)
   - [HyperElasticity results](../results/HyperElasticity.md)
+  - [Plasticity results](../results/Plasticity.md)
   - [Topology results](../results/Topology.md)
 
 ## Environment
@@ -227,6 +229,27 @@ mpiexec -n 32 ./.venv/bin/python -u src/problems/topology/jax/solve_topopt_paral
   --outer_snapshot_dir artifacts/raw_results/example_runs/topology_parallel_frames \
   --json_out artifacts/raw_results/example_runs/topology_parallel_final.json \
   --state_out artifacts/raw_results/example_runs/topology_parallel_final_state.npz
+```
+
+### Mohr-Coulomb Plasticity `P4` PMG Solve
+
+The current featured parallel path lives under
+`src/problems/slope_stability/`, but the official problem description is now
+the plane-strain Mohr-Coulomb plasticity model. The showcased high-resolution
+run uses the `L5` same-mesh `P4` space with a PMG hierarchy.
+
+Problem page: [Plasticity](../problems/Plasticity.md)  
+Current maintained results: [Plasticity results](../results/Plasticity.md)
+
+```bash
+./.venv/bin/python -u src/problems/slope_stability/jax_petsc/solve_slope_stability_dof.py \
+  --level 5 --elem_degree 4 --lambda-target 1.0 \
+  --profile performance --pc_type mg \
+  --mg_strategy same_mesh_p4_p2_p1_lminus1_p1 --mg_variant legacy_pmg \
+  --ksp_type fgmres --ksp_rtol 1e-2 --ksp_max_it 100 \
+  --save-linear-timing --no-use_trust_region --quiet \
+  --out artifacts/raw_results/example_runs/mc_plasticity_p4_l5/output.json \
+  --state-out artifacts/raw_results/example_runs/mc_plasticity_p4_l5/state.npz
 ```
 
 ## Maintained Benchmark Runners

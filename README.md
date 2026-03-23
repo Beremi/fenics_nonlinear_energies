@@ -21,11 +21,13 @@ Current documentation now lives under `docs/`:
   - [docs/problems/pLaplace.md](docs/problems/pLaplace.md)
   - [docs/problems/GinzburgLandau.md](docs/problems/GinzburgLandau.md)
   - [docs/problems/HyperElasticity.md](docs/problems/HyperElasticity.md)
+  - [docs/problems/Plasticity.md](docs/problems/Plasticity.md)
   - [docs/problems/Topology.md](docs/problems/Topology.md)
 - current maintained results:
   - [docs/results/pLaplace.md](docs/results/pLaplace.md)
   - [docs/results/GinzburgLandau.md](docs/results/GinzburgLandau.md)
   - [docs/results/HyperElasticity.md](docs/results/HyperElasticity.md)
+  - [docs/results/Plasticity.md](docs/results/Plasticity.md)
   - [docs/results/Topology.md](docs/results/Topology.md)
 
 ## Quick Start — Example Notebooks
@@ -48,6 +50,29 @@ Use the canonical `src/problems/...` paths directly in scripts, notebooks, and
 reproduction commands.
 
 Open in VS Code devcontainer and run — everything is pre-configured.
+
+## Problem: Mohr-Coulomb Plasticity 2D
+
+The current Mohr-Coulomb plasticity implementation lives under
+`src/problems/slope_stability/` because the benchmark geometry is a homogeneous
+2D slope. The canonical docs surface now treats it as the repository's
+plane-strain plasticity model, with a model page and a maintained results page
+covering the deep-tail PMG hierarchy, backend context, and current large-scale
+scaling campaign.
+
+Model card: [docs/problems/Plasticity.md](docs/problems/Plasticity.md)  
+Current maintained results: [docs/results/Plasticity.md](docs/results/Plasticity.md)
+
+```bash
+./.venv/bin/python -u src/problems/slope_stability/jax_petsc/solve_slope_stability_dof.py \
+  --level 5 --elem_degree 4 --lambda-target 1.0 \
+  --profile performance --pc_type mg \
+  --mg_strategy same_mesh_p4_p2_p1_lminus1_p1 --mg_variant legacy_pmg \
+  --ksp_type fgmres --ksp_rtol 1e-2 --ksp_max_it 100 \
+  --save-linear-timing --no-use_trust_region --quiet \
+  --out artifacts/raw_results/example_runs/mc_plasticity_p4_l5/output.json \
+  --state-out artifacts/raw_results/example_runs/mc_plasticity_p4_l5/state.npz
+```
 
 ## Problem: p-Laplacian 2D
 

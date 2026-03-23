@@ -35,6 +35,37 @@ def load_problem_hdf5(filename: str) -> tuple[dict[str, object], sp.coo_matrix |
     return params, adjacency
 
 
+def load_problem_hdf5_fields(
+    filename: str,
+    *,
+    fields: list[str] | tuple[str, ...] | set[str] | None = None,
+    load_adjacency: bool = False,
+) -> tuple[dict[str, object], sp.coo_matrix | None]:
+    """Load only selected fields from a problem HDF5 file.
+
+    This is useful for large same-mesh assets where most ranks only need the
+    lightweight metadata and not the full dense operator datasets.
+    """
+    params: dict[str, object] = {}
+    adjacency = None
+    wanted = None if fields is None else {str(key) for key in fields}
+    with h5py.File(filename, "r") as handle:
+        if load_adjacency and "adjacency" in handle:
+            group = handle["adjacency"]
+            adjacency = sp.coo_matrix(
+                (group["data"][:], (group["row"][:], group["col"][:])),
+                shape=tuple(group["shape"][:]),
+            )
+        for key in handle:
+            if key == "adjacency":
+                continue
+            if wanted is not None and key not in wanted:
+                continue
+            dataset = handle[key]
+            params[key] = dataset[()] if dataset.shape == () else dataset[:]
+    return params, adjacency
+
+
 def jaxify_problem_data(
     params: dict[str, object],
     *,

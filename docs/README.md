@@ -12,11 +12,13 @@ If you are new to the codebase, start here rather than in `archive/`.
   - [pLaplace](problems/pLaplace.md)
   - [GinzburgLandau](problems/GinzburgLandau.md)
   - [HyperElasticity](problems/HyperElasticity.md)
+  - [Plasticity](problems/Plasticity.md)
   - [Topology](problems/Topology.md)
 - Current maintained results:
   - [pLaplace results](results/pLaplace.md)
   - [GinzburgLandau results](results/GinzburgLandau.md)
   - [HyperElasticity results](results/HyperElasticity.md)
+  - [Plasticity results](results/Plasticity.md)
   - [Topology results](results/Topology.md)
 
 ## Structure
