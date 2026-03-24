@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import subprocess
 from pathlib import Path
 
 from experiments.analysis.docs_assets import common
@@ -10,13 +9,8 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 DOCS_ROOT = REPO_ROOT / "docs"
 
 
-def _tracked_doc_names(subdir: str) -> list[str]:
-    output = subprocess.check_output(
-        ["git", "ls-files", f"docs/{subdir}/*.md"],
-        cwd=REPO_ROOT,
-        text=True,
-    )
-    return sorted(Path(line).name for line in output.splitlines() if line)
+def _doc_names(subdir: str) -> list[str]:
+    return sorted(path.name for path in (DOCS_ROOT / subdir).glob("*.md"))
 ASSETS_ROOT = DOCS_ROOT / "assets"
 BUILD_ROOT = REPO_ROOT / "experiments" / "analysis" / "docs_assets"
 BANNED_SNIPPETS = (
@@ -37,6 +31,7 @@ def test_current_docs_structure_exists() -> None:
         DOCS_ROOT / "setup" / "quickstart.md",
         DOCS_ROOT / "setup" / "local_build.md",
         DOCS_ROOT / "problems" / "pLaplace.md",
+        DOCS_ROOT / "problems" / "pLaplace_u3_thesis_replications.md",
         DOCS_ROOT / "problems" / "GinzburgLandau.md",
         DOCS_ROOT / "problems" / "HyperElasticity.md",
         DOCS_ROOT / "problems" / "Plasticity.md",
@@ -64,6 +59,20 @@ def test_problem_pages_contain_required_sections() -> None:
         assert ("## Maintained Implementations" in text) or ("## Implementation Status" in text)
         assert ("Energy Table Across Levels" in text) or ("Resolution / Objective Table" in text)
     assert ".gif" in (DOCS_ROOT / "problems" / "Topology.md").read_text(encoding="utf-8")
+
+
+def test_plaplace_u3_thesis_replication_page_contains_required_sections() -> None:
+    text = (DOCS_ROOT / "problems" / "pLaplace_u3_thesis_replications.md").read_text(encoding="utf-8")
+    assert "Michaela Bailová" in text
+    assert "## Thesis Problem Statement And Functionals" in text
+    assert "## Thesis Geometries, Discretisation, And Seeds" in text
+    assert "## RMPA Square Principal-Branch Replication" in text
+    assert "## Square-With-Hole OA2 Study (Figure 5.13)" in text
+    assert "## What Matches, What Is Partial, And What Does Not Match" in text
+    assert "../assets/plaplace_u3_thesis/" in text
+    assert '<span style="color:#1d4ed8;"><em>' in text
+    assert '<span style="color:#b91c1c;"><strong>' in text
+    assert "artifacts/raw_results/plaplace_u3_thesis_full/summary.json" in text
 
 
 def test_results_pages_contain_required_sections() -> None:
@@ -103,12 +112,20 @@ def test_current_assets_exist_under_docs_assets() -> None:
         "plasticity/plasticity_p4_l7_callback_breakdown_loglog.png",
         "plasticity/plasticity_p4_l7_linear_breakdown_loglog.png",
         "plasticity/plasticity_p4_l7_pmg_internal_loglog.png",
+        "plaplace_u3_thesis/plaplace_u3_sample_state.png",
+        "plaplace_u3_thesis/square_multibranch_panel.png",
+        "plaplace_u3_thesis/square_hole_panel.png",
+    ]
+    extra_pdf = [
+        "plaplace_u3_thesis/plaplace_u3_sample_state.pdf",
     ]
     for rel in expected_pdf:
         assert (ASSETS_ROOT / rel).exists(), rel
     for rel in expected_png:
         assert (ASSETS_ROOT / rel).exists(), rel
     for rel in expected_png_only:
+        assert (ASSETS_ROOT / rel).exists(), rel
+    for rel in extra_pdf:
         assert (ASSETS_ROOT / rel).exists(), rel
     assert (ASSETS_ROOT / "topology" / "topology_parallel_final_evolution.gif").exists()
 
@@ -125,14 +142,15 @@ def test_docs_use_only_current_repo_relative_paths() -> None:
 
 
 def test_current_docs_have_one_problem_and_one_results_page_per_family() -> None:
-    problems = _tracked_doc_names("problems")
-    results = _tracked_doc_names("results")
+    problems = _doc_names("problems")
+    results = _doc_names("results")
     assert problems == [
         "GinzburgLandau.md",
         "HyperElasticity.md",
         "Plasticity.md",
         "Topology.md",
         "pLaplace.md",
+        "pLaplace_u3_thesis_replications.md",
     ]
     assert results == ["GinzburgLandau.md", "HyperElasticity.md", "Plasticity.md", "Topology.md", "pLaplace.md"]
 

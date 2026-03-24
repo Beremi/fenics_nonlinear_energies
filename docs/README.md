@@ -10,6 +10,7 @@ If you are new to the codebase, start here rather than in `archive/`.
   - [Local build](setup/local_build.md)
 - Problem overviews:
   - [pLaplace](problems/pLaplace.md)
+  - [pLaplace_u3 thesis replications](problems/pLaplace_u3_thesis_replications.md)
   - [GinzburgLandau](problems/GinzburgLandau.md)
   - [HyperElasticity](problems/HyperElasticity.md)
   - [Plasticity](problems/Plasticity.md)

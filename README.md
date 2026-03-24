@@ -19,6 +19,7 @@ Current documentation now lives under `docs/`:
 - quickstart: [docs/setup/quickstart.md](docs/setup/quickstart.md)
 - problem pages:
   - [docs/problems/pLaplace.md](docs/problems/pLaplace.md)
+  - [docs/problems/pLaplace_u3_thesis_replications.md](docs/problems/pLaplace_u3_thesis_replications.md)
   - [docs/problems/GinzburgLandau.md](docs/problems/GinzburgLandau.md)
   - [docs/problems/HyperElasticity.md](docs/problems/HyperElasticity.md)
   - [docs/problems/Plasticity.md](docs/problems/Plasticity.md)

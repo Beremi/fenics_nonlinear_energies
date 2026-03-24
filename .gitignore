@@ -16,3 +16,5 @@ h5py
 /experiments/analysis/docs_assets/**/__pycache__/
 /experiments/analysis/docs_assets/**/.DS_Store
 /experiments/analysis/docs_assets/**/.pytest_cache/
+/BAI0012_FEI_P1807_1103V036_2023.pdf
+/thesis_replications.md
