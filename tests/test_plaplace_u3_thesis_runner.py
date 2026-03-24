@@ -228,6 +228,7 @@ def test_thesis_problem_page_generator_smoke(tmp_path: Path):
     assert text.count("```bash") >= 7
     assert "secondary target" not in text
     assert "- unresolved rows:" in text
+    assert "### What is low impact" in text
     assert (asset_dir / "plaplace_u3_sample_state.png").exists()
     assert (asset_dir / "plaplace_u3_sample_state.pdf").exists()
     assert (asset_dir / "square_multibranch_panel.png").exists()
@@ -483,6 +484,7 @@ def test_thesis_report_handles_full_table_rows(tmp_path: Path):
     text = report_path.read_text(encoding="utf-8")
     assert "## Thesis Problem And Functionals" in text
     assert "## Table-By-Table Status Matrix" in text
+    assert "## What Is Low Impact" in text
     assert "## What Partially Works" in text
     assert "## What Does Not Yet Match" in text
     assert "artifacts/raw_results/plaplace_u3_thesis_full/summary.json" in text

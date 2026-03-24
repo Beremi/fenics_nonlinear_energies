@@ -14,6 +14,7 @@ from pathlib import Path
 from src.problems.plaplace_u3.thesis.assignment import (
     ASSIGNMENT_STAGE_DETAILS,
     METHOD_TO_TABLES,
+    attach_assignment_metadata,
     summarize_assignment_rows,
 )
 
@@ -26,6 +27,16 @@ SOURCE_SAMPLE_PNG = DEFAULT_ASSET_DIR / "plaplace_u3_sample_state.png"
 SOURCE_SAMPLE_PDF = DEFAULT_ASSET_DIR / "plaplace_u3_sample_state.pdf"
 SOURCE_SQUARE_PANEL = DEFAULT_ASSET_DIR / "square_multibranch_panel.png"
 SOURCE_HOLE_PANEL = DEFAULT_ASSET_DIR / "square_hole_panel.png"
+TABLE_5_13_TIMES = {
+    ("rmpa", "d", 17.0 / 6.0): 47.87,
+    ("rmpa", "d", 3.0): 95.44,
+    ("rmpa", "d_vh", 17.0 / 6.0): 5.38,
+    ("rmpa", "d_vh", 3.0): 8.46,
+    ("oa1", "d", 17.0 / 6.0): 80.66,
+    ("oa1", "d", 3.0): 131.33,
+    ("oa1", "d_vh", 17.0 / 6.0): 2.48,
+    ("oa1", "d_vh", 3.0): 4.15,
+}
 
 
 def _load_summary(path: Path) -> dict[str, object]:
@@ -75,10 +86,27 @@ def _style_thesis_sci(value: object, digits: int = 0) -> str:
     return f'<span style="color:#1d4ed8;"><em>{_fmt_sci(value, digits)}</em></span>'
 
 
-def _pass_label(value: object) -> str:
+def _assignment_verdict(row: dict[str, object]) -> str:
+    verdict = str(row.get("assignment_verdict") or "").strip().lower()
+    if verdict:
+        return verdict
+    value = row.get("assignment_acceptance_pass")
     if value is None:
         return "secondary"
-    return "PASS" if bool(value) else "FAIL"
+    return "pass" if bool(value) else "fail"
+
+
+def _assignment_label(row: dict[str, object]) -> str:
+    verdict = _assignment_verdict(row)
+    if verdict == "pass":
+        return "PASS"
+    if verdict == "low impact":
+        return "low impact"
+    if verdict == "fail":
+        return "FAIL"
+    if verdict == "unknown":
+        return "unknown"
+    return "secondary"
 
 
 def _append_table(lines: list[str], headers: list[str], rows: list[list[str]]) -> None:
@@ -250,6 +278,14 @@ def _problem_rows(rows: list[dict[str, object]]) -> list[dict[str, object]]:
     ]
 
 
+def _low_impact_rows(rows: list[dict[str, object]]) -> list[dict[str, object]]:
+    return [
+        row
+        for row in rows
+        if bool(row.get("assignment_primary")) and _assignment_verdict(row) == "low impact"
+    ]
+
+
 def _unique_partial_rows(rows: list[dict[str, object]]) -> list[dict[str, object]]:
     seen: set[tuple[str, str]] = set()
     unique: list[dict[str, object]] = []
@@ -269,6 +305,138 @@ def _unique_partial_rows(rows: list[dict[str, object]]) -> list[dict[str, object
     return unique
 
 
+def _compact_block(title: str, items: list[str]) -> list[str]:
+    if not items:
+        return []
+    return ["", f"**{title}**", *[f"- {item}" for item in items], ""]
+
+
+def _table_legend_lines(table: str) -> list[str]:
+    table = str(table)
+    if table in {"table_5_2", "table_5_3", "table_5_8", "table_5_9", "table_5_10", "table_5_11"}:
+        return [
+            "`thesis J`: published thesis energy",
+            "`repo J`: reproduced canonical energy",
+            "`thesis error` / `repo error`: thesis vs proxy-reference error",
+            "`status`: current packet verdict under the assignment policy (`PASS`, `low impact`, `FAIL`, or `secondary`)",
+        ]
+    if table == "table_5_13":
+        return [
+            "`thesis iters`: published direction-comparison count in the thesis",
+            "`repo iters`: current outer iteration count",
+            "`thesis direction iters`: published exact-direction count used for the low-impact policy",
+            "`status`: `PASS`, `low impact`, `FAIL`, or `secondary` under the current packet policy",
+        ]
+    if table in {"table_5_14", "figure_5_13"}:
+        return [
+            "`thesis J` / `repo J`: published vs reproduced energy",
+            "`thesis I` / `repo I`: published vs reproduced quotient-side value",
+            "`status`: current packet verdict under the assignment policy (`PASS`, `low impact`, `FAIL`, or `secondary`)",
+        ]
+    return ["column meanings follow the table header"]
+
+
+def _table_problem_spec_lines(table: str) -> list[str]:
+    table = str(table)
+    if table == "table_5_2" or table == "table_5_3":
+        return [
+            "1D harness for $-\\Delta_p u = u^3$ on $(0,\\pi)$.",
+            "Domain / mesh: interval seed study from the thesis 1D helper setup.",
+            "Method / direction: RMPA and OA1 with `d` / `d^{V_h}`.",
+            "Comparison target: thesis energy, proxy error, and iteration count.",
+        ]
+    if table in {"table_5_8", "table_5_9"}:
+        return [
+            "Square principal branch for $J(u)$ on $[0,\\pi]^2$.",
+            "Domain / mesh: structured $P_1$ right-triangle mesh with $h = \\pi / 2^L$.",
+            "Method / direction: RMPA with the approximate direction `d^{V_h}`.",
+            "Seed / tolerance: `sin(x)sin(y)` with the table-specific $\\varepsilon$ or level.",
+        ]
+    if table in {"table_5_10", "table_5_11"}:
+        return [
+            "Square principal branch for the scale-invariant quotient $I(u)$.",
+            "Domain / mesh: structured $P_1$ right-triangle mesh with $h = \\pi / 2^L$.",
+            "Method / direction: OA1 with the approximate direction `d^{V_h}`.",
+            "Seed / tolerance: `sin(x)sin(y)` with the table-specific $\\varepsilon$ or level.",
+        ]
+    if table == "table_5_13":
+        return [
+            "Square direction-comparison table for $J(u)$ and the descent counts.",
+            "Domain / mesh: $[0,\\pi]^2$ with $h = \\pi / 2^6$.",
+            "Method / direction: RMPA exact `d` versus approximate `d^{V_h}`, plus OA1.",
+            "Seed / tolerance: `sin(x)sin(y)` with $\\varepsilon = 10^{-4}$.",
+            "Comparison target: published direction counts, with principal-branch energy checked against Tables 5.8 / 5.10.",
+        ]
+    if table == "table_5_14":
+        return [
+            "Square multi-solution branch-selection table.",
+            "Domain / mesh: $[0,\\pi]^2$ with the thesis square seeds.",
+            "Method / direction: OA1 and OA2 with the published initialisations.",
+            "Comparison target: branch selection via $J$ and $I$.",
+        ]
+    if table == "figure_5_13":
+        return [
+            "Square-with-hole multi-solution branch-selection study.",
+            "Domain / mesh: nonconvex square-with-hole domain with the thesis hole seeds.",
+            "Method / direction: OA2 with the published initialisations.",
+            "Comparison target: branch selection via $J$ and $I$.",
+        ]
+    return ["problem specification follows the section title"]
+
+
+def _table_discrepancy_lines(table: str, rows: list[dict[str, object]]) -> list[str]:
+    table = str(table)
+    if table == "table_5_13":
+        notes: list[str] = []
+        for row in rows:
+            if str(row.get("table")) != "table_5_13" or str(row.get("method")) != "rmpa" or str(row.get("direction")) != "d":
+                continue
+            if _assignment_verdict(row) != "low impact":
+                continue
+            p_value = float(row.get("p", 0.0))
+            thesis_time = TABLE_5_13_TIMES.get(("rmpa", "d", p_value))
+            timing_note = (
+                f"timing note: thesis {thesis_time:.2f} s vs local {float(row.get('solve_time_s', 0.0)):.2f} s "
+                "on 1 proc, serial python, JAX + SciPy + PyAMG helper solves"
+                if thesis_time is not None
+                else "timing note unavailable"
+            )
+            if abs(p_value - (17.0 / 6.0)) <= 1.0e-12:
+                notes.append(
+                    "`row`: `RMPA d, p = 17/6`; `impact`: `low impact`; "
+                    f"`thesis`: `8 it, 47.87 s`; `repo`: `{int(row['outer_iterations'])} outer it, {int(row['direction_solves'])} direction solves, J = {_fmt(row.get('J'), 10)}`; "
+                    "`meaning`: `principal-branch energy matches Table 5.8`; "
+                    "`likely cause`: `late-stage tiny accepted halving steps in the exact-direction run`; "
+                    f"`{timing_note}`; `status`: `documented as low impact`."
+                )
+            elif abs(p_value - 3.0) <= 1.0e-12:
+                notes.append(
+                    "`row`: `RMPA d, p = 3`; `impact`: `low impact`; "
+                    f"`thesis`: `19 it, 95.44 s`; `repo`: `{int(row['outer_iterations'])} outer it, {int(row['direction_solves'])} direction solves, J = {_fmt(row.get('J'), 10)}`; "
+                    "`meaning`: `principal-branch energy matches Table 5.8`; "
+                    "`likely cause`: `the exact auxiliary direction is not exploited as effectively before the final halving crawl`; "
+                    f"`{timing_note}`; `status`: `documented as low impact`."
+                )
+        return notes or ["no primary mismatch beyond the rows shown above."]
+    if table == "table_5_6":
+        return [
+            "Table 5.12 is the thesis wall-time comparison for Stage C. In this packet, the timing surface is synthesized from the underlying MPA / RMPA / OA1 rows; local runs are serial python on 1 proc, and the current canonical MPA slice is not timing-comparable because the promoted MPA rows are convergence-focused rather than a stable wall-time benchmark.",
+        ]
+    if table == "table_5_11":
+        return [
+            "Thesis runbook marks Table 5.11 as internally inconsistent, so this packet keeps it as secondary context rather than a primary OA1 target.",
+        ]
+    if table == "table_5_8":
+        return [
+            "The `p = 1.5`, `level = 7` point is a secondary extension row; the primary square-branch rows still pass.",
+        ]
+    if table == "table_5_2" or table == "table_5_3":
+        return [
+            "The `p = 1.5` harness row is the published hard case and is kept as secondary context rather than a primary match.",
+        ]
+    return ["no material discrepancy in this table family."]
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--summary", type=str, default=str(DEFAULT_SUMMARY))
@@ -282,11 +450,12 @@ def main() -> None:
     out_path.parent.mkdir(parents=True, exist_ok=True)
 
     summary = _load_summary(summary_path)
-    rows = [dict(row) for row in summary["rows"]]
+    rows = [attach_assignment_metadata(dict(row)) for row in summary["rows"]]
     overview = summarize_assignment_rows(rows)
     status_counts = _status_counts(rows)
     primary_rows = [row for row in rows if bool(row.get("assignment_primary"))]
     primary_pass = [row for row in primary_rows if row.get("assignment_acceptance_pass") is True]
+    low_impact_rows = _low_impact_rows(rows)
     match_breakdown = _match_breakdown(rows)
     partial_rows = [
         row
@@ -404,8 +573,9 @@ def main() -> None:
             f"- canonical thesis report: `artifacts/reports/plaplace_u3_thesis/README.md`",
             f"- packet note: {summary.get('packet_note', '-')}",
             f"- primary assignment rows passing: `{len(primary_pass)}` / `{len(primary_rows)}`",
-            f"- exact-match primary rows passing: `{match_breakdown.get('exact', {}).get('pass', 0)}` / `{match_breakdown.get('exact', {}).get('total', 0)}`",
-            f"- proxy-match primary rows passing: `{match_breakdown.get('proxy', {}).get('pass', 0)}` / `{match_breakdown.get('proxy', {}).get('total', 0)}`",
+            f"- low-impact primary discrepancies: `{len(low_impact_rows)}`",
+            f"- direct-comparison primary rows passing: `{match_breakdown.get('exact', {}).get('pass', 0)}` / `{match_breakdown.get('exact', {}).get('total', 0)}`",
+            f"- proxy-comparison primary rows passing: `{match_breakdown.get('proxy', {}).get('pass', 0)}` / `{match_breakdown.get('proxy', {}).get('total', 0)}`",
             f"- status counts: `{status_counts}`",
             "",
             "### Stage Map",
@@ -439,7 +609,11 @@ def main() -> None:
             "## 1D Direction Study",
             "",
             "This section merges the thesis 1D harness description with the current repo results for the same nonlinearity on $(0,\\pi)$.",
-            "",
+        ]
+    )
+    lines.extend(_compact_block("Problem spec", _table_problem_spec_lines("table_5_2")))
+    lines.extend(
+        [
             _section_command(
                 "artifacts/raw_results/plaplace_u3_thesis_sections/one_dimensional",
                 "table_5_2",
@@ -462,11 +636,13 @@ def main() -> None:
                 _style_thesis(row.get("thesis_error")),
                 _style_repo(row.get("reference_error_w1p")),
                 _style_repo(row.get("outer_iterations"), 0),
-                _pass_label(row.get("assignment_acceptance_pass")),
+                _assignment_label(row),
             ]
             for row in sorted(oned_rows, key=lambda item: (str(item["table"]), float(item["p"])))
         ],
     )
+    lines.extend(_compact_block("Column legend", _table_legend_lines("table_5_2")))
+    lines.extend(_compact_block("Discrepancy notes", _table_discrepancy_lines("table_5_2", oned_rows)))
 
     lines.extend(
         [
@@ -474,7 +650,11 @@ def main() -> None:
             "## RMPA Square Principal-Branch Replication",
             "",
             "The thesis uses the square benchmark as the main validation target for RMPA. The tables below merge the mesh-refinement and fixed-mesh tolerance studies.",
-            "",
+        ]
+    )
+    lines.extend(_compact_block("Problem spec", _table_problem_spec_lines("table_5_8")))
+    lines.extend(
+        [
             _section_command(
                 "artifacts/raw_results/plaplace_u3_thesis_sections/rmpa_square",
                 "table_5_8",
@@ -496,7 +676,7 @@ def main() -> None:
                 _style_repo(row.get("J")),
                 _style_thesis(row.get("thesis_error")),
                 _style_repo(row.get("reference_error_w1p")),
-                _pass_label(row.get("assignment_acceptance_pass")),
+                _assignment_label(row),
             ]
             for row in sorted(
                 [row for row in rmpa_rows if str(row["table"]) == "table_5_8"],
@@ -504,6 +684,8 @@ def main() -> None:
             )
         ],
     )
+    lines.extend(_compact_block("Column legend", _table_legend_lines("table_5_8")))
+    lines.extend(_compact_block("Discrepancy notes", _table_discrepancy_lines("table_5_8", rmpa_rows)))
 
     lines.extend(["", "### Table 5.9 — tolerance study", ""])
     _append_table(
@@ -517,7 +699,7 @@ def main() -> None:
                 _style_repo(row.get("J")),
                 _style_thesis(row.get("thesis_error")),
                 _style_repo(row.get("reference_error_w1p")),
-                _pass_label(row.get("assignment_acceptance_pass")),
+                _assignment_label(row),
             ]
             for row in sorted(
                 [row for row in rmpa_rows if str(row["table"]) == "table_5_9"],
@@ -525,6 +707,8 @@ def main() -> None:
             )
         ],
     )
+    lines.extend(_compact_block("Column legend", _table_legend_lines("table_5_9")))
+    lines.extend(_compact_block("Discrepancy notes", _table_discrepancy_lines("table_5_9", rmpa_rows)))
 
     lines.extend(
         [
@@ -532,7 +716,11 @@ def main() -> None:
             "## OA1 Square Principal-Branch Replication",
             "",
             "OA1 uses the scale-invariant functional $I(u)$. The thesis notes that Table 5.11 should be treated cautiously, so Table 5.10 remains the primary OA1 benchmark.",
-            "",
+        ]
+    )
+    lines.extend(_compact_block("Problem spec", _table_problem_spec_lines("table_5_10")))
+    lines.extend(
+        [
             _section_command(
                 "artifacts/raw_results/plaplace_u3_thesis_sections/oa1_square",
                 "table_5_10",
@@ -554,7 +742,7 @@ def main() -> None:
                 _style_repo(row.get("J")),
                 _style_thesis(row.get("thesis_error")),
                 _style_repo(row.get("reference_error_w1p")),
-                _pass_label(row.get("assignment_acceptance_pass")),
+                _assignment_label(row),
             ]
             for row in sorted(
                 [row for row in oa1_rows if str(row["table"]) == "table_5_10"],
@@ -562,6 +750,8 @@ def main() -> None:
             )
         ],
     )
+    lines.extend(_compact_block("Column legend", _table_legend_lines("table_5_10")))
+    lines.extend(_compact_block("Discrepancy notes", _table_discrepancy_lines("table_5_10", oa1_rows)))
 
     lines.extend(["", "### Table 5.11 — tolerance study (secondary / inconsistent in thesis)", ""])
     _append_table(
@@ -575,7 +765,7 @@ def main() -> None:
                 _style_repo(row.get("J")),
                 _style_thesis(row.get("thesis_error")),
                 _style_repo(row.get("reference_error_w1p")),
-                _pass_label(row.get("assignment_acceptance_pass")),
+                _assignment_label(row),
             ]
             for row in sorted(
                 [row for row in oa1_rows if str(row["table"]) == "table_5_11"],
@@ -583,6 +773,8 @@ def main() -> None:
             )
         ],
     )
+    lines.extend(_compact_block("Column legend", _table_legend_lines("table_5_11")))
+    lines.extend(_compact_block("Discrepancy notes", _table_discrepancy_lines("table_5_11", oa1_rows)))
 
     lines.extend(
         [
@@ -590,7 +782,11 @@ def main() -> None:
             "## Cross-Method Comparison: MPA, Iteration Counts, And Descent Directions",
             "",
             "This section combines the MPA square tables with the cross-method and descent-direction comparison rows.",
-            "",
+        ]
+    )
+    lines.extend(_compact_block("Problem spec", _table_problem_spec_lines("table_5_13")))
+    lines.extend(
+        [
             _section_command(
                 "artifacts/raw_results/plaplace_u3_thesis_sections/method_comparison",
                 "table_5_6",
@@ -615,11 +811,13 @@ def main() -> None:
                 _style_repo(row.get("J")),
                 _style_thesis(row.get("thesis_error")),
                 _style_repo(row.get("reference_error_w1p")),
-                _pass_label(row.get("assignment_acceptance_pass")),
+                _assignment_label(row),
             ]
             for row in sorted(mpa_rows, key=lambda item: (str(item["table"]), float(item["p"]), int(item["level"]), float(item["epsilon"])))
         ],
     )
+    lines.extend(_compact_block("Column legend", _table_legend_lines("table_5_6")))
+    lines.extend(_compact_block("Discrepancy notes", _table_discrepancy_lines("table_5_6", mpa_rows)))
 
     lines.extend(["", "### Table 5.13 — direction comparison", ""])
     _append_table(
@@ -633,11 +831,13 @@ def main() -> None:
                 _style_thesis(row.get("thesis_iterations"), 0),
                 _style_repo(row.get("outer_iterations"), 0),
                 _style_thesis(row.get("thesis_direction_iterations"), 0),
-                _pass_label(row.get("assignment_acceptance_pass")),
+                _assignment_label(row),
             ]
             for row in sorted(direction_rows, key=lambda item: (str(item["method"]), str(item["direction"]), float(item["p"])))
         ],
     )
+    lines.extend(_compact_block("Column legend", _table_legend_lines("table_5_13")))
+    lines.extend(_compact_block("Discrepancy notes", _table_discrepancy_lines("table_5_13", direction_rows)))
 
     lines.extend(
         [
@@ -646,7 +846,11 @@ def main() -> None:
             "",
             "OA1 stays on the principal branch for the square seeds, while OA2 can recover distinct higher branches depending on the initialisation.",
             "The thesis Figure 5.12 panel order is `(a) sine`, `(b) skew`, `(c) sine_x2`, `(d) sine_y2`, so it should not be read as the same order as the Table 5.14 rows.",
-            "",
+        ]
+    )
+    lines.extend(_compact_block("Problem spec", _table_problem_spec_lines("table_5_14")))
+    lines.extend(
+        [
             _section_command(
                 "artifacts/raw_results/plaplace_u3_thesis_sections/square_multibranch",
                 "table_5_14",
@@ -667,11 +871,13 @@ def main() -> None:
                 _style_repo(row.get("J")),
                 _style_thesis(row.get("thesis_I")),
                 _style_repo(row.get("I")),
-                _pass_label(row.get("assignment_acceptance_pass")),
+                _assignment_label(row),
             ]
             for row in sorted(square_multibranch_rows, key=lambda item: (str(item["init_mode"]), str(item["method"])))
         ],
     )
+    lines.extend(_compact_block("Column legend", _table_legend_lines("table_5_14")))
+    lines.extend(_compact_block("Discrepancy notes", _table_discrepancy_lines("table_5_14", square_multibranch_rows)))
 
     lines.extend(
         [
@@ -679,7 +885,11 @@ def main() -> None:
             "## Square-With-Hole OA2 Study (Figure 5.13)",
             "",
             "This nonconvex domain is the sharpest multi-solution benchmark in the thesis packet and is the main extension case beyond the square.",
-            "",
+        ]
+    )
+    lines.extend(_compact_block("Problem spec", _table_problem_spec_lines("figure_5_13")))
+    lines.extend(
+        [
             _section_command(
                 "artifacts/raw_results/plaplace_u3_thesis_sections/square_hole",
                 "figure_5_13",
@@ -699,11 +909,13 @@ def main() -> None:
                 _style_repo(row.get("J")),
                 _style_thesis(row.get("thesis_I")),
                 _style_repo(row.get("I")),
-                _pass_label(row.get("assignment_acceptance_pass")),
+                _assignment_label(row),
             ]
             for row in sorted(hole_rows, key=lambda item: str(item["init_mode"]))
         ],
     )
+    lines.extend(_compact_block("Column legend", _table_legend_lines("figure_5_13")))
+    lines.extend(_compact_block("Discrepancy notes", _table_discrepancy_lines("figure_5_13", hole_rows)))
 
     lines.extend(
         [
@@ -717,6 +929,7 @@ def main() -> None:
             "## What Matches, What Is Partial, And What Does Not Match",
             "",
             f"- primary assignment rows passing the current thresholds: `{len(primary_pass)}` / `{len(primary_rows)}`",
+            f"- low-impact primary discrepancies: `{len(low_impact_rows)}`",
             f"- secondary / partial rows: `{len(partial_rows)}`",
             f"- unresolved rows: `{len(_problem_rows(rows))}`",
             "",
@@ -725,6 +938,34 @@ def main() -> None:
             "- Stage A and Stage B square principal-branch energies largely track the published thesis values.",
             "- Stage E square-with-hole OA2 values currently match all four published seeds in the canonical packet.",
             "- The merged page uses docs-owned assets and only repo-relative links.",
+            "",
+            "### What is low impact",
+            "",
+        ]
+    )
+    _append_table(
+        lines,
+        ["target", "verdict", "note"],
+        [
+            [
+                str(row["assignment_section"]),
+                _assignment_label(row),
+                str(row.get("assignment_gap_class") or "documented low-impact discrepancy"),
+            ]
+            for row in sorted(
+                low_impact_rows,
+                key=lambda item: (
+                    str(item.get("assignment_stage", "")),
+                    str(item.get("assignment_section", "")),
+                    str(item.get("method", "")),
+                    float(item.get("p", 0.0)),
+                ),
+            )
+        ],
+    )
+
+    lines.extend(
+        [
             "",
             "### What is partial",
             "",

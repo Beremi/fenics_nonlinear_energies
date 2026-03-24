@@ -71,10 +71,26 @@ def test_plaplace_u3_thesis_replication_page_contains_required_sections() -> Non
     assert "## RMPA Square Principal-Branch Replication" in text
     assert "## Square-With-Hole OA2 Study (Figure 5.13)" in text
     assert "## What Matches, What Is Partial, And What Does Not Match" in text
+    assert "**Problem spec**" in text
+    assert "**Column legend**" in text
+    assert "**Discrepancy notes**" in text
+    assert "low impact" in text
+    assert "timing note:" in text
     assert "../assets/plaplace_u3_thesis/" in text
     assert '<span style="color:#1d4ed8;"><em>' in text
     assert '<span style="color:#b91c1c;"><strong>' in text
     assert "artifacts/raw_results/plaplace_u3_thesis_full/summary.json" in text
+
+
+def test_plaplace_u3_thesis_report_contains_readable_blocks() -> None:
+    text = (REPO_ROOT / "artifacts" / "reports" / "plaplace_u3_thesis" / "README.md").read_text(encoding="utf-8")
+    assert "## Thesis Problem And Functionals" in text
+    assert "## Assignment Snapshot" in text
+    assert "**Problem spec**" in text
+    assert "**Column legend**" in text
+    assert "**Discrepancy notes**" in text
+    assert "low impact" in text
+    assert "timing note:" in text
 
 
 def test_results_pages_contain_required_sections() -> None:

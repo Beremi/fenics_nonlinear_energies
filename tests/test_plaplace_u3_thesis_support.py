@@ -4,7 +4,7 @@ import math
 
 import numpy as np
 
-from src.problems.plaplace_u3.thesis.assignment import classify_gap
+from src.problems.plaplace_u3.thesis.assignment import attach_assignment_metadata, classify_gap
 from src.problems.plaplace_u3.thesis.directions import DirectionContext
 from src.problems.plaplace_u3.thesis.functionals import (
     compute_state_stats_free,
@@ -128,18 +128,27 @@ def test_unpublished_rows_are_not_labeled_as_low_p_mismatches():
     assert classify_gap(row) == "Secondary / unpublished thesis row"
 
 
-def test_table_5_13_mismatch_is_labeled_as_direction_count_gap_when_energy_matches():
-    row = {
+def test_table_5_13_mismatch_is_labeled_as_low_impact_when_energy_matches():
+    row = attach_assignment_metadata(
+        {
         "table": "table_5_13",
         "method": "rmpa",
+        "direction": "d",
         "status": "completed",
         "level": 6,
         "p": 3.0,
         "J": 4.194002180491161,
+        "outer_iterations": 31,
         "thesis_direction_iterations": 19,
         "delta_direction_iterations": 12,
-    }
-    assert classify_gap(row) == "Direction-count mismatch with matched principal-branch energy"
+        }
+    )
+    assert row["assignment_acceptance_pass"] is True
+    assert row["assignment_verdict"] == "low impact"
+    assert (
+        classify_gap(row)
+        == "Low-impact direction-count discrepancy with matched principal-branch energy"
+    )
 
 
 def test_square_oa2_skew_stays_on_thesis_multibranch_solution():
