@@ -84,6 +84,7 @@ class ExecutionPolicy:
     epsilon: float | None = None
     maxit: int | None = None
     rmpa_delta0: float | None = None
+    rmpa_step_search: str | None = None
     oa_delta_hat: float | None = None
     golden_tol: float | None = None
     mpa_segment_tol_factor: float | None = None
@@ -106,6 +107,11 @@ _TABLES_WITH_REFERENCE = {
 
 def _execution_policy(case: Case) -> ExecutionPolicy:
     """Return benchmark-specific execution overrides."""
+    if str(case.table) in {"table_5_2", "table_5_3", "table_5_2_drn_sanity"}:
+        return ExecutionPolicy(
+            rmpa_step_search="golden",
+            note="1D stopping-criterion study uses the thesis golden-section variant of RMPA Step 6",
+        )
     if (
         str(case.table) == "figure_5_13"
         and str(case.method) == "oa2"
@@ -173,6 +179,7 @@ def _run_case(
     effective_direction = str(policy.direction or case.direction)
     effective_epsilon = float(policy.epsilon or case.epsilon)
     effective_rmpa_delta0 = float(policy.rmpa_delta0 or rmpa_delta0)
+    effective_rmpa_step_search = str(policy.rmpa_step_search or "halving")
     effective_oa_delta_hat = float(policy.oa_delta_hat or oa_delta_hat)
     effective_golden_tol = float(policy.golden_tol or THESIS_OA_GOLDEN_TOL)
     effective_mpa_segment_tol_factor = float(policy.mpa_segment_tol_factor or mpa_segment_tol_factor)
@@ -212,7 +219,11 @@ def _run_case(
     }
     t0 = time.perf_counter()
     if case.method == "rmpa":
-        result = run_rmpa(**run_kwargs, delta0=effective_rmpa_delta0)
+        result = run_rmpa(
+            **run_kwargs,
+            delta0=effective_rmpa_delta0,
+            step_search=effective_rmpa_step_search,
+        )
     elif case.method == "oa1":
         result = run_oa(
             **run_kwargs,
@@ -284,6 +295,7 @@ def _run_case(
             effective_ref_epsilon = float(ref_execution.epsilon or reference_epsilon)
             effective_ref_maxit = int(ref_execution.maxit or reference_maxit)
             effective_ref_rmpa_delta0 = float(ref_execution.rmpa_delta0 or rmpa_delta0)
+            effective_ref_rmpa_step_search = str(ref_execution.rmpa_step_search or "halving")
             effective_ref_oa_delta_hat = float(ref_execution.oa_delta_hat or oa_delta_hat)
             effective_ref_golden_tol = float(ref_execution.golden_tol or THESIS_OA_GOLDEN_TOL)
             ref_problem = build_problem(
@@ -303,7 +315,11 @@ def _run_case(
                 "maxit": effective_ref_maxit,
             }
             if reference_method == "rmpa":
-                ref_result = run_rmpa(**ref_kwargs, delta0=effective_ref_rmpa_delta0)
+                ref_result = run_rmpa(
+                    **ref_kwargs,
+                    delta0=effective_ref_rmpa_delta0,
+                    step_search=effective_ref_rmpa_step_search,
+                )
             elif reference_method == "oa1":
                 ref_result = run_oa(
                     **ref_kwargs,

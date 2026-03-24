@@ -1,4 +1,10 @@
-"""Classical polygonal-chain mountain pass algorithm used in the thesis."""
+"""Classical polygonal-chain mountain pass algorithm used in the thesis.
+
+The thesis MPA works on a discrete chain between the zero state and a large
+positive endpoint. The implementation keeps that structure explicit: find the
+current path peak, optionally refine the chain near that peak, then take one
+descent step and repair the local path shape around the moved node.
+"""
 
 from __future__ import annotations
 
@@ -68,6 +74,31 @@ def _search_neighbor_peak(
     return z
 
 
+def _search_neighbor_lower(
+    problem: ThesisProblem,
+    objective,
+    z: np.ndarray,
+    neighbor: np.ndarray,
+    delta_min: float,
+) -> np.ndarray:
+    z = np.asarray(z, dtype=np.float64)
+    neighbor = np.asarray(neighbor, dtype=np.float64)
+    fz = float(objective.value(z))
+    xi = 0.5 * (z + neighbor)
+
+    while _seminorm_difference(problem, z, xi) >= float(delta_min):
+        f_xi = float(objective.value(xi))
+        if f_xi < fz:
+            xi_p = 0.5 * (z + xi)
+            f_xi_p = float(objective.value(xi_p))
+            t_star = _quadratic_extremum([0.0, 0.5, 1.0], [fz, f_xi_p, f_xi], maximize=False)
+            candidate = z + t_star * (xi - z)
+            f_candidate = float(objective.value(candidate))
+            return np.asarray(candidate if f_candidate < fz else xi, dtype=np.float64)
+        xi = 0.5 * (z + xi)
+    return z
+
+
 def _descent_step(
     objective,
     z: np.ndarray,
@@ -85,17 +116,14 @@ def _descent_step(
         f_trial = float(objective.value(trial))
         if f_trial < fz:
             mid = z + 0.5 * step
-            quarter = z + 0.25 * step
-            f_quarter = float(objective.value(quarter))
             f_mid = float(objective.value(mid))
-            values = [fz, f_quarter, f_mid]
-            t_star = _quadratic_extremum([0.0, 0.25, 0.5], values, maximize=False)
+            values = [fz, f_mid, f_trial]
+            t_star = _quadratic_extremum([0.0, 0.5, 1.0], values, maximize=False)
             candidate = z + t_star * step
             f_candidate = float(objective.value(candidate))
             choices = [
                 (f_trial, trial),
                 (f_mid, mid),
-                (f_quarter, quarter),
             ]
             if f_candidate < fz:
                 choices.append((f_candidate, candidate))
@@ -129,7 +157,24 @@ def _descent_step_plain_halving(
     return z, False, halves
 
 
+def _refine_chain_around_peak(nodes: list[np.ndarray], peak_idx: int) -> list[np.ndarray]:
+    """Insert two midpoints around a repeatedly selected peak node."""
+    if len(nodes) < 7 or peak_idx <= 1 or peak_idx >= len(nodes) - 2:
+        return [np.asarray(node, dtype=np.float64) for node in nodes]
+
+    refined = [np.asarray(node, dtype=np.float64).copy() for node in nodes]
+    left_mid = 0.5 * (refined[peak_idx - 1] + refined[peak_idx])
+    right_mid = 0.5 * (refined[peak_idx] + refined[peak_idx + 1])
+
+    trimmed = [refined[0], *refined[2:-2], refined[-1]]
+    new_peak_idx = peak_idx - 1
+    trimmed.insert(new_peak_idx, left_mid)
+    trimmed.insert(new_peak_idx + 2, right_mid)
+    return [np.asarray(node, dtype=np.float64) for node in trimmed]
+
+
 def _choose_endpoint_scale(problem: ThesisProblem, objective) -> float:
+    """Pick a large endpoint whose energy is already below zero."""
     scale = max(1.0, float(problem.stats(problem.u_init).scale_to_solution))
     while float(objective.value(scale * problem.u_init)) >= 0.0:
         scale *= 2.0
@@ -165,21 +210,44 @@ def run_mpa(
     message = "Maximum number of iterations reached"
     status = "maxit"
     current = np.asarray(nodes[len(nodes) // 2], dtype=np.float64)
+    reported_peak = np.asarray(current, dtype=np.float64)
+    last_peak_idx: int | None = None
+    same_peak_streak = 0
 
     for outer_it in range(1, int(maxit) + 1):
         energies = np.asarray([float(objective.value(node)) for node in nodes], dtype=np.float64)
         inner_idx = int(np.argmax(energies[1:-1])) + 1
+        if inner_idx == last_peak_idx:
+            same_peak_streak += 1
+        else:
+            same_peak_streak = 1
+        last_peak_idx = inner_idx
+
+        chain_refined = False
+        if same_peak_streak >= 4:
+            # If the same node remains the path maximum for several iterations,
+            # add local resolution instead of repeatedly moving the coarse peak.
+            nodes = _refine_chain_around_peak(nodes, inner_idx)
+            energies = np.asarray([float(objective.value(node)) for node in nodes], dtype=np.float64)
+            inner_idx = int(np.argmax(energies[1:-1])) + 1
+            last_peak_idx = inner_idx
+            same_peak_streak = 1
+            chain_refined = True
+
         z = np.asarray(nodes[inner_idx], dtype=np.float64)
 
+        # Thesis Step 5: locally maximize J toward each neighboring chain node.
         z = _search_neighbor_peak(problem, objective, z, nodes[inner_idx - 1], delta_min)
         z = _search_neighbor_peak(problem, objective, z, nodes[inner_idx + 1], delta_min)
         nodes[inner_idx] = np.asarray(z, dtype=np.float64)
         current = np.asarray(z, dtype=np.float64)
+        reported_peak = np.asarray(current, dtype=np.float64).copy()
         current_stats = problem.stats(current)
 
         dir_result = directions.compute(current, direction)
+        stop_measure = float(dir_result.stop_measure)
         direction_solves += int(dir_result.direction_solves)
-        if dir_result.stop_measure <= float(epsilon):
+        if stop_measure <= float(epsilon):
             message = f"Stopping criterion {dir_result.stop_name} satisfied"
             status = "completed"
             break
@@ -201,7 +269,7 @@ def run_mpa(
                 "J": float(current_stats.J),
                 "I": float(current_stats.I),
                 "c": float(current_stats.c),
-                "stop_measure": float(dir_result.stop_measure),
+                "stop_measure": stop_measure,
                 "stop_name": str(dir_result.stop_name),
                 "descent_value": float(dir_result.descent_value),
                 "accepted": bool(accepted),
@@ -209,6 +277,7 @@ def run_mpa(
                 "fallback_used": bool(fallback_used),
                 "max_path_energy": float(np.max(energies)),
                 "node_index": int(inner_idx),
+                "chain_refined": bool(chain_refined),
             }
         )
 
@@ -218,8 +287,10 @@ def run_mpa(
             break
 
         nodes[inner_idx] = np.asarray(moved, dtype=np.float64)
-        nodes[inner_idx] = _search_neighbor_peak(problem, objective, nodes[inner_idx], nodes[inner_idx - 1], delta_min)
-        nodes[inner_idx] = _search_neighbor_peak(problem, objective, nodes[inner_idx], nodes[inner_idx + 1], delta_min)
+        # Thesis Step 6: after moving the peak node downhill, repair the local
+        # chain shape by searching for lower points toward each neighbor.
+        nodes[inner_idx] = _search_neighbor_lower(problem, objective, nodes[inner_idx], nodes[inner_idx - 1], delta_min)
+        nodes[inner_idx] = _search_neighbor_lower(problem, objective, nodes[inner_idx], nodes[inner_idx + 1], delta_min)
         current = np.asarray(nodes[inner_idx], dtype=np.float64)
 
     return build_result_payload(
@@ -227,7 +298,7 @@ def run_mpa(
         direction=direction,
         problem=problem,
         epsilon=float(epsilon),
-        iterate_free=current,
+        iterate_free=reported_peak,
         history=history,
         message=message,
         status=status,

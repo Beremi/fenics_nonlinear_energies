@@ -3,8 +3,6 @@
 Source of the original algorithms and published benchmark values:
 
 - Michaela Bailová, *Variational methods for solving engineering problems*, PhD Thesis, Ostrava, 2023
-- local source PDF: `BAI0012_FEI_P1807_1103V036_2023.pdf`
-- this merged page combines the thesis/runbook description and the current canonical replication packet
 
 ## Thesis Problem Statement And Functionals
 
@@ -66,7 +64,28 @@ $$
 - `OA1`: first-order descent on $I(u)$ with halving acceptance
 - `OA2`: first-order descent on $I(u)$ with a 1D minimisation step on $[0, \delta]$
 
-The repository implementation for this thesis packet lives under `src/problems/plaplace_u3/thesis/` and is backed by the same structured thesis geometries, exact $P_1$ quartic integration, and the current canonical summary at `artifacts/raw_results/plaplace_u3_thesis_full/summary.json`.
+## Implementation Map
+
+### Core Library Code
+
+- exact scalar P1 formulas for $A(u)$, $B(u)$, and $J(u)$: [`src/problems/plaplace_u3/common.py`](../../src/problems/plaplace_u3/common.py)
+- reusable 2D structured meshes, seeds, and adjacency: [`src/problems/plaplace_u3/support/mesh.py`](../../src/problems/plaplace_u3/support/mesh.py)
+- thesis 1D harness mesh support: [`src/problems/plaplace_u3/thesis/mesh1d.py`](../../src/problems/plaplace_u3/thesis/mesh1d.py)
+- discrete thesis functionals, rescaling, and the standard Laplace helper matrix: [`src/problems/plaplace_u3/thesis/functionals.py`](../../src/problems/plaplace_u3/thesis/functionals.py)
+- cached FE problem wrapper and common result payloads: [`src/problems/plaplace_u3/thesis/solver_common.py`](../../src/problems/plaplace_u3/thesis/solver_common.py)
+- descent directions and stopping criteria: [`src/problems/plaplace_u3/thesis/directions.py`](../../src/problems/plaplace_u3/thesis/directions.py)
+- thesis RMPA solver: [`src/problems/plaplace_u3/thesis/solver_rmpa.py`](../../src/problems/plaplace_u3/thesis/solver_rmpa.py)
+- thesis OA1/OA2 solvers: [`src/problems/plaplace_u3/thesis/solver_oa.py`](../../src/problems/plaplace_u3/thesis/solver_oa.py)
+- thesis MPA solver: [`src/problems/plaplace_u3/thesis/solver_mpa.py`](../../src/problems/plaplace_u3/thesis/solver_mpa.py)
+- thesis presets and published benchmark values: [`src/problems/plaplace_u3/thesis/presets.py`](../../src/problems/plaplace_u3/thesis/presets.py) and [`src/problems/plaplace_u3/thesis/tables.py`](../../src/problems/plaplace_u3/thesis/tables.py)
+- proxy-reference policy and assignment/report labels: [`src/problems/plaplace_u3/thesis/reference_policy.py`](../../src/problems/plaplace_u3/thesis/reference_policy.py) and [`src/problems/plaplace_u3/thesis/assignment.py`](../../src/problems/plaplace_u3/thesis/assignment.py)
+
+### Scripts And Publication Helpers
+
+- single-case thesis CLI and argument parsing: [`src/problems/plaplace_u3/thesis/scripts/solve_case.py`](../../src/problems/plaplace_u3/thesis/scripts/solve_case.py)
+- thesis-suite orchestration: [`experiments/runners/run_plaplace_u3_thesis_suite.py`](../../experiments/runners/run_plaplace_u3_thesis_suite.py)
+- docs page generator: [`experiments/analysis/generate_plaplace_u3_thesis_problem_page.py`](../../experiments/analysis/generate_plaplace_u3_thesis_problem_page.py)
+- report generator: [`experiments/analysis/generate_plaplace_u3_thesis_report.py`](../../experiments/analysis/generate_plaplace_u3_thesis_report.py)
 
 The section commands below rematerialize the current canonical thesis packet into dedicated experiment folders quickly. For a raw solver recomputation of the same families, use `experiments/runners/run_plaplace_u3_thesis_suite.py --only-table ...` with the table keys shown in each section.
 
@@ -80,19 +99,21 @@ The thesis validates computed solutions against a separate finite-element refere
 
 - canonical summary: `artifacts/raw_results/plaplace_u3_thesis_full/summary.json`
 - canonical thesis report: `artifacts/reports/plaplace_u3_thesis/README.md`
-- packet note: Hybrid refresh on 2026-03-23: thesis metadata recomputed with corrected tables; square-hole OA2 seeds skew and abs_sine_3x3 rerun with the documented execution overrides. Remaining rows still come from the previously promoted full packet.
-- primary assignment rows passing: `159` / `185`
-- status counts: `{'maxit': 52, 'completed': 183, 'failed': 1}`
+- packet note: Hybrid refresh on 2026-03-24: reran Tables 5.2, 5.3, 5.8, 5.13, 5.14, the d_R^N sanity row, and the previously failing MPA rows from Tables 5.6/5.7 with the corrected 1D golden-section policy, d_R^N normalization, OA2 skew-symmetry preservation, and MPA Step 5/6/reporting fixes. The Table 5.7 row (p=10/6, epsilon=1e-3) showed one divergent parallel diagnostic rerun at J≈4.361 before an isolated rerun returned J≈4.489; the promoted row uses the isolated rerun.
+- primary assignment rows passing: `179` / `185`
+- exact-match primary rows passing: `31` / `36`
+- proxy-match primary rows passing: `148` / `149`
+- status counts: `{'failed': 2, 'completed': 190, 'maxit': 44}`
 
 ### Stage Map
 
 | stage | brief | pass | fail | secondary | total |
 | --- | --- | --- | --- | --- | --- |
-| Optional 1D Harness | Section 18; cheap stopping and direction sanity check on (0, π). | 2 | 18 | 1 | 21 |
-| Stage A | Section 13 Stage A; principal branch on the square with RMPA. | 59 | 1 | 0 | 60 |
+| Optional 1D Harness | Section 18; cheap stopping and direction sanity check on (0, π). | 0 | 0 | 21 | 21 |
+| Stage A | Section 13 Stage A; principal branch on the square with RMPA. | 59 | 0 | 1 | 60 |
 | Stage B | Section 13 Stage B; cross-check the same branch with OA1. | 30 | 0 | 30 | 60 |
-| Stage C | Section 13 Stage C; compare method behavior and iteration counts. | 59 | 24 | 0 | 83 |
-| Stage D | Section 13 Stage D; multiple branches on the square with OA2. | 7 | 1 | 0 | 8 |
+| Stage C | Section 13 Stage C; compare method behavior and iteration counts. | 78 | 5 | 0 | 83 |
+| Stage D | Section 13 Stage D; multiple branches on the square with OA2. | 8 | 0 | 0 | 8 |
 | Stage E | Section 13 Stage E; multiple branches on the square-with-hole with OA2. | 4 | 0 | 0 | 4 |
 
 ### Table Map
@@ -108,17 +129,17 @@ The thesis validates computed solutions against a separate finite-element refere
 
 | target | assignment section | pass | fail | secondary | total |
 | --- | --- | --- | --- | --- | --- |
-| table_5_2 | Section 18 / Table 5.2 | 1 | 9 | 0 | 10 |
-| table_5_3 | Section 18 / Table 5.3 | 1 | 9 | 0 | 10 |
+| table_5_2 | Section 18 / Table 5.2 | 0 | 0 | 10 | 10 |
+| table_5_3 | Section 18 / Table 5.3 | 0 | 0 | 10 | 10 |
 | table_5_2_drn_sanity | Section 18 / d^R_N sanity | 0 | 0 | 1 | 1 |
-| table_5_8 | Section 14.1 / Table 5.8 | 29 | 1 | 0 | 30 |
+| table_5_8 | Section 14.1 / Table 5.8 | 29 | 0 | 1 | 30 |
 | table_5_10 | Section 15.1 / Table 5.10 | 30 | 0 | 0 | 30 |
 | table_5_9 | Section 14.2 / Table 5.9 | 30 | 0 | 0 | 30 |
 | table_5_11 | Section 15.2 / Table 5.11 | 0 | 0 | 30 | 30 |
-| table_5_6 | Section 16.1 / Table 5.6 | 13 | 11 | 0 | 24 |
-| table_5_7 | Section 16.1 / Table 5.7 | 19 | 8 | 0 | 27 |
+| table_5_6 | Section 16.1 / Table 5.6 | 24 | 0 | 0 | 24 |
+| table_5_7 | Section 16.1 / Table 5.7 | 27 | 0 | 0 | 27 |
 | table_5_13 | Section 16.2 / Table 5.13 | 27 | 5 | 0 | 32 |
-| table_5_14 | Section 17.1 / Table 5.14 | 7 | 1 | 0 | 8 |
+| table_5_14 | Section 17.1 / Table 5.14 | 8 | 0 | 0 | 8 |
 | figure_5_13 | Section 17.2 / Figure 5.13 | 4 | 0 | 0 | 4 |
 
 ## 1D Direction Study
@@ -134,27 +155,27 @@ This section merges the thesis 1D harness description with the current repo resu
 
 | table | direction | p | thesis $J$ | repo $J$ | thesis error | repo error | repo iters | status |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| table_5_2 | d | 1.500 | <span style="color:#1d4ed8;"><em>0.7600</em></span> | <span style="color:#b91c1c;"><strong>0.9130</strong></span> | <span style="color:#1d4ed8;"><em>0.0001</em></span> | <span style="color:#b91c1c;"><strong>0.0074</strong></span> | <span style="color:#b91c1c;"><strong>200</strong></span> | FAIL |
-| table_5_2 | d | 1.667 | <span style="color:#1d4ed8;"><em>0.6200</em></span> | <span style="color:#b91c1c;"><strong>0.7559</strong></span> | <span style="color:#1d4ed8;"><em>0.0001</em></span> | <span style="color:#b91c1c;"><strong>0.0007</strong></span> | <span style="color:#b91c1c;"><strong>105</strong></span> | FAIL |
-| table_5_2 | d | 1.833 | <span style="color:#1d4ed8;"><em>0.5100</em></span> | <span style="color:#b91c1c;"><strong>0.6221</strong></span> | <span style="color:#1d4ed8;"><em>0.0001</em></span> | <span style="color:#b91c1c;"><strong>0.0007</strong></span> | <span style="color:#b91c1c;"><strong>12</strong></span> | FAIL |
-| table_5_2 | d | 2.000 | <span style="color:#1d4ed8;"><em>0.4100</em></span> | <span style="color:#b91c1c;"><strong>0.5082</strong></span> | <span style="color:#1d4ed8;"><em>0.0000</em></span> | <span style="color:#b91c1c;"><strong>0.0007</strong></span> | <span style="color:#b91c1c;"><strong>6</strong></span> | FAIL |
-| table_5_2 | d | 2.167 | <span style="color:#1d4ed8;"><em>0.3300</em></span> | <span style="color:#b91c1c;"><strong>0.4109</strong></span> | <span style="color:#1d4ed8;"><em>0.0001</em></span> | <span style="color:#b91c1c;"><strong>0.0007</strong></span> | <span style="color:#b91c1c;"><strong>6</strong></span> | FAIL |
-| table_5_2 | d | 2.333 | <span style="color:#1d4ed8;"><em>0.2600</em></span> | <span style="color:#b91c1c;"><strong>0.3275</strong></span> | <span style="color:#1d4ed8;"><em>0.0001</em></span> | <span style="color:#b91c1c;"><strong>0.0008</strong></span> | <span style="color:#b91c1c;"><strong>6</strong></span> | FAIL |
-| table_5_2 | d | 2.500 | <span style="color:#1d4ed8;"><em>0.1900</em></span> | <span style="color:#b91c1c;"><strong>0.2559</strong></span> | <span style="color:#1d4ed8;"><em>0.0003</em></span> | <span style="color:#b91c1c;"><strong>0.0009</strong></span> | <span style="color:#b91c1c;"><strong>7</strong></span> | FAIL |
-| table_5_2 | d | 2.667 | <span style="color:#1d4ed8;"><em>0.1400</em></span> | <span style="color:#b91c1c;"><strong>0.1944</strong></span> | <span style="color:#1d4ed8;"><em>0.0005</em></span> | <span style="color:#b91c1c;"><strong>0.0011</strong></span> | <span style="color:#b91c1c;"><strong>7</strong></span> | FAIL |
-| table_5_2 | d | 2.833 | <span style="color:#1d4ed8;"><em>0.1000</em></span> | <span style="color:#b91c1c;"><strong>0.1420</strong></span> | <span style="color:#1d4ed8;"><em>0.0008</em></span> | <span style="color:#b91c1c;"><strong>0.0559</strong></span> | <span style="color:#b91c1c;"><strong>8</strong></span> | FAIL |
-| table_5_2 | d | 3.000 | <span style="color:#1d4ed8;"><em>0.1000</em></span> | <span style="color:#b91c1c;"><strong>0.0978</strong></span> | <span style="color:#1d4ed8;"><em>0.0008</em></span> | <span style="color:#b91c1c;"><strong>0.0390</strong></span> | <span style="color:#b91c1c;"><strong>33</strong></span> | PASS |
-| table_5_2_drn_sanity | d_rn | 2.000 | <span style="color:#1d4ed8;"><em>-</em></span> | <span style="color:#b91c1c;"><strong>0.5090</strong></span> | <span style="color:#1d4ed8;"><em>-</em></span> | <span style="color:#b91c1c;"><strong>-</strong></span> | <span style="color:#b91c1c;"><strong>200</strong></span> | secondary |
-| table_5_3 | d_vh | 1.500 | <span style="color:#1d4ed8;"><em>0.7600</em></span> | <span style="color:#b91c1c;"><strong>0.9130</strong></span> | <span style="color:#1d4ed8;"><em>0.0006</em></span> | <span style="color:#b91c1c;"><strong>0.0007</strong></span> | <span style="color:#b91c1c;"><strong>200</strong></span> | FAIL |
-| table_5_3 | d_vh | 1.667 | <span style="color:#1d4ed8;"><em>0.6200</em></span> | <span style="color:#b91c1c;"><strong>0.7559</strong></span> | <span style="color:#1d4ed8;"><em>0.0000</em></span> | <span style="color:#b91c1c;"><strong>0.0007</strong></span> | <span style="color:#b91c1c;"><strong>40</strong></span> | FAIL |
-| table_5_3 | d_vh | 1.833 | <span style="color:#1d4ed8;"><em>0.5100</em></span> | <span style="color:#b91c1c;"><strong>0.6221</strong></span> | <span style="color:#1d4ed8;"><em>0.0001</em></span> | <span style="color:#b91c1c;"><strong>0.0007</strong></span> | <span style="color:#b91c1c;"><strong>11</strong></span> | FAIL |
-| table_5_3 | d_vh | 2.000 | <span style="color:#1d4ed8;"><em>0.4100</em></span> | <span style="color:#b91c1c;"><strong>0.5082</strong></span> | <span style="color:#1d4ed8;"><em>0.0000</em></span> | <span style="color:#b91c1c;"><strong>0.0007</strong></span> | <span style="color:#b91c1c;"><strong>6</strong></span> | FAIL |
-| table_5_3 | d_vh | 2.167 | <span style="color:#1d4ed8;"><em>0.3300</em></span> | <span style="color:#b91c1c;"><strong>0.4109</strong></span> | <span style="color:#1d4ed8;"><em>0.0001</em></span> | <span style="color:#b91c1c;"><strong>0.0007</strong></span> | <span style="color:#b91c1c;"><strong>6</strong></span> | FAIL |
-| table_5_3 | d_vh | 2.333 | <span style="color:#1d4ed8;"><em>0.2600</em></span> | <span style="color:#b91c1c;"><strong>0.3275</strong></span> | <span style="color:#1d4ed8;"><em>0.0002</em></span> | <span style="color:#b91c1c;"><strong>0.0008</strong></span> | <span style="color:#b91c1c;"><strong>7</strong></span> | FAIL |
-| table_5_3 | d_vh | 2.500 | <span style="color:#1d4ed8;"><em>0.1900</em></span> | <span style="color:#b91c1c;"><strong>0.2559</strong></span> | <span style="color:#1d4ed8;"><em>0.0005</em></span> | <span style="color:#b91c1c;"><strong>0.0009</strong></span> | <span style="color:#b91c1c;"><strong>9</strong></span> | FAIL |
-| table_5_3 | d_vh | 2.667 | <span style="color:#1d4ed8;"><em>0.1400</em></span> | <span style="color:#b91c1c;"><strong>0.1944</strong></span> | <span style="color:#1d4ed8;"><em>0.0010</em></span> | <span style="color:#b91c1c;"><strong>0.0013</strong></span> | <span style="color:#b91c1c;"><strong>11</strong></span> | FAIL |
-| table_5_3 | d_vh | 2.833 | <span style="color:#1d4ed8;"><em>0.1000</em></span> | <span style="color:#b91c1c;"><strong>0.1420</strong></span> | <span style="color:#1d4ed8;"><em>0.0013</em></span> | <span style="color:#b91c1c;"><strong>0.0014</strong></span> | <span style="color:#b91c1c;"><strong>21</strong></span> | FAIL |
-| table_5_3 | d_vh | 3.000 | <span style="color:#1d4ed8;"><em>0.1000</em></span> | <span style="color:#b91c1c;"><strong>0.0978</strong></span> | <span style="color:#1d4ed8;"><em>0.0013</em></span> | <span style="color:#b91c1c;"><strong>0.0028</strong></span> | <span style="color:#b91c1c;"><strong>13</strong></span> | PASS |
+| table_5_2 | d | 1.500 | <span style="color:#1d4ed8;"><em>-</em></span> | <span style="color:#b91c1c;"><strong>0.9130</strong></span> | <span style="color:#1d4ed8;"><em>-</em></span> | <span style="color:#b91c1c;"><strong>-</strong></span> | <span style="color:#b91c1c;"><strong>87</strong></span> | secondary |
+| table_5_2 | d | 1.667 | <span style="color:#1d4ed8;"><em>0.7600</em></span> | <span style="color:#b91c1c;"><strong>0.7559</strong></span> | <span style="color:#1d4ed8;"><em>0.0001</em></span> | <span style="color:#b91c1c;"><strong>-</strong></span> | <span style="color:#b91c1c;"><strong>22</strong></span> | PASS |
+| table_5_2 | d | 1.833 | <span style="color:#1d4ed8;"><em>0.6200</em></span> | <span style="color:#b91c1c;"><strong>0.6221</strong></span> | <span style="color:#1d4ed8;"><em>0.0001</em></span> | <span style="color:#b91c1c;"><strong>-</strong></span> | <span style="color:#b91c1c;"><strong>11</strong></span> | PASS |
+| table_5_2 | d | 2.000 | <span style="color:#1d4ed8;"><em>0.5100</em></span> | <span style="color:#b91c1c;"><strong>0.5082</strong></span> | <span style="color:#1d4ed8;"><em>0.0001</em></span> | <span style="color:#b91c1c;"><strong>-</strong></span> | <span style="color:#b91c1c;"><strong>3</strong></span> | PASS |
+| table_5_2 | d | 2.167 | <span style="color:#1d4ed8;"><em>0.4100</em></span> | <span style="color:#b91c1c;"><strong>0.4109</strong></span> | <span style="color:#1d4ed8;"><em>0.0000</em></span> | <span style="color:#b91c1c;"><strong>-</strong></span> | <span style="color:#b91c1c;"><strong>5</strong></span> | PASS |
+| table_5_2 | d | 2.333 | <span style="color:#1d4ed8;"><em>0.3300</em></span> | <span style="color:#b91c1c;"><strong>0.3275</strong></span> | <span style="color:#1d4ed8;"><em>0.0001</em></span> | <span style="color:#b91c1c;"><strong>-</strong></span> | <span style="color:#b91c1c;"><strong>7</strong></span> | PASS |
+| table_5_2 | d | 2.500 | <span style="color:#1d4ed8;"><em>0.2600</em></span> | <span style="color:#b91c1c;"><strong>0.2559</strong></span> | <span style="color:#1d4ed8;"><em>0.0001</em></span> | <span style="color:#b91c1c;"><strong>-</strong></span> | <span style="color:#b91c1c;"><strong>10</strong></span> | PASS |
+| table_5_2 | d | 2.667 | <span style="color:#1d4ed8;"><em>0.1900</em></span> | <span style="color:#b91c1c;"><strong>0.1944</strong></span> | <span style="color:#1d4ed8;"><em>0.0003</em></span> | <span style="color:#b91c1c;"><strong>-</strong></span> | <span style="color:#b91c1c;"><strong>14</strong></span> | PASS |
+| table_5_2 | d | 2.833 | <span style="color:#1d4ed8;"><em>0.1400</em></span> | <span style="color:#b91c1c;"><strong>0.1420</strong></span> | <span style="color:#1d4ed8;"><em>0.0005</em></span> | <span style="color:#b91c1c;"><strong>-</strong></span> | <span style="color:#b91c1c;"><strong>18</strong></span> | PASS |
+| table_5_2 | d | 3.000 | <span style="color:#1d4ed8;"><em>0.1000</em></span> | <span style="color:#b91c1c;"><strong>0.0978</strong></span> | <span style="color:#1d4ed8;"><em>0.0008</em></span> | <span style="color:#b91c1c;"><strong>-</strong></span> | <span style="color:#b91c1c;"><strong>23</strong></span> | PASS |
+| table_5_2_drn_sanity | d_rn | 2.000 | <span style="color:#1d4ed8;"><em>-</em></span> | <span style="color:#b91c1c;"><strong>0.5082</strong></span> | <span style="color:#1d4ed8;"><em>-</em></span> | <span style="color:#b91c1c;"><strong>-</strong></span> | <span style="color:#b91c1c;"><strong>5</strong></span> | secondary |
+| table_5_3 | d_vh | 1.500 | <span style="color:#1d4ed8;"><em>-</em></span> | <span style="color:#b91c1c;"><strong>0.9130</strong></span> | <span style="color:#1d4ed8;"><em>-</em></span> | <span style="color:#b91c1c;"><strong>-</strong></span> | <span style="color:#b91c1c;"><strong>302</strong></span> | secondary |
+| table_5_3 | d_vh | 1.667 | <span style="color:#1d4ed8;"><em>0.7600</em></span> | <span style="color:#b91c1c;"><strong>0.7559</strong></span> | <span style="color:#1d4ed8;"><em>0.0006</em></span> | <span style="color:#b91c1c;"><strong>-</strong></span> | <span style="color:#b91c1c;"><strong>34</strong></span> | PASS |
+| table_5_3 | d_vh | 1.833 | <span style="color:#1d4ed8;"><em>0.6200</em></span> | <span style="color:#b91c1c;"><strong>0.6221</strong></span> | <span style="color:#1d4ed8;"><em>0.0000</em></span> | <span style="color:#b91c1c;"><strong>-</strong></span> | <span style="color:#b91c1c;"><strong>8</strong></span> | PASS |
+| table_5_3 | d_vh | 2.000 | <span style="color:#1d4ed8;"><em>0.5100</em></span> | <span style="color:#b91c1c;"><strong>0.5082</strong></span> | <span style="color:#1d4ed8;"><em>0.0001</em></span> | <span style="color:#b91c1c;"><strong>-</strong></span> | <span style="color:#b91c1c;"><strong>3</strong></span> | PASS |
+| table_5_3 | d_vh | 2.167 | <span style="color:#1d4ed8;"><em>0.4100</em></span> | <span style="color:#b91c1c;"><strong>0.4109</strong></span> | <span style="color:#1d4ed8;"><em>0.0000</em></span> | <span style="color:#b91c1c;"><strong>-</strong></span> | <span style="color:#b91c1c;"><strong>5</strong></span> | PASS |
+| table_5_3 | d_vh | 2.333 | <span style="color:#1d4ed8;"><em>0.3300</em></span> | <span style="color:#b91c1c;"><strong>0.3275</strong></span> | <span style="color:#1d4ed8;"><em>0.0001</em></span> | <span style="color:#b91c1c;"><strong>-</strong></span> | <span style="color:#b91c1c;"><strong>7</strong></span> | PASS |
+| table_5_3 | d_vh | 2.500 | <span style="color:#1d4ed8;"><em>0.2600</em></span> | <span style="color:#b91c1c;"><strong>0.2559</strong></span> | <span style="color:#1d4ed8;"><em>0.0002</em></span> | <span style="color:#b91c1c;"><strong>-</strong></span> | <span style="color:#b91c1c;"><strong>10</strong></span> | PASS |
+| table_5_3 | d_vh | 2.667 | <span style="color:#1d4ed8;"><em>0.1900</em></span> | <span style="color:#b91c1c;"><strong>0.1944</strong></span> | <span style="color:#1d4ed8;"><em>0.0005</em></span> | <span style="color:#b91c1c;"><strong>-</strong></span> | <span style="color:#b91c1c;"><strong>13</strong></span> | PASS |
+| table_5_3 | d_vh | 2.833 | <span style="color:#1d4ed8;"><em>0.1400</em></span> | <span style="color:#b91c1c;"><strong>0.1420</strong></span> | <span style="color:#1d4ed8;"><em>0.0010</em></span> | <span style="color:#b91c1c;"><strong>-</strong></span> | <span style="color:#b91c1c;"><strong>17</strong></span> | PASS |
+| table_5_3 | d_vh | 3.000 | <span style="color:#1d4ed8;"><em>0.1000</em></span> | <span style="color:#b91c1c;"><strong>0.0978</strong></span> | <span style="color:#1d4ed8;"><em>0.0013</em></span> | <span style="color:#b91c1c;"><strong>-</strong></span> | <span style="color:#b91c1c;"><strong>21</strong></span> | PASS |
 
 ## RMPA Square Principal-Branch Replication
 
@@ -171,36 +192,36 @@ The thesis uses the square benchmark as the main validation target for RMPA. The
 
 | $p$ | level | thesis $J$ | repo $J$ | thesis error | repo error | status |
 | --- | --- | --- | --- | --- | --- | --- |
-| 1.500 | 5 | <span style="color:#1d4ed8;"><em>4.9000</em></span> | <span style="color:#b91c1c;"><strong>4.9022</strong></span> | <span style="color:#1d4ed8;"><em>0.0139</em></span> | <span style="color:#b91c1c;"><strong>0.3293</strong></span> | PASS |
-| 1.500 | 6 | <span style="color:#1d4ed8;"><em>4.8800</em></span> | <span style="color:#b91c1c;"><strong>4.8823</strong></span> | <span style="color:#1d4ed8;"><em>0.0035</em></span> | <span style="color:#b91c1c;"><strong>0.1634</strong></span> | PASS |
-| 1.500 | 7 | <span style="color:#1d4ed8;"><em>4.4700</em></span> | <span style="color:#b91c1c;"><strong>4.8772</strong></span> | <span style="color:#1d4ed8;"><em>0.0005</em></span> | <span style="color:#b91c1c;"><strong>0.0815</strong></span> | FAIL |
-| 1.667 | 5 | <span style="color:#1d4ed8;"><em>4.4900</em></span> | <span style="color:#b91c1c;"><strong>4.4931</strong></span> | <span style="color:#1d4ed8;"><em>0.0083</em></span> | <span style="color:#b91c1c;"><strong>0.2463</strong></span> | PASS |
-| 1.667 | 6 | <span style="color:#1d4ed8;"><em>4.4800</em></span> | <span style="color:#b91c1c;"><strong>4.4760</strong></span> | <span style="color:#1d4ed8;"><em>0.0021</em></span> | <span style="color:#b91c1c;"><strong>0.1229</strong></span> | PASS |
-| 1.667 | 7 | <span style="color:#1d4ed8;"><em>4.4700</em></span> | <span style="color:#b91c1c;"><strong>4.4717</strong></span> | <span style="color:#1d4ed8;"><em>0.0005</em></span> | <span style="color:#b91c1c;"><strong>0.0614</strong></span> | PASS |
-| 1.833 | 5 | <span style="color:#1d4ed8;"><em>4.1400</em></span> | <span style="color:#b91c1c;"><strong>4.1362</strong></span> | <span style="color:#1d4ed8;"><em>0.0061</em></span> | <span style="color:#b91c1c;"><strong>0.2114</strong></span> | PASS |
-| 1.833 | 6 | <span style="color:#1d4ed8;"><em>4.1200</em></span> | <span style="color:#b91c1c;"><strong>4.1190</strong></span> | <span style="color:#1d4ed8;"><em>0.0015</em></span> | <span style="color:#b91c1c;"><strong>0.1055</strong></span> | PASS |
-| 1.833 | 7 | <span style="color:#1d4ed8;"><em>4.1100</em></span> | <span style="color:#b91c1c;"><strong>4.1146</strong></span> | <span style="color:#1d4ed8;"><em>0.0004</em></span> | <span style="color:#b91c1c;"><strong>0.0527</strong></span> | PASS |
-| 2.000 | 5 | <span style="color:#1d4ed8;"><em>3.8500</em></span> | <span style="color:#b91c1c;"><strong>3.8510</strong></span> | <span style="color:#1d4ed8;"><em>0.0049</em></span> | <span style="color:#b91c1c;"><strong>0.1932</strong></span> | PASS |
-| 2.000 | 6 | <span style="color:#1d4ed8;"><em>3.8300</em></span> | <span style="color:#b91c1c;"><strong>3.8324</strong></span> | <span style="color:#1d4ed8;"><em>0.0012</em></span> | <span style="color:#b91c1c;"><strong>0.0965</strong></span> | PASS |
-| 2.000 | 7 | <span style="color:#1d4ed8;"><em>3.8300</em></span> | <span style="color:#b91c1c;"><strong>3.8278</strong></span> | <span style="color:#1d4ed8;"><em>0.0003</em></span> | <span style="color:#b91c1c;"><strong>0.0482</strong></span> | PASS |
-| 2.167 | 5 | <span style="color:#1d4ed8;"><em>3.6400</em></span> | <span style="color:#b91c1c;"><strong>3.6388</strong></span> | <span style="color:#1d4ed8;"><em>0.0041</em></span> | <span style="color:#b91c1c;"><strong>0.1837</strong></span> | PASS |
-| 2.167 | 6 | <span style="color:#1d4ed8;"><em>3.6200</em></span> | <span style="color:#b91c1c;"><strong>3.6180</strong></span> | <span style="color:#1d4ed8;"><em>0.0010</em></span> | <span style="color:#b91c1c;"><strong>0.0918</strong></span> | PASS |
-| 2.167 | 7 | <span style="color:#1d4ed8;"><em>3.6100</em></span> | <span style="color:#b91c1c;"><strong>3.6128</strong></span> | <span style="color:#1d4ed8;"><em>0.0003</em></span> | <span style="color:#b91c1c;"><strong>0.0459</strong></span> | PASS |
-| 2.333 | 5 | <span style="color:#1d4ed8;"><em>3.5000</em></span> | <span style="color:#b91c1c;"><strong>3.5023</strong></span> | <span style="color:#1d4ed8;"><em>0.0036</em></span> | <span style="color:#b91c1c;"><strong>0.1799</strong></span> | PASS |
-| 2.333 | 6 | <span style="color:#1d4ed8;"><em>3.4800</em></span> | <span style="color:#b91c1c;"><strong>3.4781</strong></span> | <span style="color:#1d4ed8;"><em>0.0009</em></span> | <span style="color:#b91c1c;"><strong>0.0901</strong></span> | PASS |
-| 2.333 | 7 | <span style="color:#1d4ed8;"><em>3.4700</em></span> | <span style="color:#b91c1c;"><strong>3.4721</strong></span> | <span style="color:#1d4ed8;"><em>0.0002</em></span> | <span style="color:#b91c1c;"><strong>0.0451</strong></span> | PASS |
-| 2.500 | 5 | <span style="color:#1d4ed8;"><em>3.4500</em></span> | <span style="color:#b91c1c;"><strong>3.4515</strong></span> | <span style="color:#1d4ed8;"><em>0.0032</em></span> | <span style="color:#b91c1c;"><strong>0.1807</strong></span> | PASS |
-| 2.500 | 6 | <span style="color:#1d4ed8;"><em>3.4200</em></span> | <span style="color:#b91c1c;"><strong>3.4225</strong></span> | <span style="color:#1d4ed8;"><em>0.0008</em></span> | <span style="color:#b91c1c;"><strong>0.0908</strong></span> | PASS |
-| 2.500 | 7 | <span style="color:#1d4ed8;"><em>3.4200</em></span> | <span style="color:#b91c1c;"><strong>3.4152</strong></span> | <span style="color:#1d4ed8;"><em>0.0002</em></span> | <span style="color:#b91c1c;"><strong>0.0455</strong></span> | PASS |
-| 2.667 | 5 | <span style="color:#1d4ed8;"><em>3.5100</em></span> | <span style="color:#b91c1c;"><strong>3.5115</strong></span> | <span style="color:#1d4ed8;"><em>0.0028</em></span> | <span style="color:#b91c1c;"><strong>0.1857</strong></span> | PASS |
-| 2.667 | 6 | <span style="color:#1d4ed8;"><em>3.4800</em></span> | <span style="color:#b91c1c;"><strong>3.4751</strong></span> | <span style="color:#1d4ed8;"><em>0.0007</em></span> | <span style="color:#b91c1c;"><strong>0.0938</strong></span> | PASS |
-| 2.667 | 7 | <span style="color:#1d4ed8;"><em>3.4700</em></span> | <span style="color:#b91c1c;"><strong>3.4661</strong></span> | <span style="color:#1d4ed8;"><em>0.0002</em></span> | <span style="color:#b91c1c;"><strong>0.0471</strong></span> | PASS |
-| 2.833 | 5 | <span style="color:#1d4ed8;"><em>3.7400</em></span> | <span style="color:#b91c1c;"><strong>3.7384</strong></span> | <span style="color:#1d4ed8;"><em>0.0026</em></span> | <span style="color:#b91c1c;"><strong>0.1958</strong></span> | PASS |
-| 2.833 | 6 | <span style="color:#1d4ed8;"><em>3.6900</em></span> | <span style="color:#b91c1c;"><strong>3.6901</strong></span> | <span style="color:#1d4ed8;"><em>0.0007</em></span> | <span style="color:#b91c1c;"><strong>0.0995</strong></span> | PASS |
-| 2.833 | 7 | <span style="color:#1d4ed8;"><em>3.6800</em></span> | <span style="color:#b91c1c;"><strong>3.6780</strong></span> | <span style="color:#1d4ed8;"><em>0.0004</em></span> | <span style="color:#b91c1c;"><strong>0.0503</strong></span> | PASS |
-| 3.000 | 5 | <span style="color:#1d4ed8;"><em>4.2600</em></span> | <span style="color:#b91c1c;"><strong>4.2640</strong></span> | <span style="color:#1d4ed8;"><em>0.0023</em></span> | <span style="color:#b91c1c;"><strong>0.2127</strong></span> | PASS |
-| 3.000 | 6 | <span style="color:#1d4ed8;"><em>4.1900</em></span> | <span style="color:#b91c1c;"><strong>4.1940</strong></span> | <span style="color:#1d4ed8;"><em>0.0006</em></span> | <span style="color:#b91c1c;"><strong>0.1091</strong></span> | PASS |
-| 3.000 | 7 | <span style="color:#1d4ed8;"><em>4.1800</em></span> | <span style="color:#b91c1c;"><strong>4.1765</strong></span> | <span style="color:#1d4ed8;"><em>0.0004</em></span> | <span style="color:#b91c1c;"><strong>0.0555</strong></span> | PASS |
+| 1.500 | 5 | <span style="color:#1d4ed8;"><em>4.9000</em></span> | <span style="color:#b91c1c;"><strong>4.9022</strong></span> | <span style="color:#1d4ed8;"><em>0.0139</em></span> | <span style="color:#b91c1c;"><strong>-</strong></span> | PASS |
+| 1.500 | 6 | <span style="color:#1d4ed8;"><em>4.8800</em></span> | <span style="color:#b91c1c;"><strong>4.8823</strong></span> | <span style="color:#1d4ed8;"><em>0.0035</em></span> | <span style="color:#b91c1c;"><strong>-</strong></span> | PASS |
+| 1.500 | 7 | <span style="color:#1d4ed8;"><em>-</em></span> | <span style="color:#b91c1c;"><strong>4.8772</strong></span> | <span style="color:#1d4ed8;"><em>-</em></span> | <span style="color:#b91c1c;"><strong>-</strong></span> | secondary |
+| 1.667 | 5 | <span style="color:#1d4ed8;"><em>4.4900</em></span> | <span style="color:#b91c1c;"><strong>4.4931</strong></span> | <span style="color:#1d4ed8;"><em>0.0083</em></span> | <span style="color:#b91c1c;"><strong>-</strong></span> | PASS |
+| 1.667 | 6 | <span style="color:#1d4ed8;"><em>4.4800</em></span> | <span style="color:#b91c1c;"><strong>4.4760</strong></span> | <span style="color:#1d4ed8;"><em>0.0021</em></span> | <span style="color:#b91c1c;"><strong>-</strong></span> | PASS |
+| 1.667 | 7 | <span style="color:#1d4ed8;"><em>4.4700</em></span> | <span style="color:#b91c1c;"><strong>4.4717</strong></span> | <span style="color:#1d4ed8;"><em>0.0005</em></span> | <span style="color:#b91c1c;"><strong>-</strong></span> | PASS |
+| 1.833 | 5 | <span style="color:#1d4ed8;"><em>4.1400</em></span> | <span style="color:#b91c1c;"><strong>4.1362</strong></span> | <span style="color:#1d4ed8;"><em>0.0061</em></span> | <span style="color:#b91c1c;"><strong>-</strong></span> | PASS |
+| 1.833 | 6 | <span style="color:#1d4ed8;"><em>4.1200</em></span> | <span style="color:#b91c1c;"><strong>4.1190</strong></span> | <span style="color:#1d4ed8;"><em>0.0015</em></span> | <span style="color:#b91c1c;"><strong>-</strong></span> | PASS |
+| 1.833 | 7 | <span style="color:#1d4ed8;"><em>4.1100</em></span> | <span style="color:#b91c1c;"><strong>4.1146</strong></span> | <span style="color:#1d4ed8;"><em>0.0004</em></span> | <span style="color:#b91c1c;"><strong>-</strong></span> | PASS |
+| 2.000 | 5 | <span style="color:#1d4ed8;"><em>3.8500</em></span> | <span style="color:#b91c1c;"><strong>3.8510</strong></span> | <span style="color:#1d4ed8;"><em>0.0049</em></span> | <span style="color:#b91c1c;"><strong>-</strong></span> | PASS |
+| 2.000 | 6 | <span style="color:#1d4ed8;"><em>3.8300</em></span> | <span style="color:#b91c1c;"><strong>3.8324</strong></span> | <span style="color:#1d4ed8;"><em>0.0012</em></span> | <span style="color:#b91c1c;"><strong>-</strong></span> | PASS |
+| 2.000 | 7 | <span style="color:#1d4ed8;"><em>3.8300</em></span> | <span style="color:#b91c1c;"><strong>3.8278</strong></span> | <span style="color:#1d4ed8;"><em>0.0003</em></span> | <span style="color:#b91c1c;"><strong>-</strong></span> | PASS |
+| 2.167 | 5 | <span style="color:#1d4ed8;"><em>3.6400</em></span> | <span style="color:#b91c1c;"><strong>3.6388</strong></span> | <span style="color:#1d4ed8;"><em>0.0041</em></span> | <span style="color:#b91c1c;"><strong>-</strong></span> | PASS |
+| 2.167 | 6 | <span style="color:#1d4ed8;"><em>3.6200</em></span> | <span style="color:#b91c1c;"><strong>3.6180</strong></span> | <span style="color:#1d4ed8;"><em>0.0010</em></span> | <span style="color:#b91c1c;"><strong>-</strong></span> | PASS |
+| 2.167 | 7 | <span style="color:#1d4ed8;"><em>3.6100</em></span> | <span style="color:#b91c1c;"><strong>3.6128</strong></span> | <span style="color:#1d4ed8;"><em>0.0003</em></span> | <span style="color:#b91c1c;"><strong>-</strong></span> | PASS |
+| 2.333 | 5 | <span style="color:#1d4ed8;"><em>3.5000</em></span> | <span style="color:#b91c1c;"><strong>3.5023</strong></span> | <span style="color:#1d4ed8;"><em>0.0036</em></span> | <span style="color:#b91c1c;"><strong>-</strong></span> | PASS |
+| 2.333 | 6 | <span style="color:#1d4ed8;"><em>3.4800</em></span> | <span style="color:#b91c1c;"><strong>3.4781</strong></span> | <span style="color:#1d4ed8;"><em>0.0009</em></span> | <span style="color:#b91c1c;"><strong>-</strong></span> | PASS |
+| 2.333 | 7 | <span style="color:#1d4ed8;"><em>3.4700</em></span> | <span style="color:#b91c1c;"><strong>3.4721</strong></span> | <span style="color:#1d4ed8;"><em>0.0002</em></span> | <span style="color:#b91c1c;"><strong>-</strong></span> | PASS |
+| 2.500 | 5 | <span style="color:#1d4ed8;"><em>3.4500</em></span> | <span style="color:#b91c1c;"><strong>3.4515</strong></span> | <span style="color:#1d4ed8;"><em>0.0032</em></span> | <span style="color:#b91c1c;"><strong>-</strong></span> | PASS |
+| 2.500 | 6 | <span style="color:#1d4ed8;"><em>3.4200</em></span> | <span style="color:#b91c1c;"><strong>3.4225</strong></span> | <span style="color:#1d4ed8;"><em>0.0008</em></span> | <span style="color:#b91c1c;"><strong>-</strong></span> | PASS |
+| 2.500 | 7 | <span style="color:#1d4ed8;"><em>3.4200</em></span> | <span style="color:#b91c1c;"><strong>3.4152</strong></span> | <span style="color:#1d4ed8;"><em>0.0002</em></span> | <span style="color:#b91c1c;"><strong>-</strong></span> | PASS |
+| 2.667 | 5 | <span style="color:#1d4ed8;"><em>3.5100</em></span> | <span style="color:#b91c1c;"><strong>3.5115</strong></span> | <span style="color:#1d4ed8;"><em>0.0028</em></span> | <span style="color:#b91c1c;"><strong>-</strong></span> | PASS |
+| 2.667 | 6 | <span style="color:#1d4ed8;"><em>3.4800</em></span> | <span style="color:#b91c1c;"><strong>3.4751</strong></span> | <span style="color:#1d4ed8;"><em>0.0007</em></span> | <span style="color:#b91c1c;"><strong>-</strong></span> | PASS |
+| 2.667 | 7 | <span style="color:#1d4ed8;"><em>3.4700</em></span> | <span style="color:#b91c1c;"><strong>3.4661</strong></span> | <span style="color:#1d4ed8;"><em>0.0002</em></span> | <span style="color:#b91c1c;"><strong>-</strong></span> | PASS |
+| 2.833 | 5 | <span style="color:#1d4ed8;"><em>3.7400</em></span> | <span style="color:#b91c1c;"><strong>3.7384</strong></span> | <span style="color:#1d4ed8;"><em>0.0026</em></span> | <span style="color:#b91c1c;"><strong>-</strong></span> | PASS |
+| 2.833 | 6 | <span style="color:#1d4ed8;"><em>3.6900</em></span> | <span style="color:#b91c1c;"><strong>3.6901</strong></span> | <span style="color:#1d4ed8;"><em>0.0007</em></span> | <span style="color:#b91c1c;"><strong>-</strong></span> | PASS |
+| 2.833 | 7 | <span style="color:#1d4ed8;"><em>3.6800</em></span> | <span style="color:#b91c1c;"><strong>3.6780</strong></span> | <span style="color:#1d4ed8;"><em>0.0004</em></span> | <span style="color:#b91c1c;"><strong>-</strong></span> | PASS |
+| 3.000 | 5 | <span style="color:#1d4ed8;"><em>4.2600</em></span> | <span style="color:#b91c1c;"><strong>4.2640</strong></span> | <span style="color:#1d4ed8;"><em>0.0023</em></span> | <span style="color:#b91c1c;"><strong>-</strong></span> | PASS |
+| 3.000 | 6 | <span style="color:#1d4ed8;"><em>4.1900</em></span> | <span style="color:#b91c1c;"><strong>4.1940</strong></span> | <span style="color:#1d4ed8;"><em>0.0006</em></span> | <span style="color:#b91c1c;"><strong>-</strong></span> | PASS |
+| 3.000 | 7 | <span style="color:#1d4ed8;"><em>4.1800</em></span> | <span style="color:#b91c1c;"><strong>4.1765</strong></span> | <span style="color:#1d4ed8;"><em>0.0004</em></span> | <span style="color:#b91c1c;"><strong>-</strong></span> | PASS |
 
 ### Table 5.9 — tolerance study
 
@@ -333,35 +354,35 @@ This section combines the MPA square tables with the cross-method and descent-di
 
 | table | $p$ | level | $\varepsilon$ | thesis $J$ | repo $J$ | thesis error | repo error | status |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| table_5_6 | 1.667 | 5 | <span style="color:#b91c1c;"><strong>1e-04</strong></span> | <span style="color:#1d4ed8;"><em>4.4900</em></span> | <span style="color:#b91c1c;"><strong>4.5483</strong></span> | <span style="color:#1d4ed8;"><em>0.0084</em></span> | <span style="color:#b91c1c;"><strong>0.8137</strong></span> | FAIL |
-| table_5_6 | 1.667 | 6 | <span style="color:#b91c1c;"><strong>1e-04</strong></span> | <span style="color:#1d4ed8;"><em>4.4800</em></span> | <span style="color:#b91c1c;"><strong>4.5367</strong></span> | <span style="color:#1d4ed8;"><em>0.0021</em></span> | <span style="color:#b91c1c;"><strong>0.7931</strong></span> | FAIL |
-| table_5_6 | 1.667 | 7 | <span style="color:#b91c1c;"><strong>1e-04</strong></span> | <span style="color:#1d4ed8;"><em>4.4700</em></span> | <span style="color:#b91c1c;"><strong>4.5334</strong></span> | <span style="color:#1d4ed8;"><em>0.0005</em></span> | <span style="color:#b91c1c;"><strong>0.7821</strong></span> | FAIL |
-| table_5_6 | 1.833 | 5 | <span style="color:#b91c1c;"><strong>1e-04</strong></span> | <span style="color:#1d4ed8;"><em>4.1400</em></span> | <span style="color:#b91c1c;"><strong>4.1818</strong></span> | <span style="color:#1d4ed8;"><em>0.0061</em></span> | <span style="color:#b91c1c;"><strong>0.4402</strong></span> | FAIL |
-| table_5_6 | 1.833 | 6 | <span style="color:#b91c1c;"><strong>1e-04</strong></span> | <span style="color:#1d4ed8;"><em>4.1200</em></span> | <span style="color:#b91c1c;"><strong>4.1228</strong></span> | <span style="color:#1d4ed8;"><em>0.0015</em></span> | <span style="color:#b91c1c;"><strong>0.1910</strong></span> | PASS |
-| table_5_6 | 1.833 | 7 | <span style="color:#b91c1c;"><strong>1e-04</strong></span> | <span style="color:#1d4ed8;"><em>4.1100</em></span> | <span style="color:#b91c1c;"><strong>4.1102</strong></span> | <span style="color:#1d4ed8;"><em>0.0004</em></span> | <span style="color:#b91c1c;"><strong>0.1659</strong></span> | PASS |
-| table_5_6 | 2.000 | 5 | <span style="color:#b91c1c;"><strong>1e-04</strong></span> | <span style="color:#1d4ed8;"><em>3.8500</em></span> | <span style="color:#b91c1c;"><strong>3.8737</strong></span> | <span style="color:#1d4ed8;"><em>0.0049</em></span> | <span style="color:#b91c1c;"><strong>0.3993</strong></span> | FAIL |
-| table_5_6 | 2.000 | 6 | <span style="color:#b91c1c;"><strong>1e-04</strong></span> | <span style="color:#1d4ed8;"><em>3.8300</em></span> | <span style="color:#b91c1c;"><strong>3.8344</strong></span> | <span style="color:#1d4ed8;"><em>0.0012</em></span> | <span style="color:#b91c1c;"><strong>0.1202</strong></span> | PASS |
+| table_5_6 | 1.667 | 5 | <span style="color:#b91c1c;"><strong>1e-04</strong></span> | <span style="color:#1d4ed8;"><em>4.4900</em></span> | <span style="color:#b91c1c;"><strong>4.4931</strong></span> | <span style="color:#1d4ed8;"><em>0.0084</em></span> | <span style="color:#b91c1c;"><strong>-</strong></span> | PASS |
+| table_5_6 | 1.667 | 6 | <span style="color:#b91c1c;"><strong>1e-04</strong></span> | <span style="color:#1d4ed8;"><em>4.4800</em></span> | <span style="color:#b91c1c;"><strong>4.4760</strong></span> | <span style="color:#1d4ed8;"><em>0.0021</em></span> | <span style="color:#b91c1c;"><strong>-</strong></span> | PASS |
+| table_5_6 | 1.667 | 7 | <span style="color:#b91c1c;"><strong>1e-04</strong></span> | <span style="color:#1d4ed8;"><em>4.4700</em></span> | <span style="color:#b91c1c;"><strong>4.4717</strong></span> | <span style="color:#1d4ed8;"><em>0.0005</em></span> | <span style="color:#b91c1c;"><strong>-</strong></span> | PASS |
+| table_5_6 | 1.833 | 5 | <span style="color:#b91c1c;"><strong>1e-04</strong></span> | <span style="color:#1d4ed8;"><em>4.1400</em></span> | <span style="color:#b91c1c;"><strong>4.1362</strong></span> | <span style="color:#1d4ed8;"><em>0.0061</em></span> | <span style="color:#b91c1c;"><strong>-</strong></span> | PASS |
+| table_5_6 | 1.833 | 6 | <span style="color:#b91c1c;"><strong>1e-04</strong></span> | <span style="color:#1d4ed8;"><em>4.1200</em></span> | <span style="color:#b91c1c;"><strong>4.1190</strong></span> | <span style="color:#1d4ed8;"><em>0.0015</em></span> | <span style="color:#b91c1c;"><strong>-</strong></span> | PASS |
+| table_5_6 | 1.833 | 7 | <span style="color:#b91c1c;"><strong>1e-04</strong></span> | <span style="color:#1d4ed8;"><em>4.1100</em></span> | <span style="color:#b91c1c;"><strong>4.1146</strong></span> | <span style="color:#1d4ed8;"><em>0.0004</em></span> | <span style="color:#b91c1c;"><strong>-</strong></span> | PASS |
+| table_5_6 | 2.000 | 5 | <span style="color:#b91c1c;"><strong>1e-04</strong></span> | <span style="color:#1d4ed8;"><em>3.8500</em></span> | <span style="color:#b91c1c;"><strong>3.8510</strong></span> | <span style="color:#1d4ed8;"><em>0.0049</em></span> | <span style="color:#b91c1c;"><strong>-</strong></span> | PASS |
+| table_5_6 | 2.000 | 6 | <span style="color:#b91c1c;"><strong>1e-04</strong></span> | <span style="color:#1d4ed8;"><em>3.8300</em></span> | <span style="color:#b91c1c;"><strong>3.8324</strong></span> | <span style="color:#1d4ed8;"><em>0.0012</em></span> | <span style="color:#b91c1c;"><strong>-</strong></span> | PASS |
 | table_5_6 | 2.000 | 7 | <span style="color:#b91c1c;"><strong>1e-04</strong></span> | <span style="color:#1d4ed8;"><em>3.8300</em></span> | <span style="color:#b91c1c;"><strong>3.8285</strong></span> | <span style="color:#1d4ed8;"><em>0.0003</em></span> | <span style="color:#b91c1c;"><strong>0.0619</strong></span> | PASS |
-| table_5_6 | 2.167 | 5 | <span style="color:#b91c1c;"><strong>1e-04</strong></span> | <span style="color:#1d4ed8;"><em>3.6400</em></span> | <span style="color:#b91c1c;"><strong>3.6023</strong></span> | <span style="color:#1d4ed8;"><em>0.0041</em></span> | <span style="color:#b91c1c;"><strong>0.4255</strong></span> | FAIL |
-| table_5_6 | 2.167 | 6 | <span style="color:#b91c1c;"><strong>1e-04</strong></span> | <span style="color:#1d4ed8;"><em>3.6200</em></span> | <span style="color:#b91c1c;"><strong>3.6218</strong></span> | <span style="color:#1d4ed8;"><em>0.0010</em></span> | <span style="color:#b91c1c;"><strong>0.1374</strong></span> | PASS |
+| table_5_6 | 2.167 | 5 | <span style="color:#b91c1c;"><strong>1e-04</strong></span> | <span style="color:#1d4ed8;"><em>3.6400</em></span> | <span style="color:#b91c1c;"><strong>3.6388</strong></span> | <span style="color:#1d4ed8;"><em>0.0041</em></span> | <span style="color:#b91c1c;"><strong>-</strong></span> | PASS |
+| table_5_6 | 2.167 | 6 | <span style="color:#b91c1c;"><strong>1e-04</strong></span> | <span style="color:#1d4ed8;"><em>3.6200</em></span> | <span style="color:#b91c1c;"><strong>3.6180</strong></span> | <span style="color:#1d4ed8;"><em>0.0010</em></span> | <span style="color:#b91c1c;"><strong>-</strong></span> | PASS |
 | table_5_6 | 2.167 | 7 | <span style="color:#b91c1c;"><strong>1e-04</strong></span> | <span style="color:#1d4ed8;"><em>3.6100</em></span> | <span style="color:#b91c1c;"><strong>3.6154</strong></span> | <span style="color:#1d4ed8;"><em>0.0003</em></span> | <span style="color:#b91c1c;"><strong>0.0930</strong></span> | PASS |
-| table_5_6 | 2.500 | 5 | <span style="color:#b91c1c;"><strong>1e-04</strong></span> | <span style="color:#1d4ed8;"><em>3.4500</em></span> | <span style="color:#b91c1c;"><strong>3.4517</strong></span> | <span style="color:#1d4ed8;"><em>0.0031</em></span> | <span style="color:#b91c1c;"><strong>0.1821</strong></span> | PASS |
-| table_5_6 | 2.500 | 6 | <span style="color:#b91c1c;"><strong>1e-04</strong></span> | <span style="color:#1d4ed8;"><em>3.4200</em></span> | <span style="color:#b91c1c;"><strong>3.4229</strong></span> | <span style="color:#1d4ed8;"><em>0.0008</em></span> | <span style="color:#b91c1c;"><strong>0.0939</strong></span> | PASS |
+| table_5_6 | 2.500 | 5 | <span style="color:#b91c1c;"><strong>1e-04</strong></span> | <span style="color:#1d4ed8;"><em>3.4500</em></span> | <span style="color:#b91c1c;"><strong>3.4515</strong></span> | <span style="color:#1d4ed8;"><em>0.0031</em></span> | <span style="color:#b91c1c;"><strong>-</strong></span> | PASS |
+| table_5_6 | 2.500 | 6 | <span style="color:#b91c1c;"><strong>1e-04</strong></span> | <span style="color:#1d4ed8;"><em>3.4200</em></span> | <span style="color:#b91c1c;"><strong>3.4225</strong></span> | <span style="color:#1d4ed8;"><em>0.0008</em></span> | <span style="color:#b91c1c;"><strong>-</strong></span> | PASS |
 | table_5_6 | 2.500 | 7 | <span style="color:#b91c1c;"><strong>1e-04</strong></span> | <span style="color:#1d4ed8;"><em>3.4200</em></span> | <span style="color:#b91c1c;"><strong>3.4136</strong></span> | <span style="color:#1d4ed8;"><em>0.0002</em></span> | <span style="color:#b91c1c;"><strong>0.1393</strong></span> | PASS |
-| table_5_6 | 2.667 | 5 | <span style="color:#b91c1c;"><strong>1e-04</strong></span> | <span style="color:#1d4ed8;"><em>3.5100</em></span> | <span style="color:#b91c1c;"><strong>3.5404</strong></span> | <span style="color:#1d4ed8;"><em>0.0028</em></span> | <span style="color:#b91c1c;"><strong>0.2994</strong></span> | FAIL |
-| table_5_6 | 2.667 | 6 | <span style="color:#b91c1c;"><strong>1e-04</strong></span> | <span style="color:#1d4ed8;"><em>3.4800</em></span> | <span style="color:#b91c1c;"><strong>3.5008</strong></span> | <span style="color:#1d4ed8;"><em>0.0007</em></span> | <span style="color:#b91c1c;"><strong>0.2972</strong></span> | FAIL |
+| table_5_6 | 2.667 | 5 | <span style="color:#b91c1c;"><strong>1e-04</strong></span> | <span style="color:#1d4ed8;"><em>3.5100</em></span> | <span style="color:#b91c1c;"><strong>3.5114</strong></span> | <span style="color:#1d4ed8;"><em>0.0028</em></span> | <span style="color:#b91c1c;"><strong>-</strong></span> | PASS |
+| table_5_6 | 2.667 | 6 | <span style="color:#b91c1c;"><strong>1e-04</strong></span> | <span style="color:#1d4ed8;"><em>3.4800</em></span> | <span style="color:#b91c1c;"><strong>3.4751</strong></span> | <span style="color:#1d4ed8;"><em>0.0007</em></span> | <span style="color:#b91c1c;"><strong>-</strong></span> | PASS |
 | table_5_6 | 2.667 | 7 | <span style="color:#b91c1c;"><strong>1e-04</strong></span> | <span style="color:#1d4ed8;"><em>3.4700</em></span> | <span style="color:#b91c1c;"><strong>3.4661</strong></span> | <span style="color:#1d4ed8;"><em>0.0002</em></span> | <span style="color:#b91c1c;"><strong>0.0481</strong></span> | PASS |
-| table_5_6 | 2.833 | 5 | <span style="color:#b91c1c;"><strong>1e-04</strong></span> | <span style="color:#1d4ed8;"><em>3.7400</em></span> | <span style="color:#b91c1c;"><strong>3.7429</strong></span> | <span style="color:#1d4ed8;"><em>0.0026</em></span> | <span style="color:#b91c1c;"><strong>0.2084</strong></span> | PASS |
-| table_5_6 | 2.833 | 6 | <span style="color:#b91c1c;"><strong>1e-04</strong></span> | <span style="color:#1d4ed8;"><em>3.6900</em></span> | <span style="color:#b91c1c;"><strong>3.7193</strong></span> | <span style="color:#1d4ed8;"><em>0.0006</em></span> | <span style="color:#b91c1c;"><strong>0.1926</strong></span> | FAIL |
-| table_5_6 | 2.833 | 7 | <span style="color:#b91c1c;"><strong>1e-04</strong></span> | <span style="color:#1d4ed8;"><em>3.6800</em></span> | <span style="color:#b91c1c;"><strong>3.7076</strong></span> | <span style="color:#1d4ed8;"><em>0.0002</em></span> | <span style="color:#b91c1c;"><strong>0.1743</strong></span> | FAIL |
-| table_5_6 | 3.000 | 5 | <span style="color:#b91c1c;"><strong>1e-04</strong></span> | <span style="color:#1d4ed8;"><em>4.2600</em></span> | <span style="color:#b91c1c;"><strong>4.2946</strong></span> | <span style="color:#1d4ed8;"><em>0.0024</em></span> | <span style="color:#b91c1c;"><strong>0.2409</strong></span> | FAIL |
-| table_5_6 | 3.000 | 6 | <span style="color:#b91c1c;"><strong>1e-04</strong></span> | <span style="color:#1d4ed8;"><em>4.1900</em></span> | <span style="color:#b91c1c;"><strong>4.1939</strong></span> | <span style="color:#1d4ed8;"><em>0.0006</em></span> | <span style="color:#b91c1c;"><strong>0.1107</strong></span> | PASS |
+| table_5_6 | 2.833 | 5 | <span style="color:#b91c1c;"><strong>1e-04</strong></span> | <span style="color:#1d4ed8;"><em>3.7400</em></span> | <span style="color:#b91c1c;"><strong>3.7384</strong></span> | <span style="color:#1d4ed8;"><em>0.0026</em></span> | <span style="color:#b91c1c;"><strong>-</strong></span> | PASS |
+| table_5_6 | 2.833 | 6 | <span style="color:#b91c1c;"><strong>1e-04</strong></span> | <span style="color:#1d4ed8;"><em>3.6900</em></span> | <span style="color:#b91c1c;"><strong>3.6901</strong></span> | <span style="color:#1d4ed8;"><em>0.0006</em></span> | <span style="color:#b91c1c;"><strong>-</strong></span> | PASS |
+| table_5_6 | 2.833 | 7 | <span style="color:#b91c1c;"><strong>1e-04</strong></span> | <span style="color:#1d4ed8;"><em>3.6800</em></span> | <span style="color:#b91c1c;"><strong>3.6823</strong></span> | <span style="color:#1d4ed8;"><em>0.0002</em></span> | <span style="color:#b91c1c;"><strong>-</strong></span> | PASS |
+| table_5_6 | 3.000 | 5 | <span style="color:#b91c1c;"><strong>1e-04</strong></span> | <span style="color:#1d4ed8;"><em>4.2600</em></span> | <span style="color:#b91c1c;"><strong>4.2640</strong></span> | <span style="color:#1d4ed8;"><em>0.0024</em></span> | <span style="color:#b91c1c;"><strong>-</strong></span> | PASS |
+| table_5_6 | 3.000 | 6 | <span style="color:#b91c1c;"><strong>1e-04</strong></span> | <span style="color:#1d4ed8;"><em>4.1900</em></span> | <span style="color:#b91c1c;"><strong>4.1940</strong></span> | <span style="color:#1d4ed8;"><em>0.0006</em></span> | <span style="color:#b91c1c;"><strong>-</strong></span> | PASS |
 | table_5_6 | 3.000 | 7 | <span style="color:#b91c1c;"><strong>1e-04</strong></span> | <span style="color:#1d4ed8;"><em>4.1800</em></span> | <span style="color:#b91c1c;"><strong>4.1796</strong></span> | <span style="color:#1d4ed8;"><em>0.0002</em></span> | <span style="color:#b91c1c;"><strong>0.0656</strong></span> | PASS |
-| table_5_7 | 1.667 | 6 | <span style="color:#b91c1c;"><strong>1e-04</strong></span> | <span style="color:#1d4ed8;"><em>4.4800</em></span> | <span style="color:#b91c1c;"><strong>4.5367</strong></span> | <span style="color:#1d4ed8;"><em>0.0021</em></span> | <span style="color:#b91c1c;"><strong>0.7931</strong></span> | FAIL |
-| table_5_7 | 1.667 | 6 | <span style="color:#b91c1c;"><strong>1e-03</strong></span> | <span style="color:#1d4ed8;"><em>4.4800</em></span> | <span style="color:#b91c1c;"><strong>4.5367</strong></span> | <span style="color:#1d4ed8;"><em>0.0025</em></span> | <span style="color:#b91c1c;"><strong>0.7931</strong></span> | FAIL |
-| table_5_7 | 1.667 | 6 | <span style="color:#b91c1c;"><strong>1e-02</strong></span> | <span style="color:#1d4ed8;"><em>4.4800</em></span> | <span style="color:#b91c1c;"><strong>4.5367</strong></span> | <span style="color:#1d4ed8;"><em>0.0033</em></span> | <span style="color:#b91c1c;"><strong>0.7931</strong></span> | FAIL |
+| table_5_7 | 1.667 | 6 | <span style="color:#b91c1c;"><strong>1e-04</strong></span> | <span style="color:#1d4ed8;"><em>4.4800</em></span> | <span style="color:#b91c1c;"><strong>4.4777</strong></span> | <span style="color:#1d4ed8;"><em>0.0021</em></span> | <span style="color:#b91c1c;"><strong>-</strong></span> | PASS |
+| table_5_7 | 1.667 | 6 | <span style="color:#b91c1c;"><strong>1e-03</strong></span> | <span style="color:#1d4ed8;"><em>4.4800</em></span> | <span style="color:#b91c1c;"><strong>4.4894</strong></span> | <span style="color:#1d4ed8;"><em>0.0025</em></span> | <span style="color:#b91c1c;"><strong>-</strong></span> | PASS |
+| table_5_7 | 1.667 | 6 | <span style="color:#b91c1c;"><strong>1e-02</strong></span> | <span style="color:#1d4ed8;"><em>4.4800</em></span> | <span style="color:#b91c1c;"><strong>4.4762</strong></span> | <span style="color:#1d4ed8;"><em>0.0033</em></span> | <span style="color:#b91c1c;"><strong>-</strong></span> | PASS |
 | table_5_7 | 1.833 | 6 | <span style="color:#b91c1c;"><strong>1e-04</strong></span> | <span style="color:#1d4ed8;"><em>4.1200</em></span> | <span style="color:#b91c1c;"><strong>4.1201</strong></span> | <span style="color:#1d4ed8;"><em>0.0015</em></span> | <span style="color:#b91c1c;"><strong>0.1617</strong></span> | PASS |
-| table_5_7 | 1.833 | 6 | <span style="color:#b91c1c;"><strong>1e-03</strong></span> | <span style="color:#1d4ed8;"><em>4.1200</em></span> | <span style="color:#b91c1c;"><strong>4.2006</strong></span> | <span style="color:#1d4ed8;"><em>0.0016</em></span> | <span style="color:#b91c1c;"><strong>0.5080</strong></span> | FAIL |
+| table_5_7 | 1.833 | 6 | <span style="color:#b91c1c;"><strong>1e-03</strong></span> | <span style="color:#1d4ed8;"><em>4.1200</em></span> | <span style="color:#b91c1c;"><strong>4.1191</strong></span> | <span style="color:#1d4ed8;"><em>0.0016</em></span> | <span style="color:#b91c1c;"><strong>-</strong></span> | PASS |
 | table_5_7 | 1.833 | 6 | <span style="color:#b91c1c;"><strong>1e-02</strong></span> | <span style="color:#1d4ed8;"><em>4.1200</em></span> | <span style="color:#b91c1c;"><strong>4.1228</strong></span> | <span style="color:#1d4ed8;"><em>0.0034</em></span> | <span style="color:#b91c1c;"><strong>0.1910</strong></span> | PASS |
 | table_5_7 | 2.000 | 6 | <span style="color:#b91c1c;"><strong>1e-04</strong></span> | <span style="color:#1d4ed8;"><em>3.8300</em></span> | <span style="color:#b91c1c;"><strong>3.8385</strong></span> | <span style="color:#1d4ed8;"><em>0.0012</em></span> | <span style="color:#b91c1c;"><strong>0.1978</strong></span> | PASS |
 | table_5_7 | 2.000 | 6 | <span style="color:#b91c1c;"><strong>1e-03</strong></span> | <span style="color:#1d4ed8;"><em>3.8300</em></span> | <span style="color:#b91c1c;"><strong>3.8342</strong></span> | <span style="color:#1d4ed8;"><em>0.0012</em></span> | <span style="color:#b91c1c;"><strong>0.1167</strong></span> | PASS |
@@ -369,7 +390,7 @@ This section combines the MPA square tables with the cross-method and descent-di
 | table_5_7 | 2.167 | 6 | <span style="color:#b91c1c;"><strong>1e-04</strong></span> | <span style="color:#1d4ed8;"><em>3.6200</em></span> | <span style="color:#b91c1c;"><strong>3.6221</strong></span> | <span style="color:#1d4ed8;"><em>0.0010</em></span> | <span style="color:#b91c1c;"><strong>0.1402</strong></span> | PASS |
 | table_5_7 | 2.167 | 6 | <span style="color:#b91c1c;"><strong>1e-03</strong></span> | <span style="color:#1d4ed8;"><em>3.6200</em></span> | <span style="color:#b91c1c;"><strong>3.6202</strong></span> | <span style="color:#1d4ed8;"><em>0.0011</em></span> | <span style="color:#b91c1c;"><strong>0.1112</strong></span> | PASS |
 | table_5_7 | 2.167 | 6 | <span style="color:#b91c1c;"><strong>1e-02</strong></span> | <span style="color:#1d4ed8;"><em>3.6200</em></span> | <span style="color:#b91c1c;"><strong>3.6180</strong></span> | <span style="color:#1d4ed8;"><em>0.0019</em></span> | <span style="color:#b91c1c;"><strong>0.0921</strong></span> | PASS |
-| table_5_7 | 2.333 | 6 | <span style="color:#b91c1c;"><strong>1e-04</strong></span> | <span style="color:#1d4ed8;"><em>3.4800</em></span> | <span style="color:#b91c1c;"><strong>3.5076</strong></span> | <span style="color:#1d4ed8;"><em>0.0009</em></span> | <span style="color:#b91c1c;"><strong>0.2342</strong></span> | FAIL |
+| table_5_7 | 2.333 | 6 | <span style="color:#b91c1c;"><strong>1e-04</strong></span> | <span style="color:#1d4ed8;"><em>3.4800</em></span> | <span style="color:#b91c1c;"><strong>3.4643</strong></span> | <span style="color:#1d4ed8;"><em>0.0009</em></span> | <span style="color:#b91c1c;"><strong>-</strong></span> | PASS |
 | table_5_7 | 2.333 | 6 | <span style="color:#b91c1c;"><strong>1e-03</strong></span> | <span style="color:#1d4ed8;"><em>3.4800</em></span> | <span style="color:#b91c1c;"><strong>3.4811</strong></span> | <span style="color:#1d4ed8;"><em>0.0008</em></span> | <span style="color:#b91c1c;"><strong>0.1248</strong></span> | PASS |
 | table_5_7 | 2.333 | 6 | <span style="color:#b91c1c;"><strong>1e-02</strong></span> | <span style="color:#1d4ed8;"><em>3.4800</em></span> | <span style="color:#b91c1c;"><strong>3.4781</strong></span> | <span style="color:#1d4ed8;"><em>0.0004</em></span> | <span style="color:#b91c1c;"><strong>0.0903</strong></span> | PASS |
 | table_5_7 | 2.500 | 6 | <span style="color:#b91c1c;"><strong>1e-04</strong></span> | <span style="color:#1d4ed8;"><em>3.4200</em></span> | <span style="color:#b91c1c;"><strong>3.4229</strong></span> | <span style="color:#1d4ed8;"><em>0.0008</em></span> | <span style="color:#b91c1c;"><strong>0.0939</strong></span> | PASS |
@@ -378,9 +399,9 @@ This section combines the MPA square tables with the cross-method and descent-di
 | table_5_7 | 2.667 | 6 | <span style="color:#b91c1c;"><strong>1e-04</strong></span> | <span style="color:#1d4ed8;"><em>3.4800</em></span> | <span style="color:#b91c1c;"><strong>3.4810</strong></span> | <span style="color:#1d4ed8;"><em>0.0007</em></span> | <span style="color:#b91c1c;"><strong>0.1143</strong></span> | PASS |
 | table_5_7 | 2.667 | 6 | <span style="color:#b91c1c;"><strong>1e-03</strong></span> | <span style="color:#1d4ed8;"><em>3.4800</em></span> | <span style="color:#b91c1c;"><strong>3.4751</strong></span> | <span style="color:#1d4ed8;"><em>0.0007</em></span> | <span style="color:#b91c1c;"><strong>0.0938</strong></span> | PASS |
 | table_5_7 | 2.667 | 6 | <span style="color:#b91c1c;"><strong>1e-02</strong></span> | <span style="color:#1d4ed8;"><em>3.4800</em></span> | <span style="color:#b91c1c;"><strong>3.4751</strong></span> | <span style="color:#1d4ed8;"><em>0.0007</em></span> | <span style="color:#b91c1c;"><strong>0.0937</strong></span> | PASS |
-| table_5_7 | 2.833 | 6 | <span style="color:#b91c1c;"><strong>1e-04</strong></span> | <span style="color:#1d4ed8;"><em>3.6900</em></span> | <span style="color:#b91c1c;"><strong>3.7193</strong></span> | <span style="color:#1d4ed8;"><em>0.0006</em></span> | <span style="color:#b91c1c;"><strong>0.1926</strong></span> | FAIL |
-| table_5_7 | 2.833 | 6 | <span style="color:#b91c1c;"><strong>1e-03</strong></span> | <span style="color:#1d4ed8;"><em>3.6900</em></span> | <span style="color:#b91c1c;"><strong>3.7193</strong></span> | <span style="color:#1d4ed8;"><em>0.0006</em></span> | <span style="color:#b91c1c;"><strong>0.1926</strong></span> | FAIL |
-| table_5_7 | 2.833 | 6 | <span style="color:#b91c1c;"><strong>1e-02</strong></span> | <span style="color:#1d4ed8;"><em>3.6900</em></span> | <span style="color:#b91c1c;"><strong>3.7193</strong></span> | <span style="color:#1d4ed8;"><em>0.0018</em></span> | <span style="color:#b91c1c;"><strong>0.1926</strong></span> | FAIL |
+| table_5_7 | 2.833 | 6 | <span style="color:#b91c1c;"><strong>1e-04</strong></span> | <span style="color:#1d4ed8;"><em>3.6900</em></span> | <span style="color:#b91c1c;"><strong>3.6876</strong></span> | <span style="color:#1d4ed8;"><em>0.0006</em></span> | <span style="color:#b91c1c;"><strong>-</strong></span> | PASS |
+| table_5_7 | 2.833 | 6 | <span style="color:#b91c1c;"><strong>1e-03</strong></span> | <span style="color:#1d4ed8;"><em>3.6900</em></span> | <span style="color:#b91c1c;"><strong>3.6901</strong></span> | <span style="color:#1d4ed8;"><em>0.0006</em></span> | <span style="color:#b91c1c;"><strong>-</strong></span> | PASS |
+| table_5_7 | 2.833 | 6 | <span style="color:#b91c1c;"><strong>1e-02</strong></span> | <span style="color:#1d4ed8;"><em>3.6900</em></span> | <span style="color:#b91c1c;"><strong>3.6901</strong></span> | <span style="color:#1d4ed8;"><em>0.0018</em></span> | <span style="color:#b91c1c;"><strong>-</strong></span> | PASS |
 | table_5_7 | 3.000 | 6 | <span style="color:#b91c1c;"><strong>1e-04</strong></span> | <span style="color:#1d4ed8;"><em>4.1900</em></span> | <span style="color:#b91c1c;"><strong>4.1972</strong></span> | <span style="color:#1d4ed8;"><em>0.0006</em></span> | <span style="color:#b91c1c;"><strong>0.1425</strong></span> | PASS |
 | table_5_7 | 3.000 | 6 | <span style="color:#b91c1c;"><strong>1e-03</strong></span> | <span style="color:#1d4ed8;"><em>4.1900</em></span> | <span style="color:#b91c1c;"><strong>4.1941</strong></span> | <span style="color:#1d4ed8;"><em>0.0006</em></span> | <span style="color:#b91c1c;"><strong>0.1104</strong></span> | PASS |
 | table_5_7 | 3.000 | 6 | <span style="color:#b91c1c;"><strong>1e-02</strong></span> | <span style="color:#1d4ed8;"><em>4.1900</em></span> | <span style="color:#b91c1c;"><strong>4.1940</strong></span> | <span style="color:#1d4ed8;"><em>0.0015</em></span> | <span style="color:#b91c1c;"><strong>0.1092</strong></span> | PASS |
@@ -425,6 +446,7 @@ This section combines the MPA square tables with the cross-method and descent-di
 ## Square Multiple-Solution Study (Table 5.14)
 
 OA1 stays on the principal branch for the square seeds, while OA2 can recover distinct higher branches depending on the initialisation.
+The thesis Figure 5.12 panel order is `(a) sine`, `(b) skew`, `(c) sine_x2`, `(d) sine_y2`, so it should not be read as the same order as the Table 5.14 rows.
 
 ```bash
 ./.venv/bin/python -u experiments/analysis/materialize_plaplace_u3_thesis_section.py \
@@ -444,7 +466,7 @@ OA1 stays on the principal branch for the square seeds, while OA2 can recover di
 | sine_y2 | oa1 | <span style="color:#1d4ed8;"><em>3.8300</em></span> | <span style="color:#b91c1c;"><strong>3.8278</strong></span> | <span style="color:#1d4ed8;"><em>1.9800</em></span> | <span style="color:#b91c1c;"><strong>1.9781</strong></span> | PASS |
 | sine_y2 | oa2 | <span style="color:#1d4ed8;"><em>21.7400</em></span> | <span style="color:#b91c1c;"><strong>21.7443</strong></span> | <span style="color:#1d4ed8;"><em>3.0500</em></span> | <span style="color:#b91c1c;"><strong>3.0539</strong></span> | PASS |
 | skew | oa1 | <span style="color:#1d4ed8;"><em>3.8300</em></span> | <span style="color:#b91c1c;"><strong>3.8278</strong></span> | <span style="color:#1d4ed8;"><em>1.9800</em></span> | <span style="color:#b91c1c;"><strong>1.9781</strong></span> | PASS |
-| skew | oa2 | <span style="color:#1d4ed8;"><em>19.8000</em></span> | <span style="color:#b91c1c;"><strong>3.8278</strong></span> | <span style="color:#1d4ed8;"><em>2.9800</em></span> | <span style="color:#b91c1c;"><strong>1.9781</strong></span> | FAIL |
+| skew | oa2 | <span style="color:#1d4ed8;"><em>19.8000</em></span> | <span style="color:#b91c1c;"><strong>19.8047</strong></span> | <span style="color:#1d4ed8;"><em>2.9800</em></span> | <span style="color:#b91c1c;"><strong>2.9834</strong></span> | PASS |
 
 ## Square-With-Hole OA2 Study (Figure 5.13)
 
@@ -486,9 +508,9 @@ Use the canonical summary to rebuild the assignment-facing report and this merge
 
 ## What Matches, What Is Partial, And What Does Not Match
 
-- primary assignment rows passing the current thresholds: `159` / `185`
-- secondary / partial rows: `61`
-- mismatch rows: `44`
+- primary assignment rows passing the current thresholds: `179` / `185`
+- secondary / partial rows: `96`
+- unresolved rows: `5`
 
 ### What works
 
@@ -500,73 +522,23 @@ Use the canonical summary to rebuild the assignment-facing report and this merge
 
 | target | note |
 | --- | --- |
-| Section 18 / d^R_N sanity | secondary target |
-| Section 14.1 / Table 5.8 | secondary target |
-| Section 14.2 / Table 5.9 | secondary target |
-| Section 15.1 / Table 5.10 | secondary target |
+| Section 18 / Table 5.2 | 1D stopping-criterion study uses the thesis golden-section variant of RMPA Step 6 |
+| Section 18 / Table 5.3 | 1D stopping-criterion study uses the thesis golden-section variant of RMPA Step 6 |
+| Section 18 / d^R_N sanity | 1D stopping-criterion study uses the thesis golden-section variant of RMPA Step 6 |
+| Section 14.1 / Table 5.8 | Secondary / unpublished thesis row |
+| Section 14.2 / Table 5.9 | Numerically matched, but solver did not report convergence |
+| Section 15.1 / Table 5.10 | Numerically matched, but solver did not report convergence |
 | Section 15.2 / Table 5.11 | Thesis runbook marks Table 5.11 as internally inconsistent; use Table 5.10 as the primary OA1 target. |
-| Section 15.2 / Table 5.11 | Thesis runbook marks Table 5.11 as internally inconsistent; use Table 5.10 as the primary OA1 target. |
-| Section 15.2 / Table 5.11 | Thesis runbook marks Table 5.11 as internally inconsistent; use Table 5.10 as the primary OA1 target. |
-| Section 15.2 / Table 5.11 | Thesis runbook marks Table 5.11 as internally inconsistent; use Table 5.10 as the primary OA1 target. |
-| Section 15.2 / Table 5.11 | Thesis runbook marks Table 5.11 as internally inconsistent; use Table 5.10 as the primary OA1 target. |
-| Section 15.2 / Table 5.11 | Thesis runbook marks Table 5.11 as internally inconsistent; use Table 5.10 as the primary OA1 target. |
-| Section 15.2 / Table 5.11 | Thesis runbook marks Table 5.11 as internally inconsistent; use Table 5.10 as the primary OA1 target. |
-| Section 15.2 / Table 5.11 | Thesis runbook marks Table 5.11 as internally inconsistent; use Table 5.10 as the primary OA1 target. |
-| Section 15.2 / Table 5.11 | Thesis runbook marks Table 5.11 as internally inconsistent; use Table 5.10 as the primary OA1 target. |
-| Section 15.2 / Table 5.11 | Thesis runbook marks Table 5.11 as internally inconsistent; use Table 5.10 as the primary OA1 target. |
-| Section 15.2 / Table 5.11 | Thesis runbook marks Table 5.11 as internally inconsistent; use Table 5.10 as the primary OA1 target. |
-| Section 15.2 / Table 5.11 | Thesis runbook marks Table 5.11 as internally inconsistent; use Table 5.10 as the primary OA1 target. |
-| Section 15.2 / Table 5.11 | Thesis runbook marks Table 5.11 as internally inconsistent; use Table 5.10 as the primary OA1 target. |
-| Section 15.2 / Table 5.11 | Thesis runbook marks Table 5.11 as internally inconsistent; use Table 5.10 as the primary OA1 target. |
-| Section 15.2 / Table 5.11 | Thesis runbook marks Table 5.11 as internally inconsistent; use Table 5.10 as the primary OA1 target. |
-| Section 15.2 / Table 5.11 | Thesis runbook marks Table 5.11 as internally inconsistent; use Table 5.10 as the primary OA1 target. |
+| Section 16.1 / Table 5.6 | Numerically matched, but solver did not report convergence |
+| Section 16.1 / Table 5.7 | Numerically matched, but solver did not report convergence |
+| Section 16.1 / Table 5.7 | Repeated direct reruns were unstable: one parallel diagnostic rerun landed at J≈4.361 before an isolated rerun returned J≈4.489. The promoted row uses the isolated rerun. |
 
 ### What does not match
 
 | target | method | status | gap class |
 | --- | --- | --- | --- |
-| Section 18 / Table 5.2 | rmpa | maxit | 1D harness did not meet thesis stopping tolerance |
-| Section 18 / Table 5.2 | rmpa | completed | Unresolved thesis mismatch |
-| Section 18 / Table 5.2 | rmpa | completed | Unresolved thesis mismatch |
-| Section 18 / Table 5.2 | rmpa | completed | Unresolved thesis mismatch |
-| Section 18 / Table 5.2 | rmpa | completed | Unresolved thesis mismatch |
-| Section 18 / Table 5.2 | rmpa | completed | Unresolved thesis mismatch |
-| Section 18 / Table 5.2 | rmpa | completed | Unresolved thesis mismatch |
-| Section 18 / Table 5.2 | rmpa | completed | Unresolved thesis mismatch |
-| Section 18 / Table 5.2 | rmpa | completed | Unresolved thesis mismatch |
-| Section 18 / Table 5.3 | rmpa | maxit | 1D harness did not meet thesis stopping tolerance |
-| Section 18 / Table 5.3 | rmpa | completed | Unresolved thesis mismatch |
-| Section 18 / Table 5.3 | rmpa | completed | Unresolved thesis mismatch |
-| Section 18 / Table 5.3 | rmpa | completed | Unresolved thesis mismatch |
-| Section 18 / Table 5.3 | rmpa | completed | Unresolved thesis mismatch |
-| Section 18 / Table 5.3 | rmpa | completed | Unresolved thesis mismatch |
-| Section 18 / Table 5.3 | rmpa | completed | Unresolved thesis mismatch |
-| Section 18 / Table 5.3 | rmpa | completed | Unresolved thesis mismatch |
-| Section 18 / Table 5.3 | rmpa | completed | Unresolved thesis mismatch |
-| Section 18 / d^R_N sanity | rmpa | maxit | 1D harness did not meet thesis stopping tolerance |
-| Section 14.1 / Table 5.8 | rmpa | maxit | Low-p RMPA target / branch sensitivity |
-| Section 16.1 / Table 5.6 | mpa | maxit | MPA convergence budget / step robustness |
-| Section 16.1 / Table 5.6 | mpa | maxit | MPA convergence budget / step robustness |
-| Section 16.1 / Table 5.6 | mpa | maxit | MPA convergence budget / step robustness |
-| Section 16.1 / Table 5.6 | mpa | maxit | MPA convergence budget / step robustness |
-| Section 16.1 / Table 5.6 | mpa | maxit | MPA convergence budget / step robustness |
-| Section 16.1 / Table 5.6 | mpa | maxit | MPA convergence budget / step robustness |
-| Section 16.1 / Table 5.6 | mpa | maxit | MPA convergence budget / step robustness |
-| Section 16.1 / Table 5.6 | mpa | maxit | MPA convergence budget / step robustness |
-| Section 16.1 / Table 5.6 | mpa | maxit | MPA convergence budget / step robustness |
-| Section 16.1 / Table 5.6 | mpa | maxit | MPA convergence budget / step robustness |
-| Section 16.1 / Table 5.6 | mpa | maxit | MPA convergence budget / step robustness |
-| Section 16.1 / Table 5.7 | mpa | maxit | MPA convergence budget / step robustness |
-| Section 16.1 / Table 5.7 | mpa | maxit | MPA convergence budget / step robustness |
-| Section 16.1 / Table 5.7 | mpa | maxit | MPA convergence budget / step robustness |
-| Section 16.1 / Table 5.7 | mpa | maxit | MPA convergence budget / step robustness |
-| Section 16.1 / Table 5.7 | mpa | maxit | MPA convergence budget / step robustness |
-| Section 16.1 / Table 5.7 | mpa | maxit | MPA convergence budget / step robustness |
-| Section 16.1 / Table 5.7 | mpa | maxit | MPA convergence budget / step robustness |
-| Section 16.1 / Table 5.7 | mpa | maxit | MPA convergence budget / step robustness |
-| Section 16.2 / Table 5.13 | oa1 | completed | Unresolved thesis mismatch |
-| Section 16.2 / Table 5.13 | oa1 | completed | Unresolved thesis mismatch |
-| Section 16.2 / Table 5.13 | rmpa | completed | Unresolved thesis mismatch |
-| Section 16.2 / Table 5.13 | rmpa | completed | Unresolved thesis mismatch |
-| Section 16.2 / Table 5.13 | rmpa | completed | Unresolved thesis mismatch |
-| Section 17.1 / Table 5.14 | oa2 | completed | OA2 square branch-selection mismatch |
+| Section 16.2 / Table 5.13 | oa1 | completed | Direction-count mismatch with matched principal-branch energy |
+| Section 16.2 / Table 5.13 | oa1 | completed | Direction-count mismatch with matched principal-branch energy |
+| Section 16.2 / Table 5.13 | rmpa | completed | Direction-count mismatch with matched principal-branch energy |
+| Section 16.2 / Table 5.13 | rmpa | completed | Direction-count mismatch with matched principal-branch energy |
+| Section 16.2 / Table 5.13 | rmpa | completed | Direction-count mismatch with matched principal-branch energy |

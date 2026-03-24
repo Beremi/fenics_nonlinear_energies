@@ -1,9 +1,15 @@
-"""Thesis-faithful ray mountain pass algorithm."""
+"""Thesis-faithful ray mountain pass algorithm.
+
+RMPA evolves directly on the energy ``J``. Each trial point is projected back to
+the analytic ray maximizer before acceptance, which is why the line-search logic
+is written in terms of the projected energy rather than the raw iterate.
+"""
 
 from __future__ import annotations
 
 import numpy as np
 
+from src.core.serial.minimizers import golden_section_search
 from src.problems.plaplace_u3.thesis.directions import build_direction_context
 from src.problems.plaplace_u3.thesis.functionals import compute_state_stats_free
 from src.problems.plaplace_u3.thesis.presets import THESIS_MAXIT_RMPA_OA, THESIS_RMPA_DELTA0
@@ -21,10 +27,14 @@ def run_rmpa(
     epsilon: float,
     maxit: int = THESIS_MAXIT_RMPA_OA,
     delta0: float = THESIS_RMPA_DELTA0,
+    step_search: str = "halving",
     reference_error_w1p: float | None = None,
     state_out: str = "",
 ) -> dict[str, object]:
     """Run the thesis ray mountain pass algorithm on one problem."""
+    step_search = str(step_search).lower()
+    if step_search not in {"halving", "golden"}:
+        raise ValueError(f"Unsupported RMPA step_search={step_search!r}")
     objective = build_objective_bundle(problem, "J")
     directions = build_direction_context(problem, objective)
 
@@ -51,9 +61,21 @@ def run_rmpa(
         projected = current
         projected_stats = current_stats
         halves = 0
+        alpha = 0.0
 
-        while halves <= 60:
-            trial = np.asarray(current + float(delta0) * step_dir, dtype=np.float64)
+        if step_search == "golden":
+            # The 1D thesis study uses a golden-section Step 6 variant. The
+            # objective here is the energy of the ray-projected candidate.
+            def _phi(step: float) -> float:
+                trial = np.asarray(current + float(step) * step_dir, dtype=np.float64)
+                trial_stats = compute_state_stats_free(problem.params, trial)
+                if not np.isfinite(trial_stats.scale_to_solution):
+                    return np.inf
+                projected_candidate = trial * float(trial_stats.scale_to_solution)
+                return float(compute_state_stats_free(problem.params, projected_candidate).J)
+
+            alpha_star, _ = golden_section_search(_phi, 0.0, float(delta0), 1.0e-5)
+            trial = np.asarray(current + float(alpha_star) * step_dir, dtype=np.float64)
             trial_stats = compute_state_stats_free(problem.params, trial)
             if np.isfinite(trial_stats.scale_to_solution):
                 projected_candidate = trial * float(trial_stats.scale_to_solution)
@@ -62,9 +84,24 @@ def run_rmpa(
                     projected = projected_candidate
                     projected_stats = projected_candidate_stats
                     accepted = True
-                    break
-            step_dir *= 0.5
-            halves += 1
+                    alpha = float(alpha_star)
+        else:
+            # The default square runs follow the thesis halving search until the
+            # projected energy drops below the current ray maximum.
+            while halves <= 60:
+                trial = np.asarray(current + float(delta0) * step_dir, dtype=np.float64)
+                trial_stats = compute_state_stats_free(problem.params, trial)
+                if np.isfinite(trial_stats.scale_to_solution):
+                    projected_candidate = trial * float(trial_stats.scale_to_solution)
+                    projected_candidate_stats = compute_state_stats_free(problem.params, projected_candidate)
+                    if projected_candidate_stats.J < current_stats.J:
+                        projected = projected_candidate
+                        projected_stats = projected_candidate_stats
+                        accepted = True
+                        alpha = float(delta0 / (2**halves))
+                        break
+                step_dir *= 0.5
+                halves += 1
 
         history.append(
             {
@@ -76,10 +113,12 @@ def run_rmpa(
                 "stop_name": str(dir_result.stop_name),
                 "descent_value": float(dir_result.descent_value),
                 "delta0": float(delta0),
+                "alpha": float(alpha),
                 "halves": int(halves),
                 "accepted": bool(accepted),
                 "trial_J": float(projected_stats.J),
                 "trial_I": float(projected_stats.I),
+                "step_search": step_search,
             }
         )
 
@@ -106,6 +145,7 @@ def run_rmpa(
         state_out=state_out,
         extra={
             "delta0": float(delta0),
+            "step_search": step_search,
             "objective_name": "J",
         },
     )

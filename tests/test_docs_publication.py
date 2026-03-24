@@ -66,6 +66,8 @@ def test_plaplace_u3_thesis_replication_page_contains_required_sections() -> Non
     assert "Michaela Bailová" in text
     assert "## Thesis Problem Statement And Functionals" in text
     assert "## Thesis Geometries, Discretisation, And Seeds" in text
+    assert "## Implementation Map" in text
+    assert "../../src/problems/plaplace_u3/thesis/scripts/solve_case.py" in text
     assert "## RMPA Square Principal-Branch Replication" in text
     assert "## Square-With-Hole OA2 Study (Figure 5.13)" in text
     assert "## What Matches, What Is Partial, And What Does Not Match" in text

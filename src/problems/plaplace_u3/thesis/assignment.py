@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+from .tables import TABLE_5_8_RMPA_BY_LEVEL, TABLE_5_10_OA1_BY_LEVEL
+
 
 @dataclass(frozen=True)
 class AssignmentTarget:
@@ -223,6 +225,26 @@ def _delta_i(row: dict[str, object]) -> float | None:
     return abs(float(measured) - float(thesis_i))
 
 
+def _table_5_13_principal_delta_j(row: dict[str, object]) -> float | None:
+    if str(row.get("table", "")) != "table_5_13":
+        return None
+    measured = row.get("J")
+    if measured is None:
+        return None
+    level = int(row.get("level", 0))
+    p_value = float(row.get("p", 0.0))
+    method = str(row.get("method", ""))
+    if method == "rmpa":
+        target = TABLE_5_8_RMPA_BY_LEVEL.get(level, {}).get(p_value, {}).get("J")
+    elif method == "oa1":
+        target = TABLE_5_10_OA1_BY_LEVEL.get(level, {}).get(p_value, {}).get("J")
+    else:
+        return None
+    if target is None:
+        return None
+    return abs(float(measured) - float(target))
+
+
 def assignment_acceptance_pass(row: dict[str, object]) -> bool | None:
     """Evaluate the primary assignment acceptance rule for one row."""
     table = str(row["table"])
@@ -293,6 +315,15 @@ def classify_gap(row: dict[str, object]) -> str | None:
         if status != "completed":
             return "Numerically matched, but solver did not report convergence"
         return None
+    if table in {"table_5_2", "table_5_3"} and row.get("thesis_J") is None and row.get("thesis_iterations") is None:
+        return "Published as unresolved (>500 iterations) in thesis"
+    if (
+        row.get("thesis_J") is None
+        and row.get("thesis_I") is None
+        and row.get("thesis_iterations") is None
+        and row.get("thesis_direction_iterations") is None
+    ):
+        return "Secondary / unpublished thesis row"
     if status == "maxit" and method == "mpa":
         return "MPA convergence budget / step robustness"
     if status == "maxit" and table in {"table_5_2", "table_5_3", "table_5_2_drn_sanity"}:
@@ -303,6 +334,11 @@ def classify_gap(row: dict[str, object]) -> str | None:
         return "OA2 square-hole branch-selection mismatch"
     if table in {"table_5_8", "table_5_9"} and level >= 7 and p_value <= (10.0 / 6.0):
         return "Low-p RMPA target / branch sensitivity"
+    if table == "table_5_13" and accepted is False:
+        principal_delta_j = _table_5_13_principal_delta_j(row)
+        if principal_delta_j is not None and principal_delta_j <= 2.0e-2:
+            return "Direction-count mismatch with matched principal-branch energy"
+        return "Direction-count mismatch against thesis Table 5.13"
     if table in {"table_5_6", "table_5_7"} and accepted is False:
         return "MPA energy mismatch against thesis table"
     if table in {"table_5_8", "table_5_9", "table_5_10", "table_5_11"} and accepted is False:
@@ -344,7 +380,11 @@ def summarize_assignment_rows(rows: list[dict[str, object]]) -> dict[str, object
         stage = str(row.get("assignment_stage", get_assignment_target(str(row["table"])).stage))
         table = str(row["table"])
         accepted = row.get("assignment_acceptance_pass")
-        bucket = "unknown" if accepted is None else ("pass" if bool(accepted) else "fail")
+        primary = bool(row.get("assignment_primary", get_assignment_target(table).primary))
+        if not primary:
+            bucket = "unknown"
+        else:
+            bucket = "unknown" if accepted is None else ("pass" if bool(accepted) else "fail")
         overall[bucket] += 1
         by_stage.setdefault(stage, {"pass": 0, "fail": 0, "unknown": 0, "total": 0})
         by_stage[stage][bucket] += 1

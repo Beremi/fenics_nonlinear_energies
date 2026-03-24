@@ -8,11 +8,13 @@ import numpy as np
 import pytest
 
 from experiments.runners import run_plaplace_u3_thesis_suite as thesis_suite
+from src.problems.plaplace_u3.thesis.solver_common import build_problem
+from src.problems.plaplace_u3.thesis.solver_mpa import run_mpa
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 PYTHON = REPO_ROOT / ".venv" / "bin" / "python"
-THESIS_CLI = "src/problems/plaplace_u3/thesis/solve_plaplace_u3_thesis.py"
+THESIS_CLI = "src/problems/plaplace_u3/thesis/scripts/solve_case.py"
 THESIS_RUNNER = "experiments/runners/run_plaplace_u3_thesis_suite.py"
 THESIS_REPORT = "experiments/analysis/generate_plaplace_u3_thesis_report.py"
 THESIS_MERGE = "experiments/analysis/merge_plaplace_u3_thesis_chunks.py"
@@ -98,6 +100,28 @@ def test_thesis_square_hole_oa2_smoke(tmp_path: Path):
     assert payload["geometry"] == "square_hole_pi"
     assert payload["method"] == "oa2"
     assert np.isfinite(payload["J"])
+
+
+def test_mpa_reports_last_evaluated_peak_when_hitting_maxit():
+    payload = run_mpa(
+        build_problem(
+            dimension=2,
+            level=2,
+            p=2.0,
+            geometry="square_pi",
+            init_mode="sine",
+            seed=0,
+        ),
+        direction="d_vh",
+        epsilon=1.0e-8,
+        maxit=2,
+        num_nodes=10,
+        rho=1.0,
+        segment_tol_factor=0.125,
+    )
+    assert payload["status"] == "maxit"
+    assert payload["history"]
+    assert abs(float(payload["J"]) - float(payload["history"][-1]["J"])) < 1.0e-12
 
 
 def test_thesis_quick_runner_and_report(tmp_path: Path):
@@ -196,10 +220,14 @@ def test_thesis_problem_page_generator_smoke(tmp_path: Path):
     )
     text = out_path.read_text(encoding="utf-8")
     assert "Michaela Bailová" in text
+    assert "## Implementation Map" in text
+    assert "src/problems/plaplace_u3/thesis/scripts/solve_case.py" in text
     assert "## RMPA Square Principal-Branch Replication" in text
     assert "## Rebuild The Canonical Thesis Packet And This Page" in text
     assert "../assets/plaplace_u3_thesis/" not in text
     assert text.count("```bash") >= 7
+    assert "secondary target" not in text
+    assert "- unresolved rows:" in text
     assert (asset_dir / "plaplace_u3_sample_state.png").exists()
     assert (asset_dir / "plaplace_u3_sample_state.pdf").exists()
     assert (asset_dir / "square_multibranch_panel.png").exists()

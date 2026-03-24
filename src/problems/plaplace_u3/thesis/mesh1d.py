@@ -1,4 +1,9 @@
-"""Structured interval mesh support for the thesis 1D harness."""
+"""Structured interval mesh support for the thesis 1D harness.
+
+The 1D direction-study code intentionally mirrors the 2D mesh helpers, but keeps
+its simpler interval-specific data in a separate file so the main 2D mesh module
+stays easier to read.
+"""
 
 from __future__ import annotations
 
@@ -13,6 +18,7 @@ SUPPORTED_1D_INIT_MODES = ("sine", "random")
 
 
 def _build_adjacency(elems: np.ndarray, freedofs: np.ndarray, n_total: int) -> sp.coo_matrix:
+    """Build the interval free-DOF adjacency graph used by JAX helpers."""
     freedofs = np.asarray(freedofs, dtype=np.int64)
     full_to_free = np.full(int(n_total), -1, dtype=np.int64)
     full_to_free[freedofs] = np.arange(freedofs.size, dtype=np.int64)
@@ -51,6 +57,7 @@ class MeshPLaplaceU31D:
         if mesh_level < 1:
             raise ValueError("mesh_level must be >= 1")
 
+        # The thesis uses uniform interval meshes with h = pi / 2^L.
         n_subdiv = 2**mesh_level
         h = math.pi / float(n_subdiv)
         nodes = np.linspace(0.0, math.pi, n_subdiv + 1, dtype=np.float64)

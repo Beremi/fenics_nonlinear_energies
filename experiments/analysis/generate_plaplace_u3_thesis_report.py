@@ -262,6 +262,41 @@ def _unique_rows(rows: list[dict[str, object]]) -> list[dict[str, object]]:
     return unique
 
 
+def _unique_partial_rows(rows: list[dict[str, object]]) -> list[dict[str, object]]:
+    seen: set[tuple[str, str, str]] = set()
+    unique: list[dict[str, object]] = []
+    for row in rows:
+        note = str(
+            row.get("assignment_caveat")
+            or row.get("execution_note")
+            or row.get("reference_note")
+            or row.get("assignment_gap_class")
+            or "secondary target"
+        )
+        key = (
+            str(row.get("assignment_stage")),
+            str(row.get("assignment_section")),
+            note,
+        )
+        if key in seen:
+            continue
+        seen.add(key)
+        unique.append(row)
+    return unique
+
+
+def _match_breakdown(rows: list[dict[str, object]]) -> dict[str, dict[str, int]]:
+    by_kind: dict[str, dict[str, int]] = defaultdict(lambda: {"pass": 0, "total": 0})
+    for row in rows:
+        if not bool(row.get("assignment_primary")):
+            continue
+        kind = str(row.get("assignment_reference_kind", "unknown"))
+        by_kind[kind]["total"] += 1
+        if row.get("assignment_acceptance_pass") is True:
+            by_kind[kind]["pass"] += 1
+    return dict(by_kind)
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--summary", type=str, default="artifacts/raw_results/plaplace_u3_thesis_full/summary.json")
@@ -277,7 +312,7 @@ def main() -> None:
 
     summary = _load_summary(summary_path)
     rows = [attach_assignment_metadata(dict(row)) for row in summary["rows"]]
-    assignment_overview = dict(summary.get("assignment_overview") or summarize_assignment_rows(rows))
+    assignment_overview = summarize_assignment_rows(rows)
 
     quick_rows = _rows_for(rows, "quick")
     oned_rows = _rows_for(rows, "table_5_2", "table_5_3", "table_5_2_drn_sanity")
@@ -288,7 +323,6 @@ def main() -> None:
     multibranch_rows = _rows_for(rows, "table_5_14")
     hole_rows = _rows_for(rows, "figure_5_13")
 
-    refinement_pass_count, refinement_total = _refinement_trend_counts(square_level_rows)
     iteration_order_pass_count, iteration_order_total = _iteration_order_pass_counts(rows)
     primary_rows = [row for row in rows if bool(row.get("assignment_primary"))]
     primary_pass_rows = [row for row in primary_rows if row.get("assignment_acceptance_pass") is True]
@@ -296,6 +330,8 @@ def main() -> None:
         row
         for row in rows
         if (
+            not bool(row.get("assignment_primary"))
+            or
             row.get("assignment_acceptance_pass") is None
             or (
                 row.get("assignment_acceptance_pass") is True
@@ -304,14 +340,23 @@ def main() -> None:
         )
         and str(row.get("table")) != "quick"
     ]
-    mismatch_rows = [row for row in rows if row.get("assignment_acceptance_pass") is False]
+    mismatch_rows = [
+        row
+        for row in rows
+        if bool(row.get("assignment_primary")) and row.get("assignment_acceptance_pass") is False
+    ]
     unresolved_rows = [
         row
         for row in rows
-        if str(row.get("status")) != "completed" and row.get("assignment_acceptance_pass") is not True
+        if (
+            bool(row.get("assignment_primary"))
+            and str(row.get("status")) != "completed"
+            and row.get("assignment_acceptance_pass") is not True
+        )
     ]
     status_counts = _status_counts(rows)
     execution_note_rows = [row for row in rows if row.get("execution_note")]
+    match_breakdown = _match_breakdown(rows)
 
     quick_plot = report_dir / "quick_sample.png"
     if quick_rows and quick_rows[0].get("state_path"):
@@ -407,9 +452,11 @@ def main() -> None:
             "## Assignment Snapshot",
             "",
             f"- primary assignment rows passed: `{len(primary_pass_rows)}` / `{len(primary_rows)}`",
+            f"- exact-match primary rows passed: `{match_breakdown.get('exact', {}).get('pass', 0)}` / `{match_breakdown.get('exact', {}).get('total', 0)}`",
+            f"- proxy-match primary rows passed: `{match_breakdown.get('proxy', {}).get('pass', 0)}` / `{match_breakdown.get('proxy', {}).get('total', 0)}`",
             f"- row status counts: `{status_counts}`",
-            f"- mesh-refinement trend passes (`table_5_8`, `table_5_10`): `{refinement_pass_count}` / `{refinement_total}`",
             f"- iteration-order passes (`OA1 < RMPA < MPA`, `MPA >= 2 * RMPA`): `{iteration_order_pass_count}` / `{iteration_order_total}`",
+            "- proxy reference errors are included for context only; they are not the primary pass/fail criterion.",
         ]
     )
 
@@ -617,6 +664,10 @@ def main() -> None:
         lines.extend(["", "## Square OA2 Multiple Branches", ""])
         if square_panel.exists():
             lines.extend([f"![Square OA2 branches]({square_panel.name})", ""])
+        lines.append(
+            "The thesis Figure 5.12 panel order is `(a) sine`, `(b) skew`, `(c) sine_x2`, `(d) sine_y2`, so it should not be read as the same order as the Table 5.14 rows."
+        )
+        lines.append("")
         _append_table(
             lines,
             ["seed", "method", "thesis J", "measured J", "ΔJ", "thesis I", "measured I", "assignment"],
@@ -668,6 +719,7 @@ def main() -> None:
 
     lines.extend(["", "## What Partially Works", ""])
     if partial_rows:
+        partial_rows = _unique_partial_rows(partial_rows)
         _append_table(
             lines,
             ["target", "stage", "status", "note"],
@@ -681,7 +733,7 @@ def main() -> None:
                         or row.get("execution_note")
                         or row.get("reference_note")
                         or row.get("assignment_gap_class")
-                        or "secondary target"
+                        or "secondary row"
                     ),
                 ]
                 for row in sorted(partial_rows, key=lambda item: (str(item["assignment_stage"]), str(item["assignment_section"])))[:20]

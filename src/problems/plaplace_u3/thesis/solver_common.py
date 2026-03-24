@@ -1,4 +1,9 @@
-"""Shared problem wrappers and result shaping for the thesis solvers."""
+"""Shared problem wrappers and result shaping for the thesis solvers.
+
+This module is the bridge between mesh/functionals and the individual
+algorithms: it builds a cached FE problem object, compiles objective bundles,
+and converts a raw solver iterate into the JSON payload used by reports/tests.
+"""
 
 from __future__ import annotations
 
@@ -35,7 +40,7 @@ _PROBLEM_CACHE: dict[tuple[object, ...], "ThesisProblem"] = {}
 
 @dataclass
 class ThesisProblem:
-    """One structured FE problem instance used by the thesis layer."""
+    """One cached structured FE problem instance used by the thesis layer."""
 
     dimension: int
     topology: str
@@ -104,7 +109,7 @@ def build_problem(
     init_mode: str,
     seed: int = 0,
 ) -> ThesisProblem:
-    """Build one 1D or 2D structured thesis problem."""
+    """Build one cached 1D or 2D structured thesis problem."""
     cache_key = (
         int(dimension),
         int(level),
@@ -238,7 +243,13 @@ def physical_solution_from_iterate(
     method: str,
     iterate_free: np.ndarray,
 ) -> tuple[np.ndarray, np.ndarray, StateStats]:
-    """Return the physical weak-solution state that should be reported."""
+    """Return the physical weak-solution state that should be reported.
+
+    OA1/OA2 evolve on the scale-invariant quotient ``I`` and therefore need the
+    analytic rescaling step before reporting ``J``. RMPA/MPA already evolve on
+    the correctly scaled energy landscape, so their raw iterate is the reported
+    physical state.
+    """
     method = str(method).lower()
     if method in {"oa1", "oa2"}:
         return rescale_free_to_solution(problem.params, np.asarray(iterate_free, dtype=np.float64))
@@ -296,7 +307,7 @@ def build_result_payload(
     state_out: str = "",
     extra: dict[str, object] | None = None,
 ) -> dict[str, object]:
-    """Return the common JSON payload used by all thesis CLIs."""
+    """Return the common JSON payload used by all thesis CLIs and reports."""
     physical_free, physical_full, stats = physical_solution_from_iterate(problem, method, iterate_free)
     state_path = export_state_if_requested(
         state_out,

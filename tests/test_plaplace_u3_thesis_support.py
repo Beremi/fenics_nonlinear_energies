@@ -4,12 +4,16 @@ import math
 
 import numpy as np
 
+from src.problems.plaplace_u3.thesis.assignment import classify_gap
 from src.problems.plaplace_u3.thesis.directions import DirectionContext
 from src.problems.plaplace_u3.thesis.functionals import (
     compute_state_stats_free,
     rescale_free_to_solution,
 )
+from src.problems.plaplace_u3.thesis.tables import TABLE_5_2_DIRECTION_D, TABLE_5_3_DIRECTION_VH
 from src.problems.plaplace_u3.thesis.solver_common import build_objective_bundle, build_problem
+from src.problems.plaplace_u3.thesis.solver_mpa import run_mpa
+from src.problems.plaplace_u3.thesis.solver_oa import run_oa
 from src.problems.plaplace_u3.thesis.transfer import (
     nested_w1p_error,
     prolong_free_to_problem,
@@ -99,3 +103,83 @@ def test_all_thesis_directions_are_descents():
         result = ctx.compute(np.asarray(problem.u_init, dtype=np.float64), direction)
         assert np.isfinite(result.stop_measure)
         assert result.descent_value <= 1.0e-10
+
+
+def test_1d_tables_leave_p_9_over_6_unpublished_and_align_following_rows():
+    assert (9.0 / 6.0) not in TABLE_5_2_DIRECTION_D
+    assert (9.0 / 6.0) not in TABLE_5_3_DIRECTION_VH
+    assert math.isclose(TABLE_5_2_DIRECTION_D[10.0 / 6.0]["J"], 0.76, rel_tol=0.0, abs_tol=1.0e-12)
+    assert math.isclose(TABLE_5_3_DIRECTION_VH[10.0 / 6.0]["J"], 0.76, rel_tol=0.0, abs_tol=1.0e-12)
+
+
+def test_unpublished_rows_are_not_labeled_as_low_p_mismatches():
+    row = {
+        "table": "table_5_8",
+        "method": "rmpa",
+        "status": "maxit",
+        "level": 7,
+        "p": 1.5,
+        "thesis_J": None,
+        "thesis_I": None,
+        "thesis_iterations": None,
+        "thesis_direction_iterations": None,
+        "assignment_acceptance_pass": None,
+    }
+    assert classify_gap(row) == "Secondary / unpublished thesis row"
+
+
+def test_table_5_13_mismatch_is_labeled_as_direction_count_gap_when_energy_matches():
+    row = {
+        "table": "table_5_13",
+        "method": "rmpa",
+        "status": "completed",
+        "level": 6,
+        "p": 3.0,
+        "J": 4.194002180491161,
+        "thesis_direction_iterations": 19,
+        "delta_direction_iterations": 12,
+    }
+    assert classify_gap(row) == "Direction-count mismatch with matched principal-branch energy"
+
+
+def test_square_oa2_skew_stays_on_thesis_multibranch_solution():
+    problem = build_problem(
+        dimension=2,
+        level=7,
+        p=2.0,
+        geometry="square_pi",
+        init_mode="skew",
+        seed=0,
+    )
+    result = run_oa(
+        problem,
+        variant="oa2",
+        direction="d_vh",
+        epsilon=1.0e-5,
+        maxit=500,
+    )
+
+    assert result["status"] == "completed"
+    assert math.isclose(result["I"], 2.98, rel_tol=0.0, abs_tol=0.03)
+    assert math.isclose(result["J"], 19.80, rel_tol=0.0, abs_tol=0.25)
+
+
+def test_square_mpa_low_p_row_stays_near_thesis_energy():
+    problem = build_problem(
+        dimension=2,
+        level=6,
+        p=11.0 / 6.0,
+        geometry="square_pi",
+        init_mode="sine",
+        seed=0,
+    )
+    result = run_mpa(
+        problem,
+        direction="d_vh",
+        epsilon=1.0e-3,
+        maxit=1000,
+    )
+
+    assert result["status"] in {"completed", "maxit"}
+    assert math.isclose(result["J"], 4.12, rel_tol=0.0, abs_tol=0.02)
+    assert math.isclose(result["J"], result["history"][-1]["J"], rel_tol=0.0, abs_tol=0.02)

@@ -1,4 +1,12 @@
-"""Shared discrete functionals for the thesis reproduction layer."""
+"""Discrete thesis functionals and helper operators.
+
+This file is the main "math dictionary" for the thesis layer:
+
+- exact FE evaluations of ``A(u)``, ``B(u)``, ``J(u)``, and ``I(u)``
+- rescaling from a raw iterate to the physical weak-solution representative
+- the standard Laplace stiffness matrix used only by the auxiliary ``d^{V_h}``
+  direction solve
+"""
 
 from __future__ import annotations
 
@@ -13,7 +21,7 @@ from src.problems.plaplace_u3.common import a_integrand, b_integrand, energy_int
 
 @dataclass(frozen=True)
 class StateStats:
-    """Discrete scalar state and scaling information."""
+    """Discrete scalar state and scaling information for one FE vector."""
 
     a: float
     b: float
@@ -166,7 +174,12 @@ def l4_norm_full(params: dict[str, object], u_full: np.ndarray) -> float:
 
 
 def compute_state_stats_full(params: dict[str, object], u_full: np.ndarray) -> StateStats:
-    """Evaluate the thesis functionals on one full nodal vector."""
+    """Evaluate the thesis functionals on one full nodal vector.
+
+    ``a`` and ``b`` are the raw integral terms from the thesis notation, while
+    ``scale_to_solution`` is the analytic ray projection that maps a nonzero
+    iterate onto the associated weak solution on its positive ray.
+    """
     p = float(params["p"])
     topology = str(params["topology"])
 
@@ -229,7 +242,7 @@ def compute_state_stats_free(params: dict[str, object], u_free: np.ndarray) -> S
 
 
 def rescale_free_to_solution(params: dict[str, object], u_free: np.ndarray) -> tuple[np.ndarray, np.ndarray, StateStats]:
-    """Return the weak-solution scaling ``u_tilde`` together with its stats."""
+    """Return the thesis weak-solution scaling ``u_tilde`` together with its stats."""
     raw_stats = compute_state_stats_free(params, u_free)
     scaled = np.asarray(u_free, dtype=np.float64) * float(raw_stats.scale_to_solution)
     scaled_full = expand_free_vector(
@@ -240,8 +253,30 @@ def rescale_free_to_solution(params: dict[str, object], u_free: np.ndarray) -> t
     return scaled, scaled_full, compute_state_stats_full(params, scaled_full)
 
 
+def _append_local_matrix_entries(
+    loc: np.ndarray,
+    ke: np.ndarray,
+    *,
+    rows: list[np.ndarray],
+    cols: list[np.ndarray],
+    data: list[np.ndarray],
+) -> None:
+    """Append the free-DOF part of one element matrix in COO triplet form."""
+    mask = np.asarray(loc, dtype=np.int64) >= 0
+    if not np.any(mask):
+        return
+    free_loc = np.asarray(loc[mask], dtype=np.int64)
+    rows.append(np.repeat(free_loc, free_loc.size))
+    cols.append(np.tile(free_loc, free_loc.size))
+    data.append(np.asarray(ke[np.ix_(mask, mask)], dtype=np.float64).reshape(-1))
+
+
 def assemble_stiffness_matrix(params: dict[str, object]) -> sp.csr_matrix:
-    """Assemble the scalar Laplace stiffness matrix on free DOFs."""
+    """Assemble the standard scalar Laplace stiffness matrix on free DOFs.
+
+    This is not the nonlinear p-Laplacian Hessian. It is the cheap linear helper
+    matrix used by the approximate thesis descent direction ``d^{V_h}``.
+    """
     topology = str(params["topology"])
     freedofs = np.asarray(params["freedofs"], dtype=np.int64)
     elems = np.asarray(params["elems"], dtype=np.int64)
@@ -258,34 +293,18 @@ def assemble_stiffness_matrix(params: dict[str, object]) -> sp.csr_matrix:
         dvy = np.asarray(params["dvy"], dtype=np.float64)
         vol = np.asarray(params["vol"], dtype=np.float64)
         for elem_idx in range(elems.shape[0]):
+            # Standard P1 Laplace local stiffness on one triangle.
             ke = vol[elem_idx] * (
                 np.outer(dvx[elem_idx], dvx[elem_idx]) + np.outer(dvy[elem_idx], dvy[elem_idx])
             )
-            loc = local[elem_idx]
-            mask = loc >= 0
-            if not np.any(mask):
-                continue
-            rr = np.repeat(loc[mask], np.count_nonzero(mask))
-            cc = np.tile(loc[mask], np.count_nonzero(mask))
-            vv = ke[np.ix_(mask, mask)].reshape(-1)
-            rows.append(rr)
-            cols.append(cc)
-            data.append(vv)
+            _append_local_matrix_entries(local[elem_idx], ke, rows=rows, cols=cols, data=data)
     elif topology == "interval":
         dv = np.asarray(params["dv"], dtype=np.float64)
         vol = np.asarray(params["vol"], dtype=np.float64)
         for elem_idx in range(elems.shape[0]):
+            # In 1D the same idea reduces to the interval derivative matrix.
             ke = vol[elem_idx] * np.outer(dv[elem_idx], dv[elem_idx])
-            loc = local[elem_idx]
-            mask = loc >= 0
-            if not np.any(mask):
-                continue
-            rr = np.repeat(loc[mask], np.count_nonzero(mask))
-            cc = np.tile(loc[mask], np.count_nonzero(mask))
-            vv = ke[np.ix_(mask, mask)].reshape(-1)
-            rows.append(rr)
-            cols.append(cc)
-            data.append(vv)
+            _append_local_matrix_entries(local[elem_idx], ke, rows=rows, cols=cols, data=data)
     else:  # pragma: no cover - defensive
         raise ValueError(f"Unsupported topology {topology!r}")
 
@@ -300,14 +319,14 @@ def assemble_stiffness_matrix(params: dict[str, object]) -> sp.csr_matrix:
 
 
 def J_triangle_free(u_free, *, u_0, freedofs, elems, dvx, dvy, vol, p):
-    """JAX thesis energy on the structured triangle mesh."""
+    """JAX energy callback for the structured triangle mesh."""
     u_full = u_0.at[freedofs].set(u_free)
     u_e = u_full[elems]
     return jnp.sum(energy_integrand(u_e, dvx, dvy, p) * vol)
 
 
 def I_triangle_free(u_free, *, u_0, freedofs, elems, dvx, dvy, vol, p):
-    """JAX quotient objective on the structured triangle mesh."""
+    """JAX quotient callback for the structured triangle mesh."""
     u_full = u_0.at[freedofs].set(u_free)
     u_e = u_full[elems]
     a = jnp.sum(a_integrand(u_e, dvx, dvy, p) * vol)
@@ -316,21 +335,21 @@ def I_triangle_free(u_free, *, u_0, freedofs, elems, dvx, dvy, vol, p):
 
 
 def direction_triangle_free(u_free, *, rhs, u_0, freedofs, elems, dvx, dvy, vol, p):
-    """Auxiliary convex energy whose minimizer solves ``-Δ_p b = rhs``."""
+    """Auxiliary convex energy whose minimizer solves the exact direction subproblem."""
     u_full = u_0.at[freedofs].set(u_free)
     u_e = u_full[elems]
     return jnp.sum((1.0 / p) * a_integrand(u_e, dvx, dvy, p) * vol) - jnp.dot(rhs, u_free)
 
 
 def J_interval_free(u_free, *, u_0, freedofs, elems, dv, vol, p):
-    """JAX thesis energy on the structured interval mesh."""
+    """JAX energy callback for the structured interval mesh."""
     u_full = u_0.at[freedofs].set(u_free)
     u_e = u_full[elems]
     return jnp.sum(energy_integrand_interval(u_e, dv, p) * vol)
 
 
 def I_interval_free(u_free, *, u_0, freedofs, elems, dv, vol, p):
-    """JAX quotient objective on the structured interval mesh."""
+    """JAX quotient callback for the structured interval mesh."""
     u_full = u_0.at[freedofs].set(u_free)
     u_e = u_full[elems]
     a = jnp.sum(a_integrand_interval(u_e, dv, p) * vol)
@@ -339,7 +358,7 @@ def I_interval_free(u_free, *, u_0, freedofs, elems, dv, vol, p):
 
 
 def direction_interval_free(u_free, *, rhs, u_0, freedofs, elems, dv, vol, p):
-    """Auxiliary convex energy whose minimizer solves ``-(|b'|^{p-2} b')' = rhs``."""
+    """Auxiliary convex energy for the exact 1D descent direction."""
     u_full = u_0.at[freedofs].set(u_free)
     u_e = u_full[elems]
     return jnp.sum((1.0 / p) * a_integrand_interval(u_e, dv, p) * vol) - jnp.dot(rhs, u_free)

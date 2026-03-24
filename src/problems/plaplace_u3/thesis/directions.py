@@ -1,4 +1,11 @@
-"""Thesis descent directions and stopping criteria."""
+"""Thesis descent directions and stopping criteria.
+
+The thesis compares three direction constructions:
+
+- ``d^R_N``: normalized negative gradient
+- ``d^{V_h}``: one cheap linear auxiliary solve
+- ``d``: the exact nonlinear auxiliary solve
+"""
 
 from __future__ import annotations
 
@@ -46,7 +53,7 @@ class DirectionResult:
 
 
 class _LinearDirectionSolver:
-    """Solve the linear auxiliary problem used for ``d^V_h``."""
+    """Solve the linear auxiliary problem used for ``d^{V_h}``."""
 
     def __init__(self, problem: ThesisProblem) -> None:
         self.problem = problem
@@ -69,7 +76,7 @@ class _LinearDirectionSolver:
 
 
 class _ExactDirectionSolver:
-    """Solve the nonlinear auxiliary problem used for the exact descent direction."""
+    """Solve the nonlinear auxiliary problem used for the exact direction ``d``."""
 
     def __init__(self, problem: ThesisProblem) -> None:
         self.problem = problem
@@ -84,23 +91,23 @@ class _ExactDirectionSolver:
         initial = self.last_aux
         if not np.all(np.isfinite(initial)) or np.linalg.norm(initial) == 0.0:
             initial = self.linear_fallback.solve(rhs)
-        solver_kind = "direct" if self.problem.free_dofs <= 256 else "amg"
+        solver_kind = "direct" if self.problem.dimension == 1 or self.problem.free_dofs <= 512 else "amg"
         res = newton(
             lambda x: float(self.value(np.asarray(x, dtype=np.float64))),
             lambda x: np.asarray(self.grad(np.asarray(x, dtype=np.float64)), dtype=np.float64),
             HessSolverGenerator(
                 lambda x: self.ddf(np.asarray(x, dtype=np.float64)),
                 solver_type=solver_kind,
-                tol=1.0e-2,
-                maxiter=100,
+                tol=1.0e-8,
+                maxiter=200,
             ),
             np.asarray(initial, dtype=np.float64),
             tolf=1.0e-10,
             tolg=1.0e-8,
             tolg_rel=0.0,
-            maxit=40,
+            maxit=60,
             linesearch_interval=(0.0, 2.0),
-            linesearch_tol=1.0e-3,
+            linesearch_tol=1.0e-5,
             verbose=False,
         )
         self.last_aux = np.asarray(res["x"], dtype=np.float64)
@@ -123,8 +130,16 @@ class DirectionContext:
         q = conjugate_exponent(self.problem.p)
 
         if direction_kind == THESIS_DIRECTION_RN:
+            # Thesis equation (5.8): normalize the raw gradient in the discrete
+            # W^{1,p}_0 seminorm so the stopping metric is comparable across p.
             measure = float(np.linalg.norm(gradient, ord=q))
-            seminorm_grad = float(np.linalg.norm(gradient))
+            seminorm_grad = float(
+                seminorm_full(
+                    self.problem.params,
+                    self.problem.expand_free(gradient),
+                    exponent=self.problem.p,
+                )
+            )
             if seminorm_grad <= 0.0 or not np.isfinite(seminorm_grad):
                 return DirectionResult(
                     direction=np.zeros_like(gradient),
@@ -147,6 +162,8 @@ class DirectionContext:
             )
 
         if direction_kind == THESIS_DIRECTION_VH:
+            # Thesis equation (5.7): solve one cheap linear Laplace problem and
+            # then normalize the resulting auxiliary state in |.|_{1,p,0}.
             aux = self.linear_solver.solve(gradient)
             aux_full = self.problem.expand_free(aux)
             aux_norm = float(seminorm_full(self.problem.params, aux_full, exponent=self.problem.p))
@@ -166,6 +183,7 @@ class DirectionContext:
             )
 
         if direction_kind == THESIS_DIRECTION_EXACT:
+            # Thesis equation (5.6): solve the full nonlinear auxiliary problem.
             aux = self.exact_solver.solve(gradient)
             aux_full = self.problem.expand_free(aux)
             aux_norm = float(seminorm_full(self.problem.params, aux_full, exponent=self.problem.p))

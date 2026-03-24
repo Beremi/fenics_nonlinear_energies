@@ -11,7 +11,11 @@ import shutil
 from collections import defaultdict
 from pathlib import Path
 
-from src.problems.plaplace_u3.thesis.assignment import ASSIGNMENT_STAGE_DETAILS, METHOD_TO_TABLES
+from src.problems.plaplace_u3.thesis.assignment import (
+    ASSIGNMENT_STAGE_DETAILS,
+    METHOD_TO_TABLES,
+    summarize_assignment_rows,
+)
 
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -110,6 +114,39 @@ def _asset_link(out_path: Path, asset_dir: Path, filename: str) -> str:
     return str(Path(os.path.relpath(asset_dir / filename, start=out_path.parent))).replace("\\", "/")
 
 
+def _repo_file_link(out_path: Path, repo_rel_path: str, *, label: str | None = None) -> str:
+    target = REPO_ROOT / repo_rel_path
+    rel = str(Path(os.path.relpath(target, start=out_path.parent))).replace("\\", "/")
+    return f"[`{label or repo_rel_path}`]({rel})"
+
+
+def _implementation_map_lines(out_path: Path) -> list[str]:
+    return [
+        "## Implementation Map",
+        "",
+        "### Core Library Code",
+        "",
+        f"- exact scalar P1 formulas for $A(u)$, $B(u)$, and $J(u)$: {_repo_file_link(out_path, 'src/problems/plaplace_u3/common.py')}",
+        f"- reusable 2D structured meshes, seeds, and adjacency: {_repo_file_link(out_path, 'src/problems/plaplace_u3/support/mesh.py')}",
+        f"- thesis 1D harness mesh support: {_repo_file_link(out_path, 'src/problems/plaplace_u3/thesis/mesh1d.py')}",
+        f"- discrete thesis functionals, rescaling, and the standard Laplace helper matrix: {_repo_file_link(out_path, 'src/problems/plaplace_u3/thesis/functionals.py')}",
+        f"- cached FE problem wrapper and common result payloads: {_repo_file_link(out_path, 'src/problems/plaplace_u3/thesis/solver_common.py')}",
+        f"- descent directions and stopping criteria: {_repo_file_link(out_path, 'src/problems/plaplace_u3/thesis/directions.py')}",
+        f"- thesis RMPA solver: {_repo_file_link(out_path, 'src/problems/plaplace_u3/thesis/solver_rmpa.py')}",
+        f"- thesis OA1/OA2 solvers: {_repo_file_link(out_path, 'src/problems/plaplace_u3/thesis/solver_oa.py')}",
+        f"- thesis MPA solver: {_repo_file_link(out_path, 'src/problems/plaplace_u3/thesis/solver_mpa.py')}",
+        f"- thesis presets and published benchmark values: {_repo_file_link(out_path, 'src/problems/plaplace_u3/thesis/presets.py')} and {_repo_file_link(out_path, 'src/problems/plaplace_u3/thesis/tables.py')}",
+        f"- proxy-reference policy and assignment/report labels: {_repo_file_link(out_path, 'src/problems/plaplace_u3/thesis/reference_policy.py')} and {_repo_file_link(out_path, 'src/problems/plaplace_u3/thesis/assignment.py')}",
+        "",
+        "### Scripts And Publication Helpers",
+        "",
+        f"- single-case thesis CLI and argument parsing: {_repo_file_link(out_path, 'src/problems/plaplace_u3/thesis/scripts/solve_case.py')}",
+        f"- thesis-suite orchestration: {_repo_file_link(out_path, 'experiments/runners/run_plaplace_u3_thesis_suite.py')}",
+        f"- docs page generator: {_repo_file_link(out_path, 'experiments/analysis/generate_plaplace_u3_thesis_problem_page.py')}",
+        f"- report generator: {_repo_file_link(out_path, 'experiments/analysis/generate_plaplace_u3_thesis_report.py')}",
+    ]
+
+
 def _sorted_rows(rows: list[dict[str, object]], *tables: str) -> list[dict[str, object]]:
     wanted = set(tables)
     return [dict(row) for row in rows if str(row["table"]) in wanted]
@@ -120,6 +157,18 @@ def _status_counts(rows: list[dict[str, object]]) -> dict[str, int]:
     for row in rows:
         counts[str(row["status"])] += 1
     return dict(counts)
+
+
+def _match_breakdown(rows: list[dict[str, object]]) -> dict[str, dict[str, int]]:
+    by_kind: dict[str, dict[str, int]] = defaultdict(lambda: {"pass": 0, "total": 0})
+    for row in rows:
+        if not bool(row.get("assignment_primary")):
+            continue
+        kind = str(row.get("assignment_reference_kind", "unknown"))
+        by_kind[kind]["total"] += 1
+        if row.get("assignment_acceptance_pass") is True:
+            by_kind[kind]["pass"] += 1
+    return dict(by_kind)
 
 
 def _section_command(out_dir: str, *tables: str) -> str:
@@ -193,9 +242,31 @@ def _problem_rows(rows: list[dict[str, object]]) -> list[dict[str, object]]:
     return [
         row
         for row in rows
-        if row.get("assignment_acceptance_pass") is False
-        or (row.get("assignment_acceptance_pass") is not True and str(row.get("status")) != "completed")
+        if bool(row.get("assignment_primary"))
+        and (
+            row.get("assignment_acceptance_pass") is False
+            or (row.get("assignment_acceptance_pass") is not True and str(row.get("status")) != "completed")
+        )
     ]
+
+
+def _unique_partial_rows(rows: list[dict[str, object]]) -> list[dict[str, object]]:
+    seen: set[tuple[str, str]] = set()
+    unique: list[dict[str, object]] = []
+    for row in rows:
+        note = str(
+            row.get("assignment_caveat")
+            or row.get("execution_note")
+            or row.get("reference_note")
+            or row.get("assignment_gap_class")
+            or "secondary target"
+        )
+        key = (str(row.get("assignment_section")), note)
+        if key in seen:
+            continue
+        seen.add(key)
+        unique.append(row)
+    return unique
 
 
 def main() -> None:
@@ -212,17 +283,25 @@ def main() -> None:
 
     summary = _load_summary(summary_path)
     rows = [dict(row) for row in summary["rows"]]
-    overview = dict(summary["assignment_overview"])
+    overview = summarize_assignment_rows(rows)
     status_counts = _status_counts(rows)
     primary_rows = [row for row in rows if bool(row.get("assignment_primary"))]
     primary_pass = [row for row in primary_rows if row.get("assignment_acceptance_pass") is True]
+    match_breakdown = _match_breakdown(rows)
     partial_rows = [
         row
         for row in rows
-        if row.get("assignment_acceptance_pass") is None
-        or (row.get("assignment_acceptance_pass") is True and str(row.get("status")) != "completed")
+        if (
+            not bool(row.get("assignment_primary"))
+            or row.get("assignment_acceptance_pass") is None
+            or (row.get("assignment_acceptance_pass") is True and str(row.get("status")) != "completed")
+        )
     ]
-    mismatch_rows = [row for row in rows if row.get("assignment_acceptance_pass") is False]
+    mismatch_rows = [
+        row
+        for row in rows
+        if bool(row.get("assignment_primary")) and row.get("assignment_acceptance_pass") is False
+    ]
     asset_names = _copy_assets(asset_dir)
     sample_png_link = _asset_link(out_path, asset_dir, asset_names["sample_png"])
     sample_pdf_link = _asset_link(out_path, asset_dir, asset_names["sample_pdf"])
@@ -306,27 +385,33 @@ def main() -> None:
         "- `OA1`: first-order descent on $I(u)$ with halving acceptance",
         "- `OA2`: first-order descent on $I(u)$ with a 1D minimisation step on $[0, \\delta]$",
         "",
-        "The repository implementation for this thesis packet lives under `src/problems/plaplace_u3/thesis/` and is backed by the same structured thesis geometries, exact $P_1$ quartic integration, and the current canonical summary at `artifacts/raw_results/plaplace_u3_thesis_full/summary.json`.",
-        "",
-        "The section commands below rematerialize the current canonical thesis packet into dedicated experiment folders quickly. For a raw solver recomputation of the same families, use `experiments/runners/run_plaplace_u3_thesis_suite.py --only-table ...` with the table keys shown in each section.",
-        "",
-        f"![Current square sample state]({sample_png_link})",
-        "",
-        f"PDF version: [sample state]({sample_pdf_link})",
-        "",
-        "## Validation Metric And Replication Status",
-        "",
-        "The thesis validates computed solutions against a separate finite-element reference solution using the discrete $|u-\\bar u|_{1,p,0}$ seminorm. In this repository packet, the direct thesis quantities such as $J$, $I$, and iteration counts are compared against the published tables, while the error columns use the repo's proxy reference policy documented in the canonical thesis report.",
-        "",
-        f"- canonical summary: `{_repo_rel(summary_path)}`",
-        f"- canonical thesis report: `artifacts/reports/plaplace_u3_thesis/README.md`",
-        f"- packet note: {summary.get('packet_note', '-')}",
-        f"- primary assignment rows passing: `{len(primary_pass)}` / `{len(primary_rows)}`",
-        f"- status counts: `{status_counts}`",
-        "",
-        "### Stage Map",
-        "",
     ]
+    lines.extend(_implementation_map_lines(out_path))
+    lines.extend(
+        [
+            "",
+            "The section commands below rematerialize the current canonical thesis packet into dedicated experiment folders quickly. For a raw solver recomputation of the same families, use `experiments/runners/run_plaplace_u3_thesis_suite.py --only-table ...` with the table keys shown in each section.",
+            "",
+            f"![Current square sample state]({sample_png_link})",
+            "",
+            f"PDF version: [sample state]({sample_pdf_link})",
+            "",
+            "## Validation Metric And Replication Status",
+            "",
+            "The thesis validates computed solutions against a separate finite-element reference solution using the discrete $|u-\\bar u|_{1,p,0}$ seminorm. In this repository packet, the direct thesis quantities such as $J$, $I$, and iteration counts are compared against the published tables, while the error columns use the repo's proxy reference policy documented in the canonical thesis report.",
+            "",
+            f"- canonical summary: `{_repo_rel(summary_path)}`",
+            f"- canonical thesis report: `artifacts/reports/plaplace_u3_thesis/README.md`",
+            f"- packet note: {summary.get('packet_note', '-')}",
+            f"- primary assignment rows passing: `{len(primary_pass)}` / `{len(primary_rows)}`",
+            f"- exact-match primary rows passing: `{match_breakdown.get('exact', {}).get('pass', 0)}` / `{match_breakdown.get('exact', {}).get('total', 0)}`",
+            f"- proxy-match primary rows passing: `{match_breakdown.get('proxy', {}).get('pass', 0)}` / `{match_breakdown.get('proxy', {}).get('total', 0)}`",
+            f"- status counts: `{status_counts}`",
+            "",
+            "### Stage Map",
+            "",
+        ]
+    )
 
     _append_table(
         lines,
@@ -560,6 +645,7 @@ def main() -> None:
             "## Square Multiple-Solution Study (Table 5.14)",
             "",
             "OA1 stays on the principal branch for the square seeds, while OA2 can recover distinct higher branches depending on the initialisation.",
+            "The thesis Figure 5.12 panel order is `(a) sine`, `(b) skew`, `(c) sine_x2`, `(d) sine_y2`, so it should not be read as the same order as the Table 5.14 rows.",
             "",
             _section_command(
                 "artifacts/raw_results/plaplace_u3_thesis_sections/square_multibranch",
@@ -632,7 +718,7 @@ def main() -> None:
             "",
             f"- primary assignment rows passing the current thresholds: `{len(primary_pass)}` / `{len(primary_rows)}`",
             f"- secondary / partial rows: `{len(partial_rows)}`",
-            f"- mismatch rows: `{len(mismatch_rows)}`",
+            f"- unresolved rows: `{len(_problem_rows(rows))}`",
             "",
             "### What works",
             "",
@@ -650,9 +736,18 @@ def main() -> None:
         [
             [
                 str(row["assignment_section"]),
-                str(row.get("assignment_caveat") or row.get("execution_note") or "secondary target"),
+                str(
+                    row.get("assignment_caveat")
+                    or row.get("execution_note")
+                    or row.get("reference_note")
+                    or row.get("assignment_gap_class")
+                    or "secondary row"
+                ),
             ]
-            for row in sorted(partial_rows, key=lambda item: (str(item["assignment_stage"]), str(item["assignment_section"])))[:20]
+            for row in sorted(
+                _unique_partial_rows(partial_rows),
+                key=lambda item: (str(item["assignment_stage"]), str(item["assignment_section"])),
+            )[:20]
         ],
     )
 

@@ -8,28 +8,28 @@ def _p(num: int) -> float:
 
 
 TABLE_5_2_DIRECTION_D = {
-    _p(9): {"J": 0.76, "iterations": None, "error": 1.11e-4},
-    _p(10): {"J": 0.62, "iterations": 42, "error": 6.24e-5},
-    _p(11): {"J": 0.51, "iterations": 8, "error": 6.82e-5},
-    _p(12): {"J": 0.41, "iterations": 3, "error": 1.71e-5},
-    _p(13): {"J": 0.33, "iterations": 5, "error": 7.04e-5},
-    _p(14): {"J": 0.26, "iterations": 6, "error": 1.36e-4},
-    _p(15): {"J": 0.19, "iterations": 9, "error": 2.69e-4},
-    _p(16): {"J": 0.14, "iterations": 13, "error": 4.89e-4},
-    _p(17): {"J": 0.10, "iterations": 17, "error": 7.97e-4},
+    # The thesis leaves the p = 9/6 row blank (> 500 iterations, no reported J / error).
+    _p(10): {"J": 0.76, "iterations": 42, "error": 1.11e-4},
+    _p(11): {"J": 0.62, "iterations": 8, "error": 6.24e-5},
+    _p(12): {"J": 0.51, "iterations": 3, "error": 6.82e-5},
+    _p(13): {"J": 0.41, "iterations": 5, "error": 1.71e-5},
+    _p(14): {"J": 0.33, "iterations": 6, "error": 7.04e-5},
+    _p(15): {"J": 0.26, "iterations": 9, "error": 1.36e-4},
+    _p(16): {"J": 0.19, "iterations": 13, "error": 2.69e-4},
+    _p(17): {"J": 0.14, "iterations": 17, "error": 4.89e-4},
     _p(18): {"J": 0.10, "iterations": 19, "error": 7.97e-4},
 }
 
 TABLE_5_3_DIRECTION_VH = {
-    _p(9): {"J": 0.76, "iterations": None, "error": 6.30e-4},
-    _p(10): {"J": 0.62, "iterations": 50, "error": 3.39e-5},
-    _p(11): {"J": 0.51, "iterations": 9, "error": 6.81e-5},
-    _p(12): {"J": 0.41, "iterations": 3, "error": 2.17e-5},
-    _p(13): {"J": 0.33, "iterations": 5, "error": 1.04e-4},
-    _p(14): {"J": 0.26, "iterations": 7, "error": 2.40e-4},
-    _p(15): {"J": 0.19, "iterations": 10, "error": 5.40e-4},
-    _p(16): {"J": 0.14, "iterations": 13, "error": 9.68e-4},
-    _p(17): {"J": 0.10, "iterations": 17, "error": 1.31e-3},
+    # The thesis leaves the p = 9/6 row blank (> 500 iterations, no reported J / error).
+    _p(10): {"J": 0.76, "iterations": 50, "error": 6.30e-4},
+    _p(11): {"J": 0.62, "iterations": 9, "error": 3.39e-5},
+    _p(12): {"J": 0.51, "iterations": 3, "error": 6.81e-5},
+    _p(13): {"J": 0.41, "iterations": 5, "error": 2.17e-5},
+    _p(14): {"J": 0.33, "iterations": 7, "error": 1.04e-4},
+    _p(15): {"J": 0.26, "iterations": 10, "error": 2.40e-4},
+    _p(16): {"J": 0.19, "iterations": 13, "error": 5.40e-4},
+    _p(17): {"J": 0.14, "iterations": 17, "error": 9.68e-4},
     _p(18): {"J": 0.10, "iterations": 21, "error": 1.31e-3},
 }
 

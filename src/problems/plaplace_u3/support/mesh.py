@@ -1,4 +1,9 @@
-"""Structured thesis-style mesh support for the plaplace_u3 problem family."""
+"""Structured mesh and seed support shared by the ``plaplace_u3`` family.
+
+This module is deliberately reusable and low-level: it builds the structured
+square / square-with-hole meshes, boundary masks, adjacency, and the thesis seed
+families. Solver-specific logic stays in the thesis package.
+"""
 
 from __future__ import annotations
 
@@ -47,6 +52,7 @@ def _triangle_operators(
     nodes: np.ndarray,
     elems: np.ndarray,
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """Return element gradients of the P1 basis and the triangle volumes."""
     verts = np.asarray(nodes[np.asarray(elems, dtype=np.int64)], dtype=np.float64)
     x0 = verts[:, 0, 0]
     y0 = verts[:, 0, 1]
@@ -66,6 +72,7 @@ def _triangle_operators(
 
 
 def _build_scalar_adjacency(elems: np.ndarray, freedofs: np.ndarray) -> sp.coo_matrix:
+    """Build the free-DOF adjacency used by JAX differentiation helpers."""
     freedofs = np.asarray(freedofs, dtype=np.int64)
     elems = np.asarray(elems, dtype=np.int64)
     n_total = int(np.max(elems)) + 1 if elems.size else int(freedofs.size)
@@ -90,6 +97,7 @@ def _compact_mesh(
     nodes_full: np.ndarray,
     elems_full: np.ndarray,
 ) -> tuple[np.ndarray, np.ndarray]:
+    """Drop unused nodes after removing cells, then renumber the element table."""
     used = np.unique(np.asarray(elems_full, dtype=np.int64).reshape(-1))
     old_to_new = np.full(nodes_full.shape[0], -1, dtype=np.int64)
     old_to_new[used] = np.arange(used.size, dtype=np.int64)
@@ -99,6 +107,7 @@ def _compact_mesh(
 
 
 def _hole_cell_mask(n_subdiv: int) -> np.ndarray:
+    """Mark which square cells stay in the square-with-hole geometry."""
     if int(n_subdiv) % 4 != 0:
         raise ValueError(
             "square_hole_pi requires a level with 2^level divisible by 4; use level >= 2"
@@ -118,6 +127,7 @@ def _generate_structured_triangles(
     mesh_level: int,
     geometry: str,
 ) -> tuple[np.ndarray, np.ndarray, float]:
+    """Generate the thesis structured triangle mesh for the chosen geometry."""
     n_subdiv = _level_subdivisions(mesh_level)
     h = DOMAIN_MAX / float(n_subdiv)
     coords = np.linspace(0.0, DOMAIN_MAX, n_subdiv + 1, dtype=np.float64)
@@ -141,6 +151,8 @@ def _generate_structured_triangles(
     ul = node_ids[jj + 1, ii]
     ur = node_ids[jj + 1, ii + 1]
 
+    # Every square cell is split with the same diagonal, matching the structured
+    # thesis-style triangulation used throughout this packet.
     tri_lo = np.column_stack((ll, lr, ul))
     tri_hi = np.column_stack((ur, ul, lr))
     elems_full = np.vstack((tri_lo, tri_hi)).astype(np.int64)
@@ -149,6 +161,7 @@ def _generate_structured_triangles(
 
 
 def _boundary_mask(nodes: np.ndarray, *, geometry: str, h: float) -> np.ndarray:
+    """Return the homogeneous Dirichlet boundary mask for the selected geometry."""
     tol = max(1.0e-12, 1.0e-10 * float(h))
     x = np.asarray(nodes[:, 0], dtype=np.float64)
     y = np.asarray(nodes[:, 1], dtype=np.float64)
@@ -182,6 +195,7 @@ def _build_initial_guess(
     init_mode: str,
     seed: int,
 ) -> np.ndarray:
+    """Return one thesis initial guess restricted to free DOFs."""
     x = np.asarray(nodes[:, 0], dtype=np.float64)
     y = np.asarray(nodes[:, 1], dtype=np.float64)
 
@@ -214,6 +228,7 @@ def build_problem_data(
     geometry: str,
     p: float,
 ) -> tuple[dict[str, object], sp.coo_matrix]:
+    """Build the mesh/assembly data shared by the 2D thesis solvers."""
     nodes, elems, h = _generate_structured_triangles(
         mesh_level=int(mesh_level),
         geometry=str(geometry),
@@ -280,6 +295,7 @@ class MeshPLaplaceU32D:
         )
 
     def get_data_jax(self):
+        """Return JAX-friendly arrays together with adjacency and the seed vector."""
         import jax.numpy as jnp
 
         params = jaxify_problem_data(
