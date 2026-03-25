@@ -292,6 +292,21 @@ def export_state_if_requested(
     return str(Path(path))
 
 
+def _best_stop_from_history(history: list[dict[str, object]]) -> tuple[float | None, int | None]:
+    best_measure: float | None = None
+    best_outer_it: int | None = None
+    for item in history:
+        stop_measure = item.get("stop_measure")
+        outer_it = item.get("outer_it")
+        if stop_measure is None or outer_it is None:
+            continue
+        measure = float(stop_measure)
+        if (best_measure is None) or (measure < best_measure):
+            best_measure = measure
+            best_outer_it = int(outer_it)
+    return best_measure, best_outer_it
+
+
 def build_result_payload(
     *,
     method: str,
@@ -341,11 +356,28 @@ def build_result_payload(
         "direction_solves": int(direction_solves),
         "status": str(status),
         "message": str(message),
+        "configured_maxit": None,
+        "best_stop_measure": None,
+        "best_stop_outer_it": None,
+        "accepted_step_count": int(
+            sum(1 for item in history if bool(item.get("accepted")))
+        ),
+        "max_halves": int(
+            max((int(item.get("halves", 0)) for item in history if item.get("halves") is not None), default=0)
+        ),
+        "final_halves": int(history[-1].get("halves", 0)) if history else 0,
         "history": list(history),
         "raw_iterate_free": np.asarray(iterate_free, dtype=np.float64).tolist(),
         "physical_solution_free": np.asarray(physical_free, dtype=np.float64).tolist(),
         "state_out": state_path,
     }
+    best_stop_measure, best_stop_outer_it = _best_stop_from_history(history)
+    payload["best_stop_measure"] = (
+        None if best_stop_measure is None else float(best_stop_measure)
+    )
+    payload["best_stop_outer_it"] = (
+        None if best_stop_outer_it is None else int(best_stop_outer_it)
+    )
     if extra:
         payload.update(dict(extra))
     return payload

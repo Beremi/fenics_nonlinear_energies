@@ -109,13 +109,22 @@ def run_oa(
     direction_solves = 0
     message = "Maximum number of iterations reached"
     status = "maxit"
+    best_stop_measure: float | None = None
+    best_stop_outer_it: int | None = None
+    accepted_step_count = 0
+    max_halves = 0
+    final_halves = 0
 
     for outer_it in range(1, int(maxit) + 1):
         raw_stats = problem.stats(current)
         dir_result = directions.compute(current, direction)
         direction_solves += int(dir_result.direction_solves)
+        stop_measure = float(dir_result.stop_measure)
+        if best_stop_measure is None or stop_measure < best_stop_measure:
+            best_stop_measure = stop_measure
+            best_stop_outer_it = int(outer_it)
 
-        if dir_result.stop_measure <= float(epsilon):
+        if stop_measure <= float(epsilon):
             message = f"Stopping criterion {dir_result.stop_name} satisfied"
             status = "completed"
             break
@@ -130,17 +139,16 @@ def run_oa(
 
         if variant == "oa1":
             # OA1 keeps the simpler repeated-halving acceptance step.
-            step_dir = np.asarray(dir_result.direction, dtype=np.float64).copy()
             while halves <= 60:
-                candidate = np.asarray(current + float(delta) * step_dir, dtype=np.float64)
+                alpha_try = float(delta / (2**halves))
+                candidate = np.asarray(current + alpha_try * np.asarray(dir_result.direction, dtype=np.float64), dtype=np.float64)
                 candidate_I = float(objective.value(candidate))
                 if np.isfinite(candidate_I) and candidate_I < raw_stats.I:
                     trial = candidate
                     trial_I = candidate_I
-                    alpha = float(delta / (2**halves))
+                    alpha = alpha_try
                     accepted = True
                     break
-                step_dir *= 0.5
                 halves += 1
                 line_search_evals += 1
         else:
@@ -174,6 +182,10 @@ def run_oa(
 
         trial_physical_stats = problem.stats(trial)
         trial_physical_scale = float(trial_physical_stats.scale_to_solution)
+        max_halves = max(max_halves, int(halves))
+        final_halves = int(halves)
+        if accepted:
+            accepted_step_count += 1
 
         history.append(
             {
@@ -216,6 +228,12 @@ def run_oa(
         reference_error_w1p=reference_error_w1p,
         state_out=state_out,
         extra={
+            "configured_maxit": int(maxit),
+            "best_stop_measure": None if best_stop_measure is None else float(best_stop_measure),
+            "best_stop_outer_it": None if best_stop_outer_it is None else int(best_stop_outer_it),
+            "accepted_step_count": int(accepted_step_count),
+            "max_halves": int(max_halves),
+            "final_halves": int(final_halves),
             "delta_hat": float(delta_hat),
             "golden_tol": float(golden_tol),
             "objective_name": "I",

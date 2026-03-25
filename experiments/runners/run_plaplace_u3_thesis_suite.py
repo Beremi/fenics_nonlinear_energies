@@ -49,7 +49,11 @@ from src.problems.plaplace_u3.thesis.tables import (
     TABLE_5_10_OA1_BY_LEVEL,
     TABLE_5_11_OA1_BY_EPS,
     TABLE_5_12_ITERATIONS,
+    TABLE_5_12_RUNTIME_CONTEXT,
+    TABLE_5_12_TIMES,
     TABLE_5_13_DIRECTION_COMPARISON,
+    TABLE_5_13_RUNTIME_CONTEXT,
+    TABLE_5_13_TIMES,
     TABLE_5_14_SQUARE_MULTIBRANCH,
     TABLE_5_2_DIRECTION_D,
     TABLE_5_3_DIRECTION_VH,
@@ -145,7 +149,7 @@ def _case_name(case: Case) -> str:
 
 
 def _row_from_result(case: Case, problem, result: dict[str, object], *, result_path: Path | None, solve_time_s: float = 0.0) -> dict[str, object]:
-    return {
+    row = {
         **asdict(case),
         "h": float(problem.h),
         "solve_time_s": float(solve_time_s),
@@ -163,6 +167,28 @@ def _row_from_result(case: Case, problem, result: dict[str, object], *, result_p
         "outer_iterations": result["outer_iterations"],
         "direction_solves": result["direction_solves"],
     }
+    for key in (
+        "configured_maxit",
+        "best_stop_measure",
+        "best_stop_outer_it",
+        "accepted_step_count",
+        "max_halves",
+        "final_halves",
+        "refinement_count",
+        "distinct_peak_nodes",
+        "peak_cycle_detected",
+        "objective_name",
+        "delta0",
+        "step_search",
+        "delta_hat",
+        "golden_tol",
+        "rho",
+        "num_nodes",
+        "segment_tol_factor",
+    ):
+        if key in result:
+            row[key] = result[key]
+    return row
 
 
 def _run_case(
@@ -490,6 +516,30 @@ def _attach_thesis_reference(row: dict[str, object]) -> dict[str, object]:
         published = TABLE_5_13_DIRECTION_COMPARISON.get(method, {}).get(p, {}).get(direction)
         out["thesis_direction_iterations"] = published
         out["delta_direction_iterations"] = None if published is None else int(int(row["outer_iterations"]) - int(published))
+        thesis_time = TABLE_5_13_TIMES.get(method, {}).get(p, {}).get(direction)
+        out["thesis_time_s"] = thesis_time
+        out["delta_time_s"] = None if thesis_time is None else float(row["solve_time_s"]) - float(thesis_time)
+        out["launcher"] = "serial python"
+        out["process_count"] = 1
+        out["runtime_context"] = TABLE_5_13_RUNTIME_CONTEXT
+    elif (
+        table in {"table_5_7", "table_5_9", "table_5_11"}
+        and int(level) == 6
+        and abs(float(epsilon) - 1.0e-4) <= 1.0e-14
+        and str(row.get("init_mode", "")) == "sine"
+    ):
+        thesis_time = TABLE_5_12_TIMES.get(p, {}).get(method)
+        if thesis_time is not None:
+            out["thesis_table_5_12_time_s"] = thesis_time
+            out["delta_table_5_12_time_s"] = float(row["solve_time_s"]) - float(thesis_time)
+        target = TABLE_5_12_ITERATIONS.get(p, {}).get(method)
+        if target is not None:
+            out["thesis_table_5_12_iterations"] = int(target)
+            out["delta_table_5_12_iterations"] = int(int(row["outer_iterations"]) - int(target))
+        out["timing_table"] = "table_5_12"
+        out["launcher"] = "serial python"
+        out["process_count"] = 1
+        out["runtime_context"] = TABLE_5_12_RUNTIME_CONTEXT
     return attach_assignment_metadata(out)
 
 

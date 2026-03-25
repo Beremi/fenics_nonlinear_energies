@@ -18,3 +18,5 @@ h5py
 /experiments/analysis/docs_assets/**/.pytest_cache/
 /BAI0012_FEI_P1807_1103V036_2023.pdf
 /thesis_replications.md
+plaplace_u3_timing_enrichment_agent_prompt.md
+plaplace_u3_problematic_experiment_prompt.md

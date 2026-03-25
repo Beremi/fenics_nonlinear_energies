@@ -17,6 +17,14 @@ from src.problems.plaplace_u3.thesis.assignment import (
     attach_assignment_metadata,
     summarize_assignment_rows,
 )
+from experiments.analysis.plaplace_u3_thesis_docs import (
+    convergence_diagnostic_rows,
+    table_5_12_timing_rows,
+    table_5_13_timing_rows,
+    table_discrepancy_lines,
+    table_legend_lines,
+    table_problem_spec_lines,
+)
 
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -27,16 +35,6 @@ SOURCE_SAMPLE_PNG = DEFAULT_ASSET_DIR / "plaplace_u3_sample_state.png"
 SOURCE_SAMPLE_PDF = DEFAULT_ASSET_DIR / "plaplace_u3_sample_state.pdf"
 SOURCE_SQUARE_PANEL = DEFAULT_ASSET_DIR / "square_multibranch_panel.png"
 SOURCE_HOLE_PANEL = DEFAULT_ASSET_DIR / "square_hole_panel.png"
-TABLE_5_13_TIMES = {
-    ("rmpa", "d", 17.0 / 6.0): 47.87,
-    ("rmpa", "d", 3.0): 95.44,
-    ("rmpa", "d_vh", 17.0 / 6.0): 5.38,
-    ("rmpa", "d_vh", 3.0): 8.46,
-    ("oa1", "d", 17.0 / 6.0): 80.66,
-    ("oa1", "d", 3.0): 131.33,
-    ("oa1", "d_vh", 17.0 / 6.0): 2.48,
-    ("oa1", "d_vh", 3.0): 4.15,
-}
 
 
 def _load_summary(path: Path) -> dict[str, object]:
@@ -312,129 +310,15 @@ def _compact_block(title: str, items: list[str]) -> list[str]:
 
 
 def _table_legend_lines(table: str) -> list[str]:
-    table = str(table)
-    if table in {"table_5_2", "table_5_3", "table_5_8", "table_5_9", "table_5_10", "table_5_11"}:
-        return [
-            "`thesis J`: published thesis energy",
-            "`repo J`: reproduced canonical energy",
-            "`thesis error` / `repo error`: thesis vs proxy-reference error",
-            "`status`: current packet verdict under the assignment policy (`PASS`, `low impact`, `FAIL`, or `secondary`)",
-        ]
-    if table == "table_5_13":
-        return [
-            "`thesis iters`: published direction-comparison count in the thesis",
-            "`repo iters`: current outer iteration count",
-            "`thesis direction iters`: published exact-direction count used for the low-impact policy",
-            "`status`: `PASS`, `low impact`, `FAIL`, or `secondary` under the current packet policy",
-        ]
-    if table in {"table_5_14", "figure_5_13"}:
-        return [
-            "`thesis J` / `repo J`: published vs reproduced energy",
-            "`thesis I` / `repo I`: published vs reproduced quotient-side value",
-            "`status`: current packet verdict under the assignment policy (`PASS`, `low impact`, `FAIL`, or `secondary`)",
-        ]
-    return ["column meanings follow the table header"]
+    return table_legend_lines(table)
 
 
 def _table_problem_spec_lines(table: str) -> list[str]:
-    table = str(table)
-    if table == "table_5_2" or table == "table_5_3":
-        return [
-            "1D harness for $-\\Delta_p u = u^3$ on $(0,\\pi)$.",
-            "Domain / mesh: interval seed study from the thesis 1D helper setup.",
-            "Method / direction: RMPA and OA1 with `d` / `d^{V_h}`.",
-            "Comparison target: thesis energy, proxy error, and iteration count.",
-        ]
-    if table in {"table_5_8", "table_5_9"}:
-        return [
-            "Square principal branch for $J(u)$ on $[0,\\pi]^2$.",
-            "Domain / mesh: structured $P_1$ right-triangle mesh with $h = \\pi / 2^L$.",
-            "Method / direction: RMPA with the approximate direction `d^{V_h}`.",
-            "Seed / tolerance: `sin(x)sin(y)` with the table-specific $\\varepsilon$ or level.",
-        ]
-    if table in {"table_5_10", "table_5_11"}:
-        return [
-            "Square principal branch for the scale-invariant quotient $I(u)$.",
-            "Domain / mesh: structured $P_1$ right-triangle mesh with $h = \\pi / 2^L$.",
-            "Method / direction: OA1 with the approximate direction `d^{V_h}`.",
-            "Seed / tolerance: `sin(x)sin(y)` with the table-specific $\\varepsilon$ or level.",
-        ]
-    if table == "table_5_13":
-        return [
-            "Square direction-comparison table for $J(u)$ and the descent counts.",
-            "Domain / mesh: $[0,\\pi]^2$ with $h = \\pi / 2^6$.",
-            "Method / direction: RMPA exact `d` versus approximate `d^{V_h}`, plus OA1.",
-            "Seed / tolerance: `sin(x)sin(y)` with $\\varepsilon = 10^{-4}$.",
-            "Comparison target: published direction counts, with principal-branch energy checked against Tables 5.8 / 5.10.",
-        ]
-    if table == "table_5_14":
-        return [
-            "Square multi-solution branch-selection table.",
-            "Domain / mesh: $[0,\\pi]^2$ with the thesis square seeds.",
-            "Method / direction: OA1 and OA2 with the published initialisations.",
-            "Comparison target: branch selection via $J$ and $I$.",
-        ]
-    if table == "figure_5_13":
-        return [
-            "Square-with-hole multi-solution branch-selection study.",
-            "Domain / mesh: nonconvex square-with-hole domain with the thesis hole seeds.",
-            "Method / direction: OA2 with the published initialisations.",
-            "Comparison target: branch selection via $J$ and $I$.",
-        ]
-    return ["problem specification follows the section title"]
+    return table_problem_spec_lines(table)
 
 
 def _table_discrepancy_lines(table: str, rows: list[dict[str, object]]) -> list[str]:
-    table = str(table)
-    if table == "table_5_13":
-        notes: list[str] = []
-        for row in rows:
-            if str(row.get("table")) != "table_5_13" or str(row.get("method")) != "rmpa" or str(row.get("direction")) != "d":
-                continue
-            if _assignment_verdict(row) != "low impact":
-                continue
-            p_value = float(row.get("p", 0.0))
-            thesis_time = TABLE_5_13_TIMES.get(("rmpa", "d", p_value))
-            timing_note = (
-                f"timing note: thesis {thesis_time:.2f} s vs local {float(row.get('solve_time_s', 0.0)):.2f} s "
-                "on 1 proc, serial python, JAX + SciPy + PyAMG helper solves"
-                if thesis_time is not None
-                else "timing note unavailable"
-            )
-            if abs(p_value - (17.0 / 6.0)) <= 1.0e-12:
-                notes.append(
-                    "`row`: `RMPA d, p = 17/6`; `impact`: `low impact`; "
-                    f"`thesis`: `8 it, 47.87 s`; `repo`: `{int(row['outer_iterations'])} outer it, {int(row['direction_solves'])} direction solves, J = {_fmt(row.get('J'), 10)}`; "
-                    "`meaning`: `principal-branch energy matches Table 5.8`; "
-                    "`likely cause`: `late-stage tiny accepted halving steps in the exact-direction run`; "
-                    f"`{timing_note}`; `status`: `documented as low impact`."
-                )
-            elif abs(p_value - 3.0) <= 1.0e-12:
-                notes.append(
-                    "`row`: `RMPA d, p = 3`; `impact`: `low impact`; "
-                    f"`thesis`: `19 it, 95.44 s`; `repo`: `{int(row['outer_iterations'])} outer it, {int(row['direction_solves'])} direction solves, J = {_fmt(row.get('J'), 10)}`; "
-                    "`meaning`: `principal-branch energy matches Table 5.8`; "
-                    "`likely cause`: `the exact auxiliary direction is not exploited as effectively before the final halving crawl`; "
-                    f"`{timing_note}`; `status`: `documented as low impact`."
-                )
-        return notes or ["no primary mismatch beyond the rows shown above."]
-    if table == "table_5_6":
-        return [
-            "Table 5.12 is the thesis wall-time comparison for Stage C. In this packet, the timing surface is synthesized from the underlying MPA / RMPA / OA1 rows; local runs are serial python on 1 proc, and the current canonical MPA slice is not timing-comparable because the promoted MPA rows are convergence-focused rather than a stable wall-time benchmark.",
-        ]
-    if table == "table_5_11":
-        return [
-            "Thesis runbook marks Table 5.11 as internally inconsistent, so this packet keeps it as secondary context rather than a primary OA1 target.",
-        ]
-    if table == "table_5_8":
-        return [
-            "The `p = 1.5`, `level = 7` point is a secondary extension row; the primary square-branch rows still pass.",
-        ]
-    if table == "table_5_2" or table == "table_5_3":
-        return [
-            "The `p = 1.5` harness row is the published hard case and is kept as secondary context rather than a primary match.",
-        ]
-    return ["no material discrepancy in this table family."]
+    return table_discrepancy_lines(table, rows)
 
 
 def main() -> None:
@@ -456,6 +340,8 @@ def main() -> None:
     primary_rows = [row for row in rows if bool(row.get("assignment_primary"))]
     primary_pass = [row for row in primary_rows if row.get("assignment_acceptance_pass") is True]
     low_impact_rows = _low_impact_rows(rows)
+    stage_c_rows = table_5_12_timing_rows(rows)
+    direction_rows = table_5_13_timing_rows(rows)
     match_breakdown = _match_breakdown(rows)
     partial_rows = [
         row
@@ -466,6 +352,11 @@ def main() -> None:
             or (row.get("assignment_acceptance_pass") is True and str(row.get("status")) != "completed")
         )
     ]
+    partial_rows.extend(
+        row
+        for row in [*stage_c_rows, *direction_rows]
+        if str(row.get("timing_status")) != "timing complete"
+    )
     mismatch_rows = [
         row
         for row in rows
@@ -481,7 +372,6 @@ def main() -> None:
     rmpa_rows = _sorted_rows(rows, "table_5_8", "table_5_9")
     oa1_rows = _sorted_rows(rows, "table_5_10", "table_5_11")
     mpa_rows = _sorted_rows(rows, "table_5_6", "table_5_7")
-    direction_rows = _sorted_rows(rows, "table_5_13")
     square_multibranch_rows = _sorted_rows(rows, "table_5_14")
     hole_rows = _sorted_rows(rows, "figure_5_13")
 
@@ -779,6 +669,57 @@ def main() -> None:
     lines.extend(
         [
             "",
+            "## Stage C Timing Summary",
+            "",
+            "Table 5.12 is the thesis wall-time comparison for the square principal-branch sweep at fixed mesh and tolerance. The packet surfaces the thesis timings directly and pairs them with the fresh local serial-python rerun.",
+        ]
+    )
+    lines.extend(_compact_block("Problem spec", _table_problem_spec_lines("table_5_12")))
+    lines.extend(
+        [
+            _section_command(
+                "artifacts/raw_results/plaplace_u3_thesis_sections/stage_c_timing",
+                "table_5_7",
+                "table_5_9",
+                "table_5_11",
+            ),
+            "",
+        ]
+    )
+    _append_table(
+        lines,
+        [
+            "method",
+            "$p$",
+            "thesis it",
+            "repo it",
+            "thesis time [s]",
+            "repo time [s]",
+            "timing status",
+            "timing reason",
+            "solver status",
+        ],
+        [
+            [
+                str(row["method"]),
+                _fmt(row["p"], 3),
+                _style_thesis(row.get("thesis_iterations"), 0),
+                _style_repo(row.get("repo_iterations"), 0),
+                _style_thesis(row.get("thesis_time_s"), 2),
+                _style_repo(row.get("repo_time_s"), 2),
+                str(row.get("timing_status")),
+                str(row.get("timing_reason")),
+                str(row.get("status")),
+            ]
+            for row in stage_c_rows
+        ],
+    )
+    lines.extend(_compact_block("Column legend", _table_legend_lines("table_5_12")))
+    lines.extend(_compact_block("Discrepancy notes", _table_discrepancy_lines("table_5_12", stage_c_rows)))
+
+    lines.extend(
+        [
+            "",
             "## Cross-Method Comparison: MPA, Iteration Counts, And Descent Directions",
             "",
             "This section combines the MPA square tables with the cross-method and descent-direction comparison rows.",
@@ -791,6 +732,8 @@ def main() -> None:
                 "artifacts/raw_results/plaplace_u3_thesis_sections/method_comparison",
                 "table_5_6",
                 "table_5_7",
+                "table_5_9",
+                "table_5_11",
                 "table_5_13",
             ),
             "",
@@ -819,25 +762,60 @@ def main() -> None:
     lines.extend(_compact_block("Column legend", _table_legend_lines("table_5_6")))
     lines.extend(_compact_block("Discrepancy notes", _table_discrepancy_lines("table_5_6", mpa_rows)))
 
+    timing_rows_513 = direction_rows
     lines.extend(["", "### Table 5.13 — direction comparison", ""])
     _append_table(
         lines,
-        ["method", "direction", "$p$", "thesis iters", "repo iters", "thesis direction iters", "status"],
+        [
+            "method",
+            "direction",
+            "$p$",
+            "thesis iters",
+            "repo iters",
+            "thesis direction iters",
+            "thesis time [s]",
+            "repo time [s]",
+            "timing status",
+            "timing reason",
+            "status",
+        ],
         [
             [
                 str(row["method"]),
                 str(row["direction"]),
                 _fmt(row["p"], 3),
                 _style_thesis(row.get("thesis_iterations"), 0),
-                _style_repo(row.get("outer_iterations"), 0),
+                _style_repo(row.get("repo_iterations", row.get("outer_iterations")), 0),
                 _style_thesis(row.get("thesis_direction_iterations"), 0),
+                _style_thesis(row.get("thesis_time_s"), 2),
+                _style_repo(row.get("repo_time_s"), 2),
+                str(row.get("timing_status", "timing complete")),
+                str(row.get("timing_reason")),
                 _assignment_label(row),
             ]
-            for row in sorted(direction_rows, key=lambda item: (str(item["method"]), str(item["direction"]), float(item["p"])))
+            for row in timing_rows_513
         ],
     )
     lines.extend(_compact_block("Column legend", _table_legend_lines("table_5_13")))
-    lines.extend(_compact_block("Discrepancy notes", _table_discrepancy_lines("table_5_13", direction_rows)))
+    lines.extend(_compact_block("Discrepancy notes", _table_discrepancy_lines("table_5_13", timing_rows_513)))
+
+    diagnostics_rows = convergence_diagnostic_rows(rows)
+    if diagnostics_rows:
+        lines.extend(["", "## Convergence Diagnostics", ""])
+        _append_table(
+            lines,
+            ["family", "current status", "root-cause category", "strongest evidence", "action taken"],
+            [
+                [
+                    row["family"],
+                    row["current_status"],
+                    row["root_cause_category"],
+                    row["strongest_evidence"],
+                    row["action_taken"],
+                ]
+                for row in diagnostics_rows
+            ],
+        )
 
     lines.extend(
         [
@@ -926,11 +904,11 @@ def main() -> None:
             "",
             _rebuild_packet_command(),
             "",
-            "## What Matches, What Is Partial, And What Does Not Match",
+            "## What Matches, What Needs Context, And What Does Not Match",
             "",
             f"- primary assignment rows passing the current thresholds: `{len(primary_pass)}` / `{len(primary_rows)}`",
             f"- low-impact primary discrepancies: `{len(low_impact_rows)}`",
-            f"- secondary / partial rows: `{len(partial_rows)}`",
+            f"- secondary / diagnostic rows: `{len(partial_rows)}`",
             f"- unresolved rows: `{len(_problem_rows(rows))}`",
             "",
             "### What works",
@@ -967,7 +945,7 @@ def main() -> None:
     lines.extend(
         [
             "",
-            "### What is partial",
+            "### What needs context",
             "",
         ]
     )

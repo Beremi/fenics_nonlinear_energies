@@ -70,12 +70,34 @@ def test_plaplace_u3_thesis_replication_page_contains_required_sections() -> Non
     assert "../../src/problems/plaplace_u3/thesis/scripts/solve_case.py" in text
     assert "## RMPA Square Principal-Branch Replication" in text
     assert "## Square-With-Hole OA2 Study (Figure 5.13)" in text
-    assert "## What Matches, What Is Partial, And What Does Not Match" in text
+    assert "## What Matches, What Needs Context, And What Does Not Match" in text
     assert "**Problem spec**" in text
     assert "**Column legend**" in text
     assert "**Discrepancy notes**" in text
     assert "low impact" in text
     assert "timing note:" in text
+    assert "timing status" in text
+    assert "runtime context" in text
+    assert "thesis t[s]" in text
+    assert "repo t[s]" in text
+    assert "1 proc, serial python" in text
+    assert "## Stage C Timing Summary" in text
+    assert "## Convergence Diagnostics" in text
+    assert "Table 5.12 is the thesis wall-time comparison" in text
+    assert "timing complete" in text
+    assert "timing unavailable" in text
+    assert "non-completed" in text
+    assert "solver status" in text
+    assert "maxit=1000" in text
+    assert "thesis Table 5.12 timings are surfaced alongside the current local timings" in text
+    assert "thesis Table 5.13 timings are shown beside fresh local serial-python reruns" in text
+    assert "## Convergence Diagnostics" in text
+    assert "root-cause category" in text
+    assert "action taken" in text
+    assert "MPA accepted-step peak cycling / slow stop decay" in text
+    assert "exact-direction Step 6 halving failure" in text
+    assert "cheap-direction Step 6 halving failure" in text
+    assert "timing comparison remains blocked" not in text
     assert "../assets/plaplace_u3_thesis/" in text
     assert '<span style="color:#1d4ed8;"><em>' in text
     assert '<span style="color:#b91c1c;"><strong>' in text
@@ -91,6 +113,28 @@ def test_plaplace_u3_thesis_report_contains_readable_blocks() -> None:
     assert "**Discrepancy notes**" in text
     assert "low impact" in text
     assert "timing note:" in text
+    assert "timing status" in text
+    assert "runtime context" in text
+    assert "thesis t[s]" in text
+    assert "repo t[s]" in text
+    assert "1 proc, serial python" in text
+    assert "## Stage C Timing Summary" in text
+    assert "## Convergence Diagnostics" in text
+    assert "Square cross-method timing table for MPA, RMPA, and OA1." in text
+    assert "timing complete" in text
+    assert "timing unavailable" in text
+    assert "non-completed" in text
+    assert "solver status" in text
+    assert "maxit=1000" in text
+    assert "thesis Table 5.12 timings are surfaced alongside the current local timings" in text
+    assert "thesis Table 5.13 timings are shown beside fresh local serial-python reruns" in text
+    assert "## Convergence Diagnostics" in text
+    assert "root-cause category" in text
+    assert "action taken" in text
+    assert "MPA accepted-step peak cycling / slow stop decay" in text
+    assert "exact-direction Step 6 halving failure" in text
+    assert "cheap-direction Step 6 halving failure" in text
+    assert "timing comparison remains blocked" not in text
 
 
 def test_results_pages_contain_required_sections() -> None:

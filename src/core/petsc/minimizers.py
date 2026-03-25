@@ -16,25 +16,50 @@ def golden_section_search(f, a, b, tol):
     gamma = 0.5 + np.sqrt(5) / 2
 
     an, bn = float(a), float(b)
+    fan = f(an)
+    fbn = f(bn)
     dn = (bn - an) / gamma + an
     cn = an + bn - dn
 
     fcn = f(cn)
     fdn = f(dn)
-    n_evals = 0
+    n_evals = 4
+    best_alpha = an
+    best_value = fan
+    for alpha, value in ((bn, fbn), (cn, fcn), (dn, fdn)):
+        if value < best_value:
+            best_alpha = alpha
+            best_value = value
 
     while bn - an > tol:
         if fcn < fdn:
             bn = dn
             dn, cn = cn, an + bn - cn
             fdn, fcn = fcn, f(cn)
+            if fdn < best_value:
+                best_alpha = dn
+                best_value = fdn
+            if fcn < best_value:
+                best_alpha = cn
+                best_value = fcn
         else:
             an = cn
             cn, dn = dn, an + bn - dn
             fcn, fdn = fdn, f(dn)
+            if fcn < best_value:
+                best_alpha = cn
+                best_value = fcn
+            if fdn < best_value:
+                best_alpha = dn
+                best_value = fdn
         n_evals += 1
 
-    return (an + bn) / 2.0, n_evals
+    midpoint = 0.5 * (an + bn)
+    fmid = f(midpoint)
+    n_evals += 1
+    if fmid < best_value:
+        best_alpha = midpoint
+    return float(best_alpha), n_evals
 
 
 def _effective_linesearch_tol(base_tol, a, b, relative_to_bound=False):

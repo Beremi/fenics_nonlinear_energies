@@ -99,11 +99,29 @@ def _search_neighbor_lower(
     return z
 
 
+def _repair_local_path_after_move(
+    problem: ThesisProblem,
+    objective,
+    candidate: np.ndarray,
+    left_neighbor: np.ndarray,
+    right_neighbor: np.ndarray,
+    delta_min: float,
+) -> np.ndarray:
+    candidate = np.asarray(candidate, dtype=np.float64)
+    candidate = _search_neighbor_lower(problem, objective, candidate, left_neighbor, delta_min)
+    candidate = _search_neighbor_lower(problem, objective, candidate, right_neighbor, delta_min)
+    return np.asarray(candidate, dtype=np.float64)
+
+
 def _descent_step(
+    problem: ThesisProblem,
     objective,
     z: np.ndarray,
     direction: np.ndarray,
     rho: float,
+    left_neighbor: np.ndarray,
+    right_neighbor: np.ndarray,
+    delta_min: float,
 ) -> tuple[np.ndarray, bool, int]:
     z = np.asarray(z, dtype=np.float64)
     direction = np.asarray(direction, dtype=np.float64)
@@ -113,17 +131,40 @@ def _descent_step(
 
     while halves <= 60:
         trial = z + step
-        f_trial = float(objective.value(trial))
+        repaired_trial = _repair_local_path_after_move(
+            problem,
+            objective,
+            trial,
+            left_neighbor,
+            right_neighbor,
+            delta_min,
+        )
+        f_trial = float(objective.value(repaired_trial))
         if f_trial < fz:
             mid = z + 0.5 * step
-            f_mid = float(objective.value(mid))
+            repaired_mid = _repair_local_path_after_move(
+                problem,
+                objective,
+                mid,
+                left_neighbor,
+                right_neighbor,
+                delta_min,
+            )
+            f_mid = float(objective.value(repaired_mid))
             values = [fz, f_mid, f_trial]
             t_star = _quadratic_extremum([0.0, 0.5, 1.0], values, maximize=False)
-            candidate = z + t_star * step
+            candidate = _repair_local_path_after_move(
+                problem,
+                objective,
+                z + t_star * step,
+                left_neighbor,
+                right_neighbor,
+                delta_min,
+            )
             f_candidate = float(objective.value(candidate))
             choices = [
-                (f_trial, trial),
-                (f_mid, mid),
+                (f_trial, repaired_trial),
+                (f_mid, repaired_mid),
             ]
             if f_candidate < fz:
                 choices.append((f_candidate, candidate))
@@ -136,10 +177,14 @@ def _descent_step(
 
 
 def _descent_step_plain_halving(
+    problem: ThesisProblem,
     objective,
     z: np.ndarray,
     direction: np.ndarray,
     rho: float,
+    left_neighbor: np.ndarray,
+    right_neighbor: np.ndarray,
+    delta_min: float,
 ) -> tuple[np.ndarray, bool, int]:
     """Fallback thesis-style halving without interpolation."""
     z = np.asarray(z, dtype=np.float64)
@@ -150,8 +195,16 @@ def _descent_step_plain_halving(
 
     while halves <= 80:
         trial = z + step
-        if float(objective.value(trial)) < fz:
-            return np.asarray(trial, dtype=np.float64), True, halves
+        repaired_trial = _repair_local_path_after_move(
+            problem,
+            objective,
+            trial,
+            left_neighbor,
+            right_neighbor,
+            delta_min,
+        )
+        if float(objective.value(repaired_trial)) < fz:
+            return np.asarray(repaired_trial, dtype=np.float64), True, halves
         step *= 0.5
         halves += 1
     return z, False, halves
@@ -171,6 +224,20 @@ def _refine_chain_around_peak(nodes: list[np.ndarray], peak_idx: int) -> list[np
     trimmed.insert(new_peak_idx, left_mid)
     trimmed.insert(new_peak_idx + 2, right_mid)
     return [np.asarray(node, dtype=np.float64) for node in trimmed]
+
+
+def _detect_peak_cycle(node_history: list[int]) -> bool:
+    if len(node_history) < 8:
+        return False
+    for cycle_len in range(1, 5):
+        if len(node_history) < 2 * cycle_len:
+            continue
+        for end in range(2 * cycle_len, len(node_history) + 1):
+            first = node_history[end - 2 * cycle_len : end - cycle_len]
+            second = node_history[end - cycle_len : end]
+            if first == second:
+                return True
+    return False
 
 
 def _choose_endpoint_scale(problem: ThesisProblem, objective) -> float:
@@ -213,6 +280,13 @@ def run_mpa(
     reported_peak = np.asarray(current, dtype=np.float64)
     last_peak_idx: int | None = None
     same_peak_streak = 0
+    best_stop_measure: float | None = None
+    best_stop_outer_it: int | None = None
+    accepted_step_count = 0
+    max_halves = 0
+    final_halves = 0
+    refinement_count = 0
+    node_history: list[int] = []
 
     for outer_it in range(1, int(maxit) + 1):
         energies = np.asarray([float(objective.value(node)) for node in nodes], dtype=np.float64)
@@ -233,12 +307,16 @@ def run_mpa(
             last_peak_idx = inner_idx
             same_peak_streak = 1
             chain_refined = True
+            refinement_count += 1
+        node_history.append(int(inner_idx))
 
         z = np.asarray(nodes[inner_idx], dtype=np.float64)
+        left_neighbor = np.asarray(nodes[inner_idx - 1], dtype=np.float64)
+        right_neighbor = np.asarray(nodes[inner_idx + 1], dtype=np.float64)
 
         # Thesis Step 5: locally maximize J toward each neighboring chain node.
-        z = _search_neighbor_peak(problem, objective, z, nodes[inner_idx - 1], delta_min)
-        z = _search_neighbor_peak(problem, objective, z, nodes[inner_idx + 1], delta_min)
+        z = _search_neighbor_peak(problem, objective, z, left_neighbor, delta_min)
+        z = _search_neighbor_peak(problem, objective, z, right_neighbor, delta_min)
         nodes[inner_idx] = np.asarray(z, dtype=np.float64)
         current = np.asarray(z, dtype=np.float64)
         reported_peak = np.asarray(current, dtype=np.float64).copy()
@@ -247,22 +325,42 @@ def run_mpa(
         dir_result = directions.compute(current, direction)
         stop_measure = float(dir_result.stop_measure)
         direction_solves += int(dir_result.direction_solves)
+        if best_stop_measure is None or stop_measure < best_stop_measure:
+            best_stop_measure = stop_measure
+            best_stop_outer_it = int(outer_it)
         if stop_measure <= float(epsilon):
             message = f"Stopping criterion {dir_result.stop_name} satisfied"
             status = "completed"
             break
 
-        moved, accepted, halves = _descent_step(objective, current, dir_result.direction, float(rho))
+        moved, accepted, halves = _descent_step(
+            problem,
+            objective,
+            current,
+            dir_result.direction,
+            float(rho),
+            left_neighbor,
+            right_neighbor,
+            delta_min,
+        )
         fallback_used = False
         if not accepted:
             moved, accepted, fallback_halves = _descent_step_plain_halving(
+                problem,
                 objective,
                 current,
                 dir_result.direction,
                 float(rho),
+                left_neighbor,
+                right_neighbor,
+                delta_min,
             )
             halves += int(fallback_halves)
             fallback_used = bool(accepted)
+        max_halves = max(max_halves, int(halves))
+        final_halves = int(halves)
+        if accepted:
+            accepted_step_count += 1
         history.append(
             {
                 "outer_it": int(outer_it),
@@ -287,10 +385,6 @@ def run_mpa(
             break
 
         nodes[inner_idx] = np.asarray(moved, dtype=np.float64)
-        # Thesis Step 6: after moving the peak node downhill, repair the local
-        # chain shape by searching for lower points toward each neighbor.
-        nodes[inner_idx] = _search_neighbor_lower(problem, objective, nodes[inner_idx], nodes[inner_idx - 1], delta_min)
-        nodes[inner_idx] = _search_neighbor_lower(problem, objective, nodes[inner_idx], nodes[inner_idx + 1], delta_min)
         current = np.asarray(nodes[inner_idx], dtype=np.float64)
 
     return build_result_payload(
@@ -306,6 +400,15 @@ def run_mpa(
         reference_error_w1p=reference_error_w1p,
         state_out=state_out,
         extra={
+            "configured_maxit": int(maxit),
+            "best_stop_measure": None if best_stop_measure is None else float(best_stop_measure),
+            "best_stop_outer_it": None if best_stop_outer_it is None else int(best_stop_outer_it),
+            "accepted_step_count": int(accepted_step_count),
+            "max_halves": int(max_halves),
+            "final_halves": int(final_halves),
+            "refinement_count": int(refinement_count),
+            "distinct_peak_nodes": int(len(set(node_history))),
+            "peak_cycle_detected": bool(_detect_peak_cycle(node_history)),
             "rho": float(rho),
             "num_nodes": int(num_nodes),
             "segment_tol_factor": float(segment_tol_factor),

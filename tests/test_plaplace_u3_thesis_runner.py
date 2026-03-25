@@ -7,7 +7,12 @@ from pathlib import Path
 import numpy as np
 import pytest
 
+from experiments.analysis import merge_plaplace_u3_thesis_chunks as thesis_merge
+from experiments.analysis.plaplace_u3_thesis_docs import timing_metadata_for_row
 from experiments.runners import run_plaplace_u3_thesis_suite as thesis_suite
+from src.core.serial.minimizers import golden_section_search
+from src.problems.plaplace_u3.thesis import solver_oa as thesis_solver_oa
+from src.problems.plaplace_u3.thesis import solver_rmpa as thesis_solver_rmpa
 from src.problems.plaplace_u3.thesis.solver_common import build_problem
 from src.problems.plaplace_u3.thesis.solver_mpa import run_mpa
 
@@ -122,6 +127,354 @@ def test_mpa_reports_last_evaluated_peak_when_hitting_maxit():
     assert payload["status"] == "maxit"
     assert payload["history"]
     assert abs(float(payload["J"]) - float(payload["history"][-1]["J"])) < 1.0e-12
+    assert payload["configured_maxit"] == 2
+    assert payload["accepted_step_count"] == 2
+    assert payload["best_stop_measure"] is not None
+    assert payload["best_stop_outer_it"] is not None
+    assert payload["max_halves"] >= 0
+    assert payload["final_halves"] >= 0
+    assert payload["refinement_count"] >= 0
+    assert isinstance(payload["distinct_peak_nodes"], int)
+    assert isinstance(payload["peak_cycle_detected"], bool)
+
+
+def test_row_from_result_propagates_solver_diagnostics():
+    case = thesis_suite.Case(
+        table="table_5_2",
+        method="rmpa",
+        direction="d",
+        dimension=1,
+        geometry="interval_pi",
+        level=5,
+        p=2.0,
+        epsilon=1.0e-4,
+        init_mode="sine",
+    )
+    problem = build_problem(
+        dimension=1,
+        level=5,
+        p=2.0,
+        geometry="interval_pi",
+        init_mode="sine",
+        seed=0,
+    )
+    result = {
+        "status": "completed",
+        "message": "ok",
+        "J": 0.5,
+        "I": 0.25,
+        "c": 1.0,
+        "outer_iterations": 7,
+        "direction_solves": 7,
+        "configured_maxit": 500,
+        "best_stop_measure": 1.0e-5,
+        "best_stop_outer_it": 6,
+        "accepted_step_count": 7,
+        "max_halves": 3,
+        "final_halves": 1,
+        "objective_name": "J",
+        "delta0": 1.0,
+        "step_search": "golden",
+    }
+
+    row = thesis_suite._row_from_result(
+        case,
+        problem,
+        result,
+        result_path=Path("/tmp/fake_output.json"),
+        solve_time_s=1.23,
+    )
+
+    assert row["configured_maxit"] == 500
+    assert row["best_stop_measure"] == pytest.approx(1.0e-5)
+    assert row["best_stop_outer_it"] == 6
+    assert row["accepted_step_count"] == 7
+    assert row["max_halves"] == 3
+    assert row["final_halves"] == 1
+    assert row["objective_name"] == "J"
+    assert row["delta0"] == pytest.approx(1.0)
+    assert row["step_search"] == "golden"
+
+
+def test_merge_row_score_prefers_current_budget_repo_results(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
+    fake_repo_root = tmp_path / "repo"
+    fake_repo_root.mkdir()
+    monkeypatch.setattr(thesis_merge, "REPO_ROOT", fake_repo_root)
+
+    source_path = tmp_path / "source_summary.json"
+    source_path.write_text("{}", encoding="utf-8")
+
+    repo_result = fake_repo_root / "artifacts" / "raw_results" / "fresh" / "output.json"
+    repo_result.parent.mkdir(parents=True, exist_ok=True)
+    repo_result.write_text("{}", encoding="utf-8")
+
+    stale_result = tmp_path / "stale_output.json"
+    stale_result.write_text("{}", encoding="utf-8")
+
+    fresh_row = {
+        "method": "rmpa",
+        "configured_maxit": 500,
+        "result_path": str(repo_result),
+    }
+    stale_row = {
+        "method": "rmpa",
+        "configured_maxit": 200,
+        "result_path": str(stale_result),
+    }
+
+    assert thesis_merge._row_score(fresh_row, source_path=source_path, source_priority=1) > thesis_merge._row_score(
+        stale_row,
+        source_path=source_path,
+        source_priority=0,
+    )
+
+
+def test_merge_row_score_prefers_publishable_timing_over_zero_time_chunk(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
+    fake_repo_root = tmp_path / "repo"
+    fake_repo_root.mkdir()
+    monkeypatch.setattr(thesis_merge, "REPO_ROOT", fake_repo_root)
+
+    chunk_summary = fake_repo_root / "artifacts" / "raw_results" / "plaplace_u3_thesis_chunks" / "chunk0" / "summary.json"
+    chunk_summary.parent.mkdir(parents=True, exist_ok=True)
+    chunk_summary.write_text("{}", encoding="utf-8")
+    fresh_summary = fake_repo_root / "artifacts" / "raw_results" / "plaplace_u3_thesis_refresh" / "summary.json"
+    fresh_summary.parent.mkdir(parents=True, exist_ok=True)
+    fresh_summary.write_text("{}", encoding="utf-8")
+
+    chunk_result = fake_repo_root / "artifacts" / "raw_results" / "plaplace_u3_thesis_chunks" / "chunk0" / "output.json"
+    chunk_result.write_text("{}", encoding="utf-8")
+    fresh_result = fake_repo_root / "artifacts" / "raw_results" / "plaplace_u3_thesis_refresh" / "output.json"
+    fresh_result.write_text("{}", encoding="utf-8")
+
+    stale_zero_time = {
+        "table": "table_5_13",
+        "method": "rmpa",
+        "configured_maxit": 500,
+        "status": "completed",
+        "solve_time_s": 0.0,
+        "result_path": str(chunk_result),
+    }
+    fresh_publishable = {
+        "table": "table_5_13",
+        "method": "rmpa",
+        "configured_maxit": 500,
+        "status": "completed",
+        "solve_time_s": 1.23,
+        "result_path": str(fresh_result),
+    }
+
+    assert thesis_merge._row_score(
+        fresh_publishable,
+        source_path=fresh_summary,
+        source_priority=1,
+    ) > thesis_merge._row_score(
+        stale_zero_time,
+        source_path=chunk_summary,
+        source_priority=0,
+    )
+
+
+def test_merge_row_score_prefers_stable_repo_artifact_over_temp_output(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
+    fake_repo_root = tmp_path / "repo"
+    fake_repo_root.mkdir()
+    monkeypatch.setattr(thesis_merge, "REPO_ROOT", fake_repo_root)
+
+    summary_path = fake_repo_root / "artifacts" / "raw_results" / "overlay" / "summary.json"
+    summary_path.parent.mkdir(parents=True, exist_ok=True)
+    summary_path.write_text("{}", encoding="utf-8")
+
+    stable_result = fake_repo_root / "artifacts" / "raw_results" / "overlay" / "output.json"
+    stable_result.write_text("{}", encoding="utf-8")
+    temp_result = tmp_path / "tmp_output.json"
+    temp_result.write_text("{}", encoding="utf-8")
+
+    stable_row = {
+        "method": "rmpa",
+        "configured_maxit": 500,
+        "status": "completed",
+        "solve_time_s": 1.0,
+        "result_path": str(stable_result),
+    }
+    temp_row = {
+        "method": "rmpa",
+        "configured_maxit": 500,
+        "status": "completed",
+        "solve_time_s": 1.0,
+        "result_path": str(temp_result),
+    }
+
+    assert thesis_merge._row_score(stable_row, source_path=summary_path, source_priority=1) > thesis_merge._row_score(
+        temp_row,
+        source_path=summary_path,
+        source_priority=1,
+    )
+
+
+def test_timing_metadata_distinguishes_unavailable_from_non_completed():
+    unavailable = timing_metadata_for_row(
+        {
+            "table": "table_5_13",
+            "method": "rmpa",
+            "direction": "d",
+            "p": 2.0,
+            "status": "completed",
+            "outer_iterations": 8,
+            "solve_time_s": 0.0,
+            "launcher": "serial python",
+            "process_count": 1,
+        },
+        "table_5_13",
+    )
+    assert unavailable["timing_status"] == "timing unavailable"
+    assert "timing propagation bug" in str(unavailable["timing_reason"])
+    assert unavailable["repo_time_s"] is None
+    assert unavailable["repo_iterations"] == 8
+
+    non_completed = timing_metadata_for_row(
+        {
+            "table": "table_5_12",
+            "method": "mpa",
+            "p": 2.0,
+            "status": "maxit",
+            "outer_iterations": 1000,
+            "configured_maxit": 1000,
+            "solve_time_s": 45.0,
+            "launcher": "serial python",
+            "process_count": 1,
+        },
+        "table_5_12",
+    )
+    assert non_completed["timing_status"] == "non-completed"
+    assert "maxit=1000" in str(non_completed["timing_reason"])
+    assert non_completed["repo_time_s"] is None
+    assert non_completed["raw_repo_time_s"] == pytest.approx(45.0)
+
+
+def test_golden_section_search_keeps_boundary_minimizer():
+    alpha, n_evals = golden_section_search(lambda x: float(x), 0.0, 1.0, 1.0e-5)
+    assert alpha == pytest.approx(0.0, abs=1.0e-12)
+    assert n_evals >= 4
+
+
+def test_rmpa_halving_search_tries_the_true_half_step(monkeypatch: pytest.MonkeyPatch):
+    attempted: list[float] = []
+
+    class _Stats:
+        def __init__(self, j: float) -> None:
+            self.J = j
+            self.I = j
+            self.c = 1.0
+            self.scale_to_solution = 1.0
+
+    class _Problem:
+        params: dict[str, object] = {}
+        u_init = np.zeros(1, dtype=np.float64)
+
+        def stats(self, u_free: np.ndarray) -> _Stats:
+            return _stats_for(u_free)
+
+    def _stats_for(u_free: np.ndarray) -> _Stats:
+        x = float(np.asarray(u_free, dtype=np.float64)[0])
+        attempted.append(x)
+        return _Stats(0.0 if abs(x - 0.5) <= 1.0e-12 else 1.0)
+
+    class _Directions:
+        def compute(self, current: np.ndarray, direction_kind: str):
+            return type(
+                "DirResult",
+                (),
+                {
+                    "direction": np.array([1.0], dtype=np.float64),
+                    "stop_measure": 1.0,
+                    "stop_name": "(5.7)",
+                    "descent_value": -1.0,
+                    "direction_solves": 1,
+                },
+            )()
+
+    monkeypatch.setattr(thesis_solver_rmpa, "build_objective_bundle", lambda problem, objective: object())
+    monkeypatch.setattr(thesis_solver_rmpa, "build_direction_context", lambda problem, objective: _Directions())
+    monkeypatch.setattr(thesis_solver_rmpa, "compute_state_stats_free", lambda params, u_free: _stats_for(u_free))
+    monkeypatch.setattr(
+        thesis_solver_rmpa,
+        "build_result_payload",
+        lambda **kwargs: {"status": kwargs["status"], "history": kwargs["history"], "message": kwargs["message"]},
+    )
+
+    result = thesis_solver_rmpa.run_rmpa(
+        _Problem(),
+        direction="d_vh",
+        epsilon=1.0e-4,
+        maxit=1,
+        delta0=1.0,
+        step_search="halving",
+    )
+
+    assert any(abs(x - 0.5) <= 1.0e-12 for x in attempted)
+    assert result["history"][0]["accepted"] is True
+    assert result["history"][0]["alpha"] == pytest.approx(0.5)
+
+
+def test_oa1_halving_search_tries_the_true_half_step(monkeypatch: pytest.MonkeyPatch):
+    attempted: list[float] = []
+
+    class _Stats:
+        def __init__(self, value: float) -> None:
+            self.I = value
+            self.c = 1.0
+            self.J = value
+            self.seminorm_p = 1.0
+            self.scale_to_solution = 1.0
+
+    class _Problem:
+        u_init = np.zeros(1, dtype=np.float64)
+
+        def stats(self, u_free: np.ndarray) -> _Stats:
+            x = float(np.asarray(u_free, dtype=np.float64)[0])
+            attempted.append(x)
+            return _Stats(0.0 if abs(x - 0.5) <= 1.0e-12 else 1.0)
+
+    class _Objective:
+        @staticmethod
+        def value(u_free: np.ndarray) -> float:
+            x = float(np.asarray(u_free, dtype=np.float64)[0])
+            attempted.append(x)
+            return 0.0 if abs(x - 0.5) <= 1.0e-12 else 1.0
+
+    class _Directions:
+        def compute(self, current: np.ndarray, direction_kind: str):
+            return type(
+                "DirResult",
+                (),
+                {
+                    "direction": np.array([1.0], dtype=np.float64),
+                    "stop_measure": 1.0,
+                    "stop_name": "(5.7)",
+                    "descent_value": -1.0,
+                    "direction_solves": 1,
+                },
+            )()
+
+    monkeypatch.setattr(thesis_solver_oa, "build_objective_bundle", lambda problem, objective: _Objective())
+    monkeypatch.setattr(thesis_solver_oa, "build_direction_context", lambda problem, objective: _Directions())
+    monkeypatch.setattr(
+        thesis_solver_oa,
+        "build_result_payload",
+        lambda **kwargs: {"status": kwargs["status"], "history": kwargs["history"], "message": kwargs["message"]},
+    )
+
+    result = thesis_solver_oa.run_oa(
+        _Problem(),
+        variant="oa1",
+        direction="d_vh",
+        epsilon=1.0e-4,
+        maxit=1,
+        delta_hat=1.0,
+    )
+
+    assert any(abs(x - 0.5) <= 1.0e-12 for x in attempted)
+    assert result["history"][0]["accepted"] is True
+    assert result["history"][0]["alpha"] == pytest.approx(0.5)
 
 
 def test_thesis_quick_runner_and_report(tmp_path: Path):
@@ -229,10 +582,43 @@ def test_thesis_problem_page_generator_smoke(tmp_path: Path):
     assert "secondary target" not in text
     assert "- unresolved rows:" in text
     assert "### What is low impact" in text
+    assert "## Convergence Diagnostics" in text
     assert (asset_dir / "plaplace_u3_sample_state.png").exists()
     assert (asset_dir / "plaplace_u3_sample_state.pdf").exists()
     assert (asset_dir / "square_multibranch_panel.png").exists()
     assert (asset_dir / "square_hole_panel.png").exists()
+
+
+def test_thesis_report_generator_includes_stage_c_timing_summary(tmp_path: Path):
+    out_path = tmp_path / "report" / "README.md"
+    subprocess.run(
+        [
+            str(PYTHON),
+            "-u",
+            THESIS_REPORT,
+            "--summary",
+            "artifacts/raw_results/plaplace_u3_thesis_full/summary.json",
+            "--summary-label",
+            "artifacts/raw_results/plaplace_u3_thesis_full/summary.json",
+            "--out",
+            str(out_path),
+        ],
+        cwd=REPO_ROOT,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    text = out_path.read_text(encoding="utf-8")
+    assert "## Stage C Timing Summary" in text
+    assert "timing complete" in text
+    assert "timing unavailable" in text
+    assert "non-completed" in text
+    assert "## Convergence Diagnostics" in text
+    assert "solver status" in text
+    assert "maxit=1000" in text
+    assert "1 proc, serial python, JAX + SciPy + PyAMG helper solves" in text
+    assert "thesis Table 5.12 timings are surfaced alongside the current local timings" in text
+    assert "timing comparison remains blocked" not in text
 
 
 def test_thesis_section_materializer_smoke(tmp_path: Path):
@@ -485,11 +871,117 @@ def test_thesis_report_handles_full_table_rows(tmp_path: Path):
     assert "## Thesis Problem And Functionals" in text
     assert "## Table-By-Table Status Matrix" in text
     assert "## What Is Low Impact" in text
-    assert "## What Partially Works" in text
+    assert "## What Needs Context" in text
     assert "## What Does Not Yet Match" in text
+    assert "## Convergence Diagnostics" in text
     assert "artifacts/raw_results/plaplace_u3_thesis_full/summary.json" in text
-    assert "Square Principal Branch By Tolerance" in text
-    assert "iteration-order passes" in text
+
+
+def test_canonical_summary_promotes_refreshed_fail_family_rows():
+    rows = json.loads((REPO_ROOT / "artifacts" / "raw_results" / "plaplace_u3_thesis_full" / "summary.json").read_text(encoding="utf-8"))["rows"]
+
+    def pick(table: str, level: int, p: float, epsilon: float) -> dict[str, object]:
+        for row in rows:
+            if (
+                str(row["table"]) == table
+                and int(row["level"]) == level
+                and abs(float(row["p"]) - p) <= 1.0e-12
+                and abs(float(row["epsilon"]) - epsilon) <= 1.0e-14
+            ):
+                return row
+        raise AssertionError((table, level, p, epsilon))
+
+    table58_l6 = pick("table_5_8", 6, 1.5, 1.0e-5)
+    assert table58_l6["status"] == "completed"
+    assert table58_l6["configured_maxit"] == 500
+    assert "table_5_8" in str(table58_l6["result_path"])
+    assert "p1p5" in str(table58_l6["result_path"])
+    assert (
+        "plaplace_u3_fail_refresh_20260324" in str(table58_l6["result_path"])
+        or "plaplace_u3_thesis_sections/rmpa_square" in str(table58_l6["result_path"])
+    )
+
+    table58_l7 = pick("table_5_8", 7, 1.5, 1.0e-5)
+    assert table58_l7["status"] == "completed"
+    assert table58_l7["configured_maxit"] == 500
+    assert "table_5_8" in str(table58_l7["result_path"])
+    assert "p1p5" in str(table58_l7["result_path"])
+    assert (
+        "plaplace_u3_fail_refresh_20260324" in str(table58_l7["result_path"])
+        or "plaplace_u3_thesis_sections/rmpa_square" in str(table58_l7["result_path"])
+    )
+
+    table510_l7 = pick("table_5_10", 7, 1.5, 1.0e-5)
+    assert table510_l7["status"] == "completed"
+    assert table510_l7["configured_maxit"] == 500
+    assert "table_5_10" in str(table510_l7["result_path"])
+    assert "p1p5" in str(table510_l7["result_path"])
+    assert (
+        "plaplace_u3_fail_refresh_20260324" in str(table510_l7["result_path"])
+        or "plaplace_u3_thesis_sections/oa1_square" in str(table510_l7["result_path"])
+    )
+
+    drn = pick("table_5_2_drn_sanity", 11, 2.0, 1.0e-3)
+    assert drn["status"] == "completed"
+    assert drn["configured_maxit"] == 500
+    assert "Stopping criterion (5.8) satisfied" in str(drn["message"])
+
+    table52_lowp = pick("table_5_2", 11, 1.5, 1.0e-4)
+    assert table52_lowp["status"] == "failed"
+    assert table52_lowp["configured_maxit"] == 500
+    assert "ray maximum" in str(table52_lowp["message"])
+    assert (
+        "plaplace_u3_fail_refresh_20260324/one_dimensional" in str(table52_lowp["result_path"])
+        or "plaplace_u3_thesis_sections/one_dimensional" in str(table52_lowp["result_path"])
+    )
+
+    table53_lowp = pick("table_5_3", 11, 1.5, 1.0e-4)
+    assert table53_lowp["status"] == "failed"
+    assert table53_lowp["configured_maxit"] == 500
+    assert "ray maximum" in str(table53_lowp["message"])
+    assert (
+        "plaplace_u3_fail_refresh_20260324/one_dimensional" in str(table53_lowp["result_path"])
+        or "plaplace_u3_thesis_sections/one_dimensional" in str(table53_lowp["result_path"])
+    )
+
+    table59_lowp = pick("table_5_9", 6, 1.5, 1.0e-5)
+    assert table59_lowp["status"] == "completed"
+    assert table59_lowp["configured_maxit"] == 500
+    assert float(table59_lowp["solve_time_s"]) > 0.0
+    assert "plaplace_u3_repair_20260324/table_5_9_fresh" in str(table59_lowp["result_path"])
+
+    table513_rmpa = next(
+        row
+        for row in rows
+        if str(row["table"]) == "table_5_13"
+        and str(row["method"]) == "rmpa"
+        and str(row["direction"]) == "d"
+        and int(row["level"]) == 6
+        and abs(float(row["p"]) - 2.0) <= 1.0e-12
+        and abs(float(row["epsilon"]) - 1.0e-4) <= 1.0e-14
+    )
+    assert table513_rmpa["status"] == "completed"
+    assert table513_rmpa["configured_maxit"] == 500
+    assert float(table513_rmpa["solve_time_s"]) > 0.0
+    assert "plaplace_u3_repair_20260324/table_5_13_fresh" in str(table513_rmpa["result_path"])
+
+    table56_l7 = pick("table_5_6", 7, 10.0 / 6.0, 1.0e-4)
+    assert table56_l7["status"] == "maxit"
+    if table56_l7.get("configured_maxit") is not None:
+        assert table56_l7["configured_maxit"] == 1000
+    if table56_l7.get("peak_cycle_detected") is not None:
+        assert table56_l7["peak_cycle_detected"] is True
+
+    table514_oa2 = next(
+        row
+        for row in rows
+        if str(row["table"]) == "table_5_14"
+        and str(row["method"]) == "oa2"
+        and str(row["init_mode"]) == "sine"
+    )
+    assert table514_oa2["status"] == "completed"
+    assert float(table514_oa2["solve_time_s"]) > 0.0
+    assert "plaplace_u3_table_5_14_refresh" in str(table514_oa2["result_path"])
 
 
 def test_thesis_chunk_merge_smoke(tmp_path: Path):
@@ -620,6 +1112,11 @@ def test_thesis_chunk_merge_smoke(tmp_path: Path):
                 "reference_error_w1p": None,
                 "outer_iterations": 5,
                 "direction_solves": 5,
+                "thesis_J": 4.47,
+                "delta_J": 0.40723798882084505,
+                "thesis_error": 5.24e-4,
+                "delta_error": 8.1e-2,
+                "assignment_verdict": "fail",
             },
         ]
     ):
@@ -666,3 +1163,6 @@ def test_thesis_chunk_merge_smoke(tmp_path: Path):
     assert merged["chunked"] is True
     assert merged["chunk_count"] == 5
     assert len(merged["rows"]) == 5
+    refreshed = next(row for row in merged["rows"] if row["result_path"] == "e.json")
+    assert "thesis_J" not in refreshed
+    assert refreshed["assignment_verdict"] == "secondary"
