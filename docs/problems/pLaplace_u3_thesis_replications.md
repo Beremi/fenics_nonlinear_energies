@@ -3,8 +3,6 @@
 Source of the original algorithms and published benchmark values:
 
 - Michaela Bailová, *Variational methods for solving engineering problems*, PhD Thesis, Ostrava, 2023
-- local source PDF: `BAI0012_FEI_P1807_1103V036_2023.pdf`
-- this merged page combines the thesis/runbook description and the current canonical replication packet
 
 ## Thesis Problem Statement And Functionals
 
