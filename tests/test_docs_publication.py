@@ -32,6 +32,7 @@ def test_current_docs_structure_exists() -> None:
         DOCS_ROOT / "setup" / "local_build.md",
         DOCS_ROOT / "problems" / "pLaplace.md",
         DOCS_ROOT / "problems" / "pLaplace_u3_thesis_replications.md",
+        DOCS_ROOT / "problems" / "pLaplace_up_arctan.md",
         DOCS_ROOT / "problems" / "GinzburgLandau.md",
         DOCS_ROOT / "problems" / "HyperElasticity.md",
         DOCS_ROOT / "problems" / "Plasticity.md",
@@ -104,6 +105,34 @@ def test_plaplace_u3_thesis_replication_page_contains_required_sections() -> Non
     assert "artifacts/raw_results/plaplace_u3_thesis_full/summary.json" in text
 
 
+def test_plaplace_up_arctan_problem_page_contains_required_sections() -> None:
+    text = (DOCS_ROOT / "problems" / "pLaplace_up_arctan.md").read_text(encoding="utf-8")
+    assert "Source note used for this implementation" in text
+    assert "## Mathematical Specification" in text
+    assert "### p = 2 Validation Problem" in text
+    assert "### p = 3 Main Problem" in text
+    assert "## Solvability And Proof Notes" in text
+    assert "This page therefore claims existence/solvability" in text
+    assert "## Discretization And Algorithm Notes" in text
+    assert ("## Raw Versus Certified Diagnostics" in text) or ("## Cross-Method Comparison" in text)
+    assert "## p = 2 Validation Study" in text
+    assert "## p = 3 Eigenvalue Stage" in text
+    assert "## p = 3 Main Study" in text
+    assert "## JAX + PETSc Backend" in text
+    assert "## PETSc Timing And Scaling" in text
+    assert "nonlinear its" in text
+    assert "MPA iters" in text
+    assert "Newton iters" in text
+    assert "linear its" in text
+    assert "Chebyshev" in text
+    assert "Jacobi" in text
+    assert "## Cross-Method Comparison" in text
+    assert "## Commands Used" in text
+    assert "../assets/plaplace_up_arctan/" in text
+    assert "No separate `docs/results/pLaplace_up_arctan.md` page is maintained" in text
+    assert "artifacts/raw_results/plaplace_up_arctan_petsc/summary.json" in text
+
+
 def test_plaplace_u3_thesis_report_contains_readable_blocks() -> None:
     text = (REPO_ROOT / "artifacts" / "reports" / "plaplace_u3_thesis" / "README.md").read_text(encoding="utf-8")
     assert "## Thesis Problem And Functionals" in text
@@ -137,6 +166,21 @@ def test_plaplace_u3_thesis_report_contains_readable_blocks() -> None:
     assert "timing comparison remains blocked" not in text
 
 
+def test_plaplace_up_arctan_report_contains_required_sections() -> None:
+    text = (REPO_ROOT / "artifacts" / "reports" / "plaplace_up_arctan" / "README.md").read_text(encoding="utf-8")
+    assert "# pLaplace_up_arctan Report" in text
+    assert ("## Raw Versus Certified Diagnostics" in text) or ("## Summary" in text)
+    assert "## p = 2 Validation Study" in text
+    assert "## p = 3 Eigenvalue Stage" in text
+    assert "## p = 3 Main Study" in text
+    assert "## JAX + PETSc Backend" in text
+    assert "## PETSc Timing And Scaling" in text
+    assert ("## Cross-Method Diagnostics" in text) or ("## Cross-Method Comparison" in text)
+    assert "## Reproduction" in text
+    assert "artifacts/raw_results/plaplace_up_arctan_full/summary.json" in text
+    assert "artifacts/raw_results/plaplace_up_arctan_petsc/summary.json" in text
+
+
 def test_results_pages_contain_required_sections() -> None:
     for name in ("pLaplace", "GinzburgLandau", "HyperElasticity", "Plasticity", "Topology"):
         text = (DOCS_ROOT / "results" / f"{name}.md").read_text(encoding="utf-8")
@@ -165,6 +209,16 @@ def test_current_assets_exist_under_docs_assets() -> None:
         "topology/topology_objective_history.pdf",
         "topology/topology_strong_scaling.pdf",
         "topology/topology_mesh_timing.pdf",
+        "plaplace_up_arctan/p2_solution_panel.pdf",
+        "plaplace_up_arctan/p2_convergence_history.pdf",
+        "plaplace_up_arctan/p3_solution_panel.pdf",
+        "plaplace_up_arctan/p3_convergence_history.pdf",
+        "plaplace_up_arctan/p3_eigenfunction.pdf",
+        "plaplace_up_arctan/lambda_convergence.pdf",
+        "plaplace_up_arctan/iteration_counts.pdf",
+        "plaplace_up_arctan/reference_error_refinement.pdf",
+        "plaplace_up_arctan/petsc_mesh_timing.pdf",
+        "plaplace_up_arctan/petsc_strong_scaling.pdf",
     ]
     expected_png = [rel.replace(".pdf", ".png") for rel in expected_pdf]
     expected_png_only = [
@@ -177,6 +231,16 @@ def test_current_assets_exist_under_docs_assets() -> None:
         "plaplace_u3_thesis/plaplace_u3_sample_state.png",
         "plaplace_u3_thesis/square_multibranch_panel.png",
         "plaplace_u3_thesis/square_hole_panel.png",
+        "plaplace_up_arctan/p2_solution_panel.png",
+        "plaplace_up_arctan/p2_convergence_history.png",
+        "plaplace_up_arctan/p3_solution_panel.png",
+        "plaplace_up_arctan/p3_convergence_history.png",
+        "plaplace_up_arctan/p3_eigenfunction.png",
+        "plaplace_up_arctan/lambda_convergence.png",
+        "plaplace_up_arctan/iteration_counts.png",
+        "plaplace_up_arctan/reference_error_refinement.png",
+        "plaplace_up_arctan/petsc_mesh_timing.png",
+        "plaplace_up_arctan/petsc_strong_scaling.png",
     ]
     extra_pdf = [
         "plaplace_u3_thesis/plaplace_u3_sample_state.pdf",
@@ -213,8 +277,10 @@ def test_current_docs_have_one_problem_and_one_results_page_per_family() -> None
         "Topology.md",
         "pLaplace.md",
         "pLaplace_u3_thesis_replications.md",
+        "pLaplace_up_arctan.md",
     ]
     assert results == ["GinzburgLandau.md", "HyperElasticity.md", "Plasticity.md", "Topology.md", "pLaplace.md"]
+    assert not (DOCS_ROOT / "results" / "pLaplace_up_arctan.md").exists()
 
 
 def test_publication_style_constants_remain_locked() -> None:

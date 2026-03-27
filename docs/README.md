@@ -11,6 +11,7 @@ If you are new to the codebase, start here rather than in `archive/`.
 - Problem overviews:
   - [pLaplace](problems/pLaplace.md)
   - [pLaplace_u3 thesis replications](problems/pLaplace_u3_thesis_replications.md)
+  - [pLaplace_up_arctan](problems/pLaplace_up_arctan.md)
   - [GinzburgLandau](problems/GinzburgLandau.md)
   - [HyperElasticity](problems/HyperElasticity.md)
   - [Plasticity](problems/Plasticity.md)
