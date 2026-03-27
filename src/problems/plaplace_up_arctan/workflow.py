@@ -8,8 +8,8 @@ import numpy as np
 
 from src.problems.plaplace_up_arctan.local_polish import polish_stationary
 from src.problems.plaplace_up_arctan.solver_common import ObjectiveBundle, build_objective_bundle
-from src.problems.plaplace_up_arctan.solver_mpa import run_mpa
-from src.problems.plaplace_up_arctan.solver_rmpa import run_rmpa
+from src.problems.plaplace_up_arctan.solver_mpa import run_mpa, run_mpa_symmetric
+from src.problems.plaplace_up_arctan.solver_rmpa import run_rmpa, run_rmpa_shifted
 
 
 def run_raw_method(
@@ -32,6 +32,26 @@ def run_raw_method(
             epsilon=float(epsilon),
             maxit=int(maxit),
             delta0=float(delta0),
+            init_free=None if init_free is None else np.asarray(init_free, dtype=np.float64),
+            state_out=str(state_out),
+        )
+    if method == "rmpa_shifted":
+        return run_rmpa_shifted(
+            problem,
+            epsilon=float(epsilon),
+            maxit=int(maxit),
+            delta0=float(delta0),
+            init_free=None if init_free is None else np.asarray(init_free, dtype=np.float64),
+            state_out=str(state_out),
+        )
+    if method == "mpa_symmetric":
+        return run_mpa_symmetric(
+            problem,
+            epsilon=float(epsilon),
+            maxit=int(maxit),
+            num_nodes=int(num_nodes),
+            rho=float(rho),
+            segment_tol_factor=float(segment_tol_factor),
             init_free=None if init_free is None else np.asarray(init_free, dtype=np.float64),
             state_out=str(state_out),
         )

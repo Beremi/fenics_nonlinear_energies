@@ -226,6 +226,58 @@ Strong-scaling rows are reported on the finest successful `p=2` PETSc level `L11
 
 ![PETSc strong scaling](../assets/plaplace_up_arctan/petsc_strong_scaling.png)
 
+## Alternative Certified Branch: Shifted-Line RMPA + Newton
+
+A second certified branch-finding variant is now documented at the representative mesh level `L6`. Instead of projecting onto the origin-centred ray `t w`, it fixes a negative anchor `-C_1\phi_h`, numerically maximizes the energy along the affine line through that anchor, and then uses the same stationary Newton certification stage.
+This is still presented as an alternative branch finder rather than the maintained headline workflow, because its success is more seed-sensitive than the continuation-guided certified `MPA + Newton` path. The point of the section is to document the geometry change and its measured effect, not to replace the maintained solver story above.
+
+| p | best seed | raw status | raw residual | raw its | certified status | certified residual | Newton iters | time [s] |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| 2 | sine | completed | 0.000001 | 9 | completed | 0.000000 | 1 | 2.655 |
+| 3 | eigenfunction | completed | 0.000004 | 22 | completed | 0.000000 | 1 | 7.252 |
+
+## Seed And Endpoint Geometry Comparison
+
+These tables keep the mesh fixed at `L6` so only the branch-search geometry and the start seed vary. For the MPA family, the geometry axis is one-sided `0 -> +C\phi_h` versus symmetric `-C_1\phi_h -> +C_2\phi_h`. For the RMPA family, the geometry axis is the classical ray from `0` versus the shifted line from `-C_1\phi_h`.
+
+### MPA Family
+
+| p | geometry | seed | raw status | raw residual | raw its | certified status | certified residual | Newton iters | total nonlinear | time [s] |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| 2 | 0 -> +C seed | sine | maxit | 0.148094 | 360 | completed | 0.000000 | 5 | 365 | 35.963 |
+| 2 | 0 -> +C seed | bubble | maxit | 0.148094 | 360 | completed | 0.000000 | 5 | 365 | 32.714 |
+| 2 | 0 -> +C seed | tilted | maxit | 0.148094 | 360 | completed | 0.000000 | 5 | 365 | 34.024 |
+| 2 | -C1 seed -> +C2 seed | sine | maxit | 0.020512 | 360 | completed | 0.000000 | 2 | 362 | 30.828 |
+| 2 | -C1 seed -> +C2 seed | bubble | maxit | 0.020512 | 360 | completed | 0.000000 | 2 | 362 | 30.596 |
+| 2 | -C1 seed -> +C2 seed | tilted | maxit | 0.020512 | 360 | completed | 0.000000 | 2 | 362 | 30.634 |
+| 3 | 0 -> +C seed | sine | maxit | 0.136651 | 360 | failed | 0.113560 | 30 | 390 | 39.427 |
+| 3 | 0 -> +C seed | bubble | maxit | 0.136651 | 360 | failed | 0.113560 | 30 | 390 | 38.630 |
+| 3 | 0 -> +C seed | tilted | maxit | 0.136651 | 360 | failed | 0.113560 | 30 | 390 | 39.280 |
+| 3 | 0 -> +C seed | eigenfunction | maxit | 0.136651 | 360 | failed | 0.113560 | 30 | 390 | 39.034 |
+| 3 | -C1 seed -> +C2 seed | sine | maxit | 0.597809 | 360 | completed | 0.000000 | 6 | 366 | 25.286 |
+| 3 | -C1 seed -> +C2 seed | bubble | maxit | 0.597809 | 360 | completed | 0.000000 | 6 | 366 | 25.273 |
+| 3 | -C1 seed -> +C2 seed | tilted | maxit | 0.597809 | 360 | completed | 0.000000 | 6 | 366 | 25.624 |
+| 3 | -C1 seed -> +C2 seed | eigenfunction | maxit | 0.597809 | 360 | completed | 0.000000 | 6 | 366 | 24.947 |
+
+### RMPA Family
+
+| p | geometry | seed | raw status | raw residual | raw its | certified status | certified residual | Newton iters | total nonlinear | time [s] |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| 2 | ray from 0 | sine | failed | 0.185979 | 0 | completed | 0.000000 | 6 | 6 | 0.451 |
+| 2 | ray from 0 | bubble | failed | 0.185979 | 0 | completed | 0.000000 | 6 | 6 | 0.439 |
+| 2 | ray from 0 | tilted | failed | 0.185979 | 0 | completed | 0.000000 | 6 | 6 | 0.439 |
+| 2 | line from -C1 seed | sine | completed | 0.000001 | 9 | completed | 0.000000 | 1 | 10 | 2.655 |
+| 2 | line from -C1 seed | bubble | completed | 0.000004 | 9 | completed | 0.000000 | 1 | 10 | 1.894 |
+| 2 | line from -C1 seed | tilted | completed | 0.000004 | 8 | completed | 0.000000 | 1 | 9 | 1.581 |
+| 3 | ray from 0 | sine | failed | 1.209430 | 0 | failed | 0.167461 | 30 | 30 | 9.623 |
+| 3 | ray from 0 | bubble | failed | 1.209430 | 0 | failed | 0.167461 | 30 | 30 | 9.479 |
+| 3 | ray from 0 | tilted | failed | 1.209430 | 0 | failed | 0.167461 | 30 | 30 | 9.287 |
+| 3 | ray from 0 | eigenfunction | failed | 1.209430 | 0 | failed | 0.167461 | 30 | 30 | 9.539 |
+| 3 | line from -C1 seed | sine | failed | 1.209430 | 0 | failed | 0.167461 | 30 | 30 | 9.635 |
+| 3 | line from -C1 seed | bubble | failed | 2.603957 | 0 | failed | 0.201878 | 38 | 38 | 10.332 |
+| 3 | line from -C1 seed | tilted | failed | 1.665968 | 0 | completed | 0.000000 | 8 | 8 | 0.525 |
+| 3 | line from -C1 seed | eigenfunction | completed | 0.000004 | 22 | completed | 0.000000 | 1 | 23 | 7.252 |
+
 ## Cross-Method Comparison
 
 The cross-method material is retained for completeness, but it is annexed below so the main narrative stays focused on the certified `MPA + stationary Newton` path.
@@ -299,10 +351,10 @@ The remainder of the page is annex material. It records the raw globalization be
 
 Why `RMPA` stays in the annexes:
 
-- The ray audit does not show the stable interior ray maximum required by the classical `RMPA` projection logic on the positive arctan branch.
-- Raw `RMPA` therefore fails before it can provide a reliable Newton handoff iterate.
-- Tightening the raw tolerance does not materially change the `RMPA` residuals on the published ladder.
-- The maintained successful path is **certified `MPA + stationary Newton`**, with continuation in `p` providing the decisive stabilization for `p=3`.
+- The classical origin-based `RMPA` still does not show the stable interior ray maximum required by its projection logic on the positive arctan branch.
+- The shifted-line variant documented above can work well, but only for some seed and geometry combinations, so it is still presented as a secondary certified branch finder rather than the maintained headline method.
+- Tightening the raw tolerance does not materially fix the origin-based `RMPA` rows on the published ladder.
+- The maintained successful path remains **certified `MPA + stationary Newton`**, with continuation in `p` providing the decisive stabilization for `p=3`.
 
 ## Commands Used
 

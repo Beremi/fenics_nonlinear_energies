@@ -24,7 +24,7 @@ from src.problems.plaplace_up_arctan.workflow import certify_from_iterate, run_r
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--method", choices=("mpa", "rmpa"), default="rmpa")
+    parser.add_argument("--method", choices=("mpa", "mpa_symmetric", "rmpa", "rmpa_shifted"), default="rmpa")
     parser.add_argument("--track", choices=("raw", "certified", "both"), default="both")
     parser.add_argument("--p", type=float, default=2.0)
     parser.add_argument("--level", type=int, default=6)
@@ -110,7 +110,7 @@ def _build_problem_for_p(args: argparse.Namespace, p: float, *, init_free: np.nd
 
 
 def _raw_maxit(args: argparse.Namespace) -> int:
-    default_maxit = 600 if str(args.method) == "mpa" else 300
+    default_maxit = 600 if str(args.method) in {"mpa", "mpa_symmetric"} else 300
     return int(args.maxit) if int(args.maxit) > 0 else int(default_maxit)
 
 

@@ -60,7 +60,7 @@ def named_start_seed(
 
 def candidate_start_seed_names(*, p: float, method: str, has_eigenfunction: bool) -> list[str]:
     if float(p) == 2.0:
-        if str(method) == "mpa":
+        if str(method) in {"mpa", "mpa_symmetric"}:
             return [SEED_SINE, SEED_BUBBLE, SEED_TILTED]
         return [SEED_SINE]
     names = [SEED_EIGENFUNCTION] if has_eigenfunction else [SEED_SINE]

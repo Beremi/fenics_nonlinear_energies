@@ -16,8 +16,8 @@ from src.problems.plaplace_up_arctan.eigen import compute_lambda1_cached
 from src.problems.plaplace_up_arctan.ray_audit import audit_ray_profile
 from src.problems.plaplace_up_arctan.solver_common import build_objective_bundle
 from src.problems.plaplace_up_arctan.solver_common import build_problem
-from src.problems.plaplace_up_arctan.solver_mpa import run_mpa
-from src.problems.plaplace_up_arctan.solver_rmpa import run_rmpa
+from src.problems.plaplace_up_arctan.solver_mpa import run_mpa, run_mpa_symmetric
+from src.problems.plaplace_up_arctan.solver_rmpa import run_rmpa, run_rmpa_shifted
 from src.problems.plaplace_up_arctan.transfer import nested_w1p_error, prolong_free_to_problem, same_mesh_w1p_error
 
 
@@ -127,8 +127,24 @@ def test_p2_solver_smokes_emit_state_files(tmp_path: Path) -> None:
     for method, runner in (
         ("rmpa", lambda out: run_rmpa(problem, epsilon=1.0e-3, maxit=3, delta0=1.0, state_out=str(out))),
         (
+            "rmpa_shifted",
+            lambda out: run_rmpa_shifted(problem, epsilon=1.0e-3, maxit=3, delta0=1.0, state_out=str(out)),
+        ),
+        (
             "mpa",
             lambda out: run_mpa(
+                problem,
+                epsilon=1.0e-3,
+                maxit=2,
+                num_nodes=10,
+                rho=1.0,
+                segment_tol_factor=0.125,
+                state_out=str(out),
+            ),
+        ),
+        (
+            "mpa_symmetric",
+            lambda out: run_mpa_symmetric(
                 problem,
                 epsilon=1.0e-3,
                 maxit=2,
@@ -192,6 +208,20 @@ def test_p3_eigen_stage_and_solver_smoke(tmp_path: Path) -> None:
     assert np.isfinite(result["residual_norm"])
     assert result["direction_model"] == DIRECTION_MODEL_DVH
     assert (tmp_path / "p3_rmpa.npz").exists()
+
+    shifted = run_rmpa_shifted(
+        problem,
+        epsilon=1.0e-3,
+        maxit=3,
+        delta0=1.0,
+        init_free=eigenfunction,
+        state_out=str(tmp_path / "p3_rmpa_shifted.npz"),
+    )
+    assert shifted["status"] in {"completed", "maxit", "failed"}
+    assert np.isfinite(shifted["J"])
+    assert np.isfinite(shifted["residual_norm"])
+    assert shifted["direction_model"] == DIRECTION_MODEL_DVH
+    assert (tmp_path / "p3_rmpa_shifted.npz").exists()
 
 
 def test_compute_lambda1_cached_reuses_completed_cache(tmp_path: Path) -> None:

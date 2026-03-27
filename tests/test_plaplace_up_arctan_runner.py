@@ -451,6 +451,8 @@ def test_report_and_problem_page_generators_smoke(tmp_path: Path) -> None:
     assert "## p = 3 Main Study" in report_text
     assert "## JAX + PETSc Backend" in report_text
     assert "## PETSc Timing And Scaling" in report_text
+    assert "## Alternative Certified Branch: Shifted-Line RMPA + Newton" in report_text
+    assert "## Seed And Endpoint Geometry Comparison" in report_text
     assert "nonlinear its" in report_text
     assert "MPA iters" in report_text
     assert "Newton iters" in report_text
@@ -495,6 +497,8 @@ def test_report_and_problem_page_generators_smoke(tmp_path: Path) -> None:
     assert "## p = 3 Main Study" in doc_text
     assert "## JAX + PETSc Backend" in doc_text
     assert "## PETSc Timing And Scaling" in doc_text
+    assert "## Alternative Certified Branch: Shifted-Line RMPA + Newton" in doc_text
+    assert "## Seed And Endpoint Geometry Comparison" in doc_text
     assert "nonlinear its" in doc_text
     assert "MPA iters" in doc_text
     assert "Newton iters" in doc_text

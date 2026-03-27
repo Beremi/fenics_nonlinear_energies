@@ -120,6 +120,8 @@ def test_plaplace_up_arctan_problem_page_contains_required_sections() -> None:
     assert "## p = 3 Main Study" in text
     assert "## JAX + PETSc Backend" in text
     assert "## PETSc Timing And Scaling" in text
+    assert "## Alternative Certified Branch: Shifted-Line RMPA + Newton" in text
+    assert "## Seed And Endpoint Geometry Comparison" in text
     assert "nonlinear its" in text
     assert "MPA iters" in text
     assert "Newton iters" in text
@@ -175,6 +177,8 @@ def test_plaplace_up_arctan_report_contains_required_sections() -> None:
     assert "## p = 3 Main Study" in text
     assert "## JAX + PETSc Backend" in text
     assert "## PETSc Timing And Scaling" in text
+    assert "## Alternative Certified Branch: Shifted-Line RMPA + Newton" in text
+    assert "## Seed And Endpoint Geometry Comparison" in text
     assert ("## Cross-Method Diagnostics" in text) or ("## Cross-Method Comparison" in text)
     assert "## Reproduction" in text
     assert "artifacts/raw_results/plaplace_up_arctan_full/summary.json" in text

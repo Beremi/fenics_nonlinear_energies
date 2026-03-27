@@ -45,10 +45,12 @@ DEFAULT_CONTINUATION_STEP_FLOOR = 0.025
 REF_LEVEL = 7
 REFINEMENT_LEVELS = (4, 5, 6)
 TOL_LEVEL = 6
+COMPARISON_LEVEL = 6
 EPSILONS = (1.0e-4, 1.0e-5, 1.0e-6)
 P_VALUES = (2.0, 3.0)
 METHODS = ("mpa", "rmpa")
 RUNNER_REVISION = "rawJ_dvh_certified_continuation_v2"
+COMPARISON_REVISION = "seed_geometry_comparison_v1"
 
 
 @dataclass(frozen=True)
@@ -800,6 +802,137 @@ def build_cases() -> list[Case]:
     return cases
 
 
+def _comparison_seed_names(p: float) -> list[str]:
+    names = ["sine", "bubble", "tilted"]
+    if abs(float(p) - 3.0) <= 1.0e-12:
+        names.append("eigenfunction")
+    return names
+
+
+def _comparison_variants() -> list[dict[str, str]]:
+    return [
+        {
+            "method": "mpa",
+            "family": "MPA",
+            "geometry_label": "0 -> +C seed",
+            "geometry_class": "one-sided via 0",
+        },
+        {
+            "method": "mpa_symmetric",
+            "family": "MPA",
+            "geometry_label": "-C1 seed -> +C2 seed",
+            "geometry_class": "symmetric negative/positive endpoints",
+        },
+        {
+            "method": "rmpa",
+            "family": "RMPA",
+            "geometry_label": "ray from 0",
+            "geometry_class": "one-sided via 0",
+        },
+        {
+            "method": "rmpa_shifted",
+            "family": "RMPA",
+            "geometry_label": "line from -C1 seed",
+            "geometry_class": "negative-anchor shifted line",
+        },
+    ]
+
+
+def _run_method_comparison(
+    *,
+    out_dir: Path,
+    certified_tol: float,
+    polish_maxit: int,
+) -> list[dict[str, object]]:
+    comparison_rows: list[dict[str, object]] = []
+    for p in P_VALUES:
+        if abs(float(p) - 2.0) <= 1.0e-12:
+            lambda_payload = None
+            lambda1 = 2.0 * (np.pi**2)
+            lambda_level = COMPARISON_LEVEL
+        else:
+            lambda_payload = _lambda_payload(out_dir, COMPARISON_LEVEL, p=3.0)
+            lambda1 = float(lambda_payload["lambda1"])
+            lambda_level = int(lambda_payload["lambda_level"])
+        problem = build_problem(
+            level=COMPARISON_LEVEL,
+            p=float(p),
+            geometry=GEOMETRY,
+            init_mode="sine",
+            lambda1=float(lambda1),
+            lambda_level=int(lambda_level),
+            seed=0,
+        )
+        eigenfunction_free = None if lambda_payload is None else np.asarray(lambda_payload["eigenfunction_free"], dtype=np.float64)
+        for variant in _comparison_variants():
+            method = str(variant["method"])
+            raw_maxit = SUITE_MPA_MAXIT if method in {"mpa", "mpa_symmetric"} else SUITE_RMPA_MAXIT
+            for seed_name in _comparison_seed_names(p):
+                if seed_name == "eigenfunction" and eigenfunction_free is None:
+                    continue
+                comparison_dir = out_dir / "comparison" / f"p{_p_tag(p)}" / method / seed_name
+                result_path = comparison_dir / "output.json"
+                if result_path.exists():
+                    cached = json.loads(result_path.read_text(encoding="utf-8"))
+                    if str(cached.get("comparison_revision")) == COMPARISON_REVISION:
+                        comparison_rows.append(cached)
+                        continue
+                comparison_dir.mkdir(parents=True, exist_ok=True)
+                init_free = named_start_seed(problem, seed_name, eigenfunction_free=eigenfunction_free)
+                t0 = time.perf_counter()
+                raw = run_raw_method(
+                    problem,
+                    method=method,
+                    epsilon=1.0e-5,
+                    maxit=raw_maxit,
+                    init_free=np.asarray(init_free, dtype=np.float64),
+                    state_out=str(comparison_dir / "raw_state.npz"),
+                )
+                raw["start_seed_name"] = str(seed_name)
+                raw["solve_time_s"] = float(time.perf_counter() - t0)
+                t1 = time.perf_counter()
+                certified = certify_from_iterate(
+                    problem,
+                    iterate_free=np.asarray(raw["iterate_free"], dtype=np.float64),
+                    epsilon=float(certified_tol),
+                    maxit=int(polish_maxit),
+                    state_out=str(comparison_dir / "certified_state.npz"),
+                    handoff_source=f"{method}:{raw.get('reported_iterate_source', 'reported')}",
+                )
+                certified["solve_time_s"] = float(time.perf_counter() - t1)
+                payload = {
+                    "comparison_revision": COMPARISON_REVISION,
+                    "p": float(p),
+                    "level": int(COMPARISON_LEVEL),
+                    "epsilon": 1.0e-5,
+                    "family": str(variant["family"]),
+                    "method": method,
+                    "geometry_label": str(variant["geometry_label"]),
+                    "geometry_class": str(variant["geometry_class"]),
+                    "seed_name": str(seed_name),
+                    "lambda1": float(lambda1),
+                    "lambda_level": int(lambda_level),
+                    "raw": raw,
+                    "certified": certified,
+                    "raw_status": str(raw["status"]),
+                    "raw_residual_norm": float(raw["residual_norm"]),
+                    "raw_gradient_residual_norm": float(raw.get("gradient_residual_norm", raw["residual_norm"])),
+                    "raw_outer_iterations": int(raw["outer_iterations"]),
+                    "raw_J": float(raw["J"]),
+                    "certified_status": str(certified["status"]),
+                    "certified_residual_norm": float(certified["residual_norm"]),
+                    "certified_gradient_residual_norm": float(certified.get("gradient_residual_norm", certified["residual_norm"])),
+                    "certified_newton_iters": int(certified.get("certified_newton_iters", certified["outer_iterations"])),
+                    "certified_J": float(certified["J"]),
+                    "total_nonlinear_iters": int(raw["outer_iterations"]) + int(certified.get("certified_newton_iters", certified["outer_iterations"])),
+                    "solve_time_s": float(raw.get("solve_time_s", 0.0)) + float(certified.get("solve_time_s", 0.0)),
+                    "result_path": str(result_path),
+                }
+                result_path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+                comparison_rows.append(payload)
+    return comparison_rows
+
+
 def run_suite(*, out_dir: Path, certified_tol: float = DEFAULT_CERTIFIED_TOL, polish_maxit: int = DEFAULT_POLISH_MAXIT) -> dict[str, object]:
     rows = []
     for level in range(4, REF_LEVEL + 1):
@@ -808,6 +941,7 @@ def run_suite(*, out_dir: Path, certified_tol: float = DEFAULT_CERTIFIED_TOL, po
     _reference_payload(out_dir, 3.0, certified_tol=certified_tol, polish_maxit=polish_maxit)
     for case in build_cases():
         rows.append(_row_from_result(case, _run_case(case, out_dir=out_dir, certified_tol=certified_tol, polish_maxit=polish_maxit)))
+    method_comparison = _run_method_comparison(out_dir=out_dir, certified_tol=certified_tol, polish_maxit=polish_maxit)
     payload = {
         "suite": "plaplace_up_arctan_full",
         "geometry": GEOMETRY,
@@ -817,6 +951,9 @@ def run_suite(*, out_dir: Path, certified_tol: float = DEFAULT_CERTIFIED_TOL, po
         "certified_tol": float(certified_tol),
         "polish_maxit": int(polish_maxit),
         "rows": rows,
+        "method_comparison": method_comparison,
+        "comparison_revision": COMPARISON_REVISION,
+        "comparison_level": int(COMPARISON_LEVEL),
         "lambda_cache_dir": str(_lambda_cache_dir(out_dir)),
         "generated_case_count": len(rows),
         "status_counts": {

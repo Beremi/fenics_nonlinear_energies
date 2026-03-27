@@ -51,6 +51,56 @@ def _fmt(value: object, digits: int = 6) -> str:
     return f"{float(value):.{digits}f}"
 
 
+def _comparison_rows(summary: dict[str, object], *, family: str | None = None, p: float | None = None) -> list[dict[str, object]]:
+    rows = [dict(row) for row in summary.get("method_comparison", [])]
+    if family is not None:
+        rows = [row for row in rows if str(row.get("family")) == str(family)]
+    if p is not None:
+        rows = [row for row in rows if float(row.get("p")) == float(p)]
+    return rows
+
+
+def _comparison_sort_key(row: dict[str, object]) -> tuple[float, int, int]:
+    geometry_order = {
+        "0 -> +C seed": 0,
+        "-C1 seed -> +C2 seed": 1,
+        "ray from 0": 0,
+        "line from -C1 seed": 1,
+    }
+    seed_order = {
+        "sine": 0,
+        "bubble": 1,
+        "tilted": 2,
+        "eigenfunction": 3,
+    }
+    return (
+        float(row.get("p")),
+        geometry_order.get(str(row.get("geometry_label")), 99),
+        seed_order.get(str(row.get("seed_name")), 99),
+    )
+
+
+def _comparison_table_rows(summary: dict[str, object], *, family: str) -> list[list[str]]:
+    rows: list[list[str]] = []
+    for row in sorted(_comparison_rows(summary, family=family), key=_comparison_sort_key):
+        rows.append(
+            [
+                str(int(row["p"])),
+                str(row.get("geometry_label", "-")),
+                str(row.get("seed_name", "-")),
+                str(row.get("raw_status", "-")),
+                _fmt(row.get("raw_residual_norm"), 6),
+                str(int(row.get("raw_outer_iterations", 0))),
+                str(row.get("certified_status", "-")),
+                _fmt(row.get("certified_residual_norm"), 6),
+                str(int(row.get("certified_newton_iters", 0))),
+                str(int(row.get("total_nonlinear_iters", 0))),
+                _fmt(row.get("solve_time_s"), 3),
+            ]
+        )
+    return rows
+
+
 def _petsc_rows_for(
     summary: dict[str, object] | None,
     *,
@@ -244,6 +294,24 @@ def main() -> None:
     p2_reference = _reference_payload("p2_newton_l7")
     p3_continuation = _reference_payload("p3_certified_l6")
     p3_reference = _reference_payload("p3_certified_l7")
+    comparison_level = int(summary.get("comparison_level", 6))
+    shifted_rmpa_best = []
+    for p_value in (2.0, 3.0):
+        candidates = [
+            row
+            for row in _comparison_rows(summary, family="RMPA", p=p_value)
+            if str(row.get("method")) == "rmpa_shifted" and str(row.get("certified_status")) == "completed"
+        ]
+        if candidates:
+            shifted_rmpa_best.append(
+                min(
+                    candidates,
+                    key=lambda row: (
+                        0 if str(row.get("raw_status")) == "completed" else 1,
+                        float(row.get("certified_residual_norm", float("inf"))),
+                    ),
+                )
+            )
 
     def _petsc_mesh_rows(p: float) -> list[list[str]]:
         rows: list[list[str]] = []
@@ -530,6 +598,63 @@ def main() -> None:
     lines.extend(
         [
             "",
+            "## Alternative Certified Branch: Shifted-Line RMPA + Newton",
+            "",
+            (
+                f"A second certified branch-finding variant is now documented at the representative mesh level `L{comparison_level}`. "
+                "Instead of projecting onto the origin-centred ray `t w`, it fixes a negative anchor `-C_1\\phi_h`, numerically maximizes the energy along the affine line through that anchor, and then uses the same stationary Newton certification stage."
+            ),
+            "This is still presented as an alternative branch finder rather than the maintained headline workflow, because its success is more seed-sensitive than the continuation-guided certified `MPA + Newton` path. The point of the section is to document the geometry change and its measured effect, not to replace the maintained solver story above.",
+            "",
+        ]
+    )
+    if shifted_rmpa_best:
+        lines.extend(
+            [
+                _markdown_table(
+                    ["p", "best seed", "raw status", "raw residual", "raw its", "certified status", "certified residual", "Newton iters", "time [s]"],
+                    [
+                        [
+                            str(int(row["p"])),
+                            str(row.get("seed_name", "-")),
+                            str(row.get("raw_status", "-")),
+                            _fmt(row.get("raw_residual_norm"), 6),
+                            str(int(row.get("raw_outer_iterations", 0))),
+                            str(row.get("certified_status", "-")),
+                            _fmt(row.get("certified_residual_norm"), 6),
+                            str(int(row.get("certified_newton_iters", 0))),
+                            _fmt(row.get("solve_time_s"), 3),
+                        ]
+                        for row in shifted_rmpa_best
+                    ],
+                ),
+                "",
+            ]
+        )
+    lines.extend(
+        [
+            "## Seed And Endpoint Geometry Comparison",
+            "",
+            (
+                f"These tables keep the mesh fixed at `L{comparison_level}` so only the branch-search geometry and the start seed vary. "
+                "For the MPA family, the geometry axis is one-sided `0 -> +C\\phi_h` versus symmetric `-C_1\\phi_h -> +C_2\\phi_h`. "
+                "For the RMPA family, the geometry axis is the classical ray from `0` versus the shifted line from `-C_1\\phi_h`."
+            ),
+            "",
+            "### MPA Family",
+            "",
+            _markdown_table(
+                ["p", "geometry", "seed", "raw status", "raw residual", "raw its", "certified status", "certified residual", "Newton iters", "total nonlinear", "time [s]"],
+                _comparison_table_rows(summary, family="MPA"),
+            ),
+            "",
+            "### RMPA Family",
+            "",
+            _markdown_table(
+                ["p", "geometry", "seed", "raw status", "raw residual", "raw its", "certified status", "certified residual", "Newton iters", "total nonlinear", "time [s]"],
+                _comparison_table_rows(summary, family="RMPA"),
+            ),
+            "",
             "## Cross-Method Comparison",
             "",
             "The cross-method material is retained for completeness, but it is annexed below so the main narrative stays focused on the certified `MPA + stationary Newton` path.",
@@ -580,10 +705,10 @@ def main() -> None:
         "",
         "Why `RMPA` stays in the annexes:",
         "",
-        "- The ray audit does not show the stable interior ray maximum required by the classical `RMPA` projection logic on the positive arctan branch.",
-        "- Raw `RMPA` therefore fails before it can provide a reliable Newton handoff iterate.",
-        "- Tightening the raw tolerance does not materially change the `RMPA` residuals on the published ladder.",
-        "- The maintained successful path is **certified `MPA + stationary Newton`**, with continuation in `p` providing the decisive stabilization for `p=3`.",
+        "- The classical origin-based `RMPA` still does not show the stable interior ray maximum required by its projection logic on the positive arctan branch.",
+        "- The shifted-line variant documented above can work well, but only for some seed and geometry combinations, so it is still presented as a secondary certified branch finder rather than the maintained headline method.",
+        "- Tightening the raw tolerance does not materially fix the origin-based `RMPA` rows on the published ladder.",
+        "- The maintained successful path remains **certified `MPA + stationary Newton`**, with continuation in `p` providing the decisive stabilization for `p=3`.",
         "",
         "## Commands Used",
         "",

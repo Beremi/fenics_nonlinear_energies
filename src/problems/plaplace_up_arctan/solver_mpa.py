@@ -165,7 +165,7 @@ def _descent_step(
     return z, False, halves
 
 
-def _choose_endpoint_scale(problem: ProblemInstance, objective: ObjectiveBundle, seed_free: np.ndarray) -> float:
+def _choose_positive_endpoint_scale(problem: ProblemInstance, objective: ObjectiveBundle, seed_free: np.ndarray) -> float:
     scale = 1.0
     seed_free = np.asarray(seed_free, dtype=np.float64)
     while float(objective.value(scale * seed_free)) >= 0.0:
@@ -175,9 +175,21 @@ def _choose_endpoint_scale(problem: ProblemInstance, objective: ObjectiveBundle,
     return float(scale)
 
 
-def run_mpa(
+def _choose_negative_endpoint_scale(problem: ProblemInstance, objective: ObjectiveBundle, seed_free: np.ndarray) -> float | None:
+    scale = 1.0
+    seed_free = np.asarray(seed_free, dtype=np.float64)
+    while float(objective.value(-scale * seed_free)) >= 0.0:
+        scale *= 2.0
+        if scale > 1.0e6:
+            return None
+    return float(scale)
+
+
+def _run_mpa(
     problem: ProblemInstance,
     *,
+    method_name: str,
+    endpoint_mode: str,
     epsilon: float,
     maxit: int = 500,
     num_nodes: int = 50,
@@ -195,9 +207,21 @@ def run_mpa(
     if projected_init is None and init_free is not None:
         seed_free = np.asarray(problem.u_init, dtype=np.float64)
         projected_init = project_to_ray_max(objective, seed_free)
-    endpoint_scale = _choose_endpoint_scale(problem, objective, seed_free)
-    endpoint = endpoint_scale * seed_free
-    nodes = [alpha * endpoint for alpha in np.linspace(0.0, 1.0, int(num_nodes))]
+    positive_endpoint_scale = _choose_positive_endpoint_scale(problem, objective, seed_free)
+    endpoint = positive_endpoint_scale * seed_free
+    negative_endpoint_scale = None
+    if str(endpoint_mode) == "symmetric":
+        negative_endpoint_scale = _choose_negative_endpoint_scale(problem, objective, seed_free)
+        if negative_endpoint_scale is None:
+            negative_endpoint_scale = float(positive_endpoint_scale)
+        left_endpoint = -float(negative_endpoint_scale) * seed_free
+        right_endpoint = np.asarray(endpoint, dtype=np.float64)
+        nodes = [
+            np.asarray((1.0 - alpha) * left_endpoint + alpha * right_endpoint, dtype=np.float64)
+            for alpha in np.linspace(0.0, 1.0, int(num_nodes))
+        ]
+    else:
+        nodes = [alpha * endpoint for alpha in np.linspace(0.0, 1.0, int(num_nodes))]
     initial_spacing = _seminorm_difference(problem, nodes[1], nodes[0])
     delta_min = float(segment_tol_factor) * float(initial_spacing)
 
@@ -292,7 +316,7 @@ def run_mpa(
         current = np.asarray(nodes[inner_idx], dtype=np.float64)
     reported_iterate = np.asarray(reported_peak if status == "completed" else best_iterate, dtype=np.float64)
     return build_result_payload(
-        method="mpa",
+        method=str(method_name),
         problem=problem,
         epsilon=float(epsilon),
         iterate_free=reported_iterate,
@@ -313,6 +337,9 @@ def run_mpa(
             "rho": float(rho),
             "num_nodes": int(num_nodes),
             "segment_tol_factor": float(segment_tol_factor),
+            "endpoint_mode": str(endpoint_mode),
+            "positive_endpoint_scale": float(positive_endpoint_scale),
+            "negative_endpoint_scale": None if negative_endpoint_scale is None else float(negative_endpoint_scale),
             "objective_name": "J",
             "direction_model": str(history[-1]["direction_model"]) if history else DIRECTION_MODEL_DVH,
             "solver_revision": ARCTAN_SOLVER_REVISION,
@@ -321,4 +348,58 @@ def run_mpa(
             "best_gradient_residual_norm": float(best_gradient_residual),
             "best_residual_outer_it": int(best_residual_outer_it),
         },
+    )
+
+
+def run_mpa(
+    problem: ProblemInstance,
+    *,
+    epsilon: float,
+    maxit: int = 500,
+    num_nodes: int = 50,
+    rho: float = 1.0,
+    segment_tol_factor: float = 0.125,
+    init_free: np.ndarray | None = None,
+    reference_error_w1p: float | None = None,
+    state_out: str = "",
+) -> dict[str, object]:
+    return _run_mpa(
+        problem,
+        method_name="mpa",
+        endpoint_mode="one_sided",
+        epsilon=float(epsilon),
+        maxit=int(maxit),
+        num_nodes=int(num_nodes),
+        rho=float(rho),
+        segment_tol_factor=float(segment_tol_factor),
+        init_free=None if init_free is None else np.asarray(init_free, dtype=np.float64),
+        reference_error_w1p=reference_error_w1p,
+        state_out=str(state_out),
+    )
+
+
+def run_mpa_symmetric(
+    problem: ProblemInstance,
+    *,
+    epsilon: float,
+    maxit: int = 500,
+    num_nodes: int = 50,
+    rho: float = 1.0,
+    segment_tol_factor: float = 0.125,
+    init_free: np.ndarray | None = None,
+    reference_error_w1p: float | None = None,
+    state_out: str = "",
+) -> dict[str, object]:
+    return _run_mpa(
+        problem,
+        method_name="mpa_symmetric",
+        endpoint_mode="symmetric",
+        epsilon=float(epsilon),
+        maxit=int(maxit),
+        num_nodes=int(num_nodes),
+        rho=float(rho),
+        segment_tol_factor=float(segment_tol_factor),
+        init_free=None if init_free is None else np.asarray(init_free, dtype=np.float64),
+        reference_error_w1p=reference_error_w1p,
+        state_out=str(state_out),
     )
