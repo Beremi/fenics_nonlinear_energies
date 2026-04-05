@@ -1,0 +1,18 @@
+{
+  "state": "artifacts/raw_results/docs_showcase/plasticity3d_p2_l1_lambda1p6_from_scratch/state.npz",
+  "result": "artifacts/raw_results/docs_showcase/plasticity3d_p2_l1_lambda1p6_from_scratch/output.json",
+  "out_dir": "docs/assets/plasticity3d",
+  "mesh_name": "hetero_ssr_L1",
+  "degree": 2,
+  "lambda_target": 1.6,
+  "energy": -3222136.29075661,
+  "u_max": 1.0903602131238261,
+  "omega": 6504228.42879284,
+  "nit": 19,
+  "solve_time": 277.2625916739926,
+  "convergence_png": "docs/assets/plasticity3d/plasticity3d_p2_l1_lambda1p6_from_scratch_convergence.png",
+  "displacement_png": "docs/assets/plasticity3d/plasticity3d_p2_l1_lambda1p6_from_scratch_displacement.png",
+  "slice_x_png": "docs/assets/plasticity3d/plasticity3d_p2_l1_lambda1p6_from_scratch_deviatoric_strain_slice_x.png",
+  "slice_y_png": "docs/assets/plasticity3d/plasticity3d_p2_l1_lambda1p6_from_scratch_deviatoric_strain_slice_y.png",
+  "slice_z_png": "docs/assets/plasticity3d/plasticity3d_p2_l1_lambda1p6_from_scratch_deviatoric_strain_slice_z.png"
+}

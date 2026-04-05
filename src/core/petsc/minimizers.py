@@ -216,6 +216,7 @@ def newton(
     trust_eta_expand=0.75,
     trust_max_reject=6,
     step_time_limit_s=None,
+    iteration_callback=None,
 ):
     """Newton's method for energy minimisation on PETSc vectors."""
     trust_shrink = float(trust_shrink)
@@ -253,6 +254,7 @@ def newton(
 
     g = x.duplicate()
     h = x.duplicate()
+    g_trial = x.duplicate()
     x_trial = x.duplicate()
     x_prev = x.duplicate()
     p = x.duplicate()
@@ -269,6 +271,10 @@ def newton(
 
     for _ in range(maxit):
         t_iter_start = time.perf_counter()
+        iter_index = nit + 1
+
+        if verbose and rank == 0:
+            print(f"it={iter_index}: begin", flush=True)
 
         if fail_on_nonfinite and not np.isfinite(fx):
             message = f"Non-finite energy before Newton iteration {nit + 1}"
@@ -290,6 +296,13 @@ def newton(
         if tolg_rel > 0.0 and np.isfinite(initial_grad_norm):
             grad_target = max(tolg, tolg_rel * initial_grad_norm)
 
+        if verbose and rank == 0:
+            print(
+                f"it={iter_index}: gradient ready, ||g||={normg:.5e}, "
+                f"target={grad_target:.5e}, t_g={t_grad:.3f}s",
+                flush=True,
+            )
+
         if (not require_all_convergence) and normg < grad_target:
             message = "Gradient norm converged"
             break
@@ -308,6 +321,13 @@ def newton(
             ghost_update_fn(h)
             hnorm = h.norm(PETSc.NormType.NORM_2)
             t_hess = time.perf_counter() - t0
+
+            if verbose and rank == 0:
+                print(
+                    f"it={nit}: linear step ready, ksp_its={ksp_its}, "
+                    f"||p||={hnorm:.5e}, t_H={t_hess:.3f}s",
+                    flush=True,
+                )
 
             if fail_on_nonfinite and not np.isfinite(hnorm):
                 message = f"Non-finite Newton direction norm at Newton iteration {nit}"
@@ -779,6 +799,12 @@ def newton(
             h.copy(p)
             pnorm = p.norm(PETSc.NormType.NORM_2)
             if pnorm > 1e-20:
+                if verbose and rank == 0:
+                    print(
+                        f"it={nit}: line search begin, ||p||={pnorm:.5e}, "
+                        f"mode={line_search}",
+                        flush=True,
+                    )
                 if str(line_search) == "armijo":
                     directional_derivative = float(g.dot(p))
                     alpha, fx_trial, ls_eval_local, accepted_armijo = _bounded_armijo(
@@ -787,6 +813,47 @@ def newton(
                         directional_derivative,
                     )
                     ls_evals += ls_eval_local
+                elif str(line_search) == "residual_bisection":
+                    directional_derivative = float(g.dot(p))
+                    if (
+                        not np.isfinite(directional_derivative)
+                        or directional_derivative >= 0.0
+                    ):
+                        alpha = 0.0
+                        fx_trial = np.inf
+                    else:
+                        alpha_min = 0.0
+                        alpha_max = 1.0
+                        alpha = 1.0
+                        accepted_alpha = 0.0
+                        for _ls_it in range(max(1, int(armijo_max_ls))):
+                            x_trial.waxpy(float(alpha), p, x_prev)
+                            project_fn(x_trial)
+                            ghost_update_fn(x_trial)
+                            gradient_fn(x_trial, g_trial)
+                            ghost_update_fn(g_trial)
+                            ls_evals += 1
+                            directional_trial = float(g_trial.dot(p))
+                            if np.isfinite(directional_trial) and directional_trial < 0.0:
+                                accepted_alpha = float(alpha)
+                                if abs(alpha - 1.0) <= 1.0e-15:
+                                    break
+                                alpha_min = float(alpha)
+                            else:
+                                alpha_max = float(alpha)
+                            next_alpha = 0.5 * (alpha_min + alpha_max)
+                            if next_alpha <= alpha_min + 1.0e-16:
+                                break
+                            alpha = float(next_alpha)
+                        if accepted_alpha > 0.0:
+                            alpha = float(accepted_alpha)
+                            x_trial.waxpy(float(alpha), p, x_prev)
+                            project_fn(x_trial)
+                            ghost_update_fn(x_trial)
+                            fx_trial = energy_fn(x_trial)
+                        else:
+                            alpha = 0.0
+                            fx_trial = np.inf
                 else:
                     ls_a_eff, ls_b_eff, ls_repair_evals, ls_repaired = _repair_linesearch_interval(
                         _energy_at_alpha,
@@ -802,7 +869,16 @@ def newton(
                     )
                     ls_evals += ls_eval_local
                     fx_trial = _energy_at_alpha(alpha)
-                if np.isfinite(fx_trial) and fx_trial < fx_old:
+                if verbose and rank == 0:
+                    print(
+                        f"it={nit}: line search done, alpha={alpha:.5e}, "
+                        f"ls_evals={ls_evals}, fx_trial={fx_trial:.5e}",
+                        flush=True,
+                    )
+                if (
+                    (str(line_search) == "residual_bisection" and alpha > 0.0 and np.isfinite(fx_trial))
+                    or (np.isfinite(fx_trial) and fx_trial < fx_old)
+                ):
                     fx = fx_trial
                     dE = fx_old - fx
                     step_norm = abs(alpha) * pnorm
@@ -829,12 +905,22 @@ def newton(
         t_ls = time.perf_counter() - t_ls_start
         t_iter_total = time.perf_counter() - t_iter_start
 
+        rt = float(normg / max(abs(float(grad_target)), 1.0e-30))
         if verbose and rank == 0:
-            print(
+            line = (
                 f"it={nit}, J={fx:.5f}, dJ={dE:.5e}, "
-                f"||g||={normg:.5e}, alpha={alpha:.5e}, "
-                f"ksp_its={ksp_its}, ls_evals={ls_evals}"
+                f"||g||={normg:.5e}, RT={rt:.5e}, alpha={alpha:.5e}, "
+                f"ksp_its={ksp_its}, ls_evals={ls_evals}, "
+                f"accepted={bool(accepted_step)}, "
+                f"t_g={t_grad:.3f}s, t_H={t_hess:.3f}s, "
+                f"t_ls={t_ls:.3f}s, t_it={t_iter_total:.3f}s"
             )
+            if trust_region:
+                line += (
+                    f", rho={float(rho):.5e}, delta={float(trust_radius):.5e}, "
+                    f"rejects={int(trust_rejects)}"
+                )
+            print(line, flush=True)
 
         post_grad_norm = np.nan
         converged_energy = accepted_step and np.isfinite(dE) and abs(dE) < tolf
@@ -848,37 +934,40 @@ def newton(
                 message = f"Non-finite post-update gradient norm at Newton iteration {nit}"
                 break
 
+        history_entry = {
+            "it": int(nit),
+            "energy": float(fx),
+            "dE": float(dE),
+            "grad_norm": float(normg),
+            "grad_target": float(grad_target),
+            "rt": float(rt),
+            "grad_norm_post": float(post_grad_norm),
+            "alpha": float(alpha),
+            "ksp_its": int(ksp_its),
+            "ls_evals": int(ls_evals),
+            "ls_repaired": bool(ls_repaired),
+            "used_gradient_fallback": bool(used_gradient_fallback),
+            "accepted_step": bool(accepted_step),
+            "step_norm": float(step_norm),
+            "step_rel": float(step_rel),
+            "pred_reduction": float(pred_reduction),
+            "actual_reduction": float(actual_reduction),
+            "trust_rejects": int(trust_rejects),
+            "t_grad": float(t_grad),
+            "t_hess": float(t_hess),
+            "t_ls": float(t_ls),
+            "t_update": float(t_update),
+            "t_iter": float(t_iter_total),
+            "runtime_s": float(time.perf_counter() - start),
+            "trust_radius": float(trust_radius),
+            "trust_ratio": float(rho),
+            "trust_qp": float(trust_qp),
+            "line_search": str(line_search),
+        }
         if save_history:
-            history.append(
-                {
-                    "it": int(nit),
-                    "energy": float(fx),
-                    "dE": float(dE),
-                    "grad_norm": float(normg),
-                    "grad_target": float(grad_target),
-                    "grad_norm_post": float(post_grad_norm),
-                    "alpha": float(alpha),
-                    "ksp_its": int(ksp_its),
-                    "ls_evals": int(ls_evals),
-                    "ls_repaired": bool(ls_repaired),
-                    "used_gradient_fallback": bool(used_gradient_fallback),
-                    "accepted_step": bool(accepted_step),
-                    "step_norm": float(step_norm),
-                    "step_rel": float(step_rel),
-                    "pred_reduction": float(pred_reduction),
-                    "actual_reduction": float(actual_reduction),
-                    "trust_rejects": int(trust_rejects),
-                    "t_grad": float(t_grad),
-                    "t_hess": float(t_hess),
-                    "t_ls": float(t_ls),
-                    "t_update": float(t_update),
-                    "t_iter": float(t_iter_total),
-                    "trust_radius": float(trust_radius),
-                    "trust_ratio": float(rho),
-                    "trust_qp": float(trust_qp),
-                    "line_search": str(line_search),
-                }
-            )
+            history.append(history_entry)
+        if iteration_callback is not None:
+            iteration_callback(dict(history_entry), list(history))
 
         if (
             step_time_limit_s is not None
@@ -913,6 +1002,7 @@ def newton(
 
     g.destroy()
     h.destroy()
+    g_trial.destroy()
     x_trial.destroy()
     x_prev.destroy()
     p.destroy()

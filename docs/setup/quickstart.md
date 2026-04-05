@@ -11,6 +11,7 @@ solvers and maintained benchmark runners.
   - [GinzburgLandau](../problems/GinzburgLandau.md)
   - [HyperElasticity](../problems/HyperElasticity.md)
   - [Plasticity](../problems/Plasticity.md)
+  - [Plasticity3D](../problems/Plasticity3D.md)
   - [Topology](../problems/Topology.md)
 - current maintained results:
   - [pLaplace results](../results/pLaplace.md)

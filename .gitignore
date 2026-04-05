@@ -9,6 +9,7 @@ h5py
 /artifacts/raw_results/notebook_runs/
 /artifacts/raw_results/topology_reports/
 /data/meshes/SlopeStability/*.h5
+/data/meshes/SlopeStability3D/**/*.h5
 /data/meshes/SlopeStability/pmg_transfer_cache/
 /experiments/analysis/docs_assets/**/*.provenance.json
 /experiments/analysis/docs_assets/**/*.tmp

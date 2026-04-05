@@ -15,6 +15,7 @@ If you are new to the codebase, start here rather than in `archive/`.
   - [GinzburgLandau](problems/GinzburgLandau.md)
   - [HyperElasticity](problems/HyperElasticity.md)
   - [Plasticity](problems/Plasticity.md)
+  - [Plasticity3D](problems/Plasticity3D.md)
   - [Topology](problems/Topology.md)
 - Current maintained results:
   - [pLaplace results](results/pLaplace.md)

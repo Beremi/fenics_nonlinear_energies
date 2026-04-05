@@ -164,3 +164,46 @@ def export_planestrain_state_npz(
     )
     Path(path).parent.mkdir(parents=True, exist_ok=True)
     np.savez(path, **payload)
+
+
+def export_plasticity3d_state_npz(
+    path: str | Path,
+    *,
+    coords_ref: np.ndarray,
+    x_final: np.ndarray,
+    tetrahedra: np.ndarray,
+    surface_faces: np.ndarray,
+    boundary_label: np.ndarray,
+    mesh_name: str,
+    element_degree: int,
+    lambda_target: float,
+    energy: float | None = None,
+    metadata: Mapping[str, object] | None = None,
+) -> None:
+    """Export one 3D plasticity state as reference/deformed coordinates plus topology."""
+    coords_ref = np.asarray(coords_ref, dtype=np.float64).reshape((-1, 3))
+    x_final = np.asarray(x_final, dtype=np.float64).reshape((-1, 3))
+    tetrahedra = np.asarray(tetrahedra, dtype=np.int32)
+    surface_faces = np.asarray(surface_faces, dtype=np.int32)
+    boundary_label = np.asarray(boundary_label, dtype=np.int32).reshape((-1,))
+    displacement = x_final - coords_ref
+
+    payload = _npz_payload(
+        {
+            "coords_ref": coords_ref,
+            "coords_final": x_final,
+            "displacement": displacement,
+            "tetrahedra": tetrahedra,
+            "surface_faces": surface_faces,
+            "boundary_label": boundary_label,
+        },
+        metadata={
+            "mesh_name": str(mesh_name),
+            "element_degree": int(element_degree),
+            "lambda_target": float(lambda_target),
+            **({"energy": float(energy)} if energy is not None else {}),
+            **dict(metadata or {}),
+        },
+    )
+    Path(path).parent.mkdir(parents=True, exist_ok=True)
+    np.savez(path, **payload)
