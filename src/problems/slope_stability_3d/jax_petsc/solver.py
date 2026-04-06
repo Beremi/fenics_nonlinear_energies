@@ -27,6 +27,7 @@ from src.problems.slope_stability_3d.jax_petsc.reordered_element_assembler impor
 )
 from src.problems.slope_stability_3d.support.mesh import (
     DEFAULT_MESH_NAME,
+    base_mesh_name_for_name,
     build_same_mesh_lagrange_case_data,
     ensure_same_mesh_case_hdf5,
     load_same_mesh_case_hdf5_rank_local,
@@ -80,6 +81,10 @@ def _write_progress_payload(path: str | Path, payload: dict[str, object]) -> Non
     target = Path(path)
     target.parent.mkdir(parents=True, exist_ok=True)
     target.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+
+
+def _format_gib(value: object) -> str:
+    return f"{float(value):.3f} GiB"
 
 
 @dataclass(frozen=True)
@@ -243,28 +248,38 @@ def _legacy_mg_settings(args) -> dict[str, LegacyPMGLevelSmootherConfig]:
             steps=int(steps if steps is not None else default_steps),
         )
 
+    degree4_cfg = _cfg(
+        getattr(args, "mg_p4_smoother_ksp_type", None),
+        getattr(args, "mg_p4_smoother_pc_type", None),
+        getattr(args, "mg_p4_smoother_steps", None),
+        default_pc="sor",
+        default_steps=3,
+    )
+    degree2_cfg = _cfg(
+        getattr(args, "mg_p2_smoother_ksp_type", None),
+        getattr(args, "mg_p2_smoother_pc_type", None),
+        getattr(args, "mg_p2_smoother_steps", None),
+        default_pc="sor",
+        default_steps=3,
+    )
+    degree1_cfg = _cfg(
+        getattr(args, "mg_p1_smoother_ksp_type", None),
+        getattr(args, "mg_p1_smoother_pc_type", None),
+        getattr(args, "mg_p1_smoother_steps", None),
+        default_pc="sor",
+        default_steps=3,
+    )
+    fine_degree = int(getattr(args, "elem_degree", 2))
+    if fine_degree == 4:
+        fine_cfg = degree4_cfg
+    elif fine_degree == 2:
+        fine_cfg = degree2_cfg
+    else:
+        fine_cfg = degree1_cfg
     return {
-        "fine": _cfg(
-            getattr(args, "mg_p4_smoother_ksp_type", None),
-            getattr(args, "mg_p4_smoother_pc_type", None),
-            getattr(args, "mg_p4_smoother_steps", None),
-            default_pc="sor",
-            default_steps=3,
-        ),
-        "degree2": _cfg(
-            getattr(args, "mg_p2_smoother_ksp_type", None),
-            getattr(args, "mg_p2_smoother_pc_type", None),
-            getattr(args, "mg_p2_smoother_steps", None),
-            default_pc="sor",
-            default_steps=3,
-        ),
-        "degree1": _cfg(
-            getattr(args, "mg_p1_smoother_ksp_type", None),
-            getattr(args, "mg_p1_smoother_pc_type", None),
-            getattr(args, "mg_p1_smoother_steps", None),
-            default_pc="sor",
-            default_steps=3,
-        ),
+        "fine": fine_cfg,
+        "degree2": degree2_cfg,
+        "degree1": degree1_cfg,
     }
 
 
@@ -273,9 +288,12 @@ def _resolve_mg_strategy(args) -> str:
     if strategy != "auto":
         return strategy
     degree = int(getattr(args, "elem_degree", 2))
+    mesh_name = str(getattr(args, "mesh_name", DEFAULT_MESH_NAME) or DEFAULT_MESH_NAME)
     if degree == 2:
         return "same_mesh_p2_p1"
     if degree == 4:
+        if base_mesh_name_for_name(mesh_name) != mesh_name:
+            return "uniform_refined_p4_p2_p1_p1"
         return "same_mesh_p4_p2_p1"
     raise ValueError("3D PMG requires a fine degree of 2 or 4")
 
@@ -609,11 +627,22 @@ def run(args):
     comm = MPI.COMM_WORLD
     rank = int(comm.rank)
     total_runtime_start = time.perf_counter()
+    stage_timings: dict[str, float] = {}
+    debug_setup = bool(getattr(args, "debug_setup", False))
 
     settings = _apply_3d_stack_defaults(args, _resolve_linear_settings(args))
     regularization_state = _init_newton_regularization_state(args)
     pc_options = _pc_options(settings)
+    if rank == 0 and debug_setup:
+        print("setup: problem load begin", flush=True)
+    t_stage = time.perf_counter()
     mesh_name, params, adjacency = _load_problem_data(args, comm)
+    stage_timings["problem_load"] = float(time.perf_counter() - t_stage)
+    if rank == 0 and debug_setup:
+        print(
+            f"setup: problem load done, t={stage_timings['problem_load']:.3f}s",
+            flush=True,
+        )
     lambda_target = float(
         getattr(args, "lambda_target", None)
         if getattr(args, "lambda_target", None) is not None
@@ -621,6 +650,9 @@ def run(args):
     )
     _apply_strength_reduction(params, lambda_target)
 
+    if rank == 0 and debug_setup:
+        print("setup: assembler create begin", flush=True)
+    t_stage = time.perf_counter()
     assembler = SlopeStability3DReorderedElementAssembler(
         params=params,
         comm=comm,
@@ -633,12 +665,16 @@ def run(args):
         pc_options=pc_options,
         reorder_mode=str(getattr(args, "element_reorder_mode", None) or "block_xyz"),
         local_hessian_mode=str(getattr(args, "local_hessian_mode", None) or "element"),
-        perm_override=select_reordered_perm_3d(
-            str(getattr(args, "element_reorder_mode", None) or "block_xyz"),
-            adjacency=adjacency,
-            coords_all=np.asarray(params["nodes"], dtype=np.float64),
-            freedofs=np.asarray(params["freedofs"], dtype=np.int64),
-            n_parts=int(comm.size),
+        perm_override=(
+            np.asarray(params["_distributed_perm"], dtype=np.int64)
+            if "_distributed_perm" in params
+            else select_reordered_perm_3d(
+                str(getattr(args, "element_reorder_mode", None) or "block_xyz"),
+                adjacency=adjacency,
+                coords_all=np.asarray(params["nodes"], dtype=np.float64),
+                freedofs=np.asarray(params["freedofs"], dtype=np.int64),
+                n_parts=int(comm.size),
+            )
         ),
         block_size_override=ownership_block_size_3d(
             np.asarray(params["freedofs"], dtype=np.int64)
@@ -649,6 +685,52 @@ def run(args):
         ),
         p4_hessian_chunk_size=int(getattr(args, "p4_hessian_chunk_size", 32)),
     )
+    stage_timings["assembler_create"] = float(time.perf_counter() - t_stage)
+    local_setup_summary = assembler.setup_summary()
+    local_memory_summary = assembler.memory_summary()
+    gathered_setup = comm.gather(local_setup_summary, root=0)
+    gathered_memory = comm.gather(local_memory_summary, root=0)
+    progress_path = str(getattr(args, "progress_out", "") or "").strip()
+    if rank == 0 and debug_setup:
+        print(
+            f"setup: assembler create done, t={stage_timings['assembler_create']:.3f}s",
+            flush=True,
+        )
+        if gathered_setup:
+            worst_setup = max(
+                list(gathered_setup),
+                key=lambda entry: float(entry.get("total", 0.0)),
+            )
+            print("setup: worst-rank timings", json.dumps(worst_setup, indent=2), flush=True)
+        if gathered_memory:
+            worst_memory = max(
+                list(gathered_memory),
+                key=lambda entry: float(entry.get("tracked_total_gib", 0.0)),
+            )
+            print(
+                "setup: worst-rank tracked memory "
+                f"{_format_gib(worst_memory.get('tracked_total_gib', 0.0))} "
+                f"(layout={_format_gib(worst_memory.get('layout_gib', 0.0))}, "
+                f"local={_format_gib(worst_memory.get('local_overlap_gib', 0.0))}, "
+                f"scatter={_format_gib(worst_memory.get('scatter_gib', 0.0))}, "
+                f"owned_vals={_format_gib(worst_memory.get('owned_hessian_values_gib', 0.0))})",
+                flush=True,
+            )
+    if rank == 0 and progress_path:
+        _write_progress_payload(
+            progress_path,
+            {
+                "status": "setup_complete",
+                "mesh_name": str(mesh_name),
+                "elem_degree": int(args.elem_degree),
+                "lambda_target": float(lambda_target),
+                "stage_timings": dict(stage_timings),
+                "assembler_setup": dict(local_setup_summary),
+                "assembler_memory": dict(local_memory_summary),
+                "parallel_setup": list(gathered_setup or []),
+                "parallel_memory": list(gathered_memory or []),
+            },
+        )
 
     mg_hierarchy = None
     mg_nullspace_meta = None
@@ -666,6 +748,9 @@ def run(args):
             finest_degree=int(args.elem_degree),
             strategy=strategy,
         )
+        if rank == 0 and debug_setup:
+            print("setup: mg hierarchy build begin", flush=True)
+        t_stage = time.perf_counter()
         mg_hierarchy = build_mixed_pmg_hierarchy(
             specs=specs,
             finest_params=params,
@@ -678,6 +763,12 @@ def run(args):
                 getattr(args, "mg_transfer_build_mode", "owned_rows")
             ),
         )
+        stage_timings["mg_hierarchy_build"] = float(time.perf_counter() - t_stage)
+        if rank == 0 and debug_setup:
+            print(
+                f"setup: mg hierarchy build done, t={stage_timings['mg_hierarchy_build']:.3f}s",
+                flush=True,
+            )
         configure_pmg(
             assembler.ksp,
             mg_hierarchy,
@@ -736,6 +827,9 @@ def run(args):
     if external_init_reordered is not None:
         initial_guess_meta = dict(external_init_meta or {})
     elif _should_use_elastic_initial_guess(args, settings):
+        if rank == 0 and debug_setup:
+            print("setup: elastic initial guess begin", flush=True)
+        t_stage = time.perf_counter()
         (
             u_init_reordered,
             mg_nullspace_meta,
@@ -749,6 +843,12 @@ def run(args):
             mg_nullspace_meta=mg_nullspace_meta,
             gamg_coords=gamg_coords,
         )
+        stage_timings["initial_guess_total"] = float(time.perf_counter() - t_stage)
+        if rank == 0 and debug_setup:
+            print(
+                f"setup: elastic initial guess done, t={stage_timings['initial_guess_total']:.3f}s",
+                flush=True,
+            )
         if not bool(initial_guess_meta.get("success", False)):
             raise RuntimeError(str(initial_guess_meta.get("message", "Elastic initial-guess solve failed")))
         if mg_nullspace_meta is not None:
@@ -763,6 +863,7 @@ def run(args):
             "message": "Elastic initial guess disabled for this solver stack",
             "vector_norm": float(np.linalg.norm(np.asarray(x.array[:], dtype=np.float64))),
         }
+        stage_timings["initial_guess_total"] = 0.0
         if bool(regularization_state["enabled"]):
             zero_owned = np.zeros(assembler.layout.hi - assembler.layout.lo, dtype=np.float64)
             assembler.assemble_hessian_with_mode(zero_owned, constitutive_mode="elastic")
@@ -884,7 +985,11 @@ def run(args):
                         getattr(args, "mg_coarse_hypre_relax_type_all", "symmetric-SOR/Jacobi")
                     ),
                 )
-                mg_nullspaces_live.extend(list(mg_nullspace_meta.get("nullspaces", [])))
+                for ns in list(mg_nullspace_meta.get("nullspaces", [])):
+                    if ns is None:
+                        continue
+                    if not any(existing is ns for existing in mg_nullspaces_live):
+                        mg_nullspaces_live.append(ns)
             if verbose_linear_debug and rank == 0:
                 print("linear: ksp solve begin", flush=True)
             t_solve0 = time.perf_counter()
@@ -951,6 +1056,7 @@ def run(args):
                 "attempt": int(attempt_index),
                 "operator_mode": str(operator_label),
                 "newton_regularization_r": float(r_current),
+                "t_assemble": float(t_asm),
                 "ksp_its": int(ksp_its),
                 "ksp_reason_code": int(reason_code),
                 "ksp_reason_name": str(reason_name),
@@ -1027,8 +1133,6 @@ def run(args):
 
     def trust_subproblem_solve_fn(vec, rhs, sol, trust_radius):
         return _assemble_and_solve(vec, rhs, sol, trust_radius=float(trust_radius))
-
-    progress_path = str(getattr(args, "progress_out", "") or "").strip()
 
     def _iteration_callback(entry: dict[str, object], history: list[dict[str, object]]) -> None:
         _update_newton_regularization_after_step(
@@ -1135,6 +1239,30 @@ def run(args):
         and np.all(np.isfinite(full_original))
     )
     result_status = "completed" if solver_success else "failed"
+    local_total_time = float(time.perf_counter() - total_runtime_start)
+    local_parallel_diag = {
+        "rank": int(rank),
+        "stage_timings": dict(stage_timings),
+        "local_problem": {
+            "owned_free_dofs": int(assembler.layout.hi - assembler.layout.lo),
+            "overlap_total_dofs": int(assembler.local_data.local_total_nodes.size),
+            "local_elements": int(assembler.local_data.local_elem_idx.size),
+            "owned_nnz": int(assembler.layout.owned_rows.size),
+            "vector_block_size": int(getattr(assembler, "block_size", 1)),
+        },
+        "assembler_setup": assembler.setup_summary(),
+        "assembler_memory": assembler.memory_summary(),
+        "assembly_callbacks": assembler.callback_summary(),
+        "linear_history": list(linear_records),
+        "solve_time_local": float(solve_time),
+        "total_time_local": float(local_total_time),
+    }
+    parallel_diagnostics = comm.gather(local_parallel_diag, root=0)
+    summary_diagnostics = (
+        list(parallel_diagnostics)
+        if rank == 0 and parallel_diagnostics is not None
+        else [local_parallel_diag]
+    )
 
     if getattr(args, "state_out", "") and rank == 0:
         export_plasticity3d_state_npz(
@@ -1180,7 +1308,7 @@ def run(args):
         "status": str(result_status),
         "solver_success": bool(solver_success),
         "solve_time": float(solve_time),
-        "total_time": float(time.perf_counter() - total_runtime_start),
+        "total_time": float(local_total_time),
         "linear_iterations_total": int(sum(linear_iters)),
         "linear_iterations_last": int(linear_iters[-1] if linear_iters else 0),
         "linear_history": list(linear_records),
@@ -1190,6 +1318,34 @@ def run(args):
         "final_grad_norm": float(final_grad_norm),
         "assembly_callbacks": assembler.callback_summary(),
         "assembler_setup": assembler.setup_summary(),
+        "assembler_memory": assembler.memory_summary(),
+        "stage_timings": dict(stage_timings),
+        "local_problem_summary": {
+            "owned_free_dofs_min": int(
+                min(int(r["local_problem"]["owned_free_dofs"]) for r in summary_diagnostics)
+            ),
+            "owned_free_dofs_max": int(
+                max(int(r["local_problem"]["owned_free_dofs"]) for r in summary_diagnostics)
+            ),
+            "overlap_total_dofs_min": int(
+                min(int(r["local_problem"]["overlap_total_dofs"]) for r in summary_diagnostics)
+            ),
+            "overlap_total_dofs_max": int(
+                max(int(r["local_problem"]["overlap_total_dofs"]) for r in summary_diagnostics)
+            ),
+            "local_elements_min": int(
+                min(int(r["local_problem"]["local_elements"]) for r in summary_diagnostics)
+            ),
+            "local_elements_max": int(
+                max(int(r["local_problem"]["local_elements"]) for r in summary_diagnostics)
+            ),
+            "owned_nnz_min": int(
+                min(int(r["local_problem"]["owned_nnz"]) for r in summary_diagnostics)
+            ),
+            "owned_nnz_max": int(
+                max(int(r["local_problem"]["owned_nnz"]) for r in summary_diagnostics)
+            ),
+        },
         "mesh": {
             "nodes": int(np.asarray(params["nodes"]).shape[0]),
             "elements": int(np.asarray(params["elems_scalar"]).shape[0]),
@@ -1349,6 +1505,8 @@ def run(args):
             "history": list(regularization_state["history"]),
         },
     }
+    if rank == 0:
+        payload["parallel_diagnostics"] = list(parallel_diagnostics)
     if bool(getattr(args, "save_history", False)):
         payload["history"] = list(result.get("history", []))
     if mg_hierarchy is not None:

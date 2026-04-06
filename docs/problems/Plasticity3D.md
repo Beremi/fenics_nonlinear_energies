@@ -10,7 +10,9 @@ scalar 3D potential.
 
 The primary documented result on this page is a corrected-frame
 `P2(L1), lambda = 1.6` solve run from scratch with an elastic initial guess.
-The detailed Octave-vs-JAX branch comparison is kept in the annex.
+The detailed Octave-vs-JAX branch comparison is kept in the annex, while the
+current refined `P4(L1_2)` scaling campaign lives on the dedicated results
+page.
 
 ## Mathematical Formulation
 
@@ -274,9 +276,8 @@ a source-history bookkeeping quirk rather than a true state mismatch.
 ## Caveats
 
 - The primary published result on this page is a `P2(L1)` solve card. The
-  `P4(L1) -> P2(L1) -> P1(L1)` cascade is implemented and smoke-tested, but the
-  page is not currently presenting a full corrected-frame `P4` convergence
-  study.
+  large-scale `P4` scaling study is documented separately on the 3D results
+  page rather than duplicated here.
 - The surface and slice plots focus on deviatoric strain because that is also
   the source benchmark's primary visual field for the 3D slope example.
 - The current 3D implementation still uses zero plastic-history placeholders
@@ -288,6 +289,7 @@ a source-history bookkeeping quirk rather than a true state mismatch.
 
 - 2D plane-strain model card: [Plasticity](Plasticity.md)
 - 2D maintained results: [Plasticity results](../results/Plasticity.md)
+- 3D maintained results: [Plasticity3D results](../results/Plasticity3D.md)
 - setup and environment: [quickstart](../setup/quickstart.md)
 
 ## Reproduction Commands

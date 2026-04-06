@@ -18,7 +18,12 @@ from src.core.problem_data.hdf5 import (
     load_problem_hdf5_fields,
 )
 from src.core.petsc.dof_partition import petsc_ownership_range
-from src.core.petsc.reordered_element_base import inverse_permutation, select_permutation
+from src.core.petsc.reordered_element_base import (
+    _owned_pattern_from_local_elems,
+    _owned_pattern_from_local_scalar_elems,
+    inverse_permutation,
+    select_permutation,
+)
 from src.problems.slope_stability_3d.support.materials import (
     MaterialSpec,
     heterogenous_materials_qp,
@@ -36,9 +41,13 @@ DEFAULT_MESH_NAME = "hetero_ssr_L1"
 RAW_MESH_ROOT = MESH_DATA_ROOT / "SlopeStability3D" / "hetero_ssr"
 DEFINITION_PATH = RAW_MESH_ROOT / "definition.py"
 _MESH_CASE_RE = re.compile(r"^SSR_hetero_(?P<kind>ada_L\d+|uni)\.msh$")
+_REFINED_MESH_RE = re.compile(r"^(?P<base>hetero_ssr_L\d+)_2$")
 SOURCE_INTERNAL_AXIS_ORDER = "xyz"
 SOURCE_INTERNAL_AXIS_PERM = np.asarray([0, 1, 2], dtype=np.int64)
-SAME_MESH_HDF5_SCHEMA_VERSION = 4
+SAME_MESH_HDF5_SCHEMA_VERSION = 5
+_LIGHT_CASE_CACHE: dict[tuple[str, int], dict[str, object]] = {}
+_RANK_LOCAL_LIGHT_CACHE: dict[tuple[str, int, str, int, int], dict[str, object]] = {}
+_RANK_LOCAL_HEAVY_CACHE: dict[tuple[str, int, str, int, int], dict[str, object]] = {}
 
 
 @dataclass(frozen=True)
@@ -74,8 +83,10 @@ class SlopeStability3DCaseData:
     gamma_q: np.ndarray
     eps_p_old: np.ndarray
 
-    adjacency: sp.coo_matrix
+    adjacency: sp.coo_matrix | None
     elastic_kernel: np.ndarray
+    macro_parent: np.ndarray
+    macro_parent_mesh_name: str
 
     davis_type: str = "B"
     lambda_target_default: float = 1.0
@@ -103,6 +114,8 @@ class _MacroMeshData:
     surf: np.ndarray
     boundary_label: np.ndarray
     material_id: np.ndarray
+    macro_parent: np.ndarray
+    macro_parent_mesh_name: str
 
 
 def _point_key(point: np.ndarray) -> tuple[float, float, float]:
@@ -116,7 +129,22 @@ def supported_mesh_names() -> tuple[str, ...]:
             names.append(mesh_name_from_raw_filename(path.name))
         except ValueError:
             continue
+    for base in tuple(names):
+        if re.fullmatch(r"hetero_ssr_L\d+", str(base)):
+            names.append(f"{base}_2")
     return tuple(names)
+
+
+def base_mesh_name_for_name(mesh_name: str) -> str:
+    mesh_name = str(mesh_name)
+    match = _REFINED_MESH_RE.fullmatch(mesh_name)
+    if match is not None:
+        return str(match.group("base"))
+    return mesh_name
+
+
+def uniform_refinement_steps_for_name(mesh_name: str) -> int:
+    return 1 if _REFINED_MESH_RE.fullmatch(str(mesh_name)) is not None else 0
 
 
 def mesh_name_from_raw_filename(filename: str) -> str:
@@ -130,7 +158,7 @@ def mesh_name_from_raw_filename(filename: str) -> str:
 
 
 def raw_mesh_filename_for_name(mesh_name: str) -> str:
-    mesh_name = str(mesh_name)
+    mesh_name = base_mesh_name_for_name(str(mesh_name))
     if mesh_name == "hetero_ssr_uni":
         return "SSR_hetero_uni.msh"
     if re.fullmatch(r"hetero_ssr_L\d+", mesh_name):
@@ -277,6 +305,130 @@ def _load_macro_mesh_from_msh(mesh_path: str | Path, mesh_name: str) -> _MacroMe
         surf=np.asarray(tri_cells, dtype=np.int64),
         boundary_label=np.asarray(boundary_label, dtype=np.int64),
         material_id=np.asarray(material_id, dtype=np.int64),
+        macro_parent=np.arange(tetra_cells.shape[0], dtype=np.int64),
+        macro_parent_mesh_name=str(mesh_name),
+    )
+
+
+def _macro_midpoint_index(
+    nodes: np.ndarray,
+    edge_map: dict[tuple[int, int], int],
+    extra_points: list[np.ndarray],
+    a: int,
+    b: int,
+) -> int:
+    i = int(a)
+    j = int(b)
+    key = (i, j) if i < j else (j, i)
+    idx = edge_map.get(key)
+    if idx is not None:
+        return int(idx)
+    idx = int(nodes.shape[0] + len(extra_points))
+    edge_map[key] = idx
+    extra_points.append(0.5 * (nodes[key[0]] + nodes[key[1]]))
+    return idx
+
+
+def _tet_signed_volume6(nodes: np.ndarray, tet: tuple[int, int, int, int]) -> float:
+    v0, v1, v2, v3 = (int(v) for v in tet)
+    mat = np.column_stack(
+        (
+            np.asarray(nodes[v1] - nodes[v0], dtype=np.float64),
+            np.asarray(nodes[v2] - nodes[v0], dtype=np.float64),
+            np.asarray(nodes[v3] - nodes[v0], dtype=np.float64),
+        )
+    )
+    return float(np.linalg.det(mat))
+
+
+def _ensure_positive_tet_orientation(
+    nodes: np.ndarray,
+    tet: tuple[int, int, int, int],
+) -> tuple[int, int, int, int]:
+    if _tet_signed_volume6(nodes, tet) >= 0.0:
+        return tuple(int(v) for v in tet)
+    a, b, c, d = (int(v) for v in tet)
+    return (a, c, b, d)
+
+
+def _uniform_refine_macro_mesh_once(
+    macro: _MacroMeshData,
+    *,
+    mesh_name: str,
+) -> _MacroMeshData:
+    nodes = np.asarray(macro.nodes, dtype=np.float64)
+    edge_map: dict[tuple[int, int], int] = {}
+    extra_points: list[np.ndarray] = []
+
+    refined_tets: list[tuple[int, int, int, int]] = []
+    refined_materials: list[int] = []
+    refined_parent: list[int] = []
+
+    for tet_id, tet in enumerate(np.asarray(macro.elems, dtype=np.int64)):
+        v0, v1, v2, v3 = (int(v) for v in tet)
+        m01 = _macro_midpoint_index(nodes, edge_map, extra_points, v0, v1)
+        m12 = _macro_midpoint_index(nodes, edge_map, extra_points, v1, v2)
+        m02 = _macro_midpoint_index(nodes, edge_map, extra_points, v0, v2)
+        m03 = _macro_midpoint_index(nodes, edge_map, extra_points, v0, v3)
+        m13 = _macro_midpoint_index(nodes, edge_map, extra_points, v1, v3)
+        m23 = _macro_midpoint_index(nodes, edge_map, extra_points, v2, v3)
+        children = (
+            (v0, m01, m02, m03),
+            (m01, v1, m12, m13),
+            (m02, m12, v2, m23),
+            (m03, m13, m23, v3),
+            (m01, m02, m03, m23),
+            (m01, m02, m12, m23),
+            (m01, m12, m13, m23),
+            (m01, m03, m13, m23),
+        )
+        for child in children:
+            refined_tets.append(tuple(int(v) for v in child))
+            refined_materials.append(int(macro.material_id[tet_id]))
+            refined_parent.append(int(macro.macro_parent[tet_id]))
+
+    refined_nodes = (
+        np.vstack((nodes, np.asarray(extra_points, dtype=np.float64)))
+        if extra_points
+        else np.asarray(nodes, dtype=np.float64).copy()
+    )
+    refined_elems = np.asarray(
+        [_ensure_positive_tet_orientation(refined_nodes, tet) for tet in refined_tets],
+        dtype=np.int64,
+    )
+
+    refined_surf: list[tuple[int, int, int]] = []
+    refined_labels: list[int] = []
+    for face_id, face in enumerate(np.asarray(macro.surf, dtype=np.int64)):
+        v0, v1, v2 = (int(v) for v in face)
+        m01 = _macro_midpoint_index(nodes, edge_map, extra_points, v0, v1)
+        m12 = _macro_midpoint_index(nodes, edge_map, extra_points, v1, v2)
+        m02 = _macro_midpoint_index(nodes, edge_map, extra_points, v0, v2)
+        children = (
+            (v0, m01, m02),
+            (m01, v1, m12),
+            (m02, m12, v2),
+            (m01, m12, m02),
+        )
+        for child in children:
+            refined_surf.append(tuple(int(v) for v in child))
+            refined_labels.append(int(macro.boundary_label[face_id]))
+
+    refined_nodes = (
+        np.vstack((nodes, np.asarray(extra_points, dtype=np.float64)))
+        if len(extra_points) + nodes.shape[0] != refined_nodes.shape[0]
+        else refined_nodes
+    )
+    return _MacroMeshData(
+        mesh_name=str(mesh_name),
+        raw_mesh_filename=str(macro.raw_mesh_filename),
+        nodes=np.asarray(refined_nodes, dtype=np.float64),
+        elems=np.asarray(refined_elems, dtype=np.int64),
+        surf=np.asarray(refined_surf, dtype=np.int64),
+        boundary_label=np.asarray(refined_labels, dtype=np.int64),
+        material_id=np.asarray(refined_materials, dtype=np.int64),
+        macro_parent=np.asarray(refined_parent, dtype=np.int64),
+        macro_parent_mesh_name=str(macro.macro_parent_mesh_name),
     )
 
 
@@ -957,6 +1109,26 @@ def _assemble_gravity_load(
     return force
 
 
+def _macro_mesh_for_case(mesh_path: str | Path, *, mesh_name: str) -> _MacroMeshData:
+    base_mesh_name = base_mesh_name_for_name(str(mesh_name))
+    macro = _load_macro_mesh_from_msh(mesh_path, base_mesh_name)
+    for _ in range(int(uniform_refinement_steps_for_name(str(mesh_name)))):
+        macro = _uniform_refine_macro_mesh_once(macro, mesh_name=str(mesh_name))
+    if str(macro.mesh_name) != str(mesh_name):
+        macro = _MacroMeshData(
+            mesh_name=str(mesh_name),
+            raw_mesh_filename=str(macro.raw_mesh_filename),
+            nodes=np.asarray(macro.nodes, dtype=np.float64),
+            elems=np.asarray(macro.elems, dtype=np.int64),
+            surf=np.asarray(macro.surf, dtype=np.int64),
+            boundary_label=np.asarray(macro.boundary_label, dtype=np.int64),
+            material_id=np.asarray(macro.material_id, dtype=np.int64),
+            macro_parent=np.asarray(macro.macro_parent, dtype=np.int64),
+            macro_parent_mesh_name=str(macro.macro_parent_mesh_name),
+        )
+    return macro
+
+
 def build_case_data_from_raw_mesh(
     mesh_path: str | Path,
     *,
@@ -967,7 +1139,7 @@ def build_case_data_from_raw_mesh(
     if degree not in {1, 2, 4}:
         raise ValueError(f"Unsupported degree {degree!r}; expected 1, 2, or 4")
 
-    macro = _load_macro_mesh_from_msh(mesh_path, str(mesh_name))
+    macro = _macro_mesh_for_case(mesh_path, mesh_name=str(mesh_name))
     nodes, elems_scalar, surf = _elevate_macro_mesh_to_degree(
         macro.nodes,
         macro.elems,
@@ -996,7 +1168,8 @@ def build_case_data_from_raw_mesh(
         gamma_q,
         n_nodes=int(nodes.shape[0]),
     )
-    adjacency = _build_dof_adjacency(elems, freedofs)
+    build_adjacency = int(elems.shape[0]) <= 50000
+    adjacency = _build_dof_adjacency(elems, freedofs) if build_adjacency else None
     elastic_kernel = build_near_nullspace_modes_3d(nodes, freedofs)
 
     return SlopeStability3DCaseData(
@@ -1031,6 +1204,8 @@ def build_case_data_from_raw_mesh(
         ),
         adjacency=adjacency,
         elastic_kernel=np.asarray(elastic_kernel, dtype=np.float64),
+        macro_parent=np.asarray(macro.macro_parent, dtype=np.int64),
+        macro_parent_mesh_name=str(macro.macro_parent_mesh_name),
         davis_type="B",
         lambda_target_default=1.0,
         gravity_axis=1,
@@ -1077,7 +1252,7 @@ def build_same_mesh_lagrange_case_data(
 def write_case_hdf5(path: str | Path, case_data: SlopeStability3DCaseData) -> None:
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
-    adjacency = case_data.adjacency.tocoo()
+    adjacency = None if case_data.adjacency is None else case_data.adjacency.tocoo()
     with h5py.File(path, "w") as handle:
         handle.create_dataset("case_name", data=np.bytes_(case_data.case_name))
         handle.create_dataset("mesh_name", data=np.bytes_(case_data.mesh_name))
@@ -1108,23 +1283,32 @@ def write_case_hdf5(path: str | Path, case_data: SlopeStability3DCaseData) -> No
         handle.create_dataset("gamma_q", data=case_data.gamma_q)
         handle.create_dataset("eps_p_old", data=case_data.eps_p_old)
         handle.create_dataset("elastic_kernel", data=case_data.elastic_kernel)
+        handle.create_dataset("macro_parent", data=case_data.macro_parent)
+        handle.create_dataset(
+            "macro_parent_mesh_name",
+            data=np.bytes_(case_data.macro_parent_mesh_name),
+        )
         handle.create_dataset("davis_type", data=np.bytes_(case_data.davis_type))
         handle.create_dataset(
             "lambda_target_default",
             data=float(case_data.lambda_target_default),
         )
         handle.create_dataset("gravity_axis", data=int(case_data.gravity_axis))
-        grp = handle.create_group("adjacency")
-        grp.create_dataset("data", data=adjacency.data)
-        grp.create_dataset("row", data=adjacency.row)
-        grp.create_dataset("col", data=adjacency.col)
-        grp.create_dataset("shape", data=np.asarray(adjacency.shape, dtype=np.int64))
+        if adjacency is not None:
+            grp = handle.create_group("adjacency")
+            grp.create_dataset("data", data=adjacency.data)
+            grp.create_dataset("row", data=adjacency.row)
+            grp.create_dataset("col", data=adjacency.col)
+            grp.create_dataset("shape", data=np.asarray(adjacency.shape, dtype=np.int64))
 
 
 def load_case_hdf5(path: str | Path) -> SlopeStability3DCaseData:
     raw, adjacency = load_problem_hdf5(str(path))
     if adjacency is None:
-        raise RuntimeError(f"{path} is missing required adjacency data")
+        adjacency = _build_dof_adjacency(
+            np.asarray(raw["elems"], dtype=np.int64),
+            np.asarray(raw["freedofs"], dtype=np.int64),
+        )
     return SlopeStability3DCaseData(
         case_name=_decode_hdf5_string(raw["case_name"]),
         mesh_name=_decode_hdf5_string(raw["mesh_name"]),
@@ -1154,6 +1338,8 @@ def load_case_hdf5(path: str | Path) -> SlopeStability3DCaseData:
         eps_p_old=np.asarray(raw["eps_p_old"], dtype=np.float64),
         adjacency=adjacency,
         elastic_kernel=np.asarray(raw["elastic_kernel"], dtype=np.float64),
+        macro_parent=np.asarray(raw["macro_parent"], dtype=np.int64),
+        macro_parent_mesh_name=_decode_hdf5_string(raw["macro_parent_mesh_name"]),
         davis_type=_decode_hdf5_string(raw["davis_type"]),
         lambda_target_default=float(raw["lambda_target_default"]),
         gravity_axis=int(raw["gravity_axis"]),
@@ -1171,7 +1357,13 @@ def load_case_hdf5_fields(
         fields=fields,
         load_adjacency=bool(load_adjacency),
     )
-    for key in ("case_name", "mesh_name", "raw_mesh_filename", "davis_type"):
+    for key in (
+        "case_name",
+        "mesh_name",
+        "raw_mesh_filename",
+        "macro_parent_mesh_name",
+        "davis_type",
+    ):
         if key in raw:
             raw[key] = _decode_hdf5_string(raw[key])
     return raw, adjacency
@@ -1193,6 +1385,8 @@ _SAME_MESH_LIGHT_FIELDS = (
     "u_0",
     "material_id",
     "elastic_kernel",
+    "macro_parent",
+    "macro_parent_mesh_name",
     "davis_type",
     "lambda_target_default",
     "gravity_axis",
@@ -1200,8 +1394,145 @@ _SAME_MESH_LIGHT_FIELDS = (
 
 
 def load_same_mesh_case_hdf5_light(mesh_name: str, degree: int) -> dict[str, object]:
+    cache_key = (str(mesh_name), int(degree))
+    cached = _LIGHT_CASE_CACHE.get(cache_key)
+    if cached is not None:
+        raw = dict(cached)
+        raw["elem_type"] = f"P{int(degree)}"
+        raw["element_degree"] = int(degree)
+        return raw
     path = ensure_same_mesh_case_hdf5(str(mesh_name), int(degree))
     raw, _ = load_case_hdf5_fields(path, fields=_SAME_MESH_LIGHT_FIELDS, load_adjacency=False)
+    _LIGHT_CASE_CACHE[cache_key] = dict(raw)
+    raw["elem_type"] = f"P{int(degree)}"
+    raw["element_degree"] = int(degree)
+    return raw
+
+
+def _build_rank_local_partition_metadata(
+    raw: dict[str, object],
+    *,
+    reorder_mode: str,
+    comm: MPI.Comm,
+) -> dict[str, object]:
+    nodes = np.asarray(raw["nodes"], dtype=np.float64)
+    elems = np.asarray(raw["elems"], dtype=np.int64)
+    elems_scalar = np.asarray(raw["elems_scalar"], dtype=np.int64)
+    freedofs = np.asarray(raw["freedofs"], dtype=np.int64)
+    u_0 = np.asarray(raw["u_0"], dtype=np.float64)
+    n_free = int(freedofs.size)
+    index_dtype = (
+        np.int32
+        if int(n_free) <= int(np.iinfo(np.int32).max)
+        else np.int64
+    )
+
+    perm = select_reordered_perm_3d(
+        str(reorder_mode),
+        adjacency=None,
+        coords_all=nodes,
+        freedofs=freedofs,
+        n_parts=int(comm.size),
+    )
+    iperm = inverse_permutation(np.asarray(perm, dtype=np.int64))
+    ownership_block_size = int(ownership_block_size_3d(freedofs))
+    lo, hi = petsc_ownership_range(
+        n_free,
+        int(comm.rank),
+        int(comm.size),
+        block_size=ownership_block_size,
+    )
+
+    total_to_free_orig = np.full(len(u_0), -1, dtype=np.int64)
+    total_to_free_orig[freedofs] = np.arange(n_free, dtype=np.int64)
+    total_to_free_reord = np.full(len(u_0), -1, dtype=np.int64)
+    free_mask = total_to_free_orig >= 0
+    total_to_free_reord[free_mask] = iperm[total_to_free_orig[free_mask]]
+    free_reord_by_node = np.asarray(total_to_free_reord.reshape((-1, 3)), dtype=np.int64)
+    owned_node_mask = np.any(
+        (free_reord_by_node >= int(lo)) & (free_reord_by_node < int(hi)),
+        axis=1,
+    )
+    local_elem_mask = np.any(owned_node_mask[elems_scalar], axis=1)
+    local_elem_idx = np.where(local_elem_mask)[0].astype(np.int64)
+    local_elems_total = np.asarray(elems[local_elem_idx], dtype=np.int64)
+    local_scalar_total = np.asarray(elems_scalar[local_elem_idx], dtype=np.int64)
+    local_elems_reordered = np.asarray(total_to_free_reord[local_elems_total], dtype=np.int64)
+    owned_rows, owned_cols = _owned_pattern_from_local_scalar_elems(
+        local_scalar_total,
+        free_reord_by_node=free_reord_by_node,
+        lo=int(lo),
+        hi=int(hi),
+        n_free=int(n_free),
+    )
+
+    masked = np.where(
+        local_elems_reordered >= 0,
+        local_elems_reordered,
+        np.int64(n_free),
+    )
+    elem_min = np.min(masked, axis=1)
+    valid = elem_min < int(n_free)
+    local_elem_owner = np.full(len(local_elem_idx), -1, dtype=np.int64)
+    if np.any(valid):
+        from src.core.petsc.dof_partition import _rank_of_dof_vec
+
+        local_elem_owner[valid] = _rank_of_dof_vec(
+            elem_min[valid],
+            int(n_free),
+            int(comm.size),
+            block_size=ownership_block_size,
+        )
+    local_energy_weights = (local_elem_owner == int(comm.rank)).astype(np.float64)
+    local_total_nodes, inverse = np.unique(
+        local_elems_total.ravel(),
+        return_inverse=True,
+    )
+    elems_local_np = inverse.reshape(local_elems_total.shape).astype(np.int32)
+
+    return {
+        "_distributed_perm": np.asarray(perm, dtype=index_dtype),
+        "_distributed_iperm": np.asarray(iperm, dtype=index_dtype),
+        "_distributed_lo": int(lo),
+        "_distributed_hi": int(hi),
+        "_distributed_ownership_block_size": int(ownership_block_size),
+        "_distributed_total_to_free_reord": np.asarray(total_to_free_reord, dtype=index_dtype),
+        "_distributed_local_elem_idx": np.asarray(local_elem_idx, dtype=index_dtype),
+        "_distributed_local_elems_total": np.asarray(local_elems_total, dtype=index_dtype),
+        "_distributed_local_elems_reordered": np.asarray(local_elems_reordered, dtype=index_dtype),
+        "_distributed_owned_rows": np.asarray(owned_rows, dtype=index_dtype),
+        "_distributed_owned_cols": np.asarray(owned_cols, dtype=index_dtype),
+        "_distributed_local_total_nodes": np.asarray(local_total_nodes, dtype=index_dtype),
+        "_distributed_elems_local_np": np.asarray(elems_local_np, dtype=np.int32),
+        "_distributed_energy_weights": np.asarray(local_energy_weights, dtype=np.float64),
+    }
+
+
+def load_same_mesh_case_hdf5_rank_local_light(
+    mesh_name: str,
+    degree: int,
+    *,
+    reorder_mode: str,
+    comm: MPI.Comm,
+    block_size: int = 3,
+) -> dict[str, object]:
+    del block_size
+    cache_key = (
+        str(mesh_name),
+        int(degree),
+        str(reorder_mode),
+        int(comm.size),
+        int(comm.rank),
+    )
+    cached = _RANK_LOCAL_LIGHT_CACHE.get(cache_key)
+    if cached is not None:
+        raw = dict(cached)
+        raw["elem_type"] = f"P{int(degree)}"
+        raw["element_degree"] = int(degree)
+        return raw
+    raw = load_same_mesh_case_hdf5_light(str(mesh_name), int(degree))
+    raw.update(_build_rank_local_partition_metadata(raw, reorder_mode=str(reorder_mode), comm=comm))
+    _RANK_LOCAL_LIGHT_CACHE[cache_key] = dict(raw)
     raw["elem_type"] = f"P{int(degree)}"
     raw["element_degree"] = int(degree)
     return raw
@@ -1215,38 +1546,28 @@ def load_same_mesh_case_hdf5_rank_local(
     comm: MPI.Comm,
     block_size: int = 3,
 ) -> dict[str, object]:
-    path = ensure_same_mesh_case_hdf5(str(mesh_name), int(degree))
-    raw, _ = load_case_hdf5_fields(path, fields=_SAME_MESH_LIGHT_FIELDS, load_adjacency=False)
-
-    nodes = np.asarray(raw["nodes"], dtype=np.float64)
-    elems = np.asarray(raw["elems"], dtype=np.int64)
-    freedofs = np.asarray(raw["freedofs"], dtype=np.int64)
-    u_0 = np.asarray(raw["u_0"], dtype=np.float64)
-    n_free = int(freedofs.size)
-
-    perm = select_reordered_perm_3d(
+    cache_key = (
+        str(mesh_name),
+        int(degree),
         str(reorder_mode),
-        adjacency=None,
-        coords_all=nodes,
-        freedofs=freedofs,
-        n_parts=int(comm.size),
-    )
-    iperm = inverse_permutation(np.asarray(perm, dtype=np.int64))
-    lo, hi = petsc_ownership_range(
-        n_free,
-        int(comm.rank),
         int(comm.size),
-        block_size=int(ownership_block_size_3d(freedofs)),
+        int(comm.rank),
     )
-
-    total_to_free_orig = np.full(len(u_0), -1, dtype=np.int64)
-    total_to_free_orig[freedofs] = np.arange(n_free, dtype=np.int64)
-    total_to_free_reord = np.full(len(u_0), -1, dtype=np.int64)
-    free_mask = total_to_free_orig >= 0
-    total_to_free_reord[free_mask] = iperm[total_to_free_orig[free_mask]]
-    elems_reordered = total_to_free_reord[elems]
-    local_elem_mask = np.any((elems_reordered >= lo) & (elems_reordered < hi), axis=1)
-    local_elem_idx = np.where(local_elem_mask)[0].astype(np.int64)
+    cached = _RANK_LOCAL_HEAVY_CACHE.get(cache_key)
+    if cached is not None:
+        raw = dict(cached)
+        raw["elem_type"] = f"P{int(degree)}"
+        raw["element_degree"] = int(degree)
+        return raw
+    path = ensure_same_mesh_case_hdf5(str(mesh_name), int(degree))
+    raw = load_same_mesh_case_hdf5_rank_local_light(
+        str(mesh_name),
+        int(degree),
+        reorder_mode=str(reorder_mode),
+        comm=comm,
+        block_size=int(block_size),
+    )
+    local_elem_idx = np.asarray(raw["_distributed_local_elem_idx"], dtype=np.int64)
 
     heavy_fields = (
         "dphix",
@@ -1268,9 +1589,8 @@ def load_same_mesh_case_hdf5_rank_local(
 
     raw["elem_type"] = f"P{int(degree)}"
     raw["element_degree"] = int(degree)
-    raw["_distributed_local_elem_idx"] = np.asarray(local_elem_idx, dtype=np.int64)
     raw["_distributed_local_data"] = True
-    raw["_distributed_perm"] = np.asarray(perm, dtype=np.int64)
+    _RANK_LOCAL_HEAVY_CACHE[cache_key] = dict(raw)
     return raw
 
 

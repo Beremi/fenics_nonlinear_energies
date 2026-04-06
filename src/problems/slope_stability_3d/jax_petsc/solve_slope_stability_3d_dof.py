@@ -96,7 +96,12 @@ def _build_parser(profile_defaults):
 
     parser.add_argument(
         "--mg_strategy",
-        choices=("auto", "same_mesh_p2_p1", "same_mesh_p4_p2_p1"),
+        choices=(
+            "auto",
+            "same_mesh_p2_p1",
+            "same_mesh_p4_p2_p1",
+            "uniform_refined_p4_p2_p1_p1",
+        ),
         default="auto",
     )
     parser.add_argument("--mg_p1_smoother_ksp_type", type=str, default=None)
@@ -200,6 +205,7 @@ def _build_parser(profile_defaults):
     parser.add_argument("--nproc", type=int, default=1)
     parser.add_argument("--save_history", action="store_true")
     parser.add_argument("--quiet", action="store_true")
+    parser.add_argument("--debug_setup", action="store_true")
     parser.add_argument("--out", type=str, default="")
     parser.add_argument("--state-out", type=str, default="")
     parser.add_argument("--progress-out", type=str, default="")

@@ -30,8 +30,8 @@ class GlobalLayout:
     owned_mask: np.ndarray
     owned_rows: np.ndarray
     owned_cols: np.ndarray
-    global_key_to_pos: dict[int, int]
-    owned_key_to_pos: dict[int, int]
+    owned_keys_sorted: np.ndarray
+    owned_pos_sorted: np.ndarray
     elem_owner: np.ndarray
 
 
@@ -51,10 +51,16 @@ class ScatterData:
     vec_e: np.ndarray
     vec_i: np.ndarray
     vec_positions: np.ndarray
-    hess_e: np.ndarray
-    hess_i: np.ndarray
-    hess_j: np.ndarray
-    hess_positions: np.ndarray
+    hess_e: np.ndarray | None
+    hess_i: np.ndarray | None
+    hess_j: np.ndarray | None
+    hess_positions: np.ndarray | None
+
+
+def _array_nbytes(arr: np.ndarray | None) -> int:
+    if arr is None:
+        return 0
+    return int(np.asarray(arr).nbytes)
 
 
 def _build_block_graph(adjacency: sparse.spmatrix, block_size: int) -> sparse.csr_matrix:
@@ -190,10 +196,16 @@ def _owned_pattern_from_local_elems(
     lo: int,
     hi: int,
     n_free: int,
-    chunk_elems: int = 2048,
+    chunk_elems: int = 4096,
 ) -> tuple[np.ndarray, np.ndarray]:
-    key_chunks: list[np.ndarray] = []
-    elems_arr = np.asarray(local_elems_reordered, dtype=np.int64)
+    index_dtype = (
+        np.int32
+        if int(n_free) <= int(np.iinfo(np.int32).max)
+        else np.int64
+    )
+    key_base = np.int64(n_free)
+    elems_arr = np.asarray(local_elems_reordered, dtype=index_dtype)
+    all_keys = np.zeros(0, dtype=np.int64)
     for start in range(0, int(elems_arr.shape[0]), int(chunk_elems)):
         block = elems_arr[start : start + int(chunk_elems)]
         rows = block[:, :, None]
@@ -203,16 +215,121 @@ def _owned_pattern_from_local_elems(
             continue
         row_vals = np.broadcast_to(rows, valid.shape)[valid].astype(np.int64, copy=False)
         col_vals = np.broadcast_to(cols, valid.shape)[valid].astype(np.int64, copy=False)
-        keys = np.unique(row_vals * np.int64(n_free) + col_vals)
-        if keys.size:
-            key_chunks.append(np.asarray(keys, dtype=np.int64))
-    if not key_chunks:
-        return np.zeros(0, dtype=np.int64), np.zeros(0, dtype=np.int64)
-    all_keys = np.unique(np.concatenate(key_chunks).astype(np.int64, copy=False))
+        keys = np.unique(row_vals * key_base + col_vals)
+        if keys.size == 0:
+            continue
+        if all_keys.size == 0:
+            all_keys = np.asarray(keys, dtype=np.int64)
+        else:
+            all_keys = np.union1d(all_keys, np.asarray(keys, dtype=np.int64))
+    if all_keys.size == 0:
+        empty = np.zeros(0, dtype=index_dtype)
+        return empty, empty
     return (
-        np.asarray(all_keys // np.int64(n_free), dtype=np.int64),
-        np.asarray(all_keys % np.int64(n_free), dtype=np.int64),
+        np.asarray(all_keys // key_base, dtype=index_dtype),
+        np.asarray(all_keys % key_base, dtype=index_dtype),
     )
+
+
+def _owned_pattern_from_local_scalar_elems(
+    local_elems_scalar: np.ndarray,
+    *,
+    free_reord_by_node: np.ndarray,
+    lo: int,
+    hi: int,
+    n_free: int,
+    chunk_elems: int = 4096,
+) -> tuple[np.ndarray, np.ndarray]:
+    """Build owned COO pattern from scalar-node element connectivity.
+
+    This avoids materializing full vector-valued element pair expansions in the
+    hot setup path. We first deduplicate scalar node pairs and only then expand
+    the surviving node pairs to the active vector components.
+    """
+    index_dtype = (
+        np.int32 if int(n_free) <= int(np.iinfo(np.int32).max) else np.int64
+    )
+    scalar_elems = np.asarray(local_elems_scalar, dtype=np.int64)
+    if scalar_elems.size == 0:
+        empty = np.zeros(0, dtype=index_dtype)
+        return empty, empty
+
+    free_by_node = np.asarray(free_reord_by_node, dtype=np.int64)
+    owned_node_mask = np.any(
+        (free_by_node >= int(lo)) & (free_by_node < int(hi)),
+        axis=1,
+    )
+    free_node_mask = np.any(free_by_node >= 0, axis=1)
+    key_base = np.int64(free_by_node.shape[0])
+    scalar_key_batches: list[np.ndarray] = []
+    pending_batch: list[np.ndarray] = []
+    pending_batch_bytes = 0
+    max_batch_bytes = 512 * 1024 * 1024
+
+    for start in range(0, int(scalar_elems.shape[0]), int(chunk_elems)):
+        block = scalar_elems[start : start + int(chunk_elems)]
+        row_nodes = block[:, :, None]
+        col_nodes = block[:, None, :]
+        valid = owned_node_mask[row_nodes] & free_node_mask[col_nodes]
+        if not np.any(valid):
+            continue
+        row_vals = np.broadcast_to(row_nodes, valid.shape)[valid].astype(
+            np.int64, copy=False
+        )
+        col_vals = np.broadcast_to(col_nodes, valid.shape)[valid].astype(
+            np.int64, copy=False
+        )
+        keys = np.unique(row_vals * key_base + col_vals)
+        if keys.size == 0:
+            continue
+        keys = np.asarray(keys, dtype=np.int64)
+        pending_batch.append(keys)
+        pending_batch_bytes += int(keys.nbytes)
+        if pending_batch_bytes >= max_batch_bytes:
+            scalar_key_batches.append(np.unique(np.concatenate(pending_batch, axis=0)))
+            pending_batch = []
+            pending_batch_bytes = 0
+
+    if pending_batch:
+        scalar_key_batches.append(np.unique(np.concatenate(pending_batch, axis=0)))
+
+    if not scalar_key_batches:
+        empty = np.zeros(0, dtype=index_dtype)
+        return empty, empty
+    scalar_keys = np.unique(np.concatenate(scalar_key_batches, axis=0))
+
+    row_nodes = scalar_keys // key_base
+    col_nodes = scalar_keys % key_base
+    row_dofs = np.asarray(free_by_node[row_nodes], dtype=np.int64)
+    col_dofs = np.asarray(free_by_node[col_nodes], dtype=np.int64)
+    row_valid = (row_dofs >= int(lo)) & (row_dofs < int(hi))
+    col_valid = col_dofs >= 0
+    total_nnz = int(np.sum(np.sum(row_valid, axis=1) * np.sum(col_valid, axis=1)))
+    rows = np.empty(total_nnz, dtype=index_dtype)
+    cols = np.empty(total_nnz, dtype=index_dtype)
+    offset = 0
+    for row_comp in range(row_dofs.shape[1]):
+        row_mask = row_valid[:, row_comp]
+        if not np.any(row_mask):
+            continue
+        row_vals = np.asarray(row_dofs[:, row_comp], dtype=index_dtype)
+        for col_comp in range(col_dofs.shape[1]):
+            mask = row_mask & col_valid[:, col_comp]
+            if not np.any(mask):
+                continue
+            count = int(np.count_nonzero(mask))
+            rows[offset : offset + count] = row_vals[mask]
+            cols[offset : offset + count] = np.asarray(
+                col_dofs[:, col_comp], dtype=index_dtype
+            )[mask]
+            offset += count
+
+    if offset != total_nnz:
+        rows = rows[:offset]
+        cols = cols[:offset]
+
+    order = np.lexsort((cols, rows))
+    return rows[order], cols[order]
 
 
 def build_global_layout(
@@ -228,35 +345,51 @@ def build_global_layout(
     elems = np.asarray(params["elems"], dtype=np.int64)
     n_total = int(len(np.asarray(params[dirichlet_key], dtype=np.float64)))
     n_free = int(freedofs.size)
-    iperm = inverse_permutation(perm)
-    lo, hi = petsc_ownership_range(
-        n_free, comm.rank, comm.size, block_size=int(block_size)
+    index_dtype = (
+        np.int32
+        if int(n_free) <= int(np.iinfo(np.int32).max)
+        else np.int64
     )
+    if "_distributed_iperm" in params:
+        iperm = np.asarray(params["_distributed_iperm"], dtype=np.int64)
+    else:
+        iperm = inverse_permutation(perm)
+    if "_distributed_lo" in params and "_distributed_hi" in params:
+        lo = int(params["_distributed_lo"])
+        hi = int(params["_distributed_hi"])
+    else:
+        lo, hi = petsc_ownership_range(
+            n_free, comm.rank, comm.size, block_size=int(block_size)
+        )
 
-    total_to_free_orig = np.full(n_total, -1, dtype=np.int64)
-    total_to_free_orig[freedofs] = np.arange(n_free, dtype=np.int64)
-    total_to_free_reord = np.full(n_total, -1, dtype=np.int64)
-    mask = total_to_free_orig >= 0
-    total_to_free_reord[mask] = iperm[total_to_free_orig[mask]]
+    if "_distributed_total_to_free_reord" in params:
+        total_to_free_reord = np.asarray(
+            params["_distributed_total_to_free_reord"], dtype=np.int64
+        )
+    else:
+        total_to_free_orig = np.full(n_total, -1, dtype=np.int64)
+        total_to_free_orig[freedofs] = np.arange(n_free, dtype=np.int64)
+        total_to_free_reord = np.full(n_total, -1, dtype=np.int64)
+        mask = total_to_free_orig >= 0
+        total_to_free_reord[mask] = iperm[total_to_free_orig[mask]]
     key_base = np.int64(n_free)
     if adjacency is not None:
         row_adj, col_adj = adjacency.tocsr().nonzero()
         coo_rows = iperm[np.asarray(row_adj, dtype=np.int64)]
         coo_cols = iperm[np.asarray(col_adj, dtype=np.int64)]
         owned_mask = (coo_rows >= lo) & (coo_rows < hi)
-        owned_rows = np.asarray(coo_rows[owned_mask], dtype=np.int64)
-        owned_cols = np.asarray(coo_cols[owned_mask], dtype=np.int64)
+        owned_rows = np.asarray(coo_rows[owned_mask], dtype=index_dtype)
+        owned_cols = np.asarray(coo_cols[owned_mask], dtype=index_dtype)
+        coo_rows = np.asarray(coo_rows, dtype=index_dtype)
+        coo_cols = np.asarray(coo_cols, dtype=index_dtype)
 
-        global_keys = (
-            np.asarray(coo_rows, dtype=np.int64) * key_base
-            + np.asarray(coo_cols, dtype=np.int64)
-        )
         owned_keys = (
             np.asarray(owned_rows, dtype=np.int64) * key_base
             + np.asarray(owned_cols, dtype=np.int64)
         )
-        global_key_to_pos = {int(k): i for i, k in enumerate(global_keys.tolist())}
-        owned_key_to_pos = {int(k): i for i, k in enumerate(owned_keys.tolist())}
+        owned_sort = np.argsort(owned_keys, kind="mergesort")
+        owned_keys_sorted = np.asarray(owned_keys[owned_sort], dtype=np.int64)
+        owned_pos_sorted = np.asarray(owned_sort, dtype=np.int64)
 
         elems_reordered = total_to_free_reord[elems]
         masked = np.where(elems_reordered >= 0, elems_reordered, np.int64(n_free))
@@ -271,26 +404,38 @@ def build_global_layout(
                 block_size=int(block_size),
             )
     elif "_distributed_local_elem_idx" in params:
-        local_elem_idx = np.asarray(params["_distributed_local_elem_idx"], dtype=np.int64)
-        local_elems_total = np.asarray(elems[local_elem_idx], dtype=np.int64)
-        local_elems_reordered = np.asarray(
-            total_to_free_reord[local_elems_total], dtype=np.int64
-        )
-        owned_rows, owned_cols = _owned_pattern_from_local_elems(
-            local_elems_reordered,
-            lo=int(lo),
-            hi=int(hi),
-            n_free=int(n_free),
-        )
-        coo_rows = np.asarray(owned_rows, dtype=np.int64)
-        coo_cols = np.asarray(owned_cols, dtype=np.int64)
+        if "_distributed_owned_rows" in params and "_distributed_owned_cols" in params:
+            owned_rows = np.asarray(params["_distributed_owned_rows"], dtype=np.int64)
+            owned_cols = np.asarray(params["_distributed_owned_cols"], dtype=np.int64)
+        else:
+            local_elem_idx = np.asarray(params["_distributed_local_elem_idx"], dtype=np.int64)
+            if "_distributed_local_elems_reordered" in params:
+                local_elems_reordered = np.asarray(
+                    params["_distributed_local_elems_reordered"], dtype=np.int64
+                )
+            else:
+                local_elems_total = np.asarray(elems[local_elem_idx], dtype=np.int64)
+                local_elems_reordered = np.asarray(
+                    total_to_free_reord[local_elems_total], dtype=np.int64
+                )
+            owned_rows, owned_cols = _owned_pattern_from_local_elems(
+                local_elems_reordered,
+                lo=int(lo),
+                hi=int(hi),
+                n_free=int(n_free),
+            )
+        owned_rows = np.asarray(owned_rows, dtype=index_dtype)
+        owned_cols = np.asarray(owned_cols, dtype=index_dtype)
+        coo_rows = np.asarray(owned_rows, dtype=index_dtype)
+        coo_cols = np.asarray(owned_cols, dtype=index_dtype)
         owned_mask = np.ones(len(owned_rows), dtype=bool)
         owned_keys = (
             np.asarray(owned_rows, dtype=np.int64) * key_base
             + np.asarray(owned_cols, dtype=np.int64)
         )
-        global_key_to_pos = {int(k): i for i, k in enumerate(owned_keys.tolist())}
-        owned_key_to_pos = dict(global_key_to_pos)
+        owned_sort = np.argsort(owned_keys, kind="mergesort")
+        owned_keys_sorted = np.asarray(owned_keys[owned_sort], dtype=np.int64)
+        owned_pos_sorted = np.asarray(owned_sort, dtype=np.int64)
         elem_owner = np.zeros(0, dtype=np.int64)
     else:
         raise ValueError(
@@ -305,13 +450,13 @@ def build_global_layout(
         hi=hi,
         n_free=n_free,
         total_to_free_reord=total_to_free_reord,
-        coo_rows=np.asarray(coo_rows, dtype=np.int64),
-        coo_cols=np.asarray(coo_cols, dtype=np.int64),
+        coo_rows=np.asarray(coo_rows, dtype=index_dtype),
+        coo_cols=np.asarray(coo_cols, dtype=index_dtype),
         owned_mask=np.asarray(owned_mask, dtype=bool),
         owned_rows=owned_rows,
         owned_cols=owned_cols,
-        global_key_to_pos=global_key_to_pos,
-        owned_key_to_pos=owned_key_to_pos,
+        owned_keys_sorted=np.asarray(owned_keys_sorted, dtype=np.int64),
+        owned_pos_sorted=np.asarray(owned_pos_sorted, dtype=np.int64),
         elem_owner=elem_owner,
     )
 
@@ -327,26 +472,41 @@ def build_local_overlap_data(
     elems = np.asarray(params["elems"], dtype=np.int64)
     if "_distributed_local_elem_idx" in params:
         local_elem_idx = np.asarray(params["_distributed_local_elem_idx"], dtype=np.int64)
-        local_elems_total = np.asarray(elems[local_elem_idx], dtype=np.int64)
-        elem_reordered_local = np.asarray(
-            layout.total_to_free_reord[local_elems_total], dtype=np.int64
-        )
-        masked = np.where(
-            elem_reordered_local >= 0,
-            elem_reordered_local,
-            np.int64(layout.n_free),
-        )
-        elem_min = np.min(masked, axis=1)
-        valid = elem_min < int(layout.n_free)
-        local_elem_owner = np.full(len(local_elem_idx), -1, dtype=np.int64)
-        if np.any(valid):
-            local_elem_owner[valid] = _rank_of_dof_vec(
-                elem_min[valid],
-                int(layout.n_free),
-                int(comm.size),
-                block_size=int(block_size),
+        if "_distributed_local_elems_total" in params:
+            local_elems_total = np.asarray(
+                params["_distributed_local_elems_total"], dtype=np.int64
             )
-        local_energy_weights = (local_elem_owner == int(comm.rank)).astype(np.float64)
+        else:
+            local_elems_total = np.asarray(elems[local_elem_idx], dtype=np.int64)
+        if "_distributed_local_elems_reordered" in params:
+            elem_reordered_local = np.asarray(
+                params["_distributed_local_elems_reordered"], dtype=np.int64
+            )
+        else:
+            elem_reordered_local = np.asarray(
+                layout.total_to_free_reord[local_elems_total], dtype=np.int64
+            )
+        if "_distributed_energy_weights" in params:
+            local_energy_weights = np.asarray(
+                params["_distributed_energy_weights"], dtype=np.float64
+            )
+        else:
+            masked = np.where(
+                elem_reordered_local >= 0,
+                elem_reordered_local,
+                np.int64(layout.n_free),
+            )
+            elem_min = np.min(masked, axis=1)
+            valid = elem_min < int(layout.n_free)
+            local_elem_owner = np.full(len(local_elem_idx), -1, dtype=np.int64)
+            if np.any(valid):
+                local_elem_owner[valid] = _rank_of_dof_vec(
+                    elem_min[valid],
+                    int(layout.n_free),
+                    int(comm.size),
+                    block_size=int(block_size),
+                )
+            local_energy_weights = (local_elem_owner == int(comm.rank)).astype(np.float64)
         local_elem_data = {}
         for key in elem_data_keys:
             local_key = f"_distributed_{key}"
@@ -369,10 +529,16 @@ def build_local_overlap_data(
             for key in elem_data_keys
         }
 
-    local_total_nodes, inverse = np.unique(
-        local_elems_total.ravel(), return_inverse=True
-    )
-    elems_local_np = inverse.reshape(local_elems_total.shape).astype(np.int32)
+    if "_distributed_local_total_nodes" in params and "_distributed_elems_local_np" in params:
+        local_total_nodes = np.asarray(
+            params["_distributed_local_total_nodes"], dtype=np.int64
+        )
+        elems_local_np = np.asarray(params["_distributed_elems_local_np"], dtype=np.int32)
+    else:
+        local_total_nodes, inverse = np.unique(
+            local_elems_total.ravel(), return_inverse=True
+        )
+        elems_local_np = inverse.reshape(local_elems_total.shape).astype(np.int32)
 
     return LocalOverlapData(
         local_elem_idx=local_elem_idx,
@@ -470,6 +636,7 @@ class ReorderedElementAssemblerBase:
         self.iter_timings = []
         self._hvp_eval_mode = "element_overlap"
         self._setup_timings: dict[str, float] = {}
+        self._memory_summary: dict[str, float | int] = {}
         self._callback_stats = {
             "energy": {
                 "calls": 0,
@@ -614,6 +781,7 @@ class ReorderedElementAssemblerBase:
             self._owned_hessian_values_petsc = np.zeros(
                 owned_nnz, dtype=PETSc.ScalarType
             )
+        self._memory_summary = self._build_memory_summary()
         self._nullspace = None
         t0 = time.perf_counter()
         if self.use_near_nullspace and self.near_nullspace_key is not None:
@@ -646,11 +814,72 @@ class ReorderedElementAssemblerBase:
     def _make_local_element_kernels(self):
         raise NotImplementedError
 
+    def _needs_prebuilt_hessian_scatter(self) -> bool:
+        return self.local_hessian_mode == "element"
+
+    def _build_memory_summary(self) -> dict[str, float | int]:
+        local_elem_bytes = 0
+        for value in self.local_data.local_elem_data.values():
+            local_elem_bytes += _array_nbytes(value)
+        summary: dict[str, float | int] = {
+            "layout_bytes": int(
+                _array_nbytes(self.layout.perm)
+                + _array_nbytes(self.layout.iperm)
+                + _array_nbytes(self.layout.total_to_free_reord)
+                + _array_nbytes(self.layout.coo_rows)
+                + _array_nbytes(self.layout.coo_cols)
+                + _array_nbytes(self.layout.owned_mask)
+                + _array_nbytes(self.layout.owned_rows)
+                + _array_nbytes(self.layout.owned_cols)
+                + _array_nbytes(self.layout.owned_keys_sorted)
+                + _array_nbytes(self.layout.owned_pos_sorted)
+                + _array_nbytes(self.layout.elem_owner)
+            ),
+            "local_overlap_bytes": int(
+                _array_nbytes(self.local_data.local_elem_idx)
+                + _array_nbytes(self.local_data.local_total_nodes)
+                + _array_nbytes(self.local_data.elems_local_np)
+                + _array_nbytes(self.local_data.elems_reordered)
+                + _array_nbytes(self.local_data.energy_weights)
+                + int(local_elem_bytes)
+            ),
+            "scatter_bytes": int(
+                _array_nbytes(self._scatter.owned_local_pos)
+                + _array_nbytes(self._scatter.vec_e)
+                + _array_nbytes(self._scatter.vec_i)
+                + _array_nbytes(self._scatter.vec_positions)
+                + _array_nbytes(self._scatter.hess_e)
+                + _array_nbytes(self._scatter.hess_i)
+                + _array_nbytes(self._scatter.hess_j)
+                + _array_nbytes(self._scatter.hess_positions)
+            ),
+            "owned_hessian_values_bytes": int(_array_nbytes(self._owned_hessian_values)),
+            "owned_nnz": int(self.layout.owned_rows.size),
+            "local_elements": int(self.local_data.local_elem_idx.size),
+            "local_overlap_dofs": int(self.local_data.local_total_nodes.size),
+        }
+        summary["layout_gib"] = float(summary["layout_bytes"]) / (1024.0**3)
+        summary["local_overlap_gib"] = float(summary["local_overlap_bytes"]) / (1024.0**3)
+        summary["scatter_gib"] = float(summary["scatter_bytes"]) / (1024.0**3)
+        summary["owned_hessian_values_gib"] = float(summary["owned_hessian_values_bytes"]) / (
+            1024.0**3
+        )
+        summary["tracked_total_gib"] = (
+            float(summary["layout_gib"])
+            + float(summary["local_overlap_gib"])
+            + float(summary["scatter_gib"])
+            + float(summary["owned_hessian_values_gib"])
+        )
+        return summary
+
     def _build_rhs_owned(self) -> np.ndarray:
         return np.zeros(self.layout.hi - self.layout.lo, dtype=np.float64)
 
     def setup_summary(self) -> dict[str, float]:
         return {str(k): float(v) for k, v in self._setup_timings.items()}
+
+    def memory_summary(self) -> dict[str, float | int]:
+        return dict(self._memory_summary)
 
     def _reset_owned_hessian_values(self) -> np.ndarray:
         if not self.reuse_hessian_value_buffers:
@@ -708,6 +937,9 @@ class ReorderedElementAssemblerBase:
         )
         self._energy_jit(jnp.asarray(v_local)).block_until_ready()
         self._grad_jit(jnp.asarray(v_local)).block_until_ready()
+        self._warmup_hessian(v_local)
+
+    def _warmup_hessian(self, v_local: np.ndarray) -> None:
         self._elem_hess_jit(jnp.asarray(v_local)).block_until_ready()
 
     def _setup_local_sfd(self):
@@ -981,6 +1213,18 @@ class ReorderedElementAssemblerBase:
         vec_vi = np.where(vec_valid)
         vec_positions = elems_reordered[vec_vi] - self.layout.lo
 
+        if not self._needs_prebuilt_hessian_scatter():
+            return ScatterData(
+                owned_local_pos=owned_local_pos,
+                vec_e=np.asarray(vec_vi[0], dtype=np.int64),
+                vec_i=np.asarray(vec_vi[1], dtype=np.int64),
+                vec_positions=np.asarray(vec_positions, dtype=np.int64),
+                hess_e=None,
+                hess_i=None,
+                hess_j=None,
+                hess_positions=None,
+            )
+
         rows = elems_reordered[:, :, None]
         cols = elems_reordered[:, None, :]
         valid = (rows >= self.layout.lo) & (rows < self.layout.hi) & (cols >= 0)
@@ -990,11 +1234,13 @@ class ReorderedElementAssemblerBase:
         keys = row_vals.astype(np.int64) * np.int64(self.layout.n_free) + col_vals.astype(
             np.int64
         )
-        positions = np.fromiter(
-            (self.layout.owned_key_to_pos[int(k)] for k in keys),
-            dtype=np.int64,
-            count=len(keys),
-        )
+        key_pos = np.searchsorted(self.layout.owned_keys_sorted, keys)
+        if np.any(key_pos >= self.layout.owned_keys_sorted.size):
+            raise RuntimeError("Scatter lookup exceeded owned COO pattern size")
+        matched = self.layout.owned_keys_sorted[key_pos]
+        if not np.array_equal(matched, keys):
+            raise RuntimeError("Scatter lookup found mismatched owned COO entries")
+        positions = np.asarray(self.layout.owned_pos_sorted[key_pos], dtype=np.int64)
         return ScatterData(
             owned_local_pos=owned_local_pos,
             vec_e=np.asarray(vec_vi[0], dtype=np.int64),
@@ -1207,6 +1453,13 @@ class ReorderedElementAssemblerBase:
         return finalize
 
     def assemble_hessian_element(self, u_owned):
+        if (
+            self._scatter.hess_e is None
+            or self._scatter.hess_i is None
+            or self._scatter.hess_j is None
+            or self._scatter.hess_positions is None
+        ):
+            raise RuntimeError("Prebuilt Hessian scatter data is unavailable for this assembler")
         timings = {}
         t_total = time.perf_counter()
 

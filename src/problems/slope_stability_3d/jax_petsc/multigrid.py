@@ -16,8 +16,10 @@ from src.core.petsc.reordered_element_base import (
     inverse_permutation,
 )
 from src.problems.slope_stability_3d.support.mesh import (
+    base_mesh_name_for_name,
     build_same_mesh_lagrange_case_data,
     load_same_mesh_case_hdf5_light,
+    load_same_mesh_case_hdf5_rank_local_light,
     ownership_block_size_3d,
     select_reordered_perm_3d,
 )
@@ -56,12 +58,17 @@ class SlopeStability3DMGHierarchy:
     prolongations: list[PETSc.Mat]
     restrictions: list[PETSc.Mat]
     build_metadata: dict[str, object] | None = None
+    level_nullspaces: list[PETSc.NullSpace | None] | None = None
+    level_coordinates: list[np.ndarray | None] | None = None
 
     def cleanup(self) -> None:
         for mat in self.restrictions:
             mat.destroy()
         for mat in self.prolongations:
             mat.destroy()
+        for ns in self.level_nullspaces or []:
+            if ns is not None:
+                ns.destroy()
 
 
 @dataclass(frozen=True)
@@ -232,28 +239,40 @@ def _build_level_space(
 ) -> MGLevelSpace:
     freedofs = np.asarray(params["freedofs"], dtype=np.int64)
     if perm_override is None:
-        if adjacency is None and str(reorder_mode) not in {"none", "block_xyz"}:
-            raise ValueError(
-                "rank-local MG level build currently supports only reorder modes "
-                "'none' and 'block_xyz' without a global adjacency"
+        if "_distributed_perm" in params:
+            perm = np.asarray(params["_distributed_perm"], dtype=np.int64)
+        else:
+            if adjacency is None and str(reorder_mode) not in {"none", "block_xyz"}:
+                raise ValueError(
+                    "rank-local MG level build currently supports only reorder modes "
+                    "'none' and 'block_xyz' without a global adjacency"
+                )
+            perm = select_reordered_perm_3d(
+                str(reorder_mode),
+                adjacency=adjacency,
+                coords_all=np.asarray(params["nodes"], dtype=np.float64),
+                freedofs=freedofs,
+                n_parts=int(comm.size),
             )
-        perm = select_reordered_perm_3d(
-            str(reorder_mode),
-            adjacency=adjacency,
-            coords_all=np.asarray(params["nodes"], dtype=np.float64),
-            freedofs=freedofs,
-            n_parts=int(comm.size),
-        )
     else:
         perm = np.asarray(perm_override, dtype=np.int64)
-    iperm = inverse_permutation(np.asarray(perm, dtype=np.int64))
-    ownership_block_size = ownership_block_size_3d(freedofs)
-    lo, hi = petsc_ownership_range(
-        int(freedofs.size),
-        int(comm.rank),
-        int(comm.size),
-        block_size=int(ownership_block_size),
+    if "_distributed_iperm" in params:
+        iperm = np.asarray(params["_distributed_iperm"], dtype=np.int64)
+    else:
+        iperm = inverse_permutation(np.asarray(perm, dtype=np.int64))
+    ownership_block_size = int(
+        params.get("_distributed_ownership_block_size", ownership_block_size_3d(freedofs))
     )
+    if "_distributed_lo" in params and "_distributed_hi" in params:
+        lo = int(params["_distributed_lo"])
+        hi = int(params["_distributed_hi"])
+    else:
+        lo, hi = petsc_ownership_range(
+            int(freedofs.size),
+            int(comm.rank),
+            int(comm.size),
+            block_size=int(ownership_block_size),
+        )
     total_to_free_orig = np.full(
         len(np.asarray(params["u_0"], dtype=np.float64)),
         -1,
@@ -282,7 +301,12 @@ def _load_level_from_spec(
     build_mode: str = "replicated",
 ) -> MGLevelSpace:
     if str(build_mode) == "rank_local":
-        params = load_same_mesh_case_hdf5_light(str(spec.mesh_name), int(spec.degree))
+        params = load_same_mesh_case_hdf5_rank_local_light(
+            str(spec.mesh_name),
+            int(spec.degree),
+            reorder_mode=str(reorder_mode),
+            comm=comm,
+        )
         adjacency = None
     else:
         case_data = build_same_mesh_lagrange_case_data(
@@ -384,6 +408,100 @@ def _adjacent_same_mesh_prolongation_entries(
     return _sorted_coo_arrays(entries)
 
 
+def _reference_coordinates_in_parent_tet(
+    point: np.ndarray,
+    parent_vertices: np.ndarray,
+) -> np.ndarray:
+    parent_vertices = np.asarray(parent_vertices, dtype=np.float64)
+    point = np.asarray(point, dtype=np.float64)
+    base = np.asarray(parent_vertices[0], dtype=np.float64)
+    jac = np.column_stack(
+        (
+            np.asarray(parent_vertices[1] - base, dtype=np.float64),
+            np.asarray(parent_vertices[2] - base, dtype=np.float64),
+            np.asarray(parent_vertices[3] - base, dtype=np.float64),
+        )
+    )
+    rhs = np.asarray(point - base, dtype=np.float64)
+    return np.linalg.solve(jac, rhs)
+
+
+def _parent_mesh_prolongation_entries(
+    coarse: MGLevelSpace,
+    fine: MGLevelSpace,
+    *,
+    build_mode: str,
+    tolerance: float = 1.0e-12,
+) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    parent_mesh_name = str(fine.params.get("macro_parent_mesh_name", "") or "")
+    if parent_mesh_name != str(coarse.mesh_name):
+        raise ValueError(
+            "cross-mesh parent transfer requires fine macro_parent_mesh_name "
+            f"to match coarse mesh_name, got {parent_mesh_name!r} vs {coarse.mesh_name!r}"
+        )
+
+    coarse_elem = np.asarray(coarse.params["elems_scalar"], dtype=np.int64)
+    coarse_nodes = np.asarray(coarse.params["nodes"], dtype=np.float64)
+    fine_elem = np.asarray(fine.params["elems_scalar"], dtype=np.int64)
+    fine_nodes = np.asarray(fine.params["nodes"], dtype=np.float64)
+    fine_parent = np.asarray(fine.params["macro_parent"], dtype=np.int64).ravel()
+    if fine_parent.shape[0] != fine_elem.shape[0]:
+        raise ValueError("fine macro_parent length must match fine macro element count")
+
+    node_interp_cache: dict[int, tuple[np.ndarray, np.ndarray]] = {}
+    entries: dict[tuple[int, int], float] = {}
+    for elem_id in range(int(fine_elem.shape[0])):
+        parent_id = int(fine_parent[elem_id])
+        coarse_elem_nodes = np.asarray(coarse_elem[parent_id], dtype=np.int64)
+        coarse_vertex_nodes = coarse_elem_nodes[:4]
+        parent_vertices = np.asarray(coarse_nodes[coarse_vertex_nodes], dtype=np.float64)
+        fine_nodes_elem = np.asarray(fine_elem[elem_id], dtype=np.int64)
+        for fine_node in fine_nodes_elem.tolist():
+            cached = node_interp_cache.get(int(fine_node))
+            if cached is None:
+                xi = _reference_coordinates_in_parent_tet(
+                    fine_nodes[int(fine_node)],
+                    parent_vertices,
+                ).reshape(3, 1)
+                weights = np.asarray(
+                    evaluate_tetra_lagrange_basis(int(coarse.degree), xi)[0][:, 0],
+                    dtype=np.float64,
+                )
+                nonzero = np.flatnonzero(np.abs(weights) > float(tolerance))
+                cached = (
+                    np.asarray(coarse_elem_nodes[nonzero], dtype=np.int64),
+                    np.asarray(weights[nonzero], dtype=np.float64),
+                )
+                node_interp_cache[int(fine_node)] = cached
+            coarse_global_nodes, interp_weights = cached
+            for comp in range(VECTOR_BLOCK_SIZE):
+                fine_total = VECTOR_BLOCK_SIZE * int(fine_node) + comp
+                fine_free_orig = int(fine.total_to_free_orig[fine_total])
+                if fine_free_orig < 0:
+                    continue
+                fine_row = int(fine.iperm[fine_free_orig])
+                if str(build_mode) == "owned_rows" and not (int(fine.lo) <= fine_row < int(fine.hi)):
+                    continue
+                for coarse_global_node, value in zip(coarse_global_nodes, interp_weights, strict=False):
+                    coarse_total = VECTOR_BLOCK_SIZE * int(coarse_global_node) + comp
+                    coarse_free_orig = int(coarse.total_to_free_orig[coarse_total])
+                    if coarse_free_orig < 0:
+                        continue
+                    coarse_col = int(coarse.iperm[coarse_free_orig])
+                    key = (fine_row, coarse_col)
+                    previous = entries.get(key)
+                    value_f = float(value)
+                    if previous is None:
+                        entries[key] = value_f
+                        continue
+                    if abs(previous - value_f) > float(tolerance):
+                        raise ValueError(
+                            "Inconsistent parent-mesh interpolation entry for "
+                            f"row {fine_row}, col {coarse_col}: {previous} vs {value_f}"
+                        )
+    return _sorted_coo_arrays(entries)
+
+
 def _build_matrix_from_coo(
     rows: np.ndarray,
     cols: np.ndarray,
@@ -429,19 +547,24 @@ def _build_free_reordered_prolongation(
         raise ValueError(f"Unsupported transfer build mode {build_mode!r}")
 
     t0 = time.perf_counter()
-    if build_mode == "root_bcast" and int(comm.size) > 1:
-        payload = (
-            _adjacent_same_mesh_prolongation_entries(coarse, fine, build_mode="replicated")
-            if int(comm.rank) == 0
-            else None
-        )
-        rows, cols, data = comm.bcast(payload, root=0)
-    else:
-        rows, cols, data = _adjacent_same_mesh_prolongation_entries(
+    def _build_entries(local_build_mode: str) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+        if str(coarse.mesh_name) == str(fine.mesh_name):
+            return _adjacent_same_mesh_prolongation_entries(
+                coarse,
+                fine,
+                build_mode=local_build_mode,
+            )
+        return _parent_mesh_prolongation_entries(
             coarse,
             fine,
-            build_mode=build_mode,
+            build_mode=local_build_mode,
         )
+
+    if build_mode == "root_bcast" and int(comm.size) > 1:
+        payload = _build_entries("replicated") if int(comm.rank) == 0 else None
+        rows, cols, data = comm.bcast(payload, root=0)
+    else:
+        rows, cols, data = _build_entries(build_mode)
     mapping_time = float(time.perf_counter() - t0)
 
     t1 = time.perf_counter()
@@ -495,6 +618,20 @@ def mixed_hierarchy_specs(
         if finest_degree != 4:
             raise ValueError("same_mesh_p4_p2_p1 requires finest degree 4")
         return [
+            MGHierarchySpec(str(mesh_name), 1),
+            MGHierarchySpec(str(mesh_name), 2),
+            MGHierarchySpec(str(mesh_name), 4),
+        ]
+    if str(strategy) == "uniform_refined_p4_p2_p1_p1":
+        if finest_degree != 4:
+            raise ValueError("uniform_refined_p4_p2_p1_p1 requires finest degree 4")
+        coarse_mesh_name = base_mesh_name_for_name(str(mesh_name))
+        if coarse_mesh_name == str(mesh_name):
+            raise ValueError(
+                "uniform_refined_p4_p2_p1_p1 requires a refined mesh name such as hetero_ssr_L1_2"
+            )
+        return [
+            MGHierarchySpec(str(coarse_mesh_name), 1),
             MGHierarchySpec(str(mesh_name), 1),
             MGHierarchySpec(str(mesh_name), 2),
             MGHierarchySpec(str(mesh_name), 4),
@@ -591,6 +728,8 @@ def build_mixed_pmg_hierarchy(
             "level_records": level_records,
             "transfer_records": transfer_records,
         },
+        level_nullspaces=[None] * len(levels),
+        level_coordinates=[None] * len(levels),
     )
 
 
@@ -692,16 +831,31 @@ def attach_pmg_level_metadata(
     nullspaces: list[PETSc.NullSpace] = []
     level_records: list[dict[str, object]] = []
 
-    def _iter_level_ksps(level_idx: int) -> list[PETSc.KSP]:
+    def _iter_level_ksps(level_idx: int) -> list[tuple[str, PETSc.KSP]]:
         if level_idx == 0:
-            return [pc.getMGCoarseSolve()]
-        return [pc.getMGSmoother(level_idx)]
+            return [("coarse", pc.getMGCoarseSolve())]
+        return [
+            ("smoother", pc.getMGSmoother(level_idx)),
+            ("down", pc.getMGSmootherDown(level_idx)),
+            ("up", pc.getMGSmootherUp(level_idx)),
+        ]
 
     for level_idx, level_space in enumerate(hierarchy.levels):
-        level_nullspace = (
-            _build_level_nullspace(level_space, ksp.comm) if use_near_nullspace else None
-        )
-        level_coordinates = _build_level_coordinates(level_space)
+        if use_near_nullspace:
+            if hierarchy.level_nullspaces is None:
+                hierarchy.level_nullspaces = [None] * len(hierarchy.levels)
+            level_nullspace = hierarchy.level_nullspaces[level_idx]
+            if level_nullspace is None:
+                level_nullspace = _build_level_nullspace(level_space, ksp.comm)
+                hierarchy.level_nullspaces[level_idx] = level_nullspace
+        else:
+            level_nullspace = None
+        if hierarchy.level_coordinates is None:
+            hierarchy.level_coordinates = [None] * len(hierarchy.levels)
+        level_coordinates = hierarchy.level_coordinates[level_idx]
+        if level_coordinates is None:
+            level_coordinates = _build_level_coordinates(level_space)
+            hierarchy.level_coordinates[level_idx] = level_coordinates
         record = {
             "level_index": int(level_idx),
             "mesh_name": str(level_space.mesh_name),
@@ -713,7 +867,7 @@ def attach_pmg_level_metadata(
             "matrix_block_sizes": [],
             "ksp_records": [],
         }
-        for level_ksp in _iter_level_ksps(level_idx):
+        for role, level_ksp in _iter_level_ksps(level_idx):
             try:
                 amat, pmat = level_ksp.getOperators()
             except PETSc.Error:
@@ -753,6 +907,7 @@ def attach_pmg_level_metadata(
                 )
             record["ksp_records"].append(
                 {
+                    "role": str(role),
                     "ksp_type": str(level_ksp.getType()),
                     "pc_type": str(level_pc.getType()),
                 }

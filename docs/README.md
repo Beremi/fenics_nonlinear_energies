@@ -22,6 +22,7 @@ If you are new to the codebase, start here rather than in `archive/`.
   - [GinzburgLandau results](results/GinzburgLandau.md)
   - [HyperElasticity results](results/HyperElasticity.md)
   - [Plasticity results](results/Plasticity.md)
+  - [Plasticity3D results](results/Plasticity3D.md)
   - [Topology results](results/Topology.md)
 
 ## Structure

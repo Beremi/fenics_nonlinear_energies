@@ -18,6 +18,7 @@ solvers and maintained benchmark runners.
   - [GinzburgLandau results](../results/GinzburgLandau.md)
   - [HyperElasticity results](../results/HyperElasticity.md)
   - [Plasticity results](../results/Plasticity.md)
+  - [Plasticity3D results](../results/Plasticity3D.md)
   - [Topology results](../results/Topology.md)
 
 ## Environment

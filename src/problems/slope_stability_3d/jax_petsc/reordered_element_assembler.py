@@ -22,6 +22,154 @@ from src.problems.slope_stability_3d.jax.jax_energy_3d import (
 config.update("jax_enable_x64", True)
 
 
+_PLASTIC_ELEMENT_ENERGY_BATCH = jax.jit(
+    jax.vmap(
+        element_energy_3d,
+        in_axes=(0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
+    )
+)
+_ELASTIC_ELEMENT_ENERGY_BATCH = jax.jit(
+    jax.vmap(
+        elastic_element_energy_3d,
+        in_axes=(0, 0, 0, 0, 0, 0, 0, 0),
+    )
+)
+_PLASTIC_ELEMENT_HESSIAN_BATCH = jax.jit(
+    jax.vmap(
+        jax.hessian(element_energy_3d),
+        in_axes=(0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
+    )
+)
+_ELASTIC_ELEMENT_HESSIAN_BATCH = jax.jit(
+    jax.vmap(
+        jax.hessian(elastic_element_energy_3d),
+        in_axes=(0, 0, 0, 0, 0, 0, 0, 0),
+    )
+)
+
+
+def _plastic_local_full_energy(
+    v_local,
+    elems,
+    dphix,
+    dphiy,
+    dphiz,
+    quad_weight,
+    c_bar_q,
+    sin_phi_q,
+    shear_q,
+    bulk_q,
+    lame_q,
+):
+    v_elem = v_local[elems]
+    return jnp.sum(
+        _PLASTIC_ELEMENT_ENERGY_BATCH(
+            v_elem,
+            dphix,
+            dphiy,
+            dphiz,
+            quad_weight,
+            c_bar_q,
+            sin_phi_q,
+            shear_q,
+            bulk_q,
+            lame_q,
+        )
+    )
+
+
+def _plastic_weighted_energy(
+    v_local,
+    elems,
+    dphix,
+    dphiy,
+    dphiz,
+    quad_weight,
+    c_bar_q,
+    sin_phi_q,
+    shear_q,
+    bulk_q,
+    lame_q,
+    energy_weights,
+):
+    v_elem = v_local[elems]
+    return jnp.sum(
+        _PLASTIC_ELEMENT_ENERGY_BATCH(
+            v_elem,
+            dphix,
+            dphiy,
+            dphiz,
+            quad_weight,
+            c_bar_q,
+            sin_phi_q,
+            shear_q,
+            bulk_q,
+            lame_q,
+        )
+        * energy_weights
+    )
+
+
+def _elastic_local_full_energy(
+    v_local,
+    elems,
+    dphix,
+    dphiy,
+    dphiz,
+    quad_weight,
+    shear_q,
+    bulk_q,
+    lame_q,
+):
+    v_elem = v_local[elems]
+    return jnp.sum(
+        _ELASTIC_ELEMENT_ENERGY_BATCH(
+            v_elem,
+            dphix,
+            dphiy,
+            dphiz,
+            quad_weight,
+            shear_q,
+            bulk_q,
+            lame_q,
+        )
+    )
+
+
+def _elastic_weighted_energy(
+    v_local,
+    elems,
+    dphix,
+    dphiy,
+    dphiz,
+    quad_weight,
+    shear_q,
+    bulk_q,
+    lame_q,
+    energy_weights,
+):
+    v_elem = v_local[elems]
+    return jnp.sum(
+        _ELASTIC_ELEMENT_ENERGY_BATCH(
+            v_elem,
+            dphix,
+            dphiy,
+            dphiz,
+            quad_weight,
+            shear_q,
+            bulk_q,
+            lame_q,
+        )
+        * energy_weights
+    )
+
+
+_PLASTIC_LOCAL_GRAD = jax.jit(jax.grad(_plastic_local_full_energy, argnums=0))
+_ELASTIC_LOCAL_GRAD = jax.jit(jax.grad(_elastic_local_full_energy, argnums=0))
+_PLASTIC_WEIGHTED_ENERGY = jax.jit(_plastic_weighted_energy)
+_ELASTIC_WEIGHTED_ENERGY = jax.jit(_elastic_weighted_energy)
+
+
 class SlopeStability3DReorderedElementAssembler(ReorderedElementAssemblerBase):
     """3D vector-valued overlap-domain assembler backed by JAX autodiff."""
 
@@ -111,20 +259,37 @@ class SlopeStability3DReorderedElementAssembler(ReorderedElementAssemblerBase):
         mode = str(constitutive_mode)
 
         if mode == "elastic":
-
-            hess_elem_batch = jax.jit(
-                jax.vmap(
-                    jax.hessian(elastic_element_energy_3d),
-                    in_axes=(0, 0, 0, 0, 0, 0, 0, 0),
+            def energy_fn(v_local):
+                return _ELASTIC_WEIGHTED_ENERGY(
+                    v_local,
+                    elems,
+                    dphix,
+                    dphiy,
+                    dphiz,
+                    quad_weight,
+                    shear_q,
+                    bulk_q,
+                    lame_q,
+                    energy_weights,
                 )
-            )
 
-            def _eval_elem_energy(v_elem):
-                return jax.vmap(
-                    elastic_element_energy_3d,
-                    in_axes=(0, 0, 0, 0, 0, 0, 0, 0),
-                )(
-                    v_elem,
+            def local_grad_fn(v_local):
+                return _ELASTIC_LOCAL_GRAD(
+                    v_local,
+                    elems,
+                    dphix,
+                    dphiy,
+                    dphiz,
+                    quad_weight,
+                    shear_q,
+                    bulk_q,
+                    lame_q,
+                )
+
+            def grad_local(v_local):
+                return _ELASTIC_LOCAL_GRAD(
+                    v_local,
+                    elems,
                     dphix,
                     dphiy,
                     dphiz,
@@ -135,20 +300,41 @@ class SlopeStability3DReorderedElementAssembler(ReorderedElementAssemblerBase):
                 )
 
         elif mode == "plastic":
-
-            hess_elem_batch = jax.jit(
-                jax.vmap(
-                    jax.hessian(element_energy_3d),
-                    in_axes=(0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
+            def energy_fn(v_local):
+                return _PLASTIC_WEIGHTED_ENERGY(
+                    v_local,
+                    elems,
+                    dphix,
+                    dphiy,
+                    dphiz,
+                    quad_weight,
+                    c_bar_q,
+                    sin_phi_q,
+                    shear_q,
+                    bulk_q,
+                    lame_q,
+                    energy_weights,
                 )
-            )
 
-            def _eval_elem_energy(v_elem):
-                return jax.vmap(
-                    element_energy_3d,
-                    in_axes=(0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
-                )(
-                    v_elem,
+            def local_grad_fn(v_local):
+                return _PLASTIC_LOCAL_GRAD(
+                    v_local,
+                    elems,
+                    dphix,
+                    dphiy,
+                    dphiz,
+                    quad_weight,
+                    c_bar_q,
+                    sin_phi_q,
+                    shear_q,
+                    bulk_q,
+                    lame_q,
+                )
+
+            def grad_local(v_local):
+                return _PLASTIC_LOCAL_GRAD(
+                    v_local,
+                    elems,
                     dphix,
                     dphiy,
                     dphiz,
@@ -162,22 +348,6 @@ class SlopeStability3DReorderedElementAssembler(ReorderedElementAssemblerBase):
 
         else:
             raise ValueError(f"Unsupported 3D constitutive mode {constitutive_mode!r}")
-
-        def local_full_energy(v_local):
-            v_elem = v_local[elems]
-            return jnp.sum(_eval_elem_energy(v_elem))
-
-        grad_local = jax.grad(local_full_energy)
-
-        @jax.jit
-        def energy_fn(v_local):
-            v_elem = v_local[elems]
-            e = _eval_elem_energy(v_elem)
-            return jnp.sum(e * energy_weights)
-
-        @jax.jit
-        def local_grad_fn(v_local):
-            return grad_local(v_local)
 
         if degree == 4 and mode == "plastic":
 
@@ -197,6 +367,23 @@ class SlopeStability3DReorderedElementAssembler(ReorderedElementAssemblerBase):
                     chunk_size=self.p4_hessian_chunk_size,
                 )
 
+            def elem_hess_chunk_fn(v_local, start: int, stop: int):
+                chunk = slice(int(start), int(stop))
+                v_elem = v_local[elems[chunk]]
+                return chunked_vmapped_element_hessian_3d(
+                    v_elem,
+                    dphix[chunk],
+                    dphiy[chunk],
+                    dphiz[chunk],
+                    quad_weight[chunk],
+                    c_bar_q[chunk],
+                    sin_phi_q[chunk],
+                    shear_q[chunk],
+                    bulk_q[chunk],
+                    lame_q[chunk],
+                    chunk_size=self.p4_hessian_chunk_size,
+                )
+
         elif degree == 4 and mode == "elastic":
 
             def elem_hess_fn(v_local):
@@ -213,13 +400,26 @@ class SlopeStability3DReorderedElementAssembler(ReorderedElementAssemblerBase):
                     chunk_size=self.p4_hessian_chunk_size,
                 )
 
-        else:
+            def elem_hess_chunk_fn(v_local, start: int, stop: int):
+                chunk = slice(int(start), int(stop))
+                v_elem = v_local[elems[chunk]]
+                return chunked_vmapped_elastic_element_hessian_3d(
+                    v_elem,
+                    dphix[chunk],
+                    dphiy[chunk],
+                    dphiz[chunk],
+                    quad_weight[chunk],
+                    shear_q[chunk],
+                    bulk_q[chunk],
+                    lame_q[chunk],
+                    chunk_size=self.p4_hessian_chunk_size,
+                )
 
-            @jax.jit
+        else:
             def elem_hess_fn(v_local):
                 v_elem = v_local[elems]
                 if mode == "elastic":
-                    return hess_elem_batch(
+                    return _ELASTIC_ELEMENT_HESSIAN_BATCH(
                         v_elem,
                         dphix,
                         dphiy,
@@ -229,7 +429,7 @@ class SlopeStability3DReorderedElementAssembler(ReorderedElementAssemblerBase):
                         bulk_q,
                         lame_q,
                     )
-                return hess_elem_batch(
+                return _PLASTIC_ELEMENT_HESSIAN_BATCH(
                     v_elem,
                     dphix,
                     dphiy,
@@ -242,11 +442,40 @@ class SlopeStability3DReorderedElementAssembler(ReorderedElementAssemblerBase):
                     lame_q,
                 )
 
+            def elem_hess_chunk_fn(v_local, start: int, stop: int):
+                chunk = slice(int(start), int(stop))
+                v_elem = v_local[elems[chunk]]
+                if mode == "elastic":
+                    return _ELASTIC_ELEMENT_HESSIAN_BATCH(
+                        v_elem,
+                        dphix[chunk],
+                        dphiy[chunk],
+                        dphiz[chunk],
+                        quad_weight[chunk],
+                        shear_q[chunk],
+                        bulk_q[chunk],
+                        lame_q[chunk],
+                    )
+                return _PLASTIC_ELEMENT_HESSIAN_BATCH(
+                    v_elem,
+                    dphix[chunk],
+                    dphiy[chunk],
+                    dphiz[chunk],
+                    quad_weight[chunk],
+                    c_bar_q[chunk],
+                    sin_phi_q[chunk],
+                    shear_q[chunk],
+                    bulk_q[chunk],
+                    lame_q[chunk],
+                )
+
         return {
             "elems": elems,
+            "degree": int(degree),
             "energy_fn": energy_fn,
             "local_grad_fn": local_grad_fn,
             "elem_hess_fn": elem_hess_fn,
+            "elem_hess_chunk_fn": elem_hess_chunk_fn,
             "grad_local": grad_local,
         }
 
@@ -267,7 +496,62 @@ class SlopeStability3DReorderedElementAssembler(ReorderedElementAssemblerBase):
             kernels["grad_local"],
         )
 
-    def _assemble_hessian_with_elem_hess(self, u_owned, elem_hess_jit, *, assembly_mode: str):
+    def _needs_prebuilt_hessian_scatter(self) -> bool:
+        return int(self.params.get("element_degree", 2)) != 4
+
+    def _warmup_hessian(self, v_local: np.ndarray) -> None:
+        kernels = self._get_local_element_kernels(self.constitutive_mode)
+        chunk_fn = kernels.get("elem_hess_chunk_fn")
+        n_local_elem = int(self.local_data.elems_local_np.shape[0])
+        if int(self.params.get("element_degree", 2)) == 4 and chunk_fn is not None and n_local_elem > 0:
+            stop = min(max(1, int(self.p4_hessian_chunk_size)), n_local_elem)
+            chunk_fn(jnp.asarray(v_local), 0, stop).block_until_ready()
+            return
+        kernels["elem_hess_fn"](jnp.asarray(v_local)).block_until_ready()
+
+    def _chunk_scatter_pattern(
+        self,
+        start: int,
+        stop: int,
+    ) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+        elems_reordered = np.asarray(
+            self.local_data.elems_reordered[int(start) : int(stop)], dtype=np.int64
+        )
+        rows = elems_reordered[:, :, None]
+        cols = elems_reordered[:, None, :]
+        valid = (rows >= self.layout.lo) & (rows < self.layout.hi) & (cols >= 0)
+        vi = np.where(valid)
+        if vi[0].size == 0:
+            empty = np.zeros(0, dtype=np.int64)
+            return empty, empty, empty, empty
+        row_vals = elems_reordered[vi[0], vi[1]]
+        col_vals = elems_reordered[vi[0], vi[2]]
+        keys = row_vals.astype(np.int64) * np.int64(self.layout.n_free) + col_vals.astype(
+            np.int64
+        )
+        key_pos = np.searchsorted(self.layout.owned_keys_sorted, keys)
+        if np.any(key_pos >= self.layout.owned_keys_sorted.size):
+            raise RuntimeError("Chunk scatter lookup exceeded owned COO pattern size")
+        matched = self.layout.owned_keys_sorted[key_pos]
+        if not np.array_equal(matched, keys):
+            raise RuntimeError("Chunk scatter lookup found mismatched owned COO entries")
+        positions = np.asarray(self.layout.owned_pos_sorted[key_pos], dtype=np.int64)
+        return (
+            np.asarray(vi[0], dtype=np.int64),
+            np.asarray(vi[1], dtype=np.int64),
+            np.asarray(vi[2], dtype=np.int64),
+            positions,
+        )
+
+    def _assemble_hessian_with_elem_hess(
+        self,
+        u_owned,
+        elem_hess_jit,
+        *,
+        assembly_mode: str,
+        elem_hess_chunk_fn=None,
+        hessian_chunk_elems: int | None = None,
+    ):
         timings = {}
         t_total = time.perf_counter()
         v_local, exchange = self._owned_to_local(
@@ -275,15 +559,52 @@ class SlopeStability3DReorderedElementAssembler(ReorderedElementAssemblerBase):
             zero_dirichlet=False,
         )
 
-        t0 = time.perf_counter()
-        elem_hess = np.asarray(elem_hess_jit(jnp.asarray(v_local)).block_until_ready())
-        timings["elem_hessian_compute"] = time.perf_counter() - t0
-
-        t0 = time.perf_counter()
-        contrib = elem_hess[self._scatter.hess_e, self._scatter.hess_i, self._scatter.hess_j]
         owned_vals = self._reset_owned_hessian_values()
-        np.add.at(owned_vals, self._scatter.hess_positions, contrib)
-        timings["scatter"] = time.perf_counter() - t0
+        chunk_elems = int(hessian_chunk_elems or 0)
+        if elem_hess_chunk_fn is not None and chunk_elems > 0:
+            v_local_jax = jnp.asarray(v_local)
+            n_local_elem = int(self.local_data.elems_local_np.shape[0])
+            timings["elem_hessian_compute"] = 0.0
+            timings["scatter"] = 0.0
+            for start in range(0, n_local_elem, chunk_elems):
+                stop = min(start + chunk_elems, n_local_elem)
+                t0 = time.perf_counter()
+                elem_hess_chunk = np.asarray(
+                    elem_hess_chunk_fn(v_local_jax, start, stop).block_until_ready()
+                )
+                timings["elem_hessian_compute"] += float(time.perf_counter() - t0)
+                t0 = time.perf_counter()
+                hess_e, hess_i, hess_j, hess_positions = self._chunk_scatter_pattern(
+                    start, stop
+                )
+                if hess_e.size == 0:
+                    timings["scatter"] += float(time.perf_counter() - t0)
+                    continue
+                contrib = elem_hess_chunk[
+                    hess_e,
+                    hess_i,
+                    hess_j,
+                ]
+                np.add.at(owned_vals, hess_positions, contrib)
+                timings["scatter"] += float(time.perf_counter() - t0)
+        else:
+            if (
+                self._scatter.hess_e is None
+                or self._scatter.hess_i is None
+                or self._scatter.hess_j is None
+                or self._scatter.hess_positions is None
+            ):
+                raise RuntimeError(
+                    "Full-element Hessian assembly requires prebuilt Hessian scatter data"
+                )
+            t0 = time.perf_counter()
+            elem_hess = np.asarray(elem_hess_jit(jnp.asarray(v_local)).block_until_ready())
+            timings["elem_hessian_compute"] = time.perf_counter() - t0
+
+            t0 = time.perf_counter()
+            contrib = elem_hess[self._scatter.hess_e, self._scatter.hess_i, self._scatter.hess_j]
+            np.add.at(owned_vals, self._scatter.hess_positions, contrib)
+            timings["scatter"] = time.perf_counter() - t0
 
         t0 = time.perf_counter()
         self.A.setValuesCOO(
@@ -307,12 +628,23 @@ class SlopeStability3DReorderedElementAssembler(ReorderedElementAssemblerBase):
         self._record_hessian_iteration(timings)
         return timings
 
+    def assemble_hessian_element(self, u_owned):
+        if int(self.params.get("element_degree", 2)) != 4:
+            return super().assemble_hessian_element(u_owned)
+        return self.assemble_hessian_with_mode(u_owned, constitutive_mode=self.constitutive_mode)
+
     def assemble_hessian_with_mode(self, u_owned, *, constitutive_mode: str):
         kernels = self._get_local_element_kernels(str(constitutive_mode))
         return self._assemble_hessian_with_elem_hess(
             u_owned,
             kernels["elem_hess_fn"],
             assembly_mode=f"element_overlap_{constitutive_mode}",
+            elem_hess_chunk_fn=(
+                kernels["elem_hess_chunk_fn"] if int(kernels["degree"]) == 4 else None
+            ),
+            hessian_chunk_elems=(
+                int(self.p4_hessian_chunk_size) if int(kernels["degree"]) == 4 else 0
+            ),
         )
 
     def _build_rhs_owned(self) -> np.ndarray:
