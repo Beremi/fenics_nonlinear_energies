@@ -2,11 +2,14 @@
 
 from __future__ import annotations
 
+from contextlib import contextmanager, nullcontext
 import json
 from dataclasses import dataclass
 from pathlib import Path
+import resource
 import time
 
+import jax
 import numpy as np
 from mpi4py import MPI
 from petsc4py import PETSc
@@ -83,8 +86,173 @@ def _write_progress_payload(path: str | Path, payload: dict[str, object]) -> Non
     target.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
 
 
+@contextmanager
+def _petsc_stage(name: str, enabled: bool):
+    if not bool(enabled):
+        yield
+        return
+    stage = PETSc.Log.Stage(str(name))
+    stage.push()
+    try:
+        yield
+    finally:
+        stage.pop()
+
+
+def _configure_petsc_logging(args, comm: MPI.Comm) -> str:
+    log_view_path = str(getattr(args, "petsc_log_view_path", "") or "").strip()
+    if not (bool(getattr(args, "enable_petsc_log_events", False)) or log_view_path):
+        return ""
+    PETSc.Log.begin()
+    if log_view_path:
+        target = Path(log_view_path)
+        target.parent.mkdir(parents=True, exist_ok=True)
+        return str(target)
+    return ""
+
+
+def _flush_petsc_log_view(path: str, comm: MPI.Comm) -> None:
+    if not str(path).strip():
+        return
+    viewer = PETSc.Viewer().createASCII(str(path), mode="w", comm=comm)
+    try:
+        PETSc.Log.view(viewer)
+    finally:
+        viewer.destroy()
+
+
+@contextmanager
+def _jax_trace_context(trace_dir: str, *, rank: int):
+    root = str(trace_dir or "").strip()
+    if not root:
+        yield
+        return
+    rank_dir = Path(root) / f"rank{int(rank):03d}"
+    rank_dir.mkdir(parents=True, exist_ok=True)
+    with jax.profiler.trace(str(rank_dir)):
+        yield
+
+
+def _parse_p4_chunk_size_arg(value: object) -> tuple[str, int]:
+    raw = str(value if value is not None else "32").strip()
+    if raw.lower() == "auto":
+        return "auto", 32
+    return "fixed", max(1, int(raw))
+
+
+def _parse_chunk_candidates(value: object) -> tuple[int, ...]:
+    raw = str(value if value is not None else "32,64,128,256").strip()
+    if not raw:
+        return (32, 64, 128, 256)
+    candidates = tuple(
+        max(1, int(part.strip()))
+        for part in raw.split(",")
+        if str(part).strip()
+    )
+    if not candidates:
+        raise ValueError("p4 chunk autotune candidate list may not be empty")
+    return candidates
+
+
 def _format_gib(value: object) -> str:
     return f"{float(value):.3f} GiB"
+
+
+def _process_memory_snapshot() -> dict[str, float | int]:
+    rss_current_bytes = 0
+    status_path = Path("/proc/self/status")
+    if status_path.exists():
+        for line in status_path.read_text(encoding="utf-8", errors="ignore").splitlines():
+            if line.startswith("VmRSS:"):
+                parts = line.split()
+                if len(parts) >= 2:
+                    rss_current_bytes = int(parts[1]) * 1024
+                break
+    usage = resource.getrusage(resource.RUSAGE_SELF)
+    rss_hwm_bytes = int(getattr(usage, "ru_maxrss", 0)) * 1024
+    return {
+        "rss_current_bytes": int(rss_current_bytes),
+        "rss_hwm_bytes": int(rss_hwm_bytes),
+        "rss_current_gib": float(rss_current_bytes) / float(1024**3),
+        "rss_hwm_gib": float(rss_hwm_bytes) / float(1024**3),
+    }
+
+
+def _aggregate_iteration_memory(
+    gathered_memory: list[dict[str, object]] | None,
+) -> dict[str, object]:
+    records = list(gathered_memory or [])
+    if not records:
+        return {}
+    current_vals = [float(rec.get("rss_current_bytes", 0.0)) for rec in records]
+    hwm_vals = [float(rec.get("rss_hwm_bytes", 0.0)) for rec in records]
+    current_rank = int(np.argmax(current_vals))
+    hwm_rank = int(np.argmax(hwm_vals))
+    return {
+        "rss_current_max_gib": float(max(current_vals)) / float(1024**3),
+        "rss_current_mean_gib": float(np.mean(current_vals)) / float(1024**3),
+        "rss_current_min_gib": float(min(current_vals)) / float(1024**3),
+        "rss_hwm_max_gib": float(max(hwm_vals)) / float(1024**3),
+        "rss_hwm_mean_gib": float(np.mean(hwm_vals)) / float(1024**3),
+        "rss_hwm_min_gib": float(min(hwm_vals)) / float(1024**3),
+        "rss_current_worst_rank": int(current_rank),
+        "rss_hwm_worst_rank": int(hwm_rank),
+        "per_rank": [
+            {
+                "rank": int(idx),
+                "rss_current_gib": float(rec.get("rss_current_gib", 0.0)),
+                "rss_hwm_gib": float(rec.get("rss_hwm_gib", 0.0)),
+            }
+            for idx, rec in enumerate(records)
+        ],
+    }
+
+
+def _aggregate_iteration_linear(
+    gathered_linear: list[dict[str, object] | None] | None,
+) -> dict[str, object]:
+    records = [dict(rec) for rec in list(gathered_linear or []) if rec is not None]
+    if not records:
+        return {}
+    assemble_vals = [float(rec.get("t_assemble", 0.0)) for rec in records]
+    setup_vals = [float(rec.get("t_setup", 0.0)) for rec in records]
+    solve_vals = [float(rec.get("t_solve", 0.0)) for rec in records]
+    ksp_vals = [int(rec.get("ksp_its", 0)) for rec in records]
+    true_rel_vals = [float(rec.get("true_relative_residual", 0.0)) for rec in records]
+    return {
+        "ranks": int(len(records)),
+        "t_assemble_max": float(max(assemble_vals)),
+        "t_assemble_mean": float(np.mean(assemble_vals)),
+        "t_setup_max": float(max(setup_vals)),
+        "t_setup_mean": float(np.mean(setup_vals)),
+        "t_solve_max": float(max(solve_vals)),
+        "t_solve_mean": float(np.mean(solve_vals)),
+        "ksp_its_max": int(max(ksp_vals)),
+        "ksp_its_mean": float(np.mean(ksp_vals)),
+        "ksp_its_sum": int(sum(ksp_vals)),
+        "true_relative_residual_max": float(max(true_rel_vals)),
+        "true_relative_residual_mean": float(np.mean(true_rel_vals)),
+        "accepted_via_true_residual_any": bool(
+            any(bool(rec.get("accepted_via_true_residual", False)) for rec in records)
+        ),
+        "accepted_via_maxit_direction_any": bool(
+            any(bool(rec.get("accepted_via_maxit_direction", False)) for rec in records)
+        ),
+        "per_rank": [
+            {
+                "rank": int(idx),
+                "ksp_its": int(rec.get("ksp_its", 0)),
+                "t_assemble": float(rec.get("t_assemble", 0.0)),
+                "t_setup": float(rec.get("t_setup", 0.0)),
+                "t_solve": float(rec.get("t_solve", 0.0)),
+                "true_relative_residual": float(
+                    rec.get("true_relative_residual", 0.0)
+                ),
+                "ksp_reason_name": str(rec.get("ksp_reason_name", "")),
+            }
+            for idx, rec in enumerate(records)
+        ],
+    }
 
 
 @dataclass(frozen=True)
@@ -629,14 +797,25 @@ def run(args):
     total_runtime_start = time.perf_counter()
     stage_timings: dict[str, float] = {}
     debug_setup = bool(getattr(args, "debug_setup", False))
+    petsc_log_view_path = _configure_petsc_logging(args, comm)
+    petsc_stage_enabled = bool(
+        bool(getattr(args, "enable_petsc_log_events", False)) or petsc_log_view_path
+    )
 
     settings = _apply_3d_stack_defaults(args, _resolve_linear_settings(args))
     regularization_state = _init_newton_regularization_state(args)
     pc_options = _pc_options(settings)
+    chunk_mode, p4_chunk_size_initial = _parse_p4_chunk_size_arg(
+        getattr(args, "p4_hessian_chunk_size", 32)
+    )
+    chunk_autotune_candidates = _parse_chunk_candidates(
+        getattr(args, "p4_chunk_autotune_candidates", "32,64,128,256")
+    )
     if rank == 0 and debug_setup:
         print("setup: problem load begin", flush=True)
     t_stage = time.perf_counter()
-    mesh_name, params, adjacency = _load_problem_data(args, comm)
+    with _petsc_stage("slope3d_problem_load", petsc_stage_enabled):
+        mesh_name, params, adjacency = _load_problem_data(args, comm)
     stage_timings["problem_load"] = float(time.perf_counter() - t_stage)
     if rank == 0 and debug_setup:
         print(
@@ -653,39 +832,62 @@ def run(args):
     if rank == 0 and debug_setup:
         print("setup: assembler create begin", flush=True)
     t_stage = time.perf_counter()
-    assembler = SlopeStability3DReorderedElementAssembler(
-        params=params,
-        comm=comm,
-        adjacency=adjacency,
-        ksp_rtol=float(settings["ksp_rtol"]),
-        ksp_type=str(settings["ksp_type"]),
-        pc_type=str(settings["pc_type"]),
-        ksp_max_it=int(settings["ksp_max_it"]),
-        use_near_nullspace=bool(settings["use_near_nullspace"]),
-        pc_options=pc_options,
-        reorder_mode=str(getattr(args, "element_reorder_mode", None) or "block_xyz"),
-        local_hessian_mode=str(getattr(args, "local_hessian_mode", None) or "element"),
-        perm_override=(
-            np.asarray(params["_distributed_perm"], dtype=np.int64)
-            if "_distributed_perm" in params
-            else select_reordered_perm_3d(
-                str(getattr(args, "element_reorder_mode", None) or "block_xyz"),
-                adjacency=adjacency,
-                coords_all=np.asarray(params["nodes"], dtype=np.float64),
-                freedofs=np.asarray(params["freedofs"], dtype=np.int64),
-                n_parts=int(comm.size),
-            )
-        ),
-        block_size_override=ownership_block_size_3d(
-            np.asarray(params["freedofs"], dtype=np.int64)
-        ),
-        distribution_strategy=str(getattr(args, "distribution_strategy", "overlap_p2p")),
-        reuse_hessian_value_buffers=bool(
-            getattr(args, "reuse_hessian_value_buffers", True)
-        ),
-        p4_hessian_chunk_size=int(getattr(args, "p4_hessian_chunk_size", 32)),
-    )
+    with _petsc_stage("slope3d_assembler_create", petsc_stage_enabled):
+        assembler = SlopeStability3DReorderedElementAssembler(
+            params=params,
+            comm=comm,
+            adjacency=adjacency,
+            ksp_rtol=float(settings["ksp_rtol"]),
+            ksp_type=str(settings["ksp_type"]),
+            pc_type=str(settings["pc_type"]),
+            ksp_max_it=int(settings["ksp_max_it"]),
+            use_near_nullspace=bool(settings["use_near_nullspace"]),
+            pc_options=pc_options,
+            reorder_mode=str(getattr(args, "element_reorder_mode", None) or "block_xyz"),
+            local_hessian_mode=str(getattr(args, "local_hessian_mode", None) or "element"),
+            perm_override=(
+                np.asarray(params["_distributed_perm"], dtype=np.int64)
+                if "_distributed_perm" in params
+                else select_reordered_perm_3d(
+                    str(getattr(args, "element_reorder_mode", None) or "block_xyz"),
+                    adjacency=adjacency,
+                    coords_all=np.asarray(params["nodes"], dtype=np.float64),
+                    freedofs=np.asarray(params["freedofs"], dtype=np.int64),
+                    n_parts=int(comm.size),
+                )
+            ),
+            block_size_override=ownership_block_size_3d(
+                np.asarray(params["freedofs"], dtype=np.int64)
+            ),
+            distribution_strategy=str(getattr(args, "distribution_strategy", "overlap_p2p")),
+            reuse_hessian_value_buffers=bool(
+                getattr(args, "reuse_hessian_value_buffers", True)
+            ),
+            p4_hessian_chunk_size=int(p4_chunk_size_initial),
+            assembly_backend=str(getattr(args, "assembly_backend", "coo")),
+            petsc_log_events=bool(petsc_stage_enabled),
+            jax_trace_dir=str(getattr(args, "jax_trace_dir", "") or ""),
+        )
     stage_timings["assembler_create"] = float(time.perf_counter() - t_stage)
+    if int(args.elem_degree) == 4 and chunk_mode == "auto":
+        if rank == 0 and debug_setup:
+            print("setup: p4 chunk autotune begin", flush=True)
+        t_stage = time.perf_counter()
+        with _petsc_stage("slope3d_p4_chunk_autotune", petsc_stage_enabled):
+            assembler.autotune_p4_hessian_chunk_size(
+                candidates=chunk_autotune_candidates,
+                rss_budget_gib=float(
+                    getattr(args, "p4_chunk_autotune_rss_budget_gib", 64.0)
+                ),
+            )
+        stage_timings["p4_chunk_autotune"] = float(time.perf_counter() - t_stage)
+        if rank == 0 and debug_setup:
+            print(
+                "setup: p4 chunk autotune done, "
+                f"t={stage_timings['p4_chunk_autotune']:.3f}s "
+                f"selected={int(assembler.p4_hessian_chunk_size)}",
+                flush=True,
+            )
     local_setup_summary = assembler.setup_summary()
     local_memory_summary = assembler.memory_summary()
     gathered_setup = comm.gather(local_setup_summary, root=0)
@@ -724,6 +926,14 @@ def run(args):
                 "mesh_name": str(mesh_name),
                 "elem_degree": int(args.elem_degree),
                 "lambda_target": float(lambda_target),
+                "assembly_backend": str(assembler.assembly_backend),
+                "assembly_backend_requested": str(
+                    assembler.assembly_backend_requested
+                ),
+                "matrix_type": str(assembler.A.getType()),
+                "p4_hessian_chunk_size": int(assembler.p4_hessian_chunk_size),
+                "p4_chunk_autotune": dict(assembler.p4_chunk_autotune_meta or {}),
+                "petsc_log_view_path": str(petsc_log_view_path or ""),
                 "stage_timings": dict(stage_timings),
                 "assembler_setup": dict(local_setup_summary),
                 "assembler_memory": dict(local_memory_summary),
@@ -751,18 +961,19 @@ def run(args):
         if rank == 0 and debug_setup:
             print("setup: mg hierarchy build begin", flush=True)
         t_stage = time.perf_counter()
-        mg_hierarchy = build_mixed_pmg_hierarchy(
-            specs=specs,
-            finest_params=params,
-            finest_adjacency=adjacency,
-            finest_perm=np.asarray(assembler.layout.perm, dtype=np.int64),
-            reorder_mode=str(getattr(args, "element_reorder_mode", None) or "block_xyz"),
-            comm=comm,
-            level_build_mode=str(getattr(args, "mg_level_build_mode", "root_bcast")),
-            transfer_build_mode=str(
-                getattr(args, "mg_transfer_build_mode", "owned_rows")
-            ),
-        )
+        with _petsc_stage("slope3d_mg_hierarchy_build", petsc_stage_enabled):
+            mg_hierarchy = build_mixed_pmg_hierarchy(
+                specs=specs,
+                finest_params=params,
+                finest_adjacency=adjacency,
+                finest_perm=np.asarray(assembler.layout.perm, dtype=np.int64),
+                reorder_mode=str(getattr(args, "element_reorder_mode", None) or "block_xyz"),
+                comm=comm,
+                level_build_mode=str(getattr(args, "mg_level_build_mode", "root_bcast")),
+                transfer_build_mode=str(
+                    getattr(args, "mg_transfer_build_mode", "owned_rows")
+                ),
+            )
         stage_timings["mg_hierarchy_build"] = float(time.perf_counter() - t_stage)
         if rank == 0 and debug_setup:
             print(
@@ -830,19 +1041,20 @@ def run(args):
         if rank == 0 and debug_setup:
             print("setup: elastic initial guess begin", flush=True)
         t_stage = time.perf_counter()
-        (
-            u_init_reordered,
-            mg_nullspace_meta,
-            initial_guess_meta,
-            gamg_coords,
-        ) = _solve_elastic_initial_guess(
-            assembler=assembler,
-            settings=settings,
-            args=args,
-            mg_hierarchy=mg_hierarchy,
-            mg_nullspace_meta=mg_nullspace_meta,
-            gamg_coords=gamg_coords,
-        )
+        with _petsc_stage("slope3d_elastic_initial_guess", petsc_stage_enabled):
+            (
+                u_init_reordered,
+                mg_nullspace_meta,
+                initial_guess_meta,
+                gamg_coords,
+            ) = _solve_elastic_initial_guess(
+                assembler=assembler,
+                settings=settings,
+                args=args,
+                mg_hierarchy=mg_hierarchy,
+                mg_nullspace_meta=mg_nullspace_meta,
+                gamg_coords=gamg_coords,
+            )
         stage_timings["initial_guess_total"] = float(time.perf_counter() - t_stage)
         if rank == 0 and debug_setup:
             print(
@@ -902,6 +1114,8 @@ def run(args):
             )
         linear_ksp.setFromOptions()
         return linear_ksp
+
+    root_iteration_history: list[dict[str, object]] = []
 
     def _assemble_and_solve(vec, rhs, sol, trust_radius=None):
         nonlocal gamg_coords, mg_nullspace_meta
@@ -1053,6 +1267,7 @@ def run(args):
                 )
             )
             attempt_record = {
+                "newton_iteration": int(len(linear_records) + 1),
                 "attempt": int(attempt_index),
                 "operator_mode": str(operator_label),
                 "newton_regularization_r": float(r_current),
@@ -1141,7 +1356,21 @@ def run(args):
             accepted_step=bool(entry.get("accepted_step", False)),
             iteration=int(entry.get("it", len(history))),
         )
+        latest_linear_local = dict(linear_records[-1]) if linear_records else None
+        memory_local = _process_memory_snapshot()
+        gathered_memory = comm.gather(memory_local, root=0)
+        gathered_linear = comm.gather(latest_linear_local, root=0)
         if rank != 0 or not progress_path:
+            return
+        enriched_entry = dict(entry)
+        enriched_entry["linear_iteration"] = _aggregate_iteration_linear(gathered_linear)
+        enriched_entry["memory_profile"] = _aggregate_iteration_memory(gathered_memory)
+        root_iteration_history.append(dict(enriched_entry))
+        if root_iteration_history:
+            history_payload = list(root_iteration_history)
+        else:
+            history_payload = list(history)
+        if not progress_path:
             return
         _write_progress_payload(
             progress_path,
@@ -1150,9 +1379,13 @@ def run(args):
                 "mesh_name": str(mesh_name),
                 "elem_degree": int(args.elem_degree),
                 "lambda_target": float(lambda_target),
-                "iterations_completed": int(entry.get("it", len(history))),
-                "last_iteration": dict(entry),
-                "history": list(history),
+                "assembly_backend": str(assembler.assembly_backend),
+                "matrix_type": str(assembler.A.getType()),
+                "p4_hessian_chunk_size": int(assembler.p4_hessian_chunk_size),
+                "p4_chunk_autotune": dict(assembler.p4_chunk_autotune_meta or {}),
+                "iterations_completed": int(enriched_entry.get("it", len(history_payload))),
+                "last_iteration": dict(enriched_entry),
+                "history": history_payload,
                 "newton_regularization": {
                     "enabled": bool(regularization_state["enabled"]),
                     "current_r": float(regularization_state["r"]),
@@ -1164,48 +1397,55 @@ def run(args):
 
     solve_start = time.perf_counter()
     try:
-        result = newton(
-            energy_fn=assembler.energy_fn,
-            gradient_fn=assembler.gradient_fn,
-            hessian_solve_fn=hessian_solve_fn,
-            x=x,
-            tolf=float(args.tolf),
-            tolg=float(args.tolg),
-            tolg_rel=float(args.tolg_rel),
-            linesearch_tol=float(args.linesearch_tol),
-            linesearch_interval=(float(args.linesearch_a), float(args.linesearch_b)),
-            line_search=str(getattr(args, "line_search", "golden_fixed")),
-            armijo_alpha0=float(getattr(args, "armijo_alpha0", 1.0)),
-            armijo_c1=float(getattr(args, "armijo_c1", 1.0e-4)),
-            armijo_shrink=float(getattr(args, "armijo_shrink", 0.5)),
-            armijo_max_ls=int(getattr(args, "armijo_max_ls", 40)),
-            maxit=int(args.maxit),
-            tolx_rel=float(args.tolx_rel),
-            tolx_abs=float(args.tolx_abs),
-            require_all_convergence=True,
-            fail_on_nonfinite=True,
-            verbose=(not bool(getattr(args, "quiet", False))),
-            comm=comm,
-            hessian_matvec_fn=lambda _x, vin, vout: active_operator["mat"].mult(vin, vout),
-            trust_subproblem_solve_fn=(
-                trust_subproblem_solve_fn if bool(getattr(args, "use_trust_region", False)) else None
-            ),
-            trust_subproblem_line_search=bool(
-                getattr(args, "trust_subproblem_line_search", False)
-            ),
-            save_history=bool(getattr(args, "save_history", False)),
-            trust_region=bool(getattr(args, "use_trust_region", False)),
-            trust_radius_init=float(getattr(args, "trust_radius_init", 0.5)),
-            trust_radius_min=float(getattr(args, "trust_radius_min", 1.0e-8)),
-            trust_radius_max=float(getattr(args, "trust_radius_max", 1.0e6)),
-            trust_shrink=float(getattr(args, "trust_shrink", 0.5)),
-            trust_expand=float(getattr(args, "trust_expand", 1.5)),
-            trust_eta_shrink=float(getattr(args, "trust_eta_shrink", 0.05)),
-            trust_eta_expand=float(getattr(args, "trust_eta_expand", 0.75)),
-            trust_max_reject=int(getattr(args, "trust_max_reject", 6)),
-            step_time_limit_s=getattr(args, "step_time_limit_s", None),
-            iteration_callback=_iteration_callback,
-        )
+        with _petsc_stage("slope3d_newton_solve", petsc_stage_enabled):
+            with _jax_trace_context(
+                str(getattr(args, "jax_trace_dir", "") or ""),
+                rank=rank,
+            ):
+                result = newton(
+                    energy_fn=assembler.energy_fn,
+                    gradient_fn=assembler.gradient_fn,
+                    hessian_solve_fn=hessian_solve_fn,
+                    x=x,
+                    tolf=float(args.tolf),
+                    tolg=float(args.tolg),
+                    tolg_rel=float(args.tolg_rel),
+                    linesearch_tol=float(args.linesearch_tol),
+                    linesearch_interval=(float(args.linesearch_a), float(args.linesearch_b)),
+                    line_search=str(getattr(args, "line_search", "golden_fixed")),
+                    armijo_alpha0=float(getattr(args, "armijo_alpha0", 1.0)),
+                    armijo_c1=float(getattr(args, "armijo_c1", 1.0e-4)),
+                    armijo_shrink=float(getattr(args, "armijo_shrink", 0.5)),
+                    armijo_max_ls=int(getattr(args, "armijo_max_ls", 40)),
+                    maxit=int(args.maxit),
+                    tolx_rel=float(args.tolx_rel),
+                    tolx_abs=float(args.tolx_abs),
+                    require_all_convergence=True,
+                    fail_on_nonfinite=True,
+                    verbose=(not bool(getattr(args, "quiet", False))),
+                    comm=comm,
+                    hessian_matvec_fn=lambda _x, vin, vout: active_operator["mat"].mult(vin, vout),
+                    trust_subproblem_solve_fn=(
+                        trust_subproblem_solve_fn
+                        if bool(getattr(args, "use_trust_region", False))
+                        else None
+                    ),
+                    trust_subproblem_line_search=bool(
+                        getattr(args, "trust_subproblem_line_search", False)
+                    ),
+                    save_history=bool(getattr(args, "save_history", False)),
+                    trust_region=bool(getattr(args, "use_trust_region", False)),
+                    trust_radius_init=float(getattr(args, "trust_radius_init", 0.5)),
+                    trust_radius_min=float(getattr(args, "trust_radius_min", 1.0e-8)),
+                    trust_radius_max=float(getattr(args, "trust_radius_max", 1.0e6)),
+                    trust_shrink=float(getattr(args, "trust_shrink", 0.5)),
+                    trust_expand=float(getattr(args, "trust_expand", 1.5)),
+                    trust_eta_shrink=float(getattr(args, "trust_eta_shrink", 0.05)),
+                    trust_eta_expand=float(getattr(args, "trust_eta_expand", 0.75)),
+                    trust_max_reject=int(getattr(args, "trust_max_reject", 6)),
+                    step_time_limit_s=getattr(args, "step_time_limit_s", None),
+                    iteration_callback=_iteration_callback,
+                )
     except _LinearSolveFailure as exc:
         result = {
             "nit": int(len(linear_iters)),
@@ -1240,6 +1480,13 @@ def run(args):
     )
     result_status = "completed" if solver_success else "failed"
     local_total_time = float(time.perf_counter() - total_runtime_start)
+    matrix_type = str(assembler.A.getType())
+    transfer_backend = str(
+        ((mg_hierarchy.build_metadata or {}) if mg_hierarchy is not None else {}).get(
+            "transfer_backend",
+            "coo_vectorized",
+        )
+    )
     local_parallel_diag = {
         "rank": int(rank),
         "stage_timings": dict(stage_timings),
@@ -1309,6 +1556,13 @@ def run(args):
         "solver_success": bool(solver_success),
         "solve_time": float(solve_time),
         "total_time": float(local_total_time),
+        "assembly_backend": str(assembler.assembly_backend),
+        "assembly_backend_requested": str(assembler.assembly_backend_requested),
+        "matrix_type": str(matrix_type),
+        "p4_hessian_chunk_size": int(assembler.p4_hessian_chunk_size),
+        "p4_chunk_autotune": dict(assembler.p4_chunk_autotune_meta or {}),
+        "petsc_log_view_path": str(petsc_log_view_path or ""),
+        "jax_trace_dir": str(getattr(args, "jax_trace_dir", "") or ""),
         "linear_iterations_total": int(sum(linear_iters)),
         "linear_iterations_last": int(linear_iters[-1] if linear_iters else 0),
         "linear_history": list(linear_records),
@@ -1375,6 +1629,13 @@ def run(args):
             "distribution_strategy": str(
                 getattr(args, "distribution_strategy", "overlap_p2p")
             ),
+            "assembly_backend": str(assembler.assembly_backend),
+            "assembly_backend_requested": str(
+                assembler.assembly_backend_requested
+            ),
+            "matrix_type": str(matrix_type),
+            "p4_hessian_chunk_size": int(assembler.p4_hessian_chunk_size),
+            "p4_chunk_autotune": dict(assembler.p4_chunk_autotune_meta or {}),
             "problem_build_mode": str(
                 getattr(args, "problem_build_mode", "root_bcast")
             ),
@@ -1508,9 +1769,14 @@ def run(args):
     if rank == 0:
         payload["parallel_diagnostics"] = list(parallel_diagnostics)
     if bool(getattr(args, "save_history", False)):
-        payload["history"] = list(result.get("history", []))
+        payload["history"] = (
+            list(root_iteration_history)
+            if rank == 0 and root_iteration_history
+            else list(result.get("history", []))
+        )
     if mg_hierarchy is not None:
         payload["mg_hierarchy"] = dict(mg_hierarchy.build_metadata or {})
+        payload["transfer_backend"] = str(transfer_backend)
     if mg_nullspace_meta is not None:
         payload["mg_level_metadata"] = list(mg_nullspace_meta.get("levels", []))
     if rank == 0 and not bool(getattr(args, "quiet", False)):
@@ -1521,6 +1787,11 @@ def run(args):
             flush=True,
         )
     if progress_path and rank == 0:
+        final_history = (
+            list(root_iteration_history)
+            if root_iteration_history
+            else list(result.get("history", []))
+        )
         _write_progress_payload(
             progress_path,
             {
@@ -1529,9 +1800,13 @@ def run(args):
                 "mesh_name": str(mesh_name),
                 "elem_degree": int(args.elem_degree),
                 "lambda_target": float(lambda_target),
+                "assembly_backend": str(assembler.assembly_backend),
+                "matrix_type": str(matrix_type),
+                "p4_hessian_chunk_size": int(assembler.p4_hessian_chunk_size),
+                "p4_chunk_autotune": dict(assembler.p4_chunk_autotune_meta or {}),
                 "iterations_completed": int(result["nit"]),
                 "energy": float(result["fun"]),
-                "history": list(result.get("history", [])),
+                "history": final_history,
                 "newton_regularization": {
                     "enabled": bool(regularization_state["enabled"]),
                     "current_r": float(regularization_state["r"]),
@@ -1539,4 +1814,5 @@ def run(args):
                 },
             },
         )
+    _flush_petsc_log_view(petsc_log_view_path, comm)
     return payload

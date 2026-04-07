@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import time
+from contextlib import nullcontext
 from dataclasses import dataclass
 from types import SimpleNamespace
 
@@ -76,6 +77,13 @@ class LegacyPMGLevelSmootherConfig:
     ksp_type: str
     pc_type: str
     steps: int
+
+
+def _petsc_event(name: str):
+    try:
+        return PETSc.Log.Event(str(name))
+    except PETSc.Error:
+        return nullcontext()
 
 
 def _degree_from_params(params: dict[str, object]) -> int:
@@ -328,21 +336,101 @@ def _load_level_from_spec(
     )
 
 
-def _sorted_coo_arrays(
-    entries: dict[tuple[int, int], float],
+def _coalesce_transfer_entries(
+    rows: np.ndarray,
+    cols: np.ndarray,
+    data: np.ndarray,
+    *,
+    tolerance: float = 1.0e-12,
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
-    if not entries:
+    rows = np.asarray(rows, dtype=np.int64).ravel()
+    cols = np.asarray(cols, dtype=np.int64).ravel()
+    data = np.asarray(data, dtype=np.float64).ravel()
+    if rows.size == 0:
         return (
             np.empty(0, dtype=np.int64),
             np.empty(0, dtype=np.int64),
             np.empty(0, dtype=np.float64),
         )
-    keys = np.asarray(list(entries.keys()), dtype=np.int64)
-    order = np.lexsort((keys[:, 1], keys[:, 0]))
-    rows = np.asarray(keys[order, 0], dtype=np.int64)
-    cols = np.asarray(keys[order, 1], dtype=np.int64)
-    data = np.asarray([entries[tuple(keys[idx])] for idx in order], dtype=np.float64)
-    return rows, cols, data
+    order = np.lexsort((cols, rows))
+    rows = np.asarray(rows[order], dtype=np.int64)
+    cols = np.asarray(cols[order], dtype=np.int64)
+    data = np.asarray(data[order], dtype=np.float64)
+    group_start = np.empty(rows.size, dtype=bool)
+    group_start[0] = True
+    same_prev = (rows[1:] == rows[:-1]) & (cols[1:] == cols[:-1])
+    group_start[1:] = ~same_prev
+    start_idx = np.flatnonzero(group_start)
+    if start_idx.size != rows.size:
+        mins = np.minimum.reduceat(data, start_idx)
+        maxs = np.maximum.reduceat(data, start_idx)
+        if np.any(np.abs(maxs - mins) > float(tolerance)):
+            bad = int(np.flatnonzero(np.abs(maxs - mins) > float(tolerance))[0])
+            raise ValueError(
+                "Inconsistent interpolation entry for "
+                f"row {int(rows[start_idx[bad]])}, col {int(cols[start_idx[bad]])}: "
+                f"min={float(mins[bad]):.16e}, max={float(maxs[bad]):.16e}"
+            )
+    return (
+        np.asarray(rows[start_idx], dtype=np.int64),
+        np.asarray(cols[start_idx], dtype=np.int64),
+        np.asarray(data[start_idx], dtype=np.float64),
+    )
+
+
+def _expand_vector_component_entries(
+    *,
+    coarse: MGLevelSpace,
+    fine: MGLevelSpace,
+    fine_nodes: np.ndarray,
+    coarse_nodes: np.ndarray,
+    weights: np.ndarray,
+    build_mode: str,
+    tolerance: float,
+) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    fine_nodes = np.asarray(fine_nodes, dtype=np.int64).ravel()
+    coarse_nodes = np.asarray(coarse_nodes, dtype=np.int64).ravel()
+    weights = np.asarray(weights, dtype=np.float64).ravel()
+    rows_parts: list[np.ndarray] = []
+    cols_parts: list[np.ndarray] = []
+    data_parts: list[np.ndarray] = []
+    fine_map = np.asarray(fine.total_to_free_orig, dtype=np.int64)
+    coarse_map = np.asarray(coarse.total_to_free_orig, dtype=np.int64)
+    fine_iperm = np.asarray(fine.iperm, dtype=np.int64)
+    coarse_iperm = np.asarray(coarse.iperm, dtype=np.int64)
+    for comp in range(VECTOR_BLOCK_SIZE):
+        fine_total = VECTOR_BLOCK_SIZE * fine_nodes + int(comp)
+        coarse_total = VECTOR_BLOCK_SIZE * coarse_nodes + int(comp)
+        fine_free_orig = np.asarray(fine_map[fine_total], dtype=np.int64)
+        coarse_free_orig = np.asarray(coarse_map[coarse_total], dtype=np.int64)
+        valid = (fine_free_orig >= 0) & (coarse_free_orig >= 0)
+        if not np.any(valid):
+            continue
+        fine_row = np.asarray(fine_iperm[fine_free_orig[valid]], dtype=np.int64)
+        coarse_col = np.asarray(coarse_iperm[coarse_free_orig[valid]], dtype=np.int64)
+        vals = np.asarray(weights[valid], dtype=np.float64)
+        if str(build_mode) == "owned_rows":
+            owned = (fine_row >= int(fine.lo)) & (fine_row < int(fine.hi))
+            if not np.any(owned):
+                continue
+            fine_row = fine_row[owned]
+            coarse_col = coarse_col[owned]
+            vals = vals[owned]
+        rows_parts.append(fine_row)
+        cols_parts.append(coarse_col)
+        data_parts.append(vals)
+    if not rows_parts:
+        return (
+            np.empty(0, dtype=np.int64),
+            np.empty(0, dtype=np.int64),
+            np.empty(0, dtype=np.float64),
+        )
+    return _coalesce_transfer_entries(
+        np.concatenate(rows_parts),
+        np.concatenate(cols_parts),
+        np.concatenate(data_parts),
+        tolerance=float(tolerance),
+    )
 
 
 def _adjacent_same_mesh_prolongation_entries(
@@ -371,41 +459,32 @@ def _adjacent_same_mesh_prolongation_entries(
         evaluate_tetra_lagrange_basis(int(coarse.degree), fine_ref)[0],
         dtype=np.float64,
     )
-    entries: dict[tuple[int, int], float] = {}
-    for elem_id in range(int(fine_elem.shape[0])):
-        coarse_nodes = np.asarray(coarse_elem[elem_id], dtype=np.int64)
-        fine_nodes = np.asarray(fine_elem[elem_id], dtype=np.int64)
-        for fine_local_idx, fine_node in enumerate(fine_nodes.tolist()):
-            weights = np.asarray(coarse_hatp[:, fine_local_idx], dtype=np.float64)
-            nonzero = np.flatnonzero(np.abs(weights) > float(tolerance))
-            for comp in range(VECTOR_BLOCK_SIZE):
-                fine_total = VECTOR_BLOCK_SIZE * int(fine_node) + comp
-                fine_free_orig = int(fine.total_to_free_orig[fine_total])
-                if fine_free_orig < 0:
-                    continue
-                fine_row = int(fine.iperm[fine_free_orig])
-                if str(build_mode) == "owned_rows" and not (
-                    int(fine.lo) <= fine_row < int(fine.hi)
-                ):
-                    continue
-                for coarse_local_idx in nonzero.tolist():
-                    coarse_total = VECTOR_BLOCK_SIZE * int(coarse_nodes[coarse_local_idx]) + comp
-                    coarse_free_orig = int(coarse.total_to_free_orig[coarse_total])
-                    if coarse_free_orig < 0:
-                        continue
-                    coarse_col = int(coarse.iperm[coarse_free_orig])
-                    value = float(weights[coarse_local_idx])
-                    key = (fine_row, coarse_col)
-                    previous = entries.get(key)
-                    if previous is None:
-                        entries[key] = value
-                        continue
-                    if abs(previous - value) > float(tolerance):
-                        raise ValueError(
-                            "Inconsistent same-mesh interpolation entry for "
-                            f"row {fine_row}, col {coarse_col}: {previous} vs {value}"
-                        )
-    return _sorted_coo_arrays(entries)
+    flat_fine_nodes = np.asarray(fine_elem.reshape(-1), dtype=np.int64)
+    unique_fine_nodes, first_idx = np.unique(flat_fine_nodes, return_index=True)
+    fine_elem_width = int(fine_elem.shape[1])
+    source_elem = np.asarray(first_idx // fine_elem_width, dtype=np.int64)
+    source_local = np.asarray(first_idx % fine_elem_width, dtype=np.int64)
+    coarse_elem_nodes = np.asarray(coarse_elem[source_elem], dtype=np.int64)
+    weights = np.asarray(coarse_hatp[:, source_local], dtype=np.float64)
+    coarse_local_idx, node_pos = np.nonzero(np.abs(weights) > float(tolerance))
+    if coarse_local_idx.size == 0:
+        return (
+            np.empty(0, dtype=np.int64),
+            np.empty(0, dtype=np.int64),
+            np.empty(0, dtype=np.float64),
+        )
+    return _expand_vector_component_entries(
+        coarse=coarse,
+        fine=fine,
+        fine_nodes=np.asarray(unique_fine_nodes[node_pos], dtype=np.int64),
+        coarse_nodes=np.asarray(
+            coarse_elem_nodes[node_pos, coarse_local_idx],
+            dtype=np.int64,
+        ),
+        weights=np.asarray(weights[coarse_local_idx, node_pos], dtype=np.float64),
+        build_mode=str(build_mode),
+        tolerance=float(tolerance),
+    )
 
 
 def _reference_coordinates_in_parent_tet(
@@ -448,58 +527,47 @@ def _parent_mesh_prolongation_entries(
     if fine_parent.shape[0] != fine_elem.shape[0]:
         raise ValueError("fine macro_parent length must match fine macro element count")
 
-    node_interp_cache: dict[int, tuple[np.ndarray, np.ndarray]] = {}
-    entries: dict[tuple[int, int], float] = {}
-    for elem_id in range(int(fine_elem.shape[0])):
-        parent_id = int(fine_parent[elem_id])
-        coarse_elem_nodes = np.asarray(coarse_elem[parent_id], dtype=np.int64)
-        coarse_vertex_nodes = coarse_elem_nodes[:4]
-        parent_vertices = np.asarray(coarse_nodes[coarse_vertex_nodes], dtype=np.float64)
-        fine_nodes_elem = np.asarray(fine_elem[elem_id], dtype=np.int64)
-        for fine_node in fine_nodes_elem.tolist():
-            cached = node_interp_cache.get(int(fine_node))
-            if cached is None:
-                xi = _reference_coordinates_in_parent_tet(
-                    fine_nodes[int(fine_node)],
-                    parent_vertices,
-                ).reshape(3, 1)
-                weights = np.asarray(
-                    evaluate_tetra_lagrange_basis(int(coarse.degree), xi)[0][:, 0],
-                    dtype=np.float64,
-                )
-                nonzero = np.flatnonzero(np.abs(weights) > float(tolerance))
-                cached = (
-                    np.asarray(coarse_elem_nodes[nonzero], dtype=np.int64),
-                    np.asarray(weights[nonzero], dtype=np.float64),
-                )
-                node_interp_cache[int(fine_node)] = cached
-            coarse_global_nodes, interp_weights = cached
-            for comp in range(VECTOR_BLOCK_SIZE):
-                fine_total = VECTOR_BLOCK_SIZE * int(fine_node) + comp
-                fine_free_orig = int(fine.total_to_free_orig[fine_total])
-                if fine_free_orig < 0:
-                    continue
-                fine_row = int(fine.iperm[fine_free_orig])
-                if str(build_mode) == "owned_rows" and not (int(fine.lo) <= fine_row < int(fine.hi)):
-                    continue
-                for coarse_global_node, value in zip(coarse_global_nodes, interp_weights, strict=False):
-                    coarse_total = VECTOR_BLOCK_SIZE * int(coarse_global_node) + comp
-                    coarse_free_orig = int(coarse.total_to_free_orig[coarse_total])
-                    if coarse_free_orig < 0:
-                        continue
-                    coarse_col = int(coarse.iperm[coarse_free_orig])
-                    key = (fine_row, coarse_col)
-                    previous = entries.get(key)
-                    value_f = float(value)
-                    if previous is None:
-                        entries[key] = value_f
-                        continue
-                    if abs(previous - value_f) > float(tolerance):
-                        raise ValueError(
-                            "Inconsistent parent-mesh interpolation entry for "
-                            f"row {fine_row}, col {coarse_col}: {previous} vs {value_f}"
-                        )
-    return _sorted_coo_arrays(entries)
+    flat_fine_nodes = np.asarray(fine_elem.reshape(-1), dtype=np.int64)
+    flat_parent = np.repeat(fine_parent, fine_elem.shape[1]).astype(np.int64)
+    unique_fine_nodes, first_idx = np.unique(flat_fine_nodes, return_index=True)
+    parent_id = np.asarray(flat_parent[first_idx], dtype=np.int64)
+    coarse_elem_nodes = np.asarray(coarse_elem[parent_id], dtype=np.int64)
+    coarse_vertex_nodes = np.asarray(coarse_elem_nodes[:, :4], dtype=np.int64)
+    parent_vertices = np.asarray(coarse_nodes[coarse_vertex_nodes], dtype=np.float64)
+    base = np.asarray(parent_vertices[:, 0, :], dtype=np.float64)
+    jac = np.stack(
+        (
+            np.asarray(parent_vertices[:, 1, :] - base, dtype=np.float64),
+            np.asarray(parent_vertices[:, 2, :] - base, dtype=np.float64),
+            np.asarray(parent_vertices[:, 3, :] - base, dtype=np.float64),
+        ),
+        axis=-1,
+    )
+    rhs = np.asarray(fine_nodes[unique_fine_nodes], dtype=np.float64) - base
+    xi = np.linalg.solve(jac, rhs[..., None]).squeeze(-1)
+    weights = np.asarray(
+        evaluate_tetra_lagrange_basis(int(coarse.degree), xi.T)[0],
+        dtype=np.float64,
+    )
+    coarse_local_idx, node_pos = np.nonzero(np.abs(weights) > float(tolerance))
+    if coarse_local_idx.size == 0:
+        return (
+            np.empty(0, dtype=np.int64),
+            np.empty(0, dtype=np.int64),
+            np.empty(0, dtype=np.float64),
+        )
+    return _expand_vector_component_entries(
+        coarse=coarse,
+        fine=fine,
+        fine_nodes=np.asarray(unique_fine_nodes[node_pos], dtype=np.int64),
+        coarse_nodes=np.asarray(
+            coarse_elem_nodes[node_pos, coarse_local_idx],
+            dtype=np.int64,
+        ),
+        weights=np.asarray(weights[coarse_local_idx, node_pos], dtype=np.float64),
+        build_mode=str(build_mode),
+        tolerance=float(tolerance),
+    )
 
 
 def _build_matrix_from_coo(
@@ -531,7 +599,6 @@ def _build_matrix_from_coo(
         owned_vals.astype(PETSc.ScalarType),
         addv=PETSc.InsertMode.INSERT_VALUES,
     )
-    mat.assemble()
     return mat
 
 
@@ -560,42 +627,44 @@ def _build_free_reordered_prolongation(
             build_mode=local_build_mode,
         )
 
-    if build_mode == "root_bcast" and int(comm.size) > 1:
-        payload = _build_entries("replicated") if int(comm.rank) == 0 else None
-        rows, cols, data = comm.bcast(payload, root=0)
-    else:
-        rows, cols, data = _build_entries(build_mode)
+    with _petsc_event("slope3d_mg:transfer_mapping"):
+        if build_mode == "root_bcast" and int(comm.size) > 1:
+            payload = _build_entries("replicated") if int(comm.rank) == 0 else None
+            rows, cols, data = comm.bcast(payload, root=0)
+        else:
+            rows, cols, data = _build_entries(build_mode)
     mapping_time = float(time.perf_counter() - t0)
 
     t1 = time.perf_counter()
-    prolong = _build_matrix_from_coo(
-        rows,
-        cols,
-        data,
-        row_lo=fine.lo,
-        row_hi=fine.hi,
-        n_rows=fine.n_free,
-        col_lo=coarse.lo,
-        col_hi=coarse.hi,
-        n_cols=coarse.n_free,
-        comm=comm,
-    )
-    if build_mode == "owned_rows":
-        restrict = prolong.copy()
-        restrict.transpose()
-    else:
-        restrict = _build_matrix_from_coo(
-            cols,
+    with _petsc_event("slope3d_mg:transfer_matrix_build"):
+        prolong = _build_matrix_from_coo(
             rows,
+            cols,
             data,
-            row_lo=coarse.lo,
-            row_hi=coarse.hi,
-            n_rows=coarse.n_free,
-            col_lo=fine.lo,
-            col_hi=fine.hi,
-            n_cols=fine.n_free,
+            row_lo=fine.lo,
+            row_hi=fine.hi,
+            n_rows=fine.n_free,
+            col_lo=coarse.lo,
+            col_hi=coarse.hi,
+            n_cols=coarse.n_free,
             comm=comm,
         )
+        if build_mode == "owned_rows":
+            restrict = prolong.copy()
+            restrict.transpose()
+        else:
+            restrict = _build_matrix_from_coo(
+                cols,
+                rows,
+                data,
+                row_lo=coarse.lo,
+                row_hi=coarse.hi,
+                n_rows=coarse.n_free,
+                col_lo=fine.lo,
+                col_hi=fine.hi,
+                n_cols=fine.n_free,
+                comm=comm,
+            )
     matrix_build_time = float(time.perf_counter() - t1)
     return prolong, restrict, {
         "mapping_time": float(mapping_time),
@@ -725,6 +794,7 @@ def build_mixed_pmg_hierarchy(
         build_metadata={
             "level_build_time": float(level_build_time),
             "transfer_build_time": float(transfer_build_time),
+            "transfer_backend": "coo_vectorized",
             "level_records": level_records,
             "transfer_records": transfer_records,
         },

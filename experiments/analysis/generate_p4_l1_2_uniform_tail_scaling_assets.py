@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import math
+import os
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -12,12 +13,14 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 
-ROOT = Path("artifacts/raw_results/scaling_probe")
-FIXED_BASE = ROOT / "p4_l1_2_uniform_tail_maxit1_threads1"
-OUTDIR = ROOT / "p4_l1_2_uniform_tail_assets"
+FIXED_BASE = Path(os.environ.get("P4_L1_2_SCALING_ROOT", "artifacts/raw_results/scaling_probe/p4_l1_2_uniform_tail_maxit1_threads1"))
+ROOT = FIXED_BASE.parent
+OUTDIR = Path(os.environ.get("P4_L1_2_SCALING_OUTDIR", str(ROOT / "p4_l1_2_uniform_tail_assets")))
 PER_PHASE_DIR = OUTDIR / "per_phase"
-REPORT = ROOT / "P4_L1_2_uniform_tail_parallel_scaling.md"
+REPORT = Path(os.environ.get("P4_L1_2_SCALING_REPORT", str(ROOT / "P4_L1_2_uniform_tail_parallel_scaling.md")))
 GLOBAL_ELEMS = 147352.0
+FIXED_BASE_NAME = FIXED_BASE.name
+OUTDIR_NAME = OUTDIR.name
 
 
 @dataclass(frozen=True)
@@ -324,7 +327,7 @@ def write_summary(rows: list[dict], phase_records: list[dict]) -> None:
 
 def _report_text(rows: list[dict], phase_records: list[dict]) -> str:
     outputs = "\n".join(
-        f"- [`np{int(row['np'])}/output.json`](./p4_l1_2_uniform_tail_maxit1_threads1/np{int(row['np'])}/output.json)"
+        f"- [`np{int(row['np'])}/output.json`](./{FIXED_BASE_NAME}/np{int(row['np'])}/output.json)"
         for row in rows
     )
     total_table = "\n".join(
@@ -344,7 +347,7 @@ def _report_text(rows: list[dict], phase_records: list[dict]) -> str:
         for row in rows
     )
     per_phase = "\n\n".join(
-        f"### {idx}. {rec['label']}\n\n![{rec['label']}](./p4_l1_2_uniform_tail_assets/per_phase/{_phase_plot_name(idx, rec['key'])})"
+        f"### {idx}. {rec['label']}\n\n![{rec['label']}](./{OUTDIR_NAME}/per_phase/{_phase_plot_name(idx, rec['key'])})"
         for idx, rec in enumerate(phase_records, start=1)
     )
     return f"""# `P4(L1_2), lambda = 1.5` Parallel Scaling Report
@@ -364,7 +367,7 @@ Outputs:
 
 ## Overview
 
-![overview](./p4_l1_2_uniform_tail_assets/scaling_overview_loglog.png)
+![overview](./{OUTDIR_NAME}/scaling_overview_loglog.png)
 
 | MPI ranks | total time [s] | solve time [s] | speedup | efficiency |
 | ---: | ---: | ---: | ---: | ---: |
@@ -372,7 +375,7 @@ Outputs:
 
 ## Linear Solve Timing Split
 
-![linear split](./p4_l1_2_uniform_tail_assets/linear_solve_breakdown.png)
+![linear split](./{OUTDIR_NAME}/linear_solve_breakdown.png)
 
 | MPI ranks | assemble [s] | KSP setup [s] | KSP solve [s] |
 | ---: | ---: | ---: | ---: |
@@ -380,7 +383,7 @@ Outputs:
 
 ## Impact-Sorted Phase Scaling
 
-![phase grid](./p4_l1_2_uniform_tail_assets/phase_scaling_grid.png)
+![phase grid](./{OUTDIR_NAME}/phase_scaling_grid.png)
 
 | Rank | Phase | 1 rank [s] | 32 ranks [s] | speedup | efficiency | 1-rank share of total |
 | ---: | --- | ---: | ---: | ---: | ---: | ---: |
@@ -392,7 +395,7 @@ Outputs:
 
 ## Overlap / Duplication
 
-![overlap](./p4_l1_2_uniform_tail_assets/overlap_and_efficiency.png)
+![overlap](./{OUTDIR_NAME}/overlap_and_efficiency.png)
 
 | MPI ranks | local elements min | local elements max | element duplication factor | overlap DOF factor |
 | ---: | ---: | ---: | ---: | ---: |

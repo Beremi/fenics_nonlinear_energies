@@ -1,8 +1,14 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-ROOT="${1:-artifacts/raw_results/scaling_probe/p4_l1_2_uniform_tail_maxit1_threads1}"
+ROOT="${1:-artifacts/raw_results/assembly_opt_ladder/coo_chunk8_scatteropt_sweep}"
 CHUNK_SIZE="${P4_HESSIAN_CHUNK_SIZE:-8}"
+ASSEMBLY_BACKEND="${ASSEMBLY_BACKEND:-coo}"
+ENABLE_PETSC_LOG_EVENTS="${ENABLE_PETSC_LOG_EVENTS:-0}"
+ENABLE_PETSC_LOG_VIEW="${ENABLE_PETSC_LOG_VIEW:-0}"
+REPORT_SCRIPT="${REPORT_SCRIPT:-experiments/analysis/generate_p4_l1_2_uniform_tail_scaling_assets.py}"
+REPORT_OUTDIR="${REPORT_OUTDIR:-$ROOT/assets}"
+REPORT_PATH="${REPORT_PATH:-$ROOT/REPORT.md}"
 RANKS=(1 2 4 8 16 32)
 
 mkdir -p "$ROOT"
@@ -47,6 +53,7 @@ COMMON_ARGS=(
   --mg_p4_smoother_ksp_type chebyshev
   --mg_p4_smoother_pc_type jacobi
   --mg_p4_smoother_steps 5
+  --assembly_backend "$ASSEMBLY_BACKEND"
   --p4_hessian_chunk_size "$CHUNK_SIZE"
   --line_search armijo
   --armijo_alpha0 1.0
@@ -63,11 +70,19 @@ COMMON_ARGS=(
   --quiet
 )
 
+if [[ "$ENABLE_PETSC_LOG_EVENTS" == "1" ]]; then
+  COMMON_ARGS+=(--enable_petsc_log_events)
+fi
+
 for NP in "${RANKS[@]}"; do
   OUTDIR="$ROOT/np${NP}"
   mkdir -p "$OUTDIR"
-  rm -f "$OUTDIR/output.json" "$OUTDIR/progress.json" "$OUTDIR/run.log" "$OUTDIR/time.txt"
+  rm -f "$OUTDIR/output.json" "$OUTDIR/progress.json" "$OUTDIR/run.log" "$OUTDIR/time.txt" "$OUTDIR/petsc_log_view.txt"
   echo "[$(date --iso-8601=seconds)] starting np=${NP}" | tee -a "$ROOT/serial_master.log"
+  EXTRA_ARGS=()
+  if [[ "$ENABLE_PETSC_LOG_VIEW" == "1" ]]; then
+    EXTRA_ARGS+=(--petsc_log_view_path "$OUTDIR/petsc_log_view.txt")
+  fi
   TIMEFORMAT=$'real %3R\nuser %3U\nsys %3S'
   {
     time env \
@@ -81,6 +96,7 @@ for NP in "${RANKS[@]}"; do
         --nproc "$NP" \
         --out "$OUTDIR/output.json" \
         --progress-out "$OUTDIR/progress.json" \
+        "${EXTRA_ARGS[@]}" \
         > "$OUTDIR/run.log" 2>&1
   } 2> "$OUTDIR/time.txt"
 
@@ -93,8 +109,8 @@ out_path = Path(sys.argv[1])
 summary = Path(sys.argv[2])
 np_ranks = int(sys.argv[3])
 obj = json.loads(out_path.read_text())
-diag = obj["parallel_diagnostics"][0]
-lin = diag["linear_history"][0]
+diags = obj["parallel_diagnostics"]
+lin = max(diags, key=lambda rank: rank["linear_history"][0]["t_assemble"])["linear_history"][0]
 with summary.open("a", encoding="utf-8") as f:
     f.write(
         f"{np_ranks}\t"
@@ -109,5 +125,8 @@ PY
   echo "[$(date --iso-8601=seconds)] finished np=${NP}" | tee -a "$ROOT/serial_master.log"
 done
 
-./.venv/bin/python experiments/analysis/generate_p4_l1_2_uniform_tail_scaling_assets.py >> "$ROOT/serial_master.log" 2>&1
+P4_L1_2_SCALING_ROOT="$ROOT" \
+P4_L1_2_SCALING_OUTDIR="$REPORT_OUTDIR" \
+P4_L1_2_SCALING_REPORT="$REPORT_PATH" \
+./.venv/bin/python "$REPORT_SCRIPT" >> "$ROOT/serial_master.log" 2>&1
 echo "[$(date --iso-8601=seconds)] report generated" | tee -a "$ROOT/serial_master.log"

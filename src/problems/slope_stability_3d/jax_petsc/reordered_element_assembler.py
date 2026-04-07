@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+from contextlib import nullcontext
+from pathlib import Path
+import resource
 import time
 
 import jax
@@ -208,10 +211,16 @@ class SlopeStability3DReorderedElementAssembler(ReorderedElementAssemblerBase):
         distribution_strategy=None,
         reuse_hessian_value_buffers=True,
         p4_hessian_chunk_size=32,
+        assembly_backend="coo",
+        petsc_log_events=False,
+        jax_trace_dir="",
     ):
         self.constitutive_mode = "plastic"
         self._kernel_cache: dict[str, dict[str, object]] = {}
+        self.jax_trace_dir = str(jax_trace_dir or "").strip()
+        self._jax_trace_enabled = bool(self.jax_trace_dir)
         self.p4_hessian_chunk_size = max(1, int(p4_hessian_chunk_size))
+        self.p4_chunk_autotune_meta: dict[str, object] | None = None
         if block_size_override is not None:
             self.block_size = int(block_size_override)
         super().__init__(
@@ -229,7 +238,90 @@ class SlopeStability3DReorderedElementAssembler(ReorderedElementAssemblerBase):
             perm_override=perm_override,
             distribution_strategy=distribution_strategy,
             reuse_hessian_value_buffers=reuse_hessian_value_buffers,
+            assembly_backend=assembly_backend,
+            petsc_log_events=petsc_log_events,
         )
+
+    def _resolve_assembly_backend(self, backend: str) -> str:
+        backend_name = str(backend or "coo")
+        if backend_name not in {"coo", "coo_local", "blocked_local"}:
+            raise ValueError(f"Unsupported 3D assembly backend {backend_name!r}")
+        if backend_name == "blocked_local":
+            n_free = int(np.asarray(self.params["freedofs"], dtype=np.int64).size)
+            if int(getattr(self, "block_size", 1)) != 3 or (n_free % 3) != 0:
+                raise ValueError(
+                    "assembly_backend='blocked_local' requires a full 3-block free-DOF layout; "
+                    "the current reduced system has component-wise constraints and is not block-compatible"
+                )
+        return backend_name
+
+    def _chunk_trace(self, name: str):
+        if not self._jax_trace_enabled:
+            return nullcontext()
+        return jax.profiler.TraceAnnotation(str(name))
+
+    @staticmethod
+    def _rss_gib() -> float:
+        usage = resource.getrusage(resource.RUSAGE_SELF)
+        return float(int(getattr(usage, "ru_maxrss", 0)) * 1024) / float(1024**3)
+
+    def autotune_p4_hessian_chunk_size(
+        self,
+        *,
+        u_owned: np.ndarray,
+        candidates: tuple[int, ...] = (32, 64, 128, 256),
+        rss_budget_gib: float = 64.0,
+    ) -> dict[str, object] | None:
+        if int(self.params.get("element_degree", 2)) != 4:
+            return None
+        if self.assembly_backend == "blocked_local":
+            return None
+        original_chunk = int(self.p4_hessian_chunk_size)
+        original_iter_timings = list(self.iter_timings)
+        original_callback_stats = {
+            key: dict(value) for key, value in self._callback_stats.items()
+        }
+        results: list[dict[str, object]] = []
+        try:
+            for cand in tuple(int(v) for v in candidates):
+                self.p4_hessian_chunk_size = max(1, int(cand))
+                rss_before = self._rss_gib()
+                t0 = time.perf_counter()
+                timing = self.assemble_hessian_with_mode(
+                    np.asarray(u_owned, dtype=np.float64),
+                    constitutive_mode=self.constitutive_mode,
+                )
+                total = float(time.perf_counter() - t0)
+                rss_after = self._rss_gib()
+                results.append(
+                    {
+                        "chunk_size": int(cand),
+                        "assemble_total": float(total),
+                        "hvp_compute": float(timing.get("hvp_compute", 0.0)),
+                        "extraction": float(timing.get("extraction", 0.0)),
+                        "coo_assembly": float(timing.get("coo_assembly", 0.0)),
+                        "rss_hwm_gib": float(rss_after),
+                        "rss_delta_gib": float(max(0.0, rss_after - rss_before)),
+                        "within_budget": bool(float(rss_after) <= float(rss_budget_gib)),
+                    }
+                )
+            feasible = [rec for rec in results if bool(rec["within_budget"])]
+            best = min(feasible or results, key=lambda rec: float(rec["assemble_total"]))
+            self.p4_hessian_chunk_size = int(best["chunk_size"])
+            self.p4_chunk_autotune_meta = {
+                "enabled": True,
+                "rss_budget_gib": float(rss_budget_gib),
+                "candidates": list(results),
+                "selected_chunk_size": int(best["chunk_size"]),
+            }
+            return dict(self.p4_chunk_autotune_meta)
+        finally:
+            self.iter_timings = list(original_iter_timings)
+            self._callback_stats = {
+                key: dict(value) for key, value in original_callback_stats.items()
+            }
+            if self.p4_chunk_autotune_meta is None:
+                self.p4_hessian_chunk_size = int(original_chunk)
 
     def _build_local_element_kernels(self, constitutive_mode: str) -> dict[str, object]:
         elems = jnp.asarray(self.local_data.elems_local_np, dtype=jnp.int32)
@@ -514,34 +606,59 @@ class SlopeStability3DReorderedElementAssembler(ReorderedElementAssemblerBase):
         start: int,
         stop: int,
     ) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
-        elems_reordered = np.asarray(
-            self.local_data.elems_reordered[int(start) : int(stop)], dtype=np.int64
-        )
-        rows = elems_reordered[:, :, None]
-        cols = elems_reordered[:, None, :]
-        valid = (rows >= self.layout.lo) & (rows < self.layout.hi) & (cols >= 0)
+        if self.assembly_backend == "coo_local":
+            elems_lookup = np.asarray(
+                self._local_elems_free[int(start) : int(stop)],
+                dtype=np.int64,
+            )
+            rows = elems_lookup[:, :, None]
+            cols = elems_lookup[:, None, :]
+            valid = (rows >= 0) & (cols >= 0) & self._local_owned_free_mask[rows]
+            key_base = np.int64(max(1, int(self._local_free_global_indices.size)))
+            key_table = self._local_owned_keys_sorted
+            pos_table = self._local_owned_pos_sorted
+        else:
+            elems_lookup = np.asarray(
+                self.local_data.elems_reordered[int(start) : int(stop)], dtype=np.int64
+            )
+            rows = elems_lookup[:, :, None]
+            cols = elems_lookup[:, None, :]
+            valid = (rows >= self.layout.lo) & (rows < self.layout.hi) & (cols >= 0)
+            key_base = np.int64(self.layout.n_free)
+            key_table = self.layout.owned_keys_sorted
+            pos_table = self.layout.owned_pos_sorted
         vi = np.where(valid)
         if vi[0].size == 0:
             empty = np.zeros(0, dtype=np.int64)
             return empty, empty, empty, empty
-        row_vals = elems_reordered[vi[0], vi[1]]
-        col_vals = elems_reordered[vi[0], vi[2]]
-        keys = row_vals.astype(np.int64) * np.int64(self.layout.n_free) + col_vals.astype(
-            np.int64
-        )
-        key_pos = np.searchsorted(self.layout.owned_keys_sorted, keys)
-        if np.any(key_pos >= self.layout.owned_keys_sorted.size):
+        row_vals = elems_lookup[vi[0], vi[1]]
+        col_vals = elems_lookup[vi[0], vi[2]]
+        keys = row_vals.astype(np.int64) * key_base + col_vals.astype(np.int64)
+        key_pos = np.searchsorted(key_table, keys)
+        if np.any(key_pos >= key_table.size):
             raise RuntimeError("Chunk scatter lookup exceeded owned COO pattern size")
-        matched = self.layout.owned_keys_sorted[key_pos]
+        matched = key_table[key_pos]
         if not np.array_equal(matched, keys):
             raise RuntimeError("Chunk scatter lookup found mismatched owned COO entries")
-        positions = np.asarray(self.layout.owned_pos_sorted[key_pos], dtype=np.int64)
+        positions = np.asarray(pos_table[key_pos], dtype=np.int64)
         return (
             np.asarray(vi[0], dtype=np.int64),
             np.asarray(vi[1], dtype=np.int64),
             np.asarray(vi[2], dtype=np.int64),
             positions,
         )
+
+    def _accumulate_owned_contrib(
+        self,
+        owned_vals: np.ndarray,
+        positions: np.ndarray,
+        contrib: np.ndarray,
+    ) -> None:
+        pos = np.asarray(positions, dtype=np.int64).ravel()
+        if pos.size == 0:
+            return
+        vals = np.asarray(contrib, dtype=np.float64).ravel()
+        np.add.at(owned_vals, pos, vals)
 
     def _assemble_hessian_with_elem_hess(
         self,
@@ -554,10 +671,11 @@ class SlopeStability3DReorderedElementAssembler(ReorderedElementAssemblerBase):
     ):
         timings = {}
         t_total = time.perf_counter()
-        v_local, exchange = self._owned_to_local(
-            np.asarray(u_owned, dtype=np.float64),
-            zero_dirichlet=False,
-        )
+        with self._petsc_event("slope3d:overlap_exchange"):
+            v_local, exchange = self._owned_to_local(
+                np.asarray(u_owned, dtype=np.float64),
+                zero_dirichlet=False,
+            )
 
         owned_vals = self._reset_owned_hessian_values()
         chunk_elems = int(hessian_chunk_elems or 0)
@@ -566,27 +684,52 @@ class SlopeStability3DReorderedElementAssembler(ReorderedElementAssemblerBase):
             n_local_elem = int(self.local_data.elems_local_np.shape[0])
             timings["elem_hessian_compute"] = 0.0
             timings["scatter"] = 0.0
+            timings["chunk_count"] = int((n_local_elem + chunk_elems - 1) // chunk_elems)
+            timings["chunk_size"] = int(chunk_elems)
+            chunk_rows: list[int] = []
+            chunk_kernel_times: list[float] = []
+            chunk_scatter_times: list[float] = []
             for start in range(0, n_local_elem, chunk_elems):
                 stop = min(start + chunk_elems, n_local_elem)
                 t0 = time.perf_counter()
-                elem_hess_chunk = np.asarray(
-                    elem_hess_chunk_fn(v_local_jax, start, stop).block_until_ready()
-                )
-                timings["elem_hessian_compute"] += float(time.perf_counter() - t0)
+                with self._petsc_event("slope3d:hessian_kernel"):
+                    with self._chunk_trace("slope3d_p4_chunk_hessian"):
+                        elem_hess_chunk = np.asarray(
+                            elem_hess_chunk_fn(v_local_jax, start, stop).block_until_ready()
+                        )
+                kernel_dt = float(time.perf_counter() - t0)
+                timings["elem_hessian_compute"] += kernel_dt
                 t0 = time.perf_counter()
-                hess_e, hess_i, hess_j, hess_positions = self._chunk_scatter_pattern(
-                    start, stop
-                )
+                with self._petsc_event("slope3d:hessian_scatter"):
+                    with self._chunk_trace("slope3d_p4_chunk_scatter"):
+                        hess_e, hess_i, hess_j, hess_positions = self._chunk_scatter_pattern(
+                            start, stop
+                        )
+                        if hess_e.size != 0:
+                            contrib = elem_hess_chunk[
+                                hess_e,
+                                hess_i,
+                                hess_j,
+                            ]
+                            self._accumulate_owned_contrib(
+                                owned_vals,
+                                hess_positions,
+                                contrib,
+                            )
+                scatter_dt = float(time.perf_counter() - t0)
                 if hess_e.size == 0:
-                    timings["scatter"] += float(time.perf_counter() - t0)
+                    timings["scatter"] += scatter_dt
+                    chunk_rows.append(0)
+                    chunk_kernel_times.append(kernel_dt)
+                    chunk_scatter_times.append(scatter_dt)
                     continue
-                contrib = elem_hess_chunk[
-                    hess_e,
-                    hess_i,
-                    hess_j,
-                ]
-                np.add.at(owned_vals, hess_positions, contrib)
-                timings["scatter"] += float(time.perf_counter() - t0)
+                timings["scatter"] += scatter_dt
+                chunk_rows.append(int(hess_positions.size))
+                chunk_kernel_times.append(kernel_dt)
+                chunk_scatter_times.append(scatter_dt)
+            timings["chunk_rows_max"] = int(max(chunk_rows) if chunk_rows else 0)
+            timings["chunk_kernel_time_max"] = float(max(chunk_kernel_times) if chunk_kernel_times else 0.0)
+            timings["chunk_scatter_time_max"] = float(max(chunk_scatter_times) if chunk_scatter_times else 0.0)
         else:
             if (
                 self._scatter.hess_e is None
@@ -598,20 +741,23 @@ class SlopeStability3DReorderedElementAssembler(ReorderedElementAssemblerBase):
                     "Full-element Hessian assembly requires prebuilt Hessian scatter data"
                 )
             t0 = time.perf_counter()
-            elem_hess = np.asarray(elem_hess_jit(jnp.asarray(v_local)).block_until_ready())
+            with self._petsc_event("slope3d:hessian_kernel"):
+                elem_hess = np.asarray(elem_hess_jit(jnp.asarray(v_local)).block_until_ready())
             timings["elem_hessian_compute"] = time.perf_counter() - t0
 
             t0 = time.perf_counter()
-            contrib = elem_hess[self._scatter.hess_e, self._scatter.hess_i, self._scatter.hess_j]
-            np.add.at(owned_vals, self._scatter.hess_positions, contrib)
+            with self._petsc_event("slope3d:hessian_scatter"):
+                contrib = elem_hess[self._scatter.hess_e, self._scatter.hess_i, self._scatter.hess_j]
+                self._accumulate_owned_contrib(
+                    owned_vals,
+                    self._scatter.hess_positions,
+                    contrib,
+                )
             timings["scatter"] = time.perf_counter() - t0
 
         t0 = time.perf_counter()
-        self.A.setValuesCOO(
-            self._owned_hessian_values_for_petsc(owned_vals),
-            addv=PETSc.InsertMode.INSERT_VALUES,
-        )
-        self.A.assemble()
+        with self._petsc_event("slope3d:hessian_matrix_insert"):
+            self._insert_owned_hessian_values(owned_vals)
         timings["coo_assembly"] = time.perf_counter() - t0
 
         timings["allgatherv"] = float(exchange["allgatherv"])

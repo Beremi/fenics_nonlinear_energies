@@ -1,0 +1,13 @@
+{
+  "status": "failed",
+  "message": "Maximum number of iterations reached",
+  "nit": 20,
+  "final_grad_norm": 1447.1933887843886,
+  "energy": -3188339.4384913724,
+  "solve_time": 1005.5723811751232,
+  "total_time": 1059.365672252141,
+  "linear_iterations_total": 504,
+  "max_rss_gib": 4.821769714355469,
+  "max_hwm_gib": 4.920299530029297,
+  "max_ksp_its": 57
+}

@@ -19,14 +19,22 @@ from src.problems.slope_stability_3d.jax.jax_energy_3d import (
     principal_values_from_sym6,
 )
 from src.problems.slope_stability_3d.jax_petsc import multigrid
+from src.problems.slope_stability_3d.jax_petsc.reordered_element_assembler import (
+    SlopeStability3DReorderedElementAssembler,
+)
 from src.problems.slope_stability_3d.support.mesh import (
     build_same_mesh_lagrange_case_data,
     ensure_same_mesh_case_hdf5,
     load_case_hdf5,
+    ownership_block_size_3d,
     same_mesh_case_hdf5_path,
     select_reordered_perm_3d,
 )
 from src.problems.slope_stability_3d.support.reduction import davis_b_reduction_qp
+from src.problems.slope_stability_3d.support.simplex_lagrange import (
+    evaluate_tetra_lagrange_basis,
+    tetra_reference_nodes,
+)
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -212,6 +220,148 @@ def _solver_command(
         "--out",
         str(output_path),
     ]
+
+
+def _reference_same_mesh_transfer_entries_dict(
+    coarse,
+    fine,
+    *,
+    build_mode: str,
+    tolerance: float = 1.0e-12,
+):
+    coarse_elem = np.asarray(coarse.params["elems_scalar"], dtype=np.int64)
+    fine_elem = np.asarray(fine.params["elems_scalar"], dtype=np.int64)
+    fine_ref = tetra_reference_nodes(int(fine.degree))
+    coarse_hatp = np.asarray(
+        evaluate_tetra_lagrange_basis(int(coarse.degree), fine_ref)[0],
+        dtype=np.float64,
+    )
+    entries: dict[tuple[int, int], float] = {}
+    for elem_id in range(int(fine_elem.shape[0])):
+        coarse_nodes = np.asarray(coarse_elem[elem_id], dtype=np.int64)
+        fine_nodes = np.asarray(fine_elem[elem_id], dtype=np.int64)
+        for fine_local_idx, fine_node in enumerate(fine_nodes.tolist()):
+            weights = np.asarray(coarse_hatp[:, fine_local_idx], dtype=np.float64)
+            nonzero = np.flatnonzero(np.abs(weights) > float(tolerance))
+            for comp in range(3):
+                fine_total = 3 * int(fine_node) + comp
+                fine_free_orig = int(fine.total_to_free_orig[fine_total])
+                if fine_free_orig < 0:
+                    continue
+                fine_row = int(fine.iperm[fine_free_orig])
+                if str(build_mode) == "owned_rows" and not (
+                    int(fine.lo) <= fine_row < int(fine.hi)
+                ):
+                    continue
+                for coarse_local_idx in nonzero.tolist():
+                    coarse_total = 3 * int(coarse_nodes[coarse_local_idx]) + comp
+                    coarse_free_orig = int(coarse.total_to_free_orig[coarse_total])
+                    if coarse_free_orig < 0:
+                        continue
+                    coarse_col = int(coarse.iperm[coarse_free_orig])
+                    value = float(weights[coarse_local_idx])
+                    key = (fine_row, coarse_col)
+                    previous = entries.get(key)
+                    if previous is None:
+                        entries[key] = value
+                    else:
+                        assert abs(previous - value) <= float(tolerance)
+    if not entries:
+        return (
+            np.empty(0, dtype=np.int64),
+            np.empty(0, dtype=np.int64),
+            np.empty(0, dtype=np.float64),
+        )
+    keys = np.asarray(list(entries.keys()), dtype=np.int64)
+    order = np.lexsort((keys[:, 1], keys[:, 0]))
+    rows = np.asarray(keys[order, 0], dtype=np.int64)
+    cols = np.asarray(keys[order, 1], dtype=np.int64)
+    data = np.asarray([entries[tuple(keys[idx])] for idx in order], dtype=np.float64)
+    return rows, cols, data
+
+
+def _reference_parent_transfer_entries_dict(
+    coarse,
+    fine,
+    *,
+    build_mode: str,
+    tolerance: float = 1.0e-12,
+):
+    coarse_elem = np.asarray(coarse.params["elems_scalar"], dtype=np.int64)
+    coarse_nodes = np.asarray(coarse.params["nodes"], dtype=np.float64)
+    fine_elem = np.asarray(fine.params["elems_scalar"], dtype=np.int64)
+    fine_nodes = np.asarray(fine.params["nodes"], dtype=np.float64)
+    fine_parent = np.asarray(fine.params["macro_parent"], dtype=np.int64).ravel()
+    entries: dict[tuple[int, int], float] = {}
+    node_cache: dict[int, tuple[np.ndarray, np.ndarray]] = {}
+    for elem_id in range(int(fine_elem.shape[0])):
+        parent_id = int(fine_parent[elem_id])
+        coarse_elem_nodes = np.asarray(coarse_elem[parent_id], dtype=np.int64)
+        coarse_vertex_nodes = coarse_elem_nodes[:4]
+        parent_vertices = np.asarray(coarse_nodes[coarse_vertex_nodes], dtype=np.float64)
+        base = np.asarray(parent_vertices[0], dtype=np.float64)
+        jac = np.column_stack(
+            (
+                np.asarray(parent_vertices[1] - base, dtype=np.float64),
+                np.asarray(parent_vertices[2] - base, dtype=np.float64),
+                np.asarray(parent_vertices[3] - base, dtype=np.float64),
+            )
+        )
+        for fine_node in np.asarray(fine_elem[elem_id], dtype=np.int64).tolist():
+            cached = node_cache.get(int(fine_node))
+            if cached is None:
+                xi = np.linalg.solve(
+                    jac,
+                    np.asarray(fine_nodes[int(fine_node)] - base, dtype=np.float64),
+                ).reshape(3, 1)
+                weights = np.asarray(
+                    evaluate_tetra_lagrange_basis(int(coarse.degree), xi)[0][:, 0],
+                    dtype=np.float64,
+                )
+                nonzero = np.flatnonzero(np.abs(weights) > float(tolerance))
+                cached = (
+                    np.asarray(coarse_elem_nodes[nonzero], dtype=np.int64),
+                    np.asarray(weights[nonzero], dtype=np.float64),
+                )
+                node_cache[int(fine_node)] = cached
+            coarse_global_nodes, interp_weights = cached
+            for comp in range(3):
+                fine_total = 3 * int(fine_node) + comp
+                fine_free_orig = int(fine.total_to_free_orig[fine_total])
+                if fine_free_orig < 0:
+                    continue
+                fine_row = int(fine.iperm[fine_free_orig])
+                if str(build_mode) == "owned_rows" and not (
+                    int(fine.lo) <= fine_row < int(fine.hi)
+                ):
+                    continue
+                for coarse_global_node, value in zip(
+                    coarse_global_nodes, interp_weights, strict=False
+                ):
+                    coarse_total = 3 * int(coarse_global_node) + comp
+                    coarse_free_orig = int(coarse.total_to_free_orig[coarse_total])
+                    if coarse_free_orig < 0:
+                        continue
+                    coarse_col = int(coarse.iperm[coarse_free_orig])
+                    key = (fine_row, coarse_col)
+                    value_f = float(value)
+                    previous = entries.get(key)
+                    if previous is None:
+                        entries[key] = value_f
+                    else:
+                        assert abs(previous - value_f) <= float(tolerance)
+    if not entries:
+        return (
+            np.empty(0, dtype=np.int64),
+            np.empty(0, dtype=np.int64),
+            np.empty(0, dtype=np.float64),
+        )
+    keys = np.asarray(list(entries.keys()), dtype=np.int64)
+    order = np.lexsort((keys[:, 1], keys[:, 0]))
+    rows = np.asarray(keys[order, 0], dtype=np.int64)
+    cols = np.asarray(keys[order, 1], dtype=np.int64)
+    data = np.asarray([entries[tuple(keys[idx])] for idx in order], dtype=np.float64)
+    return rows, cols, data
 
 
 def test_davis_b_reduction_qp_matches_source_array_formula():
@@ -541,6 +691,153 @@ def test_same_mesh_transfer_sanity_p2_to_p1_and_p4_to_p2():
     expected_p4 = fine_full_p4[np.asarray(fine_p4.params["freedofs"], dtype=np.int64)][fine_p4.perm]
     np.testing.assert_allclose(np.asarray(fine_vec_p4.array[:], dtype=np.float64), expected_p4, atol=1.0e-10)
     hierarchy_p4.cleanup()
+
+
+def test_vectorized_transfer_entries_match_reference_builders():
+    comm = MPI.COMM_SELF
+
+    finest_p2 = build_same_mesh_lagrange_case_data(
+        "hetero_ssr_L1", degree=2, build_mode="replicated", comm=comm
+    )
+    params_p2 = dict(finest_p2.__dict__)
+    params_p2["elem_type"] = "P2"
+    params_p2["element_degree"] = 2
+    perm_p2 = select_reordered_perm_3d(
+        "block_xyz",
+        adjacency=finest_p2.adjacency,
+        coords_all=params_p2["nodes"],
+        freedofs=params_p2["freedofs"],
+        n_parts=1,
+    )
+    hierarchy_p2 = multigrid.build_mixed_pmg_hierarchy(
+        specs=multigrid.mixed_hierarchy_specs(
+            mesh_name="hetero_ssr_L1",
+            finest_degree=2,
+            strategy="same_mesh_p2_p1",
+        ),
+        finest_params=params_p2,
+        finest_adjacency=finest_p2.adjacency,
+        finest_perm=perm_p2,
+        reorder_mode="block_xyz",
+        comm=comm,
+        level_build_mode="replicated",
+        transfer_build_mode="owned_rows",
+    )
+    coarse_p1, fine_p2 = hierarchy_p2.levels
+    rows_new, cols_new, data_new = multigrid._adjacent_same_mesh_prolongation_entries(
+        coarse_p1,
+        fine_p2,
+        build_mode="replicated",
+    )
+    rows_ref, cols_ref, data_ref = _reference_same_mesh_transfer_entries_dict(
+        coarse_p1,
+        fine_p2,
+        build_mode="replicated",
+    )
+    np.testing.assert_array_equal(rows_new, rows_ref)
+    np.testing.assert_array_equal(cols_new, cols_ref)
+    np.testing.assert_allclose(data_new, data_ref, rtol=0.0, atol=1.0e-12)
+    hierarchy_p2.cleanup()
+
+    fine_l12 = build_same_mesh_lagrange_case_data(
+        "hetero_ssr_L1_2", degree=1, build_mode="replicated", comm=comm
+    )
+    coarse_l1 = build_same_mesh_lagrange_case_data(
+        "hetero_ssr_L1", degree=1, build_mode="replicated", comm=comm
+    )
+    params_coarse = dict(coarse_l1.__dict__)
+    params_coarse["elem_type"] = "P1"
+    params_coarse["element_degree"] = 1
+    params_fine = dict(fine_l12.__dict__)
+    params_fine["elem_type"] = "P1"
+    params_fine["element_degree"] = 1
+    coarse_level = multigrid._build_level_space(
+        mesh_name="hetero_ssr_L1",
+        params=params_coarse,
+        adjacency=coarse_l1.adjacency,
+        reorder_mode="block_xyz",
+        comm=comm,
+    )
+    fine_level = multigrid._build_level_space(
+        mesh_name="hetero_ssr_L1_2",
+        params=params_fine,
+        adjacency=fine_l12.adjacency,
+        reorder_mode="block_xyz",
+        comm=comm,
+    )
+    rows_new, cols_new, data_new = multigrid._parent_mesh_prolongation_entries(
+        coarse_level,
+        fine_level,
+        build_mode="replicated",
+    )
+    rows_ref, cols_ref, data_ref = _reference_parent_transfer_entries_dict(
+        coarse_level,
+        fine_level,
+        build_mode="replicated",
+    )
+    np.testing.assert_array_equal(rows_new, rows_ref)
+    np.testing.assert_array_equal(cols_new, cols_ref)
+    np.testing.assert_allclose(data_new, data_ref, rtol=0.0, atol=1.0e-12)
+
+
+def test_coo_local_backend_matches_global_coo():
+    comm = MPI.COMM_SELF
+    case = build_same_mesh_lagrange_case_data(
+        "hetero_ssr_L1", degree=1, build_mode="replicated", comm=comm
+    )
+    params = dict(case.__dict__)
+    params["elem_type"] = "P1"
+    params["element_degree"] = 1
+    c_bar_q, sin_phi_q = davis_b_reduction_qp(
+        np.asarray(params["c0_q"], dtype=np.float64),
+        np.asarray(params["phi_q"], dtype=np.float64),
+        np.asarray(params["psi_q"], dtype=np.float64),
+        1.0,
+    )
+    params["c_bar_q"] = np.asarray(c_bar_q, dtype=np.float64)
+    params["sin_phi_q"] = np.asarray(sin_phi_q, dtype=np.float64)
+    perm = select_reordered_perm_3d(
+        "block_xyz",
+        adjacency=case.adjacency,
+        coords_all=params["nodes"],
+        freedofs=params["freedofs"],
+        n_parts=1,
+    )
+    common_kwargs = dict(
+        params=params,
+        comm=comm,
+        adjacency=case.adjacency,
+        ksp_type="cg",
+        pc_type="hypre",
+        ksp_max_it=20,
+        reorder_mode="block_xyz",
+        local_hessian_mode="element",
+        perm_override=perm,
+        block_size_override=ownership_block_size_3d(
+            np.asarray(params["freedofs"], dtype=np.int64)
+        ),
+        distribution_strategy="overlap_allgather",
+        use_near_nullspace=False,
+    )
+    assembler_coo = SlopeStability3DReorderedElementAssembler(
+        **common_kwargs,
+        assembly_backend="coo",
+    )
+    assembler_local = SlopeStability3DReorderedElementAssembler(
+        **common_kwargs,
+        assembly_backend="coo_local",
+    )
+    rng = np.random.default_rng(42)
+    u_owned = 1.0e-6 * rng.standard_normal(assembler_coo.layout.hi - assembler_coo.layout.lo)
+    assembler_coo.assemble_hessian(u_owned)
+    assembler_local.assemble_hessian(u_owned)
+    ia_coo, ja_coo, a_coo = assembler_coo.A.getValuesCSR()
+    ia_local, ja_local, a_local = assembler_local.A.getValuesCSR()
+    np.testing.assert_array_equal(np.asarray(ia_coo, dtype=np.int64), np.asarray(ia_local, dtype=np.int64))
+    np.testing.assert_array_equal(np.asarray(ja_coo, dtype=np.int64), np.asarray(ja_local, dtype=np.int64))
+    np.testing.assert_allclose(np.asarray(a_coo, dtype=np.float64), np.asarray(a_local, dtype=np.float64), rtol=1.0e-12, atol=1.0e-12)
+    assembler_coo.cleanup()
+    assembler_local.cleanup()
 
 
 def test_chunked_p4_hessian_smoke():

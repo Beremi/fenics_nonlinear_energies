@@ -92,7 +92,21 @@ def _build_parser(profile_defaults):
         action=argparse.BooleanOptionalAction,
         default=True,
     )
-    parser.add_argument("--p4_hessian_chunk_size", type=int, default=32)
+    parser.add_argument("--p4_hessian_chunk_size", type=str, default="32")
+    parser.add_argument("--p4_chunk_autotune_candidates", type=str, default="32,64,128,256")
+    parser.add_argument("--p4_chunk_autotune_rss_budget_gib", type=float, default=64.0)
+    parser.add_argument(
+        "--assembly_backend",
+        choices=("coo", "coo_local", "blocked_local"),
+        default="coo",
+    )
+    parser.add_argument("--petsc_log_view_path", type=str, default="")
+    parser.add_argument(
+        "--enable_petsc_log_events",
+        action=argparse.BooleanOptionalAction,
+        default=False,
+    )
+    parser.add_argument("--jax_trace_dir", type=str, default="")
 
     parser.add_argument(
         "--mg_strategy",
