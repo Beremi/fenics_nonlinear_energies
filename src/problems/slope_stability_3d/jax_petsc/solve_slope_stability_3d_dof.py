@@ -88,11 +88,22 @@ def _build_parser(profile_defaults):
         default="element",
     )
     parser.add_argument(
+        "--autodiff_tangent_mode",
+        choices=("element", "constitutive"),
+        default="element",
+    )
+    parser.add_argument(
         "--reuse_hessian_value_buffers",
         action=argparse.BooleanOptionalAction,
         default=True,
     )
     parser.add_argument("--p4_hessian_chunk_size", type=str, default="32")
+    parser.add_argument(
+        "--p4_chunk_scatter_cache",
+        choices=("auto", "on", "off"),
+        default="auto",
+    )
+    parser.add_argument("--p4_chunk_scatter_cache_max_gib", type=float, default=0.5)
     parser.add_argument("--p4_chunk_autotune_candidates", type=str, default="32,64,128,256")
     parser.add_argument("--p4_chunk_autotune_rss_budget_gib", type=float, default=64.0)
     parser.add_argument(

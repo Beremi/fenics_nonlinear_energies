@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from contextlib import nullcontext
+from dataclasses import dataclass
 from pathlib import Path
 import resource
 import time
@@ -15,10 +16,14 @@ from petsc4py import PETSc
 
 from src.core.petsc.reordered_element_base import ReorderedElementAssemblerBase
 from src.problems.slope_stability_3d.jax.jax_energy_3d import (
+    chunked_vmapped_elastic_element_constitutive_hessian_3d,
     chunked_vmapped_elastic_element_hessian_3d,
+    chunked_vmapped_element_constitutive_hessian_3d,
     chunked_vmapped_element_hessian_3d,
     elastic_element_energy_3d,
     element_energy_3d,
+    vmapped_elastic_element_constitutive_hessian_3d,
+    vmapped_element_constitutive_hessian_3d,
 )
 
 
@@ -173,6 +178,14 @@ _PLASTIC_WEIGHTED_ENERGY = jax.jit(_plastic_weighted_energy)
 _ELASTIC_WEIGHTED_ENERGY = jax.jit(_elastic_weighted_energy)
 
 
+@dataclass(frozen=True)
+class P4ChunkScatterCacheEntry:
+    """Compressed fixed scatter metadata for one P4 Hessian chunk."""
+
+    flat_elem_idx: np.ndarray
+    owned_pos: np.ndarray
+
+
 class SlopeStability3DReorderedElementAssembler(ReorderedElementAssemblerBase):
     """3D vector-valued overlap-domain assembler backed by JAX autodiff."""
 
@@ -206,14 +219,18 @@ class SlopeStability3DReorderedElementAssembler(ReorderedElementAssemblerBase):
         pc_options=None,
         reorder_mode="block_xyz",
         local_hessian_mode="element",
+        autodiff_tangent_mode="element",
         perm_override=None,
         block_size_override=None,
         distribution_strategy=None,
         reuse_hessian_value_buffers=True,
         p4_hessian_chunk_size=32,
+        p4_chunk_scatter_cache="auto",
+        p4_chunk_scatter_cache_max_gib=0.5,
         assembly_backend="coo",
         petsc_log_events=False,
         jax_trace_dir="",
+        memory_guard_total_gib=None,
     ):
         self.constitutive_mode = "plastic"
         self._kernel_cache: dict[str, dict[str, object]] = {}
@@ -221,6 +238,33 @@ class SlopeStability3DReorderedElementAssembler(ReorderedElementAssemblerBase):
         self._jax_trace_enabled = bool(self.jax_trace_dir)
         self.p4_hessian_chunk_size = max(1, int(p4_hessian_chunk_size))
         self.p4_chunk_autotune_meta: dict[str, object] | None = None
+        self.autodiff_tangent_mode = str(autodiff_tangent_mode or "element").strip().lower()
+        if self.autodiff_tangent_mode not in {"element", "constitutive"}:
+            raise ValueError(
+                "autodiff_tangent_mode must be one of {'element', 'constitutive'}"
+            )
+        self.p4_chunk_scatter_cache_requested = str(
+            p4_chunk_scatter_cache or "auto"
+        ).strip().lower()
+        if self.p4_chunk_scatter_cache_requested not in {"auto", "on", "off"}:
+            raise ValueError(
+                "p4_chunk_scatter_cache must be one of {'auto', 'on', 'off'}"
+            )
+        self.p4_chunk_scatter_cache_max_gib = float(p4_chunk_scatter_cache_max_gib)
+        self.p4_chunk_scatter_cache_meta: dict[str, object] = {
+            "requested": str(self.p4_chunk_scatter_cache_requested),
+            "enabled": False,
+            "reason": "not_built",
+            "chunk_size": 0,
+            "chunk_count": 0,
+            "bytes": 0,
+            "gib": 0.0,
+            "index_dtype": "",
+            "build_time_s": 0.0,
+            "max_chunk_entries": 0,
+        }
+        self._p4_chunk_scatter_cache: tuple[P4ChunkScatterCacheEntry, ...] | None = None
+        self._p4_chunk_scatter_cache_chunk_size = 0
         if block_size_override is not None:
             self.block_size = int(block_size_override)
         super().__init__(
@@ -240,7 +284,9 @@ class SlopeStability3DReorderedElementAssembler(ReorderedElementAssemblerBase):
             reuse_hessian_value_buffers=reuse_hessian_value_buffers,
             assembly_backend=assembly_backend,
             petsc_log_events=petsc_log_events,
+            memory_guard_total_gib=memory_guard_total_gib,
         )
+        self._update_p4_chunk_scatter_memory_summary(0)
 
     def _resolve_assembly_backend(self, backend: str) -> str:
         backend_name = str(backend or "coo")
@@ -277,12 +323,15 @@ class SlopeStability3DReorderedElementAssembler(ReorderedElementAssemblerBase):
         if self.assembly_backend == "blocked_local":
             return None
         original_chunk = int(self.p4_hessian_chunk_size)
+        original_cache_requested = str(self.p4_chunk_scatter_cache_requested)
         original_iter_timings = list(self.iter_timings)
         original_callback_stats = {
             key: dict(value) for key, value in self._callback_stats.items()
         }
         results: list[dict[str, object]] = []
         try:
+            self._invalidate_p4_chunk_scatter_cache(reason="autotune")
+            self.p4_chunk_scatter_cache_requested = "off"
             for cand in tuple(int(v) for v in candidates):
                 self.p4_hessian_chunk_size = max(1, int(cand))
                 rss_before = self._rss_gib()
@@ -320,8 +369,10 @@ class SlopeStability3DReorderedElementAssembler(ReorderedElementAssemblerBase):
             self._callback_stats = {
                 key: dict(value) for key, value in original_callback_stats.items()
             }
+            self.p4_chunk_scatter_cache_requested = str(original_cache_requested)
             if self.p4_chunk_autotune_meta is None:
                 self.p4_hessian_chunk_size = int(original_chunk)
+            self._invalidate_p4_chunk_scatter_cache(reason="not_built")
 
     def _build_local_element_kernels(self, constitutive_mode: str) -> dict[str, object]:
         elems = jnp.asarray(self.local_data.elems_local_np, dtype=jnp.int32)
@@ -349,6 +400,7 @@ class SlopeStability3DReorderedElementAssembler(ReorderedElementAssemblerBase):
         energy_weights = jnp.asarray(self.local_data.energy_weights, dtype=jnp.float64)
         degree = int(self.params.get("element_degree", 2))
         mode = str(constitutive_mode)
+        tangent_mode = str(self.autodiff_tangent_mode)
 
         if mode == "elastic":
             def energy_fn(v_local):
@@ -441,7 +493,42 @@ class SlopeStability3DReorderedElementAssembler(ReorderedElementAssemblerBase):
         else:
             raise ValueError(f"Unsupported 3D constitutive mode {constitutive_mode!r}")
 
-        if degree == 4 and mode == "plastic":
+        if degree == 4 and mode == "plastic" and tangent_mode == "constitutive":
+
+            def elem_hess_fn(v_local):
+                v_elem = v_local[elems]
+                return chunked_vmapped_element_constitutive_hessian_3d(
+                    v_elem,
+                    dphix,
+                    dphiy,
+                    dphiz,
+                    quad_weight,
+                    c_bar_q,
+                    sin_phi_q,
+                    shear_q,
+                    bulk_q,
+                    lame_q,
+                    chunk_size=self.p4_hessian_chunk_size,
+                )
+
+            def elem_hess_chunk_fn(v_local, start: int, stop: int):
+                chunk = slice(int(start), int(stop))
+                v_elem = v_local[elems[chunk]]
+                return chunked_vmapped_element_constitutive_hessian_3d(
+                    v_elem,
+                    dphix[chunk],
+                    dphiy[chunk],
+                    dphiz[chunk],
+                    quad_weight[chunk],
+                    c_bar_q[chunk],
+                    sin_phi_q[chunk],
+                    shear_q[chunk],
+                    bulk_q[chunk],
+                    lame_q[chunk],
+                    chunk_size=self.p4_hessian_chunk_size,
+                )
+
+        elif degree == 4 and mode == "plastic":
 
             def elem_hess_fn(v_local):
                 v_elem = v_local[elems]
@@ -470,6 +557,37 @@ class SlopeStability3DReorderedElementAssembler(ReorderedElementAssemblerBase):
                     quad_weight[chunk],
                     c_bar_q[chunk],
                     sin_phi_q[chunk],
+                    shear_q[chunk],
+                    bulk_q[chunk],
+                    lame_q[chunk],
+                    chunk_size=self.p4_hessian_chunk_size,
+                )
+
+        elif degree == 4 and mode == "elastic" and tangent_mode == "constitutive":
+
+            def elem_hess_fn(v_local):
+                v_elem = v_local[elems]
+                return chunked_vmapped_elastic_element_constitutive_hessian_3d(
+                    v_elem,
+                    dphix,
+                    dphiy,
+                    dphiz,
+                    quad_weight,
+                    shear_q,
+                    bulk_q,
+                    lame_q,
+                    chunk_size=self.p4_hessian_chunk_size,
+                )
+
+            def elem_hess_chunk_fn(v_local, start: int, stop: int):
+                chunk = slice(int(start), int(stop))
+                v_elem = v_local[elems[chunk]]
+                return chunked_vmapped_elastic_element_constitutive_hessian_3d(
+                    v_elem,
+                    dphix[chunk],
+                    dphiy[chunk],
+                    dphiz[chunk],
+                    quad_weight[chunk],
                     shear_q[chunk],
                     bulk_q[chunk],
                     lame_q[chunk],
@@ -510,6 +628,17 @@ class SlopeStability3DReorderedElementAssembler(ReorderedElementAssemblerBase):
         else:
             def elem_hess_fn(v_local):
                 v_elem = v_local[elems]
+                if mode == "elastic" and tangent_mode == "constitutive":
+                    return vmapped_elastic_element_constitutive_hessian_3d(
+                        v_elem,
+                        dphix,
+                        dphiy,
+                        dphiz,
+                        quad_weight,
+                        shear_q,
+                        bulk_q,
+                        lame_q,
+                    )
                 if mode == "elastic":
                     return _ELASTIC_ELEMENT_HESSIAN_BATCH(
                         v_elem,
@@ -517,6 +646,19 @@ class SlopeStability3DReorderedElementAssembler(ReorderedElementAssemblerBase):
                         dphiy,
                         dphiz,
                         quad_weight,
+                        shear_q,
+                        bulk_q,
+                        lame_q,
+                    )
+                if tangent_mode == "constitutive":
+                    return vmapped_element_constitutive_hessian_3d(
+                        v_elem,
+                        dphix,
+                        dphiy,
+                        dphiz,
+                        quad_weight,
+                        c_bar_q,
+                        sin_phi_q,
                         shear_q,
                         bulk_q,
                         lame_q,
@@ -537,6 +679,17 @@ class SlopeStability3DReorderedElementAssembler(ReorderedElementAssemblerBase):
             def elem_hess_chunk_fn(v_local, start: int, stop: int):
                 chunk = slice(int(start), int(stop))
                 v_elem = v_local[elems[chunk]]
+                if mode == "elastic" and tangent_mode == "constitutive":
+                    return vmapped_elastic_element_constitutive_hessian_3d(
+                        v_elem,
+                        dphix[chunk],
+                        dphiy[chunk],
+                        dphiz[chunk],
+                        quad_weight[chunk],
+                        shear_q[chunk],
+                        bulk_q[chunk],
+                        lame_q[chunk],
+                    )
                 if mode == "elastic":
                     return _ELASTIC_ELEMENT_HESSIAN_BATCH(
                         v_elem,
@@ -544,6 +697,19 @@ class SlopeStability3DReorderedElementAssembler(ReorderedElementAssemblerBase):
                         dphiy[chunk],
                         dphiz[chunk],
                         quad_weight[chunk],
+                        shear_q[chunk],
+                        bulk_q[chunk],
+                        lame_q[chunk],
+                    )
+                if tangent_mode == "constitutive":
+                    return vmapped_element_constitutive_hessian_3d(
+                        v_elem,
+                        dphix[chunk],
+                        dphiy[chunk],
+                        dphiz[chunk],
+                        quad_weight[chunk],
+                        c_bar_q[chunk],
+                        sin_phi_q[chunk],
                         shear_q[chunk],
                         bulk_q[chunk],
                         lame_q[chunk],
@@ -648,13 +814,179 @@ class SlopeStability3DReorderedElementAssembler(ReorderedElementAssemblerBase):
             positions,
         )
 
+    def _update_p4_chunk_scatter_memory_summary(self, cache_bytes: int) -> None:
+        if not hasattr(self, "_memory_summary"):
+            return
+        bytes_count = int(max(0, int(cache_bytes)))
+        gib = float(bytes_count) / float(1024.0**3)
+        self._memory_summary["p4_chunk_scatter_cache_bytes"] = bytes_count
+        self._memory_summary["p4_chunk_scatter_cache_gib"] = gib
+        self._memory_summary["tracked_total_gib"] = (
+            float(self._memory_summary.get("layout_gib", 0.0))
+            + float(self._memory_summary.get("local_overlap_gib", 0.0))
+            + float(self._memory_summary.get("scatter_gib", 0.0))
+            + float(self._memory_summary.get("owned_hessian_values_gib", 0.0))
+            + float(self._memory_summary.get("local_backend_gib", 0.0))
+            + gib
+        )
+
+    def _invalidate_p4_chunk_scatter_cache(self, *, reason: str) -> None:
+        self._p4_chunk_scatter_cache = None
+        self._p4_chunk_scatter_cache_chunk_size = 0
+        self.p4_chunk_scatter_cache_meta = {
+            "requested": str(self.p4_chunk_scatter_cache_requested),
+            "enabled": False,
+            "reason": str(reason),
+            "chunk_size": 0,
+            "chunk_count": 0,
+            "bytes": 0,
+            "gib": 0.0,
+            "index_dtype": "",
+            "build_time_s": 0.0,
+            "max_chunk_entries": 0,
+        }
+        self._update_p4_chunk_scatter_memory_summary(0)
+
+    @staticmethod
+    def _best_index_dtype(max_value: int) -> np.dtype:
+        return np.int32 if int(max_value) <= int(np.iinfo(np.int32).max) else np.int64
+
+    def _supports_p4_chunk_scatter_cache(self, *, chunk_elems: int) -> bool:
+        return (
+            int(self.params.get("element_degree", 2)) == 4
+            and int(chunk_elems) > 0
+            and self.assembly_backend in {"coo", "coo_local"}
+        )
+
+    def _build_p4_chunk_scatter_cache(
+        self,
+        *,
+        chunk_elems: int,
+    ) -> tuple[P4ChunkScatterCacheEntry, ...] | None:
+        if not self._supports_p4_chunk_scatter_cache(chunk_elems=chunk_elems):
+            self._invalidate_p4_chunk_scatter_cache(reason="unsupported")
+            return None
+        request = str(self.p4_chunk_scatter_cache_requested)
+        if request == "off":
+            self._invalidate_p4_chunk_scatter_cache(reason="requested_off")
+            return None
+
+        n_local_elem = int(self.local_data.elems_local_np.shape[0])
+        if n_local_elem <= 0:
+            self._invalidate_p4_chunk_scatter_cache(reason="empty")
+            return None
+
+        dofs_per_elem = int(self.local_data.elems_local_np.shape[1])
+        max_flat_idx = max(0, int(chunk_elems * dofs_per_elem * dofs_per_elem - 1))
+        max_owned_pos = max(0, int(self.layout.owned_rows.size - 1))
+        flat_dtype = self._best_index_dtype(max_flat_idx)
+        pos_dtype = self._best_index_dtype(max_owned_pos)
+        cache_limit_bytes = int(max(0.0, self.p4_chunk_scatter_cache_max_gib) * (1024.0**3))
+
+        entries: list[P4ChunkScatterCacheEntry] = []
+        cache_bytes = 0
+        max_chunk_entries = 0
+        t0 = time.perf_counter()
+        for start in range(0, n_local_elem, int(chunk_elems)):
+            stop = min(start + int(chunk_elems), n_local_elem)
+            hess_e, hess_i, hess_j, hess_positions = self._chunk_scatter_pattern(
+                start, stop
+            )
+            if hess_positions.size == 0:
+                empty_flat = np.zeros(0, dtype=flat_dtype)
+                empty_pos = np.zeros(0, dtype=pos_dtype)
+                entries.append(
+                    P4ChunkScatterCacheEntry(
+                        flat_elem_idx=empty_flat,
+                        owned_pos=empty_pos,
+                    )
+                )
+                continue
+            flat_idx = (
+                (
+                    np.asarray(hess_e, dtype=np.int64) * np.int64(dofs_per_elem)
+                    + np.asarray(hess_i, dtype=np.int64)
+                )
+                * np.int64(dofs_per_elem)
+                + np.asarray(hess_j, dtype=np.int64)
+            )
+            flat_arr = np.asarray(flat_idx, dtype=flat_dtype)
+            pos_arr = np.asarray(hess_positions, dtype=pos_dtype)
+            cache_bytes += int(flat_arr.nbytes + pos_arr.nbytes)
+            max_chunk_entries = max(max_chunk_entries, int(pos_arr.size))
+            if request == "auto" and cache_limit_bytes > 0 and cache_bytes > cache_limit_bytes:
+                self._invalidate_p4_chunk_scatter_cache(reason="max_gib_exceeded")
+                self.p4_chunk_scatter_cache_meta.update(
+                    {
+                        "requested": str(request),
+                        "chunk_size": int(chunk_elems),
+                        "chunk_count": int(len(entries) + 1),
+                        "bytes": int(cache_bytes),
+                        "gib": float(cache_bytes) / float(1024.0**3),
+                        "index_dtype": f"{np.dtype(flat_dtype).name}/{np.dtype(pos_dtype).name}",
+                        "build_time_s": float(time.perf_counter() - t0),
+                        "max_chunk_entries": int(max_chunk_entries),
+                    }
+                )
+                self._update_p4_chunk_scatter_memory_summary(0)
+                return None
+            entries.append(
+                P4ChunkScatterCacheEntry(
+                    flat_elem_idx=flat_arr,
+                    owned_pos=pos_arr,
+                )
+            )
+
+        self._p4_chunk_scatter_cache = tuple(entries)
+        self._p4_chunk_scatter_cache_chunk_size = int(chunk_elems)
+        self.p4_chunk_scatter_cache_meta = {
+            "requested": str(request),
+            "enabled": True,
+            "reason": "built",
+            "chunk_size": int(chunk_elems),
+            "chunk_count": int(len(entries)),
+            "bytes": int(cache_bytes),
+            "gib": float(cache_bytes) / float(1024.0**3),
+            "index_dtype": f"{np.dtype(flat_dtype).name}/{np.dtype(pos_dtype).name}",
+            "build_time_s": float(time.perf_counter() - t0),
+            "max_chunk_entries": int(max_chunk_entries),
+        }
+        self._update_p4_chunk_scatter_memory_summary(cache_bytes)
+        return self._p4_chunk_scatter_cache
+
+    def _get_p4_chunk_scatter_cache(
+        self,
+        *,
+        chunk_elems: int,
+    ) -> tuple[P4ChunkScatterCacheEntry, ...] | None:
+        if not self._supports_p4_chunk_scatter_cache(chunk_elems=chunk_elems):
+            return None
+        if (
+            self._p4_chunk_scatter_cache is not None
+            and int(self._p4_chunk_scatter_cache_chunk_size) == int(chunk_elems)
+        ):
+            return self._p4_chunk_scatter_cache
+        if self._p4_chunk_scatter_cache is not None:
+            self._invalidate_p4_chunk_scatter_cache(reason="chunk_size_changed")
+        if (
+            not bool(self.p4_chunk_scatter_cache_meta.get("enabled", False))
+            and int(self.p4_chunk_scatter_cache_meta.get("chunk_size", 0))
+            == int(chunk_elems)
+            and str(self.p4_chunk_scatter_cache_meta.get("reason", ""))
+            in {"max_gib_exceeded", "requested_off", "empty"}
+        ):
+            return None
+        if str(self.p4_chunk_scatter_cache_requested) == "off":
+            return None
+        return self._build_p4_chunk_scatter_cache(chunk_elems=int(chunk_elems))
+
     def _accumulate_owned_contrib(
         self,
         owned_vals: np.ndarray,
         positions: np.ndarray,
         contrib: np.ndarray,
     ) -> None:
-        pos = np.asarray(positions, dtype=np.int64).ravel()
+        pos = np.asarray(positions).ravel()
         if pos.size == 0:
             return
         vals = np.asarray(contrib, dtype=np.float64).ravel()
@@ -682,14 +1014,17 @@ class SlopeStability3DReorderedElementAssembler(ReorderedElementAssemblerBase):
         if elem_hess_chunk_fn is not None and chunk_elems > 0:
             v_local_jax = jnp.asarray(v_local)
             n_local_elem = int(self.local_data.elems_local_np.shape[0])
+            chunk_cache = self._get_p4_chunk_scatter_cache(chunk_elems=chunk_elems)
             timings["elem_hessian_compute"] = 0.0
             timings["scatter"] = 0.0
+            timings["pattern_lookup"] = 0.0
+            timings["accumulate"] = 0.0
             timings["chunk_count"] = int((n_local_elem + chunk_elems - 1) // chunk_elems)
             timings["chunk_size"] = int(chunk_elems)
             chunk_rows: list[int] = []
             chunk_kernel_times: list[float] = []
             chunk_scatter_times: list[float] = []
-            for start in range(0, n_local_elem, chunk_elems):
+            for chunk_idx, start in enumerate(range(0, n_local_elem, chunk_elems)):
                 stop = min(start + chunk_elems, n_local_elem)
                 t0 = time.perf_counter()
                 with self._petsc_event("slope3d:hessian_kernel"):
@@ -702,22 +1037,50 @@ class SlopeStability3DReorderedElementAssembler(ReorderedElementAssemblerBase):
                 t0 = time.perf_counter()
                 with self._petsc_event("slope3d:hessian_scatter"):
                     with self._chunk_trace("slope3d_p4_chunk_scatter"):
-                        hess_e, hess_i, hess_j, hess_positions = self._chunk_scatter_pattern(
-                            start, stop
-                        )
-                        if hess_e.size != 0:
-                            contrib = elem_hess_chunk[
-                                hess_e,
-                                hess_i,
-                                hess_j,
-                            ]
-                            self._accumulate_owned_contrib(
-                                owned_vals,
-                                hess_positions,
-                                contrib,
+                        if chunk_cache is not None:
+                            cache_entry = chunk_cache[int(chunk_idx)]
+                            hess_positions = cache_entry.owned_pos
+                            pattern_dt = 0.0
+                            has_entries = bool(hess_positions.size != 0)
+                            if has_entries:
+                                t_acc0 = time.perf_counter()
+                                contrib = elem_hess_chunk.reshape(-1)[
+                                    cache_entry.flat_elem_idx
+                                ]
+                                self._accumulate_owned_contrib(
+                                    owned_vals,
+                                    hess_positions,
+                                    contrib,
+                                )
+                                accumulate_dt = float(time.perf_counter() - t_acc0)
+                            else:
+                                accumulate_dt = 0.0
+                        else:
+                            t_pat0 = time.perf_counter()
+                            hess_e, hess_i, hess_j, hess_positions = self._chunk_scatter_pattern(
+                                start, stop
                             )
+                            pattern_dt = float(time.perf_counter() - t_pat0)
+                            has_entries = bool(hess_positions.size != 0)
+                            if has_entries:
+                                t_acc0 = time.perf_counter()
+                                contrib = elem_hess_chunk[
+                                    hess_e,
+                                    hess_i,
+                                    hess_j,
+                                ]
+                                self._accumulate_owned_contrib(
+                                    owned_vals,
+                                    hess_positions,
+                                    contrib,
+                                )
+                                accumulate_dt = float(time.perf_counter() - t_acc0)
+                            else:
+                                accumulate_dt = 0.0
+                        timings["pattern_lookup"] += float(pattern_dt)
+                        timings["accumulate"] += float(accumulate_dt)
                 scatter_dt = float(time.perf_counter() - t0)
-                if hess_e.size == 0:
+                if not has_entries:
                     timings["scatter"] += scatter_dt
                     chunk_rows.append(0)
                     chunk_kernel_times.append(kernel_dt)
@@ -754,6 +1117,8 @@ class SlopeStability3DReorderedElementAssembler(ReorderedElementAssemblerBase):
                     contrib,
                 )
             timings["scatter"] = time.perf_counter() - t0
+            timings["pattern_lookup"] = 0.0
+            timings["accumulate"] = float(timings["scatter"])
 
         t0 = time.perf_counter()
         with self._petsc_event("slope3d:hessian_matrix_insert"):

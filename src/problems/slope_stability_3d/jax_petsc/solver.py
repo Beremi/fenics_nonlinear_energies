@@ -845,6 +845,9 @@ def run(args):
             pc_options=pc_options,
             reorder_mode=str(getattr(args, "element_reorder_mode", None) or "block_xyz"),
             local_hessian_mode=str(getattr(args, "local_hessian_mode", None) or "element"),
+            autodiff_tangent_mode=str(
+                getattr(args, "autodiff_tangent_mode", None) or "element"
+            ),
             perm_override=(
                 np.asarray(params["_distributed_perm"], dtype=np.int64)
                 if "_distributed_perm" in params
@@ -864,6 +867,12 @@ def run(args):
                 getattr(args, "reuse_hessian_value_buffers", True)
             ),
             p4_hessian_chunk_size=int(p4_chunk_size_initial),
+            p4_chunk_scatter_cache=str(
+                getattr(args, "p4_chunk_scatter_cache", "auto")
+            ),
+            p4_chunk_scatter_cache_max_gib=float(
+                getattr(args, "p4_chunk_scatter_cache_max_gib", 0.5)
+            ),
             assembly_backend=str(getattr(args, "assembly_backend", "coo")),
             petsc_log_events=bool(petsc_stage_enabled),
             jax_trace_dir=str(getattr(args, "jax_trace_dir", "") or ""),
@@ -875,6 +884,7 @@ def run(args):
         t_stage = time.perf_counter()
         with _petsc_stage("slope3d_p4_chunk_autotune", petsc_stage_enabled):
             assembler.autotune_p4_hessian_chunk_size(
+                u_owned=np.zeros(int(assembler.layout.hi - assembler.layout.lo), dtype=np.float64),
                 candidates=chunk_autotune_candidates,
                 rss_budget_gib=float(
                     getattr(args, "p4_chunk_autotune_rss_budget_gib", 64.0)
@@ -930,9 +940,13 @@ def run(args):
                 "assembly_backend_requested": str(
                     assembler.assembly_backend_requested
                 ),
+                "autodiff_tangent_mode": str(assembler.autodiff_tangent_mode),
                 "matrix_type": str(assembler.A.getType()),
                 "p4_hessian_chunk_size": int(assembler.p4_hessian_chunk_size),
                 "p4_chunk_autotune": dict(assembler.p4_chunk_autotune_meta or {}),
+                "p4_chunk_scatter_cache": dict(
+                    assembler.p4_chunk_scatter_cache_meta or {}
+                ),
                 "petsc_log_view_path": str(petsc_log_view_path or ""),
                 "stage_timings": dict(stage_timings),
                 "assembler_setup": dict(local_setup_summary),
@@ -1383,6 +1397,9 @@ def run(args):
                 "matrix_type": str(assembler.A.getType()),
                 "p4_hessian_chunk_size": int(assembler.p4_hessian_chunk_size),
                 "p4_chunk_autotune": dict(assembler.p4_chunk_autotune_meta or {}),
+                "p4_chunk_scatter_cache": dict(
+                    assembler.p4_chunk_scatter_cache_meta or {}
+                ),
                 "iterations_completed": int(enriched_entry.get("it", len(history_payload))),
                 "last_iteration": dict(enriched_entry),
                 "history": history_payload,
@@ -1558,9 +1575,11 @@ def run(args):
         "total_time": float(local_total_time),
         "assembly_backend": str(assembler.assembly_backend),
         "assembly_backend_requested": str(assembler.assembly_backend_requested),
+        "autodiff_tangent_mode": str(assembler.autodiff_tangent_mode),
         "matrix_type": str(matrix_type),
         "p4_hessian_chunk_size": int(assembler.p4_hessian_chunk_size),
         "p4_chunk_autotune": dict(assembler.p4_chunk_autotune_meta or {}),
+        "p4_chunk_scatter_cache": dict(assembler.p4_chunk_scatter_cache_meta or {}),
         "petsc_log_view_path": str(petsc_log_view_path or ""),
         "jax_trace_dir": str(getattr(args, "jax_trace_dir", "") or ""),
         "linear_iterations_total": int(sum(linear_iters)),
@@ -1633,9 +1652,13 @@ def run(args):
             "assembly_backend_requested": str(
                 assembler.assembly_backend_requested
             ),
+            "autodiff_tangent_mode": str(assembler.autodiff_tangent_mode),
             "matrix_type": str(matrix_type),
             "p4_hessian_chunk_size": int(assembler.p4_hessian_chunk_size),
             "p4_chunk_autotune": dict(assembler.p4_chunk_autotune_meta or {}),
+            "p4_chunk_scatter_cache": dict(
+                assembler.p4_chunk_scatter_cache_meta or {}
+            ),
             "problem_build_mode": str(
                 getattr(args, "problem_build_mode", "root_bcast")
             ),
@@ -1804,6 +1827,9 @@ def run(args):
                 "matrix_type": str(matrix_type),
                 "p4_hessian_chunk_size": int(assembler.p4_hessian_chunk_size),
                 "p4_chunk_autotune": dict(assembler.p4_chunk_autotune_meta or {}),
+                "p4_chunk_scatter_cache": dict(
+                    assembler.p4_chunk_scatter_cache_meta or {}
+                ),
                 "iterations_completed": int(result["nit"]),
                 "energy": float(result["fun"]),
                 "history": final_history,

@@ -665,6 +665,7 @@ class ReorderedElementAssemblerBase:
         reuse_hessian_value_buffers=True,
         assembly_backend="coo",
         petsc_log_events=False,
+        memory_guard_total_gib=None,
     ):
         self.comm = comm
         self.rank = comm.Get_rank()
@@ -679,6 +680,11 @@ class ReorderedElementAssemblerBase:
             self._resolve_assembly_backend(self.assembly_backend_requested)
         )
         self._petsc_log_events_enabled = bool(petsc_log_events)
+        self.memory_guard_total_gib = (
+            None
+            if memory_guard_total_gib is None
+            else float(memory_guard_total_gib)
+        )
         self._petsc_event_cache: dict[str, PETSc.LogEvent] = {}
         self.distribution_strategy = str(
             distribution_strategy or getattr(self, "distribution_strategy", "overlap_allgather")
@@ -883,6 +889,36 @@ class ReorderedElementAssemblerBase:
             self._petsc_event_cache[str(name)] = event
         return event
 
+    @staticmethod
+    def _current_rss_gib() -> float:
+        try:
+            with open("/proc/self/status", encoding="utf-8") as fh:
+                for line in fh:
+                    if line.startswith("VmRSS:"):
+                        parts = line.split()
+                        if len(parts) >= 2:
+                            return float(int(parts[1]) * 1024) / float(1024**3)
+        except OSError:
+            pass
+        return 0.0
+
+    def _check_memory_guard(self, *, extra_local_gib: float, reason: str) -> None:
+        guard_total = self.memory_guard_total_gib
+        if guard_total is None or not np.isfinite(float(guard_total)) or float(guard_total) <= 0.0:
+            return
+        current_local = float(self._current_rss_gib())
+        peak_local = current_local + float(max(0.0, extra_local_gib))
+        total_peak = float(self.comm.allreduce(peak_local, op=MPI.SUM))
+        max_peak = float(self.comm.allreduce(peak_local, op=MPI.MAX))
+        if total_peak <= float(guard_total):
+            return
+        raise MemoryError(
+            f"Memory guard exceeded before {reason}: "
+            f"estimated_total_peak_gib={total_peak:.2f} > guard_total_gib={float(guard_total):.2f} "
+            f"(max_rank_peak_gib={max_peak:.2f}, local_current_gib={current_local:.2f}, "
+            f"local_extra_gib={float(max(0.0, extra_local_gib)):.2f})"
+        )
+
     def _needs_prebuilt_hessian_scatter(self) -> bool:
         return self.local_hessian_mode == "element"
 
@@ -1083,6 +1119,8 @@ class ReorderedElementAssemblerBase:
             ghost_exchange=float(timings.get("ghost_exchange", 0.0)),
             build_v_local=float(timings.get("build_v_local", 0.0)),
             hvp_compute=float(timings.get("hvp_compute", 0.0)),
+            pattern_lookup=float(timings.get("pattern_lookup", 0.0)),
+            accumulate=float(timings.get("accumulate", 0.0)),
             extraction=float(timings.get("extraction", 0.0)),
             coo_assembly=float(timings.get("coo_assembly", 0.0)),
             total=float(timings.get("total", 0.0)),
@@ -1144,6 +1182,22 @@ class ReorderedElementAssemblerBase:
         )
         self._sfd_J_dofs = J_arr
         self._sfd_J_to_idx = J_to_idx
+
+        # SFD on high-order vector problems can require very large
+        # `(n_colors, n_local_overlap)` indicator and HVP work arrays.
+        # Guard before materializing them so benchmarks fail cleanly.
+        indicator_shape_bytes = (
+            float(self._sfd_n_colors)
+            * float(len(local_reord))
+            * float(np.dtype(np.float64).itemsize)
+        )
+        indicator_gib = indicator_shape_bytes / float(1024**3)
+        # Lower-bound estimate:
+        # 1x individual indicator storage + 1x stacked indicator array + 1x HVP output.
+        self._check_memory_guard(
+            extra_local_gib=3.0 * float(indicator_gib),
+            reason=f"SFD local setup ({self.local_hessian_mode})",
+        )
 
         reord_to_local = np.full(self.layout.n_free, -1, dtype=np.int64)
         free_mask = local_reord >= 0

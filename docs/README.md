@@ -39,6 +39,7 @@ If you are new to the codebase, start here rather than in `archive/`.
 Current implementation and reference material:
 
 - [Trust-region + line-search algorithm](implementation/trust_region_linesearch_algorithm.md)
+- [Plasticity3D autodiff modes](implementation/plasticity3d_autodiff_modes.md)
 - [HyperElasticity JAX+PETSc implementation](implementation/hyperelasticity_jax_petsc.md)
 - [Topology JAX+PETSc implementation](implementation/topology_jax_petsc.md)
 - [Problem formulation brief](reference/problem_formulation_brief.md)

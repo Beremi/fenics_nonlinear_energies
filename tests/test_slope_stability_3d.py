@@ -11,7 +11,9 @@ from mpi4py import MPI
 from petsc4py import PETSc
 
 from src.problems.slope_stability_3d.jax.jax_energy_3d import (
+    chunked_vmapped_element_constitutive_hessian_3d,
     chunked_vmapped_element_hessian_3d,
+    element_constitutive_hessian_3d,
     element_energy_3d,
     element_hessian_3d,
     element_residual_3d,
@@ -516,6 +518,49 @@ def test_element_gradient_and_hessian_directional_sanity():
     np.testing.assert_allclose(fd_hv, hess @ direction, rtol=5.0e-3, atol=5.0e-4)
 
 
+def test_constitutive_autodiff_element_hessian_matches_element_hessian():
+    case, c_bar_q, sin_phi_q = _element_args_for_degree(1)
+    rng = np.random.default_rng(7)
+    u = 1.0e-5 * rng.standard_normal(case.elems.shape[1])
+
+    hess_element = np.asarray(
+        element_hessian_3d(
+            jax.numpy.asarray(u),
+            jax.numpy.asarray(case.dphix[0]),
+            jax.numpy.asarray(case.dphiy[0]),
+            jax.numpy.asarray(case.dphiz[0]),
+            jax.numpy.asarray(case.quad_weight[0]),
+            jax.numpy.asarray(c_bar_q[0]),
+            jax.numpy.asarray(sin_phi_q[0]),
+            jax.numpy.asarray(case.shear_q[0]),
+            jax.numpy.asarray(case.bulk_q[0]),
+            jax.numpy.asarray(case.lame_q[0]),
+        ),
+        dtype=np.float64,
+    )
+    hess_constitutive = np.asarray(
+        element_constitutive_hessian_3d(
+            jax.numpy.asarray(u),
+            jax.numpy.asarray(case.dphix[0]),
+            jax.numpy.asarray(case.dphiy[0]),
+            jax.numpy.asarray(case.dphiz[0]),
+            jax.numpy.asarray(case.quad_weight[0]),
+            jax.numpy.asarray(c_bar_q[0]),
+            jax.numpy.asarray(sin_phi_q[0]),
+            jax.numpy.asarray(case.shear_q[0]),
+            jax.numpy.asarray(case.bulk_q[0]),
+            jax.numpy.asarray(case.lame_q[0]),
+        ),
+        dtype=np.float64,
+    )
+    np.testing.assert_allclose(
+        hess_constitutive,
+        hess_element,
+        rtol=1.0e-9,
+        atol=1.0e-9,
+    )
+
+
 def test_large_cohesion_recovers_elastic_limit():
     rng = np.random.default_rng(2)
     eps6 = rng.standard_normal(6) * 1.0e-3
@@ -840,6 +885,78 @@ def test_coo_local_backend_matches_global_coo():
     assembler_local.cleanup()
 
 
+def test_constitutive_autodiff_assembler_matches_element_autodiff():
+    comm = MPI.COMM_SELF
+    case = build_same_mesh_lagrange_case_data(
+        "hetero_ssr_L1", degree=1, build_mode="replicated", comm=comm
+    )
+    params = dict(case.__dict__)
+    params["elem_type"] = "P1"
+    params["element_degree"] = 1
+    c_bar_q, sin_phi_q = davis_b_reduction_qp(
+        np.asarray(params["c0_q"], dtype=np.float64),
+        np.asarray(params["phi_q"], dtype=np.float64),
+        np.asarray(params["psi_q"], dtype=np.float64),
+        1.0,
+    )
+    params["c_bar_q"] = np.asarray(c_bar_q, dtype=np.float64)
+    params["sin_phi_q"] = np.asarray(sin_phi_q, dtype=np.float64)
+    perm = select_reordered_perm_3d(
+        "block_xyz",
+        adjacency=case.adjacency,
+        coords_all=params["nodes"],
+        freedofs=params["freedofs"],
+        n_parts=1,
+    )
+    common_kwargs = dict(
+        params=params,
+        comm=comm,
+        adjacency=case.adjacency,
+        ksp_type="cg",
+        pc_type="hypre",
+        ksp_max_it=20,
+        reorder_mode="block_xyz",
+        local_hessian_mode="element",
+        perm_override=perm,
+        block_size_override=ownership_block_size_3d(
+            np.asarray(params["freedofs"], dtype=np.int64)
+        ),
+        distribution_strategy="overlap_allgather",
+        use_near_nullspace=False,
+        assembly_backend="coo",
+    )
+    assembler_element = SlopeStability3DReorderedElementAssembler(
+        **common_kwargs,
+        autodiff_tangent_mode="element",
+    )
+    assembler_constitutive = SlopeStability3DReorderedElementAssembler(
+        **common_kwargs,
+        autodiff_tangent_mode="constitutive",
+    )
+    rng = np.random.default_rng(123)
+    u_owned = 1.0e-6 * rng.standard_normal(
+        assembler_element.layout.hi - assembler_element.layout.lo
+    )
+    assembler_element.assemble_hessian(u_owned)
+    assembler_constitutive.assemble_hessian(u_owned)
+    ia_elem, ja_elem, a_elem = assembler_element.A.getValuesCSR()
+    ia_const, ja_const, a_const = assembler_constitutive.A.getValuesCSR()
+    np.testing.assert_array_equal(
+        np.asarray(ia_elem, dtype=np.int64), np.asarray(ia_const, dtype=np.int64)
+    )
+    np.testing.assert_array_equal(
+        np.asarray(ja_elem, dtype=np.int64), np.asarray(ja_const, dtype=np.int64)
+    )
+    np.testing.assert_allclose(
+        np.asarray(a_const, dtype=np.float64),
+        np.asarray(a_elem, dtype=np.float64),
+        rtol=1.0e-9,
+        atol=1.0e-9,
+    )
+    assembler_element.cleanup()
+    assembler_constitutive.cleanup()
+
+
 def test_chunked_p4_hessian_smoke():
     case, c_bar_q, sin_phi_q = _element_args_for_degree(4)
     u_batch = np.zeros((2, case.elems.shape[1]), dtype=np.float64)
@@ -859,6 +976,44 @@ def test_chunked_p4_hessian_smoke():
     arr = np.asarray(hess, dtype=np.float64)
     assert arr.shape == (2, case.elems.shape[1], case.elems.shape[1])
     assert np.all(np.isfinite(arr))
+
+
+def test_chunked_p4_constitutive_hessian_matches_element_autodiff():
+    case, c_bar_q, sin_phi_q = _element_args_for_degree(4)
+    rng = np.random.default_rng(9)
+    u_batch = 1.0e-6 * rng.standard_normal((1, case.elems.shape[1]))
+    hess_element = chunked_vmapped_element_hessian_3d(
+        jax.numpy.asarray(u_batch),
+        jax.numpy.asarray(case.dphix[:1]),
+        jax.numpy.asarray(case.dphiy[:1]),
+        jax.numpy.asarray(case.dphiz[:1]),
+        jax.numpy.asarray(case.quad_weight[:1]),
+        jax.numpy.asarray(c_bar_q[:1]),
+        jax.numpy.asarray(sin_phi_q[:1]),
+        jax.numpy.asarray(case.shear_q[:1]),
+        jax.numpy.asarray(case.bulk_q[:1]),
+        jax.numpy.asarray(case.lame_q[:1]),
+        chunk_size=1,
+    )
+    hess_constitutive = chunked_vmapped_element_constitutive_hessian_3d(
+        jax.numpy.asarray(u_batch),
+        jax.numpy.asarray(case.dphix[:1]),
+        jax.numpy.asarray(case.dphiy[:1]),
+        jax.numpy.asarray(case.dphiz[:1]),
+        jax.numpy.asarray(case.quad_weight[:1]),
+        jax.numpy.asarray(c_bar_q[:1]),
+        jax.numpy.asarray(sin_phi_q[:1]),
+        jax.numpy.asarray(case.shear_q[:1]),
+        jax.numpy.asarray(case.bulk_q[:1]),
+        jax.numpy.asarray(case.lame_q[:1]),
+        chunk_size=1,
+    )
+    np.testing.assert_allclose(
+        np.asarray(hess_constitutive, dtype=np.float64),
+        np.asarray(hess_element, dtype=np.float64),
+        rtol=1.0e-8,
+        atol=1.0e-8,
+    )
 
 
 def test_p2_gamg_smoke(tmp_path: Path):

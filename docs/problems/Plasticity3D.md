@@ -204,6 +204,33 @@ deformed tetra mesh are left blank on purpose.
 | reordered PETSc assembler | assembles vector-valued residuals and tangents on reordered free DOFs |
 | same-mesh PMG | supports `P2 -> P1` and `P4 -> P2 -> P1` owned-row transfer construction |
 
+## Annex: Two Autodiff Tangent Paths
+
+The maintained 3D implementation now keeps two autodiff-compatible tangent
+routes for the local JAX/PETSc assembly. Both avoid hand-coded constitutive
+tangents and both keep the same scalar Mohr-Coulomb density
+`psi_MC,3D(eps, material)` as the source of truth.
+
+- `element` autodiff:
+  the original path. JAX takes `grad` and `hessian` of the full scalar element
+  energy `Pi_e(u_e)` directly with respect to the element DOFs.
+- `constitutive` autodiff:
+  an alternative path. JAX takes `grad` and `hessian` of the scalar
+  quadrature-point density with respect to the six strain components
+  `eps_q`, then the element tangent is assembled as
+  `sum_q w_q B_q^T C_q B_q`.
+
+The important contract is that the constitutive path is not a hand-derived
+analytic tangent. It still uses JAX autodiff on the same scalar energy density,
+but it moves the differentiation boundary from the full element DOF vector to
+the local strain state. This preserves the scalar-energy formulation while
+offering a second performance-oriented tangent backend for expensive `P4`
+plasticity solves.
+
+For the implementation-level distinction between the old whole-element
+autodiff path and the newer quadrature-point constitutive autodiff path, see
+[Plasticity3D autodiff modes](../implementation/plasticity3d_autodiff_modes.md).
+
 ## Annex: Octave vs JAX `P2` Direct-Branch Comparison
 
 The detailed source comparison is kept in the annex so the main card can stay
