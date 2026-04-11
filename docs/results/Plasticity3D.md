@@ -2,25 +2,149 @@
 
 ## Current Maintained Comparison
 
-The current 3D plasticity documentation is built from three completed
-experiment families:
+The current recommended maintained 3D result is now the converged
+`P4(L1_2), lambda = 1.0` study with:
 
-- corrected-frame `P2(L1), lambda = 1.6` from-scratch solve with an elastic
-  initial guess, documented on the 3D problem page
-- `P4(L1_2), lambda = 1.5` fixed-work parallel scaling campaign on
-  `1/2/4/8/16/32` MPI ranks with the mixed same-mesh plus refined-tail PMG
-  hierarchy
-- `P4(L1_2), lambda = 1.5`, `32`-rank capped `20`-Newton diagnostic run with
-  full per-iteration timing, KSP, PETSc-log, and memory logging
+- mesh / space: `hetero_ssr_L1_2`, `P4`
+- assembly: `local_constitutiveAD`
+- solver: `local_pmg`
+- nonlinear stop: `grad_norm < 1e-2`
+- linear solve: `fgmres + mg` with `ksp_rtol = 1e-1`
 
-The first result is the source-parity formulation check. The second result is
-the current large-scale 3D PMG scaling study. The third result is the detailed
-Newton diagnostic slice on the same refined benchmark and solver stack.
+This page now keeps two layers of evidence side by side:
 
-## What Changed
+- the new converged maintained scaling story for `lambda = 1.0`
+- the older `lambda = 1.5` fixed-work and capped-Newton material, preserved
+  below as historical backend and diagnostic context
 
-The maintained refined-3D result page now tracks the promoted backend from the
-assembly-optimization ladder:
+## Recommended Maintained Result
+
+The promoted maintained stack is `local_constitutiveAD + local_pmg` on
+`P4(L1_2)` at `lambda = 1.0`, with full strong-scaling coverage on
+`1/2/4/8/16/32` ranks. Every rank converged to the same nonlinear state:
+
+- final gradient norm `5.842228e-03`
+- energy `-3.1065003302388e+06`
+- `omega = 6.2167993410608e+06`
+- `u_max = 7.975388291134452e-01`
+
+Recommended settings:
+
+| knob | value |
+| --- | --- |
+| model | heterogeneous 3D Mohr-Coulomb plasticity, `lambda = 1.0` |
+| mesh / space | `hetero_ssr_L1_2`, `P4` |
+| assembly | `local_constitutiveAD` |
+| hierarchy | `same_mesh_p4_p2_p1` |
+| nonlinear method | Newton with `armijo` line search |
+| stop | `grad_norm < 1e-2` or `maxit = 50` |
+| initial guess | elastic solve on the same PMG stack |
+| linear method | `fgmres + mg` |
+| `ksp_rtol / ksp_max_it` | `1e-1 / 100` |
+| fine / bridge smoothers | `chebyshev + jacobi`, `5` steps |
+| coarse solve | `cg + hypre` |
+| problem build mode | `rank_local` |
+| MG transfer build mode | `owned_rows` |
+| thread caps | `OMP/JAX/BLAS = 1` thread per rank |
+
+Raw artifacts:
+
+- [local-only scaling report](/home/michal/repos/fenics_nonlinear_energies/artifacts/raw_results/source_compare/plasticity3d_l1_2_lambda1_grad1e2_local_pmg_scaling/REPORT.md)
+- [local-only scaling summary](/home/michal/repos/fenics_nonlinear_energies/artifacts/raw_results/source_compare/plasticity3d_l1_2_lambda1_grad1e2_local_pmg_scaling/comparison_summary.json)
+- [matched local-vs-source report](/home/michal/repos/fenics_nonlinear_energies/artifacts/raw_results/source_compare/plasticity3d_l1_2_lambda1_grad1e2_scaling/REPORT.md)
+- [all-PMG comparison report](/home/michal/repos/fenics_nonlinear_energies/artifacts/raw_results/source_compare/plasticity3d_l1_2_lambda1_grad1e2_scaling_all_pmg/REPORT.md)
+
+### Full Strong Scaling
+
+![Plasticity3D recommended overall scaling](../assets/plasticity3d/plasticity3d_l1_2_lambda1_local_pmg_scaling_overall.png)
+
+| ranks | total [s] | solve [s] | speedup | efficiency | Newton its | linear its |
+| ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| 1 | 5423.858 | 5175.697 | 1.000 | 1.000 | 17 | 114 |
+| 2 | 2914.163 | 2776.940 | 1.861 | 0.931 | 17 | 114 |
+| 4 | 1716.574 | 1634.228 | 3.160 | 0.790 | 17 | 114 |
+| 8 | 1164.304 | 1107.182 | 4.658 | 0.582 | 17 | 114 |
+| 16 | 608.352 | 574.736 | 8.916 | 0.557 | 17 | 114 |
+| 32 | 300.435 | 283.927 | 18.053 | 0.564 | 17 | 114 |
+
+The important read is that this is now a clean timing-only scaling study. The
+nonlinear work is identical at every rank, so the changes across the table are
+actual scalability changes rather than different Newton trajectories.
+
+### Component Timing
+
+![Plasticity3D recommended common components](../assets/plasticity3d/plasticity3d_l1_2_lambda1_local_pmg_common_components.png)
+
+![Plasticity3D recommended component breakdown](../assets/plasticity3d/plasticity3d_l1_2_lambda1_local_pmg_component_breakdown.png)
+
+| ranks | backend build [s] | elastic guess [s] | linear assemble [s] | linear setup [s] | linear solve [s] | Hessian callback [s] |
+| ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| 1 | 308.838 | 24.310 | 2971.253 | 689.372 | 1396.128 | 3146.747 |
+| 2 | 198.982 | 13.047 | 1585.133 | 373.494 | 749.252 | 1683.099 |
+| 4 | 146.351 | 8.117 | 853.238 | 258.854 | 472.700 | 909.161 |
+| 8 | 69.851 | 6.514 | 499.598 | 194.866 | 375.188 | 536.567 |
+| 16 | 37.005 | 3.440 | 238.872 | 115.638 | 198.429 | 260.218 |
+| 32 | 24.212 | 2.673 | 36.104 | 70.681 | 159.769 | 43.867 |
+
+The standout pattern is that callback-heavy work scales very well, especially
+the Hessian path, while the KSP setup and solve phases bend more slowly at high
+rank. Even so, the recommended stack still reaches `18.05x` end-to-end speedup
+at `32` ranks on the converged problem.
+
+### Matched Local-Vs-Source Context
+
+![Plasticity3D recommended local vs source](../assets/plasticity3d/plasticity3d_l1_2_lambda1_local_vs_source.png)
+
+The maintained local path is the recommended default, but it is still useful to
+see how the same local PMG nonlinear stack behaves when the source assembly is
+swapped in. At matched `4/8/16/32` ranks, both variants converge in the same
+`17` Newton steps with the same `114` linear iterations, so the comparison is
+again timing-only:
+
+| ranks | local wall [s] | source wall [s] | wall ratio local/source | local solve [s] | source solve [s] |
+| ---: | ---: | ---: | ---: | ---: | ---: |
+| 4 | 1716.574 | 951.034 | 1.805 | 1634.228 | 889.558 |
+| 8 | 1164.304 | 696.630 | 1.671 | 1107.182 | 656.270 |
+| 16 | 608.352 | 373.699 | 1.628 | 574.736 | 350.449 |
+| 32 | 300.435 | 276.856 | 1.085 | 283.927 | 259.549 |
+
+The source assembly remains faster at every matched rank, but the gap narrows
+substantially by `32` ranks. We still promote `local_constitutiveAD + local_pmg`
+here because it is the maintained implementation and now has the complete,
+rank-consistent `1/2/4/8/16/32` converged scaling record.
+
+### Alternative PMG Profile
+
+![Plasticity3D recommended sourcefixed comparison](../assets/plasticity3d/plasticity3d_l1_2_lambda1_sourcefixed_compare.png)
+
+We also checked the source-fixed-like PMG profile on the same `lambda = 1.0`
+benchmark family. Converged-only view:
+
+| ranks | `local_constitutiveAD + local_pmg` | `source + local_pmg` | `local_constitutiveAD + local_pmg_sourcefixed` | `source + local_pmg_sourcefixed` |
+| ---: | --- | --- | --- | --- |
+| 4 | `1716.6 s, 17 N, 114 L, grad 5.84e-3` | `951.0 s, 17 N, 114 L, grad 5.84e-3` | `2115.9 s, 24 N, 204 L, grad 6.53e-3` | `988.4 s, 21 N, 210 L, grad 2.49e-3` |
+| 8 | `1164.3 s, 17 N, 114 L, grad 5.84e-3` | `696.6 s, 17 N, 114 L, grad 5.84e-3` | `1873.6 s, 33 N, 238 L, grad 2.53e-3` | `898.0 s, 27 N, 246 L, grad 9.53e-3` |
+| 16 | `608.4 s, 17 N, 114 L, grad 5.84e-3` | `373.7 s, 17 N, 114 L, grad 5.84e-3` | `-` | `-` |
+| 32 | `300.4 s, 17 N, 114 L, grad 5.84e-3` | `276.9 s, 17 N, 114 L, grad 5.84e-3` | `347.9 s, 29 N, 250 L, grad 2.24e-3` | `-` |
+
+Rows omitted from the alternative profile hit `maxit = 50` before reaching
+`grad_norm < 1e-2`:
+
+- `np16 local_constitutiveAD + local_pmg_sourcefixed`
+- `np16 source + local_pmg_sourcefixed`
+- `np32 source + local_pmg_sourcefixed`
+
+That is the practical reason it is not the default here. It can be competitive
+on some ranks, but it does materially more Newton and Krylov work and loses
+robustness on the same benchmark family.
+
+The remaining sections below preserve the older `lambda = 1.5` fixed-work and
+`maxit = 20` diagnostic campaigns as historical backend context.
+
+## Historical Backend Promotion Context
+
+The historical fixed-work material below records the backend that was promoted
+earlier in the assembly-optimization ladder:
 
 - fine operator assembly: `coo`
 - transfer build: `coo_vectorized`
@@ -40,9 +164,9 @@ The nonlinear trajectory and final state of the `32`-rank diagnostic are
 unchanged to numerical noise; the win is in backend efficiency, not in altered
 physics or solver policy.
 
-## Current Best Settings
+## Historical Fixed-Work Settings
 
-Current maintained large-scale `P4` stack:
+Historical maintained fixed-work `P4` stack:
 
 | knob | value |
 | --- | --- |
@@ -67,9 +191,9 @@ Current maintained large-scale `P4` stack:
 | `P4` Hessian chunk size | `4` |
 | thread caps | `OMP/JAX/BLAS = 1` thread per rank |
 
-## Scaling
+## Historical Fixed-Work Scaling
 
-The current maintained 3D scaling story is the optimized
+The historical fixed-work scaling story preserved here is the optimized
 `P4(L1_2), lambda = 1.5` campaign on `1/2/4/8/16/32` ranks. Like the 2D
 fixed-work results page, this is intentionally a capped benchmark: each row
 runs one Newton iteration after setup and elastic bootstrap.
@@ -96,7 +220,7 @@ The practical reading is:
   non-scaling setup pieces remain structurally present in the overlap-domain
   formulation
 
-## Linear Solve Timing Split
+## Historical Fixed-Work Linear Solve Timing Split
 
 ![Plasticity3D linear scaling](../assets/plasticity3d/plasticity3d_p4_l1_2_linear_solve_breakdown.png)
 
@@ -369,6 +493,20 @@ export BLIS_NUM_THREADS=1 VECLIB_MAXIMUM_THREADS=1 NUMEXPR_NUM_THREADS=1
 export XLA_FLAGS="--xla_cpu_multi_thread_eigen=false intra_op_parallelism_threads=1"
 ```
 
+Run the promoted converged `lambda = 1.0` maintained sweep. The `np = 1` and
+`np = 2` rows should be run with no other benchmark MPI jobs active:
+
+```bash
+./.venv/bin/python experiments/runners/run_plasticity3d_l1_2_lambda1_grad1e2_local_pmg_scaling.py \
+  --ranks 1 2
+
+./.venv/bin/python experiments/analysis/generate_plasticity3d_impl_scaling_assets.py \
+  --summary-json artifacts/raw_results/source_compare/plasticity3d_l1_2_lambda1_grad1e2_local_pmg_scaling/comparison_summary.json \
+  --out-dir artifacts/raw_results/source_compare/plasticity3d_l1_2_lambda1_grad1e2_local_pmg_scaling
+
+./.venv/bin/python experiments/analysis/generate_plasticity3d_l1_2_lambda1_docs_assets.py
+```
+
 Run the maintained refined `1/2/4/8/16/32` optimized sweep:
 
 ```bash
@@ -463,13 +601,17 @@ Regenerate the detailed diagnostic plots:
 
 ## Notes
 
-- Rows marked `status=failed` on this page are fixed-work rows that hit the
-  intentional `maxit = 1` cap. They do not indicate a solver crash.
+- Rows marked `status=failed` on this page are historical fixed-work or
+  alternative-profile rows that hit an intentional iteration cap. They do not
+  indicate a solver crash.
 - The `32`-rank Newton diagnostic also ends with `status=failed`, but there it
   means the run exhausted the requested `20` Newton iterations rather than
   breaking in PETSc or JAX.
 - The current problem-card result for source-parity and field quality is still
   the from-scratch `P2(L1), lambda = 1.6` solve documented on
   [Plasticity3D](../problems/Plasticity3D.md).
-- The large-scale refined `P4` campaign is the current maintained parallel
-  scaling benchmark for the 3D path.
+- The current maintained parallel-scaling recommendation for the 3D refined path
+  is the converged `P4(L1_2), lambda = 1.0` `local_constitutiveAD + local_pmg`
+  study documented at the top of this page.
+- The older `lambda = 1.5` fixed-work and capped-Newton sections remain here as
+  historical backend and diagnostic context.
