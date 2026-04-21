@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from pathlib import Path
 import re
 import runpy
+import shutil
 
 import h5py
 from mpi4py import MPI
@@ -41,13 +42,22 @@ DEFAULT_MESH_NAME = "hetero_ssr_L1"
 RAW_MESH_ROOT = MESH_DATA_ROOT / "SlopeStability3D" / "hetero_ssr"
 DEFINITION_PATH = RAW_MESH_ROOT / "definition.py"
 _MESH_CASE_RE = re.compile(r"^SSR_hetero_(?P<kind>ada_L\d+|uni)\.msh$")
-_REFINED_MESH_RE = re.compile(r"^(?P<base>hetero_ssr_L\d+)_2$")
+_REFINED_MESH_RE = re.compile(r"^(?P<base>hetero_ssr_L\d+)(?P<suffix>(?:_\d+)*)$")
 SOURCE_INTERNAL_AXIS_ORDER = "xyz"
 SOURCE_INTERNAL_AXIS_PERM = np.asarray([0, 1, 2], dtype=np.int64)
-SAME_MESH_HDF5_SCHEMA_VERSION = 5
-_LIGHT_CASE_CACHE: dict[tuple[str, int], dict[str, object]] = {}
-_RANK_LOCAL_LIGHT_CACHE: dict[tuple[str, int, str, int, int], dict[str, object]] = {}
-_RANK_LOCAL_HEAVY_CACHE: dict[tuple[str, int, str, int, int], dict[str, object]] = {}
+SAME_MESH_HDF5_SCHEMA_VERSION = 6
+PLASTICITY3D_CONSTRAINT_VARIANT_COMPONENTWISE_BOTTOM = "componentwise_bottom"
+PLASTICITY3D_CONSTRAINT_VARIANT_GLUED_BOTTOM = "glued_bottom"
+DEFAULT_PLASTICITY3D_CONSTRAINT_VARIANT = PLASTICITY3D_CONSTRAINT_VARIANT_GLUED_BOTTOM
+_PLASTICITY3D_CONSTRAINT_VARIANTS = frozenset(
+    {
+        PLASTICITY3D_CONSTRAINT_VARIANT_COMPONENTWISE_BOTTOM,
+        PLASTICITY3D_CONSTRAINT_VARIANT_GLUED_BOTTOM,
+    }
+)
+_LIGHT_CASE_CACHE: dict[tuple[str, int, str], dict[str, object]] = {}
+_RANK_LOCAL_LIGHT_CACHE: dict[tuple[str, int, str, str, int, int], dict[str, object]] = {}
+_RANK_LOCAL_HEAVY_CACHE: dict[tuple[str, int, str, str, int, int], dict[str, object]] = {}
 
 
 @dataclass(frozen=True)
@@ -56,6 +66,7 @@ class SlopeStability3DCaseData:
     mesh_name: str
     degree: int
     raw_mesh_filename: str
+    constraint_variant: str
 
     nodes: np.ndarray
     elems_scalar: np.ndarray
@@ -118,8 +129,64 @@ class _MacroMeshData:
     macro_parent_mesh_name: str
 
 
+def normalize_constraint_variant(constraint_variant: str | None) -> str:
+    variant = str(
+        DEFAULT_PLASTICITY3D_CONSTRAINT_VARIANT if constraint_variant is None else constraint_variant
+    ).strip()
+    if variant not in _PLASTICITY3D_CONSTRAINT_VARIANTS:
+        supported = ", ".join(sorted(_PLASTICITY3D_CONSTRAINT_VARIANTS))
+        raise ValueError(
+            f"Unsupported Plasticity3D constraint variant {constraint_variant!r}; "
+            f"expected one of {supported}"
+        )
+    return variant
+
+
 def _point_key(point: np.ndarray) -> tuple[float, float, float]:
     return tuple(np.round(np.asarray(point, dtype=np.float64), COORD_DECIMALS).tolist())
+
+
+def _parse_refined_mesh_name(mesh_name: str) -> tuple[str, int] | None:
+    mesh_name = str(mesh_name)
+    match = _REFINED_MESH_RE.fullmatch(mesh_name)
+    if match is None:
+        return None
+    base = str(match.group("base"))
+    suffix = str(match.group("suffix") or "")
+    if not suffix:
+        return base, 0
+    tokens = [int(token) for token in suffix.split("_") if token]
+    expected = list(range(2, 2 + len(tokens)))
+    if tokens != expected:
+        raise ValueError(
+            f"Unsupported refined 3D slope mesh name {mesh_name!r}; "
+            f"expected sequential suffixes {expected!r}"
+        )
+    return base, len(tokens)
+
+
+def mesh_name_with_uniform_refinements(base_mesh_name: str, steps: int) -> str:
+    base_mesh_name = str(base_mesh_name)
+    steps = int(steps)
+    if steps < 0:
+        raise ValueError("steps must be >= 0")
+    if steps == 0:
+        return base_mesh_name
+    if re.fullmatch(r"hetero_ssr_L\d+", base_mesh_name) is None:
+        raise ValueError(f"Unsupported 3D slope mesh base name {base_mesh_name!r}")
+    suffix = "".join(f"_{level}" for level in range(2, 2 + steps))
+    return f"{base_mesh_name}{suffix}"
+
+
+def macro_parent_mesh_name_for_name(mesh_name: str) -> str:
+    mesh_name = str(mesh_name)
+    parsed = _parse_refined_mesh_name(mesh_name)
+    if parsed is None:
+        return mesh_name
+    base_mesh_name, refinement_steps = parsed
+    if refinement_steps <= 0:
+        return str(base_mesh_name)
+    return mesh_name_with_uniform_refinements(str(base_mesh_name), refinement_steps - 1)
 
 
 def supported_mesh_names() -> tuple[str, ...]:
@@ -131,20 +198,22 @@ def supported_mesh_names() -> tuple[str, ...]:
             continue
     for base in tuple(names):
         if re.fullmatch(r"hetero_ssr_L\d+", str(base)):
-            names.append(f"{base}_2")
-    return tuple(names)
+            for steps in range(1, 4):
+                names.append(mesh_name_with_uniform_refinements(str(base), steps))
+    return tuple(dict.fromkeys(names))
 
 
 def base_mesh_name_for_name(mesh_name: str) -> str:
     mesh_name = str(mesh_name)
-    match = _REFINED_MESH_RE.fullmatch(mesh_name)
-    if match is not None:
-        return str(match.group("base"))
+    parsed = _parse_refined_mesh_name(mesh_name)
+    if parsed is not None:
+        return str(parsed[0])
     return mesh_name
 
 
 def uniform_refinement_steps_for_name(mesh_name: str) -> int:
-    return 1 if _REFINED_MESH_RE.fullmatch(str(mesh_name)) is not None else 0
+    parsed = _parse_refined_mesh_name(str(mesh_name))
+    return int(parsed[1]) if parsed is not None else 0
 
 
 def mesh_name_from_raw_filename(filename: str) -> str:
@@ -170,12 +239,25 @@ def raw_mesh_path_for_name(mesh_name: str) -> Path:
     return RAW_MESH_ROOT / raw_mesh_filename_for_name(mesh_name)
 
 
-def same_mesh_case_name(mesh_name: str, degree: int) -> str:
+def legacy_unversioned_same_mesh_case_name(mesh_name: str, degree: int) -> str:
     return f"{str(mesh_name)}_p{int(degree)}_same_mesh"
 
 
-def same_mesh_case_hdf5_path(mesh_name: str, degree: int) -> Path:
-    return RAW_MESH_ROOT / f"{same_mesh_case_name(mesh_name, degree)}.h5"
+def legacy_unversioned_same_mesh_case_hdf5_path(mesh_name: str, degree: int) -> Path:
+    return RAW_MESH_ROOT / f"{legacy_unversioned_same_mesh_case_name(mesh_name, degree)}.h5"
+
+
+def same_mesh_case_name(mesh_name: str, degree: int, constraint_variant: str | None = None) -> str:
+    variant = normalize_constraint_variant(constraint_variant)
+    return f"{str(mesh_name)}_p{int(degree)}_same_mesh_{variant}"
+
+
+def same_mesh_case_hdf5_path(
+    mesh_name: str,
+    degree: int,
+    constraint_variant: str | None = None,
+) -> Path:
+    return RAW_MESH_ROOT / f"{same_mesh_case_name(mesh_name, degree, constraint_variant)}.h5"
 
 
 def _load_definition() -> dict[str, object]:
@@ -385,7 +467,7 @@ def _uniform_refine_macro_mesh_once(
         for child in children:
             refined_tets.append(tuple(int(v) for v in child))
             refined_materials.append(int(macro.material_id[tet_id]))
-            refined_parent.append(int(macro.macro_parent[tet_id]))
+            refined_parent.append(int(tet_id))
 
     refined_nodes = (
         np.vstack((nodes, np.asarray(extra_points, dtype=np.float64)))
@@ -428,7 +510,7 @@ def _uniform_refine_macro_mesh_once(
         boundary_label=np.asarray(refined_labels, dtype=np.int64),
         material_id=np.asarray(refined_materials, dtype=np.int64),
         macro_parent=np.asarray(refined_parent, dtype=np.int64),
-        macro_parent_mesh_name=str(macro.macro_parent_mesh_name),
+        macro_parent_mesh_name=str(macro.mesh_name),
     )
 
 
@@ -762,10 +844,14 @@ def select_reordered_perm_3d(
 
 
 def _build_q_mask(
+    nodes: np.ndarray,
     n_nodes: int,
     surf: np.ndarray,
     boundary_label: np.ndarray,
+    *,
+    constraint_variant: str | None = None,
 ) -> np.ndarray:
+    variant = normalize_constraint_variant(constraint_variant)
     q_mask = np.ones((int(n_nodes), 3), dtype=bool)
     labels = _definition_dirichlet_labels()
     for axis_idx, axis_name in enumerate(("x", "y", "z")):
@@ -775,6 +861,11 @@ def _build_q_mask(
         mask = np.isin(np.asarray(boundary_label, dtype=np.int64), np.asarray(constrained, dtype=np.int64))
         if np.any(mask):
             q_mask[np.asarray(surf[mask], dtype=np.int64).ravel(), axis_idx] = False
+    if variant == PLASTICITY3D_CONSTRAINT_VARIANT_GLUED_BOTTOM:
+        node_coords = np.asarray(nodes, dtype=np.float64).reshape((int(n_nodes), 3))
+        glued = np.abs(node_coords[:, 1]) <= 1.0e-12
+        if np.any(glued):
+            q_mask[glued, :] = False
     return q_mask
 
 
@@ -1112,8 +1203,10 @@ def _assemble_gravity_load(
 def _macro_mesh_for_case(mesh_path: str | Path, *, mesh_name: str) -> _MacroMeshData:
     base_mesh_name = base_mesh_name_for_name(str(mesh_name))
     macro = _load_macro_mesh_from_msh(mesh_path, base_mesh_name)
-    for _ in range(int(uniform_refinement_steps_for_name(str(mesh_name)))):
-        macro = _uniform_refine_macro_mesh_once(macro, mesh_name=str(mesh_name))
+    refinement_steps = int(uniform_refinement_steps_for_name(str(mesh_name)))
+    for step in range(1, refinement_steps + 1):
+        refined_mesh_name = mesh_name_with_uniform_refinements(base_mesh_name, step)
+        macro = _uniform_refine_macro_mesh_once(macro, mesh_name=str(refined_mesh_name))
     if str(macro.mesh_name) != str(mesh_name):
         macro = _MacroMeshData(
             mesh_name=str(mesh_name),
@@ -1134,10 +1227,12 @@ def build_case_data_from_raw_mesh(
     *,
     mesh_name: str,
     degree: int,
+    constraint_variant: str | None = None,
 ) -> SlopeStability3DCaseData:
     degree = int(degree)
     if degree not in {1, 2, 4}:
         raise ValueError(f"Unsupported degree {degree!r}; expected 1, 2, or 4")
+    variant = normalize_constraint_variant(constraint_variant)
 
     macro = _macro_mesh_for_case(mesh_path, mesh_name=str(mesh_name))
     nodes, elems_scalar, surf = _elevate_macro_mesh_to_degree(
@@ -1146,7 +1241,13 @@ def build_case_data_from_raw_mesh(
         macro.surf,
         degree=degree,
     )
-    q_mask = _build_q_mask(nodes.shape[0], surf, macro.boundary_label)
+    q_mask = _build_q_mask(
+        nodes,
+        nodes.shape[0],
+        surf,
+        macro.boundary_label,
+        constraint_variant=variant,
+    )
     freedofs = _build_free_dofs(q_mask)
     elems = expand_tetra_connectivity_to_dofs(elems_scalar)
     dphix, dphiy, dphiz, quad_weight, hatp = _assemble_local_tet_ops(
@@ -1173,10 +1274,11 @@ def build_case_data_from_raw_mesh(
     elastic_kernel = build_near_nullspace_modes_3d(nodes, freedofs)
 
     return SlopeStability3DCaseData(
-        case_name=same_mesh_case_name(mesh_name, degree),
+        case_name=same_mesh_case_name(mesh_name, degree, variant),
         mesh_name=str(mesh_name),
         degree=int(degree),
         raw_mesh_filename=str(Path(mesh_path).name),
+        constraint_variant=str(variant),
         nodes=np.asarray(nodes, dtype=np.float64),
         elems_scalar=np.asarray(elems_scalar, dtype=np.int64),
         elems=np.asarray(elems, dtype=np.int64),
@@ -1228,12 +1330,14 @@ def build_same_mesh_lagrange_case_data(
     mesh_name: str = DEFAULT_MESH_NAME,
     *,
     degree: int,
+    constraint_variant: str | None = None,
     build_mode: str = "replicated",
     comm: MPI.Comm | None = None,
 ) -> SlopeStability3DCaseData:
     mesh_name = str(mesh_name)
     degree = int(degree)
-    hdf5_path = ensure_same_mesh_case_hdf5(mesh_name, degree)
+    variant = normalize_constraint_variant(constraint_variant)
+    hdf5_path = ensure_same_mesh_case_hdf5(mesh_name, degree, constraint_variant=variant)
     return _broadcast_case_data(
         lambda: (
             load_case_hdf5(hdf5_path)
@@ -1242,6 +1346,7 @@ def build_same_mesh_lagrange_case_data(
                 raw_mesh_path_for_name(mesh_name),
                 mesh_name=mesh_name,
                 degree=degree,
+                constraint_variant=variant,
             )
         ),
         build_mode=build_mode,
@@ -1257,6 +1362,7 @@ def write_case_hdf5(path: str | Path, case_data: SlopeStability3DCaseData) -> No
         handle.create_dataset("case_name", data=np.bytes_(case_data.case_name))
         handle.create_dataset("mesh_name", data=np.bytes_(case_data.mesh_name))
         handle.create_dataset("raw_mesh_filename", data=np.bytes_(case_data.raw_mesh_filename))
+        handle.create_dataset("constraint_variant", data=np.bytes_(case_data.constraint_variant))
         handle.create_dataset("schema_version", data=int(SAME_MESH_HDF5_SCHEMA_VERSION))
         handle.create_dataset("source_internal_axis_order", data=np.bytes_(SOURCE_INTERNAL_AXIS_ORDER))
         handle.create_dataset("degree", data=int(case_data.degree))
@@ -1314,6 +1420,9 @@ def load_case_hdf5(path: str | Path) -> SlopeStability3DCaseData:
         mesh_name=_decode_hdf5_string(raw["mesh_name"]),
         degree=int(raw["degree"]),
         raw_mesh_filename=_decode_hdf5_string(raw["raw_mesh_filename"]),
+        constraint_variant=_decode_hdf5_string(
+            raw.get("constraint_variant", np.bytes_(PLASTICITY3D_CONSTRAINT_VARIANT_COMPONENTWISE_BOTTOM))
+        ),
         nodes=np.asarray(raw["nodes"], dtype=np.float64),
         elems_scalar=np.asarray(raw["elems_scalar"], dtype=np.int64),
         elems=np.asarray(raw["elems"], dtype=np.int64),
@@ -1361,6 +1470,7 @@ def load_case_hdf5_fields(
         "case_name",
         "mesh_name",
         "raw_mesh_filename",
+        "constraint_variant",
         "macro_parent_mesh_name",
         "davis_type",
     ):
@@ -1373,6 +1483,7 @@ _SAME_MESH_LIGHT_FIELDS = (
     "case_name",
     "mesh_name",
     "raw_mesh_filename",
+    "constraint_variant",
     "degree",
     "nodes",
     "elems_scalar",
@@ -1393,15 +1504,21 @@ _SAME_MESH_LIGHT_FIELDS = (
 )
 
 
-def load_same_mesh_case_hdf5_light(mesh_name: str, degree: int) -> dict[str, object]:
-    cache_key = (str(mesh_name), int(degree))
+def load_same_mesh_case_hdf5_light(
+    mesh_name: str,
+    degree: int,
+    *,
+    constraint_variant: str | None = None,
+) -> dict[str, object]:
+    variant = normalize_constraint_variant(constraint_variant)
+    cache_key = (str(mesh_name), int(degree), str(variant))
     cached = _LIGHT_CASE_CACHE.get(cache_key)
     if cached is not None:
         raw = dict(cached)
         raw["elem_type"] = f"P{int(degree)}"
         raw["element_degree"] = int(degree)
         return raw
-    path = ensure_same_mesh_case_hdf5(str(mesh_name), int(degree))
+    path = ensure_same_mesh_case_hdf5(str(mesh_name), int(degree), constraint_variant=variant)
     raw, _ = load_case_hdf5_fields(path, fields=_SAME_MESH_LIGHT_FIELDS, load_adjacency=False)
     _LIGHT_CASE_CACHE[cache_key] = dict(raw)
     raw["elem_type"] = f"P{int(degree)}"
@@ -1512,14 +1629,17 @@ def load_same_mesh_case_hdf5_rank_local_light(
     mesh_name: str,
     degree: int,
     *,
+    constraint_variant: str | None = None,
     reorder_mode: str,
     comm: MPI.Comm,
     block_size: int = 3,
 ) -> dict[str, object]:
     del block_size
+    variant = normalize_constraint_variant(constraint_variant)
     cache_key = (
         str(mesh_name),
         int(degree),
+        str(variant),
         str(reorder_mode),
         int(comm.size),
         int(comm.rank),
@@ -1530,7 +1650,11 @@ def load_same_mesh_case_hdf5_rank_local_light(
         raw["elem_type"] = f"P{int(degree)}"
         raw["element_degree"] = int(degree)
         return raw
-    raw = load_same_mesh_case_hdf5_light(str(mesh_name), int(degree))
+    raw = load_same_mesh_case_hdf5_light(
+        str(mesh_name),
+        int(degree),
+        constraint_variant=variant,
+    )
     raw.update(_build_rank_local_partition_metadata(raw, reorder_mode=str(reorder_mode), comm=comm))
     _RANK_LOCAL_LIGHT_CACHE[cache_key] = dict(raw)
     raw["elem_type"] = f"P{int(degree)}"
@@ -1542,13 +1666,16 @@ def load_same_mesh_case_hdf5_rank_local(
     mesh_name: str,
     degree: int,
     *,
+    constraint_variant: str | None = None,
     reorder_mode: str,
     comm: MPI.Comm,
     block_size: int = 3,
 ) -> dict[str, object]:
+    variant = normalize_constraint_variant(constraint_variant)
     cache_key = (
         str(mesh_name),
         int(degree),
+        str(variant),
         str(reorder_mode),
         int(comm.size),
         int(comm.rank),
@@ -1559,10 +1686,11 @@ def load_same_mesh_case_hdf5_rank_local(
         raw["elem_type"] = f"P{int(degree)}"
         raw["element_degree"] = int(degree)
         return raw
-    path = ensure_same_mesh_case_hdf5(str(mesh_name), int(degree))
+    path = ensure_same_mesh_case_hdf5(str(mesh_name), int(degree), constraint_variant=variant)
     raw = load_same_mesh_case_hdf5_rank_local_light(
         str(mesh_name),
         int(degree),
+        constraint_variant=variant,
         reorder_mode=str(reorder_mode),
         comm=comm,
         block_size=int(block_size),
@@ -1594,24 +1722,80 @@ def load_same_mesh_case_hdf5_rank_local(
     return raw
 
 
-def ensure_same_mesh_case_hdf5(mesh_name: str, degree: int) -> Path:
+def _materialize_legacy_componentwise_case_if_needed(mesh_name: str, degree: int, out_path: Path) -> bool:
+    out_path = Path(out_path)
+    if out_path.exists():
+        return True
+    legacy_path = legacy_unversioned_same_mesh_case_hdf5_path(mesh_name, degree)
+    if not legacy_path.exists():
+        return False
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copy2(legacy_path, out_path)
+    with h5py.File(out_path, "r+") as handle:
+        for key, value in (
+            ("case_name", same_mesh_case_name(mesh_name, degree, PLASTICITY3D_CONSTRAINT_VARIANT_COMPONENTWISE_BOTTOM)),
+            ("constraint_variant", PLASTICITY3D_CONSTRAINT_VARIANT_COMPONENTWISE_BOTTOM),
+            ("schema_version", int(SAME_MESH_HDF5_SCHEMA_VERSION)),
+            ("macro_parent_mesh_name", macro_parent_mesh_name_for_name(mesh_name)),
+            ("source_internal_axis_order", SOURCE_INTERNAL_AXIS_ORDER),
+        ):
+            if key in handle:
+                del handle[key]
+            if isinstance(value, str):
+                handle.create_dataset(key, data=np.bytes_(value))
+            else:
+                handle.create_dataset(key, data=value)
+    return True
+
+
+def ensure_same_mesh_case_hdf5(
+    mesh_name: str,
+    degree: int,
+    *,
+    constraint_variant: str | None = None,
+) -> Path:
     mesh_name = str(mesh_name)
     degree = int(degree)
-    path = same_mesh_case_hdf5_path(mesh_name, degree)
-    if not _same_mesh_hdf5_is_current(path, mesh_name=mesh_name, degree=degree):
+    variant = normalize_constraint_variant(constraint_variant)
+    path = same_mesh_case_hdf5_path(mesh_name, degree, variant)
+    if (
+        variant == PLASTICITY3D_CONSTRAINT_VARIANT_COMPONENTWISE_BOTTOM
+        and _materialize_legacy_componentwise_case_if_needed(mesh_name, degree, path)
+        and _same_mesh_hdf5_is_current(
+            path,
+            mesh_name=mesh_name,
+            degree=degree,
+            constraint_variant=variant,
+        )
+    ):
+        return path
+    if not _same_mesh_hdf5_is_current(
+        path,
+        mesh_name=mesh_name,
+        degree=degree,
+        constraint_variant=variant,
+    ):
         case_data = build_case_data_from_raw_mesh(
             raw_mesh_path_for_name(mesh_name),
             mesh_name=mesh_name,
             degree=degree,
+            constraint_variant=variant,
         )
         write_case_hdf5(path, case_data)
     return path
 
 
-def _same_mesh_hdf5_is_current(path: str | Path, *, mesh_name: str, degree: int) -> bool:
+def _same_mesh_hdf5_is_current(
+    path: str | Path,
+    *,
+    mesh_name: str,
+    degree: int,
+    constraint_variant: str | None = None,
+) -> bool:
     path = Path(path)
     if not path.exists():
         return False
+    variant = normalize_constraint_variant(constraint_variant)
     try:
         with h5py.File(path, "r") as handle:
             stored_degree = int(handle["degree"][()])
@@ -1619,9 +1803,19 @@ def _same_mesh_hdf5_is_current(path: str | Path, *, mesh_name: str, degree: int)
             stored_raw_mesh = _decode_hdf5_string(handle["raw_mesh_filename"][()])
             schema_obj = handle.get("schema_version")
             axis_obj = handle.get("source_internal_axis_order")
+            macro_parent_obj = handle.get("macro_parent_mesh_name")
             stored_schema = int(schema_obj[()]) if schema_obj is not None else 0
             stored_axis_order = (
                 _decode_hdf5_string(axis_obj[()]) if axis_obj is not None else ""
+            )
+            stored_macro_parent_mesh_name = (
+                _decode_hdf5_string(macro_parent_obj[()]) if macro_parent_obj is not None else ""
+            )
+            constraint_obj = handle.get("constraint_variant")
+            stored_constraint_variant = (
+                _decode_hdf5_string(constraint_obj[()])
+                if constraint_obj is not None
+                else PLASTICITY3D_CONSTRAINT_VARIANT_COMPONENTWISE_BOTTOM
             )
     except Exception:
         return False
@@ -1631,4 +1825,6 @@ def _same_mesh_hdf5_is_current(path: str | Path, *, mesh_name: str, degree: int)
         and stored_raw_mesh == raw_mesh_filename_for_name(mesh_name)
         and stored_schema == int(SAME_MESH_HDF5_SCHEMA_VERSION)
         and stored_axis_order == SOURCE_INTERNAL_AXIS_ORDER
+        and stored_macro_parent_mesh_name == macro_parent_mesh_name_for_name(mesh_name)
+        and stored_constraint_variant == str(variant)
     )

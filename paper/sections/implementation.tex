@@ -1,0 +1,137 @@
+\label{sec:implementation}
+
+The repository intentionally keeps three implementation strata.
+
+\paragraph{Pure JAX reference paths.}
+These are the most compact differentiable implementations in the codebase.
+They are useful for formulation checks, serial references, and debugging AD
+logic. They are not intended to be the primary production route for the largest
+distributed benchmarks. Their main scientific role in this paper is to show
+that the energy formulations used in the maintained stack can also be expressed
+in a compact differentiable form without sparse distributed infrastructure.
+
+\paragraph{FEniCS reference paths.}
+The \fenics{} implementations remain valuable on families where they exist,
+especially $p$-Laplace, Ginzburg--Landau, and hyperelasticity. They provide a
+trusted high-level FEM reference and help distinguish modeling issues from
+solver-stack issues. In the current repository they are used mainly as
+comparison baselines rather than as the mainline production path.
+
+\paragraph{Maintained \jaxpetsc{} path.}
+This is the central implementation of the paper. It combines JAX-based local
+physics with PETSc distributed vectors, matrices, Krylov solvers, and
+preconditioners. Problem-specific kernels stay in JAX; sparse distributed
+assembly, nonlinear globalization, and linear algebra stay in PETSc.
+
+\subsection{Autodiff modes}
+
+The maintained stack supports several second-order modes. The precise available
+choices depend on the benchmark family, but the common logic is:
+\begin{itemize}
+  \item \textbf{element AD}: exact local Hessians from differentiating the full
+        element energy;
+  \item \textbf{constitutive AD}: exact local constitutive tangents assembled
+        from quadrature-point energy densities;
+  \item \textbf{local SFD / colored SFD}: sparse approximate Hessian recovery
+        when exact second-order information is not the best cost tradeoff.
+\end{itemize}
+
+This split is scientifically important. It lets us compare exact second-order
+information against carefully structured sparse approximations without changing
+the rest of the nonlinear solver stack. In other words, the paper is not only a
+comparison of frameworks, but also a comparison of derivative strategies inside
+one common solver infrastructure.
+
+\begin{figure}[H]
+  \centering
+  \PaperFrameworkOverviewDiagram
+  \caption{Software structure of the manuscript. The maintained \jaxpetsc{}
+  implementation is the main production path; \purejax{} and \fenics{} remain
+  reference paths where they already exist in the repository.}
+  \label{fig:framework-overview}
+\end{figure}
+
+\begin{figure}[H]
+  \centering
+  \PaperDerivativePathDiagram
+  \caption{Derivative pathways from scalar energies and quadrature-point
+  potentials to distributed PETSc nonlinear solves.}
+  \label{fig:derivative-pathways}
+\end{figure}
+
+\begin{figure}[H]
+  \centering
+  \PaperAutodiffModesDiagram
+  \caption{Second-order derivative modes exposed in the maintained stack. The
+  important engineering choice is that the source of truth remains an energy or
+  energy-density expression even when the tangent path changes from element AD
+  to constitutive AD or colored SFD.}
+  \label{fig:derivative-stack}
+\end{figure}
+
+\subsection{Linear solvers and preconditioners}
+
+The maintained families use different Krylov and preconditioner combinations
+because the linear systems are qualitatively different:
+\begin{itemize}
+  \item \textbf{$p$-Laplace:} mostly \code{cg + hypre}, with exact element
+        Hessians or local-SFD Hessians in the \jaxpetsc{} path.
+  \item \textbf{Ginzburg--Landau:} \code{gmres + hypre}, reflecting the more
+        indefinite linearization.
+  \item \textbf{Hyperelasticity:} trust-region outer iterations with
+        \code{gamg}-preconditioned Krylov solves.
+  \item \textbf{Plasticity (2D):} deep-tail multigrid hierarchies whose
+        bottlenecks are now dominated by the top smoother and repeated Krylov
+        work.
+  \item \textbf{Plasticity3D:} local PMG on same-mesh
+        \code{P4 -> P2 -> P1}, coarse \code{cg + hypre}, and an elastic initial
+        guess on the same hierarchy.
+  \item \textbf{Topology:} \code{fgmres + gamg} for the mechanics step, coupled
+        to a separate distributed design update.
+\end{itemize}
+
+The comparison material later in the manuscript also includes a source-repo PMG-shell
+variant and deflated GMRES. Those are not the primary maintained defaults, but
+they are informative because they reveal how much of the final performance
+difference comes from derivative paths, preconditioners, or outer solver logic.
+
+\subsection{Distributed assembly and coloring}
+
+The \jaxpetsc{} implementation uses PETSc-owned ranges, local-plus-ghost
+layouts, and owned-row sparse assembly. This matters for both exact and
+approximate second-order information. Exact element or constitutive assembly can
+write directly into local sparse buffers. Colored SFD requires an additional
+graph-coloring step, but once the coloring is known the probe evaluations can
+still be carried out in a rank-local manner with only scalar reductions or
+owned sparse insertion in the hot loop.
+
+\begin{figure}[H]
+  \centering
+  \PaperGlobalizationDiagram
+  \caption{Globalization choices used across the repository, from pure line
+  search to trust-region and hybrid strategies.}
+  \label{fig:globalization}
+\end{figure}
+
+\begin{figure}[H]
+  \centering
+  \PaperColoringDiagram
+  \caption{Schematic view of the colored sparse-recovery logic used by the
+  local SFD Hessian path: a sparsity pattern, a distance-2 coloring, and the
+  corresponding grouped probes used for recovery.}
+  \label{fig:globalization-coloring}
+\end{figure}
+
+\begin{table}[H]
+  \centering
+  \input{tables/generated/implementation_capability_matrix.tex}
+  \caption{Implementation capability matrix across the maintained benchmark
+  families. ``Higher-order / advanced AD'' summarizes the derivative choices
+  that are scientifically interesting in each family.}
+  \label{tab:capability-matrix}
+\end{table}
+
+\Cref{tab:capability-matrix} summarizes the implemented surface. The most
+important structural point is that the maintained production story is always
+the \jaxpetsc{} column, even when a family also has \fenics{} or \purejax{}
+references.

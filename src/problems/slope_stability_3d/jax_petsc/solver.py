@@ -29,6 +29,7 @@ from src.problems.slope_stability_3d.jax_petsc.reordered_element_assembler impor
     SlopeStability3DReorderedElementAssembler,
 )
 from src.problems.slope_stability_3d.support.mesh import (
+    DEFAULT_PLASTICITY3D_CONSTRAINT_VARIANT,
     DEFAULT_MESH_NAME,
     base_mesh_name_for_name,
     build_same_mesh_lagrange_case_data,
@@ -332,7 +333,10 @@ def _pc_options(settings):
 def _load_problem_data(args, comm: MPI.Comm):
     mesh_name = str(getattr(args, "mesh_name", None) or DEFAULT_MESH_NAME)
     degree = int(args.elem_degree)
-    ensure_same_mesh_case_hdf5(mesh_name, degree)
+    constraint_variant = str(
+        getattr(args, "constraint_variant", DEFAULT_PLASTICITY3D_CONSTRAINT_VARIANT)
+    )
+    ensure_same_mesh_case_hdf5(mesh_name, degree, constraint_variant=constraint_variant)
 
     build_mode = str(getattr(args, "problem_build_mode", "root_bcast"))
     reorder_mode = str(getattr(args, "element_reorder_mode", None) or "block_xyz")
@@ -340,6 +344,7 @@ def _load_problem_data(args, comm: MPI.Comm):
         params = load_same_mesh_case_hdf5_rank_local(
             mesh_name,
             degree,
+            constraint_variant=constraint_variant,
             reorder_mode=reorder_mode,
             comm=comm,
             block_size=3,
@@ -349,6 +354,7 @@ def _load_problem_data(args, comm: MPI.Comm):
         case_data = build_same_mesh_lagrange_case_data(
             mesh_name,
             degree=degree,
+            constraint_variant=constraint_variant,
             build_mode=build_mode,
             comm=comm,
         )
@@ -457,6 +463,10 @@ def _resolve_mg_strategy(args) -> str:
         return strategy
     degree = int(getattr(args, "elem_degree", 2))
     mesh_name = str(getattr(args, "mesh_name", DEFAULT_MESH_NAME) or DEFAULT_MESH_NAME)
+    if degree == 1:
+        if base_mesh_name_for_name(mesh_name) != mesh_name:
+            return "uniform_refined_p1_chain"
+        raise ValueError("3D PMG requires a refined mesh name for degree-1 auto strategy")
     if degree == 2:
         return "same_mesh_p2_p1"
     if degree == 4:

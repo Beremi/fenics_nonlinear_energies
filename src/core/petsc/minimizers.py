@@ -193,6 +193,7 @@ def newton(
     armijo_c1=1e-4,
     armijo_shrink=0.5,
     armijo_max_ls=40,
+    armijo_gradient_fallback=False,
     maxit=100,
     tolx_rel=1e-6,
     tolx_abs=1e-10,
@@ -813,7 +814,19 @@ def newton(
                         directional_derivative,
                     )
                     ls_evals += ls_eval_local
-                elif str(line_search) == "residual_bisection":
+                    if (not accepted_armijo) and bool(armijo_gradient_fallback):
+                        g.copy(p)
+                        p.scale(-1.0)
+                        pnorm = p.norm(PETSc.NormType.NORM_2)
+                        directional_derivative = -float(normg * normg)
+                        alpha, fx_trial, ls_eval_local, accepted_armijo = _bounded_armijo(
+                            ls_a,
+                            ls_b,
+                            directional_derivative,
+                        )
+                        ls_evals += ls_eval_local
+                        used_gradient_fallback = bool(accepted_armijo)
+                elif str(line_search) in {"residual_bisection", "residual_bisection_tol"}:
                     directional_derivative = float(g.dot(p))
                     if (
                         not np.isfinite(directional_derivative)
@@ -826,6 +839,7 @@ def newton(
                         alpha_max = 1.0
                         alpha = 1.0
                         accepted_alpha = 0.0
+                        bisection_tol = max(float(linesearch_tol), 1.0e-12)
                         for _ls_it in range(max(1, int(armijo_max_ls))):
                             x_trial.waxpy(float(alpha), p, x_prev)
                             project_fn(x_trial)
@@ -841,6 +855,12 @@ def newton(
                                 alpha_min = float(alpha)
                             else:
                                 alpha_max = float(alpha)
+                            if (
+                                str(line_search) == "residual_bisection_tol"
+                                and accepted_alpha > 0.0
+                                and (alpha_max - alpha_min) <= bisection_tol
+                            ):
+                                break
                             next_alpha = 0.5 * (alpha_min + alpha_max)
                             if next_alpha <= alpha_min + 1.0e-16:
                                 break

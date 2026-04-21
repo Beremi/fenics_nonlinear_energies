@@ -25,18 +25,23 @@ from src.problems.slope_stability_3d.jax_petsc.reordered_element_assembler impor
     SlopeStability3DReorderedElementAssembler,
 )
 from src.problems.slope_stability_3d.support.mesh import (
+    PLASTICITY3D_CONSTRAINT_VARIANT_COMPONENTWISE_BOTTOM,
+    PLASTICITY3D_CONSTRAINT_VARIANT_GLUED_BOTTOM,
+    base_mesh_name_for_name,
     build_same_mesh_lagrange_case_data,
     ensure_same_mesh_case_hdf5,
     load_case_hdf5,
     ownership_block_size_3d,
     same_mesh_case_hdf5_path,
     select_reordered_perm_3d,
+    uniform_refinement_steps_for_name,
 )
 from src.problems.slope_stability_3d.support.reduction import davis_b_reduction_qp
 from src.problems.slope_stability_3d.support.simplex_lagrange import (
     evaluate_tetra_lagrange_basis,
     tetra_reference_nodes,
 )
+from experiments.runners import run_plasticity3d_backend_mix_case as plasticity3d_mix_runner
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -643,6 +648,54 @@ def test_boundary_lifting_marks_all_degree_aware_face_nodes_constrained(degree: 
         assert not np.any(case.q_mask[nodes, axis_idx[axis_name]])
 
 
+def test_glued_bottom_constrains_all_components_at_y_zero_nodes():
+    case = load_case_hdf5(
+        ensure_same_mesh_case_hdf5(
+            "hetero_ssr_L1",
+            1,
+            constraint_variant=PLASTICITY3D_CONSTRAINT_VARIANT_GLUED_BOTTOM,
+        )
+    )
+    y0_nodes = np.where(np.abs(np.asarray(case.nodes, dtype=np.float64)[:, 1]) <= 1.0e-12)[0]
+    assert y0_nodes.size > 0
+    assert not np.any(np.asarray(case.q_mask, dtype=bool)[y0_nodes, :])
+
+
+def test_componentwise_and_glued_bottom_cases_coexist_and_differ():
+    componentwise_path = ensure_same_mesh_case_hdf5(
+        "hetero_ssr_L1",
+        1,
+        constraint_variant=PLASTICITY3D_CONSTRAINT_VARIANT_COMPONENTWISE_BOTTOM,
+    )
+    glued_path = ensure_same_mesh_case_hdf5(
+        "hetero_ssr_L1",
+        1,
+        constraint_variant=PLASTICITY3D_CONSTRAINT_VARIANT_GLUED_BOTTOM,
+    )
+    assert componentwise_path != glued_path
+    assert componentwise_path == same_mesh_case_hdf5_path(
+        "hetero_ssr_L1",
+        1,
+        PLASTICITY3D_CONSTRAINT_VARIANT_COMPONENTWISE_BOTTOM,
+    )
+    assert glued_path == same_mesh_case_hdf5_path(
+        "hetero_ssr_L1",
+        1,
+        PLASTICITY3D_CONSTRAINT_VARIANT_GLUED_BOTTOM,
+    )
+
+    componentwise = load_case_hdf5(componentwise_path)
+    glued = load_case_hdf5(glued_path)
+    assert str(componentwise.constraint_variant) == PLASTICITY3D_CONSTRAINT_VARIANT_COMPONENTWISE_BOTTOM
+    assert str(glued.constraint_variant) == PLASTICITY3D_CONSTRAINT_VARIANT_GLUED_BOTTOM
+    assert int(glued.freedofs.size) < int(componentwise.freedofs.size)
+
+    y0_nodes = np.where(np.abs(np.asarray(componentwise.nodes, dtype=np.float64)[:, 1]) <= 1.0e-12)[0]
+    assert y0_nodes.size > 0
+    assert np.any(np.any(np.asarray(componentwise.q_mask, dtype=bool)[y0_nodes, :], axis=1))
+    assert not np.any(np.asarray(glued.q_mask, dtype=bool)[y0_nodes, :])
+
+
 def test_same_mesh_transfer_sanity_p2_to_p1_and_p4_to_p2():
     comm = MPI.COMM_SELF
 
@@ -823,6 +876,82 @@ def test_vectorized_transfer_entries_match_reference_builders():
     np.testing.assert_array_equal(rows_new, rows_ref)
     np.testing.assert_array_equal(cols_new, cols_ref)
     np.testing.assert_allclose(data_new, data_ref, rtol=0.0, atol=1.0e-12)
+
+
+def test_chained_uniform_refinement_aliases_are_parsed_consistently():
+    assert base_mesh_name_for_name("hetero_ssr_L1") == "hetero_ssr_L1"
+    assert uniform_refinement_steps_for_name("hetero_ssr_L1") == 0
+    assert base_mesh_name_for_name("hetero_ssr_L1_2_3") == "hetero_ssr_L1"
+    assert uniform_refinement_steps_for_name("hetero_ssr_L1_2_3") == 2
+    with pytest.raises(ValueError, match="sequential suffixes"):
+        base_mesh_name_for_name("hetero_ssr_L1_2_4")
+
+
+def test_mixed_hierarchy_specs_support_uniform_refined_p1_chain():
+    specs = multigrid.mixed_hierarchy_specs(
+        mesh_name="hetero_ssr_L1_2_3",
+        finest_degree=1,
+        strategy="uniform_refined_p1_chain",
+    )
+    assert [(spec.mesh_name, spec.degree) for spec in specs] == [
+        ("hetero_ssr_L1", 1),
+        ("hetero_ssr_L1_2", 1),
+        ("hetero_ssr_L1_2_3", 1),
+    ]
+    with pytest.raises(ValueError, match="requires finest degree 1"):
+        multigrid.mixed_hierarchy_specs(
+            mesh_name="hetero_ssr_L1_2_3",
+            finest_degree=4,
+            strategy="uniform_refined_p1_chain",
+        )
+
+
+def test_mixed_hierarchy_specs_allow_degenerate_uniform_refined_p1_chain():
+    specs = multigrid.mixed_hierarchy_specs(
+        mesh_name="hetero_ssr_L1",
+        finest_degree=1,
+        strategy="uniform_refined_p1_chain",
+    )
+    assert [(spec.mesh_name, spec.degree) for spec in specs] == [("hetero_ssr_L1", 1)]
+
+
+def test_local_pmg_support_handles_single_level_p1_chain():
+    support = plasticity3d_mix_runner._build_local_pmg_support(
+        backend=None,
+        mesh_name="hetero_ssr_L1",
+        elem_degree=1,
+        lambda_target=1.55,
+        pmg_strategy="uniform_refined_p1_chain",
+        ksp_rtol=1.0e-1,
+        ksp_max_it=100,
+        use_near_nullspace=True,
+    )
+    try:
+        assert support.hierarchy is None
+        assert support.realized_levels == 1
+        assert support.pc_backend == "hypre"
+    finally:
+        support.close()
+
+
+def test_local_pmg_support_builds_p2_on_refined_chain():
+    ensure_same_mesh_case_hdf5("hetero_ssr_L1_2_3", 2)
+    support = plasticity3d_mix_runner._build_local_pmg_support(
+        backend=None,
+        mesh_name="hetero_ssr_L1_2_3",
+        elem_degree=2,
+        lambda_target=1.55,
+        pmg_strategy="same_mesh_p2_p1",
+        ksp_rtol=1.0e-1,
+        ksp_max_it=100,
+        use_near_nullspace=True,
+    )
+    try:
+        assert support.hierarchy is not None
+        assert support.realized_levels == 2
+        assert support.pc_backend == "mg"
+    finally:
+        support.close()
 
 
 def test_coo_local_backend_matches_global_coo():

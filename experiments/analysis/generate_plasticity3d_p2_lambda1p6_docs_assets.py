@@ -20,7 +20,11 @@ from experiments.analysis.generate_plasticity3d_p4_l1_docs_assets import (
     _plot_convergence,
     _plot_surface_scalar_field,
 )
-from src.problems.slope_stability_3d.support.mesh import load_case_hdf5, same_mesh_case_hdf5_path
+from src.problems.slope_stability_3d.support.mesh import (
+    PLASTICITY3D_CONSTRAINT_VARIANT_COMPONENTWISE_BOTTOM,
+    load_case_hdf5,
+    same_mesh_case_hdf5_path,
+)
 from src.problems.slope_stability_3d.support.simplex_lagrange import evaluate_tetra_lagrange_basis
 
 
@@ -45,6 +49,7 @@ DEFAULT_OUT_DIR = REPO_ROOT / "docs" / "assets" / "plasticity3d"
 DEFAULT_MESH_NAME = "hetero_ssr_L1"
 DEFAULT_DEGREE = 2
 DEFAULT_SLUG = "plasticity3d_p2_l1_lambda1p6_from_scratch"
+DEFAULT_CONSTRAINT_VARIANT = PLASTICITY3D_CONSTRAINT_VARIANT_COMPONENTWISE_BOTTOM
 
 
 def _save_figure(fig: plt.Figure, out_base: Path) -> None:
@@ -323,12 +328,19 @@ def main() -> None:
     parser.add_argument("--mesh-name", type=str, default=DEFAULT_MESH_NAME)
     parser.add_argument("--degree", type=int, default=DEFAULT_DEGREE)
     parser.add_argument("--slug", type=str, default=DEFAULT_SLUG)
+    parser.add_argument("--constraint-variant", type=str, default=DEFAULT_CONSTRAINT_VARIANT)
     parser.add_argument("--surface-subdivisions", type=int, default=4)
     args = parser.parse_args()
 
     state = np.load(args.state)
     result_payload = json.loads(args.result.read_text(encoding="utf-8"))
-    case = load_case_hdf5(same_mesh_case_hdf5_path(str(args.mesh_name), int(args.degree)))
+    case = load_case_hdf5(
+        same_mesh_case_hdf5_path(
+            str(args.mesh_name),
+            int(args.degree),
+            str(args.constraint_variant),
+        )
+    )
 
     coords_final = np.asarray(state["coords_final"], dtype=np.float64)
     displacement = np.asarray(state["displacement"], dtype=np.float64)

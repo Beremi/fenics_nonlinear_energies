@@ -8,11 +8,12 @@ heterogeneous materials, source Gmsh physical-group labels, gravity along the
 source `y` axis, same-mesh tetrahedral `P1/P2/P4` spaces, and autodiff of one
 scalar 3D potential.
 
-The primary documented result on this page is a corrected-frame
-`P2(L1), lambda = 1.6` solve run from scratch with an elastic initial guess.
-The detailed Octave-vs-JAX branch comparison is kept in the annex, while the
-current refined `P4(L1_2)` scaling campaign lives on the dedicated results
-page.
+The primary documented result on this page is the corrected glued-bottom
+maintained-local `lambda = 1.55` study across same-mesh `P1`, `P2`, and `P4`
+discretisations. The older `P2(L1), lambda = 1.6` from-scratch solve is kept
+below as historical pre-glued-bottom evidence, while the promoted
+`P4(L1_2), lambda = 1.0` strong-scaling campaign remains on the dedicated
+results page as a separate historical timing study.
 
 ## Mathematical Formulation
 
@@ -42,13 +43,22 @@ The constitutive path is intentionally source-faithful:
 - raw source assets: `data/meshes/SlopeStability3D/hetero_ssr/`
 - maintained source meshes: `SSR_hetero_ada_L1.msh` through `L5`
 - material physical groups map to logical IDs `0..3`
-- boundary physical groups keep the source component-wise convention:
+- source physical-group labels are still imported in the source-style
+  component-wise convention:
   - `x` constrained on labels `[1, 2]`
   - `y` constrained on label `[5]`
   - `z` constrained on labels `[3, 4]`
+- maintained canonical boundary rule:
+  every node with `y = 0` is additionally glued in all three displacement
+  components
 - gravity acts only in negative `y`
 - the imported `.msh` meshes are treated as macro tetra meshes, then elevated
   locally to same-mesh `P1`, `P2`, and `P4`
+
+The current canonical `lambda = 1.55` maintained-local material on this page
+uses that glued-bottom rule. Older Plasticity3D items at `lambda = 1.5`,
+`lambda = 1.0`, and the from-scratch `P2(L1), lambda = 1.6` card are kept as
+historical pre-glued-bottom evidence until they are rerun.
 
 ## Discretisation Contract
 
@@ -61,14 +71,15 @@ The constitutive path is intentionally source-faithful:
 
 ## Computed `L1` Hierarchy Card
 
-The global hierarchy sizes below come from the generated
-`hetero_ssr_L1_p{1,2,4}_same_mesh.h5` snapshots.
+The global hierarchy sizes below come from the corrected canonical
+glued-bottom snapshots
+`hetero_ssr_L1_p{1,2,4}_same_mesh_glued_bottom.h5`.
 
 | space | nodes | macro tetrahedra | free DOFs | free `x` | free `y` | free `z` | tet quadrature |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| `P1(L1)` | `3845` | `18419` | `10859` | `3732` | `3651` | `3476` | `1` |
-| `P2(L1)` | `27605` | `18419` | `80362` | `27210` | `26883` | `26269` | `11` |
-| `P4(L1)` | `208549` | `18419` | `616322` | `207077` | `205766` | `203479` | `24` |
+| `P1(L1)` | `3845` | `18419` | `10526` | `3555` | `3651` | `3320` | `1` |
+| `P2(L1)` | `27605` | `18419` | `79024` | `26520` | `26883` | `25621` | `11` |
+| `P4(L1)` | `208549` | `18419` | `610964` | `204356` | `205766` | `200842` | `24` |
 
 The maintained same-mesh p-cascades are:
 
@@ -84,6 +95,51 @@ Additional source-benchmark facts for the card:
 - material IDs present: `[0, 1, 2, 3]`
 - gravity axis: `1` (`y`)
 - `lambda_target_default = 1.0`
+
+## Maintained `\lambda = 1.55` Degree-vs-Resolution Study
+
+To compare `p`-refinement against same-resolution `h`-refinement on the
+maintained stack, we ran a dedicated glued-bottom `32`-rank study at
+`lambda = 1.55` with:
+
+- assembly backend: `local_constitutiveAD`
+- solver backend: `local_pmg`
+- line search: `armijo`
+- stop rule: `grad_norm < 1e-2` or `maxit = 200`
+- Krylov target: `ksp_rtol = 1e-1`, `ksp_max_it = 100`
+
+The figure below shows the same converged final energies against:
+
+- free DOFs
+- end-to-end wall time on `32` MPI ranks
+
+That second point matters: the time plot does not mix rank counts. Under the
+corrected glued-bottom boundary model, all nine rows in this study are fresh
+`32`-rank maintained-local runs.
+
+![Plasticity3D lambda=1.55 degree-vs-resolution maintained-local study](../assets/plasticity3d/plasticity3d_lambda1p55_degree_energy_study.png)
+
+The main read is that increasing spatial resolution moves all three degree
+lines toward a tightly clustered high-resolution energy, but the time cost of
+reaching that regime depends strongly on the chosen path. The two most useful
+same-resolution comparisons are `P4(L1)` versus `P1(L1_2_3)` at `610964` free
+DOFs, and `P4(L1_2)` versus `P2(L1_2_3)` versus `P1(L1_2_3_4)` at `4801816`
+free DOFs. The shared-scale `y`-slice comparison below uses exactly those
+highest-resolution glued-bottom runs.
+
+| Degree | Mesh | Free DOFs | Final energy | Total [s] | Status | Artifact |
+| --- | --- | ---: | ---: | ---: | --- | --- |
+| `P1` | `L1` | `10526` | `-2953167.192979` | `1.789` | `completed` | [artifact](/home/michal/repos/fenics_nonlinear_energies/artifacts/raw_results/docs_showcase/plasticity3d_p1_l1_lambda1p55_np32_grad1e2) |
+| `P1` | `L1_2` | `79024` | `-2991497.081546` | `8.718` | `completed` | [artifact](/home/michal/repos/fenics_nonlinear_energies/artifacts/raw_results/docs_showcase/plasticity3d_p1_l1_2_lambda1p55_np32_grad1e2) |
+| `P1` | `L1_2_3` | `610964` | `-3004742.236841` | `17.185` | `completed` | [artifact](/home/michal/repos/fenics_nonlinear_energies/artifacts/raw_results/docs_showcase/plasticity3d_p1_l1_2_3_lambda1p55_np32_grad1e2) |
+| `P1` | `L1_2_3_4` | `4801816` | `-3009657.690686` | `96.654` | `completed` | [artifact](/home/michal/repos/fenics_nonlinear_energies/artifacts/raw_results/docs_showcase/plasticity3d_p1_l1_2_3_4_lambda1p55_np32_grad1e2) |
+| `P2` | `L1` | `79024` | `-3012813.367652` | `18.345` | `completed` | [artifact](/home/michal/repos/fenics_nonlinear_energies/artifacts/raw_results/docs_showcase/plasticity3d_p2_l1_lambda1p55_np32_grad1e2) |
+| `P2` | `L1_2` | `610964` | `-3013031.801279` | `98.320` | `completed` | [artifact](/home/michal/repos/fenics_nonlinear_energies/artifacts/raw_results/docs_showcase/plasticity3d_p2_l1_2_lambda1p55_np32_grad1e2) |
+| `P2` | `L1_2_3` | `4801816` | `-3013148.753130` | `1330.084` | `completed` | [artifact](/home/michal/repos/fenics_nonlinear_energies/artifacts/raw_results/docs_showcase/plasticity3d_p2_l1_2_3_lambda1p55_np32_grad1e2) |
+| `P4` | `L1` | `610964` | `-3013227.482027` | `208.214` | `completed` | [artifact](/home/michal/repos/fenics_nonlinear_energies/artifacts/raw_results/docs_showcase/plasticity3d_p4_l1_lambda1p55_np32_grad1e2) |
+| `P4` | `L1_2` | `4801816` | `-3013348.094121` | `2298.160` | `completed` | [artifact](/home/michal/repos/fenics_nonlinear_energies/artifacts/raw_results/docs_showcase/plasticity3d_p4_l1_2_lambda1p55_np32_grad1e2) |
+
+![Plasticity3D glued-bottom highest-mesh y-slice comparison](../assets/plasticity3d/plasticity3d_lambda1p55_highest_mesh_y_slice_comparison.png)
 
 ## Primary Solve Card: `P2(L1), lambda = 1.6`
 

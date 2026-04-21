@@ -1,0 +1,29 @@
+This paper presented \repo{} as a methods-and-software framework for nonlinear
+finite-element solves and optimization with a maintained \jaxpetsc{} production path.
+Across scalar diffusion, phase-field, hyperelasticity, plasticity, and
+topology optimization benchmarks, the repository demonstrates that exact or
+near-exact derivative information can be integrated with scalable sparse
+nonlinear solvers in a way that is both scientifically useful and
+implementation-conscious.
+
+The strongest flagship result is the promoted \plasticitythree{} study on
+\code{P4(L1\_2)} at $\lambda=1.0$, where the maintained
+\localpmg{} stack converges to the same nonlinear state on
+1/2/4/8/16/32 ranks and reaches $\num{18.05}\times$ end-to-end speedup at 32 ranks.
+The topology benchmark complements this by showing that the same repository can
+also sustain a distributed optimization workflow in which mechanics and design
+updates evolve together on a fine grid.
+
+Future work should follow the structure revealed by the current results:
+\begin{itemize}
+  \item extend constitutive AD and scalable second-order infrastructure to
+        additional path-dependent models;
+  \item strengthen the reference surface where \fenics{} or \purejax{} baselines
+        are still missing;
+  \item continue reducing the cost of linear setup and top-level multigrid work
+        in the flagship 3D mechanics problems.
+\end{itemize}
+
+The repository is already beyond a proof of concept. The next scientific step
+is to turn the current maintained implementation patterns into a reusable
+template for additional nonlinear multiphysics and design problems.

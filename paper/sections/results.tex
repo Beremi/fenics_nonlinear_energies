@@ -1,0 +1,193 @@
+\label{sec:numerical-examples}
+
+This section turns from problem definition to computational behaviour. The
+benchmark families in \Cref{sec:benchmarks} established the governing
+equations, discrete energies, and representative states. Here we focus on
+parallel timings, strong scaling, and the comparative cost of alternative
+solver or discretisation choices.
+
+\subsection{$p$-Laplace}
+\label{sec:num-plaplace}
+
+The $p$-Laplace problem definition and discrete energy are given in
+\Cref{sec:bench-plaplace,eq:plaplace-discrete}. In this clean scalar setting,
+the numerical story is easiest to interpret: exact element Hessians remain
+competitive at distributed scale, while local-SFD stays scientifically aligned
+but pays a measurable time premium.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=\PaperFigureMedium]{plaplace_scaling.pdf}
+  \caption{$p$-Laplace strong scaling on the finest maintained grid. All curves
+  correspond to the same discrete problem from \cref{eq:plaplace-discrete}.}
+  \label{fig:plaplace-results}
+\end{figure}
+
+\subsection{Ginzburg--Landau}
+\label{sec:num-gl}
+
+The Ginzburg--Landau family from \Cref{sec:bench-gl,eq:gl-discrete} shows the
+same high-level derivative story under a more indefinite linearization. The
+important computational message is not a dramatic separation between exact and
+approximate second-order routes, but that the maintained distributed solver
+stays reliable on a nonconvex scalar energy with the same sparse-infrastructure
+contract.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=\PaperFigureMedium]{ginzburg_landau_scaling.pdf}
+  \caption{Ginzburg--Landau strong scaling for the maintained fine-grid case
+  governed by \cref{eq:gl-discrete}.}
+  \label{fig:gl-results}
+\end{figure}
+
+\subsection{Hyperelasticity}
+\label{sec:num-hyperelasticity}
+
+The hyperelasticity problem definition, boundary data, and terminal energies
+are given in \Cref{sec:bench-he,eq:hyperelasticity-discrete}. Computationally,
+this family stresses the globalization logic more than the derivative route:
+the key result is that the distributed implementation completes the full
+24-step path while preserving a credible terminal energy trend.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=\PaperFigureMedium]{hyperelasticity_scaling.pdf}
+  \caption{Hyperelasticity strong scaling for the 24-step load path defined by
+  \cref{eq:hyperelasticity-discrete}.}
+  \label{fig:hyperelasticity-results}
+\end{figure}
+
+\subsection{Plasticity2D}
+\label{sec:num-plasticity2d}
+
+The Plasticity2D model and Davis-B reduction are defined in
+\Cref{sec:bench-plasticity2d,eq:plasticity2d-discrete,eq:plasticity2d-davis}.
+For this family, the most informative computational evidence is not a single
+strong-scaling curve but the solver-engineering material collected in
+\Cref{sec:solver-evidence}: same-mesh PMG choices, fixed-work runs, and source
+continuation behavior. We therefore keep the benchmark-local resolution trend
+in \Cref{fig:plasticity2d-energy-levels} and defer the supporting solver data
+to the later evidence section.
+
+\subsection{Plasticity3D}
+\label{sec:num-plasticity3d}
+
+The governing problem, Davis-B reduction, scalar constitutive potential, and
+deviatoric-strain norm are defined in
+\Cref{sec:bench-plasticity3d,eq:plasticity3d-discrete,eq:plasticity3d-davis,eq:plasticity3d-potential,eq:plasticity3d-devnorm}.
+This subsection focuses on two distinct questions: how the maintained
+discretisation families compare at fixed nonlinear target, and how the
+recommended maintained stack scales on the promoted $P4(L1_2)$ campaign.
+
+\begin{figure}[H]
+  \centering
+  \begin{subfigure}[t]{0.46\PaperFigureFull}
+    \centering
+    \includegraphics[width=\linewidth]{plasticity3d_degree_energy_all_dofs.pdf}
+    \caption{All degrees: final energy versus free DOFs.}
+  \end{subfigure}
+  \hfill
+  \begin{subfigure}[t]{0.46\PaperFigureFull}
+    \centering
+    \includegraphics[width=\linewidth]{plasticity3d_degree_energy_all_time.pdf}
+    \caption{All degrees: final energy versus total wall time.}
+  \end{subfigure}
+
+  \vspace{0.45em}
+
+  \begin{subfigure}[t]{0.46\PaperFigureFull}
+    \centering
+    \includegraphics[width=\linewidth]{plasticity3d_degree_energy_zoom_dofs.pdf}
+    \caption{$P2/P4$ zoom: final energy versus free DOFs.}
+  \end{subfigure}
+  \hfill
+  \begin{subfigure}[t]{0.46\PaperFigureFull}
+    \centering
+    \includegraphics[width=\linewidth]{plasticity3d_degree_energy_zoom_time.pdf}
+    \caption{$P2/P4$ zoom: final energy versus total wall time.}
+  \end{subfigure}
+  \caption{Corrected glued-bottom maintained-local Plasticity3D
+  degree-versus-resolution study at $\lambda_{\mathrm{sr}} = 1.55$. The top
+  row shows the full $P1/P2/P4$ comparison, while the bottom row zooms to
+  $P2/P4$ so the near-overlap hidden by the coarse $P1$ points becomes
+  visible. The left column plots final values of
+  \cref{eq:plasticity3d-discrete} against free DOFs; the right column plots
+  the same converged energies against end-to-end wall time. All timings are
+  fair 32-rank maintained-local runs.}
+  \label{fig:plasticity3d-degree-energy}
+\end{figure}
+
+The zoom row in \Cref{fig:plasticity3d-degree-energy} is essential because the
+full figure is dominated by coarse $P1$ variation. Under the corrected
+glued-bottom constraint, the first matched comparison is
+\code{P4(L1)} versus \code{P1(L1\_2\_3)} at \num{610964} free DOFs. The second
+matched comparison is \code{P1(L1\_2\_3\_4)}, \code{P2(L1\_2\_3)}, and
+\code{P4(L1\_2)} at \num{4801816} free DOFs. The scientific message is
+therefore not only that the maintained solver reaches closely clustered
+terminal energies along both $p$- and $h$-refined paths, but also that higher
+order on coarser meshes buys lower energy at matched DOFs only by paying a
+substantial time premium.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=1.02\PaperFigureMedium]{plasticity3d_recommended_scaling.pdf}
+  \caption{Historical strong scaling for the promoted Plasticity3D maintained
+  stack: \localpmg{} on \code{P4(L1\_2)} at
+  $\lambda_{\mathrm{sr}} = 1.0$. This is a separate timing campaign from the
+  glued-bottom benchmark-local $\lambda_{\mathrm{sr}} = 1.55$ results shown in
+  \cref{fig:plasticity3d-state,fig:plasticity3d-convergence,fig:plasticity3d-degree-energy}.}
+  \label{fig:plasticity3d-scaling}
+\end{figure}
+
+\begin{table}[H]
+  \centering
+  \input{tables/generated/plasticity3d_recommended_scaling.tex}
+  \caption{Historical Plasticity3D strong scaling for \localpmg{} on
+  \code{P4(L1\_2)} at $\lambda_{\mathrm{sr}} = 1.0$. These rows are useful as
+  solver evidence, but they should not be read as a direct timing continuation
+  of the glued-bottom $\lambda_{\mathrm{sr}} = 1.55$ benchmark figures.}
+  \label{tab:plasticity3d-scaling}
+\end{table}
+
+\Cref{fig:plasticity3d-scaling,tab:plasticity3d-scaling} give the paper's
+strongest maintained distributed mechanics result. This scaling evidence uses
+the promoted \code{P4(L1\_2)} mesh family but a different load factor,
+$\lambda_{\mathrm{sr}} = 1.0$, so it complements rather than extends the
+glued-bottom $\lambda_{\mathrm{sr}} = 1.55$ benchmark figures above. Within
+that historical campaign, the exact same nonlinear work appears on 1/2/4/8/16/32
+ranks, while the end-to-end time drops from \SI{5423.858}{s} on one rank to
+\SI{300.435}{s} on 32 ranks. Additional source-vs-local and continuation
+evidence is reported later in \Cref{sec:solver-evidence}.
+
+\subsection{Topology Optimization}
+\label{sec:num-topology}
+
+The reduced design problem, mechanics subproblem, and objective history are
+defined in
+\Cref{sec:bench-topology,eq:topology-mechanics,eq:topology-reduced-objective}.
+The numerical question here is distributed outer-loop stability: the mechanics
+solve and the design update must remain synchronized under continuation in $p$
+and move-regularized updates.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=\PaperFigureMedium]{topology_scaling.pdf}
+  \caption{Topology strong scaling for the maintained parallel fine-grid run.
+  The plotted wall times correspond to the coupled reduced-design workflow
+  defined by \cref{eq:topology-reduced-objective}.}
+  \label{fig:topology-results}
+\end{figure}
+
+\begin{table}[H]
+  \centering
+  \input{tables/generated/topology_summary.tex}
+  \caption{Parallel topology summary for the maintained fine-grid campaign,
+  reported for the reduced objective in \cref{eq:topology-reduced-objective}.}
+  \label{tab:topology-summary}
+\end{table}
+
+The topology benchmark completes the paper's computational picture. Here the
+mainline \jaxpetsc{} path is less about exact Hessians than about stable
+distributed design-mechanics coupling, while \purejax{} remains the compact
+serial reference path discussed earlier in \Cref{tab:reference-availability}.

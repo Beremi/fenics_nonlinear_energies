@@ -692,7 +692,7 @@ def _build_source_command(
     reference_stop_policy: str = "legacy_relative",
     reference_stop_tol: float = 1.0e-2,
     reference_maxit: int = 100,
-    source_pc_backend: str = "hypre",
+    source_pc_backend: str = "pmg_shell",
 ) -> list[str]:
     mesh_path = source_root / "meshes" / "3d_hetero_ssr" / "SSR_hetero_ada_L1.msh"
     cmd = [
@@ -822,7 +822,13 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--source-pc-backend",
         choices=("hypre", "gamg", "bddc", "pmg", "pmg_shell"),
-        default="hypre",
+        default="pmg_shell",
+    )
+    parser.add_argument(
+        "--implementations",
+        nargs="+",
+        choices=("source_petsc4py", "maintained_local"),
+        default=("source_petsc4py", "maintained_local"),
     )
     parser.add_argument(
         "--resume",
@@ -850,10 +856,13 @@ def main() -> None:
         for row in payload.get("rows", []):
             existing_rows[str(row.get("case_id", ""))] = dict(row)
 
+    selected_implementations = {str(v) for v in list(args.implementations)}
     cases: list[dict[str, object]] = []
     if bool(args.include_fixed_work):
         for ranks in list(args.ranks):
             for implementation in ("source_petsc4py", "maintained_local"):
+                if implementation not in selected_implementations:
+                    continue
                 cases.append(
                     {
                         "case_id": f"fixed_work:{implementation}:np{int(ranks)}",
@@ -864,6 +873,8 @@ def main() -> None:
                 )
     if bool(args.include_reference):
         for implementation in ("source_petsc4py", "maintained_local"):
+            if implementation not in selected_implementations:
+                continue
             cases.append(
                 {
                     "case_id": f"reference:{implementation}:np{int(args.reference_rank)}",

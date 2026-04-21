@@ -21,8 +21,10 @@ from src.problems.slope_stability_3d.support.mesh import (
     build_same_mesh_lagrange_case_data,
     load_same_mesh_case_hdf5_light,
     load_same_mesh_case_hdf5_rank_local_light,
+    mesh_name_with_uniform_refinements,
     ownership_block_size_3d,
     select_reordered_perm_3d,
+    uniform_refinement_steps_for_name,
 )
 from src.problems.slope_stability_3d.support.simplex_lagrange import (
     evaluate_tetra_lagrange_basis,
@@ -132,6 +134,13 @@ def _build_level_coordinates(space: MGLevelSpace) -> np.ndarray | None:
     owned_total_dofs = owned_total_dofs.reshape((-1, VECTOR_BLOCK_SIZE))
     node_ids = owned_total_dofs[:, 0] // VECTOR_BLOCK_SIZE
     return np.asarray(nodes[node_ids], dtype=np.float64)
+
+
+def _slim_level_runtime_payload(space: MGLevelSpace) -> None:
+    object.__setattr__(space, "params", {})
+    object.__setattr__(space, "perm", np.empty(0, dtype=np.int64))
+    object.__setattr__(space, "iperm", np.empty(0, dtype=np.int64))
+    object.__setattr__(space, "total_to_free_orig", np.empty(0, dtype=np.int64))
 
 
 def _ensure_ksp_options_prefix(ksp: PETSc.KSP, *, prefix_tag: str) -> str:
@@ -281,8 +290,12 @@ def _build_level_space(
             int(comm.size),
             block_size=int(ownership_block_size),
         )
+    if "u_0_len" in params:
+        total_size = int(params["u_0_len"])
+    else:
+        total_size = int(len(np.asarray(params["u_0"], dtype=np.float64)))
     total_to_free_orig = np.full(
-        len(np.asarray(params["u_0"], dtype=np.float64)),
+        int(total_size),
         -1,
         dtype=np.int64,
     )
@@ -705,6 +718,19 @@ def mixed_hierarchy_specs(
             MGHierarchySpec(str(mesh_name), 2),
             MGHierarchySpec(str(mesh_name), 4),
         ]
+    if str(strategy) == "uniform_refined_p1_chain":
+        if finest_degree != 1:
+            raise ValueError("uniform_refined_p1_chain requires finest degree 1")
+        coarse_mesh_name = base_mesh_name_for_name(str(mesh_name))
+        refinement_steps = int(uniform_refinement_steps_for_name(str(mesh_name)))
+        if coarse_mesh_name != str(mesh_name) and refinement_steps < 1:
+            raise ValueError(
+                "uniform_refined_p1_chain requires sequential refinement suffixes"
+            )
+        return [
+            MGHierarchySpec(mesh_name_with_uniform_refinements(str(coarse_mesh_name), steps), 1)
+            for steps in range(refinement_steps + 1)
+        ]
     raise ValueError(f"Unsupported 3D MG strategy {strategy!r}")
 
 
@@ -718,22 +744,49 @@ def build_mixed_pmg_hierarchy(
     comm: MPI.Comm,
     level_build_mode: str = "replicated",
     transfer_build_mode: str = "owned_rows",
+    precompute_level_nullspaces: bool = False,
+    precompute_level_coordinates: bool = False,
+    slim_completed_levels: bool = False,
 ) -> SlopeStability3DMGHierarchy:
     if len(specs) < 2:
         raise ValueError("3D PMG hierarchy requires at least two spaces")
 
     levels: list[MGLevelSpace] = []
     level_records: list[dict[str, object]] = []
+    level_nullspaces: list[PETSc.NullSpace | None] = []
+    level_coordinates: list[np.ndarray | None] = []
     t_levels0 = time.perf_counter()
-    for spec in specs[:-1]:
+    prolongations: list[PETSc.Mat] = []
+    restrictions: list[PETSc.Mat] = []
+    transfer_records: list[dict[str, object]] = []
+    t_transfers0 = 0.0
+    for idx, spec in enumerate(specs):
         t_level0 = time.perf_counter()
-        level_space = _load_level_from_spec(
-            spec,
-            reorder_mode,
-            comm,
-            build_mode=str(level_build_mode),
-        )
+        if idx == len(specs) - 1:
+            level_space = _build_level_space(
+                mesh_name=str(spec.mesh_name),
+                params=finest_params,
+                adjacency=finest_adjacency,
+                reorder_mode=str(reorder_mode),
+                comm=comm,
+                perm_override=np.asarray(finest_perm, dtype=np.int64),
+            )
+        else:
+            level_space = _load_level_from_spec(
+                spec,
+                reorder_mode,
+                comm,
+                build_mode=str(level_build_mode),
+            )
         levels.append(level_space)
+        if bool(precompute_level_nullspaces):
+            level_nullspaces.append(_build_level_nullspace(level_space, comm))
+        else:
+            level_nullspaces.append(None)
+        if bool(precompute_level_coordinates):
+            level_coordinates.append(_build_level_coordinates(level_space))
+        else:
+            level_coordinates.append(None)
         level_records.append(
             {
                 "mesh_name": str(spec.mesh_name),
@@ -742,51 +795,33 @@ def build_mixed_pmg_hierarchy(
                 "n_free": int(level_space.n_free),
             }
         )
-
-    finest_spec = specs[-1]
-    t_finest0 = time.perf_counter()
-    levels.append(
-        _build_level_space(
-            mesh_name=str(finest_spec.mesh_name),
-            params=finest_params,
-            adjacency=finest_adjacency,
-            reorder_mode=str(reorder_mode),
-            comm=comm,
-            perm_override=np.asarray(finest_perm, dtype=np.int64),
-        )
-    )
-    level_records.append(
-        {
-            "mesh_name": str(finest_spec.mesh_name),
-            "degree": int(finest_spec.degree),
-            "build_time": float(time.perf_counter() - t_finest0),
-            "n_free": int(levels[-1].n_free),
-        }
-    )
+        if len(levels) >= 2:
+            if t_transfers0 == 0.0:
+                t_transfers0 = time.perf_counter()
+            coarse = levels[-2]
+            fine = levels[-1]
+            prolong, restrict, transfer_meta = _build_free_reordered_prolongation(
+                coarse,
+                fine,
+                comm,
+                build_mode=str(transfer_build_mode),
+            )
+            prolongations.append(prolong)
+            restrictions.append(restrict)
+            transfer_records.append(
+                {
+                    "coarse_degree": int(coarse.degree),
+                    "fine_degree": int(fine.degree),
+                    "mapping_time": float(transfer_meta["mapping_time"]),
+                    "matrix_build_time": float(transfer_meta["matrix_build_time"]),
+                }
+            )
+            if bool(slim_completed_levels):
+                _slim_level_runtime_payload(coarse)
     level_build_time = float(time.perf_counter() - t_levels0)
-
-    prolongations: list[PETSc.Mat] = []
-    restrictions: list[PETSc.Mat] = []
-    transfer_records: list[dict[str, object]] = []
-    t_transfers0 = time.perf_counter()
-    for coarse, fine in zip(levels[:-1], levels[1:]):
-        prolong, restrict, transfer_meta = _build_free_reordered_prolongation(
-            coarse,
-            fine,
-            comm,
-            build_mode=str(transfer_build_mode),
-        )
-        prolongations.append(prolong)
-        restrictions.append(restrict)
-        transfer_records.append(
-            {
-                "coarse_degree": int(coarse.degree),
-                "fine_degree": int(fine.degree),
-                "mapping_time": float(transfer_meta["mapping_time"]),
-                "matrix_build_time": float(transfer_meta["matrix_build_time"]),
-            }
-        )
-    transfer_build_time = float(time.perf_counter() - t_transfers0)
+    transfer_build_time = (
+        float(time.perf_counter() - t_transfers0) if t_transfers0 > 0.0 else 0.0
+    )
     return SlopeStability3DMGHierarchy(
         levels=levels,
         prolongations=prolongations,
@@ -798,8 +833,8 @@ def build_mixed_pmg_hierarchy(
             "level_records": level_records,
             "transfer_records": transfer_records,
         },
-        level_nullspaces=[None] * len(levels),
-        level_coordinates=[None] * len(levels),
+        level_nullspaces=level_nullspaces,
+        level_coordinates=level_coordinates,
     )
 
 
@@ -821,6 +856,12 @@ def configure_pmg(
     coarse_hypre_tol: float = 0.0,
     coarse_hypre_relax_type_all: str | None = "symmetric-SOR/Jacobi",
 ) -> None:
+    coarse_coordinates = None
+    if hierarchy.level_coordinates and hierarchy.level_coordinates[0] is not None:
+        coarse_coordinates = hierarchy.level_coordinates[0]
+    else:
+        coarse_coordinates = _build_level_coordinates(hierarchy.levels[0])
+
     def _configure_level_ksp(level_ksp: PETSc.KSP, cfg: LegacyPMGLevelSmootherConfig) -> None:
         level_ksp.setType(str(cfg.ksp_type))
         level_ksp.setTolerances(max_it=int(cfg.steps))
@@ -879,7 +920,7 @@ def configure_pmg(
         hypre_max_iter=int(coarse_hypre_max_iter),
         hypre_tol=float(coarse_hypre_tol),
         hypre_relax_type_all=coarse_hypre_relax_type_all,
-        coordinates=_build_level_coordinates(hierarchy.levels[0]),
+        coordinates=coarse_coordinates,
     )
 
 

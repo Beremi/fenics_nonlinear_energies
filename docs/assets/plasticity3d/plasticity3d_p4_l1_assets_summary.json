@@ -4,14 +4,14 @@
   "out_dir": "docs/assets/plasticity3d",
   "mesh_name": "hetero_ssr_L1",
   "degree": 4,
-  "lambda_target": 1.0,
-  "energy": -3105061.4582860195,
-  "u_max": 0.7833966081276137,
-  "omega": 6210402.992453058,
-  "nit": 1,
-  "solve_time": 13.426282281987369,
+  "lambda_target": 1.5,
+  "energy": -3188306.4289653366,
+  "u_max": 0.9312535141531886,
+  "omega": 6412410.497557124,
+  "nit": 40,
+  "solve_time": 218.26399467792362,
   "convergence_png": "docs/assets/plasticity3d/plasticity3d_p4_l1_convergence.png",
   "displacement_png": "docs/assets/plasticity3d/plasticity3d_p4_l1_displacement.png",
-  "deviatoric_stress_png": "docs/assets/plasticity3d/plasticity3d_p4_l1_deviatoric_stress.png",
-  "slice_png": "docs/assets/plasticity3d/plasticity3d_p4_l1_deviatoric_stress_slices.png"
+  "deviatoric_strain_png": "docs/assets/plasticity3d/plasticity3d_p4_l1_deviatoric_strain.png",
+  "slice_png": "docs/assets/plasticity3d/plasticity3d_p4_l1_deviatoric_strain_slices.png"
 }

@@ -1,0 +1,667 @@
+\label{sec:benchmarks}
+
+The benchmark suite is intentionally heterogeneous. The central claim of the
+paper is not that one solver policy dominates every nonlinear PDE family, but
+that one maintained differentiable sparse-solver stack can cover scalar
+elliptic problems, phase-field-type energies, finite-strain mechanics,
+elastoplastic slope stability, and reduced topology optimisation without
+switching conceptual frameworks.
+
+\begin{table}[H]
+  \centering
+  \input{tables/generated/benchmark_specification_matrix.tex}
+  \caption{Benchmark families, stopping rules, and principal comparison paths.
+  The later numerical section revisits the same families from the timing and
+  scaling viewpoint.}
+  \label{tab:benchmark-spec}
+\end{table}
+
+\begin{table}[H]
+  \centering
+  \input{tables/generated/reference_availability.tex}
+  \caption{Availability of \fenics{} and \purejax{} references. Reference
+  paths are used where the repository already provides credible implementations;
+  absent cells are left absent rather than filled with speculative baselines.}
+  \label{tab:reference-availability}
+\end{table}
+
+\subsection{$p$-Laplace}
+\label{sec:bench-plaplace}
+
+The maintained $p$-Laplace benchmark follows the standard variational model for
+nonlinear diffusion \citep{lindqvist2019plaplace}. The unknown is a scalar
+field $u:\Omega \to \mathbb{R}$ on $\Omega = (0,1)^2$ with homogeneous
+Dirichlet data on $\partial\Omega$, exponent $p=3$, and forcing $f=-10$. Its
+continuous energy is
+\begin{equation}
+  \mathcal{E}(u)
+  = \int_{\Omega} \frac{1}{p} \lvert \nabla u \rvert^p \, dx
+    - \int_{\Omega} f u \, dx,
+  \label{eq:plaplace-energy}
+\end{equation}
+whose Euler--Lagrange equation is
+\begin{equation}
+  -\nabla \cdot \left(\lvert \nabla u \rvert^{p-2} \nabla u \right) = f
+  \quad \text{in }\Omega,
+  \qquad
+  u = 0 \quad \text{on }\partial\Omega.
+  \label{eq:plaplace-strong}
+\end{equation}
+The weak problem is: find $u \in V := H_0^1(\Omega)$ such that
+\begin{equation}
+  \int_{\Omega}
+    \lvert \nabla u \rvert^{p-2} \nabla u \cdot \nabla v \, dx
+  =
+  \int_{\Omega} f v \, dx
+  \qquad \forall v \in V,
+  \label{eq:plaplace-weak}
+\end{equation}
+and the discrete problem solved in the maintained code is
+\begin{equation}
+  u_h \in V_h \subset H_0^1(\Omega):
+  \qquad
+  u_h = \arg\min_{v_h \in V_h} \mathcal{E}_h(v_h),
+  \label{eq:plaplace-discrete}
+\end{equation}
+with conforming $P_1$ triangles on the maintained mesh hierarchy. This is the
+cleanest benchmark in the paper for checking exact gradients, exact Hessians,
+and sparse-recovery alternatives against each other without constitutive or
+geometric complications.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=\PaperFigureNarrow]{plaplace_state.pdf}
+  \caption{Representative $p$-Laplace state on the maintained hierarchy.}
+  \label{fig:plaplace-state}
+\end{figure}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=\PaperFigureNarrow]{plaplace_energy_levels.pdf}
+  \caption{Final discrete energies from \cref{eq:plaplace-discrete} across the
+  maintained mesh hierarchy. The element-AD and local-SFD \jaxpetsc{} paths are
+  essentially energy-consistent with the \fenics{} reference.}
+  \label{fig:plaplace-energy-levels}
+\end{figure}
+
+\begin{table}[H]
+  \centering
+  \input{tables/generated/plaplace_benchmark_summary.tex}
+  \caption{Representative final discrete energies from
+  \cref{eq:plaplace-discrete} on the showcase case.}
+  \label{tab:plaplace-benchmark}
+\end{table}
+
+The benchmark-local picture is therefore one of formulation agreement:
+\cref{fig:plaplace-energy-levels,tab:plaplace-benchmark} show that the
+maintained routes converge to the same discrete energy from
+\cref{eq:plaplace-discrete}. Scaling and timing for this family are reported in
+\Cref{sec:num-plaplace}.
+
+\subsection{Ginzburg--Landau}
+\label{sec:bench-gl}
+
+The Ginzburg--Landau benchmark uses a scalar order parameter
+$u:\Omega \to \mathbb{R}$ on $\Omega = [-1,1]^2$ with homogeneous Dirichlet
+boundary conditions and the nonconvex double-well energy familiar from
+phase-transition models \citep{ginzburg1950theory}:
+\begin{equation}
+  \mathcal{E}(u)
+  =
+  \int_{\Omega}
+    \frac{\varepsilon}{2} \lvert \nabla u \rvert^2
+    + \frac{1}{4}(u^2 - 1)^2 \, dx,
+  \qquad
+  \varepsilon = 10^{-2}.
+  \label{eq:gl-energy}
+\end{equation}
+Its strong form is
+\begin{equation}
+  -\varepsilon \Delta u + u(u^2 - 1) = 0
+  \quad \text{in }\Omega,
+  \qquad
+  u = 0 \quad \text{on }\partial\Omega,
+  \label{eq:gl-strong}
+\end{equation}
+and the weak problem is: find $u \in H_0^1(\Omega)$ such that
+\begin{equation}
+  \int_{\Omega}
+    \varepsilon \nabla u \cdot \nabla v
+    + (u^2 - 1) u v \, dx
+  = 0
+  \qquad \forall v \in H_0^1(\Omega).
+  \label{eq:gl-weak}
+\end{equation}
+The maintained discrete problem is again a conforming $P_1$ stationarity or,
+equivalently, energy-minimisation problem on the same triangular hierarchy:
+\begin{equation}
+  u_h \in V_h:
+  \qquad
+  u_h = \arg\min_{v_h \in V_h} \mathcal{E}_h(v_h).
+  \label{eq:gl-discrete}
+\end{equation}
+Relative to $p$-Laplace, the additional difficulty here is not geometry but
+indefinite local curvature from the double-well potential in
+\cref{eq:gl-energy}.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=\PaperFigureNarrow]{ginzburg_landau_state.pdf}
+  \caption{Representative Ginzburg--Landau state on the maintained hierarchy.}
+  \label{fig:gl-state}
+\end{figure}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=\PaperFigureNarrow]{ginzburg_landau_energy_levels.pdf}
+  \caption{Final discrete energies from \cref{eq:gl-discrete} across mesh
+  levels. The maintained element-AD and local-SFD routes remain nearly
+  coincident with the \fenics{} reference.}
+  \label{fig:gl-energy-levels}
+\end{figure}
+
+\begin{table}[H]
+  \centering
+  \input{tables/generated/ginzburg_landau_benchmark_summary.tex}
+  \caption{Representative final discrete energies from
+  \cref{eq:gl-discrete} on the showcase case.}
+  \label{tab:gl-benchmark}
+\end{table}
+
+The local picture is again one of formulation consistency, now for a more
+solver-sensitive nonconvex energy. Strong scaling and solver-time comparisons
+for this family are reported in \Cref{sec:num-gl}.
+
+\subsection{Hyperelasticity}
+\label{sec:bench-he}
+
+The hyperelasticity benchmark is a finite-strain cantilever problem with
+deformation map $y(X) = X + u(X)$, deformation gradient $F = \nabla y$, and
+Jacobian $J = \det F$. The stored energy is the compressible Neo-Hookean model
+used throughout the maintained code \citep{bonet2008nonlinear}:
+\begin{equation}
+  \Pi(y;\eta)
+  =
+  \int_{\Omega}
+    C_1 \left( \operatorname{tr}(F^T F) - 3 - 2 \ln J \right)
+    + D_1 (J - 1)^2 \, dx,
+  \label{eq:hyperelasticity-energy}
+\end{equation}
+on $\Omega = [0,0.4] \times [-0.005,0.005]^2$ with
+$C_1 = \num{3.8461538461538464e7}$ and
+$D_1 = \num{8.333333333333333e7}$. The left face is clamped, while the right
+face carries a prescribed rotating Dirichlet load parametrised by load step
+$\eta$. The strong form is
+\begin{equation}
+  -\nabla \cdot P(F) = 0 \quad \text{in }\Omega,
+  \qquad
+  y = \bar y(\eta) \quad \text{on }\Gamma_D,
+  \qquad
+  P(F) n = 0 \quad \text{on }\Gamma_N,
+  \label{eq:hyperelasticity-strong}
+\end{equation}
+where $P = \partial W / \partial F$ is the first Piola stress. The weak form is:
+find $u \in V_{\bar y(\eta)}$ such that
+\begin{equation}
+  \int_{\Omega} P(F(u)) : \nabla v \, dx = 0
+  \qquad \forall v \in V_0.
+  \label{eq:hyperelasticity-weak}
+\end{equation}
+The discrete problem solved in the paper is the sequence
+\begin{equation}
+  u_h^{(k)} \in V_h:
+  \qquad
+  u_h^{(k)} = \arg\min_{v_h \in V_h(\eta_k)} \Pi_h(v_h;\eta_k),
+  \qquad
+  k = 1,\dots,24,
+  \label{eq:hyperelasticity-discrete}
+\end{equation}
+with first-order tetrahedral vector elements. This is the first family in
+which robust globalization is scientifically more important than derivative
+parity alone.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=\PaperFigureMedium]{hyperelasticity_state.pdf}
+  \caption{Representative finite-strain hyperelastic state, coloured by the
+  energy density in \cref{eq:hyperelasticity-energy}.}
+  \label{fig:hyperelasticity-state}
+\end{figure}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=\PaperFigureNarrow]{hyperelasticity_energy_levels.pdf}
+  \caption{Final discrete energies from \cref{eq:hyperelasticity-discrete}
+  across the maintained mesh hierarchy. The publication story is less about
+  exact equality than about tracking the same 24-step trajectory robustly.}
+  \label{fig:hyperelasticity-energy-levels}
+\end{figure}
+
+\begin{table}[H]
+  \centering
+  \input{tables/generated/hyperelasticity_benchmark_summary.tex}
+  \caption{Representative 24-step terminal energies from
+  \cref{eq:hyperelasticity-discrete}.}
+  \label{tab:hyperelasticity-benchmark}
+\end{table}
+
+The benchmark-local takeaway is therefore a globalization result:
+\cref{fig:hyperelasticity-state,fig:hyperelasticity-energy-levels} show the
+terminal deformed state and terminal energies, while the scaling evidence is
+deferred to \Cref{sec:num-hyperelasticity}.
+
+\subsection{Plasticity2D}
+\label{sec:bench-plasticity2d}
+
+The two-dimensional plasticity benchmark is a plane-strain Mohr--Coulomb slope
+stability problem written as a scalar element potential and differentiated by
+JAX. The unknown is the displacement field
+$u = (u_x,u_y):\Omega \to \mathbb{R}^2$ on the maintained homogeneous slope
+geometry. With engineering-strain operator $B_{eq}$, stored plastic strain
+$\varepsilon^{p,\mathrm{old}}_{eq}$, friction angle $\phi$, and dilation angle
+$\psi$, the discrete total potential is
+\begin{equation}
+  \Pi_h^{2\mathrm{D}}(u_h;\lambda_{\mathrm{sr}})
+  =
+  \sum_{e=1}^{n_{\mathrm{el}}}
+  \sum_{q=1}^{n_q}
+    w_{eq}\,
+    \Phi_{\mathrm{MC},2\mathrm{D}}
+    \!\left(
+      B_{eq}u_e,\varepsilon^{p,\mathrm{old}}_{eq},
+      E,\nu,c_{\lambda,eq},\phi_{\lambda,eq},\psi_{\lambda,eq}
+    \right)
+  - f_{\mathrm{ext}}^T u_h,
+  \label{eq:plasticity2d-discrete}
+\end{equation}
+where $\lambda_{\mathrm{sr}}$ denotes the strength-reduction factor, distinct
+from the Lamé parameter used later in three dimensions. The static equilibrium
+equations remain
+\begin{equation}
+  -\nabla \cdot \sigma(u) = b
+  \quad \text{in }\Omega,
+  \qquad
+  u = \bar u \quad \text{on }\Gamma_D,
+  \qquad
+  \sigma(u)n = t \quad \text{on }\Gamma_N,
+  \label{eq:plasticity2d-strong}
+\end{equation}
+with weak form
+\begin{equation}
+  \int_{\Omega} \sigma(\varepsilon(u)) : \varepsilon(v) \, dx
+  =
+  \int_{\Omega} b \cdot v \, dx
+  + \int_{\Gamma_N} t \cdot v \, ds
+  \qquad \forall v \in V_0.
+  \label{eq:plasticity2d-weak}
+\end{equation}
+
+The maintained code keeps a Davis-B-style reduction path to map the raw
+cohesion and angles to reduced values under strength reduction; with
+$c_0,\phi,\psi$ denoting the unreduced cohesion, friction angle, and dilation
+angle, respectively, the benchmark uses
+\begin{align}
+  c_1 &= c_0 / \lambda_{\mathrm{sr}},
+  &
+  \phi_1 &= \arctan \!\left(\tan \phi / \lambda_{\mathrm{sr}}\right),
+  &
+  \psi_1 &= \arctan \!\left(\tan \psi / \lambda_{\mathrm{sr}}\right),
+  \nonumber\\
+  \beta &= \frac{\cos \phi_1 \cos \psi_1}{1 - \sin \phi_1 \sin \psi_1},
+  &
+  c_{\lambda} &= \beta c_1,
+  &
+  \phi_{\lambda} &= \arctan\!\left(\beta \tan \phi_1\right),
+  \label{eq:plasticity2d-davis}
+\end{align}
+with $\psi_{\lambda}$ defined analogously when the non-associated flow rule is
+activated \citep{simo1985consistent,simo1998compinel,tschuchnigg2015nonassociated}.
+The maintained endpoint runs in this paper use $\lambda_{\mathrm{sr}} = 1$ and
+$\psi = 0^\circ$, so the showcase states are exact endpoint solves rather than
+path-consistent history updates.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=\PaperFigureMedium]{plasticity2d_state_pair.pdf}
+  \caption{Representative Plasticity2D state: displacement magnitude and
+  deviatoric strain derived from the discrete potential
+  \cref{eq:plasticity2d-discrete}.}
+  \label{fig:plasticity2d-state}
+\end{figure}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=\PaperFigureNarrow]{plasticity2d_resolution_energy.pdf}
+  \caption{Resolution trend for the maintained Plasticity2D family. The plotted
+  terminal energies are evaluations of \cref{eq:plasticity2d-discrete} on the
+  curated $P4(L5)$ showcase and on the larger fixed-work $P4(L6)$ and
+  $P4(L7)$ campaigns.}
+  \label{fig:plasticity2d-energy-levels}
+\end{figure}
+
+\begin{table}[H]
+  \centering
+  \input{tables/generated/plasticity2d_benchmark_summary.tex}
+  \caption{Representative Plasticity2D endpoint values from
+  \cref{eq:plasticity2d-discrete}.}
+  \label{tab:plasticity2d-benchmark}
+\end{table}
+
+This family is where multigrid hierarchy design first becomes dominant in the
+paper. Solver-engineering evidence for Plasticity2D is reported later in
+\Cref{sec:num-plasticity2d,sec:solver-evidence}.
+
+\subsection{Plasticity3D}
+\label{sec:bench-plasticity3d}
+
+The flagship three-dimensional family is a heterogeneous Mohr--Coulomb slope
+stability problem on the imported SSR mesh hierarchy with same-mesh tetrahedral
+$P1/P2/P4$ spaces. The unknown is a displacement field
+$u = (u_x,u_y,u_z): \Omega \to \mathbb{R}^3$, gravity acts in the source
+$y$-direction, and materials vary by physical region and quadrature point.
+The maintained canonical boundary model keeps the source component-wise label
+logic and additionally glues every node with $|y| \le 10^{-12}$ in all three
+displacement components. The benchmark-local figures below use the corrected
+glued-bottom $\code{P4(L1\_2)}$ showcase at $\lambda_{\mathrm{sr}}=1.55$ and
+the finished nine-case maintained-local study at the same load factor. The
+promoted $\lambda_{\mathrm{sr}}=1.0$ strong-scaling campaign is kept later in
+the paper as separate historical timing evidence.
+The discrete total potential is
+\begin{equation}
+  \Pi_h^{3\mathrm{D}}(u_h;\lambda_{\mathrm{sr}})
+  =
+  \sum_{e=1}^{n_{\mathrm{el}}}
+  \sum_{q=1}^{n_q}
+    w_{eq}\,
+    \Phi_{\mathrm{MC},3\mathrm{D}}
+    \!\left(
+      \varepsilon_{eq}(u_e),
+      \bar c_{\lambda,eq},
+      \sin \phi_{\lambda,eq},
+      \mu_{eq},
+      K_{eq},
+      \lambda_{\mathrm{L},eq}
+    \right)
+  - f_{\mathrm{ext}}^T u_h,
+  \label{eq:plasticity3d-discrete}
+\end{equation}
+where $\lambda_{\mathrm{sr}}$ is again the strength-reduction factor and
+$\lambda_{\mathrm{L}}$ is the Lamé parameter of the elastic predictor. The
+strong and weak equilibrium equations are
+\begin{equation}
+  -\nabla \cdot \sigma(u) = \rho g_y e_y
+  \quad \text{in }\Omega,
+  \qquad
+  u_i = \bar u_i \quad \text{on }\Gamma_{D,i},
+  \qquad
+  \sigma(u)n = 0 \quad \text{on }\Gamma_N,
+  \label{eq:plasticity3d-strong}
+\end{equation}
+and
+\begin{equation}
+  \int_{\Omega} \sigma(\varepsilon(u)) : \varepsilon(v) \, dx
+  =
+  \int_{\Omega} \rho g_y e_y \cdot v \, dx
+  \qquad \forall v \in V_0.
+  \label{eq:plasticity3d-weak}
+\end{equation}
+
+The code uses the engineering-strain ordering
+\begin{equation}
+  \varepsilon
+  =
+  \begin{bmatrix}
+    \varepsilon_{xx} &
+    \varepsilon_{yy} &
+    \varepsilon_{zz} &
+    \gamma_{xy} &
+    \gamma_{yz} &
+    \gamma_{xz}
+  \end{bmatrix}^{T},
+  \label{eq:plasticity3d-engineering-strain}
+\end{equation}
+which is first mapped to tensor shear before principal values are formed. The
+benchmark keeps the Davis-B reduction explicitly at quadrature points:
+\begin{align}
+  c_{1,q} &= c_{0,q}/\lambda_{\mathrm{sr}},
+  &
+  \phi_{1,q} &= \arctan\!\left(\tan\phi_q/\lambda_{\mathrm{sr}}\right),
+  &
+  \psi_{1,q} &= \arctan\!\left(\tan\psi_q/\lambda_{\mathrm{sr}}\right),
+  \nonumber\\
+  \beta_q &= \frac{\cos\phi_{1,q}\cos\psi_{1,q}}
+                 {1-\sin\phi_{1,q}\sin\psi_{1,q}},
+  &
+  c_{\lambda,q} &= \beta_q c_{1,q},
+  &
+  \phi_{\lambda,q} &= \arctan\!\left(\beta_q \tan\phi_{1,q}\right),
+  \label{eq:plasticity3d-davis}
+\end{align}
+with
+\begin{equation}
+  \bar c_{\lambda,q} = 2 c_{\lambda,q}\cos\phi_{\lambda,q},
+  \qquad
+  \sin\phi_{\lambda,q} = \sin(\phi_{\lambda,q}),
+  \label{eq:plasticity3d-davis-bar}
+\end{equation}
+which are the scalar constitutive parameters actually stored in the maintained
+3D assembly path \citep{simo1985consistent,simo1998compinel,tschuchnigg2015nonassociated}.
+Here $\phi$ denotes friction angle and $\psi$ denotes dilation angle; the paper
+uses those symbols only in that geomechanics sense.
+
+The local constitutive law is source-faithful and exact-AD at the scalar
+potential level. Let $\varepsilon_1 \ge \varepsilon_2 \ge \varepsilon_3$ be the
+principal strains and let
+\begin{equation}
+  I_1 = \varepsilon_{xx} + \varepsilon_{yy} + \varepsilon_{zz},
+  \qquad
+  q(\varepsilon) =
+  \varepsilon_{xx}^2 + \varepsilon_{yy}^2 + \varepsilon_{zz}^2
+  + \frac{1}{2}\left(
+    \gamma_{xy}^2 + \gamma_{yz}^2 + \gamma_{xz}^2
+  \right).
+  \label{eq:plasticity3d-invariants}
+\end{equation}
+The elastic branch is
+\begin{equation}
+  \Phi_{\mathrm{el}}
+  = \frac{1}{2}\lambda_{\mathrm{L}} I_1^2 + \mu q(\varepsilon),
+  \label{eq:plasticity3d-elastic-branch}
+\end{equation}
+and the source-style return variables are
+\begin{align}
+  f_{\mathrm{tr}}
+  &=
+  2\mu\!\left((1+\sin\phi_{\lambda})\varepsilon_1 -
+  (1-\sin\phi_{\lambda})\varepsilon_3\right)
+  + 2\lambda_{\mathrm{L}}\sin\phi_{\lambda} I_1
+  - \bar c_{\lambda},
+  \nonumber\\
+  \gamma_{\mathrm{sl}}
+  &= \frac{\varepsilon_1-\varepsilon_2}{1+\sin\phi_{\lambda}},
+  \qquad
+  \gamma_{\mathrm{sr}}
+  = \frac{\varepsilon_2-\varepsilon_3}{1-\sin\phi_{\lambda}},
+  \label{eq:plasticity3d-return-tests}
+\end{align}
+with the remaining left, right, and apex thresholds defined as in the code
+through the same principal-strain ordering. The scalar potential is then the
+piecewise function
+\begin{equation}
+  \Phi_{\mathrm{MC},3\mathrm{D}}
+  =
+  \begin{cases}
+    \Phi_{\mathrm{el}},
+      & f_{\mathrm{tr}} \le 0, \\
+    \Phi_{\mathrm{s}},
+      & \Lambda_{\mathrm{s}} \le \min(\gamma_{\mathrm{sl}},\gamma_{\mathrm{sr}}), \\
+    \Phi_{\mathrm{l}},
+      & \gamma_{\mathrm{sl}} < \gamma_{\mathrm{sr}}
+        \text{ and }
+        \gamma_{\mathrm{sl}} \le \Lambda_{\mathrm{l}} \le \gamma_{\mathrm{la}}, \\
+    \Phi_{\mathrm{r}},
+      & \gamma_{\mathrm{sr}} < \gamma_{\mathrm{sl}}
+        \text{ and }
+        \gamma_{\mathrm{sr}} \le \Lambda_{\mathrm{r}} \le \gamma_{\mathrm{ra}}, \\
+    \Phi_{\mathrm{a}},
+      & \text{otherwise},
+  \end{cases}
+  \label{eq:plasticity3d-potential}
+\end{equation}
+where the branch energies $\Phi_{\mathrm{s}}$, $\Phi_{\mathrm{l}}$,
+$\Phi_{\mathrm{r}}$, and $\Phi_{\mathrm{a}}$ are the exact source-style
+quadratic corrections to \cref{eq:plasticity3d-elastic-branch}. The maintained
+constitutive-AD path differentiates \cref{eq:plasticity3d-potential} directly
+with JAX rather than substituting a hand-derived return-map tangent.
+
+For the strain visualisations in this paper we use the deviatoric norm
+\begin{equation}
+  \|\varepsilon_{\mathrm{dev}}\|
+  =
+  \sqrt{
+    \varepsilon^T
+    \left(
+      \operatorname{diag}(1,1,1,\tfrac{1}{2},\tfrac{1}{2},\tfrac{1}{2})
+      - \frac{1}{3}mm^T
+    \right)
+    \varepsilon
+  },
+  \qquad
+  m = (1,1,1,0,0,0)^T,
+  \label{eq:plasticity3d-devnorm}
+\end{equation}
+which matches the engineering-shear convention of
+\cref{eq:plasticity3d-engineering-strain}.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=\PaperFigureMedium]{plasticity3d_state_pair.pdf}
+  \caption{Corrected glued-bottom Plasticity3D showcase at
+  $\lambda_{\mathrm{sr}}=1.55$: displacement magnitude and surface deviatoric
+  strain for the maintained-local \code{P4(L1\_2)} run, both derived from the
+  discrete potential in
+  \cref{eq:plasticity3d-discrete}.}
+  \label{fig:plasticity3d-state}
+\end{figure}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=\PaperFigureMedium]{plasticity3d_convergence.pdf}
+  \caption{Newton-history convergence for all nine completed corrected
+  glued-bottom maintained-local Plasticity3D study runs at
+  $\lambda_{\mathrm{sr}}=1.55$. The upper panel shows the discrete potential
+  from \cref{eq:plasticity3d-discrete}; the lower panel shows the gradient norm
+  used as the nonlinear stopping metric, with color indicating degree and line
+  style indicating mesh level.}
+  \label{fig:plasticity3d-convergence}
+\end{figure}
+
+\begin{table}[H]
+  \centering
+  \input{tables/generated/plasticity3d_benchmark_summary.tex}
+  \caption{All nine completed glued-bottom maintained-local Plasticity3D
+  study rows at $\lambda_{\mathrm{sr}} = 1.55$, reported as endpoint values of
+  \cref{eq:plasticity3d-discrete}.}
+  \label{tab:plasticity3d-benchmark}
+\end{table}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=\PaperFigureFull]{plasticity3d_highest_mesh_y_slice_comparison.pdf}
+  \caption{Shared-scale upper $y$-slice comparison of
+  $\|\varepsilon_{\mathrm{dev}}\|$ from \cref{eq:plasticity3d-devnorm} at the
+  highest mesh level of each degree line:
+  \code{P1(L1\_2\_3\_4)}, \code{P2(L1\_2\_3)}, and \code{P4(L1\_2)}. The three
+  runs use the corrected glued-bottom maintained-local solver stack at
+  $\lambda_{\mathrm{sr}} = 1.55$ and are compared on one common color scale.}
+  \label{fig:plasticity3d-highest-slice}
+\end{figure}
+
+Plasticity3D is the benchmark where detailed constitutive definitions are most
+important: the paper later plots values of \cref{eq:plasticity3d-discrete} and
+\cref{eq:plasticity3d-devnorm}, so both quantities are defined explicitly here.
+Timing, scaling, and degree-versus-resolution evidence for this family are
+reported in \Cref{sec:num-plasticity3d}.
+
+\subsection{Topology Optimization}
+\label{sec:bench-topology}
+
+The topology benchmark is a reduced optimisation problem rather than a single
+equilibrium minimisation. The design variable is a latent nodal field
+$z_h \in Z_h$, mapped to a physical density through the logistic transform
+\begin{equation}
+  \theta_h(z_h)
+  =
+  \theta_{\min} + (1-\theta_{\min}) \sigma(z_h),
+  \qquad
+  \sigma(z) = \frac{1}{1+e^{-z}}.
+  \label{eq:topology-density-map}
+\end{equation}
+For fixed density, the mechanics state is the linear elastic displacement
+$u_h(\theta_h)$ solving
+\begin{equation}
+  a_{\theta_h}(u_h,v_h)
+  :=
+  \sum_{e=1}^{n_{\mathrm{el}}}
+    |e|\,\theta_e^{p}
+    \varepsilon(u_h)^T C \varepsilon(v_h)
+  =
+  \ell(v_h)
+  \qquad \forall v_h \in V_{h,0},
+  \label{eq:topology-mechanics}
+\end{equation}
+on the cantilever domain $\Omega = (0,2)\times(0,1)$ with clamped left edge
+and prescribed traction on a right-edge patch
+\citep{bendsoe2003topology,sigmund2001topology,ferrari2020top99}. The reduced
+objective solved in the maintained code is
+\begin{align}
+  \mathcal{J}_h(z_h)
+  &=
+  \sum_{e=1}^{n_{\mathrm{el}}}
+  |e|
+  \Bigg[
+    e_e^{\mathrm{frozen}} \theta_e^{-p}
+    + \lambda_V \theta_e
+    + \alpha_{\mathrm{reg}}
+      \left(
+        \frac{\ell_{\mathrm{pf}}}{2} \lvert \nabla \theta_e \rvert^2
+        + \frac{1}{\ell_{\mathrm{pf}}} W(\theta_e)
+      \right)
+    + \frac{\mu_{\mathrm{move}}}{2} (z_e-z_e^{\mathrm{old}})^2
+  \Bigg],
+  \label{eq:topology-reduced-objective}
+\end{align}
+with $W(\theta) = \theta^2(1-\theta)^2$, SIMP-style continuation in $p$, and
+filter/regularisation terms in the spirit of \citet{bourdin2001filters}. The
+maintained outer loop alternates mechanics solves for
+\cref{eq:topology-mechanics} with reduced design updates for
+\cref{eq:topology-reduced-objective}.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=\PaperFigureMedium]{topology_density.pdf}
+  \caption{Representative final density field for the maintained parallel
+  topology benchmark.}
+  \label{fig:topology-density}
+\end{figure}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.96\PaperFigureNarrow]{topology_history.pdf}
+  \caption{Objective-history view for the reduced topology objective
+  \cref{eq:topology-reduced-objective}, with compliance on the left axis and
+  volume fraction plus the continuation schedule in $p$ on the right axis.}
+  \label{fig:topology-history}
+\end{figure}
+
+\begin{table}[H]
+  \centering
+  \input{tables/generated/topology_benchmark_summary.tex}
+  \caption{Representative topology endpoint values from
+  \cref{eq:topology-reduced-objective}.}
+  \label{tab:topology-benchmark}
+\end{table}
+
+For topology, the relevant notion of ``convergence'' is the reduced objective
+history rather than a single equilibrium energy. Parallel timing and scaling
+for the same family are reported in \Cref{sec:num-topology}.

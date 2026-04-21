@@ -22,7 +22,7 @@ DEFAULT_SUMMARY = (
 )
 
 ASSEMBLY_ORDER = ("local", "local_constitutiveAD", "source")
-SOLVER_ORDER = ("local", "source")
+SOLVER_ORDER = ("local", "local_pmg", "source")
 
 
 def _load_json(path: Path) -> dict:
@@ -98,9 +98,12 @@ def plot_bar_metrics(summary: dict, out_path: Path) -> None:
     colors = {
         ("local", "local"): "#4e79a7",
         ("local_constitutiveAD", "local"): "#59a14f",
+        ("source", "local"): "#76b7b2",
+        ("local", "local_pmg"): "#9c755f",
+        ("local_constitutiveAD", "local_pmg"): "#bab0ab",
+        ("source", "local_pmg"): "#b07aa1",
         ("local", "source"): "#f28e2b",
         ("local_constitutiveAD", "source"): "#edc948",
-        ("source", "local"): "#76b7b2",
         ("source", "source"): "#e15759",
     }
     for ax, (key, title) in zip(axes.flat, metrics, strict=True):
@@ -125,7 +128,9 @@ def plot_bar_metrics(summary: dict, out_path: Path) -> None:
 
 def plot_solver_pair_times(summary: dict, out_path: Path) -> None:
     row_map = _row_map(summary)
-    fig, axes = plt.subplots(1, 2, figsize=(11.8, 4.6), sharey=True)
+    fig, axes = plt.subplots(1, len(SOLVER_ORDER), figsize=(5.9 * len(SOLVER_ORDER), 4.6), sharey=True)
+    if len(SOLVER_ORDER) == 1:
+        axes = [axes]
     for ax, solver_backend in zip(axes, SOLVER_ORDER, strict=True):
         rows = [
             row_map.get((solver_backend, assembly_backend))
@@ -155,7 +160,9 @@ def plot_solver_pair_times(summary: dict, out_path: Path) -> None:
 
 def plot_solver_pair_convergence(summary: dict, out_path: Path) -> None:
     row_map = _row_map(summary)
-    fig, axes = plt.subplots(1, 2, figsize=(11.8, 4.6), sharey=True)
+    fig, axes = plt.subplots(1, len(SOLVER_ORDER), figsize=(5.9 * len(SOLVER_ORDER), 4.6), sharey=True)
+    if len(SOLVER_ORDER) == 1:
+        axes = [axes]
     for ax, solver_backend in zip(axes, SOLVER_ORDER, strict=True):
         plotted = False
         for assembly_backend in ASSEMBLY_ORDER:
@@ -208,7 +215,7 @@ def build_report(*, summary: dict, out_dir: Path) -> Path:
         f"- MPI ranks: `{int(summary.get('ranks', 0))}` with `relative_correction < {float(summary.get('stop_tol', 0.0))}` and `maxit = {int(summary.get('maxit', 0))}`."
     )
     lines.append(
-        "- Six combinations: `local`, `local_constitutiveAD`, and `source` assembly crossed with local/source solvers."
+        "- Nine combinations: `local`, `local_constitutiveAD`, and `source` assembly crossed with `local`, `local_pmg`, and `source` solvers."
     )
     lines.append(
         "- `local_constitutiveAD` keeps the maintained local energy and gradient path, but assembles tangents from constitutive-level autodiff in strain space."

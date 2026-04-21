@@ -32,7 +32,7 @@ SUMMARY_NAME = "comparison_summary.json"
 RUNNER_NAME = "plasticity3d_backend_mix_compare"
 
 ASSEMBLY_ORDER = ("local", "local_constitutiveAD", "source")
-SOLVER_ORDER = ("local", "source")
+SOLVER_ORDER = ("local", "local_pmg", "source")
 
 NORMALIZED_ROW_KEYS = (
     "case_id",
@@ -345,6 +345,9 @@ def _write_summary(
                 ("local", "local"),
                 ("local", "local_constitutiveAD"),
                 ("local", "source"),
+                ("local_pmg", "local"),
+                ("local_pmg", "local_constitutiveAD"),
+                ("local_pmg", "source"),
                 ("source", "local"),
                 ("source", "local_constitutiveAD"),
                 ("source", "source"),

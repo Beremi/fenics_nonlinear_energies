@@ -1,0 +1,62 @@
+Many finite-element software stacks provide a strong subset of the ingredients
+needed for nonlinear solves and optimization, but relatively few combine all of the
+following in a maintained and practically scalable way: expressive high-level
+problem definitions, exact or near-exact gradients, usable second-order
+information, distributed nonlinear solves, and preconditioning strategies that
+remain viable on hard mechanics and design problems. This gap becomes most
+visible in the benchmark families that motivated \repo{}: high-order
+Mohr--Coulomb plasticity in three dimensions, nonlinear hyperelasticity, and
+topology optimization with coupled design and mechanics updates.
+
+The repository therefore treats \jaxpetsc{} as the main production path while
+keeping \fenics{} and \purejax{} baselines wherever they are scientifically
+useful. The \fenics{} implementations act as trusted PDE references on scalar
+and elasticity families. The \purejax{} paths provide serial differentiable
+references. The maintained \jaxpetsc{} stack is where we aim to integrate the
+whole story: sparse distributed vectors and matrices, nonlinear globalization,
+multiple derivative modes, and preconditioned Krylov solvers.
+
+The central claim of the paper is intentionally practical. We do not claim that
+every benchmark requires exact Hessians, nor that every mainstream framework is
+unable to provide them. Instead, we show that exact gradients and second-order
+information can be made operational inside a distributed nonlinear FEM stack,
+and that this materially changes what can be benchmarked and compared. In the
+maintained repository this leads to three concrete capabilities:
+\begin{enumerate}
+  \item exact element-level derivatives when they are affordable;
+  \item constitutive-level automatic differentiation for high-order plasticity
+        when full element Hessians are too expensive;
+  \item colored sparse finite-difference (SFD) recovery as a scalable fallback
+        when exact second-order information is not the best tradeoff.
+\end{enumerate}
+
+These capabilities are evaluated on six maintained families:
+$p$-Laplace, Ginzburg--Landau, hyperelasticity, plasticity, \plasticitythree{},
+and topology optimization. We give them equal top-level space because the
+paper is about a software methodology rather than one bespoke solver. At the
+same time, we devote extra narrative attention to \plasticitythree{} and
+topology optimization. Those two families are where the implementation
+difficulty is highest and where the case for the maintained \jaxpetsc{}
+approach is strongest. For \plasticitythree{}, the combination of exact
+constitutive tangents, multigrid, and MPI-parallel Newton solves is the
+principal result. For topology optimization, the challenge is different: a
+distributed design update must coexist with a robust mechanics solve and a
+continuation schedule that is numerically useful without becoming impossible to
+reproduce.
+
+The paper is organized as follows. \Cref{sec:related} places the work in the
+context of differentiable FEM, adjoint-based PDE optimization, and PETSc
+nonlinear solvers. \Cref{sec:methodology} describes the mathematical and
+algorithmic ingredients, including line search, trust regions, hybrid
+globalization, and colored derivative recovery. \Cref{sec:implementation}
+describes how these ideas are mapped onto \purejax{}, \fenics{}, and
+\jaxpetsc{}. \Cref{sec:benchmarks} introduces the benchmark suite, while
+\Cref{sec:numerical-examples} presents the later timing, scaling, and
+discretisation-comparison evidence. We conclude with a discussion of where
+exact second-order information helps most and where cheaper approximations
+remain the better engineering choice.
+
+The manuscript is written in an arXiv-first style and uses the current repo
+artifacts as the canonical data source. This is deliberate. Our goal is to make
+the scientific narrative and the implementation surface align closely enough
+that the paper can act as a map for both readers and future maintainers.

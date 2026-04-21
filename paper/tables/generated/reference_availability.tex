@@ -1,0 +1,12 @@
+\begin{tabularx}{\textwidth}{@{}>{\hsize=1.08\hsize\linewidth=\hsize\RaggedRight\arraybackslash}X@{\hspace{0.8em}}>{\hsize=0.58\hsize\linewidth=\hsize\Centering\arraybackslash}X@{\hspace{0.7em}}>{\hsize=0.62\hsize\linewidth=\hsize\Centering\arraybackslash}X@{\hspace{1.0em}}>{\hsize=1.72\hsize\linewidth=\hsize\RaggedRight\arraybackslash}X@{}}
+\toprule
+Family & FEniCS & pure JAX & Notes \\
+\midrule
+$p$-Laplace & yes & yes & All three stacks exist on maintained showcase cases. \\
+Ginzburg--Landau & yes & no & FEniCS and JAX+PETSc form the maintained comparison. \\
+Hyperelasticity & yes & yes & pure JAX is a serial formulation reference only. \\
+Plasticity2D & no & no & The maintained story is JAX+PETSc only. \\
+Plasticity3D & no & no & Source assembly exists as supporting comparison, not as a maintained reference path. \\
+Topology & no & yes & Parallel fine-grid path is JAX+PETSc; pure JAX remains the serial design reference. \\
+\bottomrule
+\end{tabularx}

@@ -1,0 +1,29 @@
+{
+  "copied_assets": [],
+  "generated_assets": [
+    "framework_overview.pdf",
+    "derivative_paths.pdf",
+    "globalization_schematic.pdf",
+    "coloring_schematic.pdf",
+    "autodiff_modes.pdf",
+    "plaplace_state.pdf",
+    "plaplace_energy_levels.pdf",
+    "plaplace_scaling.pdf",
+    "ginzburg_landau_state.pdf",
+    "ginzburg_landau_energy_levels.pdf",
+    "ginzburg_landau_scaling.pdf",
+    "hyperelasticity_state.pdf",
+    "hyperelasticity_energy_levels.pdf",
+    "hyperelasticity_scaling.pdf",
+    "plasticity2d_state_pair.pdf",
+    "plasticity2d_resolution_energy.pdf",
+    "plasticity3d_state_pair.pdf",
+    "plasticity3d_convergence.pdf",
+    "plasticity3d_highest_mesh_y_slice_comparison.pdf",
+    "plasticity3d_degree_energy_study.pdf",
+    "topology_density.pdf",
+    "topology_history.pdf",
+    "topology_scaling.pdf",
+    "plasticity3d_recommended_scaling.pdf"
+  ]
+}

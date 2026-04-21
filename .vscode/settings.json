@@ -37,7 +37,7 @@
         "--max-line-length=120",
         "--aggressive"
     ],
-    "workbench.colorTheme": "Default Dark Modern",
+    "workbench.colorTheme": "Dark Modern",
     "workbench.colorCustomizations": {
         "[Default Dark Modern]": {
             "textPreformat.background": "#1f1f1f",

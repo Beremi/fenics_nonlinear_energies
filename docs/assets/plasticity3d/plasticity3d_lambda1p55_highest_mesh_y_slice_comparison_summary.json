@@ -1,0 +1,49 @@
+{
+  "summary_json": "artifacts/raw_results/plasticity3d_lambda1p55_degree_mesh_energy_study/comparison_summary.json",
+  "rows": [
+    {
+      "degree_line": "P1",
+      "mesh_alias": "L1_2_3_4",
+      "free_dofs": 4801816,
+      "energy": -3009657.6906860177,
+      "constraint_variant": "glued_bottom",
+      "state_npz": "artifacts/raw_results/docs_showcase/plasticity3d_p1_l1_2_3_4_lambda1p55_np32_grad1e2/state.npz",
+      "result_json": "artifacts/raw_results/docs_showcase/plasticity3d_p1_l1_2_3_4_lambda1p55_np32_grad1e2/output.json"
+    },
+    {
+      "degree_line": "P2",
+      "mesh_alias": "L1_2_3",
+      "free_dofs": 4801816,
+      "energy": -3013148.7531303708,
+      "constraint_variant": "glued_bottom",
+      "state_npz": "artifacts/raw_results/docs_showcase/plasticity3d_p2_l1_2_3_lambda1p55_np32_grad1e2/state.npz",
+      "result_json": "artifacts/raw_results/docs_showcase/plasticity3d_p2_l1_2_3_lambda1p55_np32_grad1e2/output.json"
+    },
+    {
+      "degree_line": "P4",
+      "mesh_alias": "L1_2",
+      "free_dofs": 4801816,
+      "energy": -3013348.094120956,
+      "constraint_variant": "glued_bottom",
+      "state_npz": "artifacts/raw_results/docs_showcase/plasticity3d_p4_l1_2_lambda1p55_np32_grad1e2/state.npz",
+      "result_json": "artifacts/raw_results/docs_showcase/plasticity3d_p4_l1_2_lambda1p55_np32_grad1e2/output.json"
+    }
+  ],
+  "comparison": {
+    "xlim": [
+      -150.0,
+      -50.0
+    ],
+    "zlim": [
+      0.026856430463758463,
+      86.57794468283012
+    ],
+    "global_vmax": 0.0480818058906887
+  },
+  "assets": {
+    "docs_png": "docs/assets/plasticity3d/plasticity3d_lambda1p55_highest_mesh_y_slice_comparison.png",
+    "docs_pdf": "docs/assets/plasticity3d/plasticity3d_lambda1p55_highest_mesh_y_slice_comparison.pdf",
+    "study_png": "artifacts/raw_results/plasticity3d_lambda1p55_degree_mesh_energy_study/plasticity3d_lambda1p55_highest_mesh_y_slice_comparison.png",
+    "study_pdf": "artifacts/raw_results/plasticity3d_lambda1p55_degree_mesh_energy_study/plasticity3d_lambda1p55_highest_mesh_y_slice_comparison.pdf"
+  }
+}

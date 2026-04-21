@@ -1,0 +1,113 @@
+\documentclass[10pt,a4paper]{article}
+
+\usepackage[margin=1.5cm]{geometry}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{microtype}
+\usepackage{amsmath,amssymb,mathtools}
+\usepackage{booktabs,multirow,array,tabularx}
+\usepackage{ragged2e}
+\usepackage{graphicx}
+\usepackage{subcaption}
+\usepackage{tikz}
+\usepackage{float}
+\usepackage{siunitx}
+\usepackage{xcolor}
+\usepackage{url}
+\usepackage{enumitem}
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+\usepackage{placeins}
+\usepackage[numbers,sort&compress]{natbib}
+\usepackage[hidelinks]{hyperref}
+\usepackage[nameinlink,noabbrev]{cleveref}
+
+\makeatletter
+\renewcommand{\theHALG@line}{\thealgorithm.\arabic{ALG@line}}
+\makeatother
+
+\graphicspath{{figures/generated/}}
+\setlength{\textfloatsep}{8pt plus 1pt minus 2pt}
+\setlength{\floatsep}{7pt plus 1pt minus 2pt}
+\setlength{\intextsep}{7pt plus 1pt minus 2pt}
+\setlength{\tabcolsep}{4pt}
+\renewcommand{\arraystretch}{1.08}
+\setcounter{topnumber}{5}
+\setcounter{bottomnumber}{5}
+\setcounter{totalnumber}{10}
+\renewcommand{\topfraction}{0.95}
+\renewcommand{\bottomfraction}{0.95}
+\renewcommand{\textfraction}{0.05}
+\renewcommand{\floatpagefraction}{0.9}
+\setlist[itemize]{leftmargin=*,topsep=3pt,itemsep=2pt}
+\setlist[enumerate]{leftmargin=*,topsep=3pt,itemsep=2pt}
+\sisetup{detect-all=true,group-separator={,}}
+
+\newcommand{\repo}{\texttt{fenics\_nonlinear\_energies}}
+\newcommand{\code}[1]{\texttt{#1}}
+\newcommand{\jaxpetsc}{JAX+PETSc}
+\newcommand{\purejax}{pure JAX}
+\newcommand{\fenics}{FEniCS}
+\newcommand{\plasticitythree}{Plasticity3D}
+\newcommand{\localpmg}{\code{local\_constitutiveAD + local\_pmg}}
+\newcolumntype{Y}{>{\RaggedRight\arraybackslash}X}
+\newcolumntype{L}[1]{>{\RaggedRight\arraybackslash\hsize=#1\hsize\linewidth=\hsize}X}
+\newcolumntype{C}[1]{>{\Centering\arraybackslash\hsize=#1\hsize\linewidth=\hsize}X}
+\newcolumntype{R}[1]{>{\RaggedLeft\arraybackslash\hsize=#1\hsize\linewidth=\hsize}X}
+\newlength{\PaperFigureFull}
+\newlength{\PaperFigureMedium}
+\newlength{\PaperFigureNarrow}
+\setlength{\PaperFigureFull}{\textwidth}
+\setlength{\PaperFigureMedium}{0.84\textwidth}
+\setlength{\PaperFigureNarrow}{0.72\textwidth}
+
+\input{sections/tikz_diagrams}
+
+\title{Exact and Scalable Nonlinear Finite-Element Solves and Optimization with JAX and PETSc\\
+\large Draft manuscript with placeholder front matter}
+
+\author{
+Author One$^{1}$ \and Author Two$^{2}$\\
+\small $^{1}$Affiliation placeholder\\
+\small $^{2}$Affiliation placeholder\\
+\small Correspondence: placeholder@example.com
+}
+
+\date{\today}
+
+\begin{document}
+
+\maketitle
+\input{sections/abstract}
+
+\section{Introduction}
+\input{sections/introduction}
+
+\section{Related Work}
+\input{sections/related_work}
+
+\section{Methodology}
+\input{sections/methodology}
+
+\section{Implementation}
+\input{sections/implementation}
+
+\section{Benchmark Problems}
+\input{sections/benchmarks}
+
+\section{Numerical Examples}
+\input{sections/results}
+
+\section{Additional Solver Evidence}
+\input{sections/appendix}
+
+\section{Discussion}
+\input{sections/discussion}
+
+\section{Conclusion}
+\input{sections/conclusion}
+
+\bibliographystyle{unsrtnat}
+\bibliography{references}
+
+\end{document}

@@ -203,6 +203,7 @@ def main() -> None:
         step_state_path = Path(step_args.state_out)
         if rank == 0:
             _write_json(step_output_path, result)
+        comm.Barrier()
 
         step_record = {
             "step_index": int(step_idx),
@@ -229,12 +230,15 @@ def main() -> None:
 
         d_lambda = float(lam - prev_lambda) if prev_lambda is not None else 1000.0
         beta = min(1.0, eps / max(d_lambda, eps))
-        blended_path = _write_blended_initial_state(
-            prev_state_path,
-            step_state_path,
-            beta=float(beta),
-            out_path=step_dir / "omega_eps_initial_state.npz",
-        )
+        blended_path = step_dir / "omega_eps_initial_state.npz"
+        if rank == 0:
+            _write_blended_initial_state(
+                prev_state_path,
+                step_state_path,
+                beta=float(beta),
+                out_path=blended_path,
+            )
+        comm.Barrier()
         omega_args = _omega_namespace(
             args,
             lam=float(lam - eps),
@@ -244,6 +248,7 @@ def main() -> None:
         omega_result = run(omega_args)
         if rank == 0:
             _write_json(Path(omega_args.out), omega_result)
+        comm.Barrier()
         step_record["direct_eps"] = float(eps)
         step_record["direct_beta"] = float(beta)
         step_record["omega_eps_output_json"] = str(Path(omega_args.out))

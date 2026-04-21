@@ -126,6 +126,7 @@ def _build_parser(profile_defaults):
             "same_mesh_p2_p1",
             "same_mesh_p4_p2_p1",
             "uniform_refined_p4_p2_p1_p1",
+            "uniform_refined_p1_chain",
         ),
         default="auto",
     )
@@ -165,7 +166,7 @@ def _build_parser(profile_defaults):
     parser.add_argument("--maxit", type=int, default=100)
     parser.add_argument(
         "--line_search",
-        choices=("golden_fixed", "armijo", "residual_bisection"),
+        choices=("golden_fixed", "armijo", "residual_bisection", "residual_bisection_tol"),
         default="residual_bisection",
     )
     parser.add_argument("--armijo_alpha0", type=float, default=1.0)

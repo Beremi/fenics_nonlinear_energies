@@ -1,0 +1,176 @@
+\label{sec:methodology}
+
+We use a common finite-element notation across all benchmark families. The
+continuous domain is $\Omega \subset \mathbb{R}^d$, the conforming trial space
+is $V_h \subset V$, the state vector is $u_h \in V_h$, and the element-restricted
+state on element $e$ is $u_e$. When a family is posed as an energy or reduced
+objective minimisation, we write its discrete functional as
+$\mathcal{J}_h(u_h)$; when a family is posed as a sequence of equilibrium
+solves, we write the associated discrete total potential as $\Pi_h(u_h)$.
+Hyperelasticity is the only family in which $J=\det F$ denotes the deformation
+Jacobian, so we avoid the bare symbol $J$ for generic objectives elsewhere in
+the paper.
+
+At the implementation level, the common sparse-assembly task is therefore one
+of two closely related forms:
+\begin{equation}
+  \mathcal{J}_h(u_h)
+  = \sum_{e=1}^{n_{\mathrm{el}}} \Phi_e(u_e) - f_{\mathrm{ext}}^T u_h,
+  \label{eq:generic-objective}
+\end{equation}
+or
+\begin{equation}
+  \Pi_h(u_h)
+  = \sum_{e=1}^{n_{\mathrm{el}}} \Phi_e(u_e) - f_{\mathrm{ext}}^T u_h,
+  \label{eq:generic-potential}
+\end{equation}
+where $\Phi_e$ may represent a scalar diffusion energy, a phase-field
+potential, a finite-strain stored-energy density, a plasticity potential, or
+the reduced design objective used in topology optimisation. The benchmark
+sections specialise \cref{eq:generic-objective,eq:generic-potential} to each
+family and define any additional symbols locally.
+
+\subsection{Finite-element and derivative structure}
+
+The main design choice in \repo{} is that problem definitions should remain
+energy-centered whenever possible. This gives three derivative routes:
+\begin{enumerate}
+  \item \textbf{element AD:} differentiate the full scalar element energy
+        $\Pi_e(u_e)$ with respect to the element DOF vector;
+  \item \textbf{constitutive AD:} differentiate a quadrature-point energy
+        density $\psi(\varepsilon_q)$, then assemble
+        $r_e = \sum_q w_q B_q^T \sigma_q$ and
+        $K_e = \sum_q w_q B_q^T C_q B_q$;
+  \item \textbf{colored SFD:} recover sparse Hessian information through
+        directionally probed gradients/HVPs and graph coloring.
+\end{enumerate}
+
+Element AD is the most literal route and is often the cleanest mathematically.
+Constitutive AD preserves the same scalar-energy source of truth but changes
+the differentiation boundary from the full element vector to the local strain
+state. This is especially effective for high-order plasticity, where the full
+element Hessian is substantially more expensive than the $6\times6$
+constitutive tangent. Colored SFD is used when exact second-order information
+is too costly or unnecessary.
+
+\subsection{Newton--Krylov globalization}
+
+The nonlinear solves in the repository are based on Newton or quasi-Newton
+updates, but they are not all globalized in the same way. Scalar benchmarks
+primarily use line-search Newton. Hyperelasticity uses a trust-region method
+with optional post-step line search. Some maintained experiments use a hybrid
+trust-region/line-search algorithm in which a reduced trust-region model
+provides the direction, while a bounded line search chooses the accepted step.
+This hybrid logic follows the implementation documented in the repo note on
+trust-region and line-search coupling.
+
+\begin{algorithm}[H]
+\caption{Hybrid trust-region / line-search Newton}
+\begin{algorithmic}[1]
+\State Given $x_0$, trust radius $\Delta_0$, tolerances, and callbacks for
+energy, gradient, and Hessian solves/matvecs
+\For{$k=0,1,\dots$}
+  \State Assemble $g_k = \nabla J(x_k)$
+  \If{convergence criteria are satisfied}
+    \State terminate
+  \EndIf
+  \State Compute a Newton-like direction from $H(x_k)p = -g_k$
+  \If{trust region is enabled}
+    \State Build a small reduced model in the span of Newton and gradient directions
+    \State Solve the reduced trust subproblem with radius $\Delta_k$
+    \State Optionally compare against a pure gradient trust step
+    \State Restrict the line-search interval so the accepted step stays in the trust ball
+  \Else
+    \State Use the Newton direction directly
+  \EndIf
+  \State Perform one-dimensional search on the chosen direction
+  \State Compute actual and predicted reduction
+  \If{trust region is enabled}
+    \State accept/reject using $\rho = \mathrm{ared}/\mathrm{pred}$ and update $\Delta_k$
+  \Else
+    \State accept only if the merit function decreases
+  \EndIf
+\EndFor
+\end{algorithmic}
+\end{algorithm}
+
+For the maintained 3D plasticity path promoted in this paper, the chosen policy
+is simpler: Newton with Armijo line search and a PMG-preconditioned
+\code{fgmres} linear solve. This is the most stable and interpretable converged
+story currently available for the flagship benchmark reported later in
+\Cref{sec:num-plasticity3d}.
+
+\begin{algorithm}[H]
+\caption{Armijo line search used in maintained Newton solves}
+\begin{algorithmic}[1]
+\State Given state $x$, direction $p$, initial step $\alpha_0$
+\State Evaluate $J(x)$ and $g = \nabla J(x)$
+\For{$m=0,1,\dots,m_{\max}$}
+  \State $\alpha \gets \alpha_0 \beta^m$
+  \State $x_{\mathrm{trial}} \gets x + \alpha p$
+  \If{$J(x_{\mathrm{trial}}) \le J(x) + c_1 \alpha g^T p$}
+    \State accept $\alpha$
+    \State \Return
+  \EndIf
+\EndFor
+\State fall back to the smallest admissible step or to gradient-safe logic
+\end{algorithmic}
+\end{algorithm}
+
+\subsection{Colored sparse finite differences}
+
+Sparse derivative recovery is built around the observation that if columns that
+do not interfere in the sparsity pattern are perturbed together, one gradient
+or HVP evaluation can recover multiple columns of the Jacobian or Hessian
+\citep{curtis1974sparsejacobian,coleman1984sparsehessian}. In this repository,
+the local SFD path uses distance-2 coloring on the Hessian sparsity graph,
+which is especially effective when combined with overlap-domain assembly and
+owned-plus-ghost PETSc layouts.
+
+\begin{algorithm}[H]
+\caption{Distributed colored Hessian recovery}
+\begin{algorithmic}[1]
+\State Build or import local sparsity information for the free-DOF graph
+\State Compute a distance-2 coloring of the Hessian pattern
+\For{each color group $c$}
+  \State Build the combined probe vector $v_c$
+  \State Evaluate one gradient difference or HVP for $v_c$
+  \State Scatter recovered entries into owned sparse storage
+\EndFor
+\State Assemble the global PETSc matrix from owned COO/CSR entries
+\end{algorithmic}
+\end{algorithm}
+
+\subsection{Constitutive autodiff for 3D plasticity}
+
+The promoted \plasticitythree{} result in this paper uses constitutive AD.
+Rather than applying second-order AD to the full $P4$ element vector, we write
+one scalar Mohr--Coulomb energy density per quadrature point,
+\begin{equation}
+  \Phi_q(\varepsilon_q,\mathrm{material}_q),
+\end{equation}
+differentiate it with respect to the six engineering-strain components, and
+assemble the element tangent from the resulting stress and constitutive tangent.
+This keeps the scalar-energy contract intact while reducing the cost of exact
+second-order information on high-order tetrahedra.
+
+\begin{algorithm}[H]
+\caption{Constitutive AD assembly for high-order plasticity}
+\begin{algorithmic}[1]
+\For{each local element $e$}
+  \For{each quadrature point $q$}
+    \State Evaluate strain $\varepsilon_q = B_q u_e$
+    \State Evaluate scalar energy density $\Phi_q(\varepsilon_q)$
+    \State Obtain stress $\sigma_q = \partial \Phi_q / \partial \varepsilon_q$
+    \State Obtain constitutive tangent $C_q = \partial^2 \Phi_q / \partial \varepsilon_q^2$
+  \EndFor
+  \State Assemble $r_e = \sum_q w_q B_q^T \sigma_q$
+  \State Assemble $K_e = \sum_q w_q B_q^T C_q B_q$
+\EndFor
+\end{algorithmic}
+\end{algorithm}
+
+The key methodological point is that this is still exact AD on a scalar
+potential. The code does not switch to a hand-derived constitutive tangent. It
+changes where automatic differentiation is applied so that high-order 3D
+plasticity remains computationally viable.

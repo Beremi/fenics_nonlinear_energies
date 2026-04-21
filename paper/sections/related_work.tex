@@ -1,0 +1,83 @@
+\label{sec:related}
+
+The paper sits at the intersection of automated finite-element workflows,
+PDE-constrained optimization, differentiable simulation, and scalable nonlinear
+linear algebra. The most relevant background can be grouped into four strands.
+
+\paragraph{High-level finite-element automation.}
+The \fenics{} project established a powerful model in which weak forms are
+expressed at a high level and compiled into efficient low-level kernels
+\citep{logg2012fenicsbook}. That abstraction has been enormously influential.
+For our purposes it remains important both as a reference implementation path
+and as a baseline for what an expressive PDE programming environment should
+feel like.
+
+\paragraph{Adjoint-based PDE optimization.}
+In the \fenics{}/Firedrake ecosystem, \code{dolfin-adjoint} and
+\code{pyadjoint} showed that many PDE-constrained optimization problems can be
+treated through automated adjoints at the level of high-level problem
+descriptions \citep{farrell2013dolfinadjoint,mitusch2019pyadjoint}. These tools
+are especially strong for first-order reduced sensitivities. They are an
+important scientific reference point for this paper because they demonstrate
+how much can be automated without exposing the user directly to low-level
+linear algebra. At the same time, they also illustrate our main distinction:
+the combined package of exact second-order information, distributed nonlinear
+solves, and difficult material models is not commonly surfaced in the same
+maintained workflow.
+
+\paragraph{Differentiable simulation and JAX-native FEM.}
+The use of automatic differentiation inside simulation codes is now widespread,
+and the broader AD literature is mature
+\citep{baydin2018autodiff,nocedal2006numerical}. JAX, in particular, has made
+higher-order derivatives, vectorization, and accelerator-friendly program
+transformations accessible in a NumPy-like environment \citep{jax2018}. This
+has encouraged differentiable FEM frameworks such as JAX-FEM, which show that
+nonlinear constitutive models and inverse-design workflows can be expressed
+effectively in JAX \citep{xue2023jaxfem}. Our work is closest in spirit to this
+strand, but differs in emphasis: the mainline implementation here is not just a
+differentiable solver, but a distributed Newton--Krylov + PETSc workflow whose
+data structures are built around sparse MPI execution.
+
+\paragraph{Topology optimization and nonlinear mechanics.}
+The topology optimization literature is rich, with classical introductions and
+compact educational implementations still serving as community reference points
+\citep{sigmund2001topology,bendsoe2003topology,ferrari2020top99}. For
+inelasticity and nonlinear mechanics, consistent tangents and robust
+globalization remain standard themes \citep{simo1985consistent,simo1998compinel}.
+Our 3D plasticity implementation is not a textbook return-mapping framework,
+but these references are still important because they clarify what a nonlinear
+mechanics code must preserve to make Newton-type methods meaningful.
+
+\paragraph{Sparse derivative estimation and coloring.}
+When exact Hessians become too expensive, sparse recovery via graph coloring is
+the classical alternative. Curtis, Powell, and Reid established the key idea
+for sparse Jacobians \citep{curtis1974sparsejacobian}; Coleman and Mor\'e
+extended the viewpoint to sparse derivative estimation and graph-coloring-based
+recovery \citep{coleman1983sparsejacobian,coleman1984sparsehessian}. These
+ideas remain directly relevant here because the maintained \jaxpetsc{} stack
+uses local and distributed coloring for SFD Hessian assembly.
+
+\paragraph{Scalable nonlinear and linear algebra.}
+PETSc provides the scalable vector, matrix, Krylov, nonlinear, and multigrid
+infrastructure that makes our distributed implementation possible
+\citep{balay1997petsc,petsc2024web}. Rather than treating PETSc as a back-end
+detail, we treat it as a first-class methodological component: solver policy,
+preconditioner choice, and distributed data layout are part of the scientific
+story, not just engineering glue.
+
+\begin{table}[H]
+  \centering
+  \input{tables/generated/sota_framework_comparison.tex}
+  \caption{Positioning of the manuscript relative to nearby framework families
+  and workflow styles. ``Partial'' denotes that some form of the capability is
+  available in the cited ecosystem, but not necessarily as an exact
+  second-order, distributed nonlinear workflow for the same benchmark class.}
+  \label{tab:sota-comparison}
+\end{table}
+
+Against this background, the niche of \repo{} can be stated precisely. It is a
+methods-and-software framework that tries to occupy the middle ground between
+high-level differentiable modeling and scalable sparse nonlinear solvers. The
+paper does not claim that this is the only worthwhile point in that design
+space. It argues that this point is underrepresented, practically useful, and
+scientifically worth documenting in detail.

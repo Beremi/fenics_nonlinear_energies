@@ -21,3 +21,5 @@ h5py
 /thesis_replications.md
 plaplace_u3_timing_enrichment_agent_prompt.md
 plaplace_u3_problematic_experiment_prompt.md
+/paper/build/*
+!/paper/build/main.pdf

@@ -3,8 +3,11 @@
 from __future__ import annotations
 
 from contextlib import nullcontext
+import json
+import os
 import time
 from dataclasses import dataclass
+from pathlib import Path
 from types import SimpleNamespace
 
 import jax
@@ -723,8 +726,12 @@ class ReorderedElementAssemblerBase:
                 "total": 0.0,
             },
         }
+        self._debug_stage_log_dir = str(
+            os.environ.get("FNE_REORDERED_STAGE_LOG_DIR", "")
+        ).strip()
 
         t_setup_total = time.perf_counter()
+        self._emit_debug_stage("init_start")
 
         freedofs = np.asarray(params["freedofs"], dtype=np.int64)
         t0 = time.perf_counter()
@@ -746,6 +753,7 @@ class ReorderedElementAssemblerBase:
             else:
                 perm = _validate_permutation(perm_override, len(freedofs))
         self._setup_timings["permutation"] = time.perf_counter() - t0
+        self._emit_debug_stage("permutation_ready")
 
         t0 = time.perf_counter()
         with self._petsc_event("reordered:global_layout"):
@@ -758,6 +766,7 @@ class ReorderedElementAssemblerBase:
                 dirichlet_key=self.dirichlet_key,
             )
         self._setup_timings["global_layout"] = time.perf_counter() - t0
+        self._emit_debug_stage("global_layout_ready")
         self.part = SimpleNamespace(
             perm=self.layout.perm,
             iperm=self.layout.iperm,
@@ -776,16 +785,19 @@ class ReorderedElementAssemblerBase:
                 block_size=int(self.block_size),
             )
         self._setup_timings["local_overlap"] = time.perf_counter() - t0
+        self._emit_debug_stage("local_overlap_ready")
         self.dirichlet_full = np.asarray(params[self.dirichlet_key], dtype=np.float64)
 
         t0 = time.perf_counter()
         with self._petsc_event("reordered:distribution_setup"):
             self._setup_distribution_exchange()
         self._setup_timings["distribution_setup"] = time.perf_counter() - t0
+        self._emit_debug_stage("distribution_setup_ready")
         t0 = time.perf_counter()
         with self._petsc_event("reordered:matrix_backend_setup"):
             self._setup_matrix_backend_state()
         self._setup_timings["matrix_backend_setup"] = time.perf_counter() - t0
+        self._emit_debug_stage("matrix_backend_setup_ready")
 
         t0 = time.perf_counter()
         with self._petsc_event("reordered:kernel_build"):
@@ -796,14 +808,17 @@ class ReorderedElementAssemblerBase:
                 self._local_grad_raw,
             ) = self._make_local_element_kernels()
         self._setup_timings["kernel_build"] = time.perf_counter() - t0
+        self._emit_debug_stage("kernel_build_ready")
         t0 = time.perf_counter()
         with self._petsc_event("reordered:scatter_build"):
             self._scatter = self._build_scatter_data()
         self._setup_timings["scatter_build"] = time.perf_counter() - t0
+        self._emit_debug_stage("scatter_build_ready")
         t0 = time.perf_counter()
         with self._petsc_event("reordered:rhs_build"):
             self._f_owned = np.asarray(self._build_rhs_owned(), dtype=np.float64)
         self._setup_timings["rhs_build"] = time.perf_counter() - t0
+        self._emit_debug_stage("rhs_build_ready")
 
         t0 = time.perf_counter()
         if self.local_hessian_mode == "sfd_local":
@@ -817,6 +832,7 @@ class ReorderedElementAssemblerBase:
                 f"Unsupported local_hessian_mode={self.local_hessian_mode!r}"
             )
         self._setup_timings["local_hessian_setup"] = time.perf_counter() - t0
+        self._emit_debug_stage("local_hessian_setup_ready")
 
         t0 = time.perf_counter()
         self._gather_sizes = np.asarray(
@@ -826,11 +842,13 @@ class ReorderedElementAssemblerBase:
         if len(self._gather_displs) > 1:
             self._gather_displs[1:] = np.cumsum(self._gather_sizes[:-1])
         self._setup_timings["allgather_plan"] = time.perf_counter() - t0
+        self._emit_debug_stage("allgather_plan_ready")
 
         t0 = time.perf_counter()
         with self._petsc_event("reordered:matrix_create"):
             self.A = self._create_matrix()
         self._setup_timings["matrix_create"] = time.perf_counter() - t0
+        self._emit_debug_stage("matrix_create_ready")
         owned_nnz = int(self.layout.owned_rows.size)
         self._owned_hessian_values = np.zeros(owned_nnz, dtype=np.float64)
         if np.dtype(PETSc.ScalarType) == np.dtype(np.float64):
@@ -864,12 +882,42 @@ class ReorderedElementAssemblerBase:
         self.ksp.setTolerances(rtol=float(ksp_rtol), max_it=int(ksp_max_it))
         self.ksp.setFromOptions()
         self._setup_timings["ksp_create"] = time.perf_counter() - t0
+        self._emit_debug_stage("ksp_create_ready")
 
+        skip_warmup = str(os.environ.get("FNE_SKIP_REORDERED_WARMUP", "")).strip().lower() in {
+            "1",
+            "true",
+            "yes",
+            "on",
+        }
         t0 = time.perf_counter()
-        with self._petsc_event("reordered:warmup"):
-            self._warmup()
-        self._setup_timings["warmup"] = time.perf_counter() - t0
+        if skip_warmup:
+            self._setup_timings["warmup"] = 0.0
+        else:
+            with self._petsc_event("reordered:warmup"):
+                self._warmup()
+            self._setup_timings["warmup"] = time.perf_counter() - t0
         self._setup_timings["total"] = time.perf_counter() - t_setup_total
+        self._emit_debug_stage("init_ready")
+
+    def _emit_debug_stage(self, stage: str) -> None:
+        target_dir = str(getattr(self, "_debug_stage_log_dir", "") or "").strip()
+        if not target_dir:
+            return
+        try:
+            path = Path(target_dir) / f"rank{int(self.rank):03d}.jsonl"
+            path.parent.mkdir(parents=True, exist_ok=True)
+            payload = {
+                "stage": str(stage),
+                "rank": int(self.rank),
+                "rss_gib": float(self._current_rss_gib()),
+                "rss_hwm_gib": float(self._rss_gib()),
+                "time_unix": float(time.time()),
+            }
+            with path.open("a", encoding="utf-8") as fh:
+                fh.write(json.dumps(payload, sort_keys=True) + "\n")
+        except Exception:
+            pass
 
     def _make_local_element_kernels(self):
         raise NotImplementedError
@@ -923,33 +971,38 @@ class ReorderedElementAssemblerBase:
         return self.local_hessian_mode == "element"
 
     def _setup_matrix_backend_state(self) -> None:
+        index_dtype = (
+            np.int32
+            if int(self.layout.n_free) <= int(np.iinfo(np.int32).max)
+            else np.int64
+        )
         self._matrix_lgmap: PETSc.LGMap | None = None
-        self._local_free_index_by_total = np.zeros(0, dtype=np.int64)
-        self._local_elems_free = np.zeros((0, 0), dtype=np.int64)
-        self._local_free_global_indices = np.zeros(0, dtype=np.int64)
+        self._local_free_index_by_total = np.zeros(0, dtype=index_dtype)
+        self._local_elems_free = np.zeros((0, 0), dtype=index_dtype)
+        self._local_free_global_indices = np.zeros(0, dtype=index_dtype)
         self._local_owned_free_mask = np.zeros(0, dtype=bool)
-        self._local_coo_rows = np.zeros(0, dtype=np.int64)
-        self._local_coo_cols = np.zeros(0, dtype=np.int64)
+        self._local_coo_rows = np.zeros(0, dtype=index_dtype)
+        self._local_coo_cols = np.zeros(0, dtype=index_dtype)
         self._local_owned_keys_sorted = np.zeros(0, dtype=np.int64)
-        self._local_owned_pos_sorted = np.zeros(0, dtype=np.int64)
+        self._local_owned_pos_sorted = np.zeros(0, dtype=index_dtype)
         if self.assembly_backend not in {"coo_local", "blocked_local"}:
             return
         self._local_free_index_by_total = np.full(
-            len(self.local_data.local_total_nodes), -1, dtype=np.int64
+            len(self.local_data.local_total_nodes), -1, dtype=index_dtype
         )
-        local_free_positions = np.asarray(self._dist_free_local_indices, dtype=np.int64)
-        local_free_global = np.asarray(self._dist_free_global_indices, dtype=np.int64)
+        local_free_positions = np.asarray(self._dist_free_local_indices, dtype=index_dtype)
+        local_free_global = np.asarray(self._dist_free_global_indices, dtype=index_dtype)
         self._local_free_global_indices = local_free_global
         self._local_owned_free_mask = (
             (local_free_global >= int(self.layout.lo))
             & (local_free_global < int(self.layout.hi))
         )
         self._local_free_index_by_total[local_free_positions] = np.arange(
-            local_free_positions.size, dtype=np.int64
+            local_free_positions.size, dtype=index_dtype
         )
         self._local_elems_free = np.asarray(
             self._local_free_index_by_total[self.local_data.elems_local_np],
-            dtype=np.int64,
+            dtype=index_dtype,
         )
         if self.assembly_backend == "coo_local":
             local_rows, local_cols = _owned_local_pattern_from_local_elems(
@@ -957,15 +1010,15 @@ class ReorderedElementAssemblerBase:
                 owned_free_mask=self._local_owned_free_mask,
                 n_local_free=int(local_free_global.size),
             )
-            self._local_coo_rows = np.asarray(local_rows, dtype=np.int64)
-            self._local_coo_cols = np.asarray(local_cols, dtype=np.int64)
+            self._local_coo_rows = np.asarray(local_rows, dtype=index_dtype)
+            self._local_coo_cols = np.asarray(local_cols, dtype=index_dtype)
             local_keys = (
                 np.asarray(self._local_coo_rows, dtype=np.int64) * np.int64(local_free_global.size)
                 + np.asarray(self._local_coo_cols, dtype=np.int64)
             )
             local_sort = np.argsort(local_keys, kind="mergesort")
             self._local_owned_keys_sorted = np.asarray(local_keys[local_sort], dtype=np.int64)
-            self._local_owned_pos_sorted = np.asarray(local_sort, dtype=np.int64)
+            self._local_owned_pos_sorted = np.asarray(local_sort, dtype=index_dtype)
 
     def _create_matrix(self) -> PETSc.Mat:
         mat = PETSc.Mat().create(comm=self.comm)
@@ -973,18 +1026,18 @@ class ReorderedElementAssemblerBase:
         mat.setSizes(((self.layout.hi - self.layout.lo, self.layout.n_free),) * 2)
         if self.assembly_backend == "coo_local":
             self._matrix_lgmap = PETSc.LGMap().create(
-                self._local_free_global_indices.astype(PETSc.IntType),
+                self._local_free_global_indices.astype(PETSc.IntType, copy=False),
                 comm=self.comm,
             )
             mat.setLGMap(self._matrix_lgmap, self._matrix_lgmap)
             mat.setPreallocationCOOLocal(
-                self._local_coo_rows.astype(PETSc.IntType),
-                self._local_coo_cols.astype(PETSc.IntType),
+                self._local_coo_rows.astype(PETSc.IntType, copy=False),
+                self._local_coo_cols.astype(PETSc.IntType, copy=False),
             )
         else:
             mat.setPreallocationCOO(
-                self.layout.owned_rows.astype(PETSc.IntType),
-                self.layout.owned_cols.astype(PETSc.IntType),
+                self.layout.owned_rows.astype(PETSc.IntType, copy=False),
+                self.layout.owned_cols.astype(PETSc.IntType, copy=False),
             )
         if int(self.block_size) > 1:
             mat.setBlockSize(int(self.block_size))

@@ -1,0 +1,11 @@
+\begin{tabularx}{\textwidth}{@{}>{\hsize=1.08\hsize\linewidth=\hsize\RaggedRight\arraybackslash}X>{\hsize=0.55\hsize\linewidth=\hsize\Centering\arraybackslash}X>{\hsize=0.76\hsize\linewidth=\hsize\Centering\arraybackslash}X>{\hsize=0.55\hsize\linewidth=\hsize\Centering\arraybackslash}X>{\hsize=0.70\hsize\linewidth=\hsize\Centering\arraybackslash}X>{\hsize=1.86\hsize\linewidth=\hsize\RaggedRight\arraybackslash}X@{}}
+\toprule
+Framework & AD & 2nd-order & MPI & 3D plast. & Role in paper \\
+\midrule
+FEniCS custom & yes & manual & yes & partial & high-level finite-element reference and baseline solver path \\
+pyadjoint style & yes & mostly first-order & partial & limited & reference adjoint ecosystem for PDE-constrained optimisation \\
+pure JAX & yes & yes & no & limited & compact differentiable reference path \\
+JAX-FEM style & yes & yes & limited & partial & nearest differentiable-FEM literature context \\
+This repository: JAX+PETSc & yes & yes & yes & yes & maintained production path with exact or near-exact derivatives and scalable sparse solves \\
+\bottomrule
+\end{tabularx}

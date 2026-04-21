@@ -170,7 +170,7 @@ def run_fixed_lambda(
     linear_max_iter: int = 100,
     solver_type: str = "PETSC_MATLAB_DFGMRES_HYPRE_NULLSPACE",
     factor_solver_type: str | None = None,
-    pc_backend: str | None = "pmg",
+    pc_backend: str | None = "pmg_shell",
     pmg_coarse_mesh_path: Path | None = None,
     pmg_fine_hierarchy_mode: str = "default",
     preconditioner_matrix_source: str = "tangent",
@@ -386,6 +386,8 @@ def run_fixed_lambda(
     tangent_pattern = None
     bddc_pattern = None
 
+    K_elast_initial = None
+    K_elast_newton = None
     if use_lightweight_mpi_path:
         elastic_rows = assemble_owned_elastic_rows_for_comm(
             coord,
@@ -403,6 +405,8 @@ def run_fixed_lambda(
             comm=PETSc.COMM_WORLD,
             block_size=coord.shape[0],
         )
+        K_elast_initial = K_elast
+        K_elast_newton = extract_submatrix_free(K_elast, q_to_free_indices(q_mask))
         rhs_parts = MPI.COMM_WORLD.allgather(
             np.asarray(elastic_rows.local_rhs, dtype=np.float64)
         )
@@ -412,6 +416,8 @@ def run_fixed_lambda(
         from slope_stability.fem.assembly import build_elastic_stiffness_matrix
 
         K_elast, weight, B = build_elastic_stiffness_matrix(assembly, shear, lame, bulk)
+        K_elast_initial = K_elast
+        K_elast_newton = K_elast
         f_v_int = np.vstack(
             (
                 np.zeros(assembly.n_int, dtype=np.float64),
@@ -513,33 +519,24 @@ def run_fixed_lambda(
         preconditioner_options["compiled_outer"] = True
     if recycle_preconditioner:
         preconditioner_options["recycle_preconditioner"] = True
-    if effective_pc_backend == "pmg":
-        preconditioner_options.update(
-            {
-                "full_system_preconditioner": False,
-                "pc_mg_galerkin": "both",
-                "pc_mg_cycle_type": "v",
-                "mg_levels_ksp_type": "richardson",
-                "mg_levels_ksp_max_it": 3,
-                "mg_levels_pc_type": "sor",
-                "mg_coarse_ksp_type": str(mg_coarse_ksp_type or "cg"),
-                "mg_coarse_pc_type": str(mg_coarse_pc_type or "hypre"),
-                "pmg_hierarchy": pmg_hierarchy,
-            }
+    pmg_level_orders = tuple(
+        int(getattr(level, "order", -1)) for level in getattr(pmg_hierarchy, "levels", ())
+    )
+    robust_parallel_shell = (
+        pmg_hierarchy is not None
+        and int(PETSc.COMM_WORLD.getSize()) > 1
+        and pmg_level_orders in {(1, 1, 2), (1, 2, 4)}
+    )
+    if effective_pc_backend in {"pmg", "pmg_shell"}:
+        capture._apply_pmg_profile(
+            profile="source_default",
+            effective_pc_backend=effective_pc_backend,
+            preconditioner_options=preconditioner_options,
+            robust_parallel_shell=robust_parallel_shell,
         )
-    if effective_pc_backend == "pmg_shell":
-        preconditioner_options.update(
-            {
-                "full_system_preconditioner": False,
-                "mg_levels_ksp_type": "richardson",
-                "mg_levels_ksp_max_it": 3,
-                "mg_levels_pc_type": "sor",
-                "mg_coarse_ksp_type": str(mg_coarse_ksp_type or "cg"),
-                "mg_coarse_pc_type": str(mg_coarse_pc_type or "hypre"),
-                "mg_coarse_pc_hypre_type": "boomeramg",
-                "pmg_hierarchy": pmg_hierarchy,
-            }
-        )
+        preconditioner_options["mg_coarse_ksp_type"] = str(mg_coarse_ksp_type or "cg")
+        preconditioner_options["mg_coarse_pc_type"] = str(mg_coarse_pc_type or "hypre")
+        preconditioner_options["pmg_hierarchy"] = pmg_hierarchy
     if effective_pc_backend == "gamg":
         preconditioner_options.update(
             {
@@ -654,26 +651,26 @@ def run_fixed_lambda(
         U_elast_free = None
         K_free = None
         try:
-            if _prefers_full_system_operator(init_linear_solver, K_elast):
+            if _prefers_full_system_operator(init_linear_solver, K_elast_initial):
                 _setup_linear_system(
                     init_linear_solver,
-                    K_elast,
-                    A_full=K_elast,
+                    K_elast_initial,
+                    A_full=K_elast_initial,
                     free_idx=free_idx,
                 )
                 U_elast_free = _solve_linear_system(
                     init_linear_solver,
-                    K_elast,
+                    K_elast_initial,
                     f_free,
                     b_full=f_full,
                     free_idx=free_idx,
                 )
             else:
-                K_free = extract_submatrix_free(K_elast, free_idx)
+                K_free = extract_submatrix_free(K_elast_initial, free_idx)
                 _setup_linear_system(
                     init_linear_solver,
                     K_free,
-                    A_full=K_elast,
+                    A_full=K_elast_initial,
                     free_idx=free_idx,
                 )
                 U_elast_free = _solve_linear_system(
@@ -746,7 +743,7 @@ def run_fixed_lambda(
         int(it_newt_max),
         int(it_damp_max),
         float(r_min),
-        K_elast,
+        K_elast_newton,
         q_mask,
         f_V,
         const_builder,
@@ -1181,7 +1178,7 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--pc-backend",
         type=str,
-        default="pmg",
+        default="pmg_shell",
         choices=["hypre", "gamg", "bddc", "pmg", "pmg_shell"],
     )
     parser.add_argument("--pmg-coarse-mesh-path", type=Path, default=None)

@@ -1,0 +1,57 @@
+\label{sec:solver-evidence}
+
+This section collects supporting solver evidence that is scientifically useful
+but too implementation-specific for the main benchmark narratives.
+
+\subsection{Plasticity3D source and sourcefixed comparisons}
+
+The primary Plasticity3D numerical story in \Cref{sec:num-plasticity3d} is the
+maintained-local path. The tables below add two engineering comparisons on the
+same discrete problem from \cref{eq:plasticity3d-discrete}: a matched
+source-assembly comparator and a sourcefixed-like PMG variant.
+
+\begin{table}[H]
+  \centering
+  \input{tables/generated/plasticity3d_local_vs_source.tex}
+  \caption{Matched local-vs-source comparison for the same local PMG solver
+  stack. At each listed rank the local and source rows converge in the same
+  number of nonlinear and linear iterations, so this is a timing-only
+  comparison on \cref{eq:plasticity3d-discrete}.}
+  \label{tab:plasticity3d-local-vs-source}
+\end{table}
+
+\begin{table}[H]
+  \centering
+  \input{tables/generated/plasticity3d_sourcefixed_alternative.tex}
+  \caption{Converged-only view of the sourcefixed-like PMG alternative on the
+  same Plasticity3D problem. ``--'' marks rank counts that hit the Newton cap
+  before reaching the promoted gradient target.}
+  \label{tab:plasticity3d-sourcefixed}
+\end{table}
+
+These tables support two narrower statements. First, source assembly remains
+faster than maintained local assembly when both are embedded in the same PMG
+solver stack, although the gap narrows at higher rank counts. Second, the
+sourcefixed-like PMG profile is not the right default for this problem family:
+it may appear competitive on some rows, but it does more nonlinear and Krylov
+work and is less robust.
+
+\subsection{Source continuation evidence}
+
+The legacy source-continuation path is not the mainline method of the paper,
+but it is still useful because it isolates how much preconditioner policy
+matters even when the outer continuation logic is held fixed.
+
+\begin{table}[H]
+  \centering
+  \input{tables/generated/source_continuation_compare.tex}
+  \caption{Source continuation with the fixed PMG-shell smoother policy at 8
+  and 32 ranks. This is supporting solver evidence only; it is not part of the
+  paper's main maintained production story.}
+  \label{tab:source-cont}
+\end{table}
+
+\subsection{Code availability}
+
+The implementation discussed in this paper is available at
+\url{https://github.com/Beremi/fenics_nonlinear_energies}.

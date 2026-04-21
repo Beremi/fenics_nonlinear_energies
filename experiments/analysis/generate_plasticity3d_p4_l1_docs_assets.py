@@ -13,10 +13,15 @@ matplotlib.use("Agg", force=True)
 import matplotlib.colors as mcolors
 import matplotlib.pyplot as plt
 import numpy as np
+from PIL import Image, ImageDraw
+from scipy.interpolate import griddata
+from scipy.ndimage import gaussian_filter
 
-from src.problems.slope_stability_3d.jax.jax_energy_3d import vmapped_mc_stress_density_3d
-from src.problems.slope_stability_3d.support.mesh import load_case_hdf5, same_mesh_case_hdf5_path
-from src.problems.slope_stability_3d.support.reduction import davis_b_reduction_qp
+from src.problems.slope_stability_3d.support.mesh import (
+    PLASTICITY3D_CONSTRAINT_VARIANT_COMPONENTWISE_BOTTOM,
+    load_case_hdf5,
+    same_mesh_case_hdf5_path,
+)
 from src.problems.slope_stability_3d.support.simplex_lagrange import (
     evaluate_tetra_lagrange_basis,
     evaluate_triangle_lagrange_basis,
@@ -33,6 +38,12 @@ DEFAULT_RESULT = (
 DEFAULT_OUT_DIR = REPO_ROOT / "docs" / "assets" / "plasticity3d"
 DEFAULT_MESH_NAME = "hetero_ssr_L1"
 DEFAULT_DEGREE = 4
+DEFAULT_CONSTRAINT_VARIANT = PLASTICITY3D_CONSTRAINT_VARIANT_COMPONENTWISE_BOTTOM
+
+
+def _slug_for_case(mesh_name: str, degree: int) -> str:
+    mesh_label = str(mesh_name).replace("hetero_ssr_", "").lower()
+    return f"plasticity3d_p{int(degree)}_{mesh_label}"
 
 
 def _reference_triangle_submesh(subdivisions: int) -> tuple[np.ndarray, np.ndarray]:
@@ -196,8 +207,8 @@ def _quadrature_points_tetra(degree: int) -> np.ndarray:
 
 def _save_figure(fig: plt.Figure, out_base: Path) -> None:
     out_base.parent.mkdir(parents=True, exist_ok=True)
-    fig.savefig(out_base.with_suffix(".png"), bbox_inches="tight")
-    fig.savefig(out_base.with_suffix(".pdf"), bbox_inches="tight")
+    fig.savefig(out_base.with_suffix(".png"), bbox_inches="tight", dpi=300)
+    fig.savefig(out_base.with_suffix(".pdf"), bbox_inches="tight", dpi=600)
     plt.close(fig)
 
 
@@ -213,6 +224,170 @@ def _set_equal_3d_axes(ax, xyz: np.ndarray) -> None:
         ax.set_box_aspect((1.0, 1.0, 1.0))
     except Exception:
         pass
+
+
+def _apply_showcase_camera(ax, xyz: np.ndarray) -> None:
+    _set_equal_3d_axes(ax, xyz)
+    ax.view_init(elev=22.0, azim=56.0)
+
+
+def _deviatoric_strain_norm_3d(strain6: np.ndarray) -> np.ndarray:
+    dev_metric = np.diag([1.0, 1.0, 1.0, 0.5, 0.5, 0.5]) - np.outer(
+        np.array([1.0, 1.0, 1.0, 0.0, 0.0, 0.0], dtype=np.float64),
+        np.array([1.0, 1.0, 1.0, 0.0, 0.0, 0.0], dtype=np.float64),
+    ) / 3.0
+    arr = np.asarray(strain6, dtype=np.float64)
+    proj = arr @ dev_metric.T
+    return np.sqrt(np.maximum(0.0, np.sum(arr * proj, axis=1)))
+
+
+def _slice_axis_metadata(axis: int) -> dict[str, object]:
+    axis = int(axis)
+    if axis == 0:
+        return {"axis_name": "x", "proj": (1, 2), "xlabel": "y", "ylabel": "z"}
+    if axis == 1:
+        return {"axis_name": "y", "proj": (0, 2), "xlabel": "x", "ylabel": "z"}
+    if axis == 2:
+        return {"axis_name": "z", "proj": (0, 1), "xlabel": "x", "ylabel": "y"}
+    raise ValueError(f"Unsupported axis {axis}")
+
+
+def _tetra_plane_polygon_projected(
+    points: np.ndarray,
+    tet4: np.ndarray,
+    *,
+    axis: int,
+    center: float,
+) -> np.ndarray | None:
+    tet_pts = np.asarray(points[np.asarray(tet4[:4], dtype=np.int64)], dtype=np.float64)
+    distances = tet_pts[:, int(axis)] - float(center)
+    tol = 1.0e-10 * max(1.0, float(np.max(np.abs(tet_pts[:, int(axis)]))))
+    if np.all(distances > tol) or np.all(distances < -tol):
+        return None
+
+    edge_pairs = ((0, 1), (0, 2), (0, 3), (1, 2), (1, 3), (2, 3))
+    intersections: list[np.ndarray] = []
+
+    def _append_unique(pt: np.ndarray) -> None:
+        for prev in intersections:
+            if np.linalg.norm(prev - pt) <= 1.0e-9:
+                return
+        intersections.append(pt)
+
+    for idx in range(4):
+        if abs(distances[idx]) <= tol:
+            _append_unique(tet_pts[idx])
+
+    for i, j in edge_pairs:
+        di = distances[i]
+        dj = distances[j]
+        if di * dj < -tol * tol:
+            t = float(di / (di - dj))
+            _append_unique(tet_pts[i] + t * (tet_pts[j] - tet_pts[i]))
+        elif abs(di) <= tol and abs(dj) > tol:
+            _append_unique(tet_pts[i])
+        elif abs(dj) <= tol and abs(di) > tol:
+            _append_unique(tet_pts[j])
+
+    if len(intersections) < 3:
+        return None
+
+    proj0, proj1 = _slice_axis_metadata(int(axis))["proj"]
+    projected = np.asarray([[pt[int(proj0)], pt[int(proj1)]] for pt in intersections], dtype=np.float64)
+    centroid = np.mean(projected, axis=0)
+    angles = np.arctan2(projected[:, 1] - centroid[1], projected[:, 0] - centroid[0])
+    return projected[np.argsort(angles)]
+
+
+def _slice_footprint_mask(
+    points: np.ndarray,
+    tetrahedra: np.ndarray,
+    *,
+    axis: int,
+    center: float,
+    extent: tuple[float, float, float, float],
+    shape: tuple[int, int],
+) -> np.ndarray:
+    xmin, xmax, ymin, ymax = (float(v) for v in extent)
+    ny, nx = (int(shape[0]), int(shape[1]))
+    image = Image.new("L", (nx, ny), 0)
+    draw = ImageDraw.Draw(image)
+    scale_x = (nx - 1) / max(xmax - xmin, 1.0e-12)
+    scale_y = (ny - 1) / max(ymax - ymin, 1.0e-12)
+    for tet in np.asarray(tetrahedra, dtype=np.int64):
+        polygon = _tetra_plane_polygon_projected(points, tet, axis=int(axis), center=float(center))
+        if polygon is None:
+            continue
+        pixels = [((px - xmin) * scale_x, (py - ymin) * scale_y) for px, py in polygon]
+        if len(pixels) >= 3:
+            draw.polygon(pixels, fill=1, outline=1)
+    return np.asarray(image, dtype=bool)
+
+
+def _interpolate_planar_slice(
+    points: np.ndarray,
+    values: np.ndarray,
+    *,
+    axis: int,
+    center: float,
+    half_thickness: float,
+    footprint_points: np.ndarray,
+    footprint_tetrahedra: np.ndarray,
+    resolution: int = 900,
+    smooth_sigma: float = 1.0,
+) -> dict[str, object]:
+    pts = np.asarray(points, dtype=np.float64)
+    vals = np.asarray(values, dtype=np.float64).reshape(-1)
+    meta = _slice_axis_metadata(int(axis))
+    proj0, proj1 = (int(v) for v in meta["proj"])
+    mask = np.abs(pts[:, int(axis)] - float(center)) <= float(half_thickness)
+    pts_sel = np.asarray(pts[mask][:, [proj0, proj1]], dtype=np.float64)
+    vals_sel = np.asarray(vals[mask], dtype=np.float64)
+    if pts_sel.shape[0] < 3:
+        raise RuntimeError(f"Not enough slice samples for axis {axis}")
+
+    xmin = float(np.min(pts[:, proj0]))
+    xmax = float(np.max(pts[:, proj0]))
+    ymin = float(np.min(pts[:, proj1]))
+    ymax = float(np.max(pts[:, proj1]))
+    width = max(xmax - xmin, 1.0e-12)
+    height = max(ymax - ymin, 1.0e-12)
+    nx = int(resolution)
+    ny = max(int(round(nx * height / width)), 240)
+    xs = np.linspace(xmin, xmax, nx)
+    ys = np.linspace(ymin, ymax, ny)
+    grid_x, grid_y = np.meshgrid(xs, ys, indexing="xy")
+    image = griddata(pts_sel, vals_sel, (grid_x, grid_y), method="linear")
+    if np.any(~np.isfinite(image)):
+        nearest = griddata(pts_sel, vals_sel, (grid_x, grid_y), method="nearest")
+        image = np.where(np.isfinite(image), image, nearest)
+    mask_img = _slice_footprint_mask(
+        np.asarray(footprint_points, dtype=np.float64),
+        np.asarray(footprint_tetrahedra, dtype=np.int64),
+        axis=int(axis),
+        center=float(center),
+        extent=(xmin, xmax, ymin, ymax),
+        shape=(ny, nx),
+    )
+    image = np.where(mask_img, image, np.nan)
+    sigma = float(max(smooth_sigma, 0.0))
+    if sigma > 0.0:
+        valid = np.isfinite(image)
+        if np.any(valid):
+            filled = np.where(valid, image, 0.0)
+            weights = valid.astype(np.float64)
+            smooth_filled = gaussian_filter(filled, sigma=sigma, mode="nearest")
+            smooth_weights = gaussian_filter(weights, sigma=sigma, mode="nearest")
+            image_out = np.full_like(smooth_filled, np.nan, dtype=np.float64)
+            np.divide(smooth_filled, smooth_weights, out=image_out, where=smooth_weights > 1.0e-12)
+            image = np.where(mask_img, image_out, np.nan)
+    return {
+        "image": image,
+        "extent": (xmin, xmax, ymin, ymax),
+        "xlabel": str(meta["xlabel"]),
+        "ylabel": str(meta["ylabel"]),
+        "axis_name": str(meta["axis_name"]),
+    }
 
 
 def _surface_plot_arrays(
@@ -260,6 +435,7 @@ def _plot_surface_scalar_field(
     title: str,
     cbar_label: str,
     cmap_name: str,
+    upper_quantile: float | None = None,
 ) -> None:
     coords_plot, tri_plot, values = _surface_plot_arrays(
         coords_final,
@@ -269,8 +445,12 @@ def _plot_surface_scalar_field(
         subdivisions=subdivisions,
     )
     tri_vals = np.mean(values[np.asarray(tri_plot, dtype=np.int64)], axis=1)
-    vmin = float(np.min(tri_vals))
-    vmax = float(np.max(tri_vals))
+    if upper_quantile is not None:
+        vmax = float(np.quantile(tri_vals, float(upper_quantile)))
+        vmin = 0.0
+    else:
+        vmin = float(np.min(tri_vals))
+        vmax = float(np.max(tri_vals))
     if not np.isfinite(vmin) or not np.isfinite(vmax):
         raise ValueError("Surface scalar field contains non-finite values")
     if abs(vmax - vmin) < 1.0e-14:
@@ -290,9 +470,9 @@ def _plot_surface_scalar_field(
         edgecolors="none",
         alpha=1.0,
     )
+    poly.set_rasterized(True)
     ax.add_collection3d(poly)
-    _set_equal_3d_axes(ax, coords_plot)
-    ax.view_init(elev=22.0, azim=-56.0)
+    _apply_showcase_camera(ax, coords_plot)
     ax.set_axis_off()
     ax.set_title(title, pad=8.0)
     sm = plt.cm.ScalarMappable(norm=norm, cmap=cmap_name)
@@ -302,35 +482,14 @@ def _plot_surface_scalar_field(
     _save_figure(fig, out_base)
 
 
-def _deviatoric_stress_norm_3d(stress6: np.ndarray) -> np.ndarray:
-    stress6 = np.asarray(stress6, dtype=np.float64)
-    out = np.empty(stress6.shape[0], dtype=np.float64)
-    mean = np.mean(stress6[:, :3], axis=1)
-    sxx = stress6[:, 0] - mean
-    syy = stress6[:, 1] - mean
-    szz = stress6[:, 2] - mean
-    sxy = stress6[:, 3]
-    syz = stress6[:, 4]
-    sxz = stress6[:, 5]
-    out[:] = np.sqrt(
-        np.maximum(
-            0.0,
-            sxx * sxx + syy * syy + szz * szz + 2.0 * (sxy * sxy + syz * syz + sxz * sxz),
-        )
-    )
-    return out
-
-
-def _compute_nodal_deviatoric_stress(
+def _compute_nodal_deviatoric_strain(
     *,
     coords_final: np.ndarray,
     displacement: np.ndarray,
     case,
     degree: int,
-    lambda_target: float,
     chunk_size: int = 256,
 ) -> np.ndarray:
-    c_bar_q, sin_phi_q = davis_b_reduction_qp(case.c0_q, case.phi_q, case.psi_q, lambda_target)
     degree = int(degree)
     xi = _quadrature_points_tetra(degree)
     hatp = np.asarray(evaluate_tetra_lagrange_basis(degree, xi)[0], dtype=np.float64)
@@ -359,19 +518,7 @@ def _compute_nodal_deviatoric_stress(
         g_yz = np.einsum("eqp,ep->eq", dphiz, uy) + np.einsum("eqp,ep->eq", dphiy, uz)
         g_xz = np.einsum("eqp,ep->eq", dphiz, ux) + np.einsum("eqp,ep->eq", dphix, uz)
         eps6 = np.stack((e_xx, e_yy, e_zz, g_xy, g_yz, g_xz), axis=-1).reshape((-1, 6))
-
-        stress6 = np.asarray(
-            vmapped_mc_stress_density_3d(
-                eps6,
-                np.asarray(c_bar_q[start:stop], dtype=np.float64).reshape(-1),
-                np.asarray(sin_phi_q[start:stop], dtype=np.float64).reshape(-1),
-                np.asarray(case.shear_q[start:stop], dtype=np.float64).reshape(-1),
-                np.asarray(case.bulk_q[start:stop], dtype=np.float64).reshape(-1),
-                np.asarray(case.lame_q[start:stop], dtype=np.float64).reshape(-1),
-            ),
-            dtype=np.float64,
-        )
-        dev = _deviatoric_stress_norm_3d(stress6).reshape((stop - start, -1))
+        dev = _deviatoric_strain_norm_3d(eps6).reshape((stop - start, -1))
         quad_weight = np.asarray(case.quad_weight[start:stop], dtype=np.float64)[:, :, None]
         local_weight = basis_weight * quad_weight
         local_value = np.einsum("eqp,eq->ep", local_weight, dev)
@@ -385,64 +532,20 @@ def _compute_nodal_deviatoric_stress(
     return nodal
 
 
-def _compute_slice_datasets(
+def _compute_qcoords_and_deviatoric_strain(
     *,
     coords_final: np.ndarray,
     displacement: np.ndarray,
     case,
     degree: int,
-    lambda_target: float,
     chunk_size: int = 256,
-) -> list[dict[str, object]]:
-    c_bar_q, sin_phi_q = davis_b_reduction_qp(case.c0_q, case.phi_q, case.psi_q, lambda_target)
+) -> tuple[np.ndarray, np.ndarray]:
     degree = int(degree)
     xi = _quadrature_points_tetra(degree)
-    hatp = evaluate_tetra_lagrange_basis(degree, xi)[0]
-
-    bounds_min = np.min(coords_final, axis=0)
-    bounds_max = np.max(coords_final, axis=0)
-    centers = 0.5 * (bounds_min + bounds_max)
-    thickness = 0.04 * np.maximum(bounds_max - bounds_min, 1.0)
-    datasets = [
-        {
-            "axis": 0,
-            "center": float(centers[0]),
-            "thickness": float(thickness[0]),
-            "label": f"x ~= {centers[0]:.2f}",
-            "xlabel": "y",
-            "ylabel": "z",
-            "project": (1, 2),
-            "x": [],
-            "y": [],
-            "v": [],
-        },
-        {
-            "axis": 1,
-            "center": float(centers[1]),
-            "thickness": float(thickness[1]),
-            "label": f"y ~= {centers[1]:.2f}",
-            "xlabel": "x",
-            "ylabel": "z",
-            "project": (0, 2),
-            "x": [],
-            "y": [],
-            "v": [],
-        },
-        {
-            "axis": 2,
-            "center": float(centers[2]),
-            "thickness": float(thickness[2]),
-            "label": f"z ~= {centers[2]:.2f}",
-            "xlabel": "x",
-            "ylabel": "y",
-            "project": (0, 1),
-            "x": [],
-            "y": [],
-            "v": [],
-        },
-    ]
-
+    hatp = np.asarray(evaluate_tetra_lagrange_basis(degree, xi)[0], dtype=np.float64)
     elems = np.asarray(case.elems_scalar, dtype=np.int64)
+    qcoords_blocks: list[np.ndarray] = []
+    qdev_blocks: list[np.ndarray] = []
     for start in range(0, elems.shape[0], chunk_size):
         stop = min(start + chunk_size, elems.shape[0])
         elem_nodes = elems[start:stop]
@@ -462,43 +565,56 @@ def _compute_slice_datasets(
         g_yz = np.einsum("eqp,ep->eq", dphiz, uy) + np.einsum("eqp,ep->eq", dphiy, uz)
         g_xz = np.einsum("eqp,ep->eq", dphiz, ux) + np.einsum("eqp,ep->eq", dphix, uz)
         eps6 = np.stack((e_xx, e_yy, e_zz, g_xy, g_yz, g_xz), axis=-1).reshape((-1, 6))
-
-        stress6 = np.asarray(
-            vmapped_mc_stress_density_3d(
-                eps6,
-                np.asarray(c_bar_q[start:stop], dtype=np.float64).reshape(-1),
-                np.asarray(sin_phi_q[start:stop], dtype=np.float64).reshape(-1),
-                np.asarray(case.shear_q[start:stop], dtype=np.float64).reshape(-1),
-                np.asarray(case.bulk_q[start:stop], dtype=np.float64).reshape(-1),
-                np.asarray(case.lame_q[start:stop], dtype=np.float64).reshape(-1),
-            ),
-            dtype=np.float64,
-        )
-        dev = _deviatoric_stress_norm_3d(stress6)
         qcoords = np.einsum("pq,epd->eqd", hatp, x_def).reshape((-1, 3))
+        qcoords_blocks.append(np.asarray(qcoords, dtype=np.float64))
+        qdev_blocks.append(np.asarray(_deviatoric_strain_norm_3d(eps6), dtype=np.float64))
+    return np.vstack(qcoords_blocks), np.concatenate(qdev_blocks)
 
-        for data in datasets:
-            axis = int(data["axis"])
-            center = float(data["center"])
-            half = 0.5 * float(data["thickness"])
-            mask = np.abs(qcoords[:, axis] - center) <= half
-            if not np.any(mask):
-                continue
-            p0, p1 = data["project"]
-            data["x"].append(np.asarray(qcoords[mask, p0], dtype=np.float64))
-            data["y"].append(np.asarray(qcoords[mask, p1], dtype=np.float64))
-            data["v"].append(np.asarray(dev[mask], dtype=np.float64))
 
+def _compute_slice_datasets(
+    *,
+    coords_final: np.ndarray,
+    qcoords: np.ndarray,
+    qdev: np.ndarray,
+    case,
+) -> list[dict[str, object]]:
+    bounds_min = np.min(qcoords, axis=0)
+    bounds_max = np.max(qcoords, axis=0)
+    centers = 0.5 * (bounds_min + bounds_max)
+    spans = np.maximum(bounds_max - bounds_min, 1.0e-12)
+    y_center_up = bounds_min[1] + 0.62 * spans[1]
+    slices = [
+        {
+            "axis": 0,
+            "center": float(centers[0]),
+            "half_thickness": float(0.025 * spans[0]),
+        },
+        {
+            "axis": 1,
+            "center": float(y_center_up),
+            "half_thickness": float(0.02 * spans[1]),
+        },
+        {
+            "axis": 2,
+            "center": float(centers[2]),
+            "half_thickness": float(0.025 * spans[2]),
+        },
+    ]
     out: list[dict[str, object]] = []
-    for data in datasets:
-        out.append(
-            {
-                **{k: v for k, v in data.items() if k not in {"x", "y", "v"}},
-                "x": np.concatenate(data["x"]) if data["x"] else np.empty(0, dtype=np.float64),
-                "y": np.concatenate(data["y"]) if data["y"] else np.empty(0, dtype=np.float64),
-                "v": np.concatenate(data["v"]) if data["v"] else np.empty(0, dtype=np.float64),
-            }
+    for item in slices:
+        axis = int(item["axis"])
+        slice_image = _interpolate_planar_slice(
+            qcoords,
+            qdev,
+            axis=axis,
+            center=float(item["center"]),
+            half_thickness=float(item["half_thickness"]),
+            footprint_points=np.asarray(coords_final, dtype=np.float64),
+            footprint_tetrahedra=np.asarray(case.elems_scalar, dtype=np.int64),
+            resolution=900,
+            smooth_sigma=1.0,
         )
+        out.append(slice_image)
     return out
 
 
@@ -508,34 +624,52 @@ def _plot_deviatoric_slices(
     *,
     title: str,
 ) -> None:
-    nonempty = [item for item in slice_data if int(item["v"].size) > 0]
+    finite_arrays = []
+    for item in slice_data:
+        image = np.asarray(item["image"], dtype=np.float64)
+        finite = np.isfinite(image)
+        if np.any(finite):
+            finite_arrays.append(image[finite])
     vmax = 1.0
-    if nonempty:
-        vmax = float(np.quantile(np.concatenate([item["v"] for item in nonempty]), 0.995))
+    if finite_arrays:
+        vmax = float(np.quantile(np.concatenate(finite_arrays), 0.995))
         vmax = max(vmax, 1.0e-12)
-    fig, axes = plt.subplots(1, 3, figsize=(14.5, 4.6), dpi=180)
+    fig = plt.figure(figsize=(14.2, 4.9), dpi=180)
+    gs = fig.add_gridspec(
+        1,
+        4,
+        width_ratios=[1.0, 1.0, 1.0, 0.06],
+        left=0.05,
+        right=0.98,
+        bottom=0.13,
+        top=0.84,
+        wspace=0.30,
+    )
+    axes = [fig.add_subplot(gs[0, idx]) for idx in range(3)]
+    cax = fig.add_subplot(gs[0, 3])
     cmap = "magma"
-    sc = None
-    for ax, item in zip(axes, slice_data, strict=False):
-        x = np.asarray(item["x"], dtype=np.float64)
-        y = np.asarray(item["y"], dtype=np.float64)
-        v = np.asarray(item["v"], dtype=np.float64)
-        if v.size == 0:
-            ax.text(0.5, 0.5, "No points in slice", ha="center", va="center", transform=ax.transAxes)
-            ax.set_title(str(item["label"]))
-            ax.set_xlabel(str(item["xlabel"]))
-            ax.set_ylabel(str(item["ylabel"]))
-            continue
-        sc = ax.scatter(x, y, c=v, s=3.0, cmap=cmap, vmin=0.0, vmax=vmax, linewidths=0.0)
-        ax.set_aspect("equal")
-        ax.set_title(str(item["label"]))
+    mappable = None
+    axis_titles = ("central x-slice", "upper y-slice", "central z-slice")
+    for ax, item, axis_title in zip(axes, slice_data, axis_titles, strict=False):
+        image = np.asarray(item["image"], dtype=np.float64)
+        mappable = ax.imshow(
+            image,
+            origin="lower",
+            extent=tuple(item["extent"]),
+            cmap=cmap,
+            vmin=0.0,
+            vmax=vmax,
+            interpolation="bilinear",
+            aspect="equal",
+        )
+        mappable.set_rasterized(True)
+        ax.set_title(axis_title)
         ax.set_xlabel(str(item["xlabel"]))
         ax.set_ylabel(str(item["ylabel"]))
-    if sc is not None:
-        cbar = fig.colorbar(sc, ax=axes, fraction=0.025, pad=0.02)
-        cbar.set_label(r"$||s_{\mathrm{dev}}||$ (99.5% clip)")
-    fig.suptitle(title, y=0.98)
-    fig.tight_layout()
+    if mappable is not None:
+        cbar = fig.colorbar(mappable, cax=cax)
+        cbar.set_label("deviatoric strain (99.5% clip)")
+    fig.suptitle(title, y=0.94)
     _save_figure(fig, out_base)
 
 
@@ -607,13 +741,20 @@ def main() -> None:
     parser.add_argument("--out-dir", type=Path, default=DEFAULT_OUT_DIR)
     parser.add_argument("--mesh-name", type=str, default=DEFAULT_MESH_NAME)
     parser.add_argument("--degree", type=int, default=DEFAULT_DEGREE)
+    parser.add_argument("--constraint-variant", type=str, default=DEFAULT_CONSTRAINT_VARIANT)
     parser.add_argument("--surface-subdivisions", type=int, default=4)
     parser.add_argument("--chunk-size", type=int, default=256)
     args = parser.parse_args()
 
     state = np.load(args.state)
     result_payload = json.loads(args.result.read_text(encoding="utf-8"))
-    case = load_case_hdf5(same_mesh_case_hdf5_path(str(args.mesh_name), int(args.degree)))
+    case = load_case_hdf5(
+        same_mesh_case_hdf5_path(
+            str(args.mesh_name),
+            int(args.degree),
+            str(args.constraint_variant),
+        )
+    )
 
     coords_ref = np.asarray(state["coords_ref"], dtype=np.float64)
     coords_final = np.asarray(state["coords_final"], dtype=np.float64)
@@ -622,21 +763,27 @@ def main() -> None:
     nodal_disp_mag = np.linalg.norm(displacement, axis=1)
     lambda_target = float(result_payload.get("lambda_target", float(state["lambda_target"])))
     label = f"P{int(args.degree)}({str(args.mesh_name).replace('hetero_ssr_', '')})"
-    slug = f"plasticity3d_{str(args.mesh_name).lower()}_p{int(args.degree)}"
-    nodal_dev = _compute_nodal_deviatoric_stress(
+    slug = _slug_for_case(str(args.mesh_name), int(args.degree))
+    nodal_dev = _compute_nodal_deviatoric_strain(
         coords_final=coords_final,
         displacement=displacement,
         case=case,
         degree=int(args.degree),
-        lambda_target=float(lambda_target),
+        chunk_size=int(args.chunk_size),
+    )
+    qcoords, qdev = _compute_qcoords_and_deviatoric_strain(
+        coords_final=coords_final,
+        displacement=displacement,
+        case=case,
+        degree=int(args.degree),
         chunk_size=int(args.chunk_size),
     )
 
     args.out_dir.mkdir(parents=True, exist_ok=True)
     conv_base = args.out_dir / f"{slug}_convergence"
     disp_base = args.out_dir / f"{slug}_displacement"
-    dev_base = args.out_dir / f"{slug}_deviatoric_stress"
-    slice_base = args.out_dir / f"{slug}_deviatoric_stress_slices"
+    dev_base = args.out_dir / f"{slug}_deviatoric_strain"
+    slice_base = args.out_dir / f"{slug}_deviatoric_strain_slices"
 
     _plot_convergence(
         result_payload,
@@ -661,22 +808,21 @@ def main() -> None:
         dev_base,
         degree=int(args.degree),
         subdivisions=int(args.surface_subdivisions),
-        title=f"{label} surface-projected deviatoric-stress magnitude",
-        cbar_label=r"$||s_{\mathrm{dev}}||$",
+        title=f"{label} surface-projected deviatoric-strain magnitude",
+        cbar_label="deviatoric strain",
         cmap_name="magma",
+        upper_quantile=0.995,
     )
     slice_data = _compute_slice_datasets(
         coords_final=coords_final,
-        displacement=displacement,
+        qcoords=qcoords,
+        qdev=qdev,
         case=case,
-        degree=int(args.degree),
-        lambda_target=float(lambda_target),
-        chunk_size=int(args.chunk_size),
     )
     _plot_deviatoric_slices(
         slice_data,
         slice_base,
-        title=f"{label} deviatoric-stress slab slices on the deformed configuration",
+        title=f"{label} deviatoric-strain slab slices on the deformed configuration",
     )
 
     summary = {
@@ -693,7 +839,7 @@ def main() -> None:
         "solve_time": float(result_payload.get("solve_time", float("nan"))),
         "convergence_png": str(conv_base.with_suffix(".png")),
         "displacement_png": str(disp_base.with_suffix(".png")),
-        "deviatoric_stress_png": str(dev_base.with_suffix(".png")),
+        "deviatoric_strain_png": str(dev_base.with_suffix(".png")),
         "slice_png": str(slice_base.with_suffix(".png")),
     }
     (args.out_dir / f"{slug}_assets_summary.json").write_text(
