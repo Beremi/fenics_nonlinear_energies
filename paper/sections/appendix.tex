@@ -1,6 +1,6 @@
 \label{sec:solver-evidence}
 
-This section collects supporting solver evidence that is scientifically useful
+This section collects supporting solver evidence that is methodologically useful
 but too implementation-specific for the main benchmark narratives.
 
 \subsection{Plasticity3D source and sourcefixed comparisons}
@@ -32,9 +32,10 @@ source-assembly comparator and a sourcefixed-like PMG variant.
 These tables support two narrower statements. First, source assembly remains
 faster than maintained local assembly when both are embedded in the same PMG
 solver stack, although the gap narrows at higher rank counts. Second, the
-sourcefixed-like PMG profile is not the right default for this problem family:
-it may appear competitive on some rows, but it does more nonlinear and Krylov
-work and is less robust.
+sourcefixed-like PMG profile is not the preferred maintained default in the
+present study: it may appear favorable on some rows, but it does more
+nonlinear and Krylov work and converges less consistently across the reported
+runs.
 
 \subsection{Source continuation evidence}
 

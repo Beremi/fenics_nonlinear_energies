@@ -1,0 +1,325 @@
+{
+  "entries": {
+    "logg2012fenicsbook": {
+      "canonical_source_label": "Springer book page",
+      "canonical_source_url": "https://link.springer.com/book/10.1007/978-3-642-23099-8",
+      "doi": "10.1007/978-3-642-23099-8",
+      "fulltext_label": "FEniCS ebook PDF",
+      "fulltext_url": "http://launchpad.net/fenics-book/trunk/final/+download/fenics-book-2011-10-27-final.pdf",
+      "isbns": [
+        "978-3-642-23098-1",
+        "978-3-642-23099-8"
+      ],
+      "local_filename": "logg2012fenicsbook.pdf",
+      "notes": ""
+    },
+    "farrell2013dolfinadjoint": {
+      "canonical_source_label": "SIAM article",
+      "canonical_source_url": "https://doi.org/10.1137/120873558",
+      "doi": "10.1137/120873558",
+      "fulltext_label": "arXiv PDF",
+      "fulltext_url": "https://arxiv.org/pdf/1204.5577.pdf",
+      "isbns": [],
+      "local_filename": "farrell2013dolfinadjoint.pdf",
+      "notes": ""
+    },
+    "mitusch2019pyadjoint": {
+      "canonical_source_label": "JOSS article",
+      "canonical_source_url": "https://joss.theoj.org/papers/10.21105/joss.01292",
+      "doi": "10.21105/joss.01292",
+      "fulltext_label": "JOSS PDF",
+      "fulltext_url": "https://joss.theoj.org/papers/10.21105/joss.01292.pdf",
+      "isbns": [],
+      "local_filename": "mitusch2019pyadjoint.pdf",
+      "notes": ""
+    },
+    "baydin2018autodiff": {
+      "canonical_source_label": "JMLR article",
+      "canonical_source_url": "https://www.jmlr.org/papers/v18/17-468.html",
+      "doi": null,
+      "fulltext_label": "JMLR PDF",
+      "fulltext_url": "https://www.jmlr.org/papers/volume18/17-468/17-468.pdf",
+      "isbns": [],
+      "local_filename": "baydin2018autodiff.pdf",
+      "notes": ""
+    },
+    "jax2018": {
+      "canonical_source_label": "Google Research page",
+      "canonical_source_url": "https://research.google/pubs/compiling-machine-learning-programs-via-high-level-tracing/",
+      "doi": null,
+      "fulltext_label": "MLSys PDF",
+      "fulltext_url": "https://mlsys.org/Conferences/doc/2018/146.pdf",
+      "isbns": [],
+      "local_filename": "jax2018.pdf",
+      "notes": ""
+    },
+    "lindqvist2019plaplace": {
+      "canonical_source_label": "Springer book page",
+      "canonical_source_url": "https://link.springer.com/book/10.1007/978-3-030-14501-9",
+      "doi": "10.1007/978-3-030-14501-9",
+      "fulltext_label": null,
+      "fulltext_url": null,
+      "isbns": [
+        "978-3-030-14500-2",
+        "978-3-030-14501-9"
+      ],
+      "local_filename": "lindqvist2019plaplace.pdf",
+      "notes": "A local non-public copy is available in the cache."
+    },
+    "ginzburg1950theory": {
+      "canonical_source_label": "CERN record",
+      "canonical_source_url": "https://cds.cern.ch/record/486430",
+      "doi": null,
+      "fulltext_label": null,
+      "fulltext_url": null,
+      "isbns": [],
+      "local_filename": null,
+      "notes": "Canonical cited object is the original 1950 article; no public full text located."
+    },
+    "bonet2008nonlinear": {
+      "canonical_source_label": "Cambridge record",
+      "canonical_source_url": "https://doi.org/10.1017/CBO9780511755446",
+      "doi": "10.1017/CBO9780511755446",
+      "fulltext_label": null,
+      "fulltext_url": null,
+      "isbns": [
+        "978-0-521-83870-2",
+        "978-0-511-75544-6"
+      ],
+      "local_filename": "bonet2008nonlinear.pdf",
+      "notes": "A local non-public copy is available in the cache."
+    },
+    "xue2023jaxfem": {
+      "canonical_source_label": "HKUST record",
+      "canonical_source_url": "https://researchportal.hkust.edu.hk/en/publications/jax-fem-a-differentiable-gpu-accelerated-3d-finite-element-solver/",
+      "doi": "10.1016/j.cpc.2023.108802",
+      "fulltext_label": "arXiv PDF",
+      "fulltext_url": "https://arxiv.org/pdf/2212.00964.pdf",
+      "isbns": [],
+      "local_filename": "xue2023jaxfem.pdf",
+      "notes": ""
+    },
+    "balay1997petsc": {
+      "canonical_source_label": "Springer chapter",
+      "canonical_source_url": "https://link.springer.com/chapter/10.1007/978-1-4612-1986-6_8",
+      "doi": "10.1007/978-1-4612-1986-6_8",
+      "fulltext_label": null,
+      "fulltext_url": null,
+      "isbns": [
+        "978-0-8176-3974-7",
+        "978-1-4612-1986-6"
+      ],
+      "local_filename": "balay1997petsc.pdf",
+      "notes": "A local non-public copy is available in the cache."
+    },
+    "petsc2024web": {
+      "canonical_source_label": "PETSc website",
+      "canonical_source_url": "https://petsc.org/",
+      "doi": null,
+      "fulltext_label": "Open docs page",
+      "fulltext_url": "https://petsc.org/release/",
+      "isbns": [],
+      "local_filename": "petsc2024web.html",
+      "notes": "Year is fixed to 2024 from the archived PETSc 3.21 citation block."
+    },
+    "nocedal2006numerical": {
+      "canonical_source_label": "Springer book page",
+      "canonical_source_url": "https://link.springer.com/book/10.1007/978-0-387-40065-5",
+      "doi": "10.1007/978-0-387-40065-5",
+      "fulltext_label": null,
+      "fulltext_url": null,
+      "isbns": [
+        "978-0-387-30303-1",
+        "978-0-387-40065-5"
+      ],
+      "local_filename": "nocedal2006numerical.pdf",
+      "notes": "A local non-public copy is available in the cache."
+    },
+    "curtis1974sparsejacobian": {
+      "canonical_source_label": "Oxford article",
+      "canonical_source_url": "https://academic.oup.com/imamat/article-abstract/13/1/117/721987",
+      "doi": "10.1093/imamat/13.1.117",
+      "fulltext_label": null,
+      "fulltext_url": null,
+      "isbns": [],
+      "local_filename": "curtis1974sparsejacobian.pdf",
+      "notes": "A local non-public copy is available in the cache."
+    },
+    "coleman1983sparsejacobian": {
+      "canonical_source_label": "SIAM article DOI",
+      "canonical_source_url": "https://doi.org/10.1137/0720013",
+      "doi": "10.1137/0720013",
+      "fulltext_label": "ANL technical-report PDF",
+      "fulltext_url": "https://digital.library.unt.edu/ark:/67531/metadc283504/m2/1/high_res_d/metadc283504.pdf",
+      "isbns": [],
+      "local_filename": "coleman1983sparsejacobian.pdf",
+      "notes": ""
+    },
+    "coleman1984sparsehessian": {
+      "canonical_source_label": "Springer article",
+      "canonical_source_url": "https://link.springer.com/article/10.1007/BF02612334",
+      "doi": "10.1007/BF02612334",
+      "fulltext_label": "Springer PDF",
+      "fulltext_url": "https://link.springer.com/content/pdf/10.1007/BF02612334.pdf",
+      "isbns": [],
+      "local_filename": "coleman1984sparsehessian.pdf",
+      "notes": ""
+    },
+    "bendsoe2003topology": {
+      "canonical_source_label": "Springer book page",
+      "canonical_source_url": "https://link.springer.com/book/10.1007/978-3-662-05086-6",
+      "doi": "10.1007/978-3-662-05086-6",
+      "fulltext_label": null,
+      "fulltext_url": null,
+      "isbns": [
+        "978-3-540-42992-0",
+        "978-3-662-05086-6"
+      ],
+      "local_filename": "bendsoe2003topology.pdf",
+      "notes": "Normalized to the DOI-bearing Springer second-edition record; a local non-public copy is available in the cache."
+    },
+    "sigmund2001topology": {
+      "canonical_source_label": "DOI landing page",
+      "canonical_source_url": "https://doi.org/10.1007/s001580050176",
+      "doi": "10.1007/s001580050176",
+      "fulltext_label": "TopOpt PDF",
+      "fulltext_url": "https://www.topopt.mek.dtu.dk/-/media/subsites/topopt/apps/dokumenter-og-filer-til-apps/matlab-1-.pdf",
+      "isbns": [],
+      "local_filename": "sigmund2001topology.pdf",
+      "notes": ""
+    },
+    "ferrari2020top99": {
+      "canonical_source_label": "DTU Orbit record",
+      "canonical_source_url": "https://orbit.dtu.dk/en/publications/a-new-generation-99-line-matlab-code-for-compliance-topology-opti/",
+      "doi": "10.1007/s00158-020-02629-w",
+      "fulltext_label": "arXiv PDF",
+      "fulltext_url": "https://arxiv.org/pdf/2005.05436.pdf",
+      "isbns": [],
+      "local_filename": "ferrari2020top99.pdf",
+      "notes": ""
+    },
+    "bourdin2001filters": {
+      "canonical_source_label": "DOI landing page",
+      "canonical_source_url": "https://doi.org/10.1002/nme.116",
+      "doi": "10.1002/nme.116",
+      "fulltext_label": "Author-hosted PDF",
+      "fulltext_url": "https://ms.mcmaster.ca/~bourdinb/downloads/Bourdin-2001a.pdf",
+      "isbns": [],
+      "local_filename": "bourdin2001filters.pdf",
+      "notes": ""
+    },
+    "simo1985consistent": {
+      "canonical_source_label": "DOI landing page",
+      "canonical_source_url": "https://doi.org/10.1016/0045-7825(85)90070-2",
+      "doi": "10.1016/0045-7825(85)90070-2",
+      "fulltext_label": null,
+      "fulltext_url": null,
+      "isbns": [],
+      "local_filename": "simo1985consistent.pdf",
+      "notes": "A local non-public copy is available in the cache."
+    },
+    "simo1998compinel": {
+      "canonical_source_label": "Springer book page",
+      "canonical_source_url": "https://link.springer.com/book/10.1007/b98904",
+      "doi": "10.1007/b98904",
+      "fulltext_label": null,
+      "fulltext_url": null,
+      "isbns": [
+        "978-0-387-97520-7",
+        "978-0-387-22763-4"
+      ],
+      "local_filename": "simo1998compinel.pdf",
+      "notes": "A local non-public copy is available in the cache."
+    },
+    "tschuchnigg2015nonassociated": {
+      "canonical_source_label": "TU Graz record",
+      "canonical_source_url": "https://tugraz.elsevierpure.com/en/publications/slope-stability-analysis-by-means-of-finite-element-limit-analysi",
+      "doi": "10.1016/j.compgeo.2015.06.018",
+      "fulltext_label": null,
+      "fulltext_url": null,
+      "isbns": [],
+      "local_filename": "tschuchnigg2015nonassociated.pdf",
+      "notes": "A local non-public copy is available in the cache."
+    },
+    "baratta2025dolfinx": {
+      "canonical_source_label": "Zenodo preprint record",
+      "canonical_source_url": "https://zenodo.org/records/18101307",
+      "doi": "10.5281/zenodo.18101307",
+      "fulltext_label": "Zenodo PDF",
+      "fulltext_url": "https://zenodo.org/records/18101307/files/main.pdf",
+      "isbns": [],
+      "local_filename": "baratta2025dolfinx.pdf",
+      "notes": ""
+    },
+    "blauth2023cashocsv2": {
+      "canonical_source_label": "DOI landing page",
+      "canonical_source_url": "https://doi.org/10.1016/j.softx.2023.101577",
+      "doi": "10.1016/j.softx.2023.101577",
+      "fulltext_label": "arXiv PDF",
+      "fulltext_url": "https://arxiv.org/pdf/2306.09828.pdf",
+      "isbns": [],
+      "local_filename": "blauth2023cashocsv2.pdf",
+      "notes": ""
+    },
+    "bode2025autopdex": {
+      "canonical_source_label": "JOSS article",
+      "canonical_source_url": "https://joss.theoj.org/papers/10.21105/joss.07300",
+      "doi": "10.21105/joss.07300",
+      "fulltext_label": "JOSS PDF",
+      "fulltext_url": "https://joss.theoj.org/papers/10.21105/joss.07300.pdf",
+      "isbns": [],
+      "local_filename": "bode2025autopdex.pdf",
+      "notes": ""
+    },
+    "davis1968plasticity": {
+      "canonical_source_label": "TRID record",
+      "canonical_source_url": "https://trid.trb.org/View/124976",
+      "doi": null,
+      "fulltext_label": null,
+      "fulltext_url": null,
+      "isbns": [],
+      "local_filename": null,
+      "notes": "Chapter in Soil Mechanics: Selected Topics; no public full text located."
+    },
+    "hu2025jaxcpfem": {
+      "canonical_source_label": "Nature article",
+      "canonical_source_url": "https://www.nature.com/articles/s41524-025-01528-2",
+      "doi": "10.1038/s41524-025-01528-2",
+      "fulltext_label": "Open-access article",
+      "fulltext_url": "https://www.nature.com/articles/s41524-025-01528-2",
+      "isbns": [],
+      "local_filename": "hu2025jaxcpfem.html",
+      "notes": ""
+    },
+    "jia2024fenitop": {
+      "canonical_source_label": "Springer article",
+      "canonical_source_url": "https://link.springer.com/article/10.1007/s00158-024-03818-7",
+      "doi": "10.1007/s00158-024-03818-7",
+      "fulltext_label": "Open-access article",
+      "fulltext_url": "https://link.springer.com/article/10.1007/s00158-024-03818-7",
+      "isbns": [],
+      "local_filename": "jia2024fenitop.html",
+      "notes": ""
+    },
+    "latyshev2025externaloperators": {
+      "canonical_source_label": "JTCAM article",
+      "canonical_source_url": "https://jtcam.episciences.org/14449",
+      "doi": "10.46298/jtcam.14449",
+      "fulltext_label": "JTCAM PDF",
+      "fulltext_url": "https://jtcam.episciences.org/16616/pdf",
+      "isbns": [],
+      "local_filename": "latyshev2025externaloperators.pdf",
+      "notes": ""
+    },
+    "yashchuk2023bringing": {
+      "canonical_source_label": "arXiv abstract",
+      "canonical_source_url": "https://arxiv.org/abs/2309.07137",
+      "doi": null,
+      "fulltext_label": "arXiv PDF",
+      "fulltext_url": "https://arxiv.org/pdf/2309.07137.pdf",
+      "isbns": [],
+      "local_filename": "yashchuk2023bringing.pdf",
+      "notes": ""
+    }
+  }
+}

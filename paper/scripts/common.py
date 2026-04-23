@@ -14,11 +14,13 @@ BUILD_ROOT = PAPER_ROOT / "build"
 FIGURES_ROOT = PAPER_ROOT / "figures" / "generated"
 TABLES_ROOT = PAPER_ROOT / "tables" / "generated"
 SCRIPTS_ROOT = PAPER_ROOT / "scripts"
+LITERATURE_ROOT = PAPER_ROOT / "literature"
+FULLTEXT_ROOT = LITERATURE_ROOT / "fulltext"
 LAYOUT_JSON = BUILD_ROOT / "layout.json"
 
 
 def ensure_paper_dirs() -> None:
-    for path in (BUILD_ROOT, FIGURES_ROOT, TABLES_ROOT, SCRIPTS_ROOT):
+    for path in (BUILD_ROOT, FIGURES_ROOT, TABLES_ROOT, SCRIPTS_ROOT, LITERATURE_ROOT):
         path.mkdir(parents=True, exist_ok=True)
 
 

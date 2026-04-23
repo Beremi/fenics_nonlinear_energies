@@ -1,12 +1,14 @@
 @book{logg2012fenicsbook,
-  editor    = {Anders Logg and Kent-Andre Mardal and Garth Wells},
-  title     = {Automated Solution of Differential Equations by the Finite Element Method},
-  publisher = {Springer},
-  address   = {Berlin},
+  editor    = {Anders Logg and Kent-Andre Mardal and Garth N. Wells},
+  title     = {Automated Solution of Differential Equations by the Finite Element Method: The {FEniCS} Book},
+  publisher = {Springer Berlin Heidelberg},
+  address   = {Berlin, Heidelberg},
   year      = {2012},
   series    = {Lecture Notes in Computational Science and Engineering},
   volume    = {84},
-  doi       = {10.1007/978-3-642-23099-8}
+  isbn      = {978-3-642-23098-1, 978-3-642-23099-8},
+  doi       = {10.1007/978-3-642-23099-8},
+  url       = {https://link.springer.com/book/10.1007/978-3-642-23099-8}
 }
 
 @article{farrell2013dolfinadjoint,
@@ -17,18 +19,20 @@
   volume  = {35},
   number  = {4},
   pages   = {C369--C393},
-  doi     = {10.1137/120873558}
+  doi     = {10.1137/120873558},
+  url     = {https://doi.org/10.1137/120873558}
 }
 
 @article{mitusch2019pyadjoint,
-  author  = {Sebastian K. Mitusch and Simon W. Funke and Patrick E. Farrell},
-  title   = {pyadjoint: A Python package for algorithmic differentiation of variational forms},
+  author  = {Sebastian K. Mitusch and Simon W. Funke and J{\o}rgen S. Dokken},
+  title   = {dolfin-adjoint 2018.1: automated adjoints for {FEniCS} and Firedrake},
   journal = {Journal of Open Source Software},
   year    = {2019},
   volume  = {4},
   number  = {38},
   pages   = {1292},
-  doi     = {10.21105/joss.01292}
+  doi     = {10.21105/joss.01292},
+  url     = {https://joss.theoj.org/papers/10.21105/joss.01292}
 }
 
 @article{baydin2018autodiff,
@@ -42,23 +46,24 @@
   url     = {https://www.jmlr.org/papers/v18/17-468.html}
 }
 
-@misc{jax2018,
-  author       = {Roy Frostig and Matthew James Johnson and Chris Leary},
-  title        = {Compiling machine learning programs via high-level tracing},
-  year         = {2018},
-  howpublished = {SysML Workshop},
-  note         = {JAX reference implementation and design note},
-  url          = {https://github.com/google/jax}
+@inproceedings{jax2018,
+  author    = {Roy Frostig and Matthew James Johnson and Chris Leary},
+  title     = {Compiling machine learning programs via high-level tracing},
+  booktitle = {SysML},
+  year      = {2018},
+  url       = {https://research.google/pubs/compiling-machine-learning-programs-via-high-level-tracing/}
 }
 
 @book{lindqvist2019plaplace,
   author    = {Peter Lindqvist},
   title     = {Notes on the Stationary $p$-Laplace Equation},
-  publisher = {Springer},
+  publisher = {Springer International Publishing},
   address   = {Cham},
   year      = {2019},
   series    = {SpringerBriefs in Mathematics},
-  doi       = {10.1007/978-3-030-14501-9}
+  isbn      = {978-3-030-14500-2, 978-3-030-14501-9},
+  doi       = {10.1007/978-3-030-14501-9},
+  url       = {https://link.springer.com/book/10.1007/978-3-030-14501-9}
 }
 
 @article{ginzburg1950theory,
@@ -67,7 +72,9 @@
   journal = {Zhurnal Eksperimental'noi i Teoreticheskoi Fiziki},
   year    = {1950},
   volume  = {20},
-  pages   = {1064--1082}
+  number  = {12},
+  pages   = {1064--1082},
+  url     = {https://cds.cern.ch/record/486430}
 }
 
 @book{bonet2008nonlinear,
@@ -77,45 +84,55 @@
   address   = {Cambridge},
   edition   = {2},
   year      = {2008},
-  doi       = {10.1017/CBO9780511755446}
+  isbn      = {978-0-521-83870-2, 978-0-511-75544-6},
+  doi       = {10.1017/CBO9780511755446},
+  url       = {https://doi.org/10.1017/CBO9780511755446}
 }
 
 @article{xue2023jaxfem,
-  author  = {Tianju Xue and Jiachen Zhang and Yijiang Huang and Joseph K. Guest and Yongxing Wang},
-  title   = {{JAX-FEM}: A differentiable GPU-accelerated 3D finite element solver for inverse design and mechanistic data science},
-  journal = {Computer Methods in Applied Mechanics and Engineering},
+  author  = {Tianju Xue and Shuheng Liao and Zhengtao Gan and Chanwook Park and Xiaoyu Xie and Wing Kam Liu and Jian Cao},
+  title   = {{JAX-FEM}: A differentiable GPU-accelerated 3D finite element solver for automatic inverse design and mechanistic data science},
+  journal = {Computer Physics Communications},
   year    = {2023},
-  volume  = {418},
-  pages   = {116469},
-  doi     = {10.1016/j.cma.2023.116469}
+  volume  = {291},
+  pages   = {108802},
+  doi     = {10.1016/j.cpc.2023.108802},
+  url     = {https://researchportal.hkust.edu.hk/en/publications/jax-fem-a-differentiable-gpu-accelerated-3d-finite-element-solver/}
 }
 
 @incollection{balay1997petsc,
   author    = {Satish Balay and William D. Gropp and Lois Curfman McInnes and Barry F. Smith},
-  title     = {Efficient Management of Parallelism in Object Oriented Numerical Software Libraries},
-  booktitle = {Modern Software Tools in Scientific Computing},
-  publisher = {Birkh\"auser},
-  address   = {Boston},
+  title     = {Efficient Management of Parallelism in Object-Oriented Numerical Software Libraries},
+  booktitle = {Modern Software Tools for Scientific Computing},
+  editor    = {Erlend Arge and Are Magnus Bruaset and Hans Petter Langtangen},
+  publisher = {Birkh{\"a}user Boston},
+  address   = {Boston, MA},
   year      = {1997},
   pages     = {163--202},
-  doi       = {10.1007/978-1-4612-1986-6_8}
+  isbn      = {978-0-8176-3974-7, 978-1-4612-1986-6},
+  doi       = {10.1007/978-1-4612-1986-6_8},
+  url       = {https://link.springer.com/chapter/10.1007/978-1-4612-1986-6_8}
 }
 
 @misc{petsc2024web,
-  author       = {Satish Balay and Shrirang Abhyankar and Mark F. Adams and Jed Brown and Peter Brune and Kris Buschelman and others},
+  author       = {Satish Balay and Shrirang Abhyankar and Mark F. Adams and Steven Benson and Jed Brown and Peter Brune and Kris Buschelman and Emil M. Constantinescu and Lisandro Dalcin and Alp Dener and Victor Eijkhout and Jacob Faibussowitsch and William D. Gropp and V{\'a}clav Hapla and Tobin Isaac and Pierre Jolivet and Dmitry Karpeev and Dinesh Kaushik and Matthew G. Knepley and Fande Kong and Scott Kruger and Dave A. May and Lois Curfman McInnes and Richard Tran Mills and Lawrence Mitchell and Todd Munson and Jose E. Roman and Karl Rupp and Patrick Sanan and Jason Sarich and Barry F. Smith and Stefano Zampini and Hong Zhang and Junchao Zhang},
   title        = {{PETSc} Web page},
   year         = {2024},
-  howpublished = {Argonne National Laboratory},
+  howpublished = {\url{https://petsc.org/}},
   url          = {https://petsc.org/}
 }
 
 @book{nocedal2006numerical,
   author    = {Jorge Nocedal and Stephen J. Wright},
   title     = {Numerical Optimization},
-  publisher = {Springer},
+  publisher = {Springer New York},
+  address   = {New York, NY},
+  series    = {Springer Series in Operations Research and Financial Engineering},
   edition   = {2},
   year      = {2006},
-  doi       = {10.1007/978-0-387-40065-5}
+  isbn      = {978-0-387-30303-1, 978-0-387-40065-5},
+  doi       = {10.1007/978-0-387-40065-5},
+  url       = {https://link.springer.com/book/10.1007/978-0-387-40065-5}
 }
 
 @book{conn2000trust,
@@ -135,7 +152,8 @@
   volume  = {13},
   number  = {1},
   pages   = {117--119},
-  doi     = {10.1093/imamat/13.1.117}
+  doi     = {10.1093/imamat/13.1.117},
+  url     = {https://academic.oup.com/imamat/article-abstract/13/1/117/721987}
 }
 
 @article{coleman1983sparsejacobian,
@@ -146,7 +164,8 @@
   volume  = {20},
   number  = {1},
   pages   = {187--209},
-  doi     = {10.1137/0720013}
+  doi     = {10.1137/0720013},
+  url     = {https://doi.org/10.1137/0720013}
 }
 
 @article{coleman1984sparsehessian,
@@ -157,16 +176,20 @@
   volume  = {28},
   number  = {3},
   pages   = {243--270},
-  doi     = {10.1007/BF02612334}
+  doi     = {10.1007/BF02612334},
+  url     = {https://link.springer.com/article/10.1007/BF02612334}
 }
 
 @book{bendsoe2003topology,
   author    = {Martin Philip Bends{\o}e and Ole Sigmund},
   title     = {Topology Optimization: Theory, Methods, and Applications},
-  publisher = {Springer},
-  address   = {Berlin},
-  year      = {2003},
-  doi       = {10.1007/978-3-662-05086-6}
+  publisher = {Springer Berlin Heidelberg},
+  address   = {Berlin, Heidelberg},
+  edition   = {2},
+  year      = {2004},
+  isbn      = {978-3-540-42992-0, 978-3-662-05086-6},
+  doi       = {10.1007/978-3-662-05086-6},
+  url       = {https://link.springer.com/book/10.1007/978-3-662-05086-6}
 }
 
 @article{sigmund2001topology,
@@ -177,7 +200,8 @@
   volume  = {21},
   number  = {2},
   pages   = {120--127},
-  doi     = {10.1007/s001580050176}
+  doi     = {10.1007/s001580050176},
+  url     = {https://doi.org/10.1007/s001580050176}
 }
 
 @article{ferrari2020top99,
@@ -186,8 +210,10 @@
   journal = {Structural and Multidisciplinary Optimization},
   year    = {2020},
   volume  = {62},
+  number  = {4},
   pages   = {2211--2228},
-  doi     = {10.1007/s00158-020-02629-w}
+  doi     = {10.1007/s00158-020-02629-w},
+  url     = {https://orbit.dtu.dk/en/publications/a-new-generation-99-line-matlab-code-for-compliance-topology-opti/}
 }
 
 @article{bourdin2001filters,
@@ -198,7 +224,8 @@
   volume  = {50},
   number  = {9},
   pages   = {2143--2158},
-  doi     = {10.1002/nme.116}
+  doi     = {10.1002/nme.116},
+  url     = {https://doi.org/10.1002/nme.116}
 }
 
 @article{simo1985consistent,
@@ -209,26 +236,115 @@
   volume  = {48},
   number  = {1},
   pages   = {101--118},
-  doi     = {10.1016/0045-7825(85)90070-2}
+  doi     = {10.1016/0045-7825(85)90070-2},
+  url     = {https://doi.org/10.1016/0045-7825(85)90070-2}
 }
 
 @book{simo1998compinel,
   author    = {Juan C. Simo and Thomas J. R. Hughes},
   title     = {Computational Inelasticity},
-  publisher = {Springer},
+  publisher = {Springer-Verlag},
   address   = {New York},
   year      = {1998},
   series    = {Interdisciplinary Applied Mathematics},
   volume    = {7},
-  doi       = {10.1007/b98904}
+  isbn      = {978-0-387-97520-7, 978-0-387-22763-4},
+  doi       = {10.1007/b98904},
+  url       = {https://link.springer.com/book/10.1007/b98904}
 }
 
 @article{tschuchnigg2015nonassociated,
-  author  = {Franz Tschuchnigg and Helmut Schweiger and Scott W. Sloan and I. Lyamin and Ioannis Raissakis},
+  author  = {Franz Tschuchnigg and Helmut Schweiger and Scott W. Sloan},
   title   = {Slope stability analysis by means of finite element limit analysis and finite element strength reduction techniques. Part I: Numerical studies considering non-associated plasticity},
   journal = {Computers and Geotechnics},
   year    = {2015},
   volume  = {70},
   pages   = {169--177},
-  doi     = {10.1016/j.compgeo.2015.06.018}
+  doi     = {10.1016/j.compgeo.2015.06.018},
+  url     = {https://tugraz.elsevierpure.com/en/publications/slope-stability-analysis-by-means-of-finite-element-limit-analysi}
+}
+
+@article{latyshev2025externaloperators,
+  author    = {Andrey Latyshev and J{\'e}r{\'e}my Bleyer and Corrado Maurini and Jack Hale},
+  title     = {Expressing general constitutive models in {FEniCSx} using external operators and algorithmic automatic differentiation},
+  journal   = {Journal of Theoretical, Computational and Applied Mechanics},
+  year      = {2025},
+  doi       = {10.46298/jtcam.14449},
+  url       = {https://jtcam.episciences.org/14449}
+}
+
+@article{bode2025autopdex,
+  author    = {Tobias Bode},
+  title     = {{AutoPDEx}: An Automized Partial Differential Equation solver based on {JAX}},
+  journal   = {Journal of Open Source Software},
+  year      = {2025},
+  volume    = {10},
+  number    = {108},
+  pages     = {7300},
+  doi       = {10.21105/joss.07300},
+  url       = {https://joss.theoj.org/papers/10.21105/joss.07300}
+}
+
+@article{hu2025jaxcpfem,
+  author    = {Fanglei Hu and Stephen Niezgoda and Tianju Xue and Jian Cao},
+  title     = {Efficient {GPU}-computing simulation platform {JAX-CPFEM} for differentiable crystal plasticity finite element method},
+  journal   = {npj Computational Materials},
+  year      = {2025},
+  volume    = {11},
+  number    = {1},
+  pages     = {46},
+  doi       = {10.1038/s41524-025-01528-2},
+  url       = {https://www.nature.com/articles/s41524-025-01528-2}
+}
+
+@misc{baratta2025dolfinx,
+  author    = {Igor A. Baratta and Joseph P. Dean and J{\o}rgen S. Dokken and Michal Habera and Jack S. Hale and Chris N. Richardson and Marie E. Rognes and Matthew W. Scroggs and Nathan Sime and Garth N. Wells},
+  title     = {{DOLFINx}: The next generation {FEniCS} problem solving environment},
+  publisher = {Zenodo},
+  year      = {2025},
+  doi       = {10.5281/zenodo.18101307},
+  url       = {https://zenodo.org/records/18101307}
+}
+
+@article{jia2024fenitop,
+  author    = {Yingqi Jia and Chao Wang and Xiaojia Shelly Zhang},
+  title     = {{FEniTop}: a simple {FEniCSx} implementation for 2D and 3D topology optimization supporting parallel computing},
+  journal   = {Structural and Multidisciplinary Optimization},
+  year      = {2024},
+  volume    = {67},
+  number    = {8},
+  pages     = {140},
+  doi       = {10.1007/s00158-024-03818-7},
+  url       = {https://link.springer.com/article/10.1007/s00158-024-03818-7}
+}
+
+@article{yashchuk2023bringing,
+  author  = {Ivan Yashchuk},
+  title   = {Bringing {PDE}s to {JAX} with forward and reverse modes automatic differentiation},
+  journal = {arXiv preprint arXiv:2309.07137},
+  year    = {2023},
+  url     = {https://arxiv.org/abs/2309.07137}
+}
+
+@article{blauth2023cashocsv2,
+  author  = {Sebastian Blauth},
+  title   = {Version 2.0 -- cashocs: A Computational, Adjoint-Based Shape Optimization and Optimal Control Software},
+  journal = {SoftwareX},
+  year    = {2023},
+  volume  = {24},
+  pages   = {101577},
+  doi     = {10.1016/j.softx.2023.101577},
+  url     = {https://doi.org/10.1016/j.softx.2023.101577}
+}
+
+@incollection{davis1968plasticity,
+  author    = {E. H. Davis},
+  title     = {Theories of plasticity and the failure of soil masses},
+  booktitle = {Soil Mechanics: Selected Topics},
+  editor    = {I. K. Lee},
+  publisher = {Butterworths},
+  address   = {London},
+  year      = {1968},
+  pages     = {341--380},
+  url       = {https://trid.trb.org/View/124976}
 }

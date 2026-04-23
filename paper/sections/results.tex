@@ -3,17 +3,17 @@
 This section turns from problem definition to computational behaviour. The
 benchmark families in \Cref{sec:benchmarks} established the governing
 equations, discrete energies, and representative states. Here we focus on
-parallel timings, strong scaling, and the comparative cost of alternative
+parallel timings, scaling trends, and the comparative cost of alternative
 solver or discretisation choices.
 
-\subsection{$p$-Laplace}
+\subsection{\texorpdfstring{$p$-Laplace}{p-Laplace}}
 \label{sec:num-plaplace}
 
 The $p$-Laplace problem definition and discrete energy are given in
 \Cref{sec:bench-plaplace,eq:plaplace-discrete}. In this clean scalar setting,
 the numerical story is easiest to interpret: exact element Hessians remain
-competitive at distributed scale, while local-SFD stays scientifically aligned
-but pays a measurable time premium.
+effective in the reported distributed runs, while local-SFD reaches nearly
+identical discrete energies at higher wall time.
 
 \begin{figure}[H]
   \centering
@@ -30,7 +30,7 @@ The Ginzburg--Landau family from \Cref{sec:bench-gl,eq:gl-discrete} shows the
 same high-level derivative story under a more indefinite linearization. The
 important computational message is not a dramatic separation between exact and
 approximate second-order routes, but that the maintained distributed solver
-stays reliable on a nonconvex scalar energy with the same sparse-infrastructure
+remains convergent on this nonconvex scalar energy with the same sparse-infrastructure
 contract.
 
 \begin{figure}[H]
@@ -48,7 +48,8 @@ The hyperelasticity problem definition, boundary data, and terminal energies
 are given in \Cref{sec:bench-he,eq:hyperelasticity-discrete}. Computationally,
 this family stresses the globalization logic more than the derivative route:
 the key result is that the distributed implementation completes the full
-24-step path while preserving a credible terminal energy trend.
+24-step path while tracking the terminal energy trend reported in the benchmark
+summary.
 
 \begin{figure}[H]
   \centering
@@ -124,10 +125,9 @@ glued-bottom constraint, the first matched comparison is
 \code{P4(L1)} versus \code{P1(L1\_2\_3)} at \num{610964} free DOFs. The second
 matched comparison is \code{P1(L1\_2\_3\_4)}, \code{P2(L1\_2\_3)}, and
 \code{P4(L1\_2)} at \num{4801816} free DOFs. The scientific message is
-therefore not only that the maintained solver reaches closely clustered
-terminal energies along both $p$- and $h$-refined paths, but also that higher
-order on coarser meshes buys lower energy at matched DOFs only by paying a
-substantial time premium.
+therefore that the maintained solver reaches similar terminal energies along
+both $p$- and $h$-refined paths, while higher order on coarser meshes buys
+lower energy at matched DOFs only by paying a clear wall-time premium.
 
 \begin{figure}[H]
   \centering
@@ -155,10 +155,11 @@ strongest maintained distributed mechanics result. This scaling evidence uses
 the promoted \code{P4(L1\_2)} mesh family but a different load factor,
 $\lambda_{\mathrm{sr}} = 1.0$, so it complements rather than extends the
 glued-bottom $\lambda_{\mathrm{sr}} = 1.55$ benchmark figures above. Within
-that historical campaign, the exact same nonlinear work appears on 1/2/4/8/16/32
-ranks, while the end-to-end time drops from \SI{5423.858}{s} on one rank to
-\SI{300.435}{s} on 32 ranks. Additional source-vs-local and continuation
-evidence is reported later in \Cref{sec:solver-evidence}.
+that historical campaign, the reported nonlinear and linear iteration counts
+remain matched on 1/2/4/8/16/32 ranks, while the end-to-end time drops from
+\SI{5423.858}{s} on one rank to \SI{300.435}{s} on 32 ranks. Additional
+source-vs-local and continuation evidence is reported later in
+\Cref{sec:solver-evidence}.
 
 \subsection{Topology Optimization}
 \label{sec:num-topology}
@@ -168,14 +169,16 @@ defined in
 \Cref{sec:bench-topology,eq:topology-mechanics,eq:topology-reduced-objective}.
 The numerical question here is distributed outer-loop stability: the mechanics
 solve and the design update must remain synchronized under continuation in $p$
-and move-regularized updates.
+and move-regularized updates. Because the outer-loop work can vary with the
+continuation schedule, the timing evidence here should be read as end-to-end
+workflow scaling rather than fixed-work strong scaling.
 
 \begin{figure}[H]
   \centering
   \includegraphics[width=\PaperFigureMedium]{topology_scaling.pdf}
-  \caption{Topology strong scaling for the maintained parallel fine-grid run.
-  The plotted wall times correspond to the coupled reduced-design workflow
-  defined by \cref{eq:topology-reduced-objective}.}
+  \caption{Topology end-to-end parallel timing trend for the maintained
+  fine-grid run. The plotted wall times correspond to the coupled reduced-design
+  workflow defined by \cref{eq:topology-reduced-objective}.}
   \label{fig:topology-results}
 \end{figure}
 

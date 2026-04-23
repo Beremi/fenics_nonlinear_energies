@@ -6,7 +6,8 @@ is $V_h \subset V$, the state vector is $u_h \in V_h$, and the element-restricte
 state on element $e$ is $u_e$. When a family is posed as an energy or reduced
 objective minimisation, we write its discrete functional as
 $\mathcal{J}_h(u_h)$; when a family is posed as a sequence of equilibrium
-solves, we write the associated discrete total potential as $\Pi_h(u_h)$.
+solves or by a scalar equilibrium surrogate, we write the associated scalar
+functional as $\Pi_h(u_h)$.
 Hyperelasticity is the only family in which $J=\det F$ denotes the deformation
 Jacobian, so we avoid the bare symbol $J$ for generic objectives elsewhere in
 the paper.
@@ -25,8 +26,9 @@ or
   \label{eq:generic-potential}
 \end{equation}
 where $\Phi_e$ may represent a scalar diffusion energy, a phase-field
-potential, a finite-strain stored-energy density, a plasticity potential, or
-the reduced design objective used in topology optimisation. The benchmark
+potential, a finite-strain stored-energy density, a repository scalarized
+plasticity surrogate, or the reduced design objective used in topology
+optimisation. The benchmark
 sections specialise \cref{eq:generic-objective,eq:generic-potential} to each
 family and define any additional symbols locally.
 
@@ -49,7 +51,7 @@ Element AD is the most literal route and is often the cleanest mathematically.
 Constitutive AD preserves the same scalar-energy source of truth but changes
 the differentiation boundary from the full element vector to the local strain
 state. This is especially effective for high-order plasticity, where the full
-element Hessian is substantially more expensive than the $6\times6$
+element Hessian is often much more expensive than the $6\times6$
 constitutive tangent. Colored SFD is used when exact second-order information
 is too costly or unnecessary.
 
@@ -61,8 +63,10 @@ primarily use line-search Newton. Hyperelasticity uses a trust-region method
 with optional post-step line search. Some maintained experiments use a hybrid
 trust-region/line-search algorithm in which a reduced trust-region model
 provides the direction, while a bounded line search chooses the accepted step.
-This hybrid logic follows the implementation documented in the repo note on
-trust-region and line-search coupling.
+The line-search and trust-region ingredients follow standard globalization ideas
+\citep[Chs.~2--4]{nocedal2006numerical}; the particular hybrid coupling used in
+some repository experiments is an implementation-specific combination of those
+textbook ingredients.
 
 \begin{algorithm}[H]
 \caption{Hybrid trust-region / line-search Newton}
@@ -95,9 +99,9 @@ energy, gradient, and Hessian solves/matvecs
 \end{algorithm}
 
 For the maintained 3D plasticity path promoted in this paper, the chosen policy
-is simpler: Newton with Armijo line search and a PMG-preconditioned
-\code{fgmres} linear solve. This is the most stable and interpretable converged
-story currently available for the flagship benchmark reported later in
+is simpler: Newton with Armijo backtracking and a PMG-preconditioned
+\code{fgmres} linear solve \citep[Sec.~3.1]{nocedal2006numerical}. This is the
+maintained baseline workflow used for the flagship benchmark reported later in
 \Cref{sec:num-plasticity3d}.
 
 \begin{algorithm}[H]
@@ -151,8 +155,8 @@ one scalar Mohr--Coulomb energy density per quadrature point,
 \end{equation}
 differentiate it with respect to the six engineering-strain components, and
 assemble the element tangent from the resulting stress and constitutive tangent.
-This keeps the scalar-energy contract intact while reducing the cost of exact
-second-order information on high-order tetrahedra.
+This keeps the scalar-energy contract intact while reducing the cost of
+branchwise second-order information on high-order tetrahedra.
 
 \begin{algorithm}[H]
 \caption{Constitutive AD assembly for high-order plasticity}
@@ -170,7 +174,10 @@ second-order information on high-order tetrahedra.
 \end{algorithmic}
 \end{algorithm}
 
-The key methodological point is that this is still exact AD on a scalar
-potential. The code does not switch to a hand-derived constitutive tangent. It
-changes where automatic differentiation is applied so that high-order 3D
-plasticity remains computationally viable.
+The key methodological point is that automatic differentiation is applied
+directly to the implemented scalar branch potential. The code does not switch
+to a hand-derived constitutive tangent. Away from branch switching sets this
+yields branchwise exact derivatives of the implemented surrogate; at switching
+sets the model remains nonsmooth, so the resulting tangents should be read as
+branchwise surrogate derivatives rather than globally smooth continuum
+derivatives.

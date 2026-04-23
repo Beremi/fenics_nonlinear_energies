@@ -2,25 +2,26 @@ The results support three main conclusions.
 
 \paragraph{Exact second-order information is worthwhile, but not everywhere in
 the same way.}
-On scalar problems, exact element Hessians are often the cleanest and fastest
-choice. On \plasticitythree{}, exact constitutive tangents are the practical
-winner because they preserve the energy-based AD story while avoiding the cost
-of full element Hessians on high-order tetrahedra. On other problems, colored
-SFD remains scientifically useful because it gives a structured approximation
-without requiring a hand-derived tangent.
+In the scalar benchmark families reported here, exact element Hessians were the
+cleanest and often fastest choice. On \plasticitythree{}, exact constitutive
+tangents were the practical winner because they preserve the energy-based AD
+story while avoiding the cost of full element Hessians on high-order
+tetrahedra. On other problems, colored SFD remains methodologically useful
+because it gives a structured approximation without requiring a hand-derived
+tangent.
 
 \paragraph{The best preconditioner is not always the one with the fewest Krylov
 iterations.}
 Several comparison studies in the repository illustrate this point, and the
 paper keeps the conclusion explicit. Some PMG profiles reduce iteration counts
 while still losing on wall-clock time because each apply is much more
-expensive. The strongest example is the comparison between local PMG and
-sourcefixed-like PMG variants on \plasticitythree{}. This is exactly why the
+expensive. In the \plasticitythree{} comparisons reported here, lower Krylov
+counts did not always translate into lower wall-clock time. This is why the
 paper emphasizes both iteration counts and component timings.
 
 \paragraph{Reference implementations remain essential.}
 The \fenics{} and \purejax{} paths are not just historical leftovers. They make
-the mainline \jaxpetsc{} story scientifically stronger by exposing where the
+the mainline \jaxpetsc{} story more interpretable by exposing where the
 maintained production stack is genuinely adding something new and where it is
 merely reproducing a smaller reference implementation at larger scale. The
 benchmark families also make clear that references are unevenly available:

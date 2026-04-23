@@ -20,19 +20,17 @@ switching conceptual frameworks.
   \centering
   \input{tables/generated/reference_availability.tex}
   \caption{Availability of \fenics{} and \purejax{} references. Reference
-  paths are used where the repository already provides credible implementations;
+  paths are used where the repository already provides documented implementations;
   absent cells are left absent rather than filled with speculative baselines.}
   \label{tab:reference-availability}
 \end{table}
 
-\subsection{$p$-Laplace}
+\subsection{\texorpdfstring{$p$-Laplace}{p-Laplace}}
 \label{sec:bench-plaplace}
 
-The maintained $p$-Laplace benchmark follows the standard variational model for
-nonlinear diffusion \citep{lindqvist2019plaplace}. The unknown is a scalar
-field $u:\Omega \to \mathbb{R}$ on $\Omega = (0,1)^2$ with homogeneous
-Dirichlet data on $\partial\Omega$, exponent $p=3$, and forcing $f=-10$. Its
-continuous energy is
+The literature model is the standard stationary $p$-Laplace Dirichlet problem
+and its associated energy formulation \citep[Ch.~2]{lindqvist2019plaplace}. The
+unknown is a scalar field $u:\Omega \to \mathbb{R}$ and the continuous energy is
 \begin{equation}
   \mathcal{E}(u)
   = \int_{\Omega} \frac{1}{p} \lvert \nabla u \rvert^p \, dx
@@ -47,23 +45,25 @@ whose Euler--Lagrange equation is
   u = 0 \quad \text{on }\partial\Omega.
   \label{eq:plaplace-strong}
 \end{equation}
-The weak problem is: find $u \in V := H_0^1(\Omega)$ such that
+The weak problem is: find $u \in W_0^{1,p}(\Omega)$ such that
 \begin{equation}
   \int_{\Omega}
     \lvert \nabla u \rvert^{p-2} \nabla u \cdot \nabla v \, dx
   =
   \int_{\Omega} f v \, dx
-  \qquad \forall v \in V,
+  \qquad \forall v \in W_0^{1,p}(\Omega),
   \label{eq:plaplace-weak}
 \end{equation}
-and the discrete problem solved in the maintained code is
+The repository specialization used in this paper takes
+$\Omega = (0,1)^2$, exponent $p=3$, forcing $f=-10$, and a conforming $P_1$
+triangular hierarchy. The discrete problem is
 \begin{equation}
-  u_h \in V_h \subset H_0^1(\Omega):
+  u_h \in V_h \subset W_0^{1,p}(\Omega):
   \qquad
   u_h = \arg\min_{v_h \in V_h} \mathcal{E}_h(v_h),
   \label{eq:plaplace-discrete}
 \end{equation}
-with conforming $P_1$ triangles on the maintained mesh hierarchy. This is the
+where $V_h$ is the chosen conforming finite-element subspace. This is the
 cleanest benchmark in the paper for checking exact gradients, exact Hessians,
 and sparse-recovery alternatives against each other without constitutive or
 geometric complications.
@@ -101,10 +101,10 @@ maintained routes converge to the same discrete energy from
 \subsection{Ginzburg--Landau}
 \label{sec:bench-gl}
 
-The Ginzburg--Landau benchmark uses a scalar order parameter
-$u:\Omega \to \mathbb{R}$ on $\Omega = [-1,1]^2$ with homogeneous Dirichlet
-boundary conditions and the nonconvex double-well energy familiar from
-phase-transition models \citep{ginzburg1950theory}:
+We cite \citet{ginzburg1950theory} for the historical origin of
+Ginzburg--Landau free-energy modeling only. The maintained benchmark used here is a
+repository specialization: a scalar real-valued double-well problem on
+$\Omega = [-1,1]^2$ with homogeneous Dirichlet boundary conditions and energy
 \begin{equation}
   \mathcal{E}(u)
   =
@@ -132,12 +132,13 @@ and the weak problem is: find $u \in H_0^1(\Omega)$ such that
   \qquad \forall v \in H_0^1(\Omega).
   \label{eq:gl-weak}
 \end{equation}
-The maintained discrete problem is again a conforming $P_1$ stationarity or,
-equivalently, energy-minimisation problem on the same triangular hierarchy:
+The maintained discrete problem is a conforming $P_1$ stationary problem on the
+same triangular hierarchy:
 \begin{equation}
   u_h \in V_h:
   \qquad
-  u_h = \arg\min_{v_h \in V_h} \mathcal{E}_h(v_h).
+  D\mathcal{E}_h(u_h)[v_h] = 0
+  \qquad \forall v_h \in V_h.
   \label{eq:gl-discrete}
 \end{equation}
 Relative to $p$-Laplace, the additional difficulty here is not geometry but
@@ -154,7 +155,8 @@ indefinite local curvature from the double-well potential in
 \begin{figure}[H]
   \centering
   \includegraphics[width=\PaperFigureNarrow]{ginzburg_landau_energy_levels.pdf}
-  \caption{Final discrete energies from \cref{eq:gl-discrete} across mesh
+  \caption{Final discrete energies associated with the stationary problem
+  \cref{eq:gl-discrete} across mesh
   levels. The maintained element-AD and local-SFD routes remain nearly
   coincident with the \fenics{} reference.}
   \label{fig:gl-energy-levels}
@@ -163,7 +165,7 @@ indefinite local curvature from the double-well potential in
 \begin{table}[H]
   \centering
   \input{tables/generated/ginzburg_landau_benchmark_summary.tex}
-  \caption{Representative final discrete energies from
+  \caption{Representative final discrete energies associated with
   \cref{eq:gl-discrete} on the showcase case.}
   \label{tab:gl-benchmark}
 \end{table}
@@ -175,10 +177,12 @@ for this family are reported in \Cref{sec:num-gl}.
 \subsection{Hyperelasticity}
 \label{sec:bench-he}
 
-The hyperelasticity benchmark is a finite-strain cantilever problem with
-deformation map $y(X) = X + u(X)$, deformation gradient $F = \nabla y$, and
-Jacobian $J = \det F$. The stored energy is the compressible Neo-Hookean model
-used throughout the maintained code \citep{bonet2008nonlinear}:
+The literature model is a standard finite-strain hyperelastic equilibrium
+problem written in terms of deformation map $y(X) = X + u(X)$, deformation
+gradient $F = \nabla y$, Jacobian $J = \det F$, and first Piola stress
+$P = \partial W / \partial F$ \citep[Chs.~4--6]{bonet2008nonlinear}. The
+repository specialization used in this paper is a cantilever benchmark with the
+compressible Neo-Hookean-type density
 \begin{equation}
   \Pi(y;\eta)
   =
@@ -190,8 +194,8 @@ used throughout the maintained code \citep{bonet2008nonlinear}:
 on $\Omega = [0,0.4] \times [-0.005,0.005]^2$ with
 $C_1 = \num{3.8461538461538464e7}$ and
 $D_1 = \num{8.333333333333333e7}$. The left face is clamped, while the right
-face carries a prescribed rotating Dirichlet load parametrised by load step
-$\eta$. The strong form is
+face carries the prescribed rotating Dirichlet load path used throughout the
+repository, parametrized by load step $\eta$. The strong form is
 \begin{equation}
   -\nabla \cdot P(F) = 0 \quad \text{in }\Omega,
   \qquad
@@ -207,18 +211,19 @@ find $u \in V_{\bar y(\eta)}$ such that
   \qquad \forall v \in V_0.
   \label{eq:hyperelasticity-weak}
 \end{equation}
-The discrete problem solved in the paper is the sequence
+The discrete problem solved in the paper is the sequence of stationary points
 \begin{equation}
   u_h^{(k)} \in V_h:
   \qquad
-  u_h^{(k)} = \arg\min_{v_h \in V_h(\eta_k)} \Pi_h(v_h;\eta_k),
+  D\Pi_h(u_h^{(k)};\eta_k)[v_h] = 0
+  \qquad \forall v_h \in V_{h,0},
   \qquad
   k = 1,\dots,24,
   \label{eq:hyperelasticity-discrete}
 \end{equation}
-with first-order tetrahedral vector elements. This is the first family in
-which robust globalization is scientifically more important than derivative
-parity alone.
+with first-order tetrahedral vector elements and the benchmark-specific boundary
+data described above. This is the first family in which globalization is more
+scientifically important than derivative parity alone.
 
 \begin{figure}[H]
   \centering
@@ -231,16 +236,17 @@ parity alone.
 \begin{figure}[H]
   \centering
   \includegraphics[width=\PaperFigureNarrow]{hyperelasticity_energy_levels.pdf}
-  \caption{Final discrete energies from \cref{eq:hyperelasticity-discrete}
-  across the maintained mesh hierarchy. The publication story is less about
-  exact equality than about tracking the same 24-step trajectory robustly.}
+  \caption{Final discrete energies along the stationary sequence
+  \cref{eq:hyperelasticity-discrete} across the maintained mesh hierarchy. The
+  publication story is less about
+  exact equality than about tracking the same 24-step trajectory consistently.}
   \label{fig:hyperelasticity-energy-levels}
 \end{figure}
 
 \begin{table}[H]
   \centering
   \input{tables/generated/hyperelasticity_benchmark_summary.tex}
-  \caption{Representative 24-step terminal energies from
+  \caption{Representative 24-step terminal energies along
   \cref{eq:hyperelasticity-discrete}.}
   \label{tab:hyperelasticity-benchmark}
 \end{table}
@@ -253,13 +259,35 @@ deferred to \Cref{sec:num-hyperelasticity}.
 \subsection{Plasticity2D}
 \label{sec:bench-plasticity2d}
 
-The two-dimensional plasticity benchmark is a plane-strain Mohr--Coulomb slope
-stability problem written as a scalar element potential and differentiated by
-JAX. The unknown is the displacement field
+The literature model is a quasi-static plane-strain Mohr--Coulomb slope
+stability problem posed as equilibrium together with a constitutive update and
+history variables \citep{davis1968plasticity,simo1985consistent,simo1998compinel,tschuchnigg2015nonassociated}.
+The unknown is the displacement field
 $u = (u_x,u_y):\Omega \to \mathbb{R}^2$ on the maintained homogeneous slope
-geometry. With engineering-strain operator $B_{eq}$, stored plastic strain
-$\varepsilon^{p,\mathrm{old}}_{eq}$, friction angle $\phi$, and dilation angle
-$\psi$, the discrete total potential is
+geometry. At increment $n+1$, the continuum equilibrium equations are
+\begin{equation}
+  -\nabla \cdot \sigma^{n+1} = b^{n+1}
+  \quad \text{in }\Omega,
+  \qquad
+  u^{n+1} = \bar u^{n+1} \quad \text{on }\Gamma_D,
+  \qquad
+  \sigma^{n+1}n = t^{n+1} \quad \text{on }\Gamma_N,
+  \label{eq:plasticity2d-strong}
+\end{equation}
+where $\sigma^{n+1}$ and the internal variables are obtained from the
+elastoplastic update driven by $\varepsilon(u^{n+1})$ and the previous state.
+The corresponding weak form is
+\begin{equation}
+  \int_{\Omega} \sigma^{n+1} : \varepsilon(v) \, dx
+  =
+  \int_{\Omega} b^{n+1} \cdot v \, dx
+  + \int_{\Gamma_N} t^{n+1} \cdot v \, ds
+  \qquad \forall v \in V_0.
+  \label{eq:plasticity2d-weak}
+\end{equation}
+The maintained runs reported here are endpoint solves, not path-consistent
+incremental histories. Accordingly, the repository benchmark uses the following
+scalarized discrete surrogate functional for differentiation and comparison:
 \begin{equation}
   \Pi_h^{2\mathrm{D}}(u_h;\lambda_{\mathrm{sr}})
   =
@@ -275,26 +303,7 @@ $\psi$, the discrete total potential is
   \label{eq:plasticity2d-discrete}
 \end{equation}
 where $\lambda_{\mathrm{sr}}$ denotes the strength-reduction factor, distinct
-from the Lamé parameter used later in three dimensions. The static equilibrium
-equations remain
-\begin{equation}
-  -\nabla \cdot \sigma(u) = b
-  \quad \text{in }\Omega,
-  \qquad
-  u = \bar u \quad \text{on }\Gamma_D,
-  \qquad
-  \sigma(u)n = t \quad \text{on }\Gamma_N,
-  \label{eq:plasticity2d-strong}
-\end{equation}
-with weak form
-\begin{equation}
-  \int_{\Omega} \sigma(\varepsilon(u)) : \varepsilon(v) \, dx
-  =
-  \int_{\Omega} b \cdot v \, dx
-  + \int_{\Gamma_N} t \cdot v \, ds
-  \qquad \forall v \in V_0.
-  \label{eq:plasticity2d-weak}
-\end{equation}
+from the Lam{\'e} parameter used later in three dimensions.
 
 The maintained code keeps a Davis-B-style reduction path to map the raw
 cohesion and angles to reduced values under strength reduction; with
@@ -315,16 +324,16 @@ angle, respectively, the benchmark uses
   \label{eq:plasticity2d-davis}
 \end{align}
 with $\psi_{\lambda}$ defined analogously when the non-associated flow rule is
-activated \citep{simo1985consistent,simo1998compinel,tschuchnigg2015nonassociated}.
-The maintained endpoint runs in this paper use $\lambda_{\mathrm{sr}} = 1$ and
-$\psi = 0^\circ$, so the showcase states are exact endpoint solves rather than
-path-consistent history updates.
+activated \citep{davis1968plasticity,tschuchnigg2015nonassociated}. The
+showcase endpoint runs in this paper use $\lambda_{\mathrm{sr}} = 1$ and
+$\psi = 0^\circ$, so the reported states should be read as repository endpoint
+surrogates rather than path-consistent history updates.
 
 \begin{figure}[H]
   \centering
   \includegraphics[width=\PaperFigureMedium]{plasticity2d_state_pair.pdf}
   \caption{Representative Plasticity2D state: displacement magnitude and
-  deviatoric strain derived from the discrete potential
+  deviatoric strain derived from the scalar surrogate
   \cref{eq:plasticity2d-discrete}.}
   \label{fig:plasticity2d-state}
 \end{figure}
@@ -354,19 +363,41 @@ paper. Solver-engineering evidence for Plasticity2D is reported later in
 \subsection{Plasticity3D}
 \label{sec:bench-plasticity3d}
 
-The flagship three-dimensional family is a heterogeneous Mohr--Coulomb slope
-stability problem on the imported SSR mesh hierarchy with same-mesh tetrahedral
-$P1/P2/P4$ spaces. The unknown is a displacement field
+The literature model is again quasi-static Mohr--Coulomb equilibrium with
+constitutive/history updates, now on a three-dimensional heterogeneous slope
+geometry \citep{davis1968plasticity,simo1985consistent,simo1998compinel,tschuchnigg2015nonassociated}.
+The unknown is a displacement field
 $u = (u_x,u_y,u_z): \Omega \to \mathbb{R}^3$, gravity acts in the source
-$y$-direction, and materials vary by physical region and quadrature point.
-The maintained canonical boundary model keeps the source component-wise label
-logic and additionally glues every node with $|y| \le 10^{-12}$ in all three
-displacement components. The benchmark-local figures below use the corrected
-glued-bottom $\code{P4(L1\_2)}$ showcase at $\lambda_{\mathrm{sr}}=1.55$ and
-the finished nine-case maintained-local study at the same load factor. The
-promoted $\lambda_{\mathrm{sr}}=1.0$ strong-scaling campaign is kept later in
-the paper as separate historical timing evidence.
-The discrete total potential is
+$y$-direction. At increment $n+1$, the continuum equilibrium equations are
+\begin{equation}
+  -\nabla \cdot \sigma^{n+1} = \rho g_y^{n+1} e_y
+  \quad \text{in }\Omega,
+  \qquad
+  u_i^{n+1} = \bar u_i^{n+1} \quad \text{on }\Gamma_{D,i},
+  \qquad
+  \sigma^{n+1}n = 0 \quad \text{on }\Gamma_N,
+  \label{eq:plasticity3d-strong}
+\end{equation}
+where $\sigma^{n+1}$ and the internal variables are obtained from the
+elastoplastic update driven by $\varepsilon(u^{n+1})$ and the previous state.
+The corresponding weak form is
+\begin{equation}
+  \int_{\Omega} \sigma^{n+1} : \varepsilon(v) \, dx
+  =
+  \int_{\Omega} \rho g_y^{n+1} e_y \cdot v \, dx
+  \qquad \forall v \in V_0.
+  \label{eq:plasticity3d-weak}
+\end{equation}
+The repository specialization studied in this paper uses the imported SSR mesh
+hierarchy with same-mesh tetrahedral $P1/P2/P4$ spaces, source component-wise
+boundary labels, and an additional glued-bottom condition that fixes every node
+with $|y| \le 10^{-12}$ in all three displacement components. The benchmark-local
+figures below use the corrected glued-bottom $\code{P4(L1\_2)}$ showcase at
+$\lambda_{\mathrm{sr}}=1.55$ and the finished nine-case maintained-local study
+at the same load factor. The promoted $\lambda_{\mathrm{sr}}=1.0$ strong-scaling
+campaign is kept later in the paper as separate historical timing evidence.
+For those endpoint and continuation studies, the maintained code evaluates the
+following algorithmic scalar surrogate:
 \begin{equation}
   \Pi_h^{3\mathrm{D}}(u_h;\lambda_{\mathrm{sr}})
   =
@@ -386,25 +417,7 @@ The discrete total potential is
   \label{eq:plasticity3d-discrete}
 \end{equation}
 where $\lambda_{\mathrm{sr}}$ is again the strength-reduction factor and
-$\lambda_{\mathrm{L}}$ is the Lamé parameter of the elastic predictor. The
-strong and weak equilibrium equations are
-\begin{equation}
-  -\nabla \cdot \sigma(u) = \rho g_y e_y
-  \quad \text{in }\Omega,
-  \qquad
-  u_i = \bar u_i \quad \text{on }\Gamma_{D,i},
-  \qquad
-  \sigma(u)n = 0 \quad \text{on }\Gamma_N,
-  \label{eq:plasticity3d-strong}
-\end{equation}
-and
-\begin{equation}
-  \int_{\Omega} \sigma(\varepsilon(u)) : \varepsilon(v) \, dx
-  =
-  \int_{\Omega} \rho g_y e_y \cdot v \, dx
-  \qquad \forall v \in V_0.
-  \label{eq:plasticity3d-weak}
-\end{equation}
+$\lambda_{\mathrm{L}}$ is the Lam{\'e} parameter of the elastic predictor.
 
 The code uses the engineering-strain ordering
 \begin{equation}
@@ -445,12 +458,12 @@ with
   \label{eq:plasticity3d-davis-bar}
 \end{equation}
 which are the scalar constitutive parameters actually stored in the maintained
-3D assembly path \citep{simo1985consistent,simo1998compinel,tschuchnigg2015nonassociated}.
+3D assembly path \citep{davis1968plasticity,tschuchnigg2015nonassociated}.
 Here $\phi$ denotes friction angle and $\psi$ denotes dilation angle; the paper
 uses those symbols only in that geomechanics sense.
 
-The local constitutive law is source-faithful and exact-AD at the scalar
-potential level. Let $\varepsilon_1 \ge \varepsilon_2 \ge \varepsilon_3$ be the
+The local constitutive surrogate follows the piecewise branch structure used in
+the repository. Let $\varepsilon_1 \ge \varepsilon_2 \ge \varepsilon_3$ be the
 principal strains and let
 \begin{equation}
   I_1 = \varepsilon_{xx} + \varepsilon_{yy} + \varepsilon_{zz},
@@ -509,10 +522,13 @@ piecewise function
   \label{eq:plasticity3d-potential}
 \end{equation}
 where the branch energies $\Phi_{\mathrm{s}}$, $\Phi_{\mathrm{l}}$,
-$\Phi_{\mathrm{r}}$, and $\Phi_{\mathrm{a}}$ are the exact source-style
+$\Phi_{\mathrm{r}}$, and $\Phi_{\mathrm{a}}$ are the repository's branchwise
 quadratic corrections to \cref{eq:plasticity3d-elastic-branch}. The maintained
-constitutive-AD path differentiates \cref{eq:plasticity3d-potential} directly
-with JAX rather than substituting a hand-derived return-map tangent.
+constitutive-AD path differentiates the smooth branches of
+\cref{eq:plasticity3d-potential} directly with JAX rather than substituting a
+hand-derived return-map tangent; the branch interfaces remain nonsmooth and are
+treated as part of the algorithmic constitutive surrogate rather than as a
+globally smooth continuum potential.
 
 For the strain visualisations in this paper we use the deviatoric norm
 \begin{equation}
@@ -539,7 +555,7 @@ which matches the engineering-shear convention of
   \caption{Corrected glued-bottom Plasticity3D showcase at
   $\lambda_{\mathrm{sr}}=1.55$: displacement magnitude and surface deviatoric
   strain for the maintained-local \code{P4(L1\_2)} run, both derived from the
-  discrete potential in
+  scalar surrogate in
   \cref{eq:plasticity3d-discrete}.}
   \label{fig:plasticity3d-state}
 \end{figure}
@@ -549,10 +565,10 @@ which matches the engineering-shear convention of
   \includegraphics[width=\PaperFigureMedium]{plasticity3d_convergence.pdf}
   \caption{Newton-history convergence for all nine completed corrected
   glued-bottom maintained-local Plasticity3D study runs at
-  $\lambda_{\mathrm{sr}}=1.55$. The upper panel shows the discrete potential
-  from \cref{eq:plasticity3d-discrete}; the lower panel shows the gradient norm
-  used as the nonlinear stopping metric, with color indicating degree and line
-  style indicating mesh level.}
+  $\lambda_{\mathrm{sr}}=1.55$. The upper panel shows the value of the
+  algorithmic surrogate from \cref{eq:plasticity3d-discrete}; the lower panel
+  shows the gradient norm used as the nonlinear stopping metric, with color
+  indicating degree and line style indicating mesh level.}
   \label{fig:plasticity3d-convergence}
 \end{figure}
 
@@ -586,8 +602,13 @@ reported in \Cref{sec:num-plasticity3d}.
 \subsection{Topology Optimization}
 \label{sec:bench-topology}
 
-The topology benchmark is a reduced optimisation problem rather than a single
-equilibrium minimisation. The design variable is a latent nodal field
+The literature model is the standard SIMP-style compliance topology-optimization
+setting on a cantilever domain, together with filtering and continuation ideas
+from the classical topology literature
+\citep{bendsoe2003topology,sigmund2001topology,ferrari2020top99,bourdin2001filters}.
+In the repository specialization studied here, the topology benchmark is a
+reduced optimization problem rather than a single equilibrium minimization. The
+design variable is a latent nodal field
 $z_h \in Z_h$, mapped to a physical density through the logistic transform
 \begin{equation}
   \theta_h(z_h)
@@ -597,7 +618,8 @@ $z_h \in Z_h$, mapped to a physical density through the logistic transform
   \sigma(z) = \frac{1}{1+e^{-z}}.
   \label{eq:topology-density-map}
 \end{equation}
-For fixed density, the mechanics state is the linear elastic displacement
+For fixed density, the maintained discretization solves for the linear elastic
+displacement state
 $u_h(\theta_h)$ solving
 \begin{equation}
   a_{\theta_h}(u_h,v_h)
@@ -611,9 +633,8 @@ $u_h(\theta_h)$ solving
   \label{eq:topology-mechanics}
 \end{equation}
 on the cantilever domain $\Omega = (0,2)\times(0,1)$ with clamped left edge
-and prescribed traction on a right-edge patch
-\citep{bendsoe2003topology,sigmund2001topology,ferrari2020top99}. The reduced
-objective solved in the maintained code is
+and prescribed traction on a right-edge patch. The reduced objective solved in
+the maintained code is
 \begin{align}
   \mathcal{J}_h(z_h)
   &=
@@ -632,8 +653,12 @@ objective solved in the maintained code is
   \label{eq:topology-reduced-objective}
 \end{align}
 with $W(\theta) = \theta^2(1-\theta)^2$, SIMP-style continuation in $p$, and
-filter/regularisation terms in the spirit of \citet{bourdin2001filters}. The
-maintained outer loop alternates mechanics solves for
+repository regularization terms that play a mesh-control role analogous to
+filtering/regularization in \citet{bourdin2001filters}. Here
+$e_e^{\mathrm{frozen}}$ denotes the element elastic energy density from the
+previous mechanics state; the latent logistic map, frozen-energy term, and move
+penalty are repository-specific design choices rather than standard SIMP
+notation. The maintained outer loop alternates mechanics solves for
 \cref{eq:topology-mechanics} with reduced design updates for
 \cref{eq:topology-reduced-objective}.
 

@@ -2,7 +2,7 @@ PYTHON := ../.venv/bin/python
 LATEXMK := latexmk
 MAIN := main.tex
 
-.PHONY: all layout figures tables validate pdf clean
+.PHONY: all layout figures tables literature validate pdf clean
 
 all: pdf
 
@@ -14,6 +14,9 @@ figures: layout
 
 tables: layout
 	$(PYTHON) scripts/generate_paper_tables.py
+
+literature:
+	$(PYTHON) scripts/generate_literature_sources.py
 
 validate: figures tables
 	$(PYTHON) scripts/validate_paper_assets.py
