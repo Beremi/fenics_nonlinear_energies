@@ -65,6 +65,21 @@ Finest maintained strong-scaling case: level `4`, `24` steps.
 | JAX+PETSc element | 16 | 902.409 | 783 | 18775 | 87.722 |
 | JAX+PETSc element | 32 | 528.833 | 831 | 18940 | 87.722 |
 
+## First-Step Derivative Route Check
+
+The paper's derivative-route table uses a separate local first-step check on
+level `4` with `32` MPI ranks. Both rows intentionally use the replicated
+JAX+PETSc element path, because the production rank-local HyperElasticity path
+supports element AD only and rejects local-SFD Hessians.
+
+| route | ranks | solve [s] | Newton | linear | energy | result |
+| --- | ---: | ---: | ---: | ---: | ---: | --- |
+| Element AD | 32 | 12.4060 | 22 | 492 | 0.1519923275 | completed |
+| Local colored SFD | 32 | 36.4661 | 22 | 492 | 0.1519923275 | completed |
+
+This is a derivative-route cost comparison, not a replacement for the
+rank-local production scaling rows.
+
 ## Reproduction Commands
 
 MPI maintained suite:

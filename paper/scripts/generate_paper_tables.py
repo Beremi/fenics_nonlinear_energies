@@ -31,6 +31,7 @@ P3D_DERIVATIVE_ABLATION_SUMMARY = (
 )
 JAX_FEM_BASELINE_SUMMARY = REPO_ROOT / "artifacts/raw_results/jax_fem_hyperelastic_baseline/comparison_summary.json"
 GLOBALIZATION_METHOD_COMPARE = REPO_ROOT / "artifacts/reports/globalization_method_compare/full_summary.csv"
+DERIVATIVE_ROUTE_COMPARE = REPO_ROOT / "artifacts/reports/derivative_route_compare/full_summary.csv"
 P3D_LOCAL_LAMBDA155_SCALING = (
     REPO_ROOT
     / "artifacts/reports/plasticity3d_p4_l1_2_mumps_pmg_step_grad_local_karolina_scaling/local_solver_total_scaling.csv"
@@ -106,6 +107,32 @@ GLOBALIZATION_METHOD_LABELS = {
     "newton_linesearch": "Newton + LS",
     "steihaug_trust": "Steihaug TR",
     "hybrid_trust_linesearch": "Hybrid TR+LS",
+}
+
+DERIVATIVE_BENCHMARK_ORDER = {
+    "plaplace_l9_np32": 0,
+    "he_l4_step1_np32": 1,
+    "plasticity3d_p2_l1_lambda155_np32": 2,
+}
+
+DERIVATIVE_ROUTE_ORDER = {
+    "element_ad": 0,
+    "colored_sfd": 1,
+    "constitutive_ad": 2,
+}
+
+DERIVATIVE_BENCHMARK_LABELS = {
+    "plaplace_l9_np32": "$p$-Laplace $L_9$",
+    "he_l4_step1_np32": "Hyperelasticity $L_4$ step 1",
+    "plasticity3d_p2_l1_lambda155_np32": (
+        "\\shortstack[l]{Plasticity3D $P_2(L_1)$\\\\$\\lambda_{\\mathrm{sr}}=\\num{1.55}$}"
+    ),
+}
+
+DERIVATIVE_ROUTE_LABELS = {
+    "element_ad": "Element AD",
+    "colored_sfd": "Colored SFD",
+    "constitutive_ad": "Constitutive AD",
 }
 
 MESH_ALIAS_MATH = {
@@ -397,6 +424,17 @@ def globalization_method_rows(path: Path = GLOBALIZATION_METHOD_COMPARE) -> list
     return rows
 
 
+def derivative_route_rows(path: Path = DERIVATIVE_ROUTE_COMPARE) -> list[dict[str, str]]:
+    rows = read_csv_rows(path)
+    rows.sort(
+        key=lambda row: (
+            DERIVATIVE_BENCHMARK_ORDER.get(row.get("benchmark", ""), 10**6),
+            DERIVATIVE_ROUTE_ORDER.get(row.get("route", ""), 10**6),
+        )
+    )
+    return rows
+
+
 def _fmt_optional_wall(value: object) -> str:
     text = str(value).strip()
     if not text:
@@ -409,6 +447,14 @@ def _fmt_optional_energy(value: object) -> str:
     if not text:
         return "--"
     return fmt_energy(float(text))
+
+
+def _derivative_row_time(row: dict[str, str]) -> str:
+    for key in ("solve_time_s", "total_time_s", "wall_time_s"):
+        text = str(row.get(key, "")).strip()
+        if text:
+            return fmt_wall_time(float(text))
+    return "--"
 
 
 def plasticity2d_resolution_rows() -> list[dict[str, object]]:
@@ -522,6 +568,7 @@ def main() -> None:
     p3d_ablation = read_json(P3D_DERIVATIVE_ABLATION_SUMMARY)
     jax_fem_baseline = read_json(JAX_FEM_BASELINE_SUMMARY)
     globalization_rows = globalization_method_rows()
+    derivative_rows = derivative_route_rows()
 
     local_scaling_rows = find_rows(local_rows, LOCAL_IMPL)
     mixed_local_rows = find_rows(mixed_rows, LOCAL_IMPL)
@@ -830,6 +877,25 @@ def main() -> None:
                 _fmt_optional_energy(row.get("final_energy")),
             ]
             for row in globalization_rows
+        ],
+    )
+
+    write_table_star(
+        "derivative_route_compare.tex",
+        fill_spec("l l c c c c c c"),
+        ["Benchmark", "Route", "Ranks", "Result", "Newton", "Krylov", "Time [s]", "Energy"],
+        [
+            [
+                DERIVATIVE_BENCHMARK_LABELS.get(str(row["benchmark"]), str(row["benchmark_label"])),
+                DERIVATIVE_ROUTE_LABELS.get(str(row["route"]), str(row["route_label"])),
+                fmt_count(row["nprocs"]),
+                str(row["result"]).replace("_", r"\_"),
+                fmt_count(row["newton_iters"]),
+                fmt_count(row["krylov_iters"]),
+                _derivative_row_time(row),
+                _fmt_optional_energy(row.get("final_energy")),
+            ]
+            for row in derivative_rows
         ],
     )
 
@@ -1214,6 +1280,21 @@ def main() -> None:
                 "final_energy": None if not str(row.get("final_energy", "")).strip() else float(row["final_energy"]),
             }
             for row in globalization_rows
+        ],
+        "derivative_route_compare": [
+            {
+                "benchmark": str(row["benchmark"]),
+                "route": str(row["route"]),
+                "nprocs": int(row["nprocs"]),
+                "result": str(row["result"]),
+                "newton_iters": int(row["newton_iters"]),
+                "krylov_iters": int(row["krylov_iters"]),
+                "time_s": float(
+                    str(row.get("solve_time_s") or row.get("total_time_s") or row.get("wall_time_s"))
+                ),
+                "final_energy": None if not str(row.get("final_energy", "")).strip() else float(row["final_energy"]),
+            }
+            for row in derivative_rows
         ],
         "plasticity3d_validation": {
             "layer1a_work_rel": float(layer1a_metrics["work_relative_difference"]),

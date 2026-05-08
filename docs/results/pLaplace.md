@@ -71,6 +71,11 @@ Finest maintained strong-scaling case: level `9`.
 | JAX+PETSc local-SFD | 16 | 1.7617 | 6 | 11 | -7.960005 |
 | JAX+PETSc local-SFD | 32 | 1.4540 | 6 | 11 | -7.960003 |
 
+The derivative-route comparison used in the paper is the 32-rank level `9`
+pair above. Element AD and local colored SFD both converge in `6` Newton
+iterations and `11` Krylov iterations to the same reported energy, while the
+local-SFD route takes `1.4540 s` versus `1.1444 s` for element AD.
+
 ## Reproduction Commands
 
 Maintained suite:

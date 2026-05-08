@@ -56,6 +56,36 @@ rather than a universal preference for any single globalization strategy.
   \label{tab:globalization-method-compare}
 \end{table}
 
+\subsection{Derivative-Route Comparison}
+\label{sec:num-derivative-route}
+
+\Cref{tab:derivative-route-compare} isolates the cost of the second-order
+route on three representative local cases. The $p$-Laplace rows reuse the
+tracked level-9, 32-rank documentation data. The hyperelasticity rows run only
+the first level-4 load step and intentionally use the replicated element path
+for both routes, because the production rank-local hyperelasticity path rejects
+colored SFD. This makes the row a derivative-route comparison rather than a
+production-scaling claim. The Plasticity3D rows use the same
+$P_2(L_1)$, $\lambda_{\mathrm{sr}}=\num{1.55}$, MUMPS-backed PMG setting as the
+globalization comparison above.
+
+Across the scalar and hyperelasticity rows, local colored SFD reaches the same
+reported energy and identical nonlinear/Krylov iteration counts, but with a
+clear wall-time premium. The Plasticity3D endpoint favors constitutive AD:
+constitutive AD is fastest, element AD also converges, and colored SFD reaches
+the same reported energy but exhausts the strict trust-region convergence gate
+before satisfying $\|\nabla J\|_2 < \num{1e-4}$. The failed SFD row is retained
+because it is part of the comparison outcome, not a missing measurement.
+
+\begin{table}[H]
+  \centering
+  \footnotesize
+  \input{tables/generated/derivative_route_compare.tex}
+  \caption{Local derivative-route comparison. Colored SFD denotes local
+  subgraph finite-difference Hessian recovery.}
+  \label{tab:derivative-route-compare}
+\end{table}
+
 \subsection{\texorpdfstring{$p$-Laplace}{p-Laplace}}
 \label{sec:num-plaplace}
 
