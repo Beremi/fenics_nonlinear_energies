@@ -32,13 +32,11 @@ P3D_DERIVATIVE_ABLATION_SUMMARY = (
 JAX_FEM_BASELINE_SUMMARY = REPO_ROOT / "artifacts/raw_results/jax_fem_hyperelastic_baseline/comparison_summary.json"
 P3D_LOCAL_LAMBDA155_SCALING = (
     REPO_ROOT
-    / "artifacts/reports/local_plasticity3d_p4_l1_2_mumps_pmg_solver_total_scaling/solver_total_scaling.csv"
+    / "artifacts/reports/plasticity3d_p4_l1_2_mumps_pmg_step_grad_local_karolina_scaling/local_solver_total_scaling.csv"
 )
 P3D_KAROLINA_LAMBDA155_SCALING = (
     REPO_ROOT
-    / "artifacts/raw_results/karolina/plasticity3d_p4_l1_2_mumps_pmg_scaling/"
-    / "plasticity3d_p4_l1_2_mumps_pmg_rpn16_node_sweep_hdf5_nolock_20260507_121450/"
-    / "summary/fetched_results_summary.csv"
+    / "artifacts/reports/plasticity3d_p4_l1_2_mumps_pmg_step_grad_local_karolina_scaling/karolina_rpn16_solver_total_scaling.csv"
 )
 
 PLAPLACE_PARITY = REPO_ROOT / "experiments/analysis/docs_assets/data/plaplace/parity_showcase.csv"
@@ -325,6 +323,8 @@ def select_topology_rows(labels: tuple[str, ...]) -> list[dict[str, str]]:
 def plasticity3d_local_karolina_rows() -> list[dict[str, object]]:
     rows: list[dict[str, object]] = []
     for row in read_csv_rows(P3D_LOCAL_LAMBDA155_SCALING):
+        owned = float(row["owned_free_dofs_sum"])
+        overlap = float(row["overlap_total_dofs_sum"])
         rows.append(
             {
                 "source": "local workstation",
@@ -335,11 +335,17 @@ def plasticity3d_local_karolina_rows() -> list[dict[str, object]]:
                 "linear_iterations_total": int(row["linear_iterations_total"]),
                 "energy": float(row["energy"]),
                 "grad": float(row["final_grad_norm"]),
+                "max_local_dofs": int(row["max_local_dofs"]),
+                "owned_free_dofs_sum": int(owned),
+                "overlap_total_dofs_sum": int(overlap),
+                "replication_ratio": float(row.get("replication_ratio") or overlap / owned),
             }
         )
     for row in read_csv_rows(P3D_KAROLINA_LAMBDA155_SCALING):
         if row.get("output") != "yes" or not row.get("solver_total"):
             continue
+        owned = float(row["owned_free_dofs_sum"])
+        overlap = float(row["overlap_total_dofs_sum"])
         rows.append(
             {
                 "source": "Karolina",
@@ -350,6 +356,10 @@ def plasticity3d_local_karolina_rows() -> list[dict[str, object]]:
                 "linear_iterations_total": int(row["ksp_its"]),
                 "energy": float(row["energy"]),
                 "grad": float(row["grad"]),
+                "max_local_dofs": int(row["max_local_dofs"]),
+                "owned_free_dofs_sum": int(owned),
+                "overlap_total_dofs_sum": int(overlap),
+                "replication_ratio": float(row.get("replication_ratio") or overlap / owned),
             }
         )
     rows.sort(key=lambda row: (str(row["source"]) != "local workstation", int(row["ranks"])))
@@ -842,6 +852,28 @@ def main() -> None:
     )
 
     write_table_star(
+        "plasticity3d_local_karolina_partitioning.tex",
+        fill_spec("l c c c c"),
+        [
+            "Platform",
+            "Ranks",
+            "Nodes",
+            "Max local DOFs",
+            "Overlap / owned DOFs",
+        ],
+        [
+            [
+                str(row["source"]),
+                fmt_count(row["ranks"]),
+                "--" if row["nodes"] is None else fmt_count(row["nodes"]),
+                fmt_dofs(row["max_local_dofs"]),
+                fmt_float(float(row["replication_ratio"]), 2),
+            ]
+            for row in p3d_local_karolina_rows
+        ],
+    )
+
+    write_table_star(
         "plasticity3d_local_vs_source.tex",
         fill_spec("c c c c c c"),
         ["Ranks", "Constitutive wall [s]", "Source wall [s]", "Constitutive solve [s]", "Source solve [s]", "Ratio"],
@@ -1078,6 +1110,10 @@ def main() -> None:
                 "linear_iterations_total": int(row["linear_iterations_total"]),
                 "energy": float(row["energy"]),
                 "grad": float(row["grad"]),
+                "max_local_dofs": int(row["max_local_dofs"]),
+                "owned_free_dofs_sum": int(row["owned_free_dofs_sum"]),
+                "overlap_total_dofs_sum": int(row["overlap_total_dofs_sum"]),
+                "replication_ratio": float(row["replication_ratio"]),
             }
             for row in p3d_local_karolina_rows
         ],

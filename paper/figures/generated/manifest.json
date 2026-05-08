@@ -16,8 +16,8 @@
       "/home/michal/repos/fenics_nonlinear_energies/artifacts/raw_results/plasticity3d_derivative_ablation/comparison_summary.json"
     ],
     "plasticity3d_local_vs_karolina_scaling.pdf": [
-      "/home/michal/repos/fenics_nonlinear_energies/artifacts/reports/local_plasticity3d_p4_l1_2_mumps_pmg_solver_total_scaling/solver_total_scaling.csv",
-      "/home/michal/repos/fenics_nonlinear_energies/artifacts/raw_results/karolina/plasticity3d_p4_l1_2_mumps_pmg_scaling/plasticity3d_p4_l1_2_mumps_pmg_rpn16_node_sweep_hdf5_nolock_20260507_121450/summary/fetched_results_summary.csv"
+      "/home/michal/repos/fenics_nonlinear_energies/artifacts/reports/plasticity3d_p4_l1_2_mumps_pmg_step_grad_local_karolina_scaling/local_solver_total_scaling.csv",
+      "/home/michal/repos/fenics_nonlinear_energies/artifacts/reports/plasticity3d_p4_l1_2_mumps_pmg_step_grad_local_karolina_scaling/karolina_rpn16_solver_total_scaling.csv"
     ],
     "plasticity3d_validation_layer1a_boundary.pdf": [
       "/home/michal/repos/fenics_nonlinear_energies/artifacts/raw_results/plasticity3d_validation/validation_manifest.json",

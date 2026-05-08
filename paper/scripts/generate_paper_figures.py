@@ -95,13 +95,11 @@ P3D_DERIVATIVE_ABLATION_ROOT = REPO_ROOT / "artifacts/raw_results/plasticity3d_d
 JAX_FEM_BASELINE_ROOT = REPO_ROOT / "artifacts/raw_results/jax_fem_hyperelastic_baseline"
 P3D_LOCAL_LAMBDA155_SCALING = (
     REPO_ROOT
-    / "artifacts/reports/local_plasticity3d_p4_l1_2_mumps_pmg_solver_total_scaling/solver_total_scaling.csv"
+    / "artifacts/reports/plasticity3d_p4_l1_2_mumps_pmg_step_grad_local_karolina_scaling/local_solver_total_scaling.csv"
 )
 P3D_KAROLINA_LAMBDA155_SCALING = (
     REPO_ROOT
-    / "artifacts/raw_results/karolina/plasticity3d_p4_l1_2_mumps_pmg_scaling/"
-    / "plasticity3d_p4_l1_2_mumps_pmg_rpn16_node_sweep_hdf5_nolock_20260507_121450/"
-    / "summary/fetched_results_summary.csv"
+    / "artifacts/reports/plasticity3d_p4_l1_2_mumps_pmg_step_grad_local_karolina_scaling/karolina_rpn16_solver_total_scaling.csv"
 )
 
 LOCAL_IMPL = "local_constitutiveAD_local_pmg_armijo"
