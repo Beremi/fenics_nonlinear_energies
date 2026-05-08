@@ -9,11 +9,11 @@ MESH_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__
 
 PROBLEMS = {
     "pLaplace2D": {
-        "levels": list(range(1, 10)),
+        "levels": list(range(1, 11)),
         "path": lambda lvl: os.path.join(MESH_DIR, "pLaplace", f"pLaplace_level{lvl}.h5"),
     },
     "GinzburgLandau2D": {
-        "levels": list(range(2, 10)),
+        "levels": list(range(2, 11)),
         "path": lambda lvl: os.path.join(MESH_DIR, "GinzburgLandau", f"GL_level{lvl}.h5"),
     },
     "HyperElasticity3D": {

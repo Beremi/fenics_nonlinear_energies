@@ -10,6 +10,52 @@ Evidence from older timing studies is retained when it is still informative for
 workflow viability, but it is labeled as timing evidence rather than merged into
 the validation story.
 
+\subsection{Globalization Method Comparison}
+\label{sec:num-globalization}
+
+\Cref{tab:globalization-method-compare} isolates the nonlinear globalization
+choice on four maintained local benchmarks using the same element assembly path
+and fixed preconditioner family within each problem. The scalar cases use
+level-10 meshes obtained by one additional uniform refinement of the maintained
+level-9 inputs. The $p$-Laplace row uses 32 MPI ranks with a 30 s launcher cap;
+the Ginzburg--Landau row uses 16 MPI ranks with a 120 s cap, because a 32-rank
+local launch exceeded the fixed setup budget before reaching the nonlinear
+solve. The hyperelasticity row uses the first eight load steps of the level-4
+rank-local procedural path on 32 MPI ranks with a 270 s cap. The Plasticity3D
+row uses the $P_2(L_1)$ endpoint surrogate at
+$\lambda_{\mathrm{sr}}=1.55$ on 32 MPI ranks with a 180 s cap. Timeout rows
+are retained as results; the table uses the solver-reported solve time when an
+output JSON is produced and the launcher wall time otherwise. In the
+line-search rows the trust-region machinery is disabled; in particular, the
+hyperelasticity line-search baseline uses GMRES rather than the STCG
+trust-region subproblem solver. For the Plasticity3D row, all methods are
+judged against the stricter $\|\nabla J\|_2 < 10^{-4}$ endpoint gate.
+
+The clean $p$-Laplace case is the expected easy case: Newton with Armijo line
+search is sufficient and is the fastest row. Ginzburg--Landau separates the
+policies more sharply: the same line-search-only policy times out under the
+fixed cap, while both trust-region variants converge to the same reported
+energy. For the hyperelasticity excerpt all three policies complete, but
+Steihaug trust-region globalization without the line-search subproblem safeguard
+has the largest rejection count and the largest solve time. The hybrid row keeps
+the trust-region safeguard while reducing both nonlinear iterations and solver
+time relative to line-search-only Newton. The Plasticity3D endpoint gives the
+opposite conclusion from the easy scalar case: at the stricter
+$\|\nabla J\|_2 < 10^{-4}$ gate, line-search-only Newton reaches the iteration
+cap near the target, whereas both trust-region policies converge. The hybrid
+variant is the fastest of the two trust-region rows and also uses fewer Krylov
+iterations. These rows therefore support a problem-dependent policy choice
+rather than a universal preference for any single globalization strategy.
+
+\begin{table}[H]
+  \centering
+  \footnotesize
+  \input{tables/generated/globalization_method_compare.tex}
+  \caption{Local comparison of nonlinear globalization policies. LS denotes
+  Armijo line search and TR denotes Steihaug trust region.}
+  \label{tab:globalization-method-compare}
+\end{table}
+
 \subsection{\texorpdfstring{$p$-Laplace}{p-Laplace}}
 \label{sec:num-plaplace}
 

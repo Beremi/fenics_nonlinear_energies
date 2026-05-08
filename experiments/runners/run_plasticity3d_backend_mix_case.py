@@ -27,6 +27,7 @@ from src.core.petsc.dof_partition import petsc_ownership_range
 from src.core.petsc.minimizers import newton as local_newton
 from src.core.petsc.reordered_element_base import inverse_permutation
 from src.core.petsc.reasons import ksp_reason_name
+from src.core.petsc.trust_ksp import ksp_cg_set_radius
 from src.problems.slope_stability_3d.jax_petsc.multigrid import (
     LegacyPMGLevelSmootherConfig,
     SlopeStability3DMGHierarchy,
@@ -1708,10 +1709,11 @@ def _make_local_ksp(
     ksp_rtol: float,
     ksp_max_it: int,
     pmg_support: LocalPMGSupport | None = None,
+    ksp_type: str = "fgmres",
 ) -> PETSc.KSP:
     ksp = PETSc.KSP().create(comm=comm)
     ksp.setOptionsPrefix(prefix)
-    ksp.setType("fgmres")
+    ksp.setType(str(ksp_type))
     if _is_local_pmg_solver_backend(str(solver_backend)):
         if pmg_support is None:
             raise ValueError("PMG local solver requested without PMG support.")
@@ -2049,6 +2051,16 @@ def _run_local_solver_backend(
     armijo_c1: float,
     armijo_shrink: float,
     armijo_max_ls: int,
+    use_trust_region: bool,
+    trust_radius_init: float,
+    trust_radius_min: float,
+    trust_radius_max: float,
+    trust_shrink: float,
+    trust_expand: float,
+    trust_eta_shrink: float,
+    trust_eta_expand: float,
+    trust_max_reject: int,
+    trust_subproblem_line_search: bool,
     pmg_support: LocalPMGSupport | None = None,
     lazy_pmg_config: dict[str, object] | None = None,
     stage_path: Path | None = None,
@@ -2236,6 +2248,71 @@ def _run_local_solver_backend(
         )
         return int(rec["ksp_its"])
 
+    def trust_subproblem_solve_fn(vec, rhs, sol, trust_radius):
+        iteration = int(len(linear_records) + 1)
+        _append_stage_event(
+            stage_path,
+            stage="local_trust_iteration_start",
+            started=started,
+            newton_iteration=iteration,
+            trust_radius=float(trust_radius),
+        )
+        if _is_local_pmg_solver_backend(str(solver_backend)) and pmg_support is None:
+            _ensure_pmg_support()
+        t0 = time.perf_counter()
+        A = backend.vec_tangent(vec)
+        t_assemble = time.perf_counter() - t0
+        ksp = _make_local_ksp(
+            prefix="mix_trust_",
+            comm=A.getComm(),
+            solver_backend=str(solver_backend),
+            ksp_rtol=float(ksp_rtol),
+            ksp_max_it=int(ksp_max_it),
+            pmg_support=pmg_support,
+            ksp_type="stcg",
+        )
+        t1 = time.perf_counter()
+        ksp.setOperators(A)
+        ksp.setUp()
+        if _is_local_pmg_solver_backend(str(solver_backend)):
+            _attach_local_pmg_metadata(
+                ksp,
+                pmg_support,
+                solver_backend=str(solver_backend),
+            )
+        ksp_cg_set_radius(ksp, float(trust_radius))
+        t_setup = time.perf_counter() - t1
+        t2 = time.perf_counter()
+        ksp.solve(rhs, sol)
+        t_solve = time.perf_counter() - t2
+        rec = {
+            "newton_iteration": iteration,
+            "ksp_its": int(ksp.getIterationNumber()),
+            "ksp_reason_code": int(ksp.getConvergedReason()),
+            "ksp_reason_name": str(ksp_reason_name(int(ksp.getConvergedReason()))),
+            "ksp_residual_norm": float(ksp.getResidualNorm()),
+            "t_assemble": float(t_assemble),
+            "t_setup": float(t_setup),
+            "t_solve": float(t_solve),
+            "trust_radius": float(trust_radius),
+        }
+        ksp.destroy()
+        linear_records.append(rec)
+        _append_stage_event(
+            stage_path,
+            stage="local_trust_iteration_done",
+            started=started,
+            newton_iteration=int(rec["newton_iteration"]),
+            ksp_iterations=int(rec["ksp_its"]),
+            ksp_reason=str(rec["ksp_reason_name"]),
+            trust_radius=float(trust_radius),
+        )
+        return int(rec["ksp_its"])
+
+    def hessian_matvec_fn(vec, vin, vout):
+        A = backend.vec_tangent(vec)
+        A.mult(vin, vout)
+
     def _iteration_progress_callback(entry: dict[str, object], _history: list[dict[str, object]]) -> None:
         payload = dict(entry)
         payload["event"] = "newton_iteration"
@@ -2327,6 +2404,20 @@ def _run_local_solver_backend(
         verbose=False,
         comm=PETSc.COMM_WORLD.tompi4py(),
         save_history=True,
+        hessian_matvec_fn=hessian_matvec_fn,
+        trust_subproblem_solve_fn=(
+            trust_subproblem_solve_fn if bool(use_trust_region) else None
+        ),
+        trust_subproblem_line_search=bool(trust_subproblem_line_search),
+        trust_region=bool(use_trust_region),
+        trust_radius_init=float(trust_radius_init),
+        trust_radius_min=float(trust_radius_min),
+        trust_radius_max=float(trust_radius_max),
+        trust_shrink=float(trust_shrink),
+        trust_expand=float(trust_expand),
+        trust_eta_shrink=float(trust_eta_shrink),
+        trust_eta_expand=float(trust_eta_expand),
+        trust_max_reject=int(trust_max_reject),
         iteration_callback=_iteration_progress_callback,
     )
     solve_time = time.perf_counter() - solve_t0
@@ -2979,6 +3070,8 @@ def _case_payload(
     line_search: str,
     linesearch_tol: float,
     armijo_max_ls: int,
+    use_trust_region: bool,
+    trust_subproblem_line_search: bool,
     result: dict[str, object],
 ) -> dict[str, object]:
     return {
@@ -2991,6 +3084,8 @@ def _case_payload(
         "line_search": str(line_search),
         "linesearch_tol": float(linesearch_tol),
         "armijo_max_ls": int(armijo_max_ls),
+        "use_trust_region": bool(use_trust_region),
+        "trust_subproblem_line_search": bool(trust_subproblem_line_search),
         **result,
     }
 
@@ -3172,6 +3267,20 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--armijo-c1", type=float, default=1.0e-4)
     parser.add_argument("--armijo-shrink", type=float, default=0.5)
     parser.add_argument("--armijo-max-ls", type=int, default=40)
+    parser.add_argument("--use-trust-region", action=argparse.BooleanOptionalAction, default=False)
+    parser.add_argument("--trust-radius-init", type=float, default=1.0)
+    parser.add_argument("--trust-radius-min", type=float, default=1.0e-8)
+    parser.add_argument("--trust-radius-max", type=float, default=1.0e6)
+    parser.add_argument("--trust-shrink", type=float, default=0.5)
+    parser.add_argument("--trust-expand", type=float, default=1.5)
+    parser.add_argument("--trust-eta-shrink", type=float, default=0.05)
+    parser.add_argument("--trust-eta-expand", type=float, default=0.75)
+    parser.add_argument("--trust-max-reject", type=int, default=6)
+    parser.add_argument(
+        "--trust-subproblem-line-search",
+        action=argparse.BooleanOptionalAction,
+        default=False,
+    )
     return parser
 
 
@@ -3331,6 +3440,16 @@ def main() -> None:
             armijo_c1=float(args.armijo_c1),
             armijo_shrink=float(args.armijo_shrink),
             armijo_max_ls=int(args.armijo_max_ls),
+            use_trust_region=bool(args.use_trust_region),
+            trust_radius_init=float(args.trust_radius_init),
+            trust_radius_min=float(args.trust_radius_min),
+            trust_radius_max=float(args.trust_radius_max),
+            trust_shrink=float(args.trust_shrink),
+            trust_expand=float(args.trust_expand),
+            trust_eta_shrink=float(args.trust_eta_shrink),
+            trust_eta_expand=float(args.trust_eta_expand),
+            trust_max_reject=int(args.trust_max_reject),
+            trust_subproblem_line_search=bool(args.trust_subproblem_line_search),
             pmg_support=pmg_support,
             lazy_pmg_config=lazy_pmg_config,
             stage_path=stage_path,
@@ -3381,6 +3500,8 @@ def main() -> None:
         line_search=str(args.line_search),
         linesearch_tol=float(args.linesearch_tol),
         armijo_max_ls=int(args.armijo_max_ls),
+        use_trust_region=bool(args.use_trust_region),
+        trust_subproblem_line_search=bool(args.trust_subproblem_line_search),
         result=result,
     )
     payload["mesh_name"] = str(args.mesh_name)

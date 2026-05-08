@@ -30,6 +30,7 @@ P3D_DERIVATIVE_ABLATION_SUMMARY = (
     REPO_ROOT / "artifacts/raw_results/plasticity3d_derivative_ablation/comparison_summary.json"
 )
 JAX_FEM_BASELINE_SUMMARY = REPO_ROOT / "artifacts/raw_results/jax_fem_hyperelastic_baseline/comparison_summary.json"
+GLOBALIZATION_METHOD_COMPARE = REPO_ROOT / "artifacts/reports/globalization_method_compare/full_summary.csv"
 P3D_LOCAL_LAMBDA155_SCALING = (
     REPO_ROOT
     / "artifacts/reports/plasticity3d_p4_l1_2_mumps_pmg_step_grad_local_karolina_scaling/local_solver_total_scaling.csv"
@@ -86,6 +87,25 @@ IMPLEMENTATION_LABELS = {
     SOURCE_IMPL: "source-operator PMG variant",
     LOCAL_SOURCEFIXED_IMPL: "constitutive-AD PMG solver",
     SOURCE_SOURCEFIXED_IMPL: "source-assembly PMG variant",
+}
+
+GLOBALIZATION_BENCHMARK_ORDER = {
+    "plaplace_l10_np32": 0,
+    "gl_l10_np16": 1,
+    "he_l4_np32_steps8": 2,
+    "plasticity3d_p2_l1_np32_lambda155": 3,
+}
+
+GLOBALIZATION_METHOD_ORDER = {
+    "newton_linesearch": 0,
+    "steihaug_trust": 1,
+    "hybrid_trust_linesearch": 2,
+}
+
+GLOBALIZATION_METHOD_LABELS = {
+    "newton_linesearch": "Newton + LS",
+    "steihaug_trust": "Steihaug TR",
+    "hybrid_trust_linesearch": "Hybrid TR+LS",
 }
 
 MESH_ALIAS_MATH = {
@@ -366,6 +386,31 @@ def plasticity3d_local_karolina_rows() -> list[dict[str, object]]:
     return rows
 
 
+def globalization_method_rows(path: Path = GLOBALIZATION_METHOD_COMPARE) -> list[dict[str, str]]:
+    rows = read_csv_rows(path)
+    rows.sort(
+        key=lambda row: (
+            GLOBALIZATION_BENCHMARK_ORDER.get(row.get("benchmark", ""), 10**6),
+            GLOBALIZATION_METHOD_ORDER.get(row.get("method", ""), 10**6),
+        )
+    )
+    return rows
+
+
+def _fmt_optional_wall(value: object) -> str:
+    text = str(value).strip()
+    if not text:
+        return "--"
+    return fmt_wall_time(float(text))
+
+
+def _fmt_optional_energy(value: object) -> str:
+    text = str(value).strip()
+    if not text:
+        return "--"
+    return fmt_energy(float(text))
+
+
 def plasticity2d_resolution_rows() -> list[dict[str, object]]:
     showcase = read_json(P2D_SHOWCASE)
     l5_result = showcase["result"]["steps"][0]
@@ -476,6 +521,7 @@ def main() -> None:
     p3d_validation = read_json(P3D_VALIDATION_SUMMARY)
     p3d_ablation = read_json(P3D_DERIVATIVE_ABLATION_SUMMARY)
     jax_fem_baseline = read_json(JAX_FEM_BASELINE_SUMMARY)
+    globalization_rows = globalization_method_rows()
 
     local_scaling_rows = find_rows(local_rows, LOCAL_IMPL)
     mixed_local_rows = find_rows(mixed_rows, LOCAL_IMPL)
@@ -750,6 +796,40 @@ def main() -> None:
                 fmt_count(row["linear_iters"]),
             ]
             for row in he_karolina_rows
+        ],
+    )
+
+    write_table_star(
+        "globalization_method_compare.tex",
+        fill_spec("l l c c c c c c c c c"),
+        [
+            "Benchmark",
+            "Method",
+            "Ranks",
+            "Result",
+            "Steps",
+            "Newton",
+            "Krylov",
+            "LS evals",
+            "TR rejects",
+            "Time [s]",
+            "Energy",
+        ],
+        [
+            [
+                str(row["benchmark_label"]),
+                GLOBALIZATION_METHOD_LABELS.get(str(row["method"]), str(row["method"]).replace("_", r"\_")),
+                fmt_count(row["nprocs"]),
+                str(row["result"]).replace("_", r"\_"),
+                f"{fmt_count(row['completed_steps'])}/{fmt_count(row['steps_requested'])}",
+                fmt_count(row["newton_iters"]),
+                fmt_count(row["krylov_iters"]),
+                fmt_count(row["line_search_evals"]),
+                fmt_count(row["trust_rejects"]),
+                _fmt_optional_wall(row.get("solve_time_s") or row.get("wall_time_s")),
+                _fmt_optional_energy(row.get("final_energy")),
+            ]
+            for row in globalization_rows
         ],
     )
 
@@ -1116,6 +1196,24 @@ def main() -> None:
                 "replication_ratio": float(row["replication_ratio"]),
             }
             for row in p3d_local_karolina_rows
+        ],
+        "globalization_method_compare": [
+            {
+                "benchmark": str(row["benchmark"]),
+                "method": str(row["method"]),
+                "nprocs": int(row["nprocs"]),
+                "result": str(row["result"]),
+                "completed_steps": int(row["completed_steps"]),
+                "steps_requested": int(row["steps_requested"]),
+                "newton_iters": int(row["newton_iters"]),
+                "krylov_iters": int(row["krylov_iters"]),
+                "line_search_evals": int(row["line_search_evals"]),
+                "trust_rejects": int(row["trust_rejects"]),
+                "solve_time_s": None if not str(row.get("solve_time_s", "")).strip() else float(row["solve_time_s"]),
+                "wall_time_s": float(row["wall_time_s"]),
+                "final_energy": None if not str(row.get("final_energy", "")).strip() else float(row["final_energy"]),
+            }
+            for row in globalization_rows
         ],
         "plasticity3d_validation": {
             "layer1a_work_rel": float(layer1a_metrics["work_relative_difference"]),

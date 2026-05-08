@@ -349,6 +349,7 @@ def newton(
         actual_reduction = np.nan
         trust_rejects = 0
         accepted_step = False
+        used_roundoff_acceptance = False
         used_gradient_fallback = False
         terminate_after_iter = False
         terminate_message = None
@@ -398,6 +399,28 @@ def newton(
                 else:
                     alpha_trial = next_alpha
             return 0.0, np.inf, int(n_eval), False
+
+        def _energy_roundoff_tol(*values):
+            finite_scales = [abs(float(v)) for v in values if np.isfinite(v)]
+            scale = max([1.0, *finite_scales])
+            return 64.0 * np.finfo(np.float64).eps * scale
+
+        def _accepts_roundoff_converged_candidate(candidate_value, candidate_step_size):
+            if not require_all_convergence:
+                return False
+            if not (np.isfinite(candidate_value) and np.isfinite(candidate_step_size)):
+                return False
+            if candidate_step_size <= 0.0:
+                return False
+            candidate_step_rel = candidate_step_size / max(1.0, x_prev_norm)
+            if not (candidate_step_size < tolx_abs or candidate_step_rel < tolx_rel):
+                return False
+            if candidate_value > fx_old + _energy_roundoff_tol(fx_old, candidate_value):
+                return False
+            gradient_fn(x_trial, g_trial)
+            ghost_update_fn(g_trial)
+            trial_grad_norm = g_trial.norm(PETSc.NormType.NORM_2)
+            return np.isfinite(trial_grad_norm) and trial_grad_norm < grad_target
 
         if trust_region:
             trust_radius = min(max(trust_radius, trust_radius_min), trust_radius_max)
@@ -508,14 +531,20 @@ def newton(
 
                     step_size = abs(alpha) * snod_norm if np.isfinite(snod_norm) else 0.0
 
-                    if (
+                    normal_accept = (
                         np.isfinite(newval)
                         and np.isfinite(rho)
                         and rho >= trust_eta_shrink
                         and actual_reduction > 0.0
-                    ):
+                    )
+                    roundoff_accept = (not normal_accept) and _accepts_roundoff_converged_candidate(
+                        newval,
+                        step_size,
+                    )
+
+                    if normal_accept or roundoff_accept:
                         fx = newval
-                        dE = actual_reduction
+                        dE = fx_old - newval if np.isfinite(newval) else actual_reduction
                         step_norm = step_size
                         step_rel = step_norm / max(1.0, x_prev_norm)
                         t_update0 = time.perf_counter()
@@ -524,8 +553,14 @@ def newton(
                         ghost_update_fn(x)
                         t_update = time.perf_counter() - t_update0
                         accepted_step = True
+                        used_roundoff_acceptance = bool(roundoff_accept)
+                        actual_reduction = dE
 
-                        if rho >= trust_eta_expand and step_norm >= 0.9 * trial_radius:
+                        if (
+                            normal_accept
+                            and rho >= trust_eta_expand
+                            and step_norm >= 0.9 * trial_radius
+                        ):
                             trust_radius = min(trust_radius_max, trial_radius * trust_expand)
                         else:
                             trust_radius = trial_radius
@@ -736,14 +771,20 @@ def newton(
 
                     step_size = abs(alpha) * snod_norm if np.isfinite(snod_norm) else 0.0
 
-                    if (
+                    normal_accept = (
                         np.isfinite(newval)
                         and np.isfinite(rho)
                         and rho >= trust_eta_shrink
                         and actual_reduction > 0.0
-                    ):
+                    )
+                    roundoff_accept = (not normal_accept) and _accepts_roundoff_converged_candidate(
+                        newval,
+                        step_size,
+                    )
+
+                    if normal_accept or roundoff_accept:
                         fx = newval
-                        dE = actual_reduction
+                        dE = fx_old - newval if np.isfinite(newval) else actual_reduction
                         step_norm = step_size
                         step_rel = step_norm / max(1.0, x_prev_norm)
                         t_update0 = time.perf_counter()
@@ -752,8 +793,14 @@ def newton(
                         ghost_update_fn(x)
                         t_update = time.perf_counter() - t_update0
                         accepted_step = True
+                        used_roundoff_acceptance = bool(roundoff_accept)
+                        actual_reduction = dE
 
-                        if rho >= trust_eta_expand and step_norm >= 0.9 * trial_radius:
+                        if (
+                            normal_accept
+                            and rho >= trust_eta_expand
+                            and step_norm >= 0.9 * trial_radius
+                        ):
                             trust_radius = min(trust_radius_max, trial_radius * trust_expand)
                         else:
                             trust_radius = trial_radius
@@ -967,6 +1014,7 @@ def newton(
             "ls_evals": int(ls_evals),
             "ls_repaired": bool(ls_repaired),
             "used_gradient_fallback": bool(used_gradient_fallback),
+            "used_roundoff_acceptance": bool(used_roundoff_acceptance),
             "accepted_step": bool(accepted_step),
             "step_norm": float(step_norm),
             "step_rel": float(step_rel),

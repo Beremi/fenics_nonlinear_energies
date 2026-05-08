@@ -14,6 +14,8 @@ h5py
 /data/meshes/SlopeStability/*.h5
 /data/meshes/SlopeStability3D/**/*.h5
 /data/meshes/SlopeStability/pmg_transfer_cache/
+/data/meshes/pLaplace/pLaplace_level10.h5
+/data/meshes/GinzburgLandau/GL_level10.h5
 /experiments/analysis/docs_assets/**/*.provenance.json
 /experiments/analysis/docs_assets/**/*.tmp
 /experiments/analysis/docs_assets/**/*.bak

@@ -1,0 +1,18 @@
+\begin{tabular*}{\textwidth}{@{}l@{\extracolsep{\fill}} l c c c c c c c c c@{}}
+\toprule
+Benchmark & Method & Ranks & Result & Steps & Newton & Krylov & LS evals & TR rejects & Time [s] & Energy \\
+\midrule
+p-Laplace L10 & Newton + LS & 32 & completed & 1/1 & 15 & 32 & 15 & 0 & \num{6.95} & \num{-0.2517224496} \\
+p-Laplace L10 & Steihaug TR & 32 & completed & 1/1 & 29 & 32 & 0 & 0 & \num{11.7} & \num{-0.2517227312} \\
+p-Laplace L10 & Hybrid TR+LS & 32 & completed & 1/1 & 29 & 32 & 29 & 0 & \num{12} & \num{-0.2517227312} \\
+Ginzburg--Landau L10 & Newton + LS & 16 & timeout & 0/1 & 0 & 0 & 0 & 0 & \num{121} & -- \\
+Ginzburg--Landau L10 & Steihaug TR & 16 & completed & 1/1 & 19 & 25 & 0 & 0 & \num{14.3} & \num{0.3456246783} \\
+Ginzburg--Landau L10 & Hybrid TR+LS & 16 & completed & 1/1 & 19 & 25 & 19 & 0 & \num{14.3} & \num{0.3456246783} \\
+HyperElasticity L4 & Newton + LS & 32 & completed & 8/8 & 420 & 6984 & 2758 & 0 & \num{194} & \num{9.733145} \\
+HyperElasticity L4 & Steihaug TR & 32 & completed & 8/8 & 314 & 7245 & 0 & 95 & \num{178} & \num{9.73101} \\
+HyperElasticity L4 & Hybrid TR+LS & 32 & completed & 8/8 & 295 & 6849 & 499 & 3 & \num{149} & \num{9.730978} \\
+Plasticity3D P2(L1) & Newton + LS & 32 & failed & 0/1 & 80 & 858 & 224 & 0 & \num{70.2} & \num{-3012813} \\
+Plasticity3D P2(L1) & Steihaug TR & 32 & completed & 1/1 & 13 & 96 & 0 & 1 & \num{20.8} & \num{-3012813} \\
+Plasticity3D P2(L1) & Hybrid TR+LS & 32 & completed & 1/1 & 11 & 73 & 12 & 0 & \num{16.4} & \num{-3012813} \\
+\bottomrule
+\end{tabular*}
