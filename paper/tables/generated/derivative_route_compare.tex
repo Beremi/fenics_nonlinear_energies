@@ -1,13 +1,13 @@
-\begin{tabular*}{\textwidth}{@{}l@{\extracolsep{\fill}} l c c c c c c@{}}
+\begin{tabular*}{\textwidth}{@{}l@{\extracolsep{\fill}} l c c c c c c c c@{}}
 \toprule
-Benchmark & Route & Ranks & Result & Newton & Krylov & Time [s] & Energy \\
+Benchmark & Route & Ranks & Result & Newton & Krylov & Time [s] & Hessian [s] & SFD colors & Energy \\
 \midrule
-$p$-Laplace $L_9$ & Element AD & 32 & completed & 6 & 11 & \num{1.14} & \num{-7.960003} \\
-$p$-Laplace $L_9$ & Colored SFD & 32 & completed & 6 & 11 & \num{1.45} & \num{-7.960003} \\
-Hyperelasticity $L_4$ step 1 & Element AD & 32 & completed & 22 & 492 & \num{12.4} & \num{0.1519923275} \\
-Hyperelasticity $L_4$ step 1 & Colored SFD & 32 & completed & 22 & 492 & \num{36.5} & \num{0.1519923275} \\
-\shortstack[l]{Plasticity3D $P_2(L_1)$\\$\lambda_{\mathrm{sr}}=\num{1.55}$} & Element AD & 32 & completed & 11 & 73 & \num{16.5} & \num{-3012813} \\
-\shortstack[l]{Plasticity3D $P_2(L_1)$\\$\lambda_{\mathrm{sr}}=\num{1.55}$} & Colored SFD & 32 & failed & 11 & 133 & \num{28.6} & \num{-3012813} \\
-\shortstack[l]{Plasticity3D $P_2(L_1)$\\$\lambda_{\mathrm{sr}}=\num{1.55}$} & Constitutive AD & 32 & completed & 11 & 73 & \num{5.01} & \num{-3012813} \\
+$p$-Laplace $L_9$ & Element AD & 32 & completed & 6 & 11 & \num{1.14} & -- & -- & \num{-7.960003} \\
+$p$-Laplace $L_9$ & Colored SFD & 32 & completed & 6 & 11 & \num{1.45} & -- & -- & \num{-7.960003} \\
+Hyperelasticity $L_4$ step 1 & Element AD & 32 & completed & 22 & 492 & \num{11.7} & -- & -- & \num{0.1519923275} \\
+Hyperelasticity $L_4$ step 1 & Colored SFD & 32 & completed & 22 & 492 & \num{34.6} & -- & -- & \num{0.1519923275} \\
+\shortstack[l]{Plasticity3D $P_2(L_1)$\\$\lambda_{\mathrm{sr}}=\num{1.55}$} & Element AD & 32 & completed & 11 & 73 & \num{16.3} & \num{6.57} & -- & \num{-3012813} \\
+\shortstack[l]{Plasticity3D $P_2(L_1)$\\$\lambda_{\mathrm{sr}}=\num{1.55}$} & Colored SFD & 32 & completed & 11 & 73 & \num{16.4} & \num{6.59} & 240--420 & \num{-3012813} \\
+\shortstack[l]{Plasticity3D $P_2(L_1)$\\$\lambda_{\mathrm{sr}}=\num{1.55}$} & Constitutive AD & 32 & completed & 11 & 73 & \num{4.81} & \num{1.6} & -- & \num{-3012813} \\
 \bottomrule
 \end{tabular*}

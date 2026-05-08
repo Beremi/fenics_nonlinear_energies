@@ -457,6 +457,23 @@ def _derivative_row_time(row: dict[str, str]) -> str:
     return "--"
 
 
+def _derivative_hessian_time(row: dict[str, str]) -> str:
+    text = str(row.get("hessian_time_s", "")).strip()
+    return "--" if not text else fmt_wall_time(float(text))
+
+
+def _derivative_sfd_colors(row: dict[str, str]) -> str:
+    if str(row.get("route", "")) != "colored_sfd":
+        return "--"
+    lo = str(row.get("sfd_colors_min", "")).strip()
+    hi = str(row.get("sfd_colors_max", "")).strip()
+    if not lo or not hi or int(float(hi)) <= 0:
+        return "--"
+    lo_i = int(float(lo))
+    hi_i = int(float(hi))
+    return str(hi_i) if lo_i == hi_i else f"{lo_i}--{hi_i}"
+
+
 def plasticity2d_resolution_rows() -> list[dict[str, object]]:
     showcase = read_json(P2D_SHOWCASE)
     l5_result = showcase["result"]["steps"][0]
@@ -882,8 +899,19 @@ def main() -> None:
 
     write_table_star(
         "derivative_route_compare.tex",
-        fill_spec("l l c c c c c c"),
-        ["Benchmark", "Route", "Ranks", "Result", "Newton", "Krylov", "Time [s]", "Energy"],
+        fill_spec("l l c c c c c c c c"),
+        [
+            "Benchmark",
+            "Route",
+            "Ranks",
+            "Result",
+            "Newton",
+            "Krylov",
+            "Time [s]",
+            "Hessian [s]",
+            "SFD colors",
+            "Energy",
+        ],
         [
             [
                 DERIVATIVE_BENCHMARK_LABELS.get(str(row["benchmark"]), str(row["benchmark_label"])),
@@ -893,6 +921,8 @@ def main() -> None:
                 fmt_count(row["newton_iters"]),
                 fmt_count(row["krylov_iters"]),
                 _derivative_row_time(row),
+                _derivative_hessian_time(row),
+                _derivative_sfd_colors(row),
                 _fmt_optional_energy(row.get("final_energy")),
             ]
             for row in derivative_rows
@@ -1291,6 +1321,21 @@ def main() -> None:
                 "krylov_iters": int(row["krylov_iters"]),
                 "time_s": float(
                     str(row.get("solve_time_s") or row.get("total_time_s") or row.get("wall_time_s"))
+                ),
+                "hessian_time_s": (
+                    None
+                    if not str(row.get("hessian_time_s", "")).strip()
+                    else float(row["hessian_time_s"])
+                ),
+                "sfd_colors_min": (
+                    None
+                    if not str(row.get("sfd_colors_min", "")).strip()
+                    else int(float(row["sfd_colors_min"]))
+                ),
+                "sfd_colors_max": (
+                    None
+                    if not str(row.get("sfd_colors_max", "")).strip()
+                    else int(float(row["sfd_colors_max"]))
                 ),
                 "final_energy": None if not str(row.get("final_energy", "")).strip() else float(row["final_energy"]),
             }

@@ -145,15 +145,18 @@ The paper's derivative-route table also includes the glued-bottom
 `same_mesh_p2_p1`, hybrid trust-region/Armijo globalization, and
 `grad_stop_tol = 1e-4`.
 
-| route | solve [s] | Newton | linear | energy | omega | u_max | result |
-| --- | ---: | ---: | ---: | ---: | ---: | ---: | --- |
-| Element AD | 16.5140 | 11 | 73 | -3012813.367652 | 6034756.703243 | 0.739001 | completed |
-| Local colored SFD | 28.6179 | 11 | 133 | -3012813.367652 | 6034756.701697 | 0.739001 | failed strict gradient gate |
-| Constitutive AD | 5.0113 | 11 | 73 | -3012813.367652 | 6034756.703243 | 0.739001 | completed |
+| route | solve [s] | Hessian [s] | SFD colors | Newton | linear | energy | omega | u_max | result |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- |
+| Element AD | 16.3179 | 6.5683 | -- | 11 | 73 | -3012813.367652 | 6034756.703243 | 0.739001 | completed |
+| Local colored SFD | 16.3929 | 6.5934 | 240-420 | 11 | 73 | -3012813.367652 | 6034756.703243 | 0.739001 | completed |
+| Constitutive AD | 4.8085 | 1.5973 | -- | 11 | 73 | -3012813.367652 | 6034756.703243 | 0.739001 | completed |
 
-The colored-SFD row reaches the same reported energy and displacement metric,
-but exhausts the strict trust-region convergence gate before satisfying
-`||grad J||_2 < 1e-4`; it is therefore kept as a failed comparison row.
+All three derivative routes now reach the same reported energy, displacement
+metric, Newton count, and Krylov count. The local colored-SFD route uses
+between `240` and `420` colors across the `32` ranks, so its comparable solve
+time is not due to an under-colored reconstruction; its batched HVP callback is
+roughly the same cost as the element-Hessian callback on this `P2` endpoint.
+Constitutive AD remains the fastest route.
 
 The remaining sections below preserve the older `lambda = 1.5` fixed-work and
 `maxit = 20` diagnostic campaigns as historical backend context.

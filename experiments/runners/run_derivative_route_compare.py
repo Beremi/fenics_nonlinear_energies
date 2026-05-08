@@ -64,6 +64,11 @@ CSV_FIELDS = (
     "krylov_iters",
     "line_search_evals",
     "trust_rejects",
+    "hessian_hvp_time_s",
+    "hessian_time_s",
+    "sfd_colors_min",
+    "sfd_colors_max",
+    "sfd_colors_unique",
     "final_energy",
     "omega",
     "u_max",
@@ -208,6 +213,41 @@ def _plaplace_solver_name(case: CaseSpec) -> str:
     return "jax_petsc_element" if case.route == "element_ad" else "jax_petsc_local_sfd"
 
 
+def _plasticity3d_assembly_details(payload: dict[str, Any]) -> dict[str, Any]:
+    callbacks = dict(payload.get("assembly_callbacks") or {})
+    hessian = dict(callbacks.get("hessian") or {})
+    diagnostics = dict(payload.get("assembler_rank_diagnostics") or {})
+    coloring = dict(diagnostics.get("sfd_coloring") or {})
+    unique = coloring.get("colors_unique", "")
+    if isinstance(unique, list):
+        unique_text = " ".join(str(int(v)) for v in unique)
+    else:
+        unique_text = str(unique or "")
+    return {
+        "hessian_hvp_time_s": (
+            ""
+            if _safe_float(hessian.get("hvp_compute")) is None
+            else float(hessian["hvp_compute"])
+        ),
+        "hessian_time_s": (
+            ""
+            if _safe_float(hessian.get("total")) is None
+            else float(hessian["total"])
+        ),
+        "sfd_colors_min": (
+            ""
+            if _safe_float(coloring.get("colors_min")) is None
+            else int(coloring["colors_min"])
+        ),
+        "sfd_colors_max": (
+            ""
+            if _safe_float(coloring.get("colors_max")) is None
+            else int(coloring["colors_max"])
+        ),
+        "sfd_colors_unique": unique_text,
+    }
+
+
 def summarize_plaplace_case(case: CaseSpec, *, mode: str) -> dict[str, Any]:
     rows = list(csv.DictReader(PLAPLACE_SCALING.open(newline="", encoding="utf-8")))
     solver = _plaplace_solver_name(case)
@@ -242,6 +282,11 @@ def summarize_plaplace_case(case: CaseSpec, *, mode: str) -> dict[str, Any]:
         "krylov_iters": int(row["total_linear_iters"]),
         "line_search_evals": "",
         "trust_rejects": "",
+        "hessian_hvp_time_s": "",
+        "hessian_time_s": "",
+        "sfd_colors_min": "",
+        "sfd_colors_max": "",
+        "sfd_colors_unique": "",
         "final_energy": float(row["final_energy"]),
         "omega": "",
         "u_max": "",
@@ -492,6 +537,11 @@ def summarize_he_payload(
         "krylov_iters": int(sum(_sum_step_linear(step) for step in steps)),
         "line_search_evals": int(sum(int(_sum_history(step, "ls_evals")) for step in steps)),
         "trust_rejects": int(sum(int(_sum_history(step, "trust_rejects")) for step in steps)),
+        "hessian_hvp_time_s": "",
+        "hessian_time_s": "",
+        "sfd_colors_min": "",
+        "sfd_colors_max": "",
+        "sfd_colors_unique": "",
         "final_energy": "" if final_energy is None else float(final_energy),
         "omega": "",
         "u_max": "",
@@ -529,6 +579,7 @@ def summarize_plasticity3d_payload(
         failure_mode = message or status or "not converged"
 
     history = list(payload.get("history", []))
+    details = _plasticity3d_assembly_details(payload)
     return {
         "mode": mode,
         "benchmark": case.benchmark,
@@ -551,6 +602,7 @@ def summarize_plasticity3d_payload(
         "krylov_iters": int(payload.get("linear_iterations_total", 0)),
         "line_search_evals": int(_sum_flat_history(history, "ls_evals")),
         "trust_rejects": int(_sum_flat_history(history, "trust_rejects")),
+        **details,
         "final_energy": "" if _safe_float(payload.get("energy")) is None else float(payload["energy"]),
         "omega": "" if _safe_float(payload.get("omega")) is None else float(payload["omega"]),
         "u_max": "" if _safe_float(payload.get("u_max")) is None else float(payload["u_max"]),
@@ -617,6 +669,8 @@ def run_case(case: CaseSpec, *, mode: str, raw_dir: Path, resume: bool = True) -
     if resume and out_path.exists():
         payload = json.loads(out_path.read_text(encoding="utf-8"))
     else:
+        if out_path.exists():
+            out_path.unlink()
         start = time.perf_counter()
         with log_path.open("w", encoding="utf-8") as log:
             log.write("$ " + shlex.join(command) + "\n\n")

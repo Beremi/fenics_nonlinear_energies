@@ -415,7 +415,7 @@ def newton(
             candidate_step_rel = candidate_step_size / max(1.0, x_prev_norm)
             if not (candidate_step_size < tolx_abs or candidate_step_rel < tolx_rel):
                 return False
-            if candidate_value > fx_old + _energy_roundoff_tol(fx_old, candidate_value):
+            if candidate_value > fx_old + max(tolf, _energy_roundoff_tol(fx_old, candidate_value)):
                 return False
             gradient_fn(x_trial, g_trial)
             ghost_update_fn(g_trial)

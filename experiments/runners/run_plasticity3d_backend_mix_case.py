@@ -396,6 +396,46 @@ def _destroy_mat(A: PETSc.Mat | None) -> None:
     A.destroy()
 
 
+def _gather_assembler_rank_diagnostics(backend: object) -> dict[str, object]:
+    """Collect small per-rank assembler diagnostics for result provenance."""
+
+    comm = MPI.COMM_WORLD
+    assembler = getattr(backend, "assembler", None)
+    if assembler is None:
+        return {}
+    hessian_callbacks = dict(
+        dict(assembler.callback_summary()).get("hessian", {})
+    )
+    memory = dict(assembler.memory_summary())
+    local = {
+        "rank": int(comm.Get_rank()),
+        "local_hessian_mode": str(getattr(assembler, "local_hessian_mode", "")),
+        "hvp_eval_mode": str(getattr(assembler, "_hvp_eval_mode", "")),
+        "sfd_colors": int(getattr(assembler, "_sfd_n_colors", 0)),
+        "local_elements": int(memory.get("local_elements", 0)),
+        "local_overlap_dofs": int(memory.get("local_overlap_dofs", 0)),
+        "owned_nnz": int(memory.get("owned_nnz", 0)),
+        "hessian_calls": int(hessian_callbacks.get("calls", 0)),
+        "hessian_hvp_compute_s": float(hessian_callbacks.get("hvp_compute", 0.0)),
+        "hessian_total_s": float(hessian_callbacks.get("total", 0.0)),
+    }
+    gathered = comm.gather(local, root=0)
+    if int(comm.Get_rank()) != 0:
+        return {}
+    rows = list(gathered or [])
+    colors = [int(row.get("sfd_colors", 0)) for row in rows]
+    active_colors = [value for value in colors if value > 0]
+    return {
+        "rank_summaries": rows,
+        "sfd_coloring": {
+            "colors_min": int(min(active_colors)) if active_colors else 0,
+            "colors_max": int(max(active_colors)) if active_colors else 0,
+            "colors_unique": sorted(set(active_colors)),
+            "colors_by_rank": colors,
+        },
+    }
+
+
 @dataclass
 class LocalAssemblyBackend:
     assembler: SlopeStability3DReorderedElementAssembler
@@ -2479,6 +2519,7 @@ def _run_local_solver_backend(
         if hasattr(backend, "assembler")
         else {}
     )
+    assembler_rank_diagnostics = _gather_assembler_rank_diagnostics(backend)
     return {
         "status": str(status),
         "solver_success": bool(status == "completed"),
@@ -2506,6 +2547,7 @@ def _run_local_solver_backend(
         "assembly_callbacks": assembly_callbacks,
         "assembler_setup": assembler_setup,
         "assembler_memory": assembler_memory,
+        "assembler_rank_diagnostics": assembler_rank_diagnostics,
         "state_out": "" if state_out is None else str(state_out),
         **observables,
     }
@@ -2856,6 +2898,7 @@ def _run_local_solver_backend_with_source_linear(
         if hasattr(backend, "assembler")
         else {}
     )
+    assembler_rank_diagnostics = _gather_assembler_rank_diagnostics(backend)
     return {
         "status": str(status),
         "solver_success": bool(status == "completed"),
@@ -2883,6 +2926,7 @@ def _run_local_solver_backend_with_source_linear(
         "assembly_callbacks": assembly_callbacks,
         "assembler_setup": assembler_setup,
         "assembler_memory": assembler_memory,
+        "assembler_rank_diagnostics": assembler_rank_diagnostics,
         "state_out": "" if state_out is None else str(state_out),
         **observables,
     }

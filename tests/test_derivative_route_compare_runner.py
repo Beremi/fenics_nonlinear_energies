@@ -114,3 +114,54 @@ def test_plaplace_summary_mines_tracked_docs_scaling(tmp_path: Path, monkeypatch
     assert row["nprocs"] == 32
     assert row["total_time_s"] == 1.5
     assert row["krylov_iters"] == 11
+
+
+def test_plasticity3d_summary_extracts_hessian_and_sfd_color_metadata(tmp_path: Path):
+    case = next(
+        case
+        for case in campaign.build_case_matrix("full")
+        if case.problem == "plasticity3d" and case.route == "colored_sfd"
+    )
+    payload = {
+        "status": "completed",
+        "message": "Converged",
+        "solve_time": 12.0,
+        "total_time": 13.0,
+        "nit": 3,
+        "linear_iterations_total": 21,
+        "history": [{"ls_evals": 1, "trust_rejects": 0}],
+        "energy": -1.0,
+        "omega": 2.0,
+        "u_max": 3.0,
+        "assembly_callbacks": {
+            "hessian": {
+                "hvp_compute": 4.5,
+                "total": 5.5,
+            }
+        },
+        "assembler_rank_diagnostics": {
+            "sfd_coloring": {
+                "colors_min": 12,
+                "colors_max": 18,
+                "colors_unique": [12, 15, 18],
+            }
+        },
+    }
+
+    row = campaign.summarize_plasticity3d_payload(
+        mode="full",
+        case=case,
+        payload=payload,
+        json_path=tmp_path / "output.json",
+        log_path=tmp_path / "run.log",
+        command=["true"],
+        returncode=0,
+        wall_time_s=14.0,
+    )
+
+    assert row["result"] == "completed"
+    assert row["hessian_hvp_time_s"] == 4.5
+    assert row["hessian_time_s"] == 5.5
+    assert row["sfd_colors_min"] == 12
+    assert row["sfd_colors_max"] == 18
+    assert row["sfd_colors_unique"] == "12 15 18"

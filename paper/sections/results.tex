@@ -69,20 +69,23 @@ production-scaling claim. The Plasticity3D rows use the same
 $P_2(L_1)$, $\lambda_{\mathrm{sr}}=\num{1.55}$, MUMPS-backed PMG setting as the
 globalization comparison above.
 
-Across the scalar and hyperelasticity rows, local colored SFD reaches the same
-reported energy and identical nonlinear/Krylov iteration counts, but with a
-clear wall-time premium. The Plasticity3D endpoint favors constitutive AD:
-constitutive AD is fastest, element AD also converges, and colored SFD reaches
-the same reported energy but exhausts the strict trust-region convergence gate
-before satisfying $\|\nabla J\|_2 < \num{1e-4}$. The failed SFD row is retained
-because it is part of the comparison outcome, not a missing measurement.
+Across all three benchmark rows, local colored SFD reaches the same reported
+energy and identical nonlinear/Krylov iteration counts as element AD. The
+scalar and hyperelasticity rows still show the expected wall-time premium for
+colored SFD. On the Plasticity3D endpoint, constitutive AD is fastest, while
+element AD and colored SFD have matching iteration counts and comparable solve
+times. The colored-SFD Plasticity3D row records 240--420 colors across the 32
+ranks; its comparable solve time is therefore explained by batched local HVPs
+having nearly the same measured Hessian-callback cost as element AD on this
+$P_2(L_1)$ case, not by an under-colored finite-difference reconstruction.
 
 \begin{table}[H]
   \centering
   \footnotesize
   \input{tables/generated/derivative_route_compare.tex}
   \caption{Local derivative-route comparison. Colored SFD denotes local
-  subgraph finite-difference Hessian recovery.}
+  subgraph finite-difference Hessian recovery; the SFD-color range is shown
+  where the current run records per-rank color counts.}
   \label{tab:derivative-route-compare}
 \end{table}
 

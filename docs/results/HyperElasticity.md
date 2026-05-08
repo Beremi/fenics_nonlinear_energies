@@ -74,8 +74,8 @@ supports element AD only and rejects local-SFD Hessians.
 
 | route | ranks | solve [s] | Newton | linear | energy | result |
 | --- | ---: | ---: | ---: | ---: | ---: | --- |
-| Element AD | 32 | 12.4060 | 22 | 492 | 0.1519923275 | completed |
-| Local colored SFD | 32 | 36.4661 | 22 | 492 | 0.1519923275 | completed |
+| Element AD | 32 | 11.6526 | 22 | 492 | 0.1519923275 | completed |
+| Local colored SFD | 32 | 34.5787 | 22 | 492 | 0.1519923275 | completed |
 
 This is a derivative-route cost comparison, not a replacement for the
 rank-local production scaling rows.

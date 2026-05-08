@@ -108,6 +108,32 @@ def _array_nbytes(arr: np.ndarray | None) -> int:
     return int(np.asarray(arr).nbytes)
 
 
+def _sfd_column_conflict_matrix(
+    row_idx: np.ndarray,
+    col_idx: np.ndarray,
+    n_cols: int,
+) -> sparse.csr_matrix:
+    """Return SFD column conflicts for the rows extracted from HVPs."""
+
+    row_idx = np.asarray(row_idx, dtype=np.int64).ravel()
+    col_idx = np.asarray(col_idx, dtype=np.int64).ravel()
+    n_cols = int(n_cols)
+    if n_cols <= 0 or row_idx.size == 0:
+        return sparse.csr_matrix((max(0, n_cols), max(0, n_cols)), dtype=np.float64)
+    pattern = sparse.csr_matrix(
+        (
+            np.ones(int(row_idx.size), dtype=np.float64),
+            (row_idx, col_idx),
+        ),
+        shape=(n_cols, n_cols),
+    )
+    conflicts = sparse.csr_matrix(pattern.T @ pattern)
+    conflicts.data[:] = 1.0
+    conflicts.setdiag(0)
+    conflicts.eliminate_zeros()
+    return conflicts
+
+
 def _build_block_graph(adjacency: sparse.spmatrix, block_size: int) -> sparse.csr_matrix:
     rows, cols = adjacency.nonzero()
     br = rows // block_size
@@ -1379,23 +1405,14 @@ class ReorderedElementAssemblerBase:
         J_to_idx = np.full(self.layout.n_free, -1, dtype=np.int64)
         J_to_idx[J_arr] = np.arange(n_J, dtype=np.int64)
 
-        A_J = sparse.csr_matrix(
-            (
-                np.ones(len(row_arr), dtype=np.float64),
-                (J_to_idx[row_arr], J_to_idx[col_arr]),
-            ),
-            shape=(n_J, n_J),
+        conflicts = _sfd_column_conflict_matrix(
+            J_to_idx[row_arr],
+            J_to_idx[col_arr],
+            n_J,
         )
-        A_J.data[:] = 1.0
-        A_J.eliminate_zeros()
-
-        A2_J = sparse.csr_matrix(A_J @ A_J)
-        A2_J.data[:] = 1.0
-        A2_J.eliminate_zeros()
-
-        A2_J_coo = A2_J.tocoo()
-        lo_tri = A2_J_coo.row > A2_J_coo.col
-        edges = np.column_stack((A2_J_coo.row[lo_tri], A2_J_coo.col[lo_tri]))
+        conflicts_coo = conflicts.tocoo()
+        lo_tri = conflicts_coo.row > conflicts_coo.col
+        edges = np.column_stack((conflicts_coo.row[lo_tri], conflicts_coo.col[lo_tri]))
         graph = igraph.Graph(
             n_J, edges.tolist() if len(edges) > 0 else [], directed=False
         )
