@@ -56,6 +56,24 @@ rather than a universal preference for any single globalization strategy.
   \label{tab:globalization-method-compare}
 \end{table}
 
+The Ginzburg--Landau row is also rerun as a reviewer-gap fixed-budget probe on
+the level-10 mesh with eight MPI ranks, so every policy reaches the nonlinear
+solver rather than timing out during setup. \Cref{tab:reviewer-gl-globalization}
+reports this cleaned scalar-nonconvex comparison separately from the
+multi-family table above. Its purpose is narrower: it checks whether the
+trust-region conclusions survive when the setup budget is not the dominant
+failure mode.
+
+\begin{table}[H]
+  \centering
+  \footnotesize
+  \input{tables/generated/reviewer_gl_globalization.tex}
+  \caption{Reviewer-gap Ginzburg--Landau level-10 globalization cleanup on
+  eight local MPI ranks. The rows use the same element assembly and Hypre
+  preconditioner; only the nonlinear globalization policy changes.}
+  \label{tab:reviewer-gl-globalization}
+\end{table}
+
 \subsection{Derivative-Route Comparison}
 \label{sec:num-derivative-route}
 
@@ -87,6 +105,32 @@ $P_2(L_1)$ case, not by an under-colored finite-difference reconstruction.
   subgraph finite-difference Hessian recovery; the SFD-color range is shown
   where the current run records per-rank color counts.}
   \label{tab:derivative-route-compare}
+\end{table}
+
+\Cref{tab:reviewer-p3d-derivative-degree} adds the missing degree sensitivity
+behind the Plasticity3D derivative-route claim. The fixed-work probe uses one
+Newton linearization on glued-bottom heterogeneous meshes at
+$\lambda_{\mathrm{sr}}=\num{1.55}$, 32 MPI ranks, and the degree-appropriate
+PMG hierarchy. This table should be read as derivative cost evidence, not as
+a convergence-quality replacement for the full Plasticity3D endpoint studies.
+The same-DOF comparison is the most informative row pair: $P_1(L_2)$ and
+$P_2(L_1)$ both have \num{79024} free unknowns, but the $P_2$ element stencil
+is denser. Its colored-SFD route therefore needs 240--420 colors instead of
+66--90, raises the Hessian callback from \num{0.332} to \num{1.412} s, and
+raises the rank-maximum RSS from about \num{0.65} to \num{1.10} GiB. We omit
+the $P_4$ colored-SFD row from this local table; the $P_2$ same-DOF comparison
+already exposes the stencil density effect without forcing a workstation-scale
+memory stress case.
+
+\begin{table}[H]
+  \centering
+  \scriptsize
+  \input{tables/generated/reviewer_p3d_derivative_degree.tex}
+  \caption{Plasticity3D one-Newton derivative-route cost versus discretization.
+  Elem DOFs is the local vector element size used by the Hessian callback;
+  overlap DOFs is the maximum local overlap vector size recorded by the
+  assembler.}
+  \label{tab:reviewer-p3d-derivative-degree}
 \end{table}
 
 \subsection{\texorpdfstring{$p$-Laplace}{p-Laplace}}
@@ -164,6 +208,40 @@ multi-node rows use one 128-rank redundant group per node.
 report the application-reported solver total time, not Slurm elapsed time.
 All rows reach the same first-step energy to the precision shown in the raw
 outputs, with 21 Newton iterations and 43 Krylov iterations.
+
+\Cref{tab:reviewer-he-distribution} records the local ablation that motivated
+the production rank-local path used in the Karolina runs. The correctness row
+compares the replicated and rank-local level-4 first-step solve at four MPI
+ranks; the memory rows use one Newton linearization on the level-5 mesh at
+8, 16, and 32 ranks. The table reports both operating-system peak RSS and the
+assembler's tracked array footprint, making clear whether a row stores global
+mesh and adjacency data or only local elements plus overlap.
+
+\begin{table}[H]
+  \centering
+  \scriptsize
+  \input{tables/generated/reviewer_he_distribution.tex}
+  \caption{Local HyperElasticity distribution and memory ablation. RSS
+  max/sum gives the maximum and summed per-rank resident set size. Tracked sum
+  is the assembler-reported array footprint, and overlap/owned is the summed
+  rank-local overlap DOF count divided by global owned free DOFs.}
+  \label{tab:reviewer-he-distribution}
+\end{table}
+
+\Cref{tab:reviewer-he-pmg} isolates the first-step level-5 PMG choice on the
+same 32-rank local fixed-work problem. All rows perform the same eight Newton
+linearizations, so differences in total time are attributable to the linear
+preconditioner and coarse-solver policy rather than to nonlinear stopping.
+
+\begin{table}[H]
+  \centering
+  \footnotesize
+  \input{tables/generated/reviewer_he_pmg.tex}
+  \caption{Local HyperElasticity level-5 PMG and coarse-solver sensitivity at
+  32 MPI ranks with fixed nonlinear work. The PMG rows use the same
+  rank-local element path as the production scaling runs.}
+  \label{tab:reviewer-he-pmg}
+\end{table}
 
 \begin{figure}[H]
   \centering
@@ -398,6 +476,27 @@ workflow scaling rather than fixed-work strong scaling.
   \caption{Parallel topology summary for the maintained fine-grid study,
   reported for the reduced objective in \cref{eq:topology-reduced-objective}.}
   \label{tab:topology-summary}
+\end{table}
+
+\Cref{tab:reviewer-topology-consistency} complements the end-to-end scaling
+table with a fixed-schedule rank-consistency probe on a smaller
+$384\times192$ grid. The run disables early convergence and stall stopping,
+uses the same initial design and smoother continuation schedule
+($p \leftarrow p+\num{0.1}$) on all ranks, and compares the saved final density
+field against the one-rank reference after 40 outer iterations. All rows
+complete the fixed work. The compliance difference stays below \num{0.2}\%,
+and the density relative $L^2$ difference remains below \num{0.04}, which
+checks that the distributed design-gradient exchange and mechanics coupling
+are no longer visibly rank-dependent on this diagnostic grid.
+
+\begin{table}[H]
+  \centering
+  \footnotesize
+  \input{tables/generated/reviewer_topology_consistency.tex}
+  \caption{Topology fixed-schedule rank consistency. Each row completes the
+  same 40 outer iterations; compliance and density differences are relative to
+  the one-rank row.}
+  \label{tab:reviewer-topology-consistency}
 \end{table}
 
 The topology benchmark completes the paper's computational picture. Here the

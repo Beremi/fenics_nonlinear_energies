@@ -8,6 +8,7 @@ import ctypes
 import gc
 import json
 import os
+import resource
 import sys
 import time
 from dataclasses import dataclass
@@ -407,6 +408,7 @@ def _gather_assembler_rank_diagnostics(backend: object) -> dict[str, object]:
         dict(assembler.callback_summary()).get("hessian", {})
     )
     memory = dict(assembler.memory_summary())
+    ru_maxrss_mib = float(resource.getrusage(resource.RUSAGE_SELF).ru_maxrss) / 1024.0
     local = {
         "rank": int(comm.Get_rank()),
         "local_hessian_mode": str(getattr(assembler, "local_hessian_mode", "")),
@@ -415,6 +417,7 @@ def _gather_assembler_rank_diagnostics(backend: object) -> dict[str, object]:
         "local_elements": int(memory.get("local_elements", 0)),
         "local_overlap_dofs": int(memory.get("local_overlap_dofs", 0)),
         "owned_nnz": int(memory.get("owned_nnz", 0)),
+        "ru_maxrss_mib": float(ru_maxrss_mib),
         "hessian_calls": int(hessian_callbacks.get("calls", 0)),
         "hessian_hvp_compute_s": float(hessian_callbacks.get("hvp_compute", 0.0)),
         "hessian_total_s": float(hessian_callbacks.get("total", 0.0)),
@@ -425,6 +428,7 @@ def _gather_assembler_rank_diagnostics(backend: object) -> dict[str, object]:
     rows = list(gathered or [])
     colors = [int(row.get("sfd_colors", 0)) for row in rows]
     active_colors = [value for value in colors if value > 0]
+    rss_values = [float(row.get("ru_maxrss_mib", 0.0)) for row in rows]
     return {
         "rank_summaries": rows,
         "sfd_coloring": {
@@ -432,6 +436,12 @@ def _gather_assembler_rank_diagnostics(backend: object) -> dict[str, object]:
             "colors_max": int(max(active_colors)) if active_colors else 0,
             "colors_unique": sorted(set(active_colors)),
             "colors_by_rank": colors,
+        },
+        "resource_usage": {
+            "rank_ru_maxrss_mib": rss_values,
+            "ru_maxrss_mib_min": float(min(rss_values)) if rss_values else 0.0,
+            "ru_maxrss_mib_max": float(max(rss_values)) if rss_values else 0.0,
+            "ru_maxrss_mib_total": float(sum(rss_values)) if rss_values else 0.0,
         },
     }
 

@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import json
 from pathlib import Path
+import resource
 import time
 
 import jax
@@ -218,6 +219,7 @@ def run_topology_optimisation_parallel(
     save_design_iteration_history: bool = False,
     outer_snapshot_stride: int = 1,
     outer_snapshot_dir: str = "",
+    fixed_outer_schedule: bool = False,
     verbose: bool = False,
 ) -> tuple[dict, dict]:
     comm = MPI.COMM_WORLD
@@ -547,7 +549,11 @@ def run_topology_optimisation_parallel(
         continuation_gate_ok, recent_mech_maxit, recent_design_maxit = _continuation_gate_recent_maxit(
             recent_gate_history, 10
         )
-        p_step = float(scheduled_p_step if (scheduled_p_step <= 0.0 or continuation_gate_ok) else 0.0)
+        if fixed_outer_schedule:
+            continuation_gate_ok = True
+            p_step = float(scheduled_p_step)
+        else:
+            p_step = float(scheduled_p_step if (scheduled_p_step <= 0.0 or continuation_gate_ok) else 0.0)
 
         history.append(
             {
@@ -622,7 +628,8 @@ def run_topology_optimisation_parallel(
         _maybe_save_snapshot(outer_it, p_penal, volume_value)
 
         if (
-            p_penal >= p_max - 1e-12
+            not fixed_outer_schedule
+            and p_penal >= p_max - 1e-12
             and abs(volume_residual) <= volume_tol
             and design_change <= outer_tol
             and compliance_change <= outer_tol
@@ -631,7 +638,8 @@ def run_topology_optimisation_parallel(
             break
 
         if (
-            stall_theta_tol > 0.0
+            not fixed_outer_schedule
+            and stall_theta_tol > 0.0
             and p_penal >= stall_p_min
             and design_change <= stall_theta_tol
             and theta_state_change <= stall_theta_tol
@@ -642,7 +650,9 @@ def run_topology_optimisation_parallel(
 
         p_penal = min(p_max, p_penal + p_step)
 
-    if status == "completed" and not outer_converged and len(history) >= outer_maxit:
+    if fixed_outer_schedule and status == "completed" and len(history) >= outer_maxit:
+        status = "fixed_work_completed"
+    elif status == "completed" and not outer_converged and len(history) >= outer_maxit:
         status = "max_outer_iterations"
 
     if status != "failed_mechanics":
@@ -663,6 +673,17 @@ def run_topology_optimisation_parallel(
     total_time = time.perf_counter() - total_start
     final_volume = float(design_eval.volume_fraction(z_vec))
     final_compliance = float(mechanics_assembler.compliance(u_vec))
+    local_rss_mib = float(resource.getrusage(resource.RUSAGE_SELF).ru_maxrss) / 1024.0
+    rank_rss_values = comm.gather(local_rss_mib, root=0)
+    if rank == 0 and rank_rss_values:
+        resource_usage = {
+            "rank_ru_maxrss_mib": [float(v) for v in rank_rss_values],
+            "ru_maxrss_mib_min": float(min(rank_rss_values)),
+            "ru_maxrss_mib_max": float(max(rank_rss_values)),
+            "ru_maxrss_mib_total": float(sum(rank_rss_values)),
+        }
+    else:
+        resource_usage = {}
     theta_grid = _root_theta_grid(
         partition,
         z_vec,
@@ -716,6 +737,7 @@ def run_topology_optimisation_parallel(
             "volume_tol": float(volume_tol),
             "stall_theta_tol": float(stall_theta_tol),
             "stall_p_min": float(stall_p_min),
+            "fixed_outer_schedule": bool(fixed_outer_schedule),
         },
         "solver_options": {
             "mechanics_ksp_type": str(mechanics_ksp_type),
@@ -744,6 +766,7 @@ def run_topology_optimisation_parallel(
             "design_gd_line_search": str(design_gd_line_search),
             "linesearch_relative_to_bound": bool(linesearch_relative_to_bound),
         },
+        "resource_usage": resource_usage,
         "final_metrics": {
             "outer_iterations": int(len(history)),
             "final_volume_fraction": float(final_volume),
@@ -842,6 +865,7 @@ def _build_arg_parser() -> argparse.ArgumentParser:
     parser.add_argument("--save_design_iteration_history", action="store_true")
     parser.add_argument("--outer_snapshot_stride", type=int, default=1)
     parser.add_argument("--outer_snapshot_dir", type=str, default="")
+    parser.add_argument("--fixed_outer_schedule", action="store_true")
     parser.add_argument("--json_out", type=str, default="")
     parser.add_argument("--state_out", type=str, default="")
     parser.add_argument("--quiet", action="store_true")
@@ -912,6 +936,7 @@ def main() -> None:
         save_design_iteration_history=args.save_design_iteration_history,
         outer_snapshot_stride=args.outer_snapshot_stride,
         outer_snapshot_dir=args.outer_snapshot_dir,
+        fixed_outer_schedule=args.fixed_outer_schedule,
         verbose=not args.quiet,
     )
 

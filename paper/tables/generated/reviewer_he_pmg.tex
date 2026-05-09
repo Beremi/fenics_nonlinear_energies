@@ -1,0 +1,10 @@
+\begin{tabular*}{\textwidth}{@{}l@{\extracolsep{\fill}} c c c c c c c c c@{}}
+\toprule
+Precond. & Result & Newton & Krylov & Solver [s] & Assembly [s] & PC [s] & Linear [s] & Coarse & Energy \\
+\midrule
+GAMG & fixed work & 8 & 42 & \num{22.3} & \num{9.11} & \num{6.41} & \num{3.91} & -- & \num{1.608441} \\
+PMG $L_2$ + Hypre & fixed work & 8 & 92 & \num{23.3} & \num{10.3} & \num{2.93} & \num{8.14} & hypre & \num{0.5252349427} \\
+PMG $L_2$ + MUMPS & fixed work & 8 & 17 & \num{15.3} & \num{9.13} & \num{2.55} & \num{1.91} & mumps, 1 grp. & \num{0.3848912708} \\
+PMG $L_3$ + MUMPS & fixed work & 8 & 17 & \num{16.3} & \num{9.14} & \num{2.93} & \num{2.51} & mumps, 1 grp. & \num{0.3864166034} \\
+\bottomrule
+\end{tabular*}

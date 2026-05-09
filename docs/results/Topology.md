@@ -71,6 +71,26 @@ Fine-grid parallel scaling (`768 x 384`):
 | 16 | completed | 66 | 5.80 | 0.3798 | 9.6859 | 43.328 | 4.805 |
 | 32 | completed | 66 | 6.60 | 0.3749 | 9.9074 | 25.105 | 8.293 |
 
+## Reviewer-Gap Fixed-Schedule Consistency
+
+The paper includes a fixed-work topology consistency probe on a `384 x 192`
+grid:
+
+```bash
+./.venv/bin/python experiments/runners/run_paper_reviewer_gap_experiments.py \
+  --mode full --sections topology_consistency --no-resume
+```
+
+Report CSV: [full_topology_consistency.csv](../../artifacts/reports/paper_reviewer_gap_experiments/full_topology_consistency.csv).
+
+This probe uses `--fixed_outer_schedule`, disables early convergence/stall
+stopping, uses the smoother fixed continuation increment `p_increment = 0.1`,
+runs exactly `40` outer iterations for `np = 1, 2, 4, 8, 16, 32`, and saves
+the root density state so compliance, volume, and density relative `L2`
+differences can be compared against the one-rank trajectory. All rows complete
+the fixed work; compliance differs by less than `0.2%` from the one-rank row,
+and density relative `L2` stays below `0.04`.
+
 ## Reproduction Commands
 
 For timings comparable to the maintained topology tables, pin the JAX CPU

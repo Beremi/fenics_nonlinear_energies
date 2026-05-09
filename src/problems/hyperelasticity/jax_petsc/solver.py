@@ -6,6 +6,7 @@ CLI entry point (argparse) is in ``solve_HE_dof.py``.
 """
 
 import gc
+import resource
 import time
 
 import numpy as np
@@ -197,6 +198,20 @@ def _summarize_rank_memory(rank_summaries) -> dict[str, float | int | list[dict[
         out[f"{key}_max"] = float(max(values))
         out[f"{key}_total"] = float(sum(values))
     return out
+
+
+def _summarize_rank_rss(comm: MPI.Comm) -> dict[str, float | list[float]]:
+    local_rss_mib = float(resource.getrusage(resource.RUSAGE_SELF).ru_maxrss) / 1024.0
+    gathered = comm.gather(local_rss_mib, root=0)
+    if comm.rank != 0 or not gathered:
+        return {}
+    values = [float(value) for value in gathered]
+    return {
+        "rank_ru_maxrss_mib": values,
+        "ru_maxrss_mib_min": float(min(values)),
+        "ru_maxrss_mib_max": float(max(values)),
+        "ru_maxrss_mib_total": float(sum(values)),
+    }
 
 
 def _resolve_linear_settings(args):
@@ -788,6 +803,8 @@ def run(args):
             if pmg_hierarchy is not None:
                 pmg_hierarchy.cleanup()
 
+    resource_usage_report = _summarize_rank_rss(comm)
+
     return build_load_step_result(
         mesh_level=int(args.level),
         total_dofs=int(params.get("_distributed_total_dofs", len(params.get("u_0", [])))),
@@ -838,6 +855,7 @@ def run(args):
                     "pmg_hierarchy": pmg_metadata,
                     "assembler_setup_by_rank": assembler_setup_report,
                     "assembler_memory_by_rank": assembler_memory_report,
+                    "resource_usage": resource_usage_report,
                     "assembler": assembler.__class__.__name__,
                     "trust_subproblem_solver": (
                         "petsc_ksp" if trust_ksp_subproblem else "reduced_2d"

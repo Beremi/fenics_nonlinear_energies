@@ -158,6 +158,30 @@ time is not due to an under-colored reconstruction; its batched HVP callback is
 roughly the same cost as the element-Hessian callback on this `P2` endpoint.
 Constitutive AD remains the fastest route.
 
+## Reviewer-Gap Degree/Derivative Probe
+
+The paper's reviewer-gap campaign adds a fixed-work derivative-cost check on
+glued-bottom `lambda = 1.55` cases, including a same-DOF comparison between
+`P1(L2)` and `P2(L1)`:
+
+```bash
+./.venv/bin/python experiments/runners/run_paper_reviewer_gap_experiments.py \
+  --mode full --sections p3d_derivative_degree --no-resume
+```
+
+Report CSV: [full_p3d_derivative_degree.csv](../../artifacts/reports/paper_reviewer_gap_experiments/full_p3d_derivative_degree.csv).
+
+This is a one-Newton diagnostic, not a replacement for the converged endpoint
+rows. It records free DOFs, local element DOFs, maximum local overlap DOFs,
+Hessian callback time, colored SFD color counts, Krylov work, and peak rank RSS
+for element AD, colored SFD, and constitutive AD. The key comparison is
+`P1(L2)` versus `P2(L1)`: both have `79024` free DOFs, but the denser `P2`
+element stencil raises the colored-SFD color range from `66-90` to `240-420`,
+the SFD Hessian callback from `0.332 s` to `1.412 s`, and the peak per-rank
+RSS from about `0.65 GiB` to `1.10 GiB`. The local `P4` colored-SFD row is not
+run here; the same-DOF `P1/P2` comparison already shows the stencil-density
+effect without forcing a local memory stress case.
+
 The remaining sections below preserve the older `lambda = 1.5` fixed-work and
 `maxit = 20` diagnostic campaigns as historical backend context.
 

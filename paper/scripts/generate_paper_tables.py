@@ -32,6 +32,12 @@ P3D_DERIVATIVE_ABLATION_SUMMARY = (
 JAX_FEM_BASELINE_SUMMARY = REPO_ROOT / "artifacts/raw_results/jax_fem_hyperelastic_baseline/comparison_summary.json"
 GLOBALIZATION_METHOD_COMPARE = REPO_ROOT / "artifacts/reports/globalization_method_compare/full_summary.csv"
 DERIVATIVE_ROUTE_COMPARE = REPO_ROOT / "artifacts/reports/derivative_route_compare/full_summary.csv"
+REVIEWER_GAP_ROOT = REPO_ROOT / "artifacts/reports/paper_reviewer_gap_experiments"
+REVIEWER_HE_DISTRIBUTION = REVIEWER_GAP_ROOT / "full_he_distribution.csv"
+REVIEWER_HE_PMG = REVIEWER_GAP_ROOT / "full_he_pmg.csv"
+REVIEWER_TOPOLOGY_CONSISTENCY = REVIEWER_GAP_ROOT / "full_topology_consistency.csv"
+REVIEWER_GL_GLOBALIZATION = REVIEWER_GAP_ROOT / "full_gl_globalization.csv"
+REVIEWER_P3D_DERIVATIVE_DEGREE = REVIEWER_GAP_ROOT / "full_p3d_derivative_degree.csv"
 P3D_LOCAL_LAMBDA155_SCALING = (
     REPO_ROOT
     / "artifacts/reports/plasticity3d_p4_l1_2_mumps_pmg_step_grad_local_karolina_scaling/local_solver_total_scaling.csv"
@@ -130,6 +136,24 @@ DERIVATIVE_BENCHMARK_LABELS = {
 }
 
 DERIVATIVE_ROUTE_LABELS = {
+    "element_ad": "Element AD",
+    "colored_sfd": "Colored SFD",
+    "constitutive_ad": "Constitutive AD",
+}
+
+REVIEWER_HE_BUILD_LABELS = {
+    "replicated": "replicated",
+    "rank_local": "rank-local",
+}
+
+REVIEWER_HE_PMG_LABELS = {
+    "gamg": "GAMG",
+    "pmg_l2_hypre": "PMG $L_2$ + Hypre",
+    "pmg_l2_redundant_mumps": "PMG $L_2$ + MUMPS",
+    "pmg_l3_redundant_mumps": "PMG $L_3$ + MUMPS",
+}
+
+REVIEWER_P3D_ROUTE_LABELS = {
     "element_ad": "Element AD",
     "colored_sfd": "Colored SFD",
     "constitutive_ad": "Constitutive AD",
@@ -435,6 +459,51 @@ def derivative_route_rows(path: Path = DERIVATIVE_ROUTE_COMPARE) -> list[dict[st
     return rows
 
 
+def reviewer_he_distribution_rows(path: Path = REVIEWER_HE_DISTRIBUTION) -> list[dict[str, str]]:
+    rows = read_csv_rows(path)
+    rows.sort(
+        key=lambda row: (
+            0 if row.get("probe") == "correctness" else 1,
+            int(float(row.get("level") or 0)),
+            int(float(row.get("nprocs") or 0)),
+            0 if row.get("build_mode") == "replicated" else 1,
+        )
+    )
+    return rows
+
+
+def reviewer_he_pmg_rows(path: Path = REVIEWER_HE_PMG) -> list[dict[str, str]]:
+    rows = read_csv_rows(path)
+    order = {key: index for index, key in enumerate(REVIEWER_HE_PMG_LABELS)}
+    rows.sort(key=lambda row: order.get(row.get("candidate", ""), 10**6))
+    return rows
+
+
+def reviewer_topology_consistency_rows(path: Path = REVIEWER_TOPOLOGY_CONSISTENCY) -> list[dict[str, str]]:
+    rows = read_csv_rows(path)
+    rows.sort(key=lambda row: int(float(row.get("nprocs") or 0)))
+    return rows
+
+
+def reviewer_gl_globalization_rows(path: Path = REVIEWER_GL_GLOBALIZATION) -> list[dict[str, str]]:
+    rows = read_csv_rows(path)
+    rows.sort(key=lambda row: GLOBALIZATION_METHOD_ORDER.get(row.get("method", ""), 10**6))
+    return rows
+
+
+def reviewer_p3d_derivative_degree_rows(path: Path = REVIEWER_P3D_DERIVATIVE_DEGREE) -> list[dict[str, str]]:
+    rows = read_csv_rows(path)
+    route_order = {key: index for index, key in enumerate(REVIEWER_P3D_ROUTE_LABELS)}
+    rows.sort(
+        key=lambda row: (
+            int(float(row.get("free_dofs") or 0)),
+            str(row.get("mesh_case", "")),
+            route_order.get(row.get("route", ""), 10**6),
+        )
+    )
+    return rows
+
+
 def _fmt_optional_wall(value: object) -> str:
     text = str(value).strip()
     if not text:
@@ -447,6 +516,87 @@ def _fmt_optional_energy(value: object) -> str:
     if not text:
         return "--"
     return fmt_energy(float(text))
+
+
+def _fmt_optional_float(value: object, digits: int = 3) -> str:
+    text = str(value).strip()
+    if not text:
+        return "--"
+    return fmt_float(float(text), digits)
+
+
+def _fmt_optional_sci(value: object, sig: int = 3) -> str:
+    text = str(value).strip()
+    if not text:
+        return "--"
+    return fmt_sci(float(text), sig)
+
+
+def _fmt_optional_count(value: object) -> str:
+    text = str(value).strip()
+    if not text:
+        return "--"
+    return fmt_count(text)
+
+
+def _fmt_optional_dofs(value: object) -> str:
+    text = str(value).strip()
+    if not text:
+        return "--"
+    return fmt_dofs(text)
+
+
+def _result_label(value: object) -> str:
+    text = str(value).strip()
+    labels = {
+        "completed": "completed",
+        "fixed_work": "fixed work",
+        "fixed_work_completed": "fixed work",
+        "failed_design": "design failed",
+        "timeout": "timeout",
+        "skipped_oom_guard": "OOM guarded",
+        "missing_json": "missing JSON",
+        "failed": "failed",
+    }
+    return labels.get(text, text.replace("_", r"\_"))
+
+
+def _p3d_discretization_label(row: dict[str, str]) -> str:
+    text = str(row.get("discretization", "")).strip()
+    if text.startswith("P") and "(L" in text and text.endswith(")"):
+        degree, mesh = text.split("(", 1)
+        return element_label(degree, mesh[:-1])
+    if text:
+        return text.replace("_", r"\_")
+    return degree_label(f"P{int(float(row.get('degree') or 0))}")
+
+
+def _fmt_mib_pair(max_mib: object, total_mib: object) -> str:
+    max_text = str(max_mib).strip()
+    total_text = str(total_mib).strip()
+    if not max_text and not total_text:
+        return "--"
+    max_gib = float(max_text or 0.0) / 1024.0
+    total_gib = float(total_text or 0.0) / 1024.0
+    return f"{fmt_float(max_gib, 1)}/{fmt_float(total_gib, 1)}"
+
+
+def _fmt_optional_gib(value: object) -> str:
+    text = str(value).strip()
+    if not text:
+        return "--"
+    return fmt_float(float(text), 2)
+
+
+def _fmt_he_coarse(row: dict[str, str]) -> str:
+    coarse_pc = str(row.get("coarse_pc", "")).strip()
+    if not coarse_pc:
+        return "--"
+    if coarse_pc == "redundant":
+        factor = str(row.get("coarse_factor_solver", "")).strip() or "LU"
+        groups = _fmt_optional_count(row.get("coarse_redundant_number", ""))
+        return f"{factor.replace('_', r'\_')}, {groups} grp."
+    return coarse_pc.replace("_", r"\_")
 
 
 def _derivative_row_time(row: dict[str, str]) -> str:
@@ -586,6 +736,11 @@ def main() -> None:
     jax_fem_baseline = read_json(JAX_FEM_BASELINE_SUMMARY)
     globalization_rows = globalization_method_rows()
     derivative_rows = derivative_route_rows()
+    reviewer_he_distribution = reviewer_he_distribution_rows()
+    reviewer_he_pmg = reviewer_he_pmg_rows()
+    reviewer_topology = reviewer_topology_consistency_rows()
+    reviewer_gl = reviewer_gl_globalization_rows()
+    reviewer_p3d_degree = reviewer_p3d_derivative_degree_rows()
 
     local_scaling_rows = find_rows(local_rows, LOCAL_IMPL)
     mixed_local_rows = find_rows(mixed_rows, LOCAL_IMPL)
@@ -926,6 +1081,170 @@ def main() -> None:
                 _fmt_optional_energy(row.get("final_energy")),
             ]
             for row in derivative_rows
+        ],
+    )
+
+    write_table_star(
+        "reviewer_he_distribution.tex",
+        fill_spec("l c c c c c c c c c c"),
+        [
+            "Probe",
+            "Level",
+            "Ranks",
+            "Build",
+            "Result",
+            "Newton",
+            "Krylov",
+            "Solve [s]",
+            "RSS max/sum [GiB]",
+            "Tracked sum [GiB]",
+            "Overlap/owned",
+        ],
+        [
+            [
+                str(row.get("probe", "")).replace("_", r"\_"),
+                mesh_label(f"L{int(float(row.get('level') or 0))}"),
+                fmt_count(row["nprocs"]),
+                REVIEWER_HE_BUILD_LABELS.get(str(row.get("build_mode", "")), str(row.get("build_mode", ""))),
+                _result_label(row.get("result", "")),
+                _fmt_optional_count(row.get("newton_iters", "")),
+                _fmt_optional_count(row.get("krylov_iters", "")),
+                _fmt_optional_wall(row.get("solve_time_s", "")),
+                _fmt_mib_pair(row.get("ru_maxrss_mib_max", ""), row.get("ru_maxrss_mib_total", "")),
+                _fmt_optional_gib(row.get("tracked_total_gib_total", "")),
+                _fmt_optional_float(row.get("overlap_owned_ratio", ""), 2),
+            ]
+            for row in reviewer_he_distribution
+        ],
+    )
+
+    write_table_star(
+        "reviewer_he_pmg.tex",
+        fill_spec("l c c c c c c c c c"),
+        [
+            "Precond.",
+            "Result",
+            "Newton",
+            "Krylov",
+            "Solver [s]",
+            "Assembly [s]",
+            "PC [s]",
+            "Linear [s]",
+            "Coarse",
+            "Energy",
+        ],
+        [
+            [
+                REVIEWER_HE_PMG_LABELS.get(str(row.get("candidate", "")), str(row.get("candidate", "")).replace("_", r"\_")),
+                _result_label(row.get("result", "")),
+                _fmt_optional_count(row.get("newton_iters", "")),
+                _fmt_optional_count(row.get("krylov_iters", "")),
+                _fmt_optional_wall(row.get("solve_time_s", "")),
+                _fmt_optional_wall(row.get("assemble_time_s", "")),
+                _fmt_optional_wall(row.get("pc_setup_time_s", "")),
+                _fmt_optional_wall(row.get("linear_solve_time_s", "")),
+                _fmt_he_coarse(row),
+                _fmt_optional_energy(row.get("energy", "")),
+            ]
+            for row in reviewer_he_pmg
+        ],
+    )
+
+    write_table_star(
+        "reviewer_gl_globalization.tex",
+        fill_spec("l c c c c c c c c"),
+        [
+            "Method",
+            "Result",
+            "Newton",
+            "Krylov",
+            "LS evals",
+            "TR rejects",
+            "Setup [s]",
+            "Solve [s]",
+            "Energy",
+        ],
+        [
+            [
+                GLOBALIZATION_METHOD_LABELS.get(str(row.get("method", "")), str(row.get("method", "")).replace("_", r"\_")),
+                _result_label(row.get("result", "")),
+                _fmt_optional_count(row.get("newton_iters", "")),
+                _fmt_optional_count(row.get("krylov_iters", "")),
+                _fmt_optional_count(row.get("line_search_evals", "")),
+                _fmt_optional_count(row.get("trust_rejects", "")),
+                _fmt_optional_wall(row.get("setup_time_s", "")),
+                _fmt_optional_wall(row.get("solve_time_s", "")),
+                _fmt_optional_energy(row.get("energy", "")),
+            ]
+            for row in reviewer_gl
+        ],
+    )
+
+    write_table_star(
+        "reviewer_topology_consistency.tex",
+        fill_spec("c c c c c c c c c"),
+        [
+            "Ranks",
+            "Result",
+            "Outer",
+            "Solve [s]",
+            "Compliance",
+            "Volume",
+            "$p$",
+            "$\\Delta C/C_1$",
+            "Density rel. $L^2$",
+        ],
+        [
+            [
+                fmt_count(row["nprocs"]),
+                _result_label(row.get("result", "")),
+                _fmt_optional_count(row.get("outer_iterations", "")),
+                _fmt_optional_wall(row.get("solve_time_s", "")),
+                _fmt_optional_float(row.get("final_compliance", ""), 4),
+                _fmt_optional_float(row.get("final_volume_fraction", ""), 4),
+                _fmt_optional_float(row.get("final_p", ""), 2),
+                _fmt_optional_sci(row.get("compliance_rel_diff_vs_np1", "")),
+                _fmt_optional_sci(row.get("density_rel_l2_vs_np1", "")),
+            ]
+            for row in reviewer_topology
+        ],
+    )
+
+    write_table_star(
+        "reviewer_p3d_derivative_degree.tex",
+        fill_spec("c l c c c c c c c c c"),
+        [
+            "Element",
+            "Route",
+            "Result",
+            "Free DOFs",
+            "Elem DOFs",
+            "Overlap DOFs",
+            "Krylov",
+            "Solve [s]",
+            "Hessian [s]",
+            "SFD colors",
+            "RSS max [GiB]",
+        ],
+        [
+            [
+                _p3d_discretization_label(row),
+                REVIEWER_P3D_ROUTE_LABELS.get(str(row.get("route", "")), str(row.get("route", "")).replace("_", r"\_")),
+                _result_label(row.get("result", "")),
+                _fmt_optional_dofs(row.get("free_dofs", "")),
+                _fmt_optional_count(row.get("local_element_dofs", "")),
+                _fmt_optional_count(row.get("local_overlap_dofs", "")),
+                _fmt_optional_count(row.get("krylov_iters", "")),
+                _fmt_optional_wall(row.get("solve_time_s", "")),
+                _fmt_optional_wall(row.get("hessian_time_s", "")),
+                _derivative_sfd_colors(row),
+                (
+                    _fmt_optional_float(float(row.get("ru_maxrss_mib_max", 0.0)) / 1024.0, 1)
+                    if str(row.get("ru_maxrss_mib_max", "")).strip()
+                    else "--"
+                ),
+            ]
+            for row in reviewer_p3d_degree
         ],
     )
 
@@ -1363,6 +1682,13 @@ def main() -> None:
             }
             for row in he_karolina_rows
         ],
+        "reviewer_gap": {
+            "he_distribution_rows": len(reviewer_he_distribution),
+            "he_pmg_rows": len(reviewer_he_pmg),
+            "gl_globalization_rows": len(reviewer_gl),
+            "topology_consistency_rows": len(reviewer_topology),
+            "p3d_derivative_degree_rows": len(reviewer_p3d_degree),
+        },
     }
     write_json(REPO_ROOT / "paper/build/tables_summary.json", payload)
 

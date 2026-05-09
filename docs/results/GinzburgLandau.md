@@ -68,6 +68,23 @@ Finest maintained strong-scaling case: level `9`.
 | JAX+PETSc local-SFD | 16 | 4.4732 | 8 | 38 | 0.345626 |
 | JAX+PETSc local-SFD | 32 | 2.7230 | 7 | 39 | 0.345626 |
 
+## Reviewer-Gap Globalization Cleanup
+
+The paper's reviewer-gap campaign adds a level `10`, `np = 8` local
+globalization comparison for Ginzburg-Landau so every method reaches the
+nonlinear solver inside a fixed `300 s` cap:
+
+```bash
+./.venv/bin/python experiments/runners/run_paper_reviewer_gap_experiments.py \
+  --mode full --sections gl_globalization --no-resume
+```
+
+Report CSV: [full_gl_globalization.csv](../../artifacts/reports/paper_reviewer_gap_experiments/full_gl_globalization.csv).
+
+This run is separate from the maintained level `9` strong-scaling suite above;
+it is a reviewer-facing nonlinear globalization probe on the generated level
+`10` scalar mesh.
+
 ## Reproduction Commands
 
 Maintained suite:

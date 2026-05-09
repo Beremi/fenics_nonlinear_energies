@@ -289,6 +289,45 @@ class OwnedGhostLayout:
         )
         return v, ExchangeTimings(build_v_local=time.perf_counter() - t0)
 
+    def accumulate_local_to_owned(self, values_local: np.ndarray) -> np.ndarray:
+        """Sum local overlapped contributions back to the owning rank layout."""
+        values = np.asarray(values_local, dtype=np.float64)
+        if values.shape != (self.n_local,):
+            raise ValueError(
+                f"Expected local vector with shape {(self.n_local,)}, got {values.shape}."
+            )
+        owned = np.zeros(self.n_owned, dtype=np.float64)
+        if self._p2p_owned_local.size:
+            np.add.at(owned, self._p2p_owned_offset, values[self._p2p_owned_local])
+        if not self._ghost_recv_local_concat.size and not self._ghost_send_offsets_concat.size:
+            return owned
+
+        send_buf = (
+            np.ascontiguousarray(values[self._ghost_recv_local_concat], dtype=np.float64)
+            if self._ghost_recv_local_concat.size
+            else np.empty(0, dtype=np.float64)
+        )
+        recv_buf = np.empty(int(np.sum(self._ghost_send_counts)), dtype=np.float64)
+        if recv_buf.size:
+            recv_buf.fill(0.0)
+        self.comm.Alltoallv(
+            [
+                send_buf,
+                self._ghost_recv_counts_list,
+                self._ghost_recv_displs_list,
+                MPI.DOUBLE,
+            ],
+            [
+                recv_buf,
+                self._ghost_send_counts_list,
+                self._ghost_send_displs_list,
+                MPI.DOUBLE,
+            ],
+        )
+        if recv_buf.size:
+            np.add.at(owned, self._ghost_send_offsets_concat, recv_buf)
+        return owned
+
     def create_vec(self, fill: float = 0.0) -> PETSc.Vec:
         v = PETSc.Vec().createMPI((self.n_owned, self.n_free), comm=self.comm)
         arr = v.getArray(readonly=False)
@@ -1161,7 +1200,7 @@ class TopologyMechanicsAssembler:
             }
         )
 
-        if int(result["reason_code"]) <= 0 and str(result["reason"]) == "DIVERGED_MAX_IT":
+        if int(result["reason_code"]) <= 0 and str(result["reason"]) in {"DIVERGED_MAX_IT", "DIVERGED_DTOL"}:
             accepted = self._accept_maxit_via_line_search(
                 rhs=rhs,
                 vec_guess=vec_guess,
@@ -1183,7 +1222,11 @@ class TopologyMechanicsAssembler:
 
         if int(result["reason_code"]) <= 0:
             reason_msg = str(result["reason"])
-            needs_shift = "INDEFINITE_PC" in reason_msg or "BREAKDOWN" in reason_msg
+            needs_shift = (
+                "INDEFINITE_PC" in reason_msg
+                or "BREAKDOWN" in reason_msg
+                or "DIVERGED_DTOL" in reason_msg
+            )
             if needs_shift:
                 result["x"].destroy()
                 base_shift = max(1e-16, 0.01 * float(self._latest_diag_abs_max))
@@ -1215,7 +1258,7 @@ class TopologyMechanicsAssembler:
                     result = fallback_result
                     if int(result["reason_code"]) > 0:
                         break
-                    if str(result["reason"]) == "DIVERGED_MAX_IT":
+                    if str(result["reason"]) in {"DIVERGED_MAX_IT", "DIVERGED_DTOL"}:
                         accepted = self._accept_maxit_via_line_search(
                             rhs=rhs,
                             vec_guess=vec_guess,
@@ -1434,7 +1477,7 @@ class TopologyDesignEvaluator:
             ).block_until_ready()
         )
         g_arr = g.getArray(readonly=False)
-        g_arr[:] = grad_local[self.part.owned_local_indices]
+        g_arr[:] = self.part.accumulate_local_to_owned(grad_local)
         del g_arr
 
     def volume_fraction(self, vec: PETSc.Vec) -> float:
