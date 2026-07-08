@@ -33,7 +33,7 @@ final energy, full-field displacement, centerline displacement, and
 $u_{\max}$-curve differences. The \plasticitythree{} Layer 2 acceptance gate
 uses three thresholds from its validation manifest: at most $0.03$ relative
 difference in the highest successful load factor, at most $0.05$ relative
-$L^2$ difference for the $u_{\max}(\lambda)$ curve, and at most $0.10$
+$L^2$ difference for the $u_{\max}(\lambda_{\mathrm{sr}})$ curve, and at most $0.10$
 relative $L^2$ difference for the endpoint displacement. The deviatoric-strain
 and boundary-profile differences in \Cref{tab:plasticity3d-validation} are
 diagnostics, not acceptance gates.
@@ -109,14 +109,16 @@ direct-branch source-observable agreement for the endpoint surrogate on the
 $P_2(L_1)$ source-family case. This layer is tight: the work relative
 difference is \num{3.877e-5}, the displacement relative $L^2$ difference is
 \num{3.517e-3}, and the deviatoric-strain relative $L^2$ difference is
-\num{8.720e-3}. Layer 2 is different: it is a fixed-$\lambda$ diagnostic
-against a source-operator comparison, not proof of path-consistent
+\num{8.720e-3}. Layer 2 is different: it is a fixed-$\lambda_{\mathrm{sr}}$
+diagnostic
+against a reference-operator comparison, not proof of path-consistent
 incremental-history equivalence. After matching the source boundary contract
 to the glued-bottom free-DOF mask, the validation schedule is capped
 at the main-figure load level $\lambda_{\mathrm{sr}}=1.55$. It keeps the
-highest-successful-$\lambda$ schedule proxy aligned on the tested grid and
-passes the predefined gates for the $u_{\max}(\lambda)$ curve and endpoint
-displacement: the $u_{\max}(\lambda)$ relative $L^2$ difference is
+highest-successful-$\lambda_{\mathrm{sr}}$ schedule proxy aligned on the tested
+grid and passes the predefined gates for the $u_{\max}(\lambda_{\mathrm{sr}})$
+curve and endpoint displacement: the
+$u_{\max}(\lambda_{\mathrm{sr}})$ relative $L^2$ difference is
 \num{6.396e-6}, and the endpoint displacement relative $L^2$ difference is
 \num{8.299e-4}. The endpoint deviatoric-strain relative $L^2$ difference
 (\num{4.307e-3}) and boundary-profile relative $L^2$ difference
@@ -139,11 +141,13 @@ reference.
   \begin{subfigure}[t]{\PaperFigureMedium}
     \centering
     \includegraphics[width=\linewidth]{plasticity3d_validation_umax_curve.pdf}
-    \caption{Layer 2: fixed-$\lambda$ source-operator diagnostic.}
+    \caption{Layer 2: fixed-$\lambda_{\mathrm{sr}}$ reference-operator
+    diagnostic.}
   \end{subfigure}
   \caption{Plasticity3D validation ladder. The upper panel documents tight
   direct-branch source-observable agreement for the endpoint surrogate; the
-  lower panel shows close fixed-$\lambda$ source-operator agreement after
+  lower panel shows close fixed-$\lambda_{\mathrm{sr}}$ reference-operator
+  agreement after
   matching the glued-bottom boundary contract.}
   \label{fig:plasticity3d-validation}
 \end{figure}
@@ -153,12 +157,13 @@ reference.
   \input{tables/generated/plasticity3d_validation_summary.tex}
   \caption{Plasticity3D validation summary for direct-branch source-observable
   agreement
-  (layer 1A) and the fixed-$\lambda$ source-operator diagnostic (layer 2).}
+  (layer 1A) and the fixed-$\lambda_{\mathrm{sr}}$ reference-operator
+  diagnostic (layer 2).}
   \label{tab:plasticity3d-validation}
 \end{table}
 
 The resulting interpretation is limited but useful. \plasticitythree{} is
 supported here by direct-branch source-observable agreement in Layer 1A, while
-Layer 2 supports the same endpoint surrogate under a fixed-load source-operator
+Layer 2 supports the same endpoint surrogate under a fixed-load reference-operator
 contract. Neither layer is a path-consistent
 incremental-plasticity history validation.

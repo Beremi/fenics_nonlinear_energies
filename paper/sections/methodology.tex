@@ -43,8 +43,8 @@ additional symbols locally.
 The main design choice in the toolset is that problem definitions should remain
 energy-centered whenever possible. This gives three derivative routes:
 \begin{enumerate}
-  \item \textbf{element AD:} differentiate the full scalar element energy
-        $\Pi_e(u_e)$ with respect to the element DOF vector;
+  \item \textbf{element AD:} differentiate the full scalar element contribution
+        $\Phi_e(u_e)$ with respect to the element DOF vector;
   \item \textbf{constitutive AD:} differentiate a quadrature-point energy
         density $\psi(\varepsilon_q)$, then assemble
         $r_e = \sum_q w_q B_q^T \sigma_q$ and

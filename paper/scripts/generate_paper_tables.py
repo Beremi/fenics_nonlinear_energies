@@ -95,9 +95,9 @@ IMPLEMENTATION_LABELS = {
     "jax_petsc_local_sfd": "JAX+PETSc colored SFD",
     "jax_serial": "serial JAX",
     LOCAL_IMPL: "constitutive-AD PMG solver",
-    SOURCE_IMPL: "source-operator PMG variant",
+    SOURCE_IMPL: "reference-operator PMG variant",
     LOCAL_SOURCEFIXED_IMPL: "constitutive-AD PMG solver",
-    SOURCE_SOURCEFIXED_IMPL: "source-assembly PMG variant",
+    SOURCE_SOURCEFIXED_IMPL: "reference-formula assembly PMG variant",
 }
 
 GLOBALIZATION_BENCHMARK_ORDER = {
@@ -258,9 +258,9 @@ def implementation_label(name: object) -> str:
     if "local_constitutiveAD" in key and "local_pmg" in key:
         return "constitutive-AD PMG solver"
     if "sourcefixed" in key:
-        return "source-assembly PMG variant"
+        return "reference-formula assembly PMG variant"
     if key.startswith("source") or "_source" in key:
-        return "source-operator PMG variant"
+        return "reference-operator PMG variant"
     return key.replace("_", r"\_")
 
 
@@ -441,7 +441,7 @@ def plasticity3d_local_karolina_rows() -> list[dict[str, object]]:
         grad = float(row["final_grad_norm"])
         rows.append(
             {
-                "source": "workstation MPI",
+                "source": "single-node CPU",
                 "ranks": int(row["ranks"]),
                 "nodes": None,
                 "solver_total_s": float(row["solver_total_s"]),
@@ -470,7 +470,7 @@ def plasticity3d_local_karolina_rows() -> list[dict[str, object]]:
         grad = float(row["grad"])
         rows.append(
             {
-                "source": "Karolina",
+                "source": "multi-node CPU",
                 "ranks": int(row["ranks"]),
                 "nodes": int(row["nodes"]),
                 "solver_total_s": float(row["solver_total"]),
@@ -490,7 +490,7 @@ def plasticity3d_local_karolina_rows() -> list[dict[str, object]]:
                 "replication_ratio": float(row.get("replication_ratio") or overlap / owned),
             }
         )
-    rows.sort(key=lambda row: (str(row["source"]) != "workstation MPI", int(row["ranks"])))
+    rows.sort(key=lambda row: (str(row["source"]) != "single-node CPU", int(row["ranks"])))
     return rows
 
 
@@ -849,7 +849,7 @@ def main() -> None:
             [
                 "Plasticity3D",
                 f"constitutive-AD PMG solver, {element_label('P4', 'L1_2')}, $\\lambda_{{\\mathrm{{sr}}}}=\\num{{1.0}}$, 32 ranks: {fmt_wall_time(float(p3d_highlight['wall_time_s']))} s",
-                "Historical timing context for this load factor; the main glued-bottom discretization study uses $\\lambda_{\\mathrm{sr}}=\\num{1.55}$.",
+                "Auxiliary timing context for this load factor; the main glued-bottom discretization study uses $\\lambda_{\\mathrm{sr}}=\\num{1.55}$.",
             ],
             [
                 "Topology",
@@ -883,13 +883,13 @@ def main() -> None:
         + " "
         + pcol(r"0.26\textwidth")
         + "@{}",
-        ["Family", "Grid / mesh", "Stop rule", "Compared paths", "Main difficulty"],
+        ["Family", "Grid / mesh", "Solve contract", "Compared paths", "Main difficulty"],
         [
             ["$p$-Laplace", mesh_label("L9"), "Newton + line search", "FEniCS, pure JAX, JAX+PETSc", "nonlinear elliptic solve with exact sparse Hessians"],
             ["Ginzburg--Landau", mesh_label("L9"), "Newton + line search", "FEniCS, JAX+PETSc", "indefinite local curvature from the double well"],
             ["Hyperelasticity", f"{mesh_label('L4')}, 24 steps", "trust-region path", "FEniCS, pure JAX, JAX+PETSc", "nonconvex large-deformation mechanics"],
             ["Plasticity2D", f"{element_label('P4', 'L5')}--{element_label('P4', 'L7')}", "endpoint or fixed work", "JAX+PETSc only", "same-mesh PMG and nonlinear tail behavior"],
-            ["Plasticity3D", f"{degree_label('P1')}/{degree_label('P2')}/{degree_label('P4')}", "campaign-specific", "constitutive-AD and source PMG variants", "heterogeneous 3D Mohr--Coulomb with constitutive AD"],
+            ["Plasticity3D", f"{degree_label('P1')}/{degree_label('P2')}/{degree_label('P4')}", "configuration-specific", "constitutive and reference PMG variants", "heterogeneous 3D Mohr--Coulomb with constitutive AD"],
             ["Topology", "$768\\times384$", "stall-stop continuation", "pure JAX, JAX+PETSc", "distributed design-mechanics coupling"],
         ],
     )
@@ -911,7 +911,12 @@ def main() -> None:
             ["Ginzburg--Landau", "yes", "no", "FEniCS and JAX+PETSc form the reported comparison."],
             ["Hyperelasticity", "yes", "yes", "pure JAX is a serial formulation reference only."],
             ["Plasticity2D", "no", "no", "The reported solver path is JAX+PETSc only."],
-            ["Plasticity3D", "no", "no", "Source assembly exists as supporting comparison, not as a reference path."],
+            [
+                "Plasticity3D",
+                "no",
+                "no",
+                "Reference-formula assembly exists as supporting comparison, not as a reference path.",
+            ],
             ["Topology", "no", "yes", "Parallel fine-grid path is JAX+PETSc; pure JAX remains the serial design reference."],
         ],
     )
@@ -1482,7 +1487,14 @@ def main() -> None:
     write_table_star(
         "plasticity3d_local_vs_source.tex",
         fill_spec("c c c c c c"),
-        ["Ranks", "Constitutive wall [s]", "Source wall [s]", "Constitutive solve [s]", "Source solve [s]", "Ratio"],
+        [
+            "Ranks",
+            "Constitutive wall [s]",
+            "Reference wall [s]",
+            "Constitutive solve [s]",
+            "Reference solve [s]",
+            "Ratio",
+        ],
         [
             [
                 fmt_count(lrow["ranks"]),
@@ -1558,7 +1570,14 @@ def main() -> None:
     write_table_star(
         "source_continuation_compare.tex",
         fill_spec("l c c c c c"),
-        ["Policy", "Ranks", "Runtime [s]", "Init Krylov iters", "Continuation Krylov iters", "Final $\\lambda$"],
+        [
+            "Policy",
+            "Ranks",
+            "Runtime [s]",
+            "Init Krylov iters",
+            "Continuation Krylov iters",
+            "Final $\\lambda_{\\mathrm{sr}}$",
+        ],
         [
             [
                 "fixed PMG-shell smoother",
@@ -1597,13 +1616,13 @@ def main() -> None:
             ],
             [
                 "2",
-                "highest-successful $\\lambda$",
+                "highest-successful $\\lambda_{\\mathrm{sr}}$",
                 fmt_sci(float(layer2_metrics["critical_lambda_schedule_proxy"]["relative_difference"])),
                 _layer2_gate_status(layer2_metrics, "critical_lambda_pass"),
             ],
             [
                 "2",
-                "$u_{\\max}(\\lambda)$ relative $L^2$",
+                "$u_{\\max}(\\lambda_{\\mathrm{sr}})$ relative $L^2$",
                 fmt_sci(float(layer2_metrics["umax_curve_relative_l2"])),
                 _layer2_gate_status(layer2_metrics, "umax_curve_pass"),
             ],

@@ -2,23 +2,23 @@
 
 The results support four main conclusions.
 
-\paragraph{Constitutive AD is the preferred route on a high-order
+\paragraph{Constitutive AD is fastest in the fixed high-order
 Plasticity3D derivative test.}
 \Cref{fig:plasticity3d-derivative-ablation,tab:plasticity3d-derivative-ablation}
 show a clean cost-quality picture on the fixed
 $P_4(L_1)$, $\lambda_{\mathrm{sr}}=1.5$, 8-rank case. All three routes
 reach essentially the same terminal state with the same nonlinear and Krylov
 counts, so the comparison is about cost rather than about different converged
-solutions. On that evidence, constitutive AD is the preferred route:
-it preserves the scalar-energy implementation contract while reducing wall time
-substantially relative to full element AD and colored SFD.
+solutions. In this fixed test, constitutive AD preserves the scalar-energy
+implementation contract while reducing wall time substantially relative to full
+element AD and colored SFD.
 
 \paragraph{Validation has to be separated by claim level.}
 The Plasticity3D validation ladder in
 \Cref{fig:plasticity3d-validation,tab:plasticity3d-validation} supports a
 scoped mechanics interpretation. The tested endpoint surrogate agrees closely
-with the source-family observables reported here, and the fixed-lambda
-source-operator comparison satisfies the endpoint field-agreement thresholds
+with the source-family observables reported here, and the fixed-$\lambda_{\mathrm{sr}}$
+reference-operator comparison satisfies the endpoint field-agreement thresholds
 after matching the glued-bottom boundary contract. The evidence therefore
 supports the intended endpoint surrogate for the tested cases, but it does not
 establish path-consistent incremental elastoplastic-history equivalence or a
@@ -37,17 +37,18 @@ between frameworks or into plasticity validation, but it does strengthen the
 manuscript by showing that at least one recent external implementation can be
 matched on a shared hyperelastic problem contract.
 
-\paragraph{Fairness and limitations remain part of the scientific result.}
-Several limitations should stay explicit. The historical Plasticity3D strong
+\paragraph{Scope of the evidence.}
+The same evidence also defines the scope of the conclusions. The auxiliary
+Plasticity3D strong
 scaling study at $\lambda_{\mathrm{sr}}=1.0$ remains timing evidence, while
 the newer glued-bottom $\lambda_{\mathrm{sr}}=1.55$ scaling sweep is the
 converged comparison tied to the benchmark. The topology study is
 reported as end-to-end workflow scaling rather than fixed-work strong scaling.
-Some source/local PMG studies remain solver-engineering diagnostics rather than
-fully symmetric scientific baselines. None of these caveats erase the paper's
-main contribution, but they do define its proper scope: a software-and-methods
-workflow with explicit derivative-route choices, explicit validation surfaces,
-and explicit agreement boundaries.
+Some reference-operator PMG studies remain solver-engineering diagnostics rather than
+fully symmetric scientific baselines. These boundaries give the proper
+interpretation of the contribution: a software-and-methods workflow with
+explicit derivative-route choices, explicit validation surfaces, and explicit
+agreement limits.
 
 The broader methodological lesson is that differentiable FEM becomes most
 scientifically useful when local differentiation and sparse solver engineering

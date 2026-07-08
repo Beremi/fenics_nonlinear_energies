@@ -425,7 +425,7 @@ $L_1,\ldots,L_4$ for the four displayed mesh levels.
 The figures below use the corrected glued-bottom $P_4(L_2)$ showcase at
 $\lambda_{\mathrm{sr}}=1.55$ and the finished nine-case study
 at the same load factor. The $\lambda_{\mathrm{sr}}=1.0$ strong-scaling
-study is kept later in the paper as separate historical timing evidence.
+study is kept later in the paper as separate auxiliary timing evidence.
 For those endpoint and continuation studies, we evaluate the
 following algorithmic scalar surrogate:
 \begin{equation}
@@ -657,8 +657,8 @@ Because \cref{eq:plasticity3d-discrete,eq:plasticity3d-potential} define an
 algorithmic endpoint surrogate rather than a path-consistent incremental
 history functional, the results section reports this family with a separate
 validation ladder. Direct-branch source-observable agreement for the endpoint
-surrogate is treated separately from a fixed-lambda source-operator
-comparison. The latter checks source-family behavior under matched geometry,
+surrogate is treated separately from a fixed-$\lambda_{\mathrm{sr}}$
+reference-operator comparison. The latter checks source-family behavior under matched geometry,
 materials, Davis-B reduction parameters, load schedule, and glued-bottom
 free-DOF mask, but it is not a path-consistent incremental-history validation.
 The paper therefore keeps the Plasticity3D claims at the level of a

@@ -119,8 +119,8 @@ is denser. Its colored-SFD route therefore needs 240--420 colors instead of
 66--90, raises the Hessian callback from \num{0.332} to \num{1.412} s, and
 raises the rank-maximum RSS from about \num{0.65} to \num{1.10} GiB. We omit
 the $P_4$ colored-SFD row from this local table; the $P_2$ same-DOF comparison
-already exposes the stencil density effect without forcing a workstation-scale
-memory stress case.
+already exposes the stencil density effect without forcing a large local-memory
+stress case.
 
 \begin{table}[H]
   \centering
@@ -188,15 +188,15 @@ scaling for the load path in \cref{eq:hyperelasticity-discrete}.
   \label{fig:hyperelasticity-results}
 \end{figure}
 
-The larger fixed-work Karolina experiment isolates the first level-5 load
-step after the rank-local HyperElasticity implementation. The Karolina CPU
-nodes used here are IT4I standard CPU nodes with two AMD EPYC 7H12 64-core
-processors and 256 GB RAM \citep{it4i-karolina-compute-nodes}; on the tested
-nodes Slurm exposes the 128 cores as eight NUMA domains with 16 cores each.
-The runs use one MPI rank per core, contiguous CPU-ID binding, and local memory
-binding. The mesh is generated procedurally from the uniform beam hierarchy,
-and the element path assembles from rank-local elements with local PETSc COO
-preallocation and point-to-point overlap exchange.
+The larger fixed-work multi-node experiment isolates the first level-5 load
+step after the rank-local hyperelasticity implementation. The CPU cluster nodes
+used here have two AMD EPYC 7H12 64-core processors and 256 GB RAM
+\citep{it4i-karolina-compute-nodes}; on the tested nodes Slurm exposes the
+128 cores as eight NUMA domains with 16 cores each. The runs use one MPI rank
+per core, contiguous CPU-ID binding, and local memory binding. The mesh is
+generated procedurally from the uniform beam hierarchy, and the element path
+assembles from rank-local elements with local PETSc COO preallocation and
+point-to-point overlap exchange.
 
 The nonlinear solve is the same trust-region Newton path used for the
 benchmark in \cref{sec:bench-he}. The linear subproblems use STCG with a
@@ -206,13 +206,14 @@ one-node rows use one redundant group over the active ranks, while the
 multi-node rows use one 128-rank redundant group per node.
 \Cref{fig:hyperelasticity-karolina-pmg-scaling,tab:hyperelasticity-karolina-pmg-scaling}
 report the application-reported solver total time, not Slurm elapsed time.
-All rows reach the same first-step energy to the precision shown in the raw
-outputs, with 21 Newton iterations and 43 Krylov iterations.
+All rows reach the same first-step energy to the precision shown in
+\Cref{tab:hyperelasticity-karolina-pmg-scaling}, with 21 Newton iterations and
+43 Krylov iterations.
 
-\Cref{tab:hyperelasticity-distribution-memory} records the fixed-work ablation that
-motivated the rank-local assembly path used in the Karolina runs. The correctness row
-compares the replicated and rank-local level-4 first-step solve at four MPI
-ranks; the memory rows use one Newton linearization on the level-5 mesh at
+\Cref{tab:hyperelasticity-distribution-memory} records the fixed-work ablation
+that motivated the rank-local assembly path used in the multi-node runs. The
+correctness row compares the replicated and rank-local level-4 first-step solve
+at four MPI ranks; the memory rows use one Newton linearization on the level-5 mesh at
 8, 16, and 32 ranks. The table reports both operating-system peak RSS and the
 assembler's tracked array footprint, making clear whether a row stores global
 mesh and adjacency data or only local elements plus overlap.
@@ -221,7 +222,7 @@ mesh and adjacency data or only local elements plus overlap.
   \centering
   \scriptsize
   \input{tables/generated/hyperelasticity_distribution_memory.tex}
-  \caption{Local HyperElasticity distribution and memory ablation. RSS
+  \caption{Local hyperelasticity distribution and memory ablation. RSS
   max/sum gives the maximum and summed per-rank resident set size. Tracked sum
   is the assembler-reported array footprint, and overlap/owned is the summed
   rank-local overlap DOF count divided by global owned free DOFs.}
@@ -240,7 +241,7 @@ than an endpoint-accuracy ranking.
   \centering
   \footnotesize
   \input{tables/generated/hyperelasticity_pmg_sensitivity.tex}
-  \caption{Local HyperElasticity level-5 PMG and coarse-solver sensitivity at
+  \caption{Local hyperelasticity level-5 PMG and coarse-solver sensitivity at
   32 MPI ranks with fixed nonlinear work. The PMG rows use the same
   rank-local element path as the scaling runs.}
   \label{tab:hyperelasticity-pmg-sensitivity}
@@ -249,15 +250,16 @@ than an endpoint-accuracy ranking.
 \begin{figure}[H]
   \centering
   \includegraphics[width=\PaperFigureMedium]{hyperelasticity_karolina_pmg_scaling.pdf}
-  \caption{Karolina level-5 HyperElasticity first-step fixed-work scaling with
-  the PMG coarse level fixed at $L_2$. Multi-node annotations show node counts.}
+  \caption{Multi-node CPU level-5 hyperelasticity first-step fixed-work scaling
+  with the PMG coarse level fixed at $L_2$. Multi-node annotations show node
+  counts.}
   \label{fig:hyperelasticity-karolina-pmg-scaling}
 \end{figure}
 
 \begin{table}[H]
   \centering
   \input{tables/generated/hyperelasticity_karolina_pmg_scaling.tex}
-  \caption{Karolina level-5 HyperElasticity first-step timings used in
+  \caption{Multi-node CPU level-5 hyperelasticity first-step timings used in
   \cref{fig:hyperelasticity-karolina-pmg-scaling}.}
   \label{tab:hyperelasticity-karolina-pmg-scaling}
 \end{table}
@@ -281,13 +283,13 @@ deviatoric-strain norm are defined in
 \Cref{sec:bench-plasticity3d,eq:plasticity3d-discrete,eq:plasticity3d-davis,eq:plasticity3d-potential,eq:plasticity3d-devnorm}.
 The validation limits for this endpoint surrogate are reported in
 \Cref{sec:val-plasticity3d}. With that interpretation fixed, this section asks
-two performance questions: which second-order route is preferred on the fixed
-high-order derivative-route case, and how the endpoint surrogate behaves across
-degree, resolution, and rank count.
+two performance questions: which second-order route is fastest on the fixed
+high-order derivative-route case under matched terminal observables, and how
+the endpoint surrogate behaves across degree, resolution, and rank count.
 
 \paragraph{Derivative-route ablation.}
-The first question is which second-order route has the most useful
-cost-quality profile for the reported workflow. On the fixed
+The first question is which second-order route gives the lowest measured cost
+without changing the reported terminal observables. On the fixed
 $P_4(L_1)$ case at $\lambda_{\mathrm{sr}}=1.5$ and 8 MPI ranks, all three
 routes converge to essentially the same terminal state, with identical Newton
 and total Krylov counts. This residual-bisection Newton probe uses the
@@ -377,7 +379,7 @@ lower energy at matched DOFs only by paying a clear wall-time premium.
 \begin{figure}[H]
   \centering
   \includegraphics[width=\PaperFigureMedium]{plasticity3d_recommended_scaling.pdf}
-  \caption{Historical strong scaling for the selected Plasticity3D solver
+  \caption{Auxiliary strong scaling for the selected Plasticity3D solver
   configuration: \localpmg{} on $P_4(L_2)$ at
   $\lambda_{\mathrm{sr}} = 1.0$. This is a separate timing study from the
   glued-bottom $\lambda_{\mathrm{sr}} = 1.55$ results shown in
@@ -388,7 +390,7 @@ lower energy at matched DOFs only by paying a clear wall-time premium.
 \begin{table}[H]
   \centering
   \input{tables/generated/plasticity3d_recommended_scaling.tex}
-  \caption{Historical Plasticity3D strong scaling for \localpmg{} on
+  \caption{Auxiliary Plasticity3D strong scaling for \localpmg{} on
   $P_4(L_2)$ at $\lambda_{\mathrm{sr}} = 1.0$. These rows are useful as
   solver evidence, but they should not be read as a direct timing continuation
   of the glued-bottom $\lambda_{\mathrm{sr}} = 1.55$ benchmark figures.}
@@ -396,14 +398,14 @@ lower energy at matched DOFs only by paying a clear wall-time premium.
 \end{table}
 
 \Cref{fig:plasticity3d-scaling,tab:plasticity3d-scaling} give the paper's
-largest distributed mechanics timing result for the Hypre-coarse historical PMG
+largest distributed mechanics timing result for the Hypre-coarse auxiliary PMG
 profile. This scaling evidence uses the selected $P_4(L_2)$ mesh family but a
 different load factor, $\lambda_{\mathrm{sr}} = 1.0$, so it complements rather
 than extends the glued-bottom $\lambda_{\mathrm{sr}} = 1.55$ benchmark figures
 above. Within that timing study, the reported nonlinear and linear iteration
 counts remain matched on 1/2/4/8/16/32 ranks, while the end-to-end time drops
 from \SI{5424}{s} on one rank to \SI{300}{s} on 32 ranks. Additional
-source-assembly and continuation evidence is reported later in
+reference-formula assembly and continuation evidence is reported later in
 \Cref{sec:solver-evidence}.
 
 The converged glued-bottom $P_4(L_2)$,
@@ -414,8 +416,8 @@ the nonlinear method is Armijo Newton, and the PETSc relative KSP residual
 tolerance is \num{1e-2}. The nonlinear stop requires both relative correction below
 \num{0.002} and gradient norm below one percent of the first Newton gradient.
 \Cref{fig:plasticity3d-local-karolina-scaling,tab:plasticity3d-local-karolina-scaling}
-compare the workstation MPI sweep with the Karolina CPU-node sweep at 16 MPI
-ranks per node. All plotted rows converge in 29 Newton iterations and
+compare the single-node CPU sweep with the multi-node CPU sweep at 16 MPI ranks
+per node. All plotted rows converge in 29 Newton iterations and
 1240 total Krylov iterations to the same energy and gradient norm to the
 precision shown in the table. The apparently large final gradient norm is below
 the relative gradient target; the table therefore reports both $\|g\|$ and the
@@ -425,7 +427,7 @@ by different nonlinear work.
 \begin{figure}[H]
   \centering
   \includegraphics[width=\PaperFigureMedium]{plasticity3d_local_vs_karolina_scaling.pdf}
-  \caption{Workstation and Karolina converged scaling for the glued-bottom
+  \caption{Single-node and multi-node CPU converged scaling for the glued-bottom
   Plasticity3D $P_4(L_2)$ case at $\lambda_{\mathrm{sr}}=\num{1.55}$. Dashed
   references are ideal $1/r$ lines anchored separately to the first point of
   each platform.}
@@ -438,8 +440,8 @@ by different nonlinear work.
   \input{tables/generated/plasticity3d_local_karolina_scaling.tex}
   \caption{Converged timings for the Plasticity3D
   $P_4(L_2)$, $\lambda_{\mathrm{sr}}=\num{1.55}$ run in
-  \cref{fig:plasticity3d-local-karolina-scaling}. Workstation rows are
-  workstation MPI runs; Karolina rows use 16 ranks per CPU node. The nonlinear
+  \cref{fig:plasticity3d-local-karolina-scaling}. Single-node rows use one CPU
+  node; multi-node rows use 16 ranks per CPU node. The nonlinear
   stop requires relative correction below \num{0.002} and final gradient below
   one percent of the first Newton gradient.}
   \label{tab:plasticity3d-local-karolina-scaling}
@@ -530,8 +532,8 @@ the nonconvex Ginzburg--Landau probes and necessary for the stricter
 $P_2(L_1)$ Plasticity3D globalization probe. Second, the derivative-route
 comparisons show that access to several second-order routes is useful in
 practice. Colored SFD is a credible verification and fallback route on the
-tested fixed-size problems, but constitutive AD gives the best cost-quality
-profile on the fixed high-order Plasticity3D derivative-route case. Third, the
+tested fixed-size problems, while constitutive AD gives the lowest measured
+wall time on the fixed high-order Plasticity3D derivative-route case. Third, the
 hyperelasticity
 distribution and PMG ablations, together with the Plasticity3D partitioning
 diagnostics, show that sparse ownership, overlap size, coarse solves, and

@@ -3,17 +3,18 @@
 This section collects supporting solver evidence that is methodologically useful
 but too narrow for the main benchmark narratives.
 
-\subsection{Plasticity3D Source-Assembly and Fixed-Operator PMG Comparisons}
+\subsection{Plasticity3D Reference-Formula and Fixed-Operator PMG Comparisons}
 
 The primary Plasticity3D numerical story in \Cref{sec:num-plasticity3d} is the
 rank-local constitutive-AD path. The tables below add two solver-policy
-comparisons on the same discrete problem from \cref{eq:plasticity3d-discrete}: a matched
-source-assembly comparator and a fixed source-operator PMG variant.
+comparisons on the same discrete problem from \cref{eq:plasticity3d-discrete}:
+a matched reference-formula assembly comparator and a fixed reference-operator
+PMG variant.
 
 \begin{table}[H]
   \centering
   \input{tables/generated/plasticity3d_local_vs_source.tex}
-  \caption{Matched constitutive-assembly versus source-assembly comparison for
+  \caption{Matched constitutive-assembly versus reference-formula assembly comparison for
   the same PMG solver stack. At each listed rank both rows converge in the same
   number of nonlinear and linear iterations, so this is a timing-only
   comparison on \cref{eq:plasticity3d-discrete}.}
@@ -23,22 +24,22 @@ source-assembly comparator and a fixed source-operator PMG variant.
 \begin{table}[H]
   \centering
   \input{tables/generated/plasticity3d_fixed_source_operator_pmg.tex}
-  \caption{Fixed source-operator PMG alternative on the same Plasticity3D
+  \caption{Fixed reference-operator PMG alternative on the same Plasticity3D
   problem. The status column distinguishes completed rows from rank counts
   that hit the Newton cap before reaching the target gradient tolerance.}
   \label{tab:plasticity3d-fixed-source-pmg}
 \end{table}
 
-These tables support two narrower statements. First, source assembly has lower
-reported wall time than rank-local assembly when both are embedded in the
-same PMG solver stack, although the gap narrows at higher rank counts. Second,
-the fixed source-operator PMG profile is not the preferred default in the
+These tables support two narrower statements. First, reference-formula assembly
+has lower reported wall time than rank-local assembly when both are embedded in
+the same PMG solver stack, although the gap narrows at higher rank counts.
+Second, the fixed reference-operator PMG profile is not the default used in the
 present study: it may appear favorable on some rows, but it does more nonlinear
 and Krylov work and converges less consistently across the reported runs.
 The rank-local constitutive-AD path remains the mainline because it uses the
 same local differentiable formulation as the derivative-route and converged
-scaling studies; the source-assembly rows are retained to expose solver-policy
-sensitivity on matched discrete problems.
+scaling studies; the reference-formula rows are retained to expose
+solver-policy sensitivity on matched discrete problems.
 
 \subsection{Plasticity2D Source Continuation Evidence}
 

@@ -56,7 +56,10 @@ MATLAB/Octave literature only when there is source-backed evidence.
   prose chunk removes the remaining `\repo{}`-centered framing from the
   abstract, introduction, related work, discussion, and conclusion, so the
   paper-facing object is the computational toolset rather than the repository
-  name.
+  name. Current chunk removes remaining platform-local labels from the
+  Plasticity3D evidence narrative, replacing workstation/Karolina wording with
+  single-node and multi-node CPU wording, and uses auxiliary rather than
+  historical for timing-only Plasticity3D evidence.
 - `INTRO`: positioning and contributions.
   Status: now opens with the nonlinear FEM computational bottleneck and includes
   an explicit contribution block with solver, derivative/assembly, and
@@ -79,12 +82,14 @@ MATLAB/Octave literature only when there is source-backed evidence.
   Status: revised as solver paths with scientific roles, not codebase strata;
   implementation prose now uses mainline/scalable/distributed terminology
   instead of maintained or production-path wording. Plasticity3D PMG wording now
-  separates Hypre-coarse historical/endpoint probes from the MUMPS-backed
+  separates Hypre-coarse auxiliary/endpoint probes from the MUMPS-backed
   redundant-LU profile used by the P2 globalization/derivative rows and the
   converged P4(L2), lambda=1.55 scaling run. Current chunk also separates
   Hyperelasticity's GAMG profile from the larger PMG/MUMPS fixed-work profile
   and renames the capability-matrix feature column so solver policy is not
-  mislabeled as AD only.
+  mislabeled as AD only. Paper-facing Plasticity3D PMG prose now uses
+  reference-formula and reference-operator labels instead of source-assembly or
+  source-operator labels, while preserving the scientific comparison contract.
 - `BENCHMARKS`: mathematical problem coverage.
   Families: p-Laplace, Ginzburg--Landau, Hyperelasticity, Plasticity2D,
   Plasticity3D, Topology.
@@ -96,6 +101,9 @@ MATLAB/Octave literature only when there is source-backed evidence.
   stall rule are now stated in the benchmark text. The Plasticity3D branch
   thresholds, return denominators, branch multipliers, and branch energies are
   now defined explicitly in the benchmark section instead of being left implicit.
+  The benchmark specification matrix now labels problem-specific stopping and
+  work definitions as a solve contract and uses configuration-specific rather
+  than campaign-specific wording for Plasticity3D.
 - `VALIDATION`: external and source-family comparison.
   Evidence: narrow hyperelastic JAX-FEM comparison; Plasticity3D validation
   ladder with endpoint-surrogate scope.
@@ -106,7 +114,9 @@ MATLAB/Octave literature only when there is source-backed evidence.
   records matched mesh/schedule and terminal post-comparison under the paper
   energy. Plasticity3D Layer 1A is phrased as direct-branch source-observable
   agreement, while glued-bottom boundary-contract language is reserved for
-  Layer 2.
+  Layer 2. Current chunk writes strength-reduction evidence as
+  `\lambda_{\mathrm{sr}}` in prose, captions, and generated tables, and
+  describes the fixed-operator diagnostic as a reference-operator diagnostic.
 - `RESULTS`: performance and solver behavior.
   Evidence: globalization comparison, derivative-route comparison, scaling
   studies, hyperelastic and Plasticity3D solver diagnostics, topology scaling.
@@ -123,13 +133,20 @@ MATLAB/Octave literature only when there is source-backed evidence.
   the Plasticity3D derivative-ablation observables `\omega` and `u_{\max}`,
   states the lambda=1.55 linear tolerance as the PETSc relative KSP residual
   tolerance, and marks the Hyperelasticity PMG table as fixed-work
-  solver-policy evidence rather than an endpoint-accuracy ranking.
+  solver-policy evidence rather than an endpoint-accuracy ranking. Current
+  chunk scopes the Plasticity3D constitutive-AD comparison to the fixed
+  high-order derivative-route test and describes it as the lowest measured wall
+  time under matched terminal observables, not a general preference. The
+  single-node/multi-node CPU scaling evidence now has matching generated table
+  labels, figure legend labels, and body-text interpretation.
 - `DISCUSSION_CONCLUSION`: interpretation and scope.
   Current prose states the toolset lesson in paper-facing terms: automatic
   differentiation alone does not determine large nonlinear FEM behavior;
   globalization, sparse ownership, overlap replication, coarse-level policy,
   preconditioning, and surrogate-model interpretation are part of the numerical
-  method.
+  method. Current chunk reframes caveat-led language as scope of evidence and
+  keeps the conclusion tied to fixed-test evidence rather than broad best-path
+  claims.
 - `FIGURES_TABLES`: visual and layout quality.
   Current fact: `paper/build/main.pdf` is 37 pages, A4, 10 pt article,
   text width about 7.09 in. Many floats use `[H]`, so placement is highly manual.
@@ -159,9 +176,13 @@ MATLAB/Octave literature only when there is source-backed evidence.
   globalization method comparison, derivative-route comparison,
   Hyperelasticity distribution/memory, Hyperelasticity PMG sensitivity,
   Plasticity3D derivative-degree evidence, Plasticity3D derivative ablation,
-  and the appendix fixed source-operator PMG table. Rendered pages 23--28 and
+  and the appendix fixed reference-operator PMG table. Rendered pages 23--28 and
   33 show the split tables within the text block, attached to their captions,
-  and free of table/figure overlap; the PDF grows from 36 to 37 pages.
+  and free of table/figure overlap; the PDF grows from 36 to 37 pages. Current
+  chunk visually checked rendered pages 9, 30, and 33 after rebuild: the solve
+  contract/reference-availability tables, single-node/multi-node scaling
+  figure, and reference-formula appendix tables are readable and within the
+  text block.
 - `REPRO`: reproducibility and submission readiness.
   Known blockers from `paper/todo.md`: target journal/template/declarations,
   repository license/archive DOI, and archive-neutral provenance for critical
@@ -170,14 +191,17 @@ MATLAB/Octave literature only when there is source-backed evidence.
   corrected in the workspace, but archive-neutral submission bundles remain
   outstanding. Current subagent audit confirmed the same remaining blockers:
   target venue/template and declarations, repository license plus archival DOI,
-  and archive-neutral provenance for paper-critical artifacts.
+  and archive-neutral provenance for paper-critical artifacts. Current chunk
+  restored source/generated consistency for all edited generated tables and
+  the single changed Plasticity3D scaling figure.
 
 ## Evidence Nodes
 
 - `E1`: Derivative routes.
   Element AD, constitutive AD, and colored SFD are already described and
-  compared. Strongest result: constitutive AD preferred on the fixed high-order
-  Plasticity3D derivative-route case while preserving terminal-state agreement.
+  compared. Strongest result: constitutive AD is fastest on the fixed
+  high-order Plasticity3D derivative-route case while preserving terminal-state
+  agreement.
 - `E2`: Nonlinear globalization.
   Tables compare line search, trust region, and hybrid policies. The synthesis
   now scopes trust-region conclusions to the nonconvex Ginzburg--Landau probes
@@ -197,11 +221,11 @@ MATLAB/Octave literature only when there is source-backed evidence.
   interpretation.
 - `E5`: Comparator surface.
   Pure JAX and FEniCS references exist where implemented; JAX-FEM exists for
-  hyperelasticity; Plasticity3D source-family comparisons are narrow; topology
-  literature includes MATLAB references but no current direct MATLAB runtime
-  comparison is yet established.
+  hyperelasticity; Plasticity3D reference-formula/reference-operator
+  comparisons are narrow; topology literature includes MATLAB references but no
+  current direct MATLAB runtime comparison is yet established.
 - `E6`: Plasticity3D scope.
-  Direct-branch source-observable agreement and fixed-load source-operator
+  Direct-branch source-observable agreement and fixed-load reference-operator
   diagnostics support the endpoint surrogate, but there is no true
   path-consistent incremental-history validation. This boundary must remain.
 
@@ -244,7 +268,7 @@ MATLAB/Octave literature only when there is source-backed evidence.
   GAMG and PMG/MUMPS profiles, defined Plasticity3D derivative-ablation
   observables, scoped Hyperelasticity PMG energy as fixed-work evidence, stated
   the Plasticity3D KSP tolerance as a PETSc relative residual tolerance, and
-  added a source-assembly/mainline scope sentence.
+  added a reference-formula/mainline scope sentence.
 - `Reproducibility/submission` (`Epicurus`): completed. Findings partly
   addressed: source-submission `reviewer_*` table names were removed. Remaining
   blockers are process-level: archive-neutral provenance, venue/declarations,
@@ -268,6 +292,28 @@ MATLAB/Octave literature only when there is source-backed evidence.
   the font further. Addressed by stacked outcome/work, memory/overlap, timing,
   and terminal-observable blocks in the generated table script; visual checks
   passed on pages 23--28 and 33.
+- `Message/style` (`Turing`): completed. Findings partly addressed in the
+  current chunk: paper-facing platform labels now use single-node and
+  multi-node CPU terms, auxiliary/reference-formula/reference-operator wording
+  replaces local/source labels where appropriate, and the constitutive-AD claim
+  is scoped to the fixed high-order derivative-route test. Remaining high-value
+  style work: compress the abstract, strengthen contribution framing across
+  the SOTA transition, and add more body-text interpretation for implementation
+  figures.
+- `Math/self-contained` (`Aristotle`): completed. Small findings addressed:
+  derivative-route notation now uses `\Phi_e`, the benchmark table says solve
+  contract, and strength-reduction evidence consistently uses
+  `\lambda_{\mathrm{sr}}`. Remaining high-value math work: make the plasticity
+  problem data more self-contained, unify hyperelastic displacement notation,
+  define Plasticity3D branch symbols without `q` conflicts, add topology
+  objective data, clarify failed-row semantics, and finish display-equation
+  punctuation.
+- `Repro/provenance` (`Plato`): completed. Current chunk restored
+  source/generated consistency for the touched generated tables and target
+  scaling figure. Remaining blockers: archive-neutral provenance bundle,
+  repository license plus archival DOI, target venue/template/declarations,
+  strict JSON rejection of existing `NaN` provenance, stale reproducibility
+  notes, and limited-access citation verification.
 
 ## First Edit Backlog
 

@@ -1957,14 +1957,14 @@ def generate_plasticity3d_local_vs_karolina_scaling(layout: dict[str, float]) ->
     fig, ax = plt.subplots(figsize=paper_figure_size(layout, preset="medium", height_ratio=0.52))
     series = [
         (
-            "workstation MPI",
+            "single-node CPU",
             np.asarray([int(row["ranks"]) for row in local_rows], dtype=np.int64),
             np.asarray([float(row["solver_total_s"]) for row in local_rows], dtype=np.float64),
             "#1f77b4",
             "o",
         ),
         (
-            "Karolina, 16 ranks/node",
+            "multi-node CPU, 16 ranks/node",
             np.asarray([int(row["ranks"]) for row in karolina_rows], dtype=np.int64),
             np.asarray([float(row["solver_total"]) for row in karolina_rows], dtype=np.float64),
             "#d62728",

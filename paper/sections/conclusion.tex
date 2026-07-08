@@ -9,8 +9,9 @@ The Plasticity3D evidence is intentionally narrower than a broad mechanics
 claim. For the tested cases, the endpoint surrogate agrees closely with the
 reported source-family observables and passes the predefined acceptance
 quantities, while the evidence remains below the level needed for
-path-consistent incremental-history validation. Constitutive AD gives the best
-cost-quality tradeoff in the derivative-route study. On Hyperelasticity, the
+path-consistent incremental-history validation. Constitutive AD gives the
+lowest measured wall time in the fixed high-order derivative-route study. On
+hyperelasticity, the
 companion comparison
 against JAX-FEM shows that the \jaxpetsc{} solver can agree very closely with a
 recent external implementation when the mesh and prescribed displacement
@@ -22,7 +23,7 @@ to larger sparse nonlinear solves.
 Future work should follow the boundaries made visible by these results:
 \begin{itemize}
   \item extend the validation surface for path-dependent mechanics beyond the
-        present surrogate-versus-source-operator comparison, including a true
+        present surrogate-versus-reference-operator comparison, including a true
         incremental-history reference;
   \item add more agreement-focused external baselines on tightly matched problem
         contracts;
