@@ -83,7 +83,11 @@ MATLAB/Octave literature only when there is source-backed evidence.
   observables, and reference-model diagnostics. Current label/notation chunk
   narrows the Plasticity3D introduction claim to reference-observable agreement
   and replaces remaining organization-text `mainline` wording with primary
-  \jaxpetsc{} realization.
+  \jaxpetsc{} realization. Current SOTA/math polish chunk makes the positioning
+  table affirmative and source-scoped: the table records documented
+  capabilities, splits JAX-FEM/Xue 2026 from AutoPDEx, removes negative absence
+  claims, and replaces bridge/path language with bridge architectures and
+  reference implementations.
 - `RELATED`: literature framing.
   Status: consolidated defensive taxonomy into fewer scientific groups:
   FEM automation, differentiable FEM/AD, nonlinear solver infrastructure,
@@ -93,6 +97,9 @@ MATLAB/Octave literature only when there is source-backed evidence.
   implementation-lineage context only. Current notation-and-claims chunk makes
   the PETSc paragraph affirmative: ownership layout, Krylov policy,
   globalization, and preconditioner design are part of the numerical method.
+  Current SOTA/math polish chunk scopes Xue 2026 as a close second-order
+  comparator and describes the Sysala continuation/iterative-solver work as a
+  reference line rather than a source family.
 - `METHOD`: mathematical and algorithmic core.
   Current assets: common finite-element energy notation, derivative routes,
   globalization algorithms, colored sparse finite differences, constitutive AD.
@@ -106,7 +113,9 @@ MATLAB/Octave literature only when there is source-backed evidence.
   free-DOF convention self-contained for nonhomogeneous essential data by
   introducing `V_{h,0}`, the affine lift `\bar u_h(\theta)`, and the local
   element state `u_e(x;\theta)`; it also treats topology as a schematic reduced
-  objective rather than a mechanics potential plus regularization.
+  objective rather than a mechanics potential plus regularization. Current
+  SOTA/math polish chunk defines the Armijo backtracking parameters and maximum
+  count in the algorithm's given line.
 - `IMPLEMENTATION`: realization of the method.
   Current assets: pure JAX, FEniCS, and JAX+PETSc strata; autodiff modes;
   Krylov/preconditioner matrix; distributed assembly.
@@ -128,6 +137,9 @@ MATLAB/Octave literature only when there is source-backed evidence.
   the remaining Figure 1 `mainline` label. Current notation-and-claims chunk
   removes remaining "hot loop" and "engineering choice" wording and aligns the
   capability matrix with the Hyperelasticity colored-SFD comparison evidence.
+  Current SOTA/math polish chunk renames visible pure-JAX/FEniCS reference path
+  headings and schematic labels to reference implementations, and normalizes the
+  autodiff-mode schematic from `B_q^T C_q B_q` to `B_q^\top C_q B_q`.
 - `BENCHMARKS`: mathematical problem coverage.
   Families: p-Laplace, Ginzburg--Landau, Hyperelasticity, Plasticity2D,
   Plasticity3D, Topology.
@@ -155,6 +167,12 @@ MATLAB/Octave literature only when there is source-backed evidence.
   generated summary table, distinguishing the completed endpoint case from
   fixed-iteration diagnostics. Current notation-and-claims chunk removes
   remaining visible "showcase" and "corrected glued-bottom" caption wording.
+  Current SOTA/math polish chunk normalizes remaining transpose notation to
+  `^\top`, defines the Plasticity2D branch-potential symbol, defines the
+  topology elasticity tensor and SIMP exponent before use, punctuates the
+  Davis-B and Plasticity3D potential displays, and replaces remaining raw/local
+  or study-row wording with unreduced, endpoint-surrogate, and study-case
+  terminology.
 - `VALIDATION`: external and reference-model comparison.
   Evidence: narrow hyperelastic JAX-FEM comparison; Plasticity3D validation
   ladder with endpoint-surrogate scope.
@@ -178,7 +196,10 @@ MATLAB/Octave literature only when there is source-backed evidence.
   changes Layer 1A wording to direct-branch endpoint-observable agreement with
   the reference model, replaces remaining source-boundary wording with
   reference-model boundary conditions, and regenerates the validation figures so
-  visible labels read `reference model`.
+  visible labels read `reference model`. Current SOTA/math polish chunk renames
+  the Plasticity3D section, caption, and prose from validation
+  sequence/schedule to endpoint-surrogate comparison, and defines the compared
+  observable `b` in the validation relative-difference metric.
 - `RESULTS`: performance and solver behavior.
   Evidence: globalization comparison, derivative-route comparison, scaling
   studies, hyperelastic and Plasticity3D solver diagnostics, topology scaling.
@@ -221,7 +242,11 @@ MATLAB/Octave literature only when there is source-backed evidence.
   Current label/notation chunk renames the benchmark-specification column from
   `Stopping rule` to `Solve policy`, aligns the Plasticity3D CPU scaling caption
   with `CPU setting`, and converts visible JAX-FEM/Plasticity3D figure
-  annotations from raw `e` notation to rendered scientific notation.
+  annotations from raw `e` notation to rendered scientific notation. Current
+  SOTA/math polish chunk retitles affected result captions as fixed-case,
+  matched-case, or rank-local comparisons, removes corrected-glued-bottom
+  revision language, and scopes colored SFD as a comparison and fallback route
+  rather than a verification claim.
 - `DISCUSSION_CONCLUSION`: interpretation and scope.
   Current prose states the toolset lesson in paper-facing terms: automatic
   differentiation alone does not determine large nonlinear FEM behavior;
@@ -235,9 +260,11 @@ MATLAB/Octave literature only when there is source-backed evidence.
   future-work paragraph as scientific extensions. Current notation-and-claims
   chunk makes the discussion endpoint-scoped for Plasticity3D, quotes the
   hyperelastic comparison discrepancy scale, and classifies solver-policy
-  diagnostics separately from symmetric external comparisons.
+  diagnostics separately from symmetric external comparisons. Current SOTA/math
+  polish chunk makes the Plasticity3D discussion use endpoint-surrogate
+  comparison terminology consistently.
 - `FIGURES_TABLES`: visual and layout quality.
-  Current fact: `paper/build/main.pdf` is 37 pages, A4, 10 pt article,
+  Current fact: `paper/build/main.pdf` is 38 pages, A4, 10 pt article,
   text width about 7.09 in. Many floats use `[H]`, so placement is highly manual.
   Figure/layout subagent audit: assets are technically clean at current A4
   width, with embedded fonts and 600 ppi raster layers, but dense 3D
@@ -295,7 +322,14 @@ MATLAB/Octave literature only when there is source-backed evidence.
   checked rendered pages 1, 6, 7, 20, 21, and 30. The abstract/opening, primary
   \jaxpetsc{} implementation heading, Figure 1, JAX-FEM panels, Plasticity3D
   validation sequence, and CPU-scaling caption are readable, unclipped, and free
-  of the flagged raw labels.
+  of the flagged raw labels. Current SOTA/math polish chunk rebuilt the 38-page
+  PDF and visually checked rendered pages 2, 5, 7, 9, 17, 18, 21--23, 25, and
+  27--30. The expanded SOTA table, Armijo algorithm, implementation schematics,
+  reference-availability table, Plasticity3D definitions, endpoint-surrogate
+  comparison, derivative-route tables, Hyperelasticity rank-local tables, and
+  Plasticity3D degree/scaling figures are readable, unclipped, and within the
+  text block. The log scan, PDF text scan, asset validator, `qpdf --check`, and
+  `git diff --check` were clean.
 - `REPRO`: reproducibility and submission readiness.
   Known blockers from `paper/todo.md`: target journal/template/declarations,
   repository license/archive DOI, and archive-neutral provenance for critical
@@ -510,6 +544,23 @@ MATLAB/Octave literature only when there is source-backed evidence.
   JAX-FEM and Plasticity3D validation figure annotations use LaTeX scientific
   notation rather than raw `e` notation, and only semantically changed figure
   assets should be staged; metadata-only figure churn should remain unstaged.
+- `SOTA/related-work table audit` (`Feynman-current`): completed. Findings
+  addressed in the current SOTA/math polish chunk: the SOTA table now uses
+  documented-capability wording, splits the JAX-FEM/Xue and AutoPDEx rows,
+  replaces negative absence claims with affirmative scope descriptions, removes
+  visible `SNES`, and softens bridge/source-family language in the surrounding
+  introduction and related work.
+- `Math consistency audit` (`Dirac-current`): completed. Findings addressed in
+  the current SOTA/math polish chunk: transpose notation is normalized to
+  `^\top`, missing Plasticity2D and topology definitions were added, Armijo
+  parameters are defined, displayed equations are punctuated, the validation
+  metric defines the compared observable, and Plasticity3D validation wording is
+  endpoint-surrogate scoped.
+- `Figures/captions/table label audit` (`Faraday-current`): completed.
+  Findings addressed in the current SOTA/math polish chunk: `study rows`,
+  revision-history caption wording, local/raw labels, and `Reference paths`
+  labels were replaced with paper-facing study-case, fixed-case, matched-case,
+  rank-local, unreduced, and reference-implementation wording.
 
 ## First Edit Backlog
 

@@ -1496,7 +1496,8 @@ def generate_framework_overview(layout: dict[str, float]) -> str:
         (0.25, 0.15),
         title="",
         body=[
-            "Reference paths",
+            "Reference",
+            "implementations",
             "pure JAX, FEniCS",
         ],
         facecolor="#f4efe6",
@@ -1888,7 +1889,7 @@ def generate_autodiff_modes(layout: dict[str, float]) -> str:
     fig, axes = plt.subplots(3, 1, figsize=text_figure_size(layout, height_ratio=0.44))
     panels = [
         ("Element AD", ["$\\Pi_e(u_e)$", "exact local gradient and Hessian", "higher-order elements can be costly"], "#e6f0fb"),
-        ("Constitutive AD", ["$\\psi(\\varepsilon_q)$", "$B_q^T C_q B_q$ assembly", "best maintained 3D plasticity path"], "#eef5e7"),
+        ("Constitutive AD", ["$\\psi(\\varepsilon_q)$", "$B_q^\\top C_q B_q$ assembly", "best maintained 3D plasticity path"], "#eef5e7"),
         ("Local colored SFD", ["probe HVPs only where needed", "parallel coloring / recovery", "useful when exact Hessians are too expensive"], "#fbf1eb"),
     ]
     for ax, (title, lines, color) in zip(axes, panels, strict=True):
@@ -2244,7 +2245,7 @@ def _plot_source_continuation_compare(layout: dict[str, float]) -> str:
     ax.set_xticklabels(labels)
     ax.set_yscale("log")
     ax.set_ylabel("Value")
-    ax.set_title("Source SSR continuation after PMG-shell smoother fix")
+    ax.set_title("Reference-operator continuation comparison")
     ax.grid(True, which="both", axis="y", alpha=0.25)
     ax.legend(loc="best")
     out = FIGURES_ROOT / "source_continuation_pmg_shell_compare.pdf"

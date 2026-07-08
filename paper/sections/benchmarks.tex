@@ -20,8 +20,8 @@ frameworks.
   \centering
   \input{tables/generated/reference_availability.tex}
   \caption{Availability of \fenics{} and \purejax{} references. Reference
-  paths are used where documented implementations exist for the same benchmark
-  family;
+  implementations are used where documented implementations exist for the same
+  benchmark family;
   absent cells are left absent rather than filled with speculative baselines.}
   \label{tab:reference-availability}
 \end{table}
@@ -197,7 +197,7 @@ compressible Neo-Hookean-type potential
   \Pi(u;\eta)
   =
   \int_{\Omega}
-    C_1 \left( \operatorname{tr}(F(u)^T F(u)) - 3 - 2 \ln J(u) \right)
+    C_1 \left( \operatorname{tr}(F(u)^\top F(u)) - 3 - 2 \ln J(u) \right)
     + D_1 (J(u) - 1)^2 \, dx,
   \label{eq:hyperelasticity-energy}
 \end{equation}
@@ -316,7 +316,7 @@ vertical sides are fixed horizontally, and the sloping top is traction-free.
 The material parameters are
 $E=\num{40000}$, $\nu=\num{0.30}$, $c_0=\num{6.0}$,
 $\phi=45^\circ$, $\psi=0^\circ$, and gravity magnitude $\gamma=\num{20}$,
-so $b=(0,-\gamma)^T$ in the endpoint solves.
+so $b=(0,-\gamma)^\top$ in the endpoint solves.
 The endpoint studies set the old plastic strain to zero at all quadrature
 points.
 The corresponding weak form is
@@ -342,16 +342,18 @@ surrogate functional for differentiation and comparison:
       B_{eq}u_e,\varepsilon^{p,\mathrm{old}}_{eq},
       E,\nu,c_{\lambda,eq},\phi_{\lambda,eq}
     \right)
-  - f_{\mathrm{ext}}^T u_h,
+  - f_{\mathrm{ext}}^\top u_h,
   \label{eq:plasticity2d-discrete}
 \end{equation}
 where $\lambda_{\mathrm{sr}}$ denotes the strength-reduction factor, distinct
-from the Lam{\'e} parameter used later in three dimensions. The dilation angle
-enters this endpoint model only through the Davis-B reduction below.
+from the Lam{\'e} parameter used later in three dimensions, and
+$\Phi_{\mathrm{MC},2\mathrm{D}}$ denotes the scalar branch potential used for
+the two-dimensional Mohr--Coulomb endpoint surrogate. The dilation angle enters
+this endpoint model only through the Davis-B reduction below.
 
 The benchmark uses a Davis-B-style reduction path
 \citep{davis1968plasticity,tschuchnigg2015nonassociated,sysala2021optimization}
-to map the raw
+to map the unreduced
 cohesion and angles to reduced values under strength reduction; with
 $c_0,\phi,\psi$ denoting the unreduced cohesion, friction angle, and dilation
 angle, respectively, the benchmark uses
@@ -368,7 +370,7 @@ angle, respectively, the benchmark uses
   \nonumber\\
   \phi_{\lambda} &= \arctan\!\left(\beta \tan \phi_1\right),
   &
-  \psi_{\lambda} &= \arctan\!\left(\beta \tan \psi_1\right),
+  \psi_{\lambda} &= \arctan\!\left(\beta \tan \psi_1\right).
   \label{eq:plasticity2d-davis}
 \end{align}
 The reported endpoint runs in this paper use $\lambda_{\mathrm{sr}} = 1$ and
@@ -479,7 +481,7 @@ following algorithmic scalar surrogate:
       K_{eq},
       \lambda_{\mathrm{L},eq}
     \right)
-  - f_{\mathrm{ext}}^T u_h,
+  - f_{\mathrm{ext}}^\top u_h,
   \label{eq:plasticity3d-discrete}
 \end{equation}
 where $\lambda_{\mathrm{sr}}$ is again the strength-reduction factor and
@@ -498,7 +500,7 @@ We use the engineering-strain ordering
     \gamma_{xy} &
     \gamma_{yz} &
     \gamma_{xz}
-  \end{bmatrix}^{T},
+  \end{bmatrix}^{\top},
   \label{eq:plasticity3d-engineering-strain}
 \end{equation}
 which is first mapped to tensor shear before principal values are formed. The
@@ -663,7 +665,7 @@ With these definitions, the scalar potential is the piecewise function
         \gamma_{\mathrm{sr}} \le \Lambda_{\mathrm{r}} \le \gamma_{\mathrm{ra}}, \\
     \Phi_{\mathrm{a}},
       & \text{otherwise},
-  \end{cases}
+  \end{cases}.
   \label{eq:plasticity3d-potential}
 \end{equation}
 The constitutive-AD path differentiates the smooth branches of
@@ -677,10 +679,10 @@ For the strain visualizations in this paper we use the deviatoric norm
   \|\varepsilon_{\mathrm{dev}}\|
   =
   \sqrt{
-    \varepsilon^T
+    \varepsilon^\top
     \left(
       \operatorname{diag}(1,1,1,\tfrac{1}{2},\tfrac{1}{2},\tfrac{1}{2})
-      - \frac{1}{3}mm^T
+      - \frac{1}{3}mm^\top
     \right)
     \varepsilon
   },
@@ -694,7 +696,7 @@ which matches the engineering-shear convention of
 Because \cref{eq:plasticity3d-discrete,eq:plasticity3d-potential} define an
 algorithmic endpoint surrogate rather than a path-consistent incremental
 history functional, the results section reports this family with a separate
-validation sequence. Direct-branch endpoint-observable agreement with the
+endpoint-surrogate comparison. Direct-branch endpoint-observable agreement with the
 reference model for the endpoint surrogate is treated separately from a
 fixed-$\lambda_{\mathrm{sr}}$ reference-operator comparison. The latter checks
 matched geometry, materials, Davis-B reduction parameters, load schedule, and
@@ -735,7 +737,7 @@ surrogate is a full incremental elastoplastic solver.
   \centering
   \input{tables/generated/plasticity3d_benchmark_summary.tex}
   \caption{All nine completed glued-bottom Plasticity3D
-  study rows at $\lambda_{\mathrm{sr}} = 1.55$, reported as endpoint values of
+  study cases at $\lambda_{\mathrm{sr}} = 1.55$, reported as endpoint values of
   \cref{eq:plasticity3d-discrete}.}
   \label{tab:plasticity3d-benchmark}
 \end{table}
@@ -785,7 +787,8 @@ target volume fraction $0.4$, $\theta_{\min}=\num{1e-6}$, Young's modulus
 $E=\num{1}$, Poisson ratio $0.3$, and a downward unit traction over the centered
 $20\%$ patch of the right edge. The left edge is clamped, while fixed solid
 design pads are imposed near the clamp and around the load patch.
-For fixed density, the discretization solves for the linear elastic
+Let $C$ denote the plane-stress elasticity tensor and let $p$ be the current
+SIMP exponent. For fixed density, the discretization solves for the linear elastic
 displacement state
 $u_h(\theta_h)$ solving
 \begin{equation}
@@ -793,7 +796,7 @@ $u_h(\theta_h)$ solving
   :=
   \sum_{e=1}^{n_{\mathrm{el}}}
     |e|\,\theta_e^{p}
-    \varepsilon(u_h)^T C \varepsilon(v_h)
+    \varepsilon(u_h)^\top C \varepsilon(v_h)
   =
   \ell(v_h)
   \qquad \forall v_h \in V_{h,0},
@@ -806,7 +809,7 @@ design step freezes, on each element,
   e_e^{\mathrm{frozen}}
   =
   (\theta_e^{\mathrm{old}})^{2p}\,
-  \varepsilon(u_h)^{T}C\varepsilon(u_h).
+  \varepsilon(u_h)^\top C\varepsilon(u_h).
 \]
 The reduced objective is
 \begin{align}

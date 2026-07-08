@@ -3,7 +3,7 @@
 The implementation is organized around three solver paths with different
 scientific roles.
 
-\paragraph{Pure JAX reference paths.}
+\paragraph{Pure JAX reference implementations.}
 These are compact differentiable realizations of selected benchmark energies.
 They are useful for formulation checks, serial references, and AD diagnostics.
 They are not intended to be the primary scalable route for the largest
@@ -11,7 +11,7 @@ distributed benchmarks. Their main scientific role in this paper is to show
 that the same energy formulations can also be expressed without sparse
 distributed infrastructure.
 
-\paragraph{FEniCS reference paths.}
+\paragraph{FEniCS reference implementations.}
 The \fenics{} implementations remain valuable on families where they exist,
 especially $p$-Laplace, Ginzburg--Landau, and hyperelasticity. They provide a
 trusted high-level FEM reference and help distinguish modeling issues from

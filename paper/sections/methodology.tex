@@ -132,7 +132,8 @@ study reported later in \Cref{sec:num-plasticity3d}.
 \begin{algorithm}[H]
 \caption{Armijo line search used in Newton solves}
 \begin{algorithmic}[1]
-\State Given state $x$, direction $p$, initial step $\alpha_0$
+\State Given state $x$, direction $p$, initial step $\alpha_0$, backtracking
+parameters $\beta\in(0,1)$, $c_1\in(0,1)$, and maximum count $m_{\max}$
 \State Evaluate $\mathcal{F}(x)$ and $g = \nabla \mathcal{F}(x)$
 \For{$m=0,1,\dots,m_{\max}$}
   \State $\alpha \gets \alpha_0 \beta^m$

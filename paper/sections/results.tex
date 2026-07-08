@@ -50,7 +50,7 @@ rather than a universal preference for any single globalization strategy.
   \centering
   \footnotesize
   \input{tables/generated/globalization_method_compare.tex}
-  \caption{Local comparison of nonlinear globalization policies. LS denotes
+  \caption{Fixed-case comparison of nonlinear globalization policies. LS denotes
   Armijo line search and TR denotes Steihaug trust region.}
   \label{tab:globalization-method-compare}
 \end{table}
@@ -100,7 +100,7 @@ $P_2(L_1)$ case, not by an under-colored finite-difference reconstruction.
   \centering
   \footnotesize
   \input{tables/generated/derivative_route_compare.tex}
-  \caption{Local derivative-route comparison. Colored SFD denotes local
+  \caption{Matched-case derivative-route comparison. Colored SFD denotes local
   subgraph finite-difference Hessian recovery; the SFD-color range is shown
   where per-rank color counts are available.}
   \label{tab:derivative-route-compare}
@@ -221,7 +221,7 @@ only local elements plus overlap.
   \centering
   \scriptsize
   \input{tables/generated/hyperelasticity_distribution_memory.tex}
-  \caption{Local hyperelasticity distribution and memory comparison. RSS
+  \caption{Rank-local hyperelasticity distribution and memory comparison. RSS
   max/sum gives the maximum and summed per-rank resident set size. Tracked sum
   is the reported assembly-array footprint, and overlap/owned is the summed
   rank-local overlap DOF count divided by global owned free DOFs.}
@@ -240,7 +240,7 @@ than an endpoint-accuracy ranking.
   \centering
   \footnotesize
   \input{tables/generated/hyperelasticity_pmg_sensitivity.tex}
-  \caption{Local hyperelasticity level-5 PMG and coarse-solver sensitivity at
+  \caption{Rank-local hyperelasticity level-5 PMG and coarse-solver sensitivity at
   32 MPI ranks with fixed nonlinear work. The PMG configurations use the same
   rank-local element path as the scaling runs.}
   \label{tab:hyperelasticity-pmg-sensitivity}
@@ -355,7 +355,7 @@ selected solver configurations scale on the separate $P_4(L_2)$ timing studies.
     \includegraphics[width=\linewidth]{plasticity3d_degree_energy_zoom_time.pdf}
     \caption{$P2/P4$ zoom: final energy versus total wall time.}
   \end{subfigure}
-  \caption{Corrected glued-bottom Plasticity3D
+  \caption{Glued-bottom Plasticity3D
   degree-versus-resolution study at $\lambda_{\mathrm{sr}} = 1.55$. The top
   panels show the full $P_1/P_2/P_4$ comparison, while the bottom panels zoom to
   $P_2/P_4$ so the near-overlap hidden by the coarse $P_1$ points becomes
@@ -367,8 +367,8 @@ selected solver configurations scale on the separate $P_4(L_2)$ timing studies.
 \end{figure}
 
 The zoomed panels in \Cref{fig:plasticity3d-degree-energy} are essential because the
-full figure is dominated by coarse $P_1$ variation. Under the corrected
-glued-bottom constraint, the first matched comparison is
+full figure is dominated by coarse $P_1$ variation. Under the glued-bottom
+constraint, the first matched comparison is
 $P_4(L_1)$ versus $P_1(L_3)$ at \num{610964} free DOFs. The second
 matched comparison is $P_1(L_4)$, $P_2(L_3)$, and $P_4(L_2)$ at
 \num{4801816} free DOFs. The scientific message is
@@ -534,7 +534,7 @@ on the clean $p$-Laplace case, while trust-region safeguards are beneficial on
 the nonconvex Ginzburg--Landau tests and needed for convergence in the stricter
 $P_2(L_1)$ Plasticity3D globalization test reported here. Second, the derivative-route
 comparisons show that access to several second-order routes is useful in
-practice. Colored SFD is a credible verification and fallback route on the
+practice. Colored SFD is a comparison and fallback route on the
 tested fixed-size problems, while constitutive AD gives the lowest measured
 wall time on the fixed high-order Plasticity3D derivative-route case. Third, the
 hyperelasticity

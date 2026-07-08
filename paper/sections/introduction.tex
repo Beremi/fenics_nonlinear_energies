@@ -80,9 +80,9 @@ comparison using conservative, source-backed descriptors.
   \scriptsize
   \setlength{\tabcolsep}{3pt}
   \input{tables/generated/sota_framework_comparison.tex}
-  \caption{State-of-the-art positioning of the framework families most relevant
-  to this paper. The columns record source-supported workflow properties rather
-  than subjective scores.}
+  \caption{Selected related software positioning for the framework families most
+  relevant to this paper. The columns record documented capabilities rather than
+  subjective scores.}
   \label{tab:sota-comparison}
 \end{table}
 
@@ -91,18 +91,20 @@ high-level FEM and adjoint ecosystems
 \citep{logg2012fenicsbook,baratta2025dolfinx,farrell2013dolfinadjoint,mitusch2019pyadjoint,blauth2023cashocsv2},
 the present toolset moves the center of gravity from PDE-level adjoint-centered
 automation toward distributed nonlinear solve policy and multiple second-order
-routes inside the same sparse solver stack. Second, relative to JAX-native mechanics and
-differentiable-simulation frameworks
+routes inside the same sparse solver stack. Second, relative to JAX-native
+mechanics and differentiable-simulation frameworks
 \citep{xue2023jaxfem,xue2026implicit,bode2025autopdex,hu2025jaxcpfem}, the main
 distinction is that the implementation here centers PETSc-owned sparse MPI data
-structures and preconditioned Newton solves, whereas the cited JAX-native
-frameworks emphasize JAX-level modeling, local differentiation, GPU execution,
-second-order implicit differentiation, or differentiable-physics workflows.
+structures and preconditioned Newton solves. JAX-FEM and JAX-CPFEM emphasize
+JAX-level mechanics modeling and GPU-oriented differentiable simulation; the
+later Xue finite-element work adds implicit Hessian-vector products for inverse
+problems; and AutoPDEx adds nonlinear minimizers, implicit differentiation, and
+optional PETSc integration.
 Third, relative to recent bridge and hybrid papers that combine
 JAX-style differentiation with established FEM or solver environments
 \citep{yashchuk2023bringing,latyshev2025externaloperators,cattaneo2026jetsci},
-the paper's emphasis is on extending that bridge-style differentiation story
-into benchmarked PETSc sparse assembly, Krylov solves, and nonlinear
+the paper's emphasis is on extending those bridge architectures into
+benchmarked PETSc sparse assembly, Krylov solves, and nonlinear
 globalization for benchmark families that include topology optimization and 3D
 Mohr--Coulomb-type mechanics.
 
@@ -120,12 +122,12 @@ context behind the summary above. \Cref{sec:methodology} describes the common
 finite-element energy notation, derivative routes, nonlinear globalization, and
 sparse derivative recovery. \Cref{sec:implementation} explains the primary
 \jaxpetsc{} implementation and the narrower \purejax{} and \fenics{} reference
-paths used in selected checks.
+implementations used in selected checks.
 \Cref{sec:benchmarks} defines the benchmark suite, with each benchmark separated
 into literature model and implemented discrete problem. \Cref{sec:validation}
 then reports validation and external-comparison evidence, deliberately
 separating hyperelastic JAX-FEM agreement from the Plasticity3D
-reference-model validation sequence. \Cref{sec:numerical-examples} reports timing, scaling,
+reference-model endpoint-surrogate comparison. \Cref{sec:numerical-examples} reports timing, scaling,
 derivative-route, and discretization-comparison evidence.
 \Cref{sec:solver-evidence} adds solver-policy diagnostics, followed by a
 discussion of limitations.

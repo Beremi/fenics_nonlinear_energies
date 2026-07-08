@@ -4,8 +4,8 @@ This section separates validation and external-comparison evidence from the
 performance results that follow. The distinction is important because the
 paper uses different levels of evidence for different claims: Hyperelasticity
 has a narrow external companion comparison against JAX-FEM, while
-\plasticitythree{} has a reference-model validation sequence for the implemented
-endpoint surrogate.
+\plasticitythree{} is evaluated through a reference-model endpoint-surrogate
+comparison.
 
 \subsection{Comparison Metrics}
 \label{sec:val-metrics}
@@ -19,8 +19,9 @@ relative differences of the form
        {\|a\|_M},
   \label{eq:validation-relative-difference}
 \end{equation}
-where $a$ is the reference observable and $M$ denotes the discrete norm used for
-the comparison. For nodal displacement vectors, $M$ is the Euclidean norm on the
+where $a$ is the reference observable, $b$ is the compared observable, and $M$
+denotes the discrete norm used for the comparison. For nodal displacement
+vectors, $M$ is the Euclidean norm on the
 compared free degrees of freedom. For sampled profiles and quadrature-derived
 fields, $M$ denotes the corresponding sampled or quadrature-weighted norm used
 by the comparison. The reported field and profile observables have nonzero
@@ -90,7 +91,7 @@ is faster (\SI{0.176}{s} median wall time versus \SI{2.524}{s} for JAX-FEM),
 but the scientific role of this table is solution agreement under a matched
 hyperelastic definition rather than a software ranking.
 
-\subsection{Plasticity3D Validation Sequence}
+\subsection{Plasticity3D Endpoint-Surrogate Comparison}
 \label{sec:val-plasticity3d}
 
 The \plasticitythree{} benchmark is tied to Mohr--Coulomb slope-stability
@@ -104,8 +105,8 @@ method context for this problem class
 \citep{sysala2017returnmapping,sysala2021optimization,sysala2025convexoptimization,sysala2025advancedcontinuation};
 they are not used here as verified numeric paper baselines.
 
-The validation sequence therefore separates two questions. Layer 1A tests
-direct-branch endpoint-observable agreement with the reference model on the
+The endpoint-surrogate comparison therefore separates two questions. Layer 1A
+tests direct-branch endpoint-observable agreement with the reference model on the
 $P_2(L_1)$ reference case. This layer is tight: the work relative
 difference is \num{3.877e-5}, the displacement relative $L^2$ difference is
 \num{3.517e-3}, and the deviatoric-strain relative $L^2$ difference is
@@ -114,7 +115,7 @@ diagnostic
 against a reference-operator comparison, not proof of path-consistent
 incremental-history equivalence. After matching the reference-model boundary
 conditions
-to the glued-bottom free-DOF mask, the validation schedule is capped
+to the glued-bottom free-DOF mask, the comparison schedule is capped
 at the main-figure load level $\lambda_{\mathrm{sr}}=1.55$. It keeps the
 highest-successful-$\lambda_{\mathrm{sr}}$ schedule proxy aligned on the tested
 grid and passes the predefined gates for the $u_{\max}(\lambda_{\mathrm{sr}})$
@@ -146,8 +147,8 @@ reference.
     \caption{Layer 2: fixed-$\lambda_{\mathrm{sr}}$ reference-operator
     diagnostic.}
   \end{subfigure}
-  \caption{Plasticity3D validation sequence. The upper panel documents tight
-  direct-branch endpoint-observable agreement with the reference model for the
+  \caption{Plasticity3D endpoint-surrogate comparison. The upper panel documents
+  tight direct-branch endpoint-observable agreement with the reference model for the
   endpoint surrogate; the
   lower panel shows close fixed-$\lambda_{\mathrm{sr}}$ reference-operator
   agreement after
