@@ -9,7 +9,7 @@ show a clean cost-quality picture on the locked
 $P_4(L_1)$, $\lambda_{\mathrm{sr}}=1.5$, 8-rank case. All three routes
 reach essentially the same terminal state with the same nonlinear and Krylov
 counts, so the comparison is about cost rather than about different converged
-solutions. On that evidence, constitutive AD is the preferred maintained route:
+solutions. On that evidence, constitutive AD is the preferred route:
 it preserves the scalar-energy implementation contract while reducing wall time
 substantially relative to full element AD and colored SFD.
 
@@ -20,42 +20,43 @@ paper should phrase its mechanics claims. Same-case source-faithfulness to the
 source-style surrogate implementation is strong, and that is an important
 result for software credibility. The fixed-lambda source-operator comparison
 also satisfies the configured endpoint field-agreement thresholds once the
-source boundary condition is matched to the maintained glued-bottom mask. The
-right interpretation is therefore stronger but still scoped: the maintained
-implementation faithfully reproduces the intended endpoint-surrogate workflow,
-yet the present evidence does not justify describing that surrogate as a
-path-consistent incremental elastoplastic history solve or as a verified
-numeric reproduction of the Sysala source-family papers.
+source boundary condition is matched to the glued-bottom mask. The right
+interpretation is therefore stronger but still scoped: the implementation
+faithfully reproduces the intended endpoint-surrogate workflow, yet the present
+evidence does not justify describing that surrogate as a path-consistent
+incremental elastoplastic history solve or as a verified numeric reproduction
+of the Sysala source-family papers.
 
 \paragraph{Matched external baselines are useful when the contract is narrow.}
 The hyperelastic companion comparison against JAX-FEM in
 \Cref{fig:hyperelasticity-jaxfem-baseline,tab:hyperelasticity-jaxfem-baseline}
 shows that a narrow, fairness-first external baseline can survive review-level
 scrutiny. Here the mesh and prescribed displacement schedule are matched, and
-the terminal states are post-compared with the repository energy; the resulting
-energy and field differences are very small. The comparison is useful precisely
-because it is narrow and hyperelastic-only. The paper should not generalize it
-into a broad ranking between frameworks or into plasticity validation, but it
-does strengthen the manuscript by showing that at least one recent external
-implementation can be matched on a shared hyperelastic problem contract.
+the terminal states are post-compared with the energy in
+\cref{eq:hyperelasticity-energy}; the resulting energy and field differences
+are very small. The comparison is useful precisely because it is narrow and
+hyperelastic-only. The paper should not generalize it into a broad ranking
+between frameworks or into plasticity validation, but it does strengthen the
+manuscript by showing that at least one recent external implementation can be
+matched on a shared hyperelastic problem contract.
 
 \paragraph{Fairness and limitations remain part of the scientific result.}
 Several limitations should stay explicit. The historical Plasticity3D strong
 scaling study at $\lambda_{\mathrm{sr}}=1.0$ remains workflow evidence, while
 the newer glued-bottom $\lambda_{\mathrm{sr}}=1.55$ scaling sweep is the
-converged comparison tied to the maintained benchmark. The topology study is
+converged comparison tied to the benchmark. The topology study is
 reported as end-to-end workflow scaling rather than fixed-work strong scaling.
 Some source/local PMG studies remain solver-engineering diagnostics rather than
 fully symmetric scientific baselines. None of these caveats erase the paper's
-main contribution, but they do define its proper scope: a maintained
-software-and-methods workflow with explicit derivative-route choices, explicit
-validation surfaces, and explicit fairness boundaries.
+main contribution, but they do define its proper scope: a software-and-methods
+workflow with explicit derivative-route choices, explicit validation surfaces,
+and explicit fairness boundaries.
 
 The broader methodological lesson is that differentiable FEM becomes most
 scientifically useful when local differentiation and sparse solver engineering
 are designed together. Automatic differentiation alone does not settle the
 behavior of large nonlinear FEM workflows; globalization, sparse ownership,
 preconditioning, and the interpretation of surrogate models matter just as
-much. Within that scoped claim, \repo{} contributes a reproducible maintained
-workflow rather than a universal differentiable-PDE platform or a new
+much. Within that scoped claim, \repo{} contributes a reproducible nonlinear
+FEM workflow rather than a universal differentiable-PDE platform or a new
 constitutive theory.

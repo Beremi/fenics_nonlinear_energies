@@ -1,21 +1,22 @@
 \label{sec:implementation}
 
-The repository intentionally keeps three implementation strata.
+The implementation is organized around three solver paths with different
+scientific roles.
 
 \paragraph{Pure JAX reference paths.}
-These are the most compact differentiable implementations in the codebase.
-They are useful for formulation checks, serial references, and debugging AD
-logic. They are not intended to be the primary production route for the largest
+These are compact differentiable realizations of selected benchmark energies.
+They are useful for formulation checks, serial references, and AD diagnostics.
+They are not intended to be the primary production route for the largest
 distributed benchmarks. Their main scientific role in this paper is to show
-that the energy formulations used in the maintained stack can also be expressed
-in a compact differentiable form without sparse distributed infrastructure.
+that the same energy formulations can also be expressed without sparse
+distributed infrastructure.
 
 \paragraph{FEniCS reference paths.}
 The \fenics{} implementations remain valuable on families where they exist,
 especially $p$-Laplace, Ginzburg--Landau, and hyperelasticity. They provide a
 trusted high-level FEM reference and help distinguish modeling issues from
-solver-stack issues. In this repository they are used mainly as
-comparison baselines rather than as the mainline production path.
+solver-stack issues. In this paper they are used mainly as comparison baselines
+rather than as the mainline production path.
 
 \paragraph{Maintained \jaxpetsc{} path.}
 This is the central implementation of the paper. It combines JAX-based local
@@ -25,7 +26,7 @@ assembly, nonlinear globalization, and linear algebra stay in PETSc.
 
 \subsection{Autodiff modes}
 
-The maintained stack supports several second-order modes. The precise available
+The \jaxpetsc{} stack supports several second-order modes. The precise available
 choices depend on the benchmark family, but the common logic is:
 \begin{itemize}
   \item \textbf{element AD}: exact local Hessians from differentiating the full
@@ -45,9 +46,9 @@ one common solver infrastructure.
 \begin{figure}[H]
   \centering
   \PaperFrameworkOverviewDiagram
-  \caption{Software structure of the manuscript. The maintained \jaxpetsc{}
+  \caption{Software structure of the manuscript. The \jaxpetsc{}
   implementation is the main production path; \purejax{} and \fenics{} remain
-  reference paths where they already exist in the repository.}
+  reference paths where matching benchmark formulations exist.}
   \label{fig:framework-overview}
 \end{figure}
 
@@ -62,7 +63,7 @@ one common solver infrastructure.
 \begin{figure}[H]
   \centering
   \PaperAutodiffModesDiagram
-  \caption{Second-order derivative modes exposed in the maintained stack. The
+  \caption{Second-order derivative modes exposed in the \jaxpetsc{} stack. The
   important engineering choice is that the source of truth remains an energy or
   energy-density expression even when the tangent path changes from element AD
   to constitutive AD or colored SFD.}
@@ -71,7 +72,7 @@ one common solver infrastructure.
 
 \subsection{Linear solvers and preconditioners}
 
-The maintained families use different Krylov and preconditioner combinations
+The benchmark families use different Krylov and preconditioner combinations
 because the linear systems are qualitatively different:
 \begin{itemize}
   \item \textbf{$p$-Laplace:} mostly \code{cg + hypre}, with exact element
@@ -83,16 +84,16 @@ because the linear systems are qualitatively different:
   \item \textbf{Plasticity (2D):} deep-tail multigrid hierarchies whose
         bottlenecks are dominated by the top smoother and repeated Krylov
         work.
-  \item \textbf{Plasticity3D:} local PMG on same-mesh
-        \code{P4 -> P2 -> P1}, coarse \code{cg + hypre}, and an elastic initial
-        guess on the same hierarchy.
+  \item \textbf{Plasticity3D:} local PMG on the same-mesh
+        $P_4 \to P_2 \to P_1$ hierarchy, coarse \code{cg + hypre}, and an
+        elastic initial guess on the same hierarchy.
   \item \textbf{Topology:} \code{fgmres + gamg} for the mechanics step, coupled
         to a separate distributed design update.
 \end{itemize}
 
-The comparison material later in the manuscript also includes a source-repo
+The comparison material later in the manuscript also includes a source-family
 PMG-shell variant and alternative Krylov/preconditioner diagnostics. Those are
-not the primary maintained defaults, but they are informative because they
+not the primary defaults, but they are informative because they
 reveal how much of the final performance difference comes from derivative
 paths, preconditioners, or outer solver logic.
 
@@ -109,7 +110,7 @@ owned sparse insertion in the hot loop.
 \begin{figure}[H]
   \centering
   \PaperGlobalizationDiagram
-  \caption{Globalization choices used across the repository, from pure line
+  \caption{Globalization choices used across the benchmark suite, from pure line
   search to trust-region and hybrid strategies.}
   \label{fig:globalization}
 \end{figure}
@@ -126,13 +127,13 @@ owned sparse insertion in the hot loop.
 \begin{table}[H]
   \centering
   \input{tables/generated/implementation_capability_matrix.tex}
-  \caption{Implementation capability matrix across the maintained benchmark
+  \caption{Implementation capability matrix across the benchmark
   families. ``Higher-order / advanced AD'' summarizes the derivative choices
   that are scientifically interesting in each family.}
   \label{tab:capability-matrix}
 \end{table}
 
 \Cref{tab:capability-matrix} summarizes the implemented surface. The most
-important structural point is that the maintained production story is always
+important structural point is that the \jaxpetsc{} production story is always
 the \jaxpetsc{} column, even when a family also has \fenics{} or \purejax{}
 references.

@@ -1,27 +1,27 @@
-This paper presented \repo{} as a software-and-methods workflow for nonlinear
-finite-element solves and optimization with a maintained \jaxpetsc{} production
-path. The central contribution is not a new constitutive theory or a universal
-differentiable-PDE abstraction, but a maintained implementation pattern in
-which local JAX differentiation, sparse PETSc nonlinear solves, and multiple
-second-order routes are kept together across a heterogeneous benchmark suite.
+This paper presented \repo{} as a computational toolset for nonlinear
+finite-element solves and optimization with a \jaxpetsc{} production path. The
+central contribution is not a new constitutive theory or a universal
+differentiable-PDE abstraction, but an implementation pattern in which local JAX
+differentiation, sparse PETSc nonlinear solves, and multiple second-order routes
+are kept together across a heterogeneous benchmark suite.
 
 The Plasticity3D evidence is intentionally narrower than a broad mechanics
 claim. Same-case source-faithfulness to the source-style surrogate
 implementation is strong, and the fixed-lambda source-operator comparison
 passes the configured gated quantities after matching the glued-bottom
 boundary contract, with additional field-agreement diagnostics reported
-separately. These results support the maintained
-endpoint-surrogate workflow for this benchmark family, while still not
+separately. These results support the endpoint-surrogate workflow for this
+benchmark family, while still not
 supporting constitutive-equivalence language or path-consistent
 incremental-history claims. Constitutive AD emerges as the preferred
 cost-quality route on the locked flagship case. On Hyperelasticity, the
 companion comparison
-against JAX-FEM shows that the maintained code can agree very closely with a
+against JAX-FEM shows that the \jaxpetsc{} implementation can agree very closely with a
 recent external implementation when the mesh and prescribed displacement
-schedule are matched and terminal states are post-compared with the repository
-energy. The promoted Plasticity3D timing study and the distributed topology
-workflow then show that the same codebase remains operational beyond small
-validation comparisons.
+schedule are matched and terminal states are post-compared with
+\cref{eq:hyperelasticity-energy}. The promoted Plasticity3D timing study and
+the distributed topology workflow then show that the same toolset remains
+operational beyond small validation comparisons.
 
 Future work should follow the boundaries made visible by these results:
 \begin{itemize}
@@ -35,6 +35,6 @@ Future work should follow the boundaries made visible by these results:
 \end{itemize}
 
 The next scientific step is not to overclaim this implementation, but
-to turn this maintained workflow into a stronger reusable template for
+to turn this workflow into a stronger reusable template for
 additional nonlinear multiphysics and design problems with equally explicit
 validation and fairness criteria.

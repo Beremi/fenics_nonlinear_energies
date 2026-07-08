@@ -48,8 +48,9 @@ differentiation, and optional PETSc integration \citep{bode2025autopdex}.
 JAX-CPFEM is especially relevant to the mechanics side of the present paper
 because it couples differentiable FEM, nonlinear crystal plasticity, and GPU
 execution in a recent open-access workflow \citep{hu2025jaxcpfem}. Together,
-these papers define the closest modern literature context for the repository's
-JAX-based local differentiation layer and second-order derivative comparisons.
+these papers define the closest modern literature context for the JAX-based
+local differentiation layer and second-order derivative comparisons studied
+here.
 
 \paragraph{Bridges between JAX-style AD and established FEM stacks.}
 The Firedrake--JAX bridge of \citet{yashchuk2023bringing} is important because
@@ -69,13 +70,14 @@ local finite-element discretization and PETSc for robust distributed sparse
 solves in heterogeneous micromechanics \citep{cattaneo2026jetsci}. We therefore
 treat it as evidence from a submitted preprint that the JAX-local/PETSc-global
 split is an active design point, while keeping the present paper's claim
-narrower: a maintained nonlinear energy-minimization suite with derivative-route
+narrower: an implemented nonlinear energy-minimization suite with derivative-route
 comparisons across the benchmark families below.
 
 \paragraph{Mohr--Coulomb slope stability and source-lineage context.}
-The plasticity benchmarks use Mohr--Coulomb-type slope-stability problems as
-reviewer-visible stress tests, so their citations have to distinguish continuum
-plasticity, strength-reduction practice, and repository-specific surrogates.
+The plasticity benchmarks use Mohr--Coulomb-type slope-stability problems, so
+their citations have to distinguish continuum plasticity, strength-reduction
+practice, source-family implementations, and the algorithmic endpoint
+surrogates studied here.
 Davis' plasticity treatment and the finite-element strength-reduction studies of
 \citet{tschuchnigg2015nonassociated} provide the Davis-style reduction context
 used in the paper. For constitutive integration, the incremental reference frame
@@ -85,9 +87,12 @@ with Mohr--Coulomb-specific nonsmooth return operators treated by
 documents variational and optimization viewpoints for shear strength reduction
 \citep{sysala2021optimization,sysala2025convexoptimization} and a 3D
 continuation/iterative-solver source family \citep{sysala2025advancedcontinuation}.
+The MATLAB implementation paper of \citet{cermak2019efficient}, with Jan Valdman
+as a coauthor, documents an efficient 2D/3D elastoplastic finite-element
+implementation lineage for this problem class.
 The present manuscript uses that literature to position the benchmark family,
 while the numerical claims remain limited to the implemented surrogate and the
-repository artifacts reported below.
+reported numerical artifacts below.
 
 \paragraph{Topology optimization workflows.}
 The classical SIMP and educational topology-optimization references remain
@@ -119,7 +124,7 @@ Against that background, the niche of \repo{} can be stated precisely. It sits
 between high-level differentiable modeling and scalable sparse nonlinear solver
 engineering. The contribution is not that it replaces the ecosystems above, but
 that it documents one specific point in the contemporary design space:
-maintained distributed nonlinear FEM workflows that combine JAX-based local
+implemented distributed nonlinear FEM workflows that combine JAX-based local
 differentiation, multiple second-order routes, and PETSc-based sparse execution
 on benchmark families ranging from scalar nonlinear diffusion to topology
 optimization and 3D Mohr--Coulomb-type mechanics.

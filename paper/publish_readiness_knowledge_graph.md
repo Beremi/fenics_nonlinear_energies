@@ -35,12 +35,13 @@ MATLAB/Octave literature only when there is source-backed evidence.
 ## Manuscript Nodes
 
 - `PAPER`: Title, abstract, and conclusion.
-  Current risk: "maintained repository workflow" is louder than "scientific FEM
-  toolset for nonlinear problems."
+  Status: title, abstract, and conclusion are now framed around a scientific
+  \jaxpetsc{} toolset for nonlinear FEM energy solves, derivative routes,
+  sparse assembly, and solver policy.
 - `INTRO`: positioning and contributions.
-  Required edit: open with the nonlinear FEM computational bottleneck and add an
-  explicit contribution block with solver, assembly/derivative, and linear-solver
-  pillars.
+  Status: now opens with the nonlinear FEM computational bottleneck and includes
+  an explicit contribution block with solver, derivative/assembly, and
+  linear-solver pillars.
 - `RELATED`: literature framing.
   Required edit: consolidate defensive taxonomy into fewer scientific groups:
   FEM automation, differentiable FEM/AD, nonlinear solver infrastructure,
@@ -48,18 +49,18 @@ MATLAB/Octave literature only when there is source-backed evidence.
 - `METHOD`: mathematical and algorithmic core.
   Current assets: common finite-element energy notation, derivative routes,
   globalization algorithms, colored sparse finite differences, constitutive AD.
-  Required edit: make nonlinear solver policy, sparse assembly, and linear
-  solver/preconditioner policy equally visible methodological components.
+  Status: generic algorithms now use the merit functional `\mathcal{F}` rather
+  than the hyperelasticity-reserved symbol `J`; prose is more paper-facing.
 - `IMPLEMENTATION`: realization of the method.
   Current assets: pure JAX, FEniCS, and JAX+PETSc strata; autodiff modes;
   Krylov/preconditioner matrix; distributed assembly.
-  Required edit: present as implementation choices for a scientific method, not
-  as codebase strata.
+  Status: revised as solver paths with scientific roles, not codebase strata.
 - `BENCHMARKS`: mathematical problem coverage.
   Families: p-Laplace, Ginzburg--Landau, Hyperelasticity, Plasticity2D,
   Plasticity3D, Topology.
-  Current risk: repeated "repository specialization" wording weakens
-  self-contained mathematical presentation.
+  Status: repeated "repository specialization" language has been replaced with
+  implemented benchmark, discrete model, endpoint surrogate, or source-family
+  context as appropriate.
 - `VALIDATION`: external and source-family comparison.
   Evidence: narrow hyperelastic JAX-FEM comparison; Plasticity3D validation
   ladder with endpoint-surrogate scope.
@@ -72,6 +73,11 @@ MATLAB/Octave literature only when there is source-backed evidence.
 - `FIGURES_TABLES`: visual and layout quality.
   Current fact: `paper/build/main.pdf` is 34 pages, A4, 10 pt article,
   text width about 7.09 in. Many floats use `[H]`, so placement is highly manual.
+  Figure/layout subagent audit: assets are technically clean at current A4
+  width, with embedded fonts and 600 ppi raster layers, but dense 3D
+  multi-panel Plasticity3D figures and wide tables are not robust to a narrower
+  journal class. High-value next step: split or simplify the worst Plasticity3D
+  figures/tables before final template submission.
 - `REPRO`: reproducibility and submission readiness.
   Known blockers from `paper/todo.md`: target journal/template/declarations,
   repository license/archive DOI, and archive-neutral provenance for critical
@@ -106,20 +112,33 @@ MATLAB/Octave literature only when there is source-backed evidence.
 
 - `Narrative/structure` (`Meitner`): completed. Key finding: restructure the
   paper around a nonlinear FEM toolset and reduce repository-internal framing.
-- `Evidence/experiments/repro` (`Linnaeus`): pending.
-- `Figures/layout/PDF` (`Archimedes`): pending.
-- `Math/notation/self-contained prose` (`Harvey`): pending.
-- `Legacy MATLAB/Valdman comparators` (`Halley`): pending.
+- `Evidence/experiments/repro` (`Linnaeus`): completed. Key finding: strong
+  evidence exists for scalar parity/scaling, the narrow hyperelastic JAX-FEM
+  comparison, Plasticity3D endpoint-surrogate validation, derivative-route
+  comparisons, and topology consistency; archive-neutral provenance and true
+  path-history Plasticity3D validation remain blockers for stronger claims.
+- `Figures/layout/PDF` (`Archimedes`): completed. Key finding: current PDF is
+  technically clean but not robust to template narrowing; dense tables and
+  Plasticity3D multi-panel figures need a dedicated layout chunk.
+- `Math/notation/self-contained prose` (`Harvey`): completed. Key finding:
+  avoid generic `J`, define comparison metrics, demote branch details that are
+  not fully enumerated, and replace implementation spellings with scientific
+  notation.
+- `Legacy MATLAB/Valdman comparators` (`Halley`): completed. Key finding:
+  cite Cermak--Sysala--Valdman 2019 as implementation-lineage context only, not
+  as a verified numerical baseline.
 
 ## First Edit Backlog
 
-1. Rewrite title and abstract around the toolset and evidence pillars.
-2. Add an explicit contributions subsection to the introduction.
-3. Recast `Implementation` as "Reference and mainline solver paths."
+1. Rewrite title and abstract around the toolset and evidence pillars. Done in
+   the first framing chunk.
+2. Add an explicit contributions subsection to the introduction. Done.
+3. Recast `Implementation` as "Reference and mainline solver paths." Done in
+   substance.
 4. Replace broad "repository" wording in benchmark definitions with
    self-contained terms such as "implemented benchmark," "discrete model," and
-   "algorithmic constitutive surrogate."
+   "algorithmic constitutive surrogate." Done for the main manuscript sections.
 5. Add a results synthesis paragraph/table using existing generated assets if
    appropriate.
 6. Audit figures for physical size and font consistency after the narrative
-   structure stabilizes.
+   structure stabilizes. Initial audit done; implementation remains.

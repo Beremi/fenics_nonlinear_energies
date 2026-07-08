@@ -321,6 +321,16 @@
       "local_filename": null,
       "notes": "CAS ASEP lists an author's postprint with restricted access; no public full text is cached."
     },
+    "cermak2019efficient": {
+      "canonical_source_label": "DOI landing page",
+      "canonical_source_url": "https://doi.org/10.1016/j.amc.2019.02.054",
+      "doi": "10.1016/j.amc.2019.02.054",
+      "fulltext_label": "arXiv PDF",
+      "fulltext_url": "https://arxiv.org/pdf/1805.04155.pdf",
+      "isbns": [],
+      "local_filename": "cermak2019efficient.pdf",
+      "notes": "Metadata verified from the Applied Mathematics and Computation DOI record and arXiv abstract; used for implementation-lineage context, not as a verified numerical baseline."
+    },
     "bode2025autopdex": {
       "canonical_source_label": "JOSS article",
       "canonical_source_url": "https://joss.theoj.org/papers/10.21105/joss.07300",
@@ -380,6 +390,16 @@
       "isbns": [],
       "local_filename": "yashchuk2023bringing.pdf",
       "notes": "arXiv metadata verified: submitted 2023-08-31, primary class cs.MS, also cs.LG and math.NA; comments state workshop publication at ICLR 2020 DeepDiffEq."
+    },
+    "it4i-karolina-compute-nodes": {
+      "canonical_source_label": "IT4I Karolina compute-node documentation",
+      "canonical_source_url": "https://docs.it4i.cz/en/docs/clusters/karolina/compute-nodes",
+      "doi": null,
+      "fulltext_label": null,
+      "fulltext_url": null,
+      "isbns": [],
+      "local_filename": null,
+      "notes": "Official IT4Innovations documentation page for Karolina CPU-node hardware; cited only for the hardware description of the reported runs."
     }
   }
 }

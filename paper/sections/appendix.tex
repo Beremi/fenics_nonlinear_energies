@@ -6,7 +6,7 @@ but too implementation-specific for the main benchmark narratives.
 \subsection{Plasticity3D Source-Assembly and Fixed-Operator PMG Comparisons}
 
 The primary Plasticity3D numerical story in \Cref{sec:num-plasticity3d} is the
-maintained local path. The tables below add two engineering comparisons on the
+rank-local constitutive-AD path. The tables below add two engineering comparisons on the
 same discrete problem from \cref{eq:plasticity3d-discrete}: a matched
 source-assembly comparator and a fixed source-operator PMG variant.
 
@@ -30,9 +30,9 @@ source-assembly comparator and a fixed source-operator PMG variant.
 \end{table}
 
 These tables support two narrower statements. First, source assembly has lower
-reported wall time than maintained local assembly when both are embedded in the
+reported wall time than rank-local assembly when both are embedded in the
 same PMG solver stack, although the gap narrows at higher rank counts. Second,
-the fixed source-operator PMG profile is not the preferred maintained default in the
+the fixed source-operator PMG profile is not the preferred default in the
 present study: it may appear favorable on some rows, but it does more nonlinear
 and Krylov work and converges less consistently across the reported runs.
 
@@ -47,20 +47,16 @@ matters even when the outer continuation logic is held fixed.
   \input{tables/generated/source_continuation_compare.tex}
   \caption{Source continuation with the fixed PMG-shell smoother policy at 8
   and 32 ranks. This is supporting solver evidence only; it is not part of the
-  paper's main maintained production story.}
+  paper's main production story.}
   \label{tab:source-cont}
 \end{table}
 
 \subsection{Code, data, and reproducibility availability}
 
 The implementation discussed in this paper is available at
-\url{https://github.com/Beremi/fenics_nonlinear_energies}. The manuscript is
-generated from the repository-local paper pipeline. The table, figure,
-literature-source, asset-validation, and reproducibility-note scripts live in
-\path{paper/scripts}. The generated manuscript assets live in
-\path{paper/tables/generated} and \path{paper/figures/generated}. The raw
-benchmark summaries used by those scripts are kept under
-\path{artifacts/raw_results}. The paper build validates that the generated
-assets are present before compiling the PDF. A citable source or artifact
+\url{https://github.com/Beremi/fenics_nonlinear_energies}. The submission
+archive should include the manuscript-generation scripts, generated table and
+figure assets, literature-source audit, raw benchmark summaries, and asset
+validation checks used to build the reported PDF. A citable source or artifact
 archive DOI should be supplied in the final submission metadata if required by
 the target journal; this journal-neutral draft does not assert one.

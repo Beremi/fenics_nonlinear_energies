@@ -14,10 +14,10 @@ the validation story.
 \label{sec:num-globalization}
 
 \Cref{tab:globalization-method-compare} isolates the nonlinear globalization
-choice on four maintained local benchmarks using the same element assembly path
+choice on four benchmark configurations using the same element assembly path
 and fixed preconditioner family within each problem. The scalar cases use
-level-10 meshes obtained by one additional uniform refinement of the maintained
-level-9 inputs. The $p$-Laplace row uses 32 MPI ranks with a 30 s launcher cap;
+level-10 meshes obtained by one additional uniform refinement of the level-9
+inputs. The $p$-Laplace row uses 32 MPI ranks with a 30 s launcher cap;
 the Ginzburg--Landau row uses 16 MPI ranks with a 120 s cap, because a 32-rank
 local launch exceeded the fixed setup budget before reaching the nonlinear
 solve. The hyperelasticity row uses the first eight load steps of the level-4
@@ -29,7 +29,7 @@ output JSON is produced and the launcher wall time otherwise. In the
 line-search rows the trust-region machinery is disabled; in particular, the
 hyperelasticity line-search baseline uses GMRES rather than the STCG
 trust-region subproblem solver. For the Plasticity3D row, all methods are
-judged against the stricter $\|\nabla J\|_2 < 10^{-4}$ endpoint gate.
+judged against the stricter $\|\nabla \mathcal{F}\|_2 < 10^{-4}$ endpoint gate.
 
 The clean $p$-Laplace case is the expected easy case: Newton with Armijo line
 search is sufficient and is the fastest row. Ginzburg--Landau separates the
@@ -41,7 +41,7 @@ has the largest rejection count and the largest solve time. The hybrid row keeps
 the trust-region safeguard while reducing both nonlinear iterations and solver
 time relative to line-search-only Newton. The Plasticity3D endpoint gives the
 opposite conclusion from the easy scalar case: at the stricter
-$\|\nabla J\|_2 < 10^{-4}$ gate, line-search-only Newton reaches the iteration
+$\|\nabla \mathcal{F}\|_2 < 10^{-4}$ gate, line-search-only Newton reaches the iteration
 cap near the target, whereas both trust-region policies converge. The hybrid
 variant is the fastest of the two trust-region rows and also uses fewer Krylov
 iterations. These rows therefore support a problem-dependent policy choice
@@ -145,7 +145,7 @@ identical discrete energies at higher wall time.
 \begin{figure}[H]
   \centering
   \includegraphics[width=\PaperFigureMedium]{plaplace_scaling.pdf}
-  \caption{$p$-Laplace strong scaling on the finest maintained grid. All curves
+  \caption{$p$-Laplace strong scaling on the finest tested grid. All curves
   correspond to the same discrete problem from \cref{eq:plaplace-discrete}.}
   \label{fig:plaplace-results}
 \end{figure}
@@ -156,14 +156,14 @@ identical discrete energies at higher wall time.
 The Ginzburg--Landau family from \Cref{sec:bench-gl,eq:gl-discrete} shows the
 same high-level derivative story under a more indefinite linearization. The
 important computational message is not a dramatic separation between exact and
-approximate second-order routes, but that the maintained distributed solver
-remains convergent on this nonconvex scalar energy with the same sparse-infrastructure
+approximate second-order routes, but that the distributed solver remains
+convergent on this nonconvex scalar energy with the same sparse-infrastructure
 contract.
 
 \begin{figure}[H]
   \centering
   \includegraphics[width=\PaperFigureMedium]{ginzburg_landau_scaling.pdf}
-  \caption{Ginzburg--Landau strong scaling for the maintained fine-grid case
+  \caption{Ginzburg--Landau strong scaling for the tested fine-grid case
   governed by \cref{eq:gl-discrete}.}
   \label{fig:gl-results}
 \end{figure}
@@ -173,12 +173,12 @@ contract.
 
 The hyperelasticity problem definition, boundary data, and terminal energies
 are given in \Cref{sec:bench-he,eq:hyperelasticity-discrete}. Computationally,
-this is the maintained benchmark in which globalization matters more than
-derivative-route choice: the distributed implementation completes the full load
-path and preserves the terminal energy trend from \Cref{sec:bench-he}. The
+this is the benchmark in which globalization matters more than derivative-route
+choice: the distributed implementation completes the full load path and
+preserves the terminal energy trend from \Cref{sec:bench-he}. The
 external JAX-FEM companion comparison is reported separately in
 \Cref{sec:val-hyperelasticity}; the figure below reports only distributed
-scaling for the repository load path.
+scaling for the load path in \cref{eq:hyperelasticity-discrete}.
 
 \begin{figure}[H]
   \centering
@@ -280,12 +280,12 @@ deviatoric-strain norm are defined in
 The validation limits for this endpoint surrogate are reported in
 \Cref{sec:val-plasticity3d}. With that interpretation fixed, this section asks
 two performance questions: which second-order route is preferred on the locked
-flagship case, and how the maintained surrogate behaves across degree,
+flagship case, and how the endpoint surrogate behaves across degree,
 resolution, and rank count.
 
 \paragraph{Derivative-route ablation.}
 The first question is which second-order route has the most useful
-cost-quality profile for the promoted maintained workflow. On the locked
+cost-quality profile for the promoted workflow. On the locked
 $P_4(L_1)$ case at $\lambda_{\mathrm{sr}}=1.5$ and 8 MPI ranks, all three
 routes converge to essentially the same terminal state, with identical Newton
 and total Krylov counts. The differences are therefore cost differences, not
@@ -310,10 +310,10 @@ and \SI{372}{s}/\SI{253}{s} for colored SFD.
   \label{tab:plasticity3d-derivative-ablation}
 \end{table}
 
-\paragraph{Maintained discretization and scaling.}
+\paragraph{Discretization and scaling.}
 The remaining figures in this subsection answer a different question: how the
-maintained surrogate behaves across degree/resolution choices, and how the
-recommended maintained stack scales on the separate promoted
+endpoint surrogate behaves across degree/resolution choices, and how the
+recommended stack scales on the separate promoted
 $P_4(L_2)$ timing studies.
 
 \begin{figure}[H]
@@ -343,14 +343,14 @@ $P_4(L_2)$ timing studies.
     \includegraphics[width=\linewidth]{plasticity3d_degree_energy_zoom_time.pdf}
     \caption{$P2/P4$ zoom: final energy versus total wall time.}
   \end{subfigure}
-  \caption{Corrected glued-bottom maintained Plasticity3D
+  \caption{Corrected glued-bottom Plasticity3D
   degree-versus-resolution study at $\lambda_{\mathrm{sr}} = 1.55$. The top
   row shows the full $P_1/P_2/P_4$ comparison, while the bottom row zooms to
   $P_2/P_4$ so the near-overlap hidden by the coarse $P_1$ points becomes
   visible. The left column plots final values of
   \cref{eq:plasticity3d-discrete} against free DOFs; the right column plots
   the same converged energies against end-to-end wall time. All timings are
-  fair 32-rank maintained runs.}
+  fair 32-rank runs.}
   \label{fig:plasticity3d-degree-energy}
 \end{figure}
 
@@ -360,14 +360,14 @@ glued-bottom constraint, the first matched comparison is
 $P_4(L_1)$ versus $P_1(L_3)$ at \num{610964} free DOFs. The second
 matched comparison is $P_1(L_4)$, $P_2(L_3)$, and $P_4(L_2)$ at
 \num{4801816} free DOFs. The scientific message is
-therefore that the maintained solver reaches similar terminal energies along
+therefore that the solver reaches similar terminal energies along
 both $p$- and $h$-refined paths, while higher order on coarser meshes buys
 lower energy at matched DOFs only by paying a clear wall-time premium.
 
 \begin{figure}[H]
   \centering
   \includegraphics[width=\PaperFigureMedium]{plasticity3d_recommended_scaling.pdf}
-  \caption{Historical strong scaling for the promoted Plasticity3D maintained
+  \caption{Historical strong scaling for the promoted Plasticity3D
   stack: \localpmg{} on $P_4(L_2)$ at
   $\lambda_{\mathrm{sr}} = 1.0$. This is a separate timing study from the
   glued-bottom $\lambda_{\mathrm{sr}} = 1.55$ results shown in
@@ -386,7 +386,7 @@ lower energy at matched DOFs only by paying a clear wall-time premium.
 \end{table}
 
 \Cref{fig:plasticity3d-scaling,tab:plasticity3d-scaling} give the paper's
-largest maintained distributed mechanics timing result. This scaling evidence uses
+largest distributed mechanics timing result. This scaling evidence uses
 the promoted $P_4(L_2)$ mesh family but a different load factor,
 $\lambda_{\mathrm{sr}} = 1.0$, so it complements rather than extends the
 glued-bottom $\lambda_{\mathrm{sr}} = 1.55$ benchmark figures above. Within
@@ -464,7 +464,7 @@ workflow scaling rather than fixed-work strong scaling.
 \begin{figure}[H]
   \centering
   \includegraphics[width=\PaperFigureMedium]{topology_scaling.pdf}
-  \caption{Topology end-to-end parallel timing trend for the maintained
+  \caption{Topology end-to-end parallel timing trend for the
   fine-grid run. The plotted wall times correspond to the coupled reduced-design
   workflow defined by \cref{eq:topology-reduced-objective}.}
   \label{fig:topology-results}
@@ -473,7 +473,7 @@ workflow scaling rather than fixed-work strong scaling.
 \begin{table}[H]
   \centering
   \input{tables/generated/topology_summary.tex}
-  \caption{Parallel topology summary for the maintained fine-grid study,
+  \caption{Parallel topology summary for the fine-grid study,
   reported for the reduced objective in \cref{eq:topology-reduced-objective}.}
   \label{tab:topology-summary}
 \end{table}

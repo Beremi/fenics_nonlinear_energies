@@ -7,7 +7,10 @@ state on element $e$ is $u_e$. When a family is posed as an energy or reduced
 objective minimization, we write its discrete functional as
 $\mathcal{J}_h(u_h)$; when a family is posed as a sequence of equilibrium
 solves or by a scalar equilibrium surrogate, we write the associated scalar
-functional as $\Pi_h(u_h)$.
+functional as $\Pi_h(u_h)$. This distinction records the modeling role of the
+functional, not a difference in the sparse assembly pattern. When an algorithm
+is stated independently of a benchmark family, we denote its merit functional by
+$\mathcal{F}$.
 Hyperelasticity is the only family in which $J=\det F$ denotes the deformation
 Jacobian, so we avoid the bare symbol $J$ for generic objectives elsewhere in
 the paper.
@@ -15,8 +18,8 @@ For finite-element labels, $P_k(L_\ell)$ denotes degree-$k$ Lagrange elements
 on mesh level $L_\ell$; problem-specific sections define the mesh hierarchy
 behind those levels when it matters for interpretation.
 
-At the implementation level, the common sparse-assembly task is therefore one
-of two closely related forms:
+At the discrete algebraic level, the common sparse-assembly task is therefore
+one of two closely related forms:
 \begin{equation}
   \mathcal{J}_h(u_h)
   = \sum_{e=1}^{n_{\mathrm{el}}} \Phi_e(u_e) - f_{\mathrm{ext}}^T u_h,
@@ -29,15 +32,15 @@ or
   \label{eq:generic-potential}
 \end{equation}
 where $\Phi_e$ may represent a scalar diffusion energy, a phase-field
-potential, a finite-strain stored-energy density, a repository scalarized
+potential, a finite-strain stored-energy density, an algorithmic scalarized
 plasticity surrogate, or the reduced design objective used in topology
-optimization. The benchmark
-sections specialize \cref{eq:generic-objective,eq:generic-potential} to each
-family and define any additional symbols locally.
+optimization. The benchmark sections specialize
+\cref{eq:generic-objective,eq:generic-potential} to each family and define any
+additional symbols locally.
 
 \subsection{Finite-element and derivative structure}
 
-The main design choice in \repo{} is that problem definitions should remain
+The main design choice in the toolset is that problem definitions should remain
 energy-centered whenever possible. This gives three derivative routes:
 \begin{enumerate}
   \item \textbf{element AD:} differentiate the full scalar element energy
@@ -60,15 +63,15 @@ is too costly or unnecessary.
 
 \subsection{Newton--Krylov globalization}
 
-The nonlinear solves in the repository are based on Newton or quasi-Newton
-updates, but they are not all globalized in the same way. Scalar benchmarks
-primarily use line-search Newton. Hyperelasticity uses a trust-region method
-with optional post-step line search. Some maintained experiments use a hybrid
+The nonlinear solves are based on Newton or quasi-Newton updates, but they are
+not all globalized in the same way. Scalar benchmarks primarily use line-search
+Newton. Hyperelasticity uses a trust-region method with optional post-step line
+search. Some benchmark configurations use a hybrid
 trust-region/line-search algorithm in which a reduced trust-region model
 provides the direction, while a bounded line search chooses the accepted step.
 The line-search and trust-region ingredients follow standard globalization ideas
 \citep[Chs.~2--4]{nocedal2006numerical}; the particular hybrid coupling used in
-some repository experiments is an implementation-specific combination of those
+some benchmark configurations is an implementation-specific combination of those
 textbook ingredients.
 
 \begin{algorithm}[H]
@@ -77,11 +80,12 @@ textbook ingredients.
 \State Given $x_0$, trust radius $\Delta_0$, tolerances, and callbacks for
 energy, gradient, and Hessian solves/matvecs
 \For{$k=0,1,\dots$}
-  \State Assemble $g_k = \nabla J(x_k)$
+  \State Assemble $g_k = \nabla \mathcal{F}(x_k)$
   \If{convergence criteria are satisfied}
     \State terminate
   \EndIf
-  \State Compute a Newton-like direction from $H(x_k)p = -g_k$
+  \State Compute a Newton-like direction from
+    $\nabla^2 \mathcal{F}(x_k)p = -g_k$
   \If{trust region is enabled}
     \State Build a small reduced model in the span of Newton and gradient directions
     \State Solve the reduced trust subproblem with radius $\Delta_k$
@@ -101,21 +105,22 @@ energy, gradient, and Hessian solves/matvecs
 \end{algorithmic}
 \end{algorithm}
 
-For the maintained 3D plasticity path promoted in this paper, the chosen policy
+For the principal 3D plasticity path promoted in this paper, the chosen policy
 is simpler: Newton with Armijo backtracking and a PMG-preconditioned
 \code{fgmres} linear solve \citep[Sec.~3.1]{nocedal2006numerical}. This is the
-maintained baseline workflow used for the flagship benchmark reported later in
+baseline workflow used for the flagship benchmark reported later in
 \Cref{sec:num-plasticity3d}.
 
 \begin{algorithm}[H]
-\caption{Armijo line search used in maintained Newton solves}
+\caption{Armijo line search used in Newton solves}
 \begin{algorithmic}[1]
 \State Given state $x$, direction $p$, initial step $\alpha_0$
-\State Evaluate $J(x)$ and $g = \nabla J(x)$
+\State Evaluate $\mathcal{F}(x)$ and $g = \nabla \mathcal{F}(x)$
 \For{$m=0,1,\dots,m_{\max}$}
   \State $\alpha \gets \alpha_0 \beta^m$
   \State $x_{\mathrm{trial}} \gets x + \alpha p$
-  \If{$J(x_{\mathrm{trial}}) \le J(x) + c_1 \alpha g^T p$}
+  \If{$\mathcal{F}(x_{\mathrm{trial}}) \le
+    \mathcal{F}(x) + c_1 \alpha g^T p$}
     \State accept $\alpha$
     \State \Return
   \EndIf
@@ -129,10 +134,10 @@ maintained baseline workflow used for the flagship benchmark reported later in
 Sparse derivative recovery is built around the observation that if columns that
 do not interfere in the sparsity pattern are perturbed together, one gradient
 or HVP evaluation can recover multiple columns of the Jacobian or Hessian
-\citep{curtis1974sparsejacobian,coleman1984sparsehessian}. In this repository,
-the local SFD path uses distance-2 coloring on the Hessian sparsity graph,
-which is especially effective when combined with overlap-domain assembly and
-owned-plus-ghost PETSc layouts.
+\citep{curtis1974sparsejacobian,coleman1984sparsehessian}. The local SFD path
+uses distance-2 coloring on the Hessian sparsity graph, which is especially
+effective when combined with overlap-domain assembly and owned-plus-ghost PETSc
+layouts.
 
 \begin{algorithm}[H]
 \caption{Distributed colored Hessian recovery}
@@ -151,15 +156,14 @@ owned-plus-ghost PETSc layouts.
 \subsection{Constitutive autodiff for 3D plasticity}
 
 The promoted \plasticitythree{} result in this paper uses constitutive AD.
-Rather than applying second-order AD to the full $P4$ element vector, we write
-one scalar Mohr--Coulomb energy density per quadrature point,
-\begin{equation}
-  \Phi_q(\varepsilon_q,\mathrm{material}_q),
-\end{equation}
-differentiate it with respect to the six engineering-strain components, and
-assemble the element tangent from the resulting stress and constitutive tangent.
-This keeps the scalar-energy contract intact while reducing the cost of
-branchwise second-order information on high-order tetrahedra.
+Rather than applying second-order AD to the full $P_4$ element vector, we define
+one scalar Mohr--Coulomb branch potential
+$\Phi_q(\varepsilon_q,m_q)$ per quadrature point, where $m_q$ collects the
+local material parameters. We differentiate this scalar potential with respect
+to the six engineering-strain components and assemble the element tangent from
+the resulting stress and constitutive tangent. This keeps the scalar-energy
+contract intact while reducing the cost of branchwise second-order information
+on high-order tetrahedra.
 
 \begin{algorithm}[H]
 \caption{Constitutive AD assembly for high-order plasticity}
@@ -178,9 +182,9 @@ branchwise second-order information on high-order tetrahedra.
 \end{algorithm}
 
 The key methodological point is that automatic differentiation is applied
-directly to the implemented scalar branch potential. The code does not switch
-to a hand-derived constitutive tangent. Away from branch switching sets this
-yields branchwise exact derivatives of the implemented surrogate; at switching
-sets the model remains nonsmooth, so the resulting tangents should be read as
-branchwise surrogate derivatives rather than globally smooth continuum
+directly to the implemented scalar branch potential. The implementation does
+not switch to a hand-derived constitutive tangent. Away from branch switching
+sets this yields branchwise exact derivatives of the implemented surrogate; at
+switching sets the model remains nonsmooth, so the resulting tangents should be
+read as branchwise surrogate derivatives rather than globally smooth continuum
 derivatives.
