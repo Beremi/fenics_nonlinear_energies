@@ -493,8 +493,10 @@ Here $\phi$ denotes friction angle and $\psi$ denotes dilation angle; the paper
 uses those symbols only in that geomechanics sense.
 
 The local constitutive surrogate follows the source-family piecewise branch
-structure. Let $\varepsilon_1 \ge \varepsilon_2 \ge \varepsilon_3$ be the
-principal strains and let
+structure. At one quadrature point we suppress the index $q$ and write
+$s_{\lambda}:=\sin\phi_{\lambda}$. Let
+$\varepsilon_1 \ge \varepsilon_2 \ge \varepsilon_3$ be the principal strains and
+let
 \begin{equation}
   I_1 = \varepsilon_{xx} + \varepsilon_{yy} + \varepsilon_{zz},
   \qquad
@@ -515,21 +517,96 @@ and the branch-selection variables are
 \begin{align}
   f_{\mathrm{tr}}
   &=
-  2\mu\!\left((1+\sin\phi_{\lambda})\varepsilon_1 -
-  (1-\sin\phi_{\lambda})\varepsilon_3\right)
-  + 2\lambda_{\mathrm{L}}\sin\phi_{\lambda} I_1
+  2\mu\!\left((1+s_{\lambda})\varepsilon_1 -
+  (1-s_{\lambda})\varepsilon_3\right)
+  + 2\lambda_{\mathrm{L}}s_{\lambda} I_1
   - \bar c_{\lambda},
   \nonumber\\
   \gamma_{\mathrm{sl}}
-  &= \frac{\varepsilon_1-\varepsilon_2}{1+\sin\phi_{\lambda}},
-  \qquad
+  &= \frac{\varepsilon_1-\varepsilon_2}{1+s_{\lambda}},
+  &
   \gamma_{\mathrm{sr}}
-  = \frac{\varepsilon_2-\varepsilon_3}{1-\sin\phi_{\lambda}},
+  &= \frac{\varepsilon_2-\varepsilon_3}{1-s_{\lambda}},
+  \nonumber\\
+  \gamma_{\mathrm{la}}
+  &= \frac{\varepsilon_1+\varepsilon_2-2\varepsilon_3}{3-s_{\lambda}},
+  &
+  \gamma_{\mathrm{ra}}
+  &= \frac{2\varepsilon_1-\varepsilon_2-\varepsilon_3}{3+s_{\lambda}}.
   \label{eq:plasticity3d-return-tests}
 \end{align}
-with the remaining left, right, and apex thresholds obtained from the same
-principal-strain ordering and branch-return formulas. The scalar potential is
-then the piecewise function
+The return denominators are
+\begin{align}
+  D_{\mathrm{s}}
+  &= 4\lambda_{\mathrm{L}}s_{\lambda}^2
+     +4\mu(1+s_{\lambda}^2),
+  &
+  D_{\mathrm{l}}
+  &= 4\lambda_{\mathrm{L}}s_{\lambda}^2
+     +\mu(1+s_{\lambda})^2
+     +2\mu(1-s_{\lambda})^2,
+  \nonumber\\
+  D_{\mathrm{r}}
+  &= 4\lambda_{\mathrm{L}}s_{\lambda}^2
+     +2\mu(1+s_{\lambda})^2
+     +\mu(1-s_{\lambda})^2,
+  &
+  D_{\mathrm{a}}
+  &= 4K s_{\lambda}^2.
+  \label{eq:plasticity3d-branch-denominators}
+\end{align}
+The corresponding branch multipliers are
+\begin{align}
+  \Lambda_{\mathrm{s}}
+  &= \frac{f_{\mathrm{tr}}}{D_{\mathrm{s}}},
+  \nonumber\\
+  \Lambda_{\mathrm{l}}
+  &=
+  \frac{
+    \mu\!\left((1+s_{\lambda})(\varepsilon_1+\varepsilon_2)
+    -2(1-s_{\lambda})\varepsilon_3\right)
+    +2\lambda_{\mathrm{L}}s_{\lambda} I_1
+    -\bar c_{\lambda}
+  }{D_{\mathrm{l}}},
+  \nonumber\\
+  \Lambda_{\mathrm{r}}
+  &=
+  \frac{
+    \mu\!\left(2(1+s_{\lambda})\varepsilon_1
+    -(1-s_{\lambda})(\varepsilon_2+\varepsilon_3)\right)
+    +2\lambda_{\mathrm{L}}s_{\lambda} I_1
+    -\bar c_{\lambda}
+  }{D_{\mathrm{r}}},
+  \nonumber\\
+  \Lambda_{\mathrm{a}}
+  &=
+  \frac{2K s_{\lambda} I_1-\bar c_{\lambda}}{D_{\mathrm{a}}}.
+  \label{eq:plasticity3d-branch-multipliers}
+\end{align}
+The branch energies are
+\begin{align}
+  \Phi_{\mathrm{s}}
+  &= \Phi_{\mathrm{el}}
+     -\frac{1}{2}D_{\mathrm{s}}\Lambda_{\mathrm{s}}^2,
+  \nonumber\\
+  \Phi_{\mathrm{l}}
+  &= \frac{1}{2}\lambda_{\mathrm{L}}I_1^2
+     +\mu\!\left(\varepsilon_3^2
+     +\frac{1}{2}(\varepsilon_1+\varepsilon_2)^2\right)
+     -\frac{1}{2}D_{\mathrm{l}}\Lambda_{\mathrm{l}}^2,
+  \nonumber\\
+  \Phi_{\mathrm{r}}
+  &= \frac{1}{2}\lambda_{\mathrm{L}}I_1^2
+     +\mu\!\left(\varepsilon_1^2
+     +\frac{1}{2}(\varepsilon_2+\varepsilon_3)^2\right)
+     -\frac{1}{2}D_{\mathrm{r}}\Lambda_{\mathrm{r}}^2,
+  \nonumber\\
+  \Phi_{\mathrm{a}}
+  &= \frac{1}{2}K I_1^2
+     -\frac{1}{2}D_{\mathrm{a}}\Lambda_{\mathrm{a}}^2.
+  \label{eq:plasticity3d-branch-energies}
+\end{align}
+With these definitions, the scalar potential is the piecewise function
 \begin{equation}
   \Phi_{\mathrm{MC},3\mathrm{D}}
   =
@@ -551,10 +628,7 @@ then the piecewise function
   \end{cases}
   \label{eq:plasticity3d-potential}
 \end{equation}
-where the branch energies $\Phi_{\mathrm{s}}$, $\Phi_{\mathrm{l}}$,
-$\Phi_{\mathrm{r}}$, and $\Phi_{\mathrm{a}}$ are branchwise quadratic
-corrections to \cref{eq:plasticity3d-elastic-branch}. The
-constitutive-AD path differentiates the smooth branches of
+The constitutive-AD path differentiates the smooth branches of
 \cref{eq:plasticity3d-potential} directly with JAX rather than substituting a
 hand-derived return-map tangent; the branch interfaces remain nonsmooth and are
 treated as part of the algorithmic constitutive surrogate rather than as a

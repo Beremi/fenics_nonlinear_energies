@@ -280,7 +280,7 @@ deviatoric-strain norm are defined in
 The validation limits for this endpoint surrogate are reported in
 \Cref{sec:val-plasticity3d}. With that interpretation fixed, this section asks
 two performance questions: which second-order route is preferred on the fixed
-flagship case, and how the endpoint surrogate behaves across degree,
+high-order derivative-route case, and how the endpoint surrogate behaves across degree,
 resolution, and rank count.
 
 \paragraph{Derivative-route ablation.}
@@ -288,11 +288,15 @@ The first question is which second-order route has the most useful
 cost-quality profile for the reported workflow. On the fixed
 $P_4(L_1)$ case at $\lambda_{\mathrm{sr}}=1.5$ and 8 MPI ranks, all three
 routes converge to essentially the same terminal state, with identical Newton
-and total Krylov counts. The differences are therefore cost differences, not
-state-quality differences: constitutive AD has the lowest median wall time on
-this fixed case, with median wall time \SI{222}{s} and median solve time
-\SI{191}{s}, compared with \SI{288}{s}/\SI{255}{s} for element AD
-and \SI{372}{s}/\SI{253}{s} for colored SFD.
+and total Krylov counts. This residual-bisection Newton probe uses the
+Hypre-backed local linear-solver profile, so it should be read as
+derivative-route timing evidence rather than as the MUMPS-backed PMG profile
+used by the later $\lambda_{\mathrm{sr}}=\num{1.55}$ convergence studies. The
+differences are cost differences, not state-quality differences: constitutive
+AD has the lowest median wall time on this fixed case, with median wall time
+\SI{222}{s} and median solve time \SI{191}{s}, compared with
+\SI{288}{s}/\SI{255}{s} for element AD and \SI{372}{s}/\SI{253}{s} for colored
+SFD.
 
 \begin{figure}[H]
   \centering
@@ -306,15 +310,16 @@ and \SI{372}{s}/\SI{253}{s} for colored SFD.
   \centering
   \input{tables/generated/plasticity3d_derivative_ablation.tex}
   \caption{Plasticity3D derivative-route comparison on the fixed
-  $P_4(L_1)$, $\lambda_{\mathrm{sr}}=1.5$, 8-rank case.}
+  $P_4(L_1)$, $\lambda_{\mathrm{sr}}=1.5$, 8-rank case. These rows use the
+  Hypre-backed local profile and are separate from the MUMPS-backed PMG rows in
+  the $\lambda_{\mathrm{sr}}=\num{1.55}$ studies.}
   \label{tab:plasticity3d-derivative-ablation}
 \end{table}
 
 \paragraph{Discretization and scaling.}
 The remaining figures in this subsection answer a different question: how the
 endpoint surrogate behaves across degree/resolution choices, and how the
-recommended stack scales on the separate selected
-$P_4(L_2)$ timing studies.
+selected solver configurations scale on the separate $P_4(L_2)$ timing studies.
 
 \begin{figure}[H]
   \centering
@@ -349,8 +354,8 @@ $P_4(L_2)$ timing studies.
   $P_2/P_4$ so the near-overlap hidden by the coarse $P_1$ points becomes
   visible. The left column plots final values of
   \cref{eq:plasticity3d-discrete} against free DOFs; the right column plots
-  the same converged energies against end-to-end wall time. All timings are
-  fair 32-rank runs.}
+  the same converged energies against end-to-end wall time. All timings use the
+  same 32-rank configuration.}
   \label{fig:plasticity3d-degree-energy}
 \end{figure}
 
@@ -367,8 +372,8 @@ lower energy at matched DOFs only by paying a clear wall-time premium.
 \begin{figure}[H]
   \centering
   \includegraphics[width=\PaperFigureMedium]{plasticity3d_recommended_scaling.pdf}
-  \caption{Historical strong scaling for the selected Plasticity3D
-  stack: \localpmg{} on $P_4(L_2)$ at
+  \caption{Historical strong scaling for the selected Plasticity3D solver
+  configuration: \localpmg{} on $P_4(L_2)$ at
   $\lambda_{\mathrm{sr}} = 1.0$. This is a separate timing study from the
   glued-bottom $\lambda_{\mathrm{sr}} = 1.55$ results shown in
   \cref{fig:plasticity3d-state,fig:plasticity3d-convergence,fig:plasticity3d-degree-energy}.}
@@ -386,19 +391,19 @@ lower energy at matched DOFs only by paying a clear wall-time premium.
 \end{table}
 
 \Cref{fig:plasticity3d-scaling,tab:plasticity3d-scaling} give the paper's
-largest distributed mechanics timing result. This scaling evidence uses
-the selected $P_4(L_2)$ mesh family but a different load factor,
-$\lambda_{\mathrm{sr}} = 1.0$, so it complements rather than extends the
-glued-bottom $\lambda_{\mathrm{sr}} = 1.55$ benchmark figures above. Within
-that timing study, the reported nonlinear and linear iteration counts
-remain matched on 1/2/4/8/16/32 ranks, while the end-to-end time drops from
-\SI{5424}{s} on one rank to \SI{300}{s} on 32 ranks. Additional
+largest distributed mechanics timing result for the Hypre-coarse historical PMG
+profile. This scaling evidence uses the selected $P_4(L_2)$ mesh family but a
+different load factor, $\lambda_{\mathrm{sr}} = 1.0$, so it complements rather
+than extends the glued-bottom $\lambda_{\mathrm{sr}} = 1.55$ benchmark figures
+above. Within that timing study, the reported nonlinear and linear iteration
+counts remain matched on 1/2/4/8/16/32 ranks, while the end-to-end time drops
+from \SI{5424}{s} on one rank to \SI{300}{s} on 32 ranks. Additional
 source-assembly and continuation evidence is reported later in
 \Cref{sec:solver-evidence}.
 
 The converged glued-bottom $P_4(L_2)$,
 $\lambda_{\mathrm{sr}}=\num{1.55}$ scaling run repeats the benchmark with the
-constitutive-AD rank-local assembly and MUMPS-backed PMG stack. The PMG
+constitutive-AD rank-local assembly and MUMPS-backed PMG profile. The PMG
 hierarchy is the same-mesh $P_4 \rightarrow P_2 \rightarrow P_1$ hierarchy,
 the nonlinear method is Armijo Newton, and the Krylov tolerance is
 \num{1e-2}. The nonlinear stop requires both relative correction below

@@ -67,7 +67,10 @@ MATLAB/Octave literature only when there is source-backed evidence.
   Krylov/preconditioner matrix; distributed assembly.
   Status: revised as solver paths with scientific roles, not codebase strata;
   implementation prose now uses mainline/scalable/distributed terminology
-  instead of maintained or production-path wording.
+  instead of maintained or production-path wording. Plasticity3D PMG wording now
+  separates Hypre-coarse historical/endpoint probes from the MUMPS-backed
+  redundant-LU profile used by the P2 globalization/derivative rows and the
+  converged P4(L2), lambda=1.55 scaling run.
 - `BENCHMARKS`: mathematical problem coverage.
   Families: p-Laplace, Ginzburg--Landau, Hyperelasticity, Plasticity2D,
   Plasticity3D, Topology.
@@ -76,7 +79,9 @@ MATLAB/Octave literature only when there is source-backed evidence.
   context as appropriate; generated tables no longer use repository/maintained
   descriptors for paper-facing claims. The Ginzburg--Landau initial state, the
   24-step hyperelastic rotating boundary map, and the topology continuation
-  stall rule are now stated in the benchmark text.
+  stall rule are now stated in the benchmark text. The Plasticity3D branch
+  thresholds, return denominators, branch multipliers, and branch energies are
+  now defined explicitly in the benchmark section instead of being left implicit.
 - `VALIDATION`: external and source-family comparison.
   Evidence: narrow hyperelastic JAX-FEM comparison; Plasticity3D validation
   ladder with endpoint-surrogate scope.
@@ -95,9 +100,12 @@ MATLAB/Octave literature only when there is source-backed evidence.
   nonlinear policy is problem-dependent, multiple derivative routes are useful,
   sparse ownership/preconditioning are part of the numerical method, and the
   \jaxpetsc{} mainline remains the scalable path while serial/external
-  formulations serve scoped reference roles.
+  formulations serve scoped reference roles. Plasticity3D result prose now marks
+  the fixed P4(L1), lambda=1.5 derivative ablation as Hypre-backed local timing
+  evidence and separates it from the MUMPS-backed PMG convergence/scaling
+  evidence at lambda=1.55.
 - `FIGURES_TABLES`: visual and layout quality.
-  Current fact: `paper/build/main.pdf` is 35 pages, A4, 10 pt article,
+  Current fact: `paper/build/main.pdf` is 36 pages, A4, 10 pt article,
   text width about 7.09 in. Many floats use `[H]`, so placement is highly manual.
   Figure/layout subagent audit: assets are technically clean at current A4
   width, with embedded fonts and 600 ppi raster layers, but dense 3D
@@ -130,7 +138,9 @@ MATLAB/Octave literature only when there is source-backed evidence.
   narrative as nonlinear-solver expertise, not isolated diagnostics.
 - `E3`: Linear solvers/preconditioners.
   PETSc Krylov, Hypre, GAMG, PMG, MUMPS/redundant coarse solves appear across
-  implementation and results. Needs one methodological narrative.
+  implementation and results. Plasticity3D now distinguishes Hypre-coarse and
+  MUMPS-backed PMG profiles in implementation and results; the broader
+  linear-solver narrative still needs final synthesis before submission.
 - `E4`: Parallel assembly.
   PETSc ownership, ghost/overlap layouts, owned-row sparse insertion, and
   rank-local assembly are present. Needs cleaner connection to final scaling
@@ -170,10 +180,9 @@ MATLAB/Octave literature only when there is source-backed evidence.
   self-conscious. Addressed in the validation/prose chunk.
 - `Math/solver contracts` (`Kant`): completed. Key findings still open:
   Plasticity3D stopping criteria need one explicit stop-contract table;
-  Plasticity3D PMG needs separate Hypre-coarse and MUMPS-coarse profiles; the
-  Plasticity3D branch thresholds and branch potentials need a self-contained
-  definition or appendix. Smaller findings on Ginzburg--Landau initial state,
-  hyperelastic load path, and topology stall-stop policy were addressed.
+  Plasticity3D PMG profiles and the constitutive branch formulas have now been
+  addressed in the manuscript. Smaller findings on Ginzburg--Landau initial
+  state, hyperelastic load path, and topology stall-stop policy were addressed.
 - `Evidence/provenance` (`Wegener`): completed. Key findings addressed:
   JAX-FEM comparison metadata no longer asserts constitutive-law identity,
   strict JSON output is enforced for the runner, and Layer 1A wording no longer
