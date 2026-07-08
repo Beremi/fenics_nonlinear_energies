@@ -17,15 +17,15 @@ the validation story.
 choice on four benchmark configurations using the same element assembly path
 and fixed preconditioner family within each problem. The scalar cases use
 level-10 meshes obtained by one additional uniform refinement of the level-9
-inputs. The $p$-Laplace row uses 32 MPI ranks with a 30 s launcher cap;
-the Ginzburg--Landau row uses 16 MPI ranks with a 120 s cap, because a 32-rank
-local launch exceeded the fixed setup budget before reaching the nonlinear
-solve. The hyperelasticity row uses the first eight load steps of the level-4
-rank-local procedural path on 32 MPI ranks with a 270 s cap. The Plasticity3D
+inputs. The $p$-Laplace row uses 32 MPI ranks with a 30 s wall-time cap.
+The Ginzburg--Landau row uses 16 MPI ranks with a 120 s cap, because the
+32-rank configuration did not reach the nonlinear solve within the fixed setup
+budget. The hyperelasticity row uses the first eight load steps of the level-4
+rank-local assembly path on 32 MPI ranks with a 270 s cap. The Plasticity3D
 row uses the $P_2(L_1)$ endpoint surrogate at
 $\lambda_{\mathrm{sr}}=1.55$ on 32 MPI ranks with a 180 s cap. Timeout rows
-are retained as results; the table uses the solver-reported solve time when an
-output JSON is produced and the launcher wall time otherwise. In the
+are retained as results; the table uses solver-reported solve time for
+completed solves and elapsed wall time for timed-out rows. In the
 line-search rows the trust-region machinery is disabled; in particular, the
 hyperelasticity line-search baseline uses GMRES rather than the STCG
 trust-region subproblem solver. For the Plasticity3D row, all methods are
@@ -56,7 +56,7 @@ rather than a universal preference for any single globalization strategy.
   \label{tab:globalization-method-compare}
 \end{table}
 
-The Ginzburg--Landau row is also rerun as a reviewer-gap fixed-budget probe on
+The Ginzburg--Landau row is also rerun as a fixed-budget scalar probe on
 the level-10 mesh with eight MPI ranks, so every policy reaches the nonlinear
 solver rather than timing out during setup. \Cref{tab:reviewer-gl-globalization}
 reports this cleaned scalar-nonconvex comparison separately from the
@@ -68,8 +68,8 @@ failure mode.
   \centering
   \footnotesize
   \input{tables/generated/reviewer_gl_globalization.tex}
-  \caption{Reviewer-gap Ginzburg--Landau level-10 globalization cleanup on
-  eight local MPI ranks. The rows use the same element assembly and Hypre
+  \caption{Ginzburg--Landau level-10 fixed-budget globalization comparison on
+  eight MPI ranks. The rows use the same element assembly and Hypre
   preconditioner; only the nonlinear globalization policy changes.}
   \label{tab:reviewer-gl-globalization}
 \end{table}
@@ -79,11 +79,11 @@ failure mode.
 
 \Cref{tab:derivative-route-compare} isolates the cost of the second-order
 route on three representative local cases. The $p$-Laplace rows reuse the
-tracked level-9, 32-rank documentation data. The hyperelasticity rows run only
+curated level-9, 32-rank timing data. The hyperelasticity rows run only
 the first level-4 load step and intentionally use the replicated element path
-for both routes, because the production rank-local hyperelasticity path rejects
+for both routes, because the rank-local hyperelasticity configuration does not use
 colored SFD. This makes the row a derivative-route comparison rather than a
-production-scaling claim. The Plasticity3D rows use the same
+scaling claim. The Plasticity3D rows use the same
 $P_2(L_1)$, $\lambda_{\mathrm{sr}}=\num{1.55}$, MUMPS-backed PMG setting as the
 globalization comparison above.
 
@@ -107,7 +107,7 @@ $P_2(L_1)$ case, not by an under-colored finite-difference reconstruction.
   \label{tab:derivative-route-compare}
 \end{table}
 
-\Cref{tab:reviewer-p3d-derivative-degree} adds the missing degree sensitivity
+\Cref{tab:reviewer-p3d-derivative-degree} adds the degree sensitivity
 behind the Plasticity3D derivative-route claim. The fixed-work probe uses one
 Newton linearization on glued-bottom heterogeneous meshes at
 $\lambda_{\mathrm{sr}}=\num{1.55}$, 32 MPI ranks, and the degree-appropriate
@@ -209,8 +209,8 @@ report the application-reported solver total time, not Slurm elapsed time.
 All rows reach the same first-step energy to the precision shown in the raw
 outputs, with 21 Newton iterations and 43 Krylov iterations.
 
-\Cref{tab:reviewer-he-distribution} records the local ablation that motivated
-the production rank-local path used in the Karolina runs. The correctness row
+\Cref{tab:reviewer-he-distribution} records the fixed-work ablation that
+motivated the rank-local assembly path used in the Karolina runs. The correctness row
 compares the replicated and rank-local level-4 first-step solve at four MPI
 ranks; the memory rows use one Newton linearization on the level-5 mesh at
 8, 16, and 32 ranks. The table reports both operating-system peak RSS and the
@@ -239,7 +239,7 @@ preconditioner and coarse-solver policy rather than to nonlinear stopping.
   \input{tables/generated/reviewer_he_pmg.tex}
   \caption{Local HyperElasticity level-5 PMG and coarse-solver sensitivity at
   32 MPI ranks with fixed nonlinear work. The PMG rows use the same
-  rank-local element path as the production scaling runs.}
+  rank-local element path as the scaling runs.}
   \label{tab:reviewer-he-pmg}
 \end{table}
 
@@ -393,18 +393,18 @@ glued-bottom $\lambda_{\mathrm{sr}} = 1.55$ benchmark figures above. Within
 that timing study, the reported nonlinear and linear iteration counts
 remain matched on 1/2/4/8/16/32 ranks, while the end-to-end time drops from
 \SI{5424}{s} on one rank to \SI{300}{s} on 32 ranks. Additional
-source-vs-local and continuation evidence is reported later in
+source-assembly and continuation evidence is reported later in
 \Cref{sec:solver-evidence}.
 
 The converged glued-bottom $P_4(L_2)$,
 $\lambda_{\mathrm{sr}}=\num{1.55}$ scaling run repeats the benchmark with the
-current constitutive-AD local assembly and MUMPS-backed PMG stack. The PMG
+constitutive-AD rank-local assembly and MUMPS-backed PMG stack. The PMG
 hierarchy is the same-mesh $P_4 \rightarrow P_2 \rightarrow P_1$ hierarchy,
 the nonlinear method is Armijo Newton, and the Krylov tolerance is
 \num{1e-2}. The nonlinear stop requires both relative correction below
 \num{0.002} and gradient norm below one percent of the first Newton gradient.
 \Cref{fig:plasticity3d-local-karolina-scaling,tab:plasticity3d-local-karolina-scaling}
-overlay the local workstation sweep with the Karolina CPU-node sweep at
+compare the single-node workstation sweep with the Karolina CPU-node sweep at
 16 MPI ranks per node. All plotted rows converge in 29 Newton iterations and
 1240 total Krylov iterations to the same energy and gradient norm to the
 precision shown in the table, so the timing comparison is not confounded by
@@ -413,7 +413,7 @@ different nonlinear work.
 \begin{figure}[H]
   \centering
   \includegraphics[width=\PaperFigureMedium]{plasticity3d_local_vs_karolina_scaling.pdf}
-  \caption{Local and Karolina converged scaling for the glued-bottom
+  \caption{Workstation and Karolina converged scaling for the glued-bottom
   Plasticity3D $P_4(L_2)$ case at $\lambda_{\mathrm{sr}}=\num{1.55}$. Dashed
   references are ideal $1/r$ lines anchored separately to the first point of
   each platform.}
@@ -425,7 +425,7 @@ different nonlinear work.
   \input{tables/generated/plasticity3d_local_karolina_scaling.tex}
   \caption{Converged timings for the Plasticity3D
   $P_4(L_2)$, $\lambda_{\mathrm{sr}}=\num{1.55}$ run in
-  \cref{fig:plasticity3d-local-karolina-scaling}. Local rows are
+  \cref{fig:plasticity3d-local-karolina-scaling}. Workstation rows are
   single-workstation MPI runs; Karolina rows use 16 ranks per CPU node.}
   \label{tab:plasticity3d-local-karolina-scaling}
 \end{table}

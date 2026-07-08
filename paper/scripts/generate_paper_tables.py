@@ -767,17 +767,17 @@ def main() -> None:
         "@{}"
         + xspec((0.68, "RaggedRight"), (1.55, "RaggedRight"), (2.10, "RaggedRight"))
         + "@{}",
-        ["Family", "Representative maintained result", "Highlight"],
+        ["Family", "Representative result", "Highlight"],
         [
             [
                 "$p$-Laplace",
                 f"JAX+PETSc element AD, {mesh_label('L9')}, 32 ranks: {fmt_wall_time(float(pl_highlight['total_time_s']))} s",
-                "Exact element Hessians are competitive with FEniCS and faster than colored SFD on the hardest maintained case.",
+                "Exact element Hessians are competitive with FEniCS and faster than colored SFD on the finest reported case.",
             ],
             [
                 "Ginzburg--Landau",
                 f"JAX+PETSc element AD, {mesh_label('L9')}, 32 ranks: {fmt_wall_time(float(gl_highlight['total_time_s']))} s",
-                "Element AD remains effectively tied with FEniCS custom Newton on the fine-grid maintained benchmark.",
+                "Element AD remains effectively tied with FEniCS custom Newton on the fine-grid benchmark.",
             ],
             [
                 "Hyperelasticity",
@@ -810,7 +810,7 @@ def main() -> None:
             ["$p$-Laplace", "yes", "yes", "yes", "element AD and local colored SFD"],
             ["Ginzburg--Landau", "yes", "no", "yes", "element AD and local colored SFD"],
             ["Hyperelasticity", "yes", "yes", "yes", "trust-region element AD"],
-            ["Plasticity2D", "no", "no", "yes", "repository scalarized potential and same-mesh PMG"],
+            ["Plasticity2D", "no", "no", "yes", "scalarized endpoint potential and same-mesh PMG"],
             ["Plasticity3D", "no", "no", "yes", "constitutive AD, element AD, and same-mesh PMG"],
             ["Topology optimization", "no", "yes", "yes", "distributed design updates and PETSc mechanics"],
         ],
@@ -850,11 +850,11 @@ def main() -> None:
         + "@{}",
         ["Family", "FEniCS", "pure JAX", "Notes"],
         [
-            ["$p$-Laplace", "yes", "yes", "All three stacks exist on maintained showcase cases."],
-            ["Ginzburg--Landau", "yes", "no", "FEniCS and JAX+PETSc form the maintained comparison."],
+            ["$p$-Laplace", "yes", "yes", "All three stacks exist on representative reported cases."],
+            ["Ginzburg--Landau", "yes", "no", "FEniCS and JAX+PETSc form the reported comparison."],
             ["Hyperelasticity", "yes", "yes", "pure JAX is a serial formulation reference only."],
-            ["Plasticity2D", "no", "no", "The maintained story is JAX+PETSc only."],
-            ["Plasticity3D", "no", "no", "Source assembly exists as supporting comparison, not as a maintained reference path."],
+            ["Plasticity2D", "no", "no", "The reported solver path is JAX+PETSc only."],
+            ["Plasticity3D", "no", "no", "Source assembly exists as supporting comparison, not as a reference path."],
             ["Topology", "no", "yes", "Parallel fine-grid path is JAX+PETSc; pure JAX remains the serial design reference."],
         ],
     )
@@ -1568,7 +1568,7 @@ def main() -> None:
             ["Contract/gate", "same mesh path", "--", "--", pass_fail(fairness_checks["same_mesh_path"])],
             ["Contract/gate", "same displacement schedule", "--", "--", pass_fail(fairness_checks["same_schedule"])],
             ["Contract/gate", "agreement thresholds", "--", "--", pass_fail(agreement_pass)],
-            ["Contract/gate", "repository-energy post-comparison", "--", "--", "used"],
+            ["Contract/gate", "energy post-comparison", "--", "--", "used"],
         ],
     )
 

@@ -493,7 +493,7 @@ The elastic branch is
   = \frac{1}{2}\lambda_{\mathrm{L}} I_1^2 + \mu q(\varepsilon),
   \label{eq:plasticity3d-elastic-branch}
 \end{equation}
-and the source-style return variables are
+and the branch-selection variables are
 \begin{align}
   f_{\mathrm{tr}}
   &=
@@ -564,8 +564,8 @@ which matches the engineering-shear convention of
 Because \cref{eq:plasticity3d-discrete,eq:plasticity3d-potential} define an
 algorithmic endpoint surrogate rather than a path-consistent incremental
 history functional, the results section reports this family with a separate
-validation ladder. Same-case source-faithfulness to the source-style surrogate
-implementation is treated separately from a fixed-lambda source-operator
+validation ladder. Same-case source-faithfulness of the endpoint surrogate
+is treated separately from a fixed-lambda source-operator
 comparison. The latter checks source-family behavior under matched geometry,
 materials, Davis-B reduction parameters, load schedule, and glued-bottom
 free-DOF mask, but it is not a path-consistent incremental-history validation.

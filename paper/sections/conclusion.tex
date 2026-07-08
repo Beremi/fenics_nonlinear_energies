@@ -1,13 +1,13 @@
 This paper presented \repo{} as a computational toolset for nonlinear
-finite-element solves and optimization with a \jaxpetsc{} production path. The
+finite-element solves and optimization with a mainline \jaxpetsc{} distributed path. The
 central contribution is not a new constitutive theory or a universal
 differentiable-PDE abstraction, but an implementation pattern in which local JAX
 differentiation, sparse PETSc nonlinear solves, and multiple second-order routes
 are kept together across a heterogeneous benchmark suite.
 
 The Plasticity3D evidence is intentionally narrower than a broad mechanics
-claim. Same-case source-faithfulness to the source-style surrogate
-implementation is strong, and the fixed-lambda source-operator comparison
+claim. Same-case source-faithfulness of the endpoint surrogate is strong, and
+the fixed-lambda source-operator comparison
 passes the configured gated quantities after matching the glued-bottom
 boundary contract, with additional field-agreement diagnostics reported
 separately. These results support the endpoint-surrogate workflow for this
@@ -16,7 +16,7 @@ supporting constitutive-equivalence language or path-consistent
 incremental-history claims. Constitutive AD emerges as the preferred
 cost-quality route on the locked flagship case. On Hyperelasticity, the
 companion comparison
-against JAX-FEM shows that the \jaxpetsc{} implementation can agree very closely with a
+against JAX-FEM shows that the \jaxpetsc{} solver can agree very closely with a
 recent external implementation when the mesh and prescribed displacement
 schedule are matched and terminal states are post-compared with
 \cref{eq:hyperelasticity-energy}. The promoted Plasticity3D timing study and

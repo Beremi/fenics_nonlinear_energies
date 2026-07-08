@@ -6,7 +6,7 @@ scientific roles.
 \paragraph{Pure JAX reference paths.}
 These are compact differentiable realizations of selected benchmark energies.
 They are useful for formulation checks, serial references, and AD diagnostics.
-They are not intended to be the primary production route for the largest
+They are not intended to be the primary scalable route for the largest
 distributed benchmarks. Their main scientific role in this paper is to show
 that the same energy formulations can also be expressed without sparse
 distributed infrastructure.
@@ -16,10 +16,10 @@ The \fenics{} implementations remain valuable on families where they exist,
 especially $p$-Laplace, Ginzburg--Landau, and hyperelasticity. They provide a
 trusted high-level FEM reference and help distinguish modeling issues from
 solver-stack issues. In this paper they are used mainly as comparison baselines
-rather than as the mainline production path.
+rather than as the mainline distributed path.
 
-\paragraph{Maintained \jaxpetsc{} path.}
-This is the central implementation of the paper. It combines JAX-based local
+\paragraph{Mainline \jaxpetsc{} path.}
+This is the central solver realization of the paper. It combines JAX-based local
 physics with PETSc distributed vectors, matrices, Krylov solvers, and
 preconditioners. Problem-specific kernels stay in JAX; sparse distributed
 assembly, nonlinear globalization, and linear algebra stay in PETSc.
@@ -47,7 +47,7 @@ one common solver infrastructure.
   \centering
   \PaperFrameworkOverviewDiagram
   \caption{Software structure of the manuscript. The \jaxpetsc{}
-  implementation is the main production path; \purejax{} and \fenics{} remain
+  stack is the mainline distributed path; \purejax{} and \fenics{} remain
   reference paths where matching benchmark formulations exist.}
   \label{fig:framework-overview}
 \end{figure}
@@ -75,19 +75,19 @@ one common solver infrastructure.
 The benchmark families use different Krylov and preconditioner combinations
 because the linear systems are qualitatively different:
 \begin{itemize}
-  \item \textbf{$p$-Laplace:} mostly \code{cg + hypre}, with exact element
+  \item \textbf{$p$-Laplace:} mostly CG with Hypre, with exact element
         Hessians or local-SFD Hessians in the \jaxpetsc{} path.
-  \item \textbf{Ginzburg--Landau:} \code{gmres + hypre}, reflecting the more
+  \item \textbf{Ginzburg--Landau:} GMRES with Hypre, reflecting the more
         indefinite linearization.
   \item \textbf{Hyperelasticity:} trust-region outer iterations with
-        \code{gamg}-preconditioned Krylov solves.
+        GAMG-preconditioned Krylov solves.
   \item \textbf{Plasticity (2D):} deep-tail multigrid hierarchies whose
         bottlenecks are dominated by the top smoother and repeated Krylov
         work.
   \item \textbf{Plasticity3D:} local PMG on the same-mesh
-        $P_4 \to P_2 \to P_1$ hierarchy, coarse \code{cg + hypre}, and an
+        $P_4 \to P_2 \to P_1$ hierarchy, a CG--Hypre coarse solve, and an
         elastic initial guess on the same hierarchy.
-  \item \textbf{Topology:} \code{fgmres + gamg} for the mechanics step, coupled
+  \item \textbf{Topology:} flexible GMRES with GAMG for the mechanics step, coupled
         to a separate distributed design update.
 \end{itemize}
 
@@ -134,6 +134,6 @@ owned sparse insertion in the hot loop.
 \end{table}
 
 \Cref{tab:capability-matrix} summarizes the implemented surface. The most
-important structural point is that the \jaxpetsc{} production story is always
+important structural point is that the \jaxpetsc{} distributed story is always
 the \jaxpetsc{} column, even when a family also has \fenics{} or \purejax{}
 references.

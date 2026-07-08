@@ -1,9 +1,9 @@
 \begin{tabularx}{\textwidth}{@{}>{\hsize=0.471\hsize\linewidth=\hsize\RaggedRight\arraybackslash}X>{\hsize=1.074\hsize\linewidth=\hsize\RaggedRight\arraybackslash}X>{\hsize=1.455\hsize\linewidth=\hsize\RaggedRight\arraybackslash}X@{}}
 \toprule
-Family & Representative maintained result & Highlight \\
+Family & Representative result & Highlight \\
 \midrule
-$p$-Laplace & JAX+PETSc element AD, $L_{9}$, 32 ranks: \num{1.14} s & Exact element Hessians are competitive with FEniCS and faster than colored SFD on the hardest maintained case. \\
-Ginzburg--Landau & JAX+PETSc element AD, $L_{9}$, 32 ranks: \num{2.1} s & Element AD remains effectively tied with FEniCS custom Newton on the fine-grid maintained benchmark. \\
+$p$-Laplace & JAX+PETSc element AD, $L_{9}$, 32 ranks: \num{1.14} s & Exact element Hessians are competitive with FEniCS and faster than colored SFD on the finest reported case. \\
+Ginzburg--Landau & JAX+PETSc element AD, $L_{9}$, 32 ranks: \num{2.1} s & Element AD remains effectively tied with FEniCS custom Newton on the fine-grid benchmark. \\
 Hyperelasticity & JAX+PETSc element AD, $L_{4}$, 32 ranks: \num{529} s & Hybrid trust-region/line-search globalization sustains large-deformation solves in distributed mode. \\
 Plasticity (2D) & JAX+PETSc deep-tail PMG, $P_{4}(L_{7})$, 16 ranks: \num{253} s & The dominant bottlenecks shift from the coarse end to the top smoother and repeated Krylov work. \\
 Plasticity3D & constitutive-AD PMG solver, $P_{4}(L_{2})$, $\lambda_{\mathrm{sr}}=\num{1.0}$, 32 ranks: \num{300} s & Historical timing context for the promoted load factor; the main glued-bottom discretization study uses $\lambda_{\mathrm{sr}}=\num{1.55}$. \\

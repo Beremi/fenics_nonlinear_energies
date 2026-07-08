@@ -71,7 +71,7 @@ trust-region/line-search algorithm in which a reduced trust-region model
 provides the direction, while a bounded line search chooses the accepted step.
 The line-search and trust-region ingredients follow standard globalization ideas
 \citep[Chs.~2--4]{nocedal2006numerical}; the particular hybrid coupling used in
-some benchmark configurations is an implementation-specific combination of those
+some benchmark configurations is a problem-specific combination of those
 textbook ingredients.
 
 \begin{algorithm}[H]
@@ -107,7 +107,7 @@ energy, gradient, and Hessian solves/matvecs
 
 For the principal 3D plasticity path promoted in this paper, the chosen policy
 is simpler: Newton with Armijo backtracking and a PMG-preconditioned
-\code{fgmres} linear solve \citep[Sec.~3.1]{nocedal2006numerical}. This is the
+flexible-GMRES linear solve \citep[Sec.~3.1]{nocedal2006numerical}. This is the
 baseline workflow used for the flagship benchmark reported later in
 \Cref{sec:num-plasticity3d}.
 

@@ -1,20 +1,20 @@
 \label{sec:solver-evidence}
 
 This section collects supporting solver evidence that is methodologically useful
-but too implementation-specific for the main benchmark narratives.
+but too narrow for the main benchmark narratives.
 
 \subsection{Plasticity3D Source-Assembly and Fixed-Operator PMG Comparisons}
 
 The primary Plasticity3D numerical story in \Cref{sec:num-plasticity3d} is the
-rank-local constitutive-AD path. The tables below add two engineering comparisons on the
-same discrete problem from \cref{eq:plasticity3d-discrete}: a matched
+rank-local constitutive-AD path. The tables below add two solver-policy
+comparisons on the same discrete problem from \cref{eq:plasticity3d-discrete}: a matched
 source-assembly comparator and a fixed source-operator PMG variant.
 
 \begin{table}[H]
   \centering
   \input{tables/generated/plasticity3d_local_vs_source.tex}
-  \caption{Matched local-vs-source comparison for the same local PMG solver
-  stack. At each listed rank the local and source rows converge in the same
+  \caption{Matched constitutive-assembly versus source-assembly comparison for
+  the same PMG solver stack. At each listed rank both rows converge in the same
   number of nonlinear and linear iterations, so this is a timing-only
   comparison on \cref{eq:plasticity3d-discrete}.}
   \label{tab:plasticity3d-local-vs-source}
@@ -38,7 +38,7 @@ and Krylov work and converges less consistently across the reported runs.
 
 \subsection{Source continuation evidence}
 
-The legacy source-continuation path is not the mainline method of the paper,
+The source-continuation comparison is not the mainline method of the paper,
 but it is still useful because it isolates how much preconditioner policy
 matters even when the outer continuation logic is held fixed.
 
@@ -47,7 +47,7 @@ matters even when the outer continuation logic is held fixed.
   \input{tables/generated/source_continuation_compare.tex}
   \caption{Source continuation with the fixed PMG-shell smoother policy at 8
   and 32 ranks. This is supporting solver evidence only; it is not part of the
-  paper's main production story.}
+  paper's mainline solver story.}
   \label{tab:source-cont}
 \end{table}
 

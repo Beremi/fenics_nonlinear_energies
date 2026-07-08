@@ -54,13 +54,16 @@ MATLAB/Octave literature only when there is source-backed evidence.
 - `IMPLEMENTATION`: realization of the method.
   Current assets: pure JAX, FEniCS, and JAX+PETSc strata; autodiff modes;
   Krylov/preconditioner matrix; distributed assembly.
-  Status: revised as solver paths with scientific roles, not codebase strata.
+  Status: revised as solver paths with scientific roles, not codebase strata;
+  implementation prose now uses mainline/scalable/distributed terminology
+  instead of maintained or production-path wording.
 - `BENCHMARKS`: mathematical problem coverage.
   Families: p-Laplace, Ginzburg--Landau, Hyperelasticity, Plasticity2D,
   Plasticity3D, Topology.
   Status: repeated "repository specialization" language has been replaced with
   implemented benchmark, discrete model, endpoint surrogate, or source-family
-  context as appropriate.
+  context as appropriate; generated tables no longer use repository/maintained
+  descriptors for paper-facing claims.
 - `VALIDATION`: external and source-family comparison.
   Evidence: narrow hyperelastic JAX-FEM comparison; Plasticity3D validation
   ladder with endpoint-surrogate scope.
