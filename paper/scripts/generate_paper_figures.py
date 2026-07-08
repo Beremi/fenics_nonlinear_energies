@@ -1902,7 +1902,7 @@ def generate_autodiff_modes(layout: dict[str, float]) -> str:
     fig, axes = plt.subplots(3, 1, figsize=text_figure_size(layout, height_ratio=0.44))
     panels = [
         ("Element AD", ["$\\Pi_e(u_e)$", "exact local gradient and Hessian", "higher-order elements can be costly"], "#e6f0fb"),
-        ("Constitutive AD", ["$\\psi(\\varepsilon_q)$", "$B_q^\\top C_q B_q$ assembly", "lowest-cost route in fixed 3D endpoint comparison"], "#eef5e7"),
+        ("Constitutive AD", ["$\\psi(\\varepsilon_q)$", "quadrature-point tangent assembly", "exact local constitutive derivatives"], "#eef5e7"),
         ("Colored SFD", ["rank-local probe HVPs only where needed", "parallel coloring / recovery", "useful when exact Hessians are too expensive"], "#fbf1eb"),
     ]
     for ax, (title, lines, color) in zip(axes, panels, strict=True):

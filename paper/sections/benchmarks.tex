@@ -2,10 +2,10 @@
 
 The benchmark suite is intentionally heterogeneous. The central claim of the
 paper is not that one solver policy dominates every nonlinear PDE family, but
-that one differentiable sparse-solver framework can cover scalar elliptic problems,
+that one differentiable sparse-solver toolset can cover scalar elliptic problems,
 phase-field-type energies, finite-strain mechanics, elastoplastic slope
 stability, and reduced topology optimization without switching conceptual
-frameworks.
+formulations.
 
 \begin{table}[H]
   \centering
@@ -192,7 +192,8 @@ $y_u(X) = X + u(X)$. We define
 $F(u) = I + \nabla u$, $J(u) = \det F(u)$, and
 $P(F) = \partial W / \partial F$ \citep[Chs.~4--6]{bonet2008nonlinear}. The
 implemented benchmark used in this paper is a cantilever problem with the
-compressible Neo-Hookean-type potential
+compressible Neo-Hookean-type potential, defined on admissible displacements
+with $J(u)>0$ almost everywhere,
 \begin{equation}
   \Pi(u;\eta)
   =
@@ -240,6 +241,10 @@ find $u \in V(\eta_k)$ such that
   \qquad \forall v \in V_0.
   \label{eq:hyperelasticity-weak}
 \end{equation}
+Trial states with nonpositive determinant fall outside the logarithmic energy
+domain and are rejected by the nonlinear globalization; accepted line-search or
+trust-region steps are therefore evaluated only on states with positive
+$J(u)$.
 The discrete problem solved in the paper is the sequence of stationary points
 \begin{equation}
   u_h^{(k)} \in V_h(\eta_k):
@@ -288,7 +293,7 @@ adds one serial JAX-FEM comparison on the same mesh and
 prescribed displacement schedule, with energy post-comparison under
 \cref{eq:hyperelasticity-energy}; it is
 included as an agreement-focused hyperelastic implementation comparison rather than
-as a broad framework ranking exercise.
+as a broad software ranking exercise.
 
 \subsection{Plasticity2D}
 \label{sec:bench-plasticity2d}
@@ -405,10 +410,12 @@ predictor, the principal-stress Mohr--Coulomb test
   -(1-\sin\phi_\lambda)\sigma_2^{\mathrm{tr}}
   -2c_\lambda\cos\phi_\lambda \le 0,
 \]
-and either the elastic energy or the corresponding line/apex return energy. The
-small square-root regularization used in the principal-stress calculation is a
-numerical smoothing of the endpoint surrogate, not a separate material
-parameter.
+and either the elastic energy or the corresponding line/apex return energy. We
+do not reproduce the full set of 2D branch-energy formulas here; they are used
+as an implemented endpoint surrogate whose role is to test solver behavior under
+nonsmooth Mohr--Coulomb-type switching. The small square-root regularization
+used in the principal-stress calculation is a numerical smoothing of this
+endpoint surrogate, not a separate material parameter.
 
 \begin{figure}[H]
   \centering
@@ -801,6 +808,16 @@ surrogate is a full incremental elastoplastic solver.
   $\lambda_{\mathrm{sr}} = 1.55$ and are compared on one common color scale.}
   \label{fig:plasticity3d-highest-slice}
 \end{figure}
+
+\Cref{fig:plasticity3d-state,fig:plasticity3d-convergence,tab:plasticity3d-benchmark,fig:plasticity3d-highest-slice}
+establish the benchmark object used later in the results section. The nine
+completed endpoint solves converge in the nonlinear stopping metric while the
+terminal values of \cref{eq:plasticity3d-discrete} decrease along both mesh and
+degree refinements. The shared-scale slice comparison shows that the larger
+values of $\|\varepsilon_{\mathrm{dev}}\|$ remain localized near the same upper
+slope region across $P_1$, $P_2$, and $P_4$, so the later degree and timing
+comparisons are interpreted as endpoint-solver comparisons rather than changes
+of the physical problem.
 
 Plasticity3D is the benchmark where detailed constitutive definitions are most
 important: the paper later plots values of \cref{eq:plasticity3d-discrete} and

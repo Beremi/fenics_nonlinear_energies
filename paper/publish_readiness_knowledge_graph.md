@@ -12,7 +12,7 @@ that couples local automatic differentiation, sparse distributed assembly,
 nonlinear globalization, Krylov linear solvers, and preconditioner policy. The
 comparison surface includes pure JAX and FEniCS reference paths where available,
 external or reference-model comparators where the scope is narrow, and legacy
-MATLAB/Octave literature only when there is source-backed evidence.
+MATLAB literature only when there is source-backed evidence.
 
 ## External Style Anchors
 
@@ -89,19 +89,23 @@ MATLAB/Octave literature only when there is source-backed evidence.
   table affirmative and source-scoped: the table records documented
   capabilities, splits JAX-FEM/Xue 2026 from AutoPDEx, removes negative absence
   claims, and replaces bridge/path language with bridge architectures and
-  reference implementations.
+  reference implementations. Current evidence-scope chunk compresses the SOTA
+  table into a three-column role taxonomy and softens external-comparison
+  language so only reported external numerical comparisons are covered by the
+  matched-observable statement.
 - `RELATED`: literature framing.
   Status: consolidated defensive taxonomy into fewer scientific groups:
   FEM automation, differentiable FEM/AD, nonlinear solver infrastructure,
   topology/plasticity source context, and scalable software comparators.
   FEniTop is now framed as topology-optimization literature context rather than
-  a direct baseline, and the Cermak--Sysala--Valdman MATLAB/Octave citation is
+  a direct baseline, and the Cermak--Sysala--Valdman MATLAB citation is
   implementation-lineage context only. Current notation-and-claims chunk makes
   the PETSc paragraph affirmative: ownership layout, Krylov policy,
   globalization, and preconditioner design are part of the numerical method.
   Current SOTA/math polish chunk scopes Xue 2026 as a close second-order
   comparator and describes the Sysala continuation/iterative-solver work as a
-  reference line rather than a source family.
+  reference line rather than a source family. Current evidence-scope chunk
+  updates the PETSc web citation key to the current 2026 entry.
 - `METHOD`: mathematical and algorithmic core.
   Current assets: common finite-element energy notation, derivative routes,
   globalization algorithms, colored sparse finite differences, constitutive AD.
@@ -117,7 +121,12 @@ MATLAB/Octave literature only when there is source-backed evidence.
   element state `u_e(x;\theta)`; it also treats topology as a schematic reduced
   objective rather than a mechanics potential plus regularization. Current
   SOTA/math polish chunk defines the Armijo backtracking parameters and maximum
-  count in the algorithm's given line.
+  count in the algorithm's given line. Current evidence-scope chunk formalizes
+  colored sparse finite-difference recovery with the Hessian, sparsity pattern,
+  distance-2 color groups, seed vectors, gradient-difference probes, AD
+  Hessian-vector probes, and owned PETSc scatter; the reported JAX+PETSc
+  colored-SFD cases are stated as using AD HVP probes, so no finite-difference
+  perturbation parameter is introduced for those runs.
 - `IMPLEMENTATION`: realization of the method.
   Current assets: pure JAX, FEniCS, and JAX+PETSc strata; autodiff modes;
   Krylov/preconditioner matrix; distributed assembly.
@@ -141,7 +150,12 @@ MATLAB/Octave literature only when there is source-backed evidence.
   capability matrix with the Hyperelasticity colored-SFD comparison evidence.
   Current SOTA/math polish chunk renames visible pure-JAX/FEniCS reference path
   headings and schematic labels to reference implementations, and normalizes the
-  autodiff-mode schematic from `B_q^T C_q B_q` to `B_q^\top C_q B_q`.
+  autodiff-mode schematic from `B_q^T C_q B_q` to `B_q^\top C_q B_q`. Current
+  evidence-scope chunk replaces remaining framework/path wording with
+  realization, construction, toolset, and formulation language, interprets the
+  implementation figures in body text, and changes the constitutive-AD diagram
+  label from a lowest-cost route to quadrature-point tangent assembly with exact
+  local constitutive derivatives.
 - `BENCHMARKS`: mathematical problem coverage.
   Families: p-Laplace, Ginzburg--Landau, Hyperelasticity, Plasticity2D,
   Plasticity3D, Topology.
@@ -174,7 +188,11 @@ MATLAB/Octave literature only when there is source-backed evidence.
   topology elasticity tensor and SIMP exponent before use, punctuates the
   Davis-B and Plasticity3D potential displays, and replaces remaining raw/local
   or study-row wording with unreduced, endpoint-surrogate, and study-case
-  terminology.
+  terminology. Current evidence-scope chunk states that the hyperelastic
+  Neo-Hookean potential is defined on admissible displacements with positive
+  Jacobian determinant and that globalization rejects nonpositive-J trial
+  states. It also narrows the Plasticity2D endpoint surrogate by saying the full
+  two-dimensional branch-energy formulas are not reproduced in the paper.
 - `VALIDATION`: external and reference-model comparison.
   Evidence: narrow hyperelastic JAX-FEM comparison; Plasticity3D validation
   ladder with endpoint-surrogate scope.
@@ -253,6 +271,9 @@ MATLAB/Octave literature only when there is source-backed evidence.
   figures/tables; removes stale glued-bottom, workflow, fixed-schedule, and
   rank-dependent wording from the visible manuscript; and scopes the
   Ginzburg--Landau fixed-budget result to the observed line-search timeout.
+  Current evidence-scope chunk adds explicit interpretations for the
+  hyperelastic multi-node fixed-work timing table and the topology scaling
+  summary, separating fixed nonlinear work from adaptive-stopping timing.
 - `DISCUSSION_CONCLUSION`: interpretation and scope.
   Current prose states the toolset lesson in paper-facing terms: automatic
   differentiation alone does not determine large nonlinear FEM behavior;
@@ -271,9 +292,11 @@ MATLAB/Octave literature only when there is source-backed evidence.
   comparison terminology consistently. Current publish-readiness chunk centers
   the abstract, introduction, discussion, and conclusion on the scientific
   \jaxpetsc{} toolset and evidence limits, replacing novelty-heavy language with
-  documented realization plus benchmark evidence.
+  documented realization plus benchmark evidence. Current evidence-scope chunk
+  keeps broad conclusions tied to documented solver construction and numerical
+  evidence rather than a software-ranking or framework-ranking claim.
 - `FIGURES_TABLES`: visual and layout quality.
-  Current fact: `paper/build/main.pdf` is 39 pages, A4, 10 pt article,
+  Current fact: `paper/build/main.pdf` is 40 pages, A4, 10 pt article,
   text width about 7.09 in. Many floats use `[H]`, so placement is highly manual.
   Figure/layout subagent audit: assets are technically clean at current A4
   width, with embedded fonts and 600 ppi raster layers, but dense 3D
@@ -343,7 +366,12 @@ MATLAB/Octave literature only when there is source-backed evidence.
   targeted figure/table regeneration and the `xurl` bibliography break fix. The
   Plasticity3D convergence caption, JAX-FEM panels, dense derivative-degree
   table, Hyperelasticity scaling page, Plasticity3D degree/scaling page, and
-  bibliography pages are readable and unclipped.
+  bibliography pages are readable and unclipped. Current evidence-scope chunk
+  rebuilt the 40-page PDF after table/script/prose edits; visually checked pages
+  1, 2, 4, 5, 13, 17, 18, 29, 34, 35, 37, 38, and 40; compressed the SOTA table
+  into a readable role taxonomy; fixed `siunitx` digit grouping for signed
+  decimal values; and found no unresolved refs, overfull boxes, PDF structural
+  errors, or banned local/process labels in the visible text scan.
 - `REPRO`: reproducibility and submission readiness.
   Known blockers from `paper/todo.md`: target journal/template/declarations,
   repository license/archive DOI, and archive-neutral provenance for critical
@@ -354,7 +382,12 @@ MATLAB/Octave literature only when there is source-backed evidence.
   target venue/template and declarations, repository license plus archival DOI,
   and archive-neutral provenance for paper-critical artifacts. Current chunk
   restored source/generated consistency for all edited generated tables and
-  the single changed Plasticity3D scaling figure.
+  the single changed Plasticity3D scaling figure. Current evidence-scope chunk
+  regenerated the ignored reproducibility note without host, platform, or local
+  interpreter-path details, renamed appendix table files from source-local names
+  to reference-formula/reference-operator/continuation names, and left final
+  archive-neutral provenance manifests, venue declarations, DOI, and license
+  decisions as submission blockers.
 
 ## Evidence Nodes
 
@@ -386,7 +419,7 @@ MATLAB/Octave literature only when there is source-backed evidence.
   comparisons are narrow; topology literature includes MATLAB references but no
   current direct MATLAB runtime comparison is yet established.
 - `E6`: Plasticity3D scope.
-  Direct-branch source-observable agreement and fixed-load reference-operator
+  Direct-branch reference-observable agreement and fixed-load reference-operator
   diagnostics support the endpoint surrogate, but there is no true
   path-consistent incremental-history validation. This boundary must remain.
 
@@ -628,6 +661,28 @@ MATLAB/Octave literature only when there is source-backed evidence.
   and bibliography pages were rendered and inspected. Remaining layout risk:
   page-25 derivative-degree and the SOTA table are acceptable in the current A4
   article but template-fragile.
+- `Implementation/method wording audit` (`Arendt-current`): completed.
+  Findings addressed in the current evidence-scope chunk: the implementation
+  narrative avoids framework/path ranking language, the figures are interpreted
+  in body text, colored SFD is mathematically defined, and the constitutive-AD
+  schematic no longer claims a lowest-cost route.
+- `SOTA/related-work audit` (`Nietzsche-current`): completed. Findings
+  addressed: the SOTA table now reports selected computational roles rather
+  than a dense capability grid, MATLAB context is scoped to implementation
+  literature, and external-comparison prose no longer implies unverified
+  universal coverage.
+- `Repro/provenance audit` (`Mencius-current`): completed. Findings partly
+  addressed: the reproducibility note no longer emits host/platform/local-path
+  details, appendix generated-table names are archive-neutral, and availability
+  prose asks for a final versioned archival artifact. Remaining blockers:
+  archive-neutral provenance bundle, DOI/license, venue declarations, and a
+  validator for local-path leakage.
+- `Math/layout audit` (`Lagrange-current`): completed. Findings addressed:
+  display punctuation, the positive-J hyperelastic admissible set, colored-SFD
+  recovery notation, Plasticity2D formula-scope wording, `siunitx` integer
+  grouping, and body-text interpretation for the Plasticity3D,
+  Hyperelasticity, and Topology result tables. Remaining risk: full
+  Plasticity2D branch formulas are still summarized rather than reproduced.
 
 ## First Edit Backlog
 

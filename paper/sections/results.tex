@@ -284,6 +284,13 @@ for a fixed nonlinear workload, not a statement about final load-path accuracy.
   \label{tab:hyperelasticity-karolina-pmg-scaling}
 \end{table}
 
+\Cref{fig:hyperelasticity-karolina-pmg-scaling,tab:hyperelasticity-karolina-pmg-scaling}
+show a fixed-work timing drop from \SI{419}{s} on 16 ranks to \SI{15.7}{s} on
+1024 ranks, with the same 21 Newton iterations and 43 Krylov iterations in all
+listed configurations. This evidence isolates the multi-node sparse-solver and
+PMG-coarse-level behavior for one load step, rather than the accuracy of the
+full load path.
+
 \subsection{Plasticity2D}
 \label{sec:num-plasticity2d}
 
@@ -518,6 +525,12 @@ computational workload.
   reported for the reduced objective in \cref{eq:topology-reduced-objective}.}
   \label{tab:topology-summary}
 \end{table}
+
+\Cref{fig:topology-results,tab:topology-summary} show that the fine-grid
+end-to-end wall time falls from \SI{208}{s} on one rank to \SI{25.1}{s} on
+32 ranks. The outer iteration counts and final continuation exponents vary
+across ranks, so this is adaptive-stopping timing evidence for the coupled
+design-mechanics computation rather than a fixed-work strong-scaling claim.
 
 \Cref{tab:topology-rank-consistency} complements the end-to-end timing
 table with a controlled 40-iteration rank-consistency test on a smaller

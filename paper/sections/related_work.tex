@@ -73,7 +73,7 @@ recent Sysala slope-stability line documents variational and optimization
 viewpoints for shear strength reduction
 \citep{sysala2021optimization,sysala2025convexoptimization} and a 3D
 continuation/iterative-solver reference line
-\citep{sysala2025advancedcontinuation}. The MATLAB/Octave implementation work
+\citep{sysala2025advancedcontinuation}. The MATLAB implementation work
 of \citet{cermak2019efficient} documents an
 efficient 2D/3D elastoplastic finite-element implementation lineage for this
 problem class. We use this literature to position the benchmark family; the
@@ -98,7 +98,7 @@ estimation with graph-coloring structure
 \citep{coleman1983sparsejacobian,coleman1984sparsehessian}. PETSc supplies the
 distributed vectors, matrices, Krylov methods, nonlinear solvers, and multigrid
 infrastructure needed to turn those derivative objects into scalable
-distributed algorithms \citep{balay1997petsc,petsc2024web}. In the present
+distributed algorithms \citep{balay1997petsc,petsc2026web}. In the present
 toolset, PETSc ownership layout, Krylov policy, nonlinear globalization, and
 preconditioner design are part of the numerical method.
 

@@ -15,9 +15,9 @@ realization, JAX represents local energies and constitutive laws, while PETSc
 owns sparse vectors and matrices, nonlinear globalization, Krylov methods, and
 preconditioners. The \purejax{} and \fenics{} formulations serve as reference
 formulations where they are available; JAX-FEM, FEniCSx-family work, and the
-MATLAB/Octave elastoplastic literature provide scoped external context rather
-than software rankings. All external comparisons are therefore restricted to
-explicitly matched benchmark definitions and observables.
+MATLAB elastoplastic implementation literature provide scoped external context
+rather than software rankings. Where we report external numerical comparisons,
+they are restricted to explicitly matched benchmark definitions and observables.
 
 \subsection{Contributions}
 \label{sec:intro-contributions}
@@ -34,7 +34,7 @@ implemented toolset is organized around three solver components:
   \item \textbf{Derivative construction in sparse assembly.} We implement and compare
         element automatic differentiation, constitutive automatic
         differentiation, and colored sparse finite-difference recovery inside
-        the same sparse assembly framework.
+        the same sparse assembly path.
   \item \textbf{Distributed PETSc realization.} We connect the nonlinear and
         derivative choices to PETSc Krylov methods and preconditioners,
         including Hypre, GAMG, and problem-specific polynomial multigrid
@@ -64,17 +64,18 @@ surrogate, not a claim of path-consistent incremental-history equivalence.
 For the purposes of this paper, the most relevant comparison axes are the
 modeling layer, the scope of differentiation, the form in which second-order
 information enters the computation, the parallel execution model, and the benchmark
-families closest to our suite. \Cref{tab:sota-comparison} summarizes that
-comparison using conservative, source-backed descriptors.
+families closest to our suite. \Cref{tab:sota-comparison} summarizes selected
+documented capabilities and roles; \Cref{sec:related} gives the source-specific
+discussion.
 
 \begin{table}[H]
   \centering
   \scriptsize
   \setlength{\tabcolsep}{3pt}
   \input{tables/generated/sota_framework_comparison.tex}
-  \caption{Selected related software positioning for the framework families most
-  relevant to this paper. The columns record documented capabilities rather than
-  subjective scores.}
+  \caption{Selected related computational roles for the software and literature
+  families most relevant to this paper. The entries record documented roles
+  rather than subjective scores.}
   \label{tab:sota-comparison}
 \end{table}
 

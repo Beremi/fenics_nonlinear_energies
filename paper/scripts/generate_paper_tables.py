@@ -898,7 +898,7 @@ def main() -> None:
     write_table(
         "implementation_capability_matrix.tex",
         "@{}l c c c " + pcol(r"0.38\textwidth") + "@{}",
-        ["Family", "FEniCS", "pure JAX", "JAX+PETSc", "Advanced solver / derivative features"],
+        ["Family", "FEniCS", "pure JAX", "JAX+PETSc", "Solver and derivative components"],
         [
             ["$p$-Laplace", "yes", "yes", "yes", "element AD and colored-SFD recovery"],
             ["Ginzburg--Landau", "yes", "no", "yes", "element AD and colored-SFD recovery"],
@@ -919,11 +919,11 @@ def main() -> None:
         + " "
         + pcol(r"0.26\textwidth")
         + "@{}",
-        ["Family", "Grid / mesh", "Solve policy", "Compared paths", "Main difficulty"],
+        ["Family", "Grid / mesh", "Solve policy", "Compared formulations", "Main difficulty"],
         [
             ["$p$-Laplace", mesh_label("L9"), "Newton + line search", "FEniCS, pure JAX, JAX+PETSc", "nonlinear elliptic solve with exact sparse Hessians"],
             ["Ginzburg--Landau", mesh_label("L9"), "Newton + line search", "FEniCS, JAX+PETSc", "indefinite local curvature from the double well"],
-            ["Hyperelasticity", f"{mesh_label('L4')}, 24 steps", "trust-region path", "FEniCS, pure JAX, JAX+PETSc", "nonconvex large-deformation mechanics"],
+            ["Hyperelasticity", f"{mesh_label('L4')}, 24 steps", "trust-region solve", "FEniCS, pure JAX, JAX+PETSc", "nonconvex large-deformation mechanics"],
             ["Plasticity2D", f"{element_label('P4', 'L5')}--{element_label('P4', 'L7')}", "endpoint solve or fixed nonlinear work", "JAX+PETSc only", "same-mesh PMG and nonlinear tail behavior"],
             ["Plasticity3D", f"{degree_label('P1')}/{degree_label('P2')}/{degree_label('P4')}", "configuration-specific", "constitutive and reference PMG variants", "heterogeneous 3D Mohr--Coulomb with constitutive AD"],
             ["Topology", "$768\\times384$", "adaptive continuation", "pure JAX, JAX+PETSc", "distributed design-mechanics coupling"],
@@ -946,14 +946,14 @@ def main() -> None:
             ["$p$-Laplace", "yes", "yes", "All three stacks exist on representative reported cases."],
             ["Ginzburg--Landau", "yes", "no", "FEniCS and JAX+PETSc form the reported comparison."],
             ["Hyperelasticity", "yes", "yes", "pure JAX is a serial formulation reference only."],
-            ["Plasticity2D", "no", "no", "The reported solver path is JAX+PETSc only."],
+            ["Plasticity2D", "no", "no", "The reported realization is JAX+PETSc only."],
             [
                 "Plasticity3D",
                 "no",
                 "no",
                 "Reference-formula assembly exists as a supporting comparison route.",
             ],
-            ["Topology", "no", "yes", "Parallel fine-grid path is JAX+PETSc; pure JAX remains the serial design reference."],
+            ["Topology", "no", "yes", "Parallel fine-grid realization is JAX+PETSc; pure JAX remains the serial design reference."],
         ],
     )
 
@@ -962,88 +962,42 @@ def main() -> None:
         fill_spec(
             " ".join(
                 [
-                    pcol(r"0.16\textwidth"),
-                    pcol(r"0.13\textwidth"),
-                    pcol(r"0.15\textwidth"),
-                    pcol(r"0.15\textwidth"),
-                    pcol(r"0.14\textwidth"),
-                    pcol(r"0.18\textwidth"),
+                    pcol(r"0.23\textwidth"),
+                    pcol(r"0.29\textwidth"),
+                    pcol(r"0.39\textwidth"),
                 ]
             )
         ),
-        ["Family", "Modeling", "Differentiation", "Second-order route", "Parallel", "Closest overlap"],
+        ["Technical family", "Documented role", "Relation to this work"],
         [
             [
-                "\\shortstack[l]{FEniCS\\\\DOLFINx\\\\\\citep{logg2012fenicsbook,baratta2025dolfinx}}",
-                "High-level variational forms",
-                "Symbolic form derivatives and generated kernels",
-                "Manual or application-specific",
-                "Distributed FEM assembly and solve",
-                "Elliptic and finite-strain mechanics",
+                "FEM and adjoint automation "
+                "\\citep{logg2012fenicsbook,baratta2025dolfinx,farrell2013dolfinadjoint,mitusch2019pyadjoint,blauth2023cashocsv2}",
+                "High-level variational forms, generated kernels, adjoint-based sensitivities, and PDE-optimization loops.",
+                "Provides the reference high-level FEM and optimization context; selected \\fenics{} runs are scoped comparison formulations.",
             ],
             [
-                "\\shortstack[l]{dolfin-adjoint\\\\pyadjoint\\\\cashocs\\\\\\citep{farrell2013dolfinadjoint,mitusch2019pyadjoint,blauth2023cashocsv2}}",
-                "High-level PDE plus optimization loop",
-                "Adjoint-based first-order sensitivities",
-                "Reduced-gradient and adjoint optimization emphasis",
-                "MPI via the host FEM stack",
-                "PDE control, shape, and topology",
+                "JAX-native differentiable FEM and PDE solvers "
+                "\\citep{xue2023jaxfem,xue2026implicit,bode2025autopdex,hu2025jaxcpfem}",
+                "Program-level AD, implicit differentiation, Hessian-vector products, nonlinear mechanics, and GPU-oriented differentiable simulation.",
+                "Motivates local differentiable modeling; the present study instead couples local JAX derivatives to PETSc sparse MPI solves and compares derivative routes.",
             ],
             [
-                "\\shortstack[l]{JAX-FEM\\\\Xue 2026\\\\\\citep{xue2023jaxfem,xue2026implicit}}",
-                "JAX-native nonlinear FEM",
-                "Program-level forward and reverse AD",
-                "Implicit Hessian-vector products in inverse-problem tests",
-                "JAX / GPU-oriented execution",
-                "Nonlinear mechanics and inverse design",
+                "FEM--JAX and JAX--PETSc bridge architectures "
+                "\\citep{yashchuk2023bringing,latyshev2025externaloperators,cattaneo2026jetsci}",
+                "AD-enabled local or variational representations combined with host FEM infrastructure or PETSc sparse solvers.",
+                "Closest architectural context for JAX-local/PETSc-global computation; this work adds a benchmark-wide comparison of derivative construction, globalization, and preconditioning.",
             ],
             [
-                "\\shortstack[l]{AutoPDEx\\\\\\citep{bode2025autopdex}}",
-                "JAX-native PDE discretizations",
-                "JAX AD and implicit differentiation",
-                "Nonlinear minimizers and implicit derivatives",
-                "JAX execution with optional PETSc integration",
-                "Differentiable PDE solvers",
+                "Mechanics and topology benchmark lineage "
+                "\\citep{tschuchnigg2015nonassociated,sysala2017returnmapping,sysala2021optimization,sysala2025convexoptimization,sysala2025advancedcontinuation,cermak2019efficient,sigmund2001topology,bendsoe2003topology,ferrari2020top99,bourdin2001filters,jia2024fenitop}",
+                "Strength-reduction plasticity, elastoplastic implementation practice, SIMP topology optimization, filtering, and compact parallel topology software.",
+                "Defines the scientific problem classes and lineage; the numerical claims remain limited to the implemented endpoint surrogate and reported comparison observables.",
             ],
             [
-                "\\shortstack[l]{JetSCI\\\\\\citep{cattaneo2026jetsci}}",
-                "JAX local discretizations plus PETSc sparse solves",
-                "JAX-differentiated discretization kernels",
-                "Differentiable simulation kernels with PETSc solves",
-                "JAX/GPU within node; PETSc MPI across nodes",
-                "Heterogeneous micromechanics",
-            ],
-            [
-                "\\shortstack[l]{Firedrake--JAX\\\\FEniCSx ext. ops\\\\\\citep{yashchuk2023bringing,latyshev2025externaloperators}}",
-                "Host FEM stack plus AD bridge",
-                "Tangent, adjoint, or local constitutive AD",
-                "Local external-operator derivatives",
-                "Host framework parallel back end",
-                "Parameterized PDEs and constitutive models",
-            ],
-            [
-                "\\shortstack[l]{JAX-CPFEM\\\\\\citep{hu2025jaxcpfem}}",
-                "JAX-native crystal-plasticity FEM",
-                "Differentiable constitutive simulator",
-                "AD constitutive derivatives",
-                "GPU-oriented execution",
-                "Crystal plasticity",
-            ],
-            [
-                "\\shortstack[l]{FEniTop\\\\\\citep{jia2024fenitop}}",
-                "FEniCSx topology code",
-                "Sensitivity-based design updates",
-                "Compliance and sensitivity optimization loop",
-                "Parallel FEniCSx realization",
-                "2D and 3D topology optimization",
-            ],
-            [
-                "This work",
-                "JAX local energies plus PETSc sparse solvers",
-                "Element AD, constitutive AD, and colored sparse finite differences",
-                "Local Hessians/tangents or sparse recovery",
-                "PETSc MPI vectors, matrices, nonlinear solvers/globalization, and multigrid",
-                "$p$-Laplace, Ginzburg--Landau, hyperelasticity, plasticity, topology",
+                "Present toolset",
+                "JAX local energies and constitutive laws with PETSc vectors, matrices, nonlinear solvers, Krylov methods, and multigrid.",
+                "Tests element AD, constitutive AD, colored SFD, nonlinear globalization, sparse assembly, and preconditioner policy across six nonlinear FEM benchmark families.",
             ],
         ],
     )
@@ -1558,7 +1512,7 @@ def main() -> None:
     )
 
     write_table_star(
-        "plasticity3d_local_vs_source.tex",
+        "plasticity3d_constitutive_vs_reference_formula.tex",
         fill_spec("c c c c c c"),
         [
             "Ranks",
@@ -1583,7 +1537,7 @@ def main() -> None:
 
     sourcefixed_rows = sourcefixed_long_rows(sourcefixed_local_rows, sourcefixed_source_rows)
     write_tablex_blocks(
-        "plasticity3d_fixed_source_operator_pmg.tex",
+        "plasticity3d_fixed_reference_operator_pmg.tex",
         [
             (
                 "Outcome and wall time",
@@ -1641,7 +1595,7 @@ def main() -> None:
     )
 
     write_table_star(
-        "source_continuation_compare.tex",
+        "plasticity2d_reference_continuation.tex",
         fill_spec("l c c c c c"),
         [
             "Policy",

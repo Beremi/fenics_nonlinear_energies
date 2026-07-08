@@ -15,7 +15,7 @@ distributed infrastructure.
 The \fenics{} implementations remain valuable on families where they exist,
 especially $p$-Laplace, Ginzburg--Landau, and hyperelasticity. They provide a
 trusted high-level FEM reference and help distinguish modeling issues from
-solver-policy issues. In this paper they are used mainly as comparison baselines
+solver-policy issues. In this paper they are used mainly as scoped reference comparisons
 rather than as the primary distributed realization.
 
 \paragraph{Primary \jaxpetsc{} realization.}
@@ -26,7 +26,7 @@ assembly, nonlinear globalization, and linear algebra stay in PETSc.
 
 \subsection{Autodiff modes}
 
-The \jaxpetsc{} framework supports several second-order modes. The precise available
+The \jaxpetsc{} realization exposes several second-order modes. The precise available
 choices depend on the benchmark family, but the common logic is:
 \begin{itemize}
   \item \textbf{element AD}: exact local Hessians from differentiating the full
@@ -39,9 +39,9 @@ choices depend on the benchmark family, but the common logic is:
 
 This split is scientifically important. It lets us compare exact second-order
 information against carefully structured sparse approximations without changing
-the rest of the nonlinear solver framework. In other words, the paper is not only a
-comparison of frameworks, but also a comparison of derivative strategies inside
-one common solver infrastructure.
+the nonlinear solver or sparse assembly path. In other words, the paper compares
+derivative strategies inside one common distributed solver construction, not only
+across reference implementations.
 
 \begin{figure}[H]
   \centering
@@ -63,14 +63,14 @@ one common solver infrastructure.
 \begin{figure}[H]
   \centering
   \PaperAutodiffModesDiagram
-  \caption{Second-order derivative modes exposed in the \jaxpetsc{} framework. The
-  methodological choice is that the source of truth remains an energy or
-  energy-density expression even when the tangent path changes from element AD
+  \caption{Second-order derivative modes exposed in the \jaxpetsc{} realization. The
+  methodological choice is that the scalar energy or energy-density expression
+  remains the defining mathematical object even when the tangent route changes from element AD
   to constitutive AD or colored SFD.}
   \label{fig:derivative-stack}
 \end{figure}
 
-Figures~\ref{fig:framework-overview}--\ref{fig:derivative-stack} summarize the
+\Cref{fig:framework-overview,fig:derivative-pathways,fig:derivative-stack} summarize the
 computational construction used in the rest of the paper. The primary
 \jaxpetsc{} realization is the distributed nonlinear solve; the reference
 formulations provide matched comparisons; and the derivative modes differ only
@@ -88,7 +88,7 @@ because the linear systems are qualitatively different:
         indefinite linearization.
   \item \textbf{Hyperelasticity:} trust-region outer iterations with
         GAMG-preconditioned Krylov solves in the main benchmark and
-        globalization rows, and same-hierarchy PMG with redundant LU/MUMPS
+        globalization comparison cases, and same-hierarchy PMG with redundant LU/MUMPS
         coarse solves in the larger fixed-work scaling profile.
   \item \textbf{Plasticity (2D):} same-mesh multigrid hierarchies whose
         bottlenecks are dominated by the finest-level smoother and repeated
@@ -147,14 +147,15 @@ problem definition.
 \begin{table}[H]
   \centering
   \input{tables/generated/implementation_capability_matrix.tex}
-  \caption{Implementation capability matrix across the benchmark
-  families. ``Advanced solver / derivative features'' summarizes the derivative
-  routes, nonlinear policies, or coupled solver features that are scientifically
-  interesting in each family.}
+  \caption{Solver and derivative components by benchmark family.
+  ``Solver and derivative components'' summarizes the derivative routes,
+  nonlinear policies, or coupled solver features that are scientifically
+  relevant in each family.}
   \label{tab:capability-matrix}
 \end{table}
 
-\Cref{tab:capability-matrix} summarizes the implemented capabilities. The most
+\Cref{tab:capability-matrix} summarizes the solver components used in the
+benchmark suite. The most
 important structural point is that the \jaxpetsc{} column is the distributed
 algebraic realization, even when a family also has \fenics{} or \purejax{}
 reference formulations.

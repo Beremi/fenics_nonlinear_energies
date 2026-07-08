@@ -8,8 +8,8 @@ applied. Nonhomogeneous essential data are represented by an affine lift
 $\bar u_h(\theta)$, with $\bar u_h=0$ in the homogeneous cases. A free
 coefficient vector $x\in\mathbb{R}^{n}$ defines the finite-element state
 \[
-  u_h(x;\theta)=\bar u_h(\theta)+\sum_{i=1}^{n} x_i\varphi_i,
-\]
+  u_h(x;\theta)=\bar u_h(\theta)+\sum_{i=1}^{n} x_i\varphi_i.
+  \]
 When no confusion is possible, we identify $u_h$ with its coefficient vector in
 algebraic formulas. On element $e$, $x_e=R_e x$ denotes the local coefficient
 vector selected by the element restriction $R_e$, while $u_e(x;\theta)$ denotes
@@ -75,7 +75,7 @@ energy-centered whenever possible. This gives three derivative routes:
 \end{enumerate}
 
 Element AD is the most literal route and is often the cleanest mathematically.
-Constitutive AD preserves the same scalar-energy source of truth but changes
+Constitutive AD preserves the same defining scalar-energy expression but changes
 the differentiation boundary from the full element vector to the local strain
 state. This is especially effective for high-order plasticity, where the full
 element Hessian is often much more expensive than the $6\times6$
@@ -136,11 +136,11 @@ policy parameters; where they affect the interpretation of a result, the paper
 reports the corresponding configuration rather than treating
 \Cref{alg:hybrid-newton} as a complete algorithmic specification.
 
-For the principal 3D plasticity path reported in this paper, the chosen policy
+For the principal 3D plasticity configuration reported in this paper, the chosen policy
 is simpler: Newton with Armijo backtracking and a polynomial-multigrid
 (PMG)-preconditioned
 flexible-GMRES linear solve \citep[Sec.~3.1]{nocedal2006numerical}. This is the
-baseline nonlinear-solver policy used for the converged 3D plasticity scaling
+nonlinear-solver policy used for the converged 3D plasticity scaling
 study reported later in \Cref{sec:num-plasticity3d}.
 
 \begin{algorithm}[H]
@@ -172,6 +172,29 @@ or HVP evaluation can recover multiple columns of the Jacobian or Hessian
 uses distance-2 coloring on the Hessian sparsity graph, which is especially
 effective when combined with overlap-domain assembly and owned-plus-ghost PETSc
 layouts.
+
+Let $H$ denote the Hessian and let $\mathcal{S}$ be its sparsity pattern. A
+distance-2 coloring partitions the column indices into groups $\mathcal{C}_c$
+such that, for each row $i$, at most one column $j\in\mathcal{C}_c$ satisfies
+$(i,j)\in\mathcal{S}$. For the color seed
+$v_c=\sum_{j\in\mathcal{C}_c} e_j$, one probe produces
+\begin{equation}
+  y_c =
+  \begin{cases}
+    \bigl(\nabla \Pi_h(x+\delta v_c)-\nabla \Pi_h(x)\bigr)/\delta,
+      & \text{finite-difference gradient probe},\\
+    H(x)v_c,
+      & \text{AD Hessian-vector probe}.
+  \end{cases}
+  \label{eq:colored-sfd-recovery}
+\end{equation}
+The structural separation then recovers $H_{ij}=(y_c)_i$ for
+$j\in\mathcal{C}_c$ and $(i,j)\in\mathcal{S}$. The reported \jaxpetsc{}
+colored-SFD cases use the AD Hessian-vector probe mode, so no finite-difference
+perturbation parameter is introduced in those runs; the finite-difference
+formula states the classical recovery variant. After recovery, each rank scatters
+only owned sparse entries to the PETSc matrix, with overlap data used only for
+local probe evaluation.
 
 \begin{algorithm}[H]
 \caption{Distributed colored Hessian recovery}

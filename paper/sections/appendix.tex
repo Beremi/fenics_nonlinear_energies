@@ -16,7 +16,7 @@ operator is not rebuilt along the nonlinear path.
 
 \begin{table}[H]
   \centering
-  \input{tables/generated/plasticity3d_local_vs_source.tex}
+  \input{tables/generated/plasticity3d_constitutive_vs_reference_formula.tex}
   \caption{Matched constitutive-assembly versus reference-formula assembly
   comparison for the same PMG solver configuration. The table reports wall time,
   solve time, and their ratio for matched rank counts on
@@ -26,7 +26,7 @@ operator is not rebuilt along the nonlinear path.
 
 \begin{table}[H]
   \centering
-  \input{tables/generated/plasticity3d_fixed_source_operator_pmg.tex}
+  \input{tables/generated/plasticity3d_fixed_reference_operator_pmg.tex}
   \caption{Fixed reference-operator PMG alternative on the same Plasticity3D
   problem. The status column distinguishes completed configurations from rank
   counts that reach the maximum number of Newton iterations before satisfying
@@ -54,7 +54,7 @@ evidence for the PMG smoother policy under the same outer continuation logic.
 
 \begin{table}[H]
   \centering
-  \input{tables/generated/source_continuation_compare.tex}
+  \input{tables/generated/plasticity2d_reference_continuation.tex}
   \caption{Reference continuation with the fixed PMG smoother policy at 8
   and 32 ranks. This is supporting solver evidence for a reference continuation
   setting, not a primary solver comparison.}
@@ -65,7 +65,8 @@ evidence for the PMG smoother policy under the same outer continuation logic.
 
 The implementation discussed in this paper is available at
 \url{https://github.com/Beremi/fenics_nonlinear_energies}. The repository
-contains the source code, input data, processed benchmark summaries, figure and
-table generation sources, and validation records used to reproduce the reported
-results, figures, and tables. No permanent artifact DOI is assigned at the time
-of writing; the repository URL identifies the available source.
+contains the current source code, input data, processed benchmark summaries, and
+figure and table generation sources used for the reported manuscript artifacts.
+A versioned archival artifact with archive-neutral provenance manifests should
+be supplied for final submission. No permanent artifact DOI is assigned at the
+time of writing; the repository URL identifies the available source snapshot.

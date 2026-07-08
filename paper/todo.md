@@ -16,8 +16,8 @@ the external submission metadata and archive-neutral provenance are fixed.
 This pass inspected the manuscript sources, bibliography, literature manifest,
 claim audit, generated tables and figures, paper generation scripts, LaTeX
 build products, and supporting artifacts needed by the paper's main claims.
-It also rechecked date-sensitive SOTA and citation metadata through live
-arXiv, DOI, and official project pages on 2026-04-30. No long MPI campaigns
+An earlier audit rechecked date-sensitive SOTA and citation metadata through
+live arXiv, DOI, and official project pages on 2026-04-30. No long MPI campaigns
 were rerun, no checked-in meshes or raw inputs were edited, and no new
 scientific claims were introduced without supporting evidence.
 
