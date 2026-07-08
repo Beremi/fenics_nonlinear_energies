@@ -90,16 +90,14 @@ PLASTICITY2D_L7_SUMMARY = REPO_ROOT / "artifacts/raw_results/slope_stability_l7_
 TOPOLOGY_STATE = REPO_ROOT / "experiments/analysis/docs_assets/data/topology/parallel_final_state.npz"
 TOPOLOGY_HISTORY = REPO_ROOT / "experiments/analysis/docs_assets/data/topology/objective_history.csv"
 TOPOLOGY_SCALING = REPO_ROOT / "experiments/analysis/docs_assets/data/topology/strong_scaling.csv"
-P3D_VALIDATION_ROOT = REPO_ROOT / "artifacts/raw_results/plasticity3d_validation"
-P3D_DERIVATIVE_ABLATION_ROOT = REPO_ROOT / "artifacts/raw_results/plasticity3d_derivative_ablation"
-JAX_FEM_BASELINE_ROOT = REPO_ROOT / "artifacts/raw_results/jax_fem_hyperelastic_baseline"
-P3D_LOCAL_LAMBDA155_SCALING = (
-    REPO_ROOT
-    / "artifacts/reports/plasticity3d_p4_l1_2_mumps_pmg_step_grad_local_karolina_scaling/local_solver_total_scaling.csv"
-)
+PAPER_SUBMISSION_BUNDLE_ROOT = REPO_ROOT / "artifacts/reproduction/paper_submission_2026_07_08"
+PAPER_SUBMISSION_INPUT_ROOT = PAPER_SUBMISSION_BUNDLE_ROOT / "inputs"
+P3D_VALIDATION_ROOT = PAPER_SUBMISSION_INPUT_ROOT / "plasticity3d_validation"
+P3D_DERIVATIVE_ABLATION_ROOT = PAPER_SUBMISSION_INPUT_ROOT / "plasticity3d_derivative_ablation"
+JAX_FEM_BASELINE_ROOT = PAPER_SUBMISSION_INPUT_ROOT / "jax_fem_hyperelastic_baseline"
+P3D_LOCAL_LAMBDA155_SCALING = PAPER_SUBMISSION_INPUT_ROOT / "plasticity3d_lambda155_scaling/local_solver_total_scaling.csv"
 P3D_KAROLINA_LAMBDA155_SCALING = (
-    REPO_ROOT
-    / "artifacts/reports/plasticity3d_p4_l1_2_mumps_pmg_step_grad_local_karolina_scaling/karolina_rpn16_solver_total_scaling.csv"
+    PAPER_SUBMISSION_INPUT_ROOT / "plasticity3d_lambda155_scaling/karolina_rpn16_solver_total_scaling.csv"
 )
 
 LOCAL_IMPL = "local_constitutiveAD_local_pmg_armijo"
@@ -126,10 +124,6 @@ def _manifest_repo_input(path: Path) -> dict[str, str]:
     except ValueError as exc:
         raise ValueError(f"Paper figure manifest input is outside the repository: {path}") from exc
     return {"kind": "repository_path", "path": relative.as_posix()}
-
-
-def _manifest_external_input(identifier: str, *, note: str) -> dict[str, str]:
-    return {"kind": "external_reference", "identifier": identifier, "note": note}
 
 
 PAPER_IMPLEMENTATION_LABELS = {
@@ -2394,36 +2388,60 @@ def main() -> None:
         },
         "generated_asset_inputs": {
             "plasticity3d_validation_layer1a_boundary.pdf": [
-                _manifest_repo_input(P3D_VALIDATION_ROOT / "validation_manifest.json"),
-                _manifest_repo_input(P3D_VALIDATION_ROOT / "comparison_summary.json"),
-                _manifest_external_input(
-                    "slope_stability_octave_ref:compare_direct_branch_lambda1p6/final_source_state.mat",
-                    note="External reference state used for the validation audit; replace with an archived artifact-relative input in the final submission bundle.",
+                _manifest_repo_input(
+                    PAPER_SUBMISSION_INPUT_ROOT / "plasticity3d_validation" / "validation_manifest.json"
                 ),
                 _manifest_repo_input(
-                    REPO_ROOT / "artifacts/raw_results/debug/p2_direct_branch_lambda1p6_merged/branch_summary.json"
+                    PAPER_SUBMISSION_INPUT_ROOT / "plasticity3d_validation" / "comparison_summary.json"
+                ),
+                _manifest_repo_input(
+                    PAPER_SUBMISSION_INPUT_ROOT / "plasticity3d_validation/source_branch/final_source_state.mat"
+                ),
+                _manifest_repo_input(
+                    PAPER_SUBMISSION_INPUT_ROOT / "plasticity3d_validation/source_branch/branch_summary.json"
+                ),
+                _manifest_repo_input(
+                    PAPER_SUBMISSION_INPUT_ROOT / "plasticity3d_validation/maintained_branch/branch_summary.json"
                 ),
             ],
             "plasticity3d_validation_umax_curve.pdf": [
-                _manifest_repo_input(P3D_VALIDATION_ROOT / "comparison_summary.json"),
+                _manifest_repo_input(
+                    PAPER_SUBMISSION_INPUT_ROOT / "plasticity3d_validation" / "comparison_summary.json"
+                ),
             ],
             "plasticity3d_derivative_ablation_bars.pdf": [
-                _manifest_repo_input(P3D_DERIVATIVE_ABLATION_ROOT / "comparison_summary.json"),
+                _manifest_repo_input(
+                    PAPER_SUBMISSION_INPUT_ROOT / "plasticity3d_derivative_ablation" / "comparison_summary.json"
+                ),
             ],
             "hyperelasticity_karolina_pmg_scaling.pdf": [
                 _manifest_repo_input(HYPER_KAROLINA_PMG_SCALING),
             ],
             "plasticity3d_local_vs_karolina_scaling.pdf": [
-                _manifest_repo_input(P3D_LOCAL_LAMBDA155_SCALING),
-                _manifest_repo_input(P3D_KAROLINA_LAMBDA155_SCALING),
+                _manifest_repo_input(
+                    PAPER_SUBMISSION_INPUT_ROOT / "plasticity3d_lambda155_scaling/local_solver_total_scaling.csv"
+                ),
+                _manifest_repo_input(
+                    PAPER_SUBMISSION_INPUT_ROOT / "plasticity3d_lambda155_scaling/karolina_rpn16_solver_total_scaling.csv"
+                ),
             ],
             "jax_fem_hyperelastic_baseline_energy_history.pdf": [
-                _manifest_repo_input(JAX_FEM_BASELINE_ROOT / "comparison_summary.json"),
+                _manifest_repo_input(
+                    PAPER_SUBMISSION_INPUT_ROOT / "jax_fem_hyperelastic_baseline" / "comparison_summary.json"
+                ),
             ],
             "jax_fem_hyperelastic_baseline_centerline.pdf": [
-                _manifest_repo_input(JAX_FEM_BASELINE_ROOT / "comparison_summary.json"),
-                _manifest_repo_input(JAX_FEM_BASELINE_ROOT / "parity" / "repo_serial_direct_state.npz"),
-                _manifest_repo_input(JAX_FEM_BASELINE_ROOT / "parity" / "jax_fem_umfpack_serial_state.npz"),
+                _manifest_repo_input(
+                    PAPER_SUBMISSION_INPUT_ROOT / "jax_fem_hyperelastic_baseline" / "comparison_summary.json"
+                ),
+                _manifest_repo_input(
+                    PAPER_SUBMISSION_INPUT_ROOT
+                    / "jax_fem_hyperelastic_baseline/parity/repo_serial_direct_state.npz"
+                ),
+                _manifest_repo_input(
+                    PAPER_SUBMISSION_INPUT_ROOT
+                    / "jax_fem_hyperelastic_baseline/parity/jax_fem_umfpack_serial_state.npz"
+                ),
             ],
         },
         "notes": "All manuscript-included PDFs in this manifest are generated by paper/scripts/generate_paper_figures.py; no external PDFs are copied into paper/figures/generated.",

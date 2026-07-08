@@ -1,0 +1,147 @@
+{
+  "case": {
+    "level": 1,
+    "mesh_path": "data/meshes/HyperElasticity/HyperElasticity_level1.h5",
+    "name": "hyperelasticity_tensile_companion",
+    "schedule": [
+      0.0025,
+      0.005,
+      0.0075,
+      0.01
+    ]
+  },
+  "fairness_gate": {
+    "checks": {
+      "centerline_relative_l2_le_5pct": true,
+      "energy_rel_diff_le_5pct": true,
+      "field_relative_l2_le_5pct": true,
+      "same_mesh_path": true,
+      "same_schedule": true,
+      "umax_curve_relative_l2_le_5pct": true
+    },
+    "comparison_contract": "Same mesh and prescribed displacement schedule; terminal states are post-compared with the paper energy, without claiming constitutive-law identity.",
+    "energy_postcomparison_used": true,
+    "jax_fem_solve_law": "logarithmic-J Piola companion formulation",
+    "passed": true,
+    "policy": "Include in the manuscript only if the mesh and prescribed displacement schedule match, terminal states are post-compared with the paper energy, and the final energy, full-field displacement, centerline, and u_max curves all stay within 5%.",
+    "post_comparison_energy_law": "paper hyperelastic energy with D1(J-1)^2 volumetric penalty"
+  },
+  "final_metrics": {
+    "centerline_relative_l2": 5.4731871671824376e-05,
+    "energy_rel_diff": 8.244460710522926e-06,
+    "field_relative_l2": 0.00020105942466034355,
+    "umax_curve_relative_l2": 8.851057159571476e-16
+  },
+  "implementations": [
+    {
+      "name": "repo_serial_direct",
+      "state_npz": "artifacts/raw_results/jax_fem_hyperelastic_baseline/parity/repo_serial_direct_state.npz",
+      "total_wall_time_s": 0.2237762559670955
+    },
+    {
+      "name": "jax_fem_umfpack_serial",
+      "state_npz": "artifacts/raw_results/jax_fem_hyperelastic_baseline/parity/jax_fem_umfpack_serial_state.npz",
+      "total_wall_time_s": 2.5443813420133665
+    }
+  ],
+  "step_rows": [
+    {
+      "displacement_x": 0.0025,
+      "energy_rel_diff": 5.35944563070841e-07,
+      "jax_fem_energy": 0.16161697707263856,
+      "jax_fem_u_max": 0.0025,
+      "jax_fem_wall_time_s": 1.0882326420396566,
+      "repo_energy": 0.16161689045494482,
+      "repo_u_max": 0.0025000000000000022,
+      "repo_wall_time_s": 0.06807739590294659,
+      "step": 1
+    },
+    {
+      "displacement_x": 0.005,
+      "energy_rel_diff": 2.1159766834880235e-06,
+      "jax_fem_energy": 0.6444211050360384,
+      "jax_fem_u_max": 0.005,
+      "jax_fem_wall_time_s": 0.2677744720131159,
+      "repo_energy": 0.6444197414588911,
+      "repo_u_max": 0.0050000000000000044,
+      "repo_wall_time_s": 0.06345530599355698,
+      "step": 2
+    },
+    {
+      "displacement_x": 0.0075,
+      "energy_rel_diff": 4.6988414799777e-06,
+      "jax_fem_energy": 1.4453826870485367,
+      "jax_fem_u_max": 0.0075,
+      "jax_fem_wall_time_s": 0.2598327549640089,
+      "repo_energy": 1.445375895456325,
+      "repo_u_max": 0.007500000000000007,
+      "repo_wall_time_s": 0.0510424260282889,
+      "step": 3
+    },
+    {
+      "displacement_x": 0.01,
+      "energy_rel_diff": 8.244460710522926e-06,
+      "jax_fem_energy": 2.561529676306249,
+      "jax_fem_u_max": 0.01,
+      "jax_fem_wall_time_s": 0.2614823479671031,
+      "repo_energy": 2.5615085580495824,
+      "repo_u_max": 0.010000000000000009,
+      "repo_wall_time_s": 0.041201128042303026,
+      "step": 4
+    }
+  ],
+  "timing_medians_s": {
+    "jax_fem_umfpack_serial": 2.5241139760473743,
+    "repo_serial_direct": 0.1759974609594792
+  },
+  "timing_rows": [
+    {
+      "implementation": "repo_serial_direct",
+      "phase": "warmup",
+      "repeat": 1,
+      "wall_time_s": null
+    },
+    {
+      "implementation": "jax_fem_umfpack_serial",
+      "phase": "warmup",
+      "repeat": 1,
+      "wall_time_s": null
+    },
+    {
+      "implementation": "repo_serial_direct",
+      "phase": "measured",
+      "repeat": 1,
+      "wall_time_s": 0.17905023810453713
+    },
+    {
+      "implementation": "jax_fem_umfpack_serial",
+      "phase": "measured",
+      "repeat": 1,
+      "wall_time_s": 2.5132452370598912
+    },
+    {
+      "implementation": "repo_serial_direct",
+      "phase": "measured",
+      "repeat": 2,
+      "wall_time_s": 0.1759974609594792
+    },
+    {
+      "implementation": "jax_fem_umfpack_serial",
+      "phase": "measured",
+      "repeat": 2,
+      "wall_time_s": 2.527400596998632
+    },
+    {
+      "implementation": "repo_serial_direct",
+      "phase": "measured",
+      "repeat": 3,
+      "wall_time_s": 0.17382655013352633
+    },
+    {
+      "implementation": "jax_fem_umfpack_serial",
+      "phase": "measured",
+      "repeat": 3,
+      "wall_time_s": 2.5241139760473743
+    }
+  ]
+}

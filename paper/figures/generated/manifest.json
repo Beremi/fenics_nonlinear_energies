@@ -10,62 +10,65 @@
     "jax_fem_hyperelastic_baseline_centerline.pdf": [
       {
         "kind": "repository_path",
-        "path": "artifacts/raw_results/jax_fem_hyperelastic_baseline/comparison_summary.json"
+        "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/jax_fem_hyperelastic_baseline/comparison_summary.json"
       },
       {
         "kind": "repository_path",
-        "path": "artifacts/raw_results/jax_fem_hyperelastic_baseline/parity/repo_serial_direct_state.npz"
+        "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/jax_fem_hyperelastic_baseline/parity/repo_serial_direct_state.npz"
       },
       {
         "kind": "repository_path",
-        "path": "artifacts/raw_results/jax_fem_hyperelastic_baseline/parity/jax_fem_umfpack_serial_state.npz"
+        "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/jax_fem_hyperelastic_baseline/parity/jax_fem_umfpack_serial_state.npz"
       }
     ],
     "jax_fem_hyperelastic_baseline_energy_history.pdf": [
       {
         "kind": "repository_path",
-        "path": "artifacts/raw_results/jax_fem_hyperelastic_baseline/comparison_summary.json"
+        "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/jax_fem_hyperelastic_baseline/comparison_summary.json"
       }
     ],
     "plasticity3d_derivative_ablation_bars.pdf": [
       {
         "kind": "repository_path",
-        "path": "artifacts/raw_results/plasticity3d_derivative_ablation/comparison_summary.json"
+        "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_derivative_ablation/comparison_summary.json"
       }
     ],
     "plasticity3d_local_vs_karolina_scaling.pdf": [
       {
         "kind": "repository_path",
-        "path": "artifacts/reports/plasticity3d_p4_l1_2_mumps_pmg_step_grad_local_karolina_scaling/local_solver_total_scaling.csv"
+        "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_lambda155_scaling/local_solver_total_scaling.csv"
       },
       {
         "kind": "repository_path",
-        "path": "artifacts/reports/plasticity3d_p4_l1_2_mumps_pmg_step_grad_local_karolina_scaling/karolina_rpn16_solver_total_scaling.csv"
+        "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_lambda155_scaling/karolina_rpn16_solver_total_scaling.csv"
       }
     ],
     "plasticity3d_validation_layer1a_boundary.pdf": [
       {
         "kind": "repository_path",
-        "path": "artifacts/raw_results/plasticity3d_validation/validation_manifest.json"
+        "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_validation/validation_manifest.json"
       },
       {
         "kind": "repository_path",
-        "path": "artifacts/raw_results/plasticity3d_validation/comparison_summary.json"
-      },
-      {
-        "identifier": "slope_stability_octave_ref:compare_direct_branch_lambda1p6/final_source_state.mat",
-        "kind": "external_reference",
-        "note": "External reference state used for the validation audit; replace with an archived artifact-relative input in the final submission bundle."
+        "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_validation/comparison_summary.json"
       },
       {
         "kind": "repository_path",
-        "path": "artifacts/raw_results/debug/p2_direct_branch_lambda1p6_merged/branch_summary.json"
+        "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_validation/source_branch/final_source_state.mat"
+      },
+      {
+        "kind": "repository_path",
+        "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_validation/source_branch/branch_summary.json"
+      },
+      {
+        "kind": "repository_path",
+        "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_validation/maintained_branch/branch_summary.json"
       }
     ],
     "plasticity3d_validation_umax_curve.pdf": [
       {
         "kind": "repository_path",
-        "path": "artifacts/raw_results/plasticity3d_validation/comparison_summary.json"
+        "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_validation/comparison_summary.json"
       }
     ]
   },

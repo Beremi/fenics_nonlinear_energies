@@ -35,6 +35,7 @@ ARCHIVE_NEUTRAL_BLOCKED_PREFIXES = (
     "artifacts/raw_results/",
     "artifacts/reports/",
 )
+SUBMISSION_BUNDLE_MANIFEST = PAPER_ROOT.parent / "artifacts" / "reproduction" / "paper_submission_2026_07_08" / "manifest.json"
 TEXT_SCAN_SUFFIXES = {
     ".csv",
     ".json",
@@ -257,6 +258,8 @@ def _validate_archive_neutral_manifest(figures_dir: Path) -> None:
     reproducibility_note = PAPER_ROOT / "build" / "reproducibility_note.md"
     if reproducibility_note.exists():
         paths_to_scan.add(reproducibility_note)
+    if SUBMISSION_BUNDLE_MANIFEST.exists():
+        paths_to_scan.add(SUBMISSION_BUNDLE_MANIFEST)
     for path in sorted(paths_to_scan):
         findings.extend(_find_banned_snippets(path, PROVENANCE_BANNED_SNIPPETS))
     if findings:

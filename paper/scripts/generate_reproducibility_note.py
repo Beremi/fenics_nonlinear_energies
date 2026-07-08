@@ -12,6 +12,7 @@ DEFAULT_OUTPUT = BUILD_ROOT / "reproducibility_note.md"
 P3D_VALIDATION_MANIFEST = REPO_ROOT / "artifacts/raw_results/plasticity3d_validation/validation_manifest.json"
 P3D_ABLATION_SUMMARY = REPO_ROOT / "artifacts/raw_results/plasticity3d_derivative_ablation/comparison_summary.json"
 JAX_FEM_BASELINE_MANIFEST = REPO_ROOT / "artifacts/raw_results/jax_fem_hyperelastic_baseline/run_manifest.json"
+SUBMISSION_BUNDLE_MANIFEST = REPO_ROOT / "artifacts/reproduction/paper_submission_2026_07_08/manifest.json"
 
 
 def _git_head() -> str:
@@ -39,13 +40,18 @@ def main() -> None:
         f"- git commit: `{_git_head()}`",
         f"- Python used to generate this note: `{_python_version(args.repo_python)}`",
         "",
-        "## Artifact Commands",
+        "## Archive Bundle",
         "",
-        f"- Plasticity3D validation manifest: `{Path(validation_manifest['runner']).name}` -> `{P3D_VALIDATION_MANIFEST.relative_to(REPO_ROOT)}`",
-        "- Regenerate validation assets: `./.venv/bin/python experiments/analysis/generate_plasticity3d_validation_assets.py`",
-        "- Regenerate derivative ablation assets: `./.venv/bin/python experiments/analysis/generate_plasticity3d_derivative_ablation_assets.py`",
-        "- JAX-FEM baseline runner: `experiments/runners/run_jax_fem_hyperelastic_baseline.py`",
-        "- Regenerate JAX-FEM baseline assets: `./.venv/bin/python experiments/analysis/generate_jax_fem_hyperelastic_baseline_assets.py`",
+        f"- Submission bundle manifest: `{SUBMISSION_BUNDLE_MANIFEST.relative_to(REPO_ROOT)}`",
+        "- Build or refresh bundle: `python paper/scripts/build_submission_bundle.py`",
+        "- Validate paper assets: `python paper/scripts/validate_paper_assets.py`",
+        "- Validate archive-neutral provenance: `python paper/scripts/validate_paper_assets.py --archive-neutral`",
+        "",
+        "## Source Inputs",
+        "",
+        f"- Plasticity3D validation manifest source: `{P3D_VALIDATION_MANIFEST.relative_to(REPO_ROOT)}`",
+        f"- Plasticity3D derivative-route summary source: `{P3D_ABLATION_SUMMARY.relative_to(REPO_ROOT)}`",
+        f"- JAX-FEM baseline manifest source: `{JAX_FEM_BASELINE_MANIFEST.relative_to(REPO_ROOT)}`",
         "",
         "## Reported Cases",
         "",

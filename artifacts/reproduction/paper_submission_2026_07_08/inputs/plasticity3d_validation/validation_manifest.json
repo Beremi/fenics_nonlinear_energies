@@ -1,0 +1,205 @@
+{
+  "layer1a": {
+    "accepted_baseline": {
+      "deviatoric_strain_relative_l2": 0.00872000570313859,
+      "displacement_relative_l2": 0.003517247,
+      "lambda_schedule": [
+        1.0,
+        1.1,
+        1.2,
+        1.3,
+        1.4,
+        1.5,
+        1.6
+      ],
+      "work_relative_difference": 3.877021e-05
+    },
+    "jax_branch_dir": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_validation/maintained_branch",
+    "kind": "exact_source_faithfulness",
+    "source_branch_dir": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_validation/source_branch"
+  },
+  "layer1b": {
+    "kind": "published_source_family_triangulation",
+    "report_md": "external_reference/slope_stability_petsc4py/benchmarks/run_3D_hetero_seepage_SSR_comsol_capture/archive/report.md"
+  },
+  "layer2": {
+    "kind": "fixed_lambda_source_operator_validation",
+    "rows": [
+      {
+        "lambda_value": 1.0,
+        "maintained": {
+          "case_dir": "artifacts/raw_results/plasticity3d_validation/layer2/lambda_1p000/maintained",
+          "command": "mpiexec -n 1 python -u experiments/runners/run_plasticity3d_backend_mix_case.py --assembly-backend local_constitutiveAD --solver-backend local --source-root external_reference/slope_stability_petsc4py --mesh-name hetero_ssr_L1 --elem-degree 2 --constraint-variant glued_bottom --lambda-target 1.0 --stop-tol 0.002 --maxit 80 --out-dir artifacts/raw_results/plasticity3d_validation/layer2/lambda_1p000/maintained --output-json artifacts/raw_results/plasticity3d_validation/layer2/lambda_1p000/maintained/output.json --state-out artifacts/raw_results/plasticity3d_validation/layer2/lambda_1p000/maintained/state.npz",
+          "exit_code": 0,
+          "output_json": "artifacts/raw_results/plasticity3d_validation/layer2/lambda_1p000/maintained/output.json",
+          "state_npz": "artifacts/raw_results/plasticity3d_validation/layer2/lambda_1p000/maintained/state.npz",
+          "stderr_path": "artifacts/raw_results/plasticity3d_validation/layer2/lambda_1p000/maintained/stderr.txt",
+          "stdout_path": "artifacts/raw_results/plasticity3d_validation/layer2/lambda_1p000/maintained/stdout.txt",
+          "wall_time_s": 23.701040612068027
+        },
+        "maintained_ranks": 1,
+        "maxit": 80,
+        "source_reference": {
+          "case_dir": "artifacts/raw_results/plasticity3d_validation/layer2/lambda_1p000/source_reference",
+          "command": "mpiexec -n 8 python -u experiments/runners/source_fixed_lambda_3d_impl.py --out-dir artifacts/raw_results/plasticity3d_validation/layer2/lambda_1p000/source_reference --output-json artifacts/raw_results/plasticity3d_validation/layer2/lambda_1p000/source_reference/output.json --mesh-path external_reference/slope_stability_petsc4py/meshes/3d_hetero_ssr/SSR_hetero_ada_L1.msh --mesh-boundary-type 1 --elem-type P2 --node-ordering block_xyz --lambda-target 1.0 --solver-type PETSC_MATLAB_DFGMRES_HYPRE_NULLSPACE --pc-backend pmg_shell --stopping-criterion relative_correction --stopping-tol 0.002 --it-newt-max 80 --linear-tolerance 1e-2 --linear-max-iter 100 --threads 1 --elastic-initial-guess --no-write-debug-bundle --write-history-json --no-write-solution-vtu --no-write-plots --quiet",
+          "exit_code": 0,
+          "history_json": "artifacts/raw_results/plasticity3d_validation/layer2/lambda_1p000/source_reference/exports/history.json",
+          "output_json": "artifacts/raw_results/plasticity3d_validation/layer2/lambda_1p000/source_reference/output.json",
+          "petsc_run_npz": "artifacts/raw_results/plasticity3d_validation/layer2/lambda_1p000/source_reference/data/petsc_run.npz",
+          "run_info_json": "artifacts/raw_results/plasticity3d_validation/layer2/lambda_1p000/source_reference/data/run_info.json",
+          "source_root": "external_reference/slope_stability_petsc4py",
+          "stderr_path": "artifacts/raw_results/plasticity3d_validation/layer2/lambda_1p000/source_reference/stderr.txt",
+          "stdout_path": "artifacts/raw_results/plasticity3d_validation/layer2/lambda_1p000/source_reference/stdout.txt",
+          "wall_time_s": 14.143984738038853
+        },
+        "source_reference_ranks": 8,
+        "stop_tol": 0.002
+      },
+      {
+        "lambda_value": 1.2,
+        "maintained": {
+          "case_dir": "artifacts/raw_results/plasticity3d_validation/layer2/lambda_1p200/maintained",
+          "command": "mpiexec -n 1 python -u experiments/runners/run_plasticity3d_backend_mix_case.py --assembly-backend local_constitutiveAD --solver-backend local --source-root external_reference/slope_stability_petsc4py --mesh-name hetero_ssr_L1 --elem-degree 2 --constraint-variant glued_bottom --lambda-target 1.2 --stop-tol 0.002 --maxit 80 --out-dir artifacts/raw_results/plasticity3d_validation/layer2/lambda_1p200/maintained --output-json artifacts/raw_results/plasticity3d_validation/layer2/lambda_1p200/maintained/output.json --state-out artifacts/raw_results/plasticity3d_validation/layer2/lambda_1p200/maintained/state.npz",
+          "exit_code": 0,
+          "output_json": "artifacts/raw_results/plasticity3d_validation/layer2/lambda_1p200/maintained/output.json",
+          "state_npz": "artifacts/raw_results/plasticity3d_validation/layer2/lambda_1p200/maintained/state.npz",
+          "stderr_path": "artifacts/raw_results/plasticity3d_validation/layer2/lambda_1p200/maintained/stderr.txt",
+          "stdout_path": "artifacts/raw_results/plasticity3d_validation/layer2/lambda_1p200/maintained/stdout.txt",
+          "wall_time_s": 23.542646253015846
+        },
+        "maintained_ranks": 1,
+        "maxit": 80,
+        "source_reference": {
+          "case_dir": "artifacts/raw_results/plasticity3d_validation/layer2/lambda_1p200/source_reference",
+          "command": "mpiexec -n 8 python -u experiments/runners/source_fixed_lambda_3d_impl.py --out-dir artifacts/raw_results/plasticity3d_validation/layer2/lambda_1p200/source_reference --output-json artifacts/raw_results/plasticity3d_validation/layer2/lambda_1p200/source_reference/output.json --mesh-path external_reference/slope_stability_petsc4py/meshes/3d_hetero_ssr/SSR_hetero_ada_L1.msh --mesh-boundary-type 1 --elem-type P2 --node-ordering block_xyz --lambda-target 1.2 --solver-type PETSC_MATLAB_DFGMRES_HYPRE_NULLSPACE --pc-backend pmg_shell --stopping-criterion relative_correction --stopping-tol 0.002 --it-newt-max 80 --linear-tolerance 1e-2 --linear-max-iter 100 --threads 1 --elastic-initial-guess --no-write-debug-bundle --write-history-json --no-write-solution-vtu --no-write-plots --quiet",
+          "exit_code": 0,
+          "history_json": "artifacts/raw_results/plasticity3d_validation/layer2/lambda_1p200/source_reference/exports/history.json",
+          "output_json": "artifacts/raw_results/plasticity3d_validation/layer2/lambda_1p200/source_reference/output.json",
+          "petsc_run_npz": "artifacts/raw_results/plasticity3d_validation/layer2/lambda_1p200/source_reference/data/petsc_run.npz",
+          "run_info_json": "artifacts/raw_results/plasticity3d_validation/layer2/lambda_1p200/source_reference/data/run_info.json",
+          "source_root": "external_reference/slope_stability_petsc4py",
+          "stderr_path": "artifacts/raw_results/plasticity3d_validation/layer2/lambda_1p200/source_reference/stderr.txt",
+          "stdout_path": "artifacts/raw_results/plasticity3d_validation/layer2/lambda_1p200/source_reference/stdout.txt",
+          "wall_time_s": 14.015667617088184
+        },
+        "source_reference_ranks": 8,
+        "stop_tol": 0.002
+      },
+      {
+        "lambda_value": 1.4,
+        "maintained": {
+          "case_dir": "artifacts/raw_results/plasticity3d_validation/layer2/lambda_1p400/maintained",
+          "command": "mpiexec -n 1 python -u experiments/runners/run_plasticity3d_backend_mix_case.py --assembly-backend local_constitutiveAD --solver-backend local --source-root external_reference/slope_stability_petsc4py --mesh-name hetero_ssr_L1 --elem-degree 2 --constraint-variant glued_bottom --lambda-target 1.4 --stop-tol 0.002 --maxit 80 --out-dir artifacts/raw_results/plasticity3d_validation/layer2/lambda_1p400/maintained --output-json artifacts/raw_results/plasticity3d_validation/layer2/lambda_1p400/maintained/output.json --state-out artifacts/raw_results/plasticity3d_validation/layer2/lambda_1p400/maintained/state.npz",
+          "exit_code": 0,
+          "output_json": "artifacts/raw_results/plasticity3d_validation/layer2/lambda_1p400/maintained/output.json",
+          "state_npz": "artifacts/raw_results/plasticity3d_validation/layer2/lambda_1p400/maintained/state.npz",
+          "stderr_path": "artifacts/raw_results/plasticity3d_validation/layer2/lambda_1p400/maintained/stderr.txt",
+          "stdout_path": "artifacts/raw_results/plasticity3d_validation/layer2/lambda_1p400/maintained/stdout.txt",
+          "wall_time_s": 26.35661397804506
+        },
+        "maintained_ranks": 1,
+        "maxit": 80,
+        "source_reference": {
+          "case_dir": "artifacts/raw_results/plasticity3d_validation/layer2/lambda_1p400/source_reference",
+          "command": "mpiexec -n 8 python -u experiments/runners/source_fixed_lambda_3d_impl.py --out-dir artifacts/raw_results/plasticity3d_validation/layer2/lambda_1p400/source_reference --output-json artifacts/raw_results/plasticity3d_validation/layer2/lambda_1p400/source_reference/output.json --mesh-path external_reference/slope_stability_petsc4py/meshes/3d_hetero_ssr/SSR_hetero_ada_L1.msh --mesh-boundary-type 1 --elem-type P2 --node-ordering block_xyz --lambda-target 1.4 --solver-type PETSC_MATLAB_DFGMRES_HYPRE_NULLSPACE --pc-backend pmg_shell --stopping-criterion relative_correction --stopping-tol 0.002 --it-newt-max 80 --linear-tolerance 1e-2 --linear-max-iter 100 --threads 1 --elastic-initial-guess --no-write-debug-bundle --write-history-json --no-write-solution-vtu --no-write-plots --quiet",
+          "exit_code": 0,
+          "history_json": "artifacts/raw_results/plasticity3d_validation/layer2/lambda_1p400/source_reference/exports/history.json",
+          "output_json": "artifacts/raw_results/plasticity3d_validation/layer2/lambda_1p400/source_reference/output.json",
+          "petsc_run_npz": "artifacts/raw_results/plasticity3d_validation/layer2/lambda_1p400/source_reference/data/petsc_run.npz",
+          "run_info_json": "artifacts/raw_results/plasticity3d_validation/layer2/lambda_1p400/source_reference/data/run_info.json",
+          "source_root": "external_reference/slope_stability_petsc4py",
+          "stderr_path": "artifacts/raw_results/plasticity3d_validation/layer2/lambda_1p400/source_reference/stderr.txt",
+          "stdout_path": "artifacts/raw_results/plasticity3d_validation/layer2/lambda_1p400/source_reference/stdout.txt",
+          "wall_time_s": 14.601184202125296
+        },
+        "source_reference_ranks": 8,
+        "stop_tol": 0.002
+      },
+      {
+        "lambda_value": 1.5,
+        "maintained": {
+          "case_dir": "artifacts/raw_results/plasticity3d_validation/layer2/lambda_1p500/maintained",
+          "command": "mpiexec -n 1 python -u experiments/runners/run_plasticity3d_backend_mix_case.py --assembly-backend local_constitutiveAD --solver-backend local --source-root external_reference/slope_stability_petsc4py --mesh-name hetero_ssr_L1 --elem-degree 2 --constraint-variant glued_bottom --lambda-target 1.5 --stop-tol 0.002 --maxit 80 --out-dir artifacts/raw_results/plasticity3d_validation/layer2/lambda_1p500/maintained --output-json artifacts/raw_results/plasticity3d_validation/layer2/lambda_1p500/maintained/output.json --state-out artifacts/raw_results/plasticity3d_validation/layer2/lambda_1p500/maintained/state.npz",
+          "exit_code": 0,
+          "output_json": "artifacts/raw_results/plasticity3d_validation/layer2/lambda_1p500/maintained/output.json",
+          "state_npz": "artifacts/raw_results/plasticity3d_validation/layer2/lambda_1p500/maintained/state.npz",
+          "stderr_path": "artifacts/raw_results/plasticity3d_validation/layer2/lambda_1p500/maintained/stderr.txt",
+          "stdout_path": "artifacts/raw_results/plasticity3d_validation/layer2/lambda_1p500/maintained/stdout.txt",
+          "wall_time_s": 32.45629081991501
+        },
+        "maintained_ranks": 1,
+        "maxit": 80,
+        "source_reference": {
+          "case_dir": "artifacts/raw_results/plasticity3d_validation/layer2/lambda_1p500/source_reference",
+          "command": "mpiexec -n 8 python -u experiments/runners/source_fixed_lambda_3d_impl.py --out-dir artifacts/raw_results/plasticity3d_validation/layer2/lambda_1p500/source_reference --output-json artifacts/raw_results/plasticity3d_validation/layer2/lambda_1p500/source_reference/output.json --mesh-path external_reference/slope_stability_petsc4py/meshes/3d_hetero_ssr/SSR_hetero_ada_L1.msh --mesh-boundary-type 1 --elem-type P2 --node-ordering block_xyz --lambda-target 1.5 --solver-type PETSC_MATLAB_DFGMRES_HYPRE_NULLSPACE --pc-backend pmg_shell --stopping-criterion relative_correction --stopping-tol 0.002 --it-newt-max 80 --linear-tolerance 1e-2 --linear-max-iter 100 --threads 1 --elastic-initial-guess --no-write-debug-bundle --write-history-json --no-write-solution-vtu --no-write-plots --quiet",
+          "exit_code": 0,
+          "history_json": "artifacts/raw_results/plasticity3d_validation/layer2/lambda_1p500/source_reference/exports/history.json",
+          "output_json": "artifacts/raw_results/plasticity3d_validation/layer2/lambda_1p500/source_reference/output.json",
+          "petsc_run_npz": "artifacts/raw_results/plasticity3d_validation/layer2/lambda_1p500/source_reference/data/petsc_run.npz",
+          "run_info_json": "artifacts/raw_results/plasticity3d_validation/layer2/lambda_1p500/source_reference/data/run_info.json",
+          "source_root": "external_reference/slope_stability_petsc4py",
+          "stderr_path": "artifacts/raw_results/plasticity3d_validation/layer2/lambda_1p500/source_reference/stderr.txt",
+          "stdout_path": "artifacts/raw_results/plasticity3d_validation/layer2/lambda_1p500/source_reference/stdout.txt",
+          "wall_time_s": 15.909299386898056
+        },
+        "source_reference_ranks": 8,
+        "stop_tol": 0.002
+      },
+      {
+        "lambda_value": 1.55,
+        "maintained": {
+          "case_dir": "artifacts/raw_results/plasticity3d_validation/layer2/lambda_1p550/maintained",
+          "command": "mpiexec -n 1 python -u experiments/runners/run_plasticity3d_backend_mix_case.py --assembly-backend local_constitutiveAD --solver-backend local --source-root external_reference/slope_stability_petsc4py --mesh-name hetero_ssr_L1 --elem-degree 2 --constraint-variant glued_bottom --lambda-target 1.55 --stop-tol 0.002 --maxit 80 --out-dir artifacts/raw_results/plasticity3d_validation/layer2/lambda_1p550/maintained --output-json artifacts/raw_results/plasticity3d_validation/layer2/lambda_1p550/maintained/output.json --state-out artifacts/raw_results/plasticity3d_validation/layer2/lambda_1p550/maintained/state.npz",
+          "exit_code": 0,
+          "output_json": "artifacts/raw_results/plasticity3d_validation/layer2/lambda_1p550/maintained/output.json",
+          "state_npz": "artifacts/raw_results/plasticity3d_validation/layer2/lambda_1p550/maintained/state.npz",
+          "stderr_path": "artifacts/raw_results/plasticity3d_validation/layer2/lambda_1p550/maintained/stderr.txt",
+          "stdout_path": "artifacts/raw_results/plasticity3d_validation/layer2/lambda_1p550/maintained/stdout.txt",
+          "wall_time_s": 50.454427835997194
+        },
+        "maintained_ranks": 1,
+        "maxit": 80,
+        "source_reference": {
+          "case_dir": "artifacts/raw_results/plasticity3d_validation/layer2/lambda_1p550/source_reference",
+          "command": "mpiexec -n 8 python -u experiments/runners/source_fixed_lambda_3d_impl.py --out-dir artifacts/raw_results/plasticity3d_validation/layer2/lambda_1p550/source_reference --output-json artifacts/raw_results/plasticity3d_validation/layer2/lambda_1p550/source_reference/output.json --mesh-path external_reference/slope_stability_petsc4py/meshes/3d_hetero_ssr/SSR_hetero_ada_L1.msh --mesh-boundary-type 1 --elem-type P2 --node-ordering block_xyz --lambda-target 1.55 --solver-type PETSC_MATLAB_DFGMRES_HYPRE_NULLSPACE --pc-backend pmg_shell --stopping-criterion relative_correction --stopping-tol 0.002 --it-newt-max 80 --linear-tolerance 1e-2 --linear-max-iter 100 --threads 1 --elastic-initial-guess --no-write-debug-bundle --write-history-json --no-write-solution-vtu --no-write-plots --quiet",
+          "exit_code": 0,
+          "history_json": "artifacts/raw_results/plasticity3d_validation/layer2/lambda_1p550/source_reference/exports/history.json",
+          "output_json": "artifacts/raw_results/plasticity3d_validation/layer2/lambda_1p550/source_reference/output.json",
+          "petsc_run_npz": "artifacts/raw_results/plasticity3d_validation/layer2/lambda_1p550/source_reference/data/petsc_run.npz",
+          "run_info_json": "artifacts/raw_results/plasticity3d_validation/layer2/lambda_1p550/source_reference/data/run_info.json",
+          "source_root": "external_reference/slope_stability_petsc4py",
+          "stderr_path": "artifacts/raw_results/plasticity3d_validation/layer2/lambda_1p550/source_reference/stderr.txt",
+          "stdout_path": "artifacts/raw_results/plasticity3d_validation/layer2/lambda_1p550/source_reference/stdout.txt",
+          "wall_time_s": 16.374971200013533
+        },
+        "source_reference_ranks": 8,
+        "stop_tol": 0.002
+      }
+    ]
+  },
+  "out_dir": "artifacts/raw_results/plasticity3d_validation",
+  "runner": "plasticity3d_validation",
+  "source_root": "external_reference/slope_stability_petsc4py",
+  "validation_contract": {
+    "acceptance_targets": {
+      "endpoint_displacement_relative_l2_max": 0.1,
+      "highest_successful_lambda_relative_difference_max": 0.03,
+      "umax_curve_relative_l2_max": 0.05
+    },
+    "benchmark_family": "Plasticity3D",
+    "canonical_case": "glued-bottom heterogeneous P2(L1)",
+    "maintained_ranks": 1,
+    "maxit": 80,
+    "schedule": [
+      1.0,
+      1.2,
+      1.4,
+      1.5,
+      1.55
+    ],
+    "source_mesh_boundary_type": 1,
+    "source_reference_ranks": 8,
+    "stop_metric": "relative_correction",
+    "stop_tol": 0.002
+  }
+}

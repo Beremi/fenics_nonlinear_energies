@@ -1,0 +1,23 @@
+{
+  "artifacts": {
+    "comparison_summary": "artifacts/raw_results/jax_fem_hyperelastic_baseline/comparison_summary.json",
+    "jax_fem_output": "artifacts/raw_results/jax_fem_hyperelastic_baseline/parity/jax_fem_umfpack_serial.json",
+    "jax_fem_state": "artifacts/raw_results/jax_fem_hyperelastic_baseline/parity/jax_fem_umfpack_serial_state.npz",
+    "maintained_output": "artifacts/raw_results/jax_fem_hyperelastic_baseline/parity/repo_serial_direct.json",
+    "maintained_state": "artifacts/raw_results/jax_fem_hyperelastic_baseline/parity/repo_serial_direct_state.npz"
+  },
+  "case_name": "jax_fem_hyperelastic_baseline",
+  "jax_fem_python": "python",
+  "jax_fem_solver": "jax_fem_umfpack_serial",
+  "level": 1,
+  "main_site_packages": "python-environment/site-packages",
+  "maintained_solver": "repo_serial_direct",
+  "schedule": [
+    0.0025,
+    0.005,
+    0.0075,
+    0.01
+  ],
+  "timing_repeats": 3,
+  "warmup_runs": 1
+}

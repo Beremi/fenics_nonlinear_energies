@@ -25,11 +25,12 @@ P3D_DEGREE_ENERGY_STUDY_SUMMARY = (
     REPO_ROOT
     / "artifacts/raw_results/plasticity3d_lambda1p55_degree_mesh_energy_study/comparison_summary.json"
 )
-P3D_VALIDATION_SUMMARY = REPO_ROOT / "artifacts/raw_results/plasticity3d_validation/comparison_summary.json"
-P3D_DERIVATIVE_ABLATION_SUMMARY = (
-    REPO_ROOT / "artifacts/raw_results/plasticity3d_derivative_ablation/comparison_summary.json"
+PAPER_SUBMISSION_INPUT_ROOT = REPO_ROOT / "artifacts/reproduction/paper_submission_2026_07_08/inputs"
+P3D_VALIDATION_SUMMARY = PAPER_SUBMISSION_INPUT_ROOT / "plasticity3d_validation/comparison_summary.json"
+P3D_DERIVATIVE_ABLATION_SUMMARY = PAPER_SUBMISSION_INPUT_ROOT / (
+    "plasticity3d_derivative_ablation/comparison_summary.json"
 )
-JAX_FEM_BASELINE_SUMMARY = REPO_ROOT / "artifacts/raw_results/jax_fem_hyperelastic_baseline/comparison_summary.json"
+JAX_FEM_BASELINE_SUMMARY = PAPER_SUBMISSION_INPUT_ROOT / "jax_fem_hyperelastic_baseline/comparison_summary.json"
 GLOBALIZATION_METHOD_COMPARE = REPO_ROOT / "artifacts/reports/globalization_method_compare/full_summary.csv"
 DERIVATIVE_ROUTE_COMPARE = REPO_ROOT / "artifacts/reports/derivative_route_compare/full_summary.csv"
 SUPPLEMENTAL_REPORT_ROOT = REPO_ROOT / "artifacts/reports/paper_reviewer_gap_experiments"
@@ -38,13 +39,9 @@ SUPPLEMENTAL_HE_PMG = SUPPLEMENTAL_REPORT_ROOT / "full_he_pmg.csv"
 SUPPLEMENTAL_TOPOLOGY_CONSISTENCY = SUPPLEMENTAL_REPORT_ROOT / "full_topology_consistency.csv"
 SUPPLEMENTAL_GL_GLOBALIZATION = SUPPLEMENTAL_REPORT_ROOT / "full_gl_globalization.csv"
 SUPPLEMENTAL_P3D_DERIVATIVE_DEGREE = SUPPLEMENTAL_REPORT_ROOT / "full_p3d_derivative_degree.csv"
-P3D_LOCAL_LAMBDA155_SCALING = (
-    REPO_ROOT
-    / "artifacts/reports/plasticity3d_p4_l1_2_mumps_pmg_step_grad_local_karolina_scaling/local_solver_total_scaling.csv"
-)
+P3D_LOCAL_LAMBDA155_SCALING = PAPER_SUBMISSION_INPUT_ROOT / "plasticity3d_lambda155_scaling/local_solver_total_scaling.csv"
 P3D_KAROLINA_LAMBDA155_SCALING = (
-    REPO_ROOT
-    / "artifacts/reports/plasticity3d_p4_l1_2_mumps_pmg_step_grad_local_karolina_scaling/karolina_rpn16_solver_total_scaling.csv"
+    PAPER_SUBMISSION_INPUT_ROOT / "plasticity3d_lambda155_scaling/karolina_rpn16_solver_total_scaling.csv"
 )
 P3D_LAMBDA155_STOP_SUMMARY = (
     REPO_ROOT

@@ -1,0 +1,159 @@
+{
+  "layer1a": {
+    "accepted_baseline": {
+      "deviatoric_strain_relative_l2": 0.00872000570313859,
+      "displacement_relative_l2": 0.003517247,
+      "lambda_schedule": [
+        1.0,
+        1.1,
+        1.2,
+        1.3,
+        1.4,
+        1.5,
+        1.6
+      ],
+      "work_relative_difference": 3.877021e-05
+    },
+    "assets": {
+      "branch_history": "layer1a/assets/branch_work_history.pdf",
+      "deformed_boundary_compare": "layer1a/assets/deformed_boundary_compare.pdf",
+      "deviatoric_strain_slice_x_compare": "layer1a/assets/deviatoric_strain_slice_x_compare.pdf",
+      "deviatoric_strain_slice_y_compare": "layer1a/assets/deviatoric_strain_slice_y_compare.pdf",
+      "deviatoric_strain_slice_z_compare": "layer1a/assets/deviatoric_strain_slice_z_compare.pdf"
+    },
+    "final_metrics": {
+      "deviatoric_strain_relative_l2": 0.00872000570313859,
+      "displacement_relative_l2": 0.0035172474897003474,
+      "work_relative_difference": 3.877021341084643e-05
+    },
+    "kind": "exact_source_faithfulness",
+    "schedule": [
+      1.0,
+      1.1,
+      1.2000000000000002,
+      1.3000000000000003,
+      1.4000000000000004,
+      1.5000000000000004,
+      1.6
+    ],
+    "structural_checks": {
+      "force_relative_diff": 5.422233134335003e-16,
+      "free_mask_exact": false,
+      "node_map_max_abs_diff": 1.4210854715202004e-14
+    }
+  },
+  "layer1b": {
+    "assets": {
+      "source_family_history": "layer1b/assets/source_family_history.pdf"
+    },
+    "kind": "published_source_family_triangulation",
+    "notes": "Context / published source-family evidence only; not the same glued-bottom Plasticity3D case.",
+    "report_md": "external_reference/slope_stability_petsc4py/benchmarks/run_3D_hetero_seepage_SSR_comsol_capture/archive/report.md",
+    "summary": {
+      "relative_lambda_history_error": 2.144e-05,
+      "relative_omega_history_error": 0.0002887,
+      "relative_umax_history_error": 0.00319,
+      "runtime_matlab_s": 2300.903,
+      "runtime_petsc_s": 1217.168
+    }
+  },
+  "layer2": {
+    "acceptance": {
+      "critical_lambda_pass": true,
+      "endpoint_disp_pass": true,
+      "overall_pass": true,
+      "umax_curve_pass": true
+    },
+    "assets": {
+      "boundary_profile": "layer2/assets/boundary_profile.pdf",
+      "deformed_boundary_compare": "layer2/assets/deformed_boundary_compare.pdf",
+      "deviatoric_strain_slice_x_compare": "layer2/assets/deviatoric_strain_slice_x_compare.pdf",
+      "deviatoric_strain_slice_y_compare": "layer2/assets/deviatoric_strain_slice_y_compare.pdf",
+      "deviatoric_strain_slice_z_compare": "layer2/assets/deviatoric_strain_slice_z_compare.pdf",
+      "umax_curve": "layer2/assets/umax_curve.pdf"
+    },
+    "boundary_profile_relative_l2": 0.000522888151174515,
+    "critical_lambda_schedule_proxy": {
+      "maintained_surrogate": 1.55,
+      "relative_difference": 0.0,
+      "source_reference": 1.55
+    },
+    "endpoint_deviatoric_strain_relative_l2": 0.004306837919044502,
+    "endpoint_displacement_relative_l2": 0.0008299121752489587,
+    "kind": "fixed_lambda_source_operator_validation",
+    "mapping_checks": {
+      "free_mask_exact": true,
+      "node_map_max_abs_diff": 0.0
+    },
+    "rows": [
+      {
+        "deviatoric_strain_relative_l2": 6.786174646836143e-05,
+        "displacement_relative_l2": 3.80220585221741e-05,
+        "lambda_value": 1.0,
+        "maintained_energy": -3006682.6601366266,
+        "maintained_omega": 6013371.645779247,
+        "maintained_solver_success": true,
+        "maintained_u_max": 0.7283586006136415,
+        "source_energy": null,
+        "source_omega": 6013366.56400012,
+        "source_solver_success": true,
+        "source_u_max": 0.7283600405066117
+      },
+      {
+        "deviatoric_strain_relative_l2": 0.003997530227576922,
+        "displacement_relative_l2": 0.00028357206049817505,
+        "lambda_value": 1.2,
+        "maintained_energy": -3006828.930984531,
+        "maintained_omega": 6013844.582251924,
+        "maintained_solver_success": true,
+        "maintained_u_max": 0.7286122875698272,
+        "source_energy": null,
+        "source_omega": 6013831.387162806,
+        "source_solver_success": true,
+        "source_u_max": 0.7286211729570056
+      },
+      {
+        "deviatoric_strain_relative_l2": 0.002739549116436139,
+        "displacement_relative_l2": 0.00012315056390713617,
+        "lambda_value": 1.4,
+        "maintained_energy": -3008199.8784703817,
+        "maintained_omega": 6018380.952570518,
+        "maintained_solver_success": true,
+        "maintained_u_max": 0.729103149845874,
+        "source_energy": null,
+        "source_omega": 6018380.489590161,
+        "source_solver_success": true,
+        "source_u_max": 0.7291038815922296
+      },
+      {
+        "deviatoric_strain_relative_l2": 0.0004749200490821323,
+        "displacement_relative_l2": 5.593272592709448e-05,
+        "lambda_value": 1.5,
+        "maintained_energy": -3010663.533039189,
+        "maintained_omega": 6026888.322304359,
+        "maintained_solver_success": true,
+        "maintained_u_max": 0.7317031456553345,
+        "source_energy": null,
+        "source_omega": 6026888.628840682,
+        "source_solver_success": true,
+        "source_u_max": 0.7317040853392703
+      },
+      {
+        "deviatoric_strain_relative_l2": 0.004306837919044502,
+        "displacement_relative_l2": 0.0008299121752489587,
+        "lambda_value": 1.55,
+        "maintained_energy": -3012813.351194075,
+        "maintained_omega": 6034736.078768107,
+        "maintained_solver_success": true,
+        "maintained_u_max": 0.7389939631931601,
+        "source_energy": null,
+        "source_omega": 6034704.256735373,
+        "source_solver_success": true,
+        "source_u_max": 0.7389991567432647
+      }
+    ],
+    "umax_curve_relative_l2": 6.396122165278674e-06
+  },
+  "manifest_json": "artifacts/raw_results/plasticity3d_validation/validation_manifest.json",
+  "runner": "plasticity3d_validation"
+}

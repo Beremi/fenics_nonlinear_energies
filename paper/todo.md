@@ -5,11 +5,11 @@
 Not yet publishable. The manuscript is scientifically close and now better
 aligned with its evidence: major claims are scoped to repository-backed
 workflow, SOTA positioning has been refreshed, citations build cleanly, and the
-generated figure/table pipeline passes focused checks. Submission is still
-blocked by missing target-journal metadata, license/archive decisions, and
-shareable provenance gaps in several manuscript-critical artifacts. Validation
-is adequate for the narrowed claims, but the paper must not be submitted until
-the external submission metadata and archive-neutral provenance are fixed.
+generated figure/table pipeline and archive-neutral provenance gate pass against
+a curated local submission bundle. Submission is still blocked by missing
+target-journal metadata, submission declarations, and license/archive decisions.
+Validation is adequate for the narrowed claims, but the paper must not be
+submitted until the external submission metadata and citable archive are fixed.
 
 ## Review Pass Scope
 
@@ -47,6 +47,10 @@ scientific claims were introduced without supporting evidence.
 - Updated `paper/scripts/validate_paper_assets.py` so required figures and
   generated tables are derived from the TeX sources and checked against the
   figure manifest.
+- Added `paper/scripts/build_submission_bundle.py`, created
+  `artifacts/reproduction/paper_submission_2026_07_08/`, redirected
+  paper-critical figure/table provenance to that bundle, and made
+  `make -C paper publish-check` pass locally.
 - Updated `paper/scripts/generate_literature_sources.py` so the default command
   uses cached local full texts unless a required download is missing; the new
   `--refresh-downloads` flag forces a network refresh.
@@ -71,33 +75,17 @@ scientific claims were introduced without supporting evidence.
   Evidence path or citation: no `LICENSE*` or `COPYING*` file is present at
   repository depth two; `paper/sections/appendix.tex` currently says an archive
   DOI should be supplied if required.
-  Exact next action: add the chosen repository license, create the submission
+  Exact next action: add the chosen repository license, include
+  `artifacts/reproduction/paper_submission_2026_07_08/` in the submission
   release or artifact archive, mint or record its DOI if applicable, and update
   the manuscript availability statement.
-- Issue: Several manuscript-critical artifacts are not yet archive-neutral.
-  Why it blocks publishability: current provenance contains local `tmp` source
-  trees, absolute `/home/michal/...` commands, and local state paths that a
-  reviewer cannot reproduce from a clean submission archive.
-  Evidence path or citation:
-  `artifacts/raw_results/plasticity3d_validation/validation_manifest.json`,
-  `artifacts/raw_results/plasticity3d_derivative_ablation/comparison_summary.json`,
-  `artifacts/raw_results/jax_fem_hyperelastic_baseline/comparison_summary.json`,
-  and `artifacts/raw_results/jax_fem_hyperelastic_baseline/parity/*.json`.
-  Exact next action: create a submission artifact bundle under
-  `artifacts/reproduction/<submission-id>/` with relative paths, source
-  snapshot hashes, command manifests, environment metadata, and corrected
-  JAX-FEM comparison contract metadata; update paper scripts/manifests to point
-  to that bundle, then require
-  `./.venv/bin/python paper/scripts/validate_paper_assets.py --archive-neutral`
-  or `make -C paper publish-check` to pass.
 
 ## Major Revisions Needed
 
 - Complete the journal-specific front matter and declarations once the target
   venue is chosen.
-- Normalize the reproducibility archive so all paper-critical validation and
-  comparison artifacts are shareable without private `tmp` checkouts or
-  machine-local absolute paths.
+- Fold the curated submission bundle into the final release/archive and make
+  the manuscript availability statement cite that durable version.
 - Decide whether locally cached full texts under `paper/literature/fulltext/`
   should remain an ignored private audit cache or become part of a controlled
   review artifact; do not imply public availability for restricted sources.
@@ -132,8 +120,8 @@ quantities from diagnostics, Plasticity2D L6/L7 is described as fixed-work
 diagnostic evidence, the former deflated-GMRES wording is softened to
 alternative Krylov/preconditioner diagnostics, and source-family Plasticity3D
 language stays endpoint-surrogate only. The remaining claim/evidence risk is
-not wording but reproducibility provenance for artifacts that still point to
-local paths.
+final archival publication: paper-critical provenance now points to a curated
+bundle, but that bundle still needs the final release/DOI context.
 
 ## SOTA Check Outcome
 
@@ -160,14 +148,15 @@ required support for the current scoped contribution.
 - `./.venv/bin/python paper/scripts/generate_paper_tables.py`: passed.
 - `./.venv/bin/python paper/scripts/generate_paper_figures.py`: passed and
   rewrote the figure manifest.
+- `./.venv/bin/python paper/scripts/build_submission_bundle.py`: passed and
+  wrote `artifacts/reproduction/paper_submission_2026_07_08/manifest.json` with
+  source and bundle SHA256 hashes for paper-critical inputs.
 - `./.venv/bin/python paper/scripts/validate_paper_assets.py`: passed on
   2026-07-08 with 29 figures, 28 generated tables, and 42 paper-facing
   provenance-scan files checked.
 - `./.venv/bin/python paper/scripts/validate_paper_assets.py --archive-neutral`:
-  intentionally fails until the submission bundle exists. The current failure
-  reports raw-results/report manifest inputs, the external reference state,
-  absolute `/home` paths, `.venv`, `tmp/source_compare`, `NaN`, and the ignored
-  build reproducibility note.
+  passed on 2026-07-08 against the curated submission bundle.
+- `make -C paper publish-check`: passed on 2026-07-08.
 - `make -C paper pdf`: passed after the script/table/figure changes and
   produced a 29-page PDF. A later rerun after the final prose cleanup was
   terminated after `generate_paper_figures.py` stalled for more than three
@@ -185,12 +174,12 @@ required support for the current scoped contribution.
   no matches in the final build logs.
 - `git diff --check`: passed.
 
-Exact remaining blockers are submission metadata, license/archive DOI, and
-archive-neutral provenance. The archive-neutral validator now makes the last
-blocker executable and currently failing by design. The only command instability
-observed in the final rerun was the intermittent TeX/font lookup or mesh-loading
-stall in the Makefile figure target; direct asset validation and direct LaTeX
-rebuild are clean.
+Exact remaining blockers are submission metadata and license/archive DOI. The
+archive-neutral validator now passes against the local curated bundle; final
+submission still must include that bundle in a durable release/archive. The only
+command instability observed in the final rerun was the intermittent TeX/font
+lookup or mesh-loading stall in the Makefile figure target; direct asset
+validation and direct LaTeX rebuild are clean.
 
 ## Optional Future Work
 

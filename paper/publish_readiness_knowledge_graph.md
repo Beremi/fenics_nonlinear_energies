@@ -377,7 +377,10 @@ MATLAB literature only when there is source-backed evidence.
   validator were clean. The full figure-generation script was interrupted in
   the known mesh/TeX-helper stall, so binary figure churn from that attempted
   regeneration remains unstaged unless a later chunk intentionally refreshes
-  those assets.
+  those assets. Current submission-bundle chunk did not intentionally refresh
+  figure binaries or the rendered PDF; it redirected paper-critical figure
+  manifest inputs to the curated submission bundle and revalidated the existing
+  generated surface.
 - `REPRO`: reproducibility and submission readiness.
   Known blockers from `paper/todo.md`: target journal/template/declarations,
   repository license/archive DOI, and archive-neutral provenance for critical
@@ -401,7 +404,17 @@ MATLAB literature only when there is source-backed evidence.
   on the manuscript-facing surface; `--archive-neutral` intentionally fails on
   the remaining raw-results/report inputs, the external reference state,
   `/home`, `.venv`, `tmp/source_compare`, `NaN`, and the ignored build
-  reproducibility note until a real submission bundle exists.
+  reproducibility note until a real submission bundle exists. Current
+  submission-bundle chunk creates the curated bundle at
+  `artifacts/reproduction/paper_submission_2026_07_08/`, copies the
+  paper-critical JSON, CSV, `.npz`, and `.mat` inputs, records source and bundle
+  SHA256 hashes, rewrites local paths to archive-neutral references, and writes
+  non-finite JSON numbers as `null`. Paper figure and table scripts now read
+  the paper-critical validation/comparison/scaling inputs from this bundle.
+  The default asset validator, `--archive-neutral`, and `make publish-check`
+  now pass for the paper-facing figure/table provenance surface. Remaining
+  submission blockers are target venue metadata/declarations, repository
+  license, and a permanent archival release or DOI.
 
 ## Evidence Nodes
 
@@ -714,6 +727,18 @@ MATLAB literature only when there is source-backed evidence.
   concrete archive-neutral failures. Remaining layout polish: page 30 still has
   a blank lower half from forced Plasticity3D result floats, and dense tables
   remain template-fragile until a target class is chosen.
+- `Archive bundle input audit` (`Erdos-current`): completed. Findings
+  addressed in the current submission-bundle chunk: the minimal paper-critical
+  bundle includes Plasticity3D validation JSON plus source and maintained branch
+  summaries, the source `.mat` state, Plasticity3D derivative comparison,
+  lambda=1.55 scaling CSVs, and JAX-FEM comparison summaries plus terminal
+  `.npz` states; binary inputs are hashed and copied byte-for-byte, while
+  non-finite source JSON values are normalized to `null` in the sanitized
+  bundle.
+- `Artifact git hygiene audit` (`Boole-current`): completed. Recommendation
+  followed: keep the global `artifacts/` ignore rule intact and force-add only
+  the narrow curated submission bundle rather than unignoring broad artifact
+  trees or staging unrelated generated outputs.
 
 ## First Edit Backlog
 
