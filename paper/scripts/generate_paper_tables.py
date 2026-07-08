@@ -32,12 +32,12 @@ P3D_DERIVATIVE_ABLATION_SUMMARY = (
 JAX_FEM_BASELINE_SUMMARY = REPO_ROOT / "artifacts/raw_results/jax_fem_hyperelastic_baseline/comparison_summary.json"
 GLOBALIZATION_METHOD_COMPARE = REPO_ROOT / "artifacts/reports/globalization_method_compare/full_summary.csv"
 DERIVATIVE_ROUTE_COMPARE = REPO_ROOT / "artifacts/reports/derivative_route_compare/full_summary.csv"
-REVIEWER_GAP_ROOT = REPO_ROOT / "artifacts/reports/paper_reviewer_gap_experiments"
-REVIEWER_HE_DISTRIBUTION = REVIEWER_GAP_ROOT / "full_he_distribution.csv"
-REVIEWER_HE_PMG = REVIEWER_GAP_ROOT / "full_he_pmg.csv"
-REVIEWER_TOPOLOGY_CONSISTENCY = REVIEWER_GAP_ROOT / "full_topology_consistency.csv"
-REVIEWER_GL_GLOBALIZATION = REVIEWER_GAP_ROOT / "full_gl_globalization.csv"
-REVIEWER_P3D_DERIVATIVE_DEGREE = REVIEWER_GAP_ROOT / "full_p3d_derivative_degree.csv"
+SUPPLEMENTAL_REPORT_ROOT = REPO_ROOT / "artifacts/reports/paper_reviewer_gap_experiments"
+SUPPLEMENTAL_HE_DISTRIBUTION = SUPPLEMENTAL_REPORT_ROOT / "full_he_distribution.csv"
+SUPPLEMENTAL_HE_PMG = SUPPLEMENTAL_REPORT_ROOT / "full_he_pmg.csv"
+SUPPLEMENTAL_TOPOLOGY_CONSISTENCY = SUPPLEMENTAL_REPORT_ROOT / "full_topology_consistency.csv"
+SUPPLEMENTAL_GL_GLOBALIZATION = SUPPLEMENTAL_REPORT_ROOT / "full_gl_globalization.csv"
+SUPPLEMENTAL_P3D_DERIVATIVE_DEGREE = SUPPLEMENTAL_REPORT_ROOT / "full_p3d_derivative_degree.csv"
 P3D_LOCAL_LAMBDA155_SCALING = (
     REPO_ROOT
     / "artifacts/reports/plasticity3d_p4_l1_2_mumps_pmg_step_grad_local_karolina_scaling/local_solver_total_scaling.csv"
@@ -493,7 +493,7 @@ def derivative_route_rows(path: Path = DERIVATIVE_ROUTE_COMPARE) -> list[dict[st
     return rows
 
 
-def reviewer_he_distribution_rows(path: Path = REVIEWER_HE_DISTRIBUTION) -> list[dict[str, str]]:
+def supplemental_he_distribution_rows(path: Path = SUPPLEMENTAL_HE_DISTRIBUTION) -> list[dict[str, str]]:
     rows = read_csv_rows(path)
     rows.sort(
         key=lambda row: (
@@ -506,26 +506,26 @@ def reviewer_he_distribution_rows(path: Path = REVIEWER_HE_DISTRIBUTION) -> list
     return rows
 
 
-def reviewer_he_pmg_rows(path: Path = REVIEWER_HE_PMG) -> list[dict[str, str]]:
+def supplemental_he_pmg_rows(path: Path = SUPPLEMENTAL_HE_PMG) -> list[dict[str, str]]:
     rows = read_csv_rows(path)
     order = {key: index for index, key in enumerate(REVIEWER_HE_PMG_LABELS)}
     rows.sort(key=lambda row: order.get(row.get("candidate", ""), 10**6))
     return rows
 
 
-def reviewer_topology_consistency_rows(path: Path = REVIEWER_TOPOLOGY_CONSISTENCY) -> list[dict[str, str]]:
+def supplemental_topology_consistency_rows(path: Path = SUPPLEMENTAL_TOPOLOGY_CONSISTENCY) -> list[dict[str, str]]:
     rows = read_csv_rows(path)
     rows.sort(key=lambda row: int(float(row.get("nprocs") or 0)))
     return rows
 
 
-def reviewer_gl_globalization_rows(path: Path = REVIEWER_GL_GLOBALIZATION) -> list[dict[str, str]]:
+def supplemental_gl_globalization_rows(path: Path = SUPPLEMENTAL_GL_GLOBALIZATION) -> list[dict[str, str]]:
     rows = read_csv_rows(path)
     rows.sort(key=lambda row: GLOBALIZATION_METHOD_ORDER.get(row.get("method", ""), 10**6))
     return rows
 
 
-def reviewer_p3d_derivative_degree_rows(path: Path = REVIEWER_P3D_DERIVATIVE_DEGREE) -> list[dict[str, str]]:
+def supplemental_p3d_derivative_degree_rows(path: Path = SUPPLEMENTAL_P3D_DERIVATIVE_DEGREE) -> list[dict[str, str]]:
     rows = read_csv_rows(path)
     route_order = {key: index for index, key in enumerate(REVIEWER_P3D_ROUTE_LABELS)}
     rows.sort(
@@ -770,11 +770,11 @@ def main() -> None:
     jax_fem_baseline = read_json(JAX_FEM_BASELINE_SUMMARY)
     globalization_rows = globalization_method_rows()
     derivative_rows = derivative_route_rows()
-    reviewer_he_distribution = reviewer_he_distribution_rows()
-    reviewer_he_pmg = reviewer_he_pmg_rows()
-    reviewer_topology = reviewer_topology_consistency_rows()
-    reviewer_gl = reviewer_gl_globalization_rows()
-    reviewer_p3d_degree = reviewer_p3d_derivative_degree_rows()
+    supplemental_he_distribution = supplemental_he_distribution_rows()
+    supplemental_he_pmg = supplemental_he_pmg_rows()
+    supplemental_topology = supplemental_topology_consistency_rows()
+    supplemental_gl = supplemental_gl_globalization_rows()
+    supplemental_p3d_degree = supplemental_p3d_derivative_degree_rows()
 
     local_scaling_rows = find_rows(local_rows, LOCAL_IMPL)
     mixed_local_rows = find_rows(mixed_rows, LOCAL_IMPL)
@@ -839,7 +839,7 @@ def main() -> None:
     write_table(
         "implementation_capability_matrix.tex",
         "@{}l c c c " + pcol(r"0.38\textwidth") + "@{}",
-        ["Family", "FEniCS", "pure JAX", "JAX+PETSc", "Higher-order / advanced AD"],
+        ["Family", "FEniCS", "pure JAX", "JAX+PETSc", "Advanced solver / derivative features"],
         [
             ["$p$-Laplace", "yes", "yes", "yes", "element AD and local colored SFD"],
             ["Ginzburg--Landau", "yes", "no", "yes", "element AD and local colored SFD"],
@@ -1123,7 +1123,7 @@ def main() -> None:
     )
 
     write_table_star(
-        "reviewer_he_distribution.tex",
+        "hyperelasticity_distribution_memory.tex",
         fill_spec("l c c c c c c c c c c"),
         [
             "Probe",
@@ -1152,12 +1152,12 @@ def main() -> None:
                 _fmt_optional_gib(row.get("tracked_total_gib_total", "")),
                 _fmt_optional_float(row.get("overlap_owned_ratio", ""), 2),
             ]
-            for row in reviewer_he_distribution
+            for row in supplemental_he_distribution
         ],
     )
 
     write_table_star(
-        "reviewer_he_pmg.tex",
+        "hyperelasticity_pmg_sensitivity.tex",
         fill_spec("l c c c c c c c c c"),
         [
             "Precond.",
@@ -1184,12 +1184,12 @@ def main() -> None:
                 _fmt_he_coarse(row),
                 _fmt_optional_energy(row.get("energy", "")),
             ]
-            for row in reviewer_he_pmg
+            for row in supplemental_he_pmg
         ],
     )
 
     write_table_star(
-        "reviewer_gl_globalization.tex",
+        "ginzburg_landau_globalization_fixed_budget.tex",
         fill_spec("l c c c c c c c c"),
         [
             "Method",
@@ -1214,12 +1214,12 @@ def main() -> None:
                 _fmt_optional_wall(row.get("solve_time_s", "")),
                 _fmt_optional_energy(row.get("energy", "")),
             ]
-            for row in reviewer_gl
+            for row in supplemental_gl
         ],
     )
 
     write_table_star(
-        "reviewer_topology_consistency.tex",
+        "topology_rank_consistency.tex",
         fill_spec("c c c c c c c c c"),
         [
             "Ranks",
@@ -1244,12 +1244,12 @@ def main() -> None:
                 _fmt_optional_sci(row.get("compliance_rel_diff_vs_np1", "")),
                 _fmt_optional_sci(row.get("density_rel_l2_vs_np1", "")),
             ]
-            for row in reviewer_topology
+            for row in supplemental_topology
         ],
     )
 
     write_table_star(
-        "reviewer_p3d_derivative_degree.tex",
+        "plasticity3d_derivative_degree.tex",
         fill_spec("c l c c c c c c c c c"),
         [
             "Element",
@@ -1282,7 +1282,7 @@ def main() -> None:
                     else "--"
                 ),
             ]
-            for row in reviewer_p3d_degree
+            for row in supplemental_p3d_degree
         ],
     )
 
@@ -1726,12 +1726,12 @@ def main() -> None:
             }
             for row in he_karolina_rows
         ],
-        "reviewer_gap": {
-            "he_distribution_rows": len(reviewer_he_distribution),
-            "he_pmg_rows": len(reviewer_he_pmg),
-            "gl_globalization_rows": len(reviewer_gl),
-            "topology_consistency_rows": len(reviewer_topology),
-            "p3d_derivative_degree_rows": len(reviewer_p3d_degree),
+        "supplemental_solver_evidence": {
+            "he_distribution_rows": len(supplemental_he_distribution),
+            "he_pmg_rows": len(supplemental_he_pmg),
+            "gl_globalization_rows": len(supplemental_gl),
+            "topology_consistency_rows": len(supplemental_topology),
+            "p3d_derivative_degree_rows": len(supplemental_p3d_degree),
         },
     }
     write_json(REPO_ROOT / "paper/build/tables_summary.json", payload)

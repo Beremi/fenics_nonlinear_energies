@@ -1,9 +1,9 @@
-This paper presented \repo{} as a computational toolset for nonlinear
-finite-element solves and optimization with a mainline \jaxpetsc{} distributed path. The
-central contribution is not a new constitutive theory or a universal
-differentiable-PDE abstraction, but an implementation pattern in which local JAX
-differentiation, sparse PETSc nonlinear solves, and multiple second-order routes
-are kept together across a heterogeneous benchmark suite.
+This paper presented a computational toolset for nonlinear finite-element solves
+and optimization with a mainline \jaxpetsc{} distributed path. The central
+contribution is not a new constitutive theory or a universal differentiable-PDE
+abstraction, but an implementation pattern in which local JAX differentiation,
+sparse PETSc nonlinear solves, and multiple second-order routes are kept
+together across a heterogeneous benchmark suite.
 
 The Plasticity3D evidence is intentionally narrower than a broad mechanics
 claim. For the tested cases, the endpoint surrogate agrees closely with the
@@ -26,7 +26,7 @@ Future work should follow the boundaries made visible by these results:
         incremental-history reference;
   \item add more agreement-focused external baselines on tightly matched problem
         contracts;
-  \item continue reducing linear-setup and multigrid costs in the flagship 3D
+  \item continue reducing linear-setup and multigrid costs in the largest 3D
         mechanics workflows.
 \end{itemize}
 

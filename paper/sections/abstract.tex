@@ -3,9 +3,9 @@ Large nonlinear finite-element energy problems couple several numerical
 difficulties: local energies and constitutive laws need reliable derivatives,
 Newton-type methods need robust globalization, and distributed runs need sparse
 assembly, Krylov solvers, and preconditioners that match the mechanics of the
-problem. We present \repo{} as a computational toolset for studying these
-choices together in nonlinear finite-element solves and energy-based topology
-optimization. The mainline realization is a \jaxpetsc{} stack in which local
+problem. We present a computational toolset for studying these choices together
+in nonlinear finite-element solves and energy-based topology optimization. The
+mainline realization is a \jaxpetsc{} stack in which local
 energies and constitutive laws are written in JAX, while sparse assembly,
 nonlinear globalization, Krylov linear solves, and preconditioning are handled
 by PETSc. The same benchmark suite also includes \purejax{} references and

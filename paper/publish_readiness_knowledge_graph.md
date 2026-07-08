@@ -34,6 +34,12 @@ MATLAB/Octave literature only when there is source-backed evidence.
   Optimization, 2025, DOI `10.1137/25M1723177`. Useful structure:
   application motivation, abstract assumptions, interpretation remarks, and a
   numerical 3D slope-stability example after the mathematical framework.
+- Additional SIOPT style cue:
+  Grapiglia and Nesterov, "Adaptive Third-Order Methods for Composite Convex
+  Optimization," SIAM Journal on Optimization, 2023, DOI `10.1137/22M1480872`.
+  Useful structure: problem statement, method variants, numerical experiments,
+  discussion, and conclusion, with numerical evidence interpreted after the
+  algorithmic contract is clear.
 - SIOPT journal scope cue: SIAM describes SIOPT as covering theory and practice
   of optimization; contributions may emphasize algorithms, software,
   computational practice, applications, or links between these subjects.
@@ -46,7 +52,11 @@ MATLAB/Octave literature only when there is source-backed evidence.
   sparse assembly, and solver policy. The abstract now opens from the nonlinear
   FEM bottleneck, avoids internal campaign terms such as locked, promoted, and
   fairness-gated, and no longer attributes the historical lambda=1.0
-  Plasticity3D speedup to the converged lambda=1.55 scaling sweep.
+  Plasticity3D speedup to the converged lambda=1.55 scaling sweep. Current
+  prose chunk removes the remaining `\repo{}`-centered framing from the
+  abstract, introduction, related work, discussion, and conclusion, so the
+  paper-facing object is the computational toolset rather than the repository
+  name.
 - `INTRO`: positioning and contributions.
   Status: now opens with the nonlinear FEM computational bottleneck and includes
   an explicit contribution block with solver, derivative/assembly, and
@@ -71,7 +81,10 @@ MATLAB/Octave literature only when there is source-backed evidence.
   instead of maintained or production-path wording. Plasticity3D PMG wording now
   separates Hypre-coarse historical/endpoint probes from the MUMPS-backed
   redundant-LU profile used by the P2 globalization/derivative rows and the
-  converged P4(L2), lambda=1.55 scaling run.
+  converged P4(L2), lambda=1.55 scaling run. Current chunk also separates
+  Hyperelasticity's GAMG profile from the larger PMG/MUMPS fixed-work profile
+  and renames the capability-matrix feature column so solver policy is not
+  mislabeled as AD only.
 - `BENCHMARKS`: mathematical problem coverage.
   Families: p-Laplace, Ginzburg--Landau, Hyperelasticity, Plasticity2D,
   Plasticity3D, Topology.
@@ -106,7 +119,17 @@ MATLAB/Octave literature only when there is source-backed evidence.
   timing evidence and separates it from the MUMPS-backed PMG convergence/scaling
   evidence at lambda=1.55. The converged P4(L2), lambda=1.55 scaling table now
   includes Newton iterations and the gradient-to-target ratio, so the stop
-  contract is visible next to the final gradient values.
+  contract is visible next to the final gradient values. Current chunk defines
+  the Plasticity3D derivative-ablation observables `\omega` and `u_{\max}`,
+  states the lambda=1.55 linear tolerance as the PETSc relative KSP residual
+  tolerance, and marks the Hyperelasticity PMG table as fixed-work
+  solver-policy evidence rather than an endpoint-accuracy ranking.
+- `DISCUSSION_CONCLUSION`: interpretation and scope.
+  Current prose states the toolset lesson in paper-facing terms: automatic
+  differentiation alone does not determine large nonlinear FEM behavior;
+  globalization, sparse ownership, overlap replication, coarse-level policy,
+  preconditioning, and surrogate-model interpretation are part of the numerical
+  method.
 - `FIGURES_TABLES`: visual and layout quality.
   Current fact: `paper/build/main.pdf` is 36 pages, A4, 10 pt article,
   text width about 7.09 in. Many floats use `[H]`, so placement is highly manual.
@@ -125,13 +148,21 @@ MATLAB/Octave literature only when there is source-backed evidence.
   Current chunk: the Plasticity3D lambda=1.55 scaling table uses scriptsize and
   adds Newton and gradient-target columns. Rendered pages 29--30 remain within
   the text block, with no clipping or table overlap.
+  Current chunk: paper-facing generated table files and labels no longer use
+  `reviewer_*` names; they were renamed to scientific names for fixed-budget
+  Ginzburg--Landau globalization, Hyperelasticity distribution/PMG evidence,
+  Plasticity3D derivative-degree evidence, and topology rank consistency. The
+  Plasticity3D convergence figure was regenerated taller with more legend
+  clearance after the layout subagent found bottom-label crowding on page 17.
 - `REPRO`: reproducibility and submission readiness.
   Known blockers from `paper/todo.md`: target journal/template/declarations,
   repository license/archive DOI, and archive-neutral provenance for critical
   artifacts. The JAX-FEM baseline runner now writes strict JSON with `null`
   warmup timings and `allow_nan=False`; ignored local baseline metadata was
   corrected in the workspace, but archive-neutral submission bundles remain
-  outstanding.
+  outstanding. Current subagent audit confirmed the same remaining blockers:
+  target venue/template and declarations, repository license plus archival DOI,
+  and archive-neutral provenance for paper-critical artifacts.
 
 ## Evidence Nodes
 
@@ -148,11 +179,14 @@ MATLAB/Octave literature only when there is source-backed evidence.
   PETSc Krylov, Hypre, GAMG, PMG, MUMPS/redundant coarse solves appear across
   implementation and results. Plasticity3D now distinguishes Hypre-coarse and
   MUMPS-backed PMG profiles in implementation and results; the broader
-  linear-solver narrative still needs final synthesis before submission.
+  linear-solver narrative now states that preconditioner policy, coarse solves,
+  and fixed-work diagnostics are part of the numerical method rather than
+  implementation detail.
 - `E4`: Parallel assembly.
   PETSc ownership, ghost/overlap layouts, owned-row sparse insertion, and
-  rank-local assembly are present. Needs cleaner connection to final scaling
-  evidence.
+  rank-local assembly are present. Current discussion and Plasticity3D
+  partitioning prose connect ownership and overlap replication to the scaling
+  interpretation.
 - `E5`: Comparator surface.
   Pure JAX and FEniCS references exist where implemented; JAX-FEM exists for
   hyperelasticity; Plasticity3D source-family comparisons are narrow; topology
@@ -197,6 +231,21 @@ MATLAB/Octave literature only when there is source-backed evidence.
   scaling table now shows Newton iterations and gradient-target ratio, and
   "flagship" wording was removed from the P4(L1), lambda=1.5 derivative
   ablation.
+- `Solver/assembly narrative` (`Godel`): completed. Findings addressed in the
+  current chunk: removed remaining flagship wording, separated Hyperelasticity
+  GAMG and PMG/MUMPS profiles, defined Plasticity3D derivative-ablation
+  observables, scoped Hyperelasticity PMG energy as fixed-work evidence, stated
+  the Plasticity3D KSP tolerance as a PETSc relative residual tolerance, and
+  added a source-assembly/mainline scope sentence.
+- `Reproducibility/submission` (`Epicurus`): completed. Findings partly
+  addressed: source-submission `reviewer_*` table names were removed. Remaining
+  blockers are process-level: archive-neutral provenance, venue/declarations,
+  license/archive DOI, and a provenance validator that rejects local paths.
+- `Layout/narrow-template` (`Copernicus`): completed. Findings partly
+  addressed: the current Plasticity3D convergence figure legend crowding was
+  fixed by increasing figure height and legend clearance. Remaining risks:
+  wide generated tables and fixed-size TikZ diagrams may need a dedicated
+  narrow-template robustness pass after the target venue is chosen.
 - `Evidence/provenance` (`Wegener`): completed. Key findings addressed:
   JAX-FEM comparison metadata no longer asserts constitutive-law identity,
   strict JSON output is enforced for the runner, and Layer 1A wording no longer

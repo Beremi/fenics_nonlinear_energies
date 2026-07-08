@@ -9,7 +9,7 @@ computational toolset for this class of problems should therefore expose not
 only a modeling interface, but also the derivative route, assembly layout,
 nonlinear solver policy, and preconditioner design.
 
-This paper studies that design point through \repo{}, an implemented toolset for
+This paper studies that design point through an implemented toolset for
 nonlinear finite-element energy solves and optimization. The mainline path is a
 solver-centric \jaxpetsc{} stack: local energies and constitutive laws are
 written in JAX, while PETSc owns sparse vectors and matrices, nonlinear
@@ -102,9 +102,9 @@ comparison using conservative, source-backed descriptors.
 Three comparisons matter most for the narrative that follows. First, relative to
 high-level FEM and adjoint ecosystems
 \citep{logg2012fenicsbook,baratta2025dolfinx,farrell2013dolfinadjoint,mitusch2019pyadjoint,blauth2023cashocsv2},
-\repo{} moves the center of gravity from PDE-level adjoint-centered automation
-toward distributed nonlinear solve policy and multiple second-order routes
-inside the same sparse solver stack. Second, relative to JAX-native mechanics and
+the present toolset moves the center of gravity from PDE-level adjoint-centered
+automation toward distributed nonlinear solve policy and multiple second-order
+routes inside the same sparse solver stack. Second, relative to JAX-native mechanics and
 differentiable-simulation frameworks
 \citep{xue2023jaxfem,xue2026implicit,bode2025autopdex,hu2025jaxcpfem}, the main
 distinction is that the implementation here centers PETSc-owned sparse MPI data
@@ -119,10 +119,10 @@ into benchmarked PETSc sparse assembly, Krylov solves, and nonlinear
 globalization for benchmark families that include topology optimization and 3D
 Mohr--Coulomb-type mechanics.
 
-The resulting positioning statement is intentionally modest. \repo{} is not
+The resulting positioning statement is intentionally modest. The toolset is not
 presented as a general differentiable-PDE platform, nor as a replacement for the
 high-level FEM and adjoint ecosystems cited above. It is presented as a
-\jaxpetsc{} toolset for distributed nonlinear energy minimization and
+\jaxpetsc{} workflow for distributed nonlinear energy minimization and
 equilibrium solves in which derivative fidelity, sparse assembly, nonlinear
 globalization, and preconditioner policy are all part of the experimental design
 rather than merely implementation detail.

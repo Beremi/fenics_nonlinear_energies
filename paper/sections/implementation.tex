@@ -80,7 +80,9 @@ because the linear systems are qualitatively different:
   \item \textbf{Ginzburg--Landau:} GMRES with Hypre, reflecting the more
         indefinite linearization.
   \item \textbf{Hyperelasticity:} trust-region outer iterations with
-        GAMG-preconditioned Krylov solves.
+        GAMG-preconditioned Krylov solves in the main benchmark and
+        globalization rows, and same-hierarchy PMG with redundant LU/MUMPS
+        coarse solves in the larger fixed-work scaling profile.
   \item \textbf{Plasticity (2D):} deep-tail multigrid hierarchies whose
         bottlenecks are dominated by the top smoother and repeated Krylov
         work.
@@ -133,8 +135,9 @@ owned sparse insertion in the hot loop.
   \centering
   \input{tables/generated/implementation_capability_matrix.tex}
   \caption{Implementation capability matrix across the benchmark
-  families. ``Higher-order / advanced AD'' summarizes the derivative choices
-  that are scientifically interesting in each family.}
+  families. ``Advanced solver / derivative features'' summarizes the derivative
+  routes, nonlinear policies, or coupled solver features that are scientifically
+  interesting in each family.}
   \label{tab:capability-matrix}
 \end{table}
 

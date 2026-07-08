@@ -1103,7 +1103,7 @@ def _generate_plasticity3d_convergence_figure(layout: dict[str, float]) -> str:
         "L1_2_3": "-.",
         "L1_2_3_4": ":",
     }
-    fig, axes = plt.subplots(2, 1, figsize=paper_figure_size(layout, preset="medium", height_ratio=0.58), sharex=True)
+    fig, axes = plt.subplots(2, 1, figsize=paper_figure_size(layout, preset="medium", height_ratio=0.68), sharex=True)
     legend_handles: list[object] = []
     legend_labels: list[str] = []
     for row in study_rows:
@@ -1154,14 +1154,14 @@ def _generate_plasticity3d_convergence_figure(layout: dict[str, float]) -> str:
         legend_handles,
         legend_labels,
         loc="lower center",
-        bbox_to_anchor=(0.5, 0.01),
+        bbox_to_anchor=(0.5, 0.035),
         ncol=3,
         frameon=False,
         fontsize=7.5,
         handlelength=2.8,
         columnspacing=1.1,
     )
-    fig.subplots_adjust(left=0.14, right=0.98, bottom=0.22, top=0.92, hspace=0.10)
+    fig.subplots_adjust(left=0.14, right=0.98, bottom=0.30, top=0.92, hspace=0.10)
     conv_out = FIGURES_ROOT / "plasticity3d_convergence.pdf"
     save_pdf_and_png(fig, conv_out)
     plt.close(fig)

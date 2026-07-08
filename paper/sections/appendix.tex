@@ -35,12 +35,16 @@ same PMG solver stack, although the gap narrows at higher rank counts. Second,
 the fixed source-operator PMG profile is not the preferred default in the
 present study: it may appear favorable on some rows, but it does more nonlinear
 and Krylov work and converges less consistently across the reported runs.
+The rank-local constitutive-AD path remains the mainline because it uses the
+same local differentiable formulation as the derivative-route and converged
+scaling studies; the source-assembly rows are retained to expose solver-policy
+sensitivity on matched discrete problems.
 
-\subsection{Source continuation evidence}
+\subsection{Plasticity2D Source Continuation Evidence}
 
-The source-continuation comparison is not the mainline method of the paper,
-but it is still useful because it isolates how much preconditioner policy
-matters even when the outer continuation logic is held fixed.
+For Plasticity2D, the source-continuation comparison is not the mainline method
+of the paper, but it is still useful because it isolates how much preconditioner
+policy matters even when the outer continuation logic is held fixed.
 
 \begin{table}[H]
   \centering
