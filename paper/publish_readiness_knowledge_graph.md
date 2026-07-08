@@ -71,13 +71,17 @@ MATLAB/Octave literature only when there is source-backed evidence.
   studies, hyperelastic and Plasticity3D solver diagnostics, topology scaling.
   Required edit: add a compact synthesis of what each result block establishes.
 - `FIGURES_TABLES`: visual and layout quality.
-  Current fact: `paper/build/main.pdf` is 34 pages, A4, 10 pt article,
+  Current fact: `paper/build/main.pdf` is 35 pages, A4, 10 pt article,
   text width about 7.09 in. Many floats use `[H]`, so placement is highly manual.
   Figure/layout subagent audit: assets are technically clean at current A4
   width, with embedded fonts and 600 ppi raster layers, but dense 3D
   multi-panel Plasticity3D figures and wide tables are not robust to a narrower
   journal class. High-value next step: split or simplify the worst Plasticity3D
   figures/tables before final template submission.
+  Layout chunk: the Plasticity3D validation ladder now uses stacked medium-width
+  panels instead of cramped side-by-side subfigures. Rendered pages 20--21 show
+  readable panel titles, colorbars, axes, captions, and a clean transition to
+  the validation summary table and results section.
 - `REPRO`: reproducibility and submission readiness.
   Known blockers from `paper/todo.md`: target journal/template/declarations,
   repository license/archive DOI, and archive-neutral provenance for critical
@@ -141,4 +145,5 @@ MATLAB/Octave literature only when there is source-backed evidence.
 5. Add a results synthesis paragraph/table using existing generated assets if
    appropriate.
 6. Audit figures for physical size and font consistency after the narrative
-   structure stabilizes. Initial audit done; implementation remains.
+   structure stabilizes. Initial audit done; Plasticity3D validation ladder
+   repaired and visually checked on rendered pages 20--21.

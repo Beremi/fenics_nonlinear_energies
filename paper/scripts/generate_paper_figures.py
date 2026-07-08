@@ -1605,15 +1605,15 @@ def _plot_plasticity3d_validation_surface_compare(
     main_norm = Normalize(vmin=0.0, vmax=max(main_vmax, 1.0e-12))
     diff_norm = Normalize(vmin=0.0, vmax=diff_vmax)
 
-    fig = plt.figure(figsize=paper_figure_size(layout, preset="subfigure", height_ratio=0.72))
+    fig = plt.figure(figsize=paper_figure_size(layout, preset="medium", height_ratio=0.42))
     gs = fig.add_gridspec(
         2,
         3,
         height_ratios=[1.0, 0.10],
-        left=0.00,
+        left=0.01,
         right=0.99,
-        bottom=0.18,
-        top=0.92,
+        bottom=0.15,
+        top=0.93,
         wspace=0.02,
         hspace=0.02,
     )
@@ -1642,8 +1642,8 @@ def _plot_plasticity3d_validation_surface_compare(
         cmap_name="cividis",
         norm=diff_norm,
     )
-    for ax, title in zip(axes, ("source", "maintained", r"$|\Delta \|u\||$"), strict=True):
-        ax.set_title(title, pad=1.5, fontsize=7.0)
+    for ax, title in zip(axes, ("source", "JAX+PETSc", r"$|\Delta \|u\||$"), strict=True):
+        ax.set_title(title, pad=1.8, fontsize=8.0)
 
     cax_main = fig.add_subplot(gs[1, :2])
     cax_diff = fig.add_subplot(gs[1, 2])
@@ -1694,7 +1694,7 @@ def generate_plasticity3d_validation_layer1a_boundary(layout: dict[str, float]) 
 
 
 def generate_plasticity3d_validation_umax_curve(layout: dict[str, float]) -> str:
-    plt = configure_paper_matplotlib(font_size=8.0)
+    plt = configure_paper_matplotlib(font_size=9.0)
     summary = _read_json(P3D_VALIDATION_ROOT / "comparison_summary.json")
     rows = [dict(row) for row in dict(summary["layer2"])["rows"]]
     x = np.asarray([float(row["lambda_value"]) for row in rows], dtype=np.float64)
@@ -1702,9 +1702,9 @@ def generate_plasticity3d_validation_umax_curve(layout: dict[str, float]) -> str
     maintained = np.asarray([float(row["maintained_u_max"]) for row in rows], dtype=np.float64)
     rel_l2 = float(dict(summary["layer2"])["umax_curve_relative_l2"])
 
-    fig, ax = plt.subplots(figsize=paper_figure_size(layout, preset="subfigure", height_ratio=0.72))
-    ax.plot(x, source, marker="o", linewidth=1.6, markersize=4.0, color="#111111", label="source")
-    ax.plot(x, maintained, marker="s", linewidth=1.4, markersize=3.8, color="#777777", linestyle="--", label="maintained")
+    fig, ax = plt.subplots(figsize=paper_figure_size(layout, preset="medium", height_ratio=0.42))
+    ax.plot(x, source, marker="o", linewidth=1.8, markersize=4.5, color="#111111", label="source")
+    ax.plot(x, maintained, marker="s", linewidth=1.6, markersize=4.3, color="#777777", linestyle="--", label="JAX+PETSc")
     ax.set_xlabel(r"$\lambda_{\mathrm{sr}}$")
     ax.set_ylabel(r"$u_{\max}$")
     ax.grid(True, alpha=0.25)
@@ -1716,9 +1716,9 @@ def generate_plasticity3d_validation_umax_curve(layout: dict[str, float]) -> str
         transform=ax.transAxes,
         ha="right",
         va="bottom",
-        fontsize=7.0,
+        fontsize=8.0,
     )
-    fig.subplots_adjust(left=0.20, right=0.97, bottom=0.23, top=0.95)
+    fig.subplots_adjust(left=0.13, right=0.98, bottom=0.17, top=0.96)
     out = FIGURES_ROOT / "plasticity3d_validation_umax_curve.pdf"
     save_pdf_and_png(fig, out, png_dpi=260)
     plt.close(fig)
