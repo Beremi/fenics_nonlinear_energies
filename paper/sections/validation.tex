@@ -3,7 +3,7 @@
 This section separates validation and external-comparison evidence from the
 performance results that follow. The distinction is important because the
 paper uses different levels of evidence for different claims: Hyperelasticity
-has a narrow external companion comparison against JAX-FEM, while
+has a narrow external comparison against JAX-FEM, while
 \plasticitythree{} is evaluated through a reference-model endpoint-surrogate
 comparison.
 
@@ -29,17 +29,17 @@ reference norms. Scalar work and energy differences use the same
 reference-denominator convention; the hyperelastic energy post-comparison uses
 an absolute denominator floor of $10^{-12}$.
 
-The hyperelastic companion comparison uses a 5\% acceptance threshold for the
+The hyperelastic JAX-FEM comparison uses a 5\% acceptance threshold for the
 final energy, full-field displacement, centerline displacement, and
-$u_{\max}$-curve differences. The \plasticitythree{} Layer 2 acceptance gate
-uses three thresholds from its validation manifest: at most $0.03$ relative
+$u_{\max}$-curve differences. The \plasticitythree{} Layer 2 acceptance
+criterion uses three thresholds from its validation manifest: at most $0.03$ relative
 difference in the highest successful load factor, at most $0.05$ relative
 $L^2$ difference for the $u_{\max}(\lambda_{\mathrm{sr}})$ curve, and at most $0.10$
 relative $L^2$ difference for the endpoint displacement. The deviatoric-strain
 and boundary-profile differences in \Cref{tab:plasticity3d-validation} are
-diagnostics, not acceptance gates.
+diagnostics, not acceptance criteria.
 
-\subsection{Hyperelasticity Companion Comparison}
+\subsection{Hyperelasticity External Comparison}
 \label{sec:val-hyperelasticity}
 
 The hyperelasticity energy is defined in \Cref{sec:bench-he}. The external
@@ -49,9 +49,9 @@ level-1 mesh and the same right-face $x$-translation schedule
 $d=(0.0025,0.005,0.0075,0.01)$, then post-compare both terminal states with
 the energy from
 \cref{eq:hyperelasticity-energy}. This supports a solution-level comparison
-for this hyperelastic problem only. It should not be read as a plasticity
-validation, a broad software comparison, or constitutive-law identity between
-the two implementations: the JAX-FEM companion implementation uses a
+for this hyperelastic problem only. The comparison is neither a plasticity
+validation nor a broad software ranking, and it does not assert constitutive-law
+identity between the two implementations: the JAX-FEM implementation uses a
 logarithmic-$J$ Piola form, whereas \cref{eq:hyperelasticity-energy} uses the
 $D_1(J-1)^2$ volumetric penalty.
 
@@ -68,7 +68,7 @@ $D_1(J-1)^2$ volumetric penalty.
     \includegraphics[width=\linewidth]{jax_fem_hyperelastic_baseline_centerline.pdf}
     \caption{Final centerline $u_x$ profile on the common sample path.}
   \end{subfigure}
-  \caption{Serial hyperelastic companion comparison against JAX-FEM on the
+  \caption{Serial hyperelastic comparison against JAX-FEM on the
   same mesh and prescribed displacement schedule, with energy post-comparison
   of the terminal states under \cref{eq:hyperelasticity-energy}.}
   \label{fig:hyperelasticity-jaxfem-baseline}
@@ -77,19 +77,20 @@ $D_1(J-1)^2$ volumetric penalty.
 \begin{table}[H]
   \centering
   \input{tables/generated/jax_fem_hyperelastic_baseline.tex}
-  \caption{Agreement-gated hyperelastic companion comparison against JAX-FEM.}
+  \caption{Thresholded hyperelastic comparison against JAX-FEM.}
   \label{tab:hyperelasticity-jaxfem-baseline}
 \end{table}
 
-The agreement gate in \Cref{tab:hyperelasticity-jaxfem-baseline} passes on all
-checked quantities. The final energy relative difference is
+The agreement criteria in \Cref{tab:hyperelasticity-jaxfem-baseline} are
+satisfied for all checked quantities. The final energy relative difference is
 \num{8.244e-6}, the full-field displacement relative $L^2$ difference is
 \num{2.011e-4}, the centerline relative $L^2$ difference is
 \num{5.473e-5}, and the $u_{\max}$-curve relative $L^2$ difference is
 effectively zero. On this small serial CPU companion case, the \jaxpetsc{} solve
 is faster (\SI{0.176}{s} median wall time versus \SI{2.524}{s} for JAX-FEM),
-but the scientific role of this table is solution agreement under a matched
-hyperelastic definition rather than a software ranking.
+but the scientific role of this table is terminal-state agreement under a
+matched mesh, displacement schedule, and common energy post-comparison rather
+than a software ranking.
 
 \subsection{Plasticity3D Endpoint-Surrogate Comparison}
 \label{sec:val-plasticity3d}
@@ -105,30 +106,30 @@ method context for this problem class
 \citep{sysala2017returnmapping,sysala2021optimization,sysala2025convexoptimization,sysala2025advancedcontinuation};
 they are not used here as verified numeric paper baselines.
 
-The endpoint-surrogate comparison therefore separates two questions. Layer 1A
-tests direct-branch endpoint-observable agreement with the reference model on the
-$P_2(L_1)$ reference case. This layer is tight: the work relative
+The endpoint-surrogate comparison therefore uses two diagnostics. The first
+diagnostic, labeled Layer 1A in \Cref{fig:plasticity3d-validation}, tests
+direct-branch endpoint-observable agreement with the reference model on the
+$P_2(L_1)$ reference case. This comparison is tight: the work relative
 difference is \num{3.877e-5}, the displacement relative $L^2$ difference is
 \num{3.517e-3}, and the deviatoric-strain relative $L^2$ difference is
-\num{8.720e-3}. Layer 2 is different: it is a fixed-$\lambda_{\mathrm{sr}}$
-diagnostic
-against a reference-operator comparison, not proof of path-consistent
-incremental-history equivalence. After matching the reference-model boundary
-conditions
-to the glued-bottom free-DOF mask, the comparison schedule is capped
+\num{8.720e-3}. The second diagnostic, labeled Layer 2, asks a narrower
+fixed-$\lambda_{\mathrm{sr}}$ question against a reference-operator comparison;
+it is not proof of path-consistent incremental-history equivalence. After
+aligning the reference-model boundary conditions with the active boundary
+condition set, the comparison schedule is capped
 at the main-figure load level $\lambda_{\mathrm{sr}}=1.55$. It keeps the
 highest-successful-$\lambda_{\mathrm{sr}}$ schedule proxy aligned on the tested
-grid and passes the predefined gates for the $u_{\max}(\lambda_{\mathrm{sr}})$
-curve and endpoint displacement: the
+grid and satisfies the predefined criteria for the
+$u_{\max}(\lambda_{\mathrm{sr}})$ curve and endpoint displacement: the
 $u_{\max}(\lambda_{\mathrm{sr}})$ relative $L^2$ difference is
 \num{6.396e-6}, and the endpoint displacement relative $L^2$ difference is
 \num{8.299e-4}. The endpoint deviatoric-strain relative $L^2$ difference
 (\num{4.307e-3}) and boundary-profile relative $L^2$ difference
-(\num{5.229e-4}) are reported as diagnostics rather than acceptance gates.
+(\num{5.229e-4}) are reported as diagnostics rather than acceptance criteria.
 This comparison uses a matched mesh, material table, Davis-B strength
-reduction, load schedule, and glued-bottom free-DOF mask, but it remains a
-fixed-load endpoint check rather than a path-consistent plastic-history
-reference.
+reduction, load schedule, boundary conditions, and active free degrees of
+freedom, but it remains a fixed-load endpoint check rather than a
+path-consistent plastic-history reference.
 
 \begin{figure}[H]
   \centering
@@ -152,7 +153,7 @@ reference.
   endpoint surrogate; the
   lower panel shows close fixed-$\lambda_{\mathrm{sr}}$ reference-operator
   agreement after
-  matching the glued-bottom boundary conditions and free-DOF mask.}
+  matching the boundary conditions and active free degrees of freedom.}
   \label{fig:plasticity3d-validation}
 \end{figure}
 

@@ -13,16 +13,16 @@ three-dimensional Mohr--Coulomb plasticity, and topology optimization.
 
 Across these problems, we compare element automatic differentiation,
 constitutive automatic differentiation, and colored sparse finite-difference
-recovery as routes to second-order information. The hyperelastic companion
-comparison satisfies matched energy and field tolerances, while the Plasticity3D
-evidence is limited to endpoint observables for the scalar surrogate and does
-not claim path-consistent plastic-history equivalence. In the fixed high-order
-Plasticity3D derivative test, constitutive AD gives the lowest median wall time
-among the three routes while preserving terminal observables; in the converged
-parallel scaling sweep, the nonlinear and Krylov work remain fixed while solver
-time decreases substantially. The topology study adds a distributed
-design-and-mechanics test at $768\times384$ resolution. These results support
-the central methodological point: derivative construction, sparse ownership,
-nonlinear globalization, and preconditioner policy must be designed as one
-numerical method for distributed nonlinear FEM.
+recovery as routes to second-order information. The evidence separates
+agreement checks from performance claims: the hyperelastic benchmark satisfies
+matched energy and field criteria, the three-dimensional plasticity comparison
+is restricted to final-load scalar and field observables for the endpoint
+surrogate, and the timing studies characterize derivative-route and
+solver-policy costs under those definitions. On the tested Plasticity3D
+derivative-route case, constitutive AD gives the lowest measured wall time while
+preserving terminal observables; the larger mechanics and topology runs exercise
+the same sparse-solver design at distributed scale. For the tested benchmark
+classes, the results show that derivative construction, sparse ownership,
+nonlinear globalization, and preconditioner policy are coupled numerical choices
+for distributed nonlinear FEM.
 \end{abstract}

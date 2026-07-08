@@ -10,11 +10,13 @@ benchmark suite. Scalar problems check formulation and derivative agreement,
 hyperelasticity provides a tightly matched external comparison, Plasticity3D
 tests nonsmooth constitutive structure and distributed sparse solves under an
 endpoint-surrogate interpretation, and topology optimization exercises a
-coupled design-and-mechanics problem. Constitutive AD is the lowest-cost route
-in the fixed high-order Plasticity3D derivative test. The largest Plasticity3D
-scaling runs converge with fixed nonlinear and Krylov work across rank counts,
-and the topology runs demonstrate end-to-end distributed design-mechanics timing
-with a separate fixed-schedule rank-consistency check.
+coupled design-and-mechanics problem. In the fixed high-order Plasticity3D
+derivative-route comparison, constitutive AD is the lowest measured wall-time
+route among the tested alternatives. In the reported $P_4(L_2)$,
+$\lambda_{\mathrm{sr}}=\num{1.55}$ Plasticity3D scaling sweep, all rank counts
+converge with the same nonlinear and Krylov work. The topology runs demonstrate
+end-to-end distributed design-mechanics timing with a separate fixed-schedule
+rank-consistency check.
 
 These results point to three scientific extensions. The first is
 path-dependent mechanics validation against an incremental-history reference.
@@ -23,3 +25,12 @@ matched problem definitions. The third is continued reduction of setup and
 multigrid costs in the largest sparse mechanics runs. Together, these
 directions extend the validation discipline of the present study toward broader
 nonlinear multiphysics and design problems.
+
+The main lesson from the tested problems is that differentiable local modeling
+and distributed nonlinear solvers interact at the level of numerical method
+design. In this toolset, JAX supplies the local energy and constitutive
+derivatives, PETSc supplies the sparse nonlinear solve, and the comparison
+surfaces delimit what each benchmark result means. This combination is the
+scientific contribution: a disciplined nonlinear FEM workflow in which
+derivative construction, assembly ownership, globalization, linear algebra, and
+interpretation are designed together.

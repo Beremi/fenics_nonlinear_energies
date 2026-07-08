@@ -80,7 +80,7 @@ geometric complications.
   \centering
   \includegraphics[width=\PaperFigureNarrow]{plaplace_energy_levels.pdf}
   \caption{Final discrete energies from \cref{eq:plaplace-discrete} across the
-  selected mesh hierarchy. The element-AD and local-SFD \jaxpetsc{} paths are
+  selected mesh hierarchy. The element-AD and colored-SFD \jaxpetsc{} paths are
   essentially energy-consistent with the \fenics{} reference.}
   \label{fig:plaplace-energy-levels}
 \end{figure}
@@ -166,7 +166,7 @@ is part of the benchmark definition.
   \includegraphics[width=\PaperFigureNarrow]{ginzburg_landau_energy_levels.pdf}
   \caption{Final discrete energies associated with the stationary problem
   \cref{eq:gl-discrete} across mesh
-  levels. The element-AD and local-SFD \jaxpetsc{} routes remain nearly
+  levels. The element-AD and colored-SFD \jaxpetsc{} routes remain nearly
   coincident with the \fenics{} reference.}
   \label{fig:gl-energy-levels}
 \end{figure}
@@ -219,6 +219,9 @@ at step $k$ is
 \]
 Thus admissible displacements satisfy $u=0$ on $\Gamma_{\mathrm{L}}$ and
 $X+u=\bar y_k(X)$ on $\Gamma_{\mathrm{R}}$.
+Let $V(\eta_k)$ denote the corresponding affine displacement space, let $V_0$
+denote the homogeneous test space, and let
+$\Gamma_N=\partial\Omega\setminus(\Gamma_{\mathrm{L}}\cup\Gamma_{\mathrm{R}})$.
 The strong form is
 \begin{equation}
   -\nabla \cdot P(F(u)) = 0 \quad \text{in }\Omega,
@@ -281,7 +284,7 @@ The within-benchmark takeaway is therefore a globalization result:
 \cref{fig:hyperelasticity-state,fig:hyperelasticity-energy-levels} show the
 terminal deformed state and terminal energies, while the scaling evidence is
 deferred to \Cref{sec:num-hyperelasticity}. The separate validation section
-adds one serial companion comparison against JAX-FEM on the same mesh and
+adds one serial JAX-FEM comparison on the same mesh and
 prescribed displacement schedule, with energy post-comparison under
 \cref{eq:hyperelasticity-energy}; it is
 included as an agreement-focused hyperelastic implementation comparison rather than
@@ -318,7 +321,9 @@ $E=\num{40000}$, $\nu=\num{0.30}$, $c_0=\num{6.0}$,
 $\phi=45^\circ$, $\psi=0^\circ$, and gravity magnitude $\gamma=\num{20}$,
 so $b=(0,-\gamma)^\top$ in the endpoint solves.
 The endpoint studies set the old plastic strain to zero at all quadrature
-points.
+points. Let $\Gamma_D$ be the union of the constrained bottom and side
+boundaries described above, let $\Gamma_N=\partial\Omega\setminus\Gamma_D$, and
+let $V_0$ denote the homogeneous displacement test space.
 The corresponding weak form is
 \begin{equation}
   \int_{\Omega} \sigma^{n+1} : \varepsilon(v) \, dx
@@ -348,8 +353,15 @@ surrogate functional for differentiation and comparison:
 where $\lambda_{\mathrm{sr}}$ denotes the strength-reduction factor, distinct
 from the Lam{\'e} parameter used later in three dimensions, and
 $\Phi_{\mathrm{MC},2\mathrm{D}}$ denotes the scalar branch potential used for
-the two-dimensional Mohr--Coulomb endpoint surrogate. The dilation angle enters
-this endpoint model only through the Davis-B reduction below.
+the two-dimensional Mohr--Coulomb endpoint surrogate. Here the subscript $eq$
+means element $e$ and quadrature point $q$, $w_{eq}$ is the corresponding
+quadrature weight including the element Jacobian, and $B_{eq}$ maps the element
+displacement vector to the two-dimensional engineering-strain vector used by the
+branch potential. The load vector $f_{\mathrm{ext}}$ is assembled from the
+right-hand side of \cref{eq:plasticity2d-weak}; for the endpoint solves this is
+the gravity load with $b=(0,-\gamma)^\top$ and zero traction on the free
+boundary. The dilation angle enters this endpoint model only through the Davis-B
+reduction below.
 
 The benchmark uses a Davis-B-style reduction path
 \citep{davis1968plasticity,tschuchnigg2015nonassociated,sysala2021optimization}
@@ -374,9 +386,22 @@ angle, respectively, the benchmark uses
   \label{eq:plasticity2d-davis}
 \end{align}
 The reported endpoint runs in this paper use $\lambda_{\mathrm{sr}} = 1$ and
-$\psi = 0^\circ$, hence $\psi_{\lambda}=0^\circ$; the reported states should
-therefore be read as algorithmic endpoint surrogates rather than
-path-consistent history updates.
+$\psi = 0^\circ$, hence $\psi_{\lambda}=0^\circ$; the reported states are
+algorithmic endpoint surrogates rather than path-consistent history updates.
+For a trial engineering strain
+$\varepsilon=(\varepsilon_{xx},\varepsilon_{yy},\gamma_{xy})^\top$ and old
+plastic strain $\varepsilon^{p,\mathrm{old}}$, the potential
+$\Phi_{\mathrm{MC},2\mathrm{D}}$ is evaluated by a plane-strain elastic
+predictor, the principal-stress Mohr--Coulomb test
+\[
+  (1+\sin\phi_\lambda)\sigma_1^{\mathrm{tr}}
+  -(1-\sin\phi_\lambda)\sigma_2^{\mathrm{tr}}
+  -2c_\lambda\cos\phi_\lambda \le 0,
+\]
+and either the elastic energy or the corresponding line/apex return energy. The
+small square-root regularization used in the principal-stress calculation is a
+numerical smoothing of the endpoint surrogate, not a separate material
+parameter.
 
 \begin{figure}[H]
   \centering
@@ -458,6 +483,10 @@ The studied discrete model uses a heterogeneous slope mesh
 hierarchy with same-mesh tetrahedral $P_1/P_2/P_4$ spaces, component-wise
 displacement boundary regions, and an additional glued-bottom condition that
 fixes every node with $|y| \le 10^{-12}$ in all three displacement components.
+Here $\Gamma_{D,i}$ denotes the Dirichlet set for displacement component $i$,
+$\Gamma_N$ is the remaining traction-free boundary, and $V_0$ is the
+homogeneous vector-valued test space after applying these component-wise
+constraints.
 We write $P_k(L_\ell)$ for polynomial degree $k$ on mesh level $\ell$ and use
 $L_1,\ldots,L_4$ for the four displayed mesh levels.
 The figures below use the glued-bottom $P_4(L_2)$ representative endpoint at
@@ -487,7 +516,10 @@ following algorithmic scalar surrogate:
 where $\lambda_{\mathrm{sr}}$ is again the strength-reduction factor and
 $\lambda_{\mathrm{L}}$ is the Lam{\'e} parameter of the elastic predictor.
 The subscript $eq$ means that each material parameter is evaluated at element
-$e$ and quadrature point $q$.
+$e$ and quadrature point $q$. The load vector $f_{\mathrm{ext}}$ is assembled
+from the body force $-\gamma_q e_y$ in
+\cref{eq:plasticity3d-weak}, with no Neumann traction contribution in the
+reported cases.
 
 We use the engineering-strain ordering
 \begin{equation}
@@ -530,7 +562,10 @@ with
 which are the scalar constitutive parameters used by the 3D assembly path
 \citep{davis1968plasticity,tschuchnigg2015nonassociated,sysala2021optimization}.
 Here $\phi$ denotes friction angle and $\psi$ denotes dilation angle; the paper
-uses those symbols only in that geomechanics sense.
+uses those symbols only in that geomechanics sense. All 3D material tuples used
+in the reported runs have $\psi=0^\circ$; the dilation angle therefore enters
+only through the Davis-B reduction above and not as a separate argument of
+$\Phi_{\mathrm{MC},3\mathrm{D}}$.
 
 The local constitutive surrogate follows the piecewise branch structure of the
 reference model. At one quadrature point we suppress the index $q$ and write
@@ -646,9 +681,12 @@ The branch energies are
      -\frac{1}{2}D_{\mathrm{a}}\Lambda_{\mathrm{a}}^2.
   \label{eq:plasticity3d-branch-energies}
 \end{align}
-With these definitions, the scalar potential is the piecewise function
+With these definitions, the scalar potential
+$\Phi_{\mathrm{MC},3\mathrm{D}}(\varepsilon;\bar c_\lambda,
+s_\lambda,\mu,K,\lambda_{\mathrm{L}})$ is the piecewise function
 \begin{equation}
-  \Phi_{\mathrm{MC},3\mathrm{D}}
+  \Phi_{\mathrm{MC},3\mathrm{D}}(\varepsilon;\bar c_\lambda,
+  s_\lambda,\mu,K,\lambda_{\mathrm{L}})
   =
   \begin{cases}
     \Phi_{\mathrm{el}},
@@ -700,7 +738,7 @@ endpoint-surrogate comparison. Direct-branch endpoint-observable agreement with 
 reference model for the endpoint surrogate is treated separately from a
 fixed-$\lambda_{\mathrm{sr}}$ reference-operator comparison. The latter checks
 matched geometry, materials, Davis-B reduction parameters, load schedule, and
-glued-bottom free-DOF mask, but it is not a path-consistent
+the active boundary conditions, but it is not a path-consistent
 incremental-history validation.
 The paper therefore keeps the Plasticity3D claims at the level of a
 problem-specific endpoint surrogate rather than a path-consistent
@@ -788,50 +826,52 @@ $E=\num{1}$, Poisson ratio $0.3$, and a downward unit traction over the centered
 $20\%$ patch of the right edge. The left edge is clamped, while fixed solid
 design pads are imposed near the clamp and around the load patch.
 Let $C$ denote the plane-stress elasticity tensor and let $p$ be the current
-SIMP exponent. For fixed density, the discretization solves for the linear elastic
-displacement state
-$u_h(\theta_h)$ solving
+SIMP exponent. For fixed density, define the bilinear form
 \begin{equation}
-  a_{\theta_h}(u_h,v_h)
+  a_{\theta_h}(w_h,v_h)
   :=
   \sum_{e=1}^{n_{\mathrm{el}}}
     |e|\,\theta_e^{p}
-    \varepsilon(u_h)^\top C \varepsilon(v_h)
-  =
-  \ell(v_h)
-  \qquad \forall v_h \in V_{h,0},
+    \varepsilon(w_h)^\top C \varepsilon(v_h).
   \label{eq:topology-mechanics}
 \end{equation}
-on the cantilever domain $\Omega = (0,2)\times(0,1)$, where $\ell$ is the load
-functional defined by that right-edge traction. After each mechanics solve, the
-design step freezes, on each element,
+On the cantilever domain $\Omega = (0,2)\times(0,1)$, the mechanics step finds
+$u_h(\theta_h)$ in the affine displacement space such that
+$a_{\theta_h}(u_h,v_h)=\ell(v_h)$ for all $v_h\in V_{h,0}$, where $\ell$ is the
+load functional defined by that right-edge traction. At outer design iteration
+$m$, after solving for $u_h^m=u_h(\theta_h^m)$, the design step freezes, on each
+element,
 \[
-  e_e^{\mathrm{frozen}}
+  e_{e,m}^{\mathrm{frozen}}
   =
-  (\theta_e^{\mathrm{old}})^{2p}\,
-  \varepsilon(u_h)^\top C\varepsilon(u_h).
+  (\theta_{e}^{m})^{2p}\,
+  \varepsilon(u_h^m)^\top C\varepsilon(u_h^m).
 \]
-The reduced objective is
+Let $(\nabla\theta_h)|_e$ denote the elementwise gradient of the interpolated
+density field used in the phase-field term. The reduced objective for the next
+design vector $z_h^{m+1}$ is
 \begin{align}
-  \mathcal{J}_h(z_h)
+  \mathcal{J}_h^m(z_h)
   &=
   \sum_{e=1}^{n_{\mathrm{el}}}
   |e|
   \Bigg[
-    e_e^{\mathrm{frozen}} \theta_e^{-p}
+    e_{e,m}^{\mathrm{frozen}} \theta_e^{-p}
     + \lambda_V \theta_e
     + \alpha_{\mathrm{reg}}
       \left(
-        \frac{\ell_{\mathrm{pf}}}{2} \lvert \nabla \theta_e \rvert^2
+        \frac{\ell_{\mathrm{pf}}}{2} \lvert (\nabla\theta_h)|_e \rvert^2
         + \frac{1}{\ell_{\mathrm{pf}}} W(\theta_e)
       \right)
-    + \frac{\mu_{\mathrm{move}}}{2} (z_e-z_e^{\mathrm{old}})^2
+    + \frac{\mu_{\mathrm{move}}}{2} (z_e-z_e^{m})^2
   \Bigg],
   \label{eq:topology-reduced-objective}
 \end{align}
-with $W(\theta) = \theta^2(1-\theta)^2$, SIMP-style continuation in $p$, and
-regularization terms that play a mesh-control role analogous to
-filtering/regularization in \citet{bourdin2001filters}. Here
+where $\theta_e$ and $z_e$ are computed from the trial $z_h$, while $z_e^m$ is
+the element average from the previous design iterate. The function
+$W(\theta) = \theta^2(1-\theta)^2$ supplies the double-well term, while the
+SIMP-style continuation in $p$ and the regularization terms play a mesh-control
+role analogous to filtering/regularization in \citet{bourdin2001filters}. Here
 $\lambda_V$ is the effective volume multiplier, updated with penalty weight
 $10$ and multiplier step factor $12$, while
 $\alpha_{\mathrm{reg}}=\num{5e-3}$,

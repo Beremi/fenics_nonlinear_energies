@@ -8,7 +8,7 @@ applied. Nonhomogeneous essential data are represented by an affine lift
 $\bar u_h(\theta)$, with $\bar u_h=0$ in the homogeneous cases. A free
 coefficient vector $x\in\mathbb{R}^{n}$ defines the finite-element state
 \[
-  u_h(x;\theta)=\bar u_h(\theta)+\sum_{i=1}^{n} x_i\varphi_i.
+  u_h(x;\theta)=\bar u_h(\theta)+\sum_{i=1}^{n} x_i\varphi_i,
 \]
 When no confusion is possible, we identify $u_h$ with its coefficient vector in
 algebraic formulas. On element $e$, $x_e=R_e x$ denotes the local coefficient
@@ -88,12 +88,14 @@ search. Some benchmark configurations use a hybrid
 trust-region/line-search algorithm in which a reduced trust-region model
 provides the direction, while a bounded line search chooses the accepted step.
 The line-search and trust-region ingredients follow standard globalization ideas
-\citep[Chs.~2--4]{nocedal2006numerical}; the particular hybrid coupling used in
-some benchmark configurations is a problem-specific combination of those
-textbook ingredients.
+\citep[Chs.~2--4]{nocedal2006numerical}. \Cref{alg:hybrid-newton} is a
+schematic solver-policy template; the reported runs use the stopping
+tolerances, caps, and globalization choices stated in the benchmark and results
+tables.
 
 \begin{algorithm}[H]
 \caption{Hybrid trust-region / line-search Newton}
+\label{alg:hybrid-newton}
 \begin{algorithmic}[1]
 \State Given $x_0$, trust radius $\Delta_0$, tolerances, and callbacks for
 energy, gradient, and Hessian solves/matvecs
@@ -113,7 +115,8 @@ energy, gradient, and Hessian solves/matvecs
     \State Use the Newton direction directly
   \EndIf
   \State Perform one-dimensional search on the chosen direction
-  \State Compute actual and predicted reduction
+  \State Compute actual and predicted reductions, $\mathrm{ared}$ and
+    $\mathrm{pred}$
   \If{trust region is enabled}
     \State accept/reject using $\rho = \mathrm{ared}/\mathrm{pred}$ and update $\Delta_k$
   \Else
@@ -122,6 +125,13 @@ energy, gradient, and Hessian solves/matvecs
 \EndFor
 \end{algorithmic}
 \end{algorithm}
+
+Here $\mathrm{ared}$ is the achieved decrease in the merit functional and
+$\mathrm{pred}$ is the decrease predicted by the local quadratic or reduced
+trust-region model. The accept/reject thresholds and radius-update factors are
+policy parameters; where they affect the interpretation of a result, the paper
+reports the corresponding configuration rather than treating
+\Cref{alg:hybrid-newton} as a complete algorithmic specification.
 
 For the principal 3D plasticity path reported in this paper, the chosen policy
 is simpler: Newton with Armijo backtracking and a PMG-preconditioned
@@ -144,7 +154,8 @@ parameters $\beta\in(0,1)$, $c_1\in(0,1)$, and maximum count $m_{\max}$
     \State \Return
   \EndIf
 \EndFor
-\State fall back to the smallest admissible step or to gradient-safe logic
+\State declare line-search failure or use a problem-specific safeguarded
+steepest-descent fallback when that policy is enabled
 \end{algorithmic}
 \end{algorithm}
 
@@ -153,7 +164,7 @@ parameters $\beta\in(0,1)$, $c_1\in(0,1)$, and maximum count $m_{\max}$
 Sparse derivative recovery is built around the observation that if columns that
 do not interfere in the sparsity pattern are perturbed together, one gradient
 or HVP evaluation can recover multiple columns of the Jacobian or Hessian
-\citep{curtis1974sparsejacobian,coleman1984sparsehessian}. The local SFD path
+\citep{curtis1974sparsejacobian,coleman1984sparsehessian}. The colored-SFD path
 uses distance-2 coloring on the Hessian sparsity graph, which is especially
 effective when combined with overlap-domain assembly and owned-plus-ghost PETSc
 layouts.

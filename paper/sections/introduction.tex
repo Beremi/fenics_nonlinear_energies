@@ -13,12 +13,12 @@ We develop and evaluate this design point through a solver-centered toolset for
 nonlinear finite-element energy solves and optimization. In the primary
 \jaxpetsc{} realization, JAX represents local energies and constitutive laws,
 while PETSc owns sparse vectors and matrices, nonlinear globalization, Krylov
-methods, and preconditioners. The \purejax{} and \fenics{} formulations provide
-scoped reference implementations where they are available, and external
-comparisons are restricted to explicitly matched benchmark definitions and
-observables. These matched reference checks let us study derivative and solver
-choices for nonlinear energy minimization without ranking full software
-ecosystems.
+methods, and preconditioners. This is the primary realization studied in the
+paper. The \purejax{} and \fenics{} variants are internal reference
+formulations where they are available; JAX-FEM, FEniCSx-family work, and the
+MATLAB/Octave elastoplastic literature provide scoped external context rather
+than software rankings. All external comparisons are therefore restricted to
+explicitly matched benchmark definitions and observables.
 
 The surrounding literature separates into high-level FEM and adjoint
 automation, JAX-native differentiable FEM, bridge architectures that combine
@@ -32,8 +32,10 @@ comparison claims limited to the matched definitions and observables stated in
 \subsection{Contributions}
 \label{sec:intro-contributions}
 
-The contribution is an implemented \jaxpetsc{} scientific toolset for nonlinear
-FEM energy minimization, organized around three solver components:
+We contribute a JAX-local/PETSc-global numerical framework in which derivative
+construction, sparse ownership, nonlinear globalization, and preconditioning are
+treated as coupled design choices for nonlinear FEM energy minimization. The
+implemented toolset is organized around three solver components:
 \begin{enumerate}
   \item \textbf{Globalized energy minimization.} We compare line-search,
         trust-region, and hybrid globalization choices on representative
@@ -57,7 +59,7 @@ We evaluate these components on six benchmark families: $p$-Laplace, scalar
 Ginzburg--Landau, hyperelasticity, two- and three-dimensional
 Mohr--Coulomb-type plasticity, and topology optimization. The scalar problems
 isolate formulation and derivative agreement. Hyperelasticity adds
-finite-strain mechanics and a narrow JAX-FEM companion comparison. The
+finite-strain mechanics and a narrow JAX-FEM external comparison. The
 plasticity benchmarks test nonsmooth constitutive structure,
 reference-observable agreement, and multigrid policy. Topology optimization
 tests a distributed design-and-mechanics loop. The geomechanics context follows

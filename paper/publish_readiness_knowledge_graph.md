@@ -561,6 +561,34 @@ MATLAB/Octave literature only when there is source-backed evidence.
   revision-history caption wording, local/raw labels, and `Reference paths`
   labels were replaced with paper-facing study-case, fixed-case, matched-case,
   rank-local, unreduced, and reference-implementation wording.
+- `Math precision audit` (`Galileo-current`): completed. Findings addressed in
+  the current validation/message chunk: hyperelastic affine/test spaces and
+  Neumann boundary are defined; Plasticity2D now defines the body-force load
+  vector, endpoint Mohr--Coulomb branch potential, and regularization role;
+  Plasticity3D now defines component boundary/test spaces, load-vector sign,
+  constitutive argument list, and the $\psi=0^\circ$ dilation scope; topology
+  now separates the bilinear form from the mechanics solve and indexes the
+  frozen reduced objective by outer design iteration; the hybrid Newton
+  algorithm is explicitly schematic and defines actual/predicted reduction; the
+  Plasticity3D degree-resolution result is scoped to observed endpoint objective
+  values.
+- `Narrative/self-containedness audit` (`Helmholtz-current`): completed.
+  Findings addressed in the current validation/message chunk: availability prose
+  is affirmative rather than draft-process wording; central claims are scoped to
+  the tested benchmark classes; front/back Plasticity3D language uses
+  final-load scalar/field observables and active boundary conditions rather than
+  free-DOF mask language; implementation prose now says computational
+  realization/framework/construction and implemented capabilities; conclusion
+  names the exact fixed high-order derivative-route comparison and
+  $P_4(L_2)$, $\lambda_{\mathrm{sr}}=1.55$ scaling sweep.
+- `PDF layout audit` (`Euclid-current`): completed. Findings addressed in the
+  current validation/message chunk: Plasticity3D validation figure text and
+  colorbar ticks were enlarged and visually checked on rendered page 22;
+  Plasticity3D degree/resolution subpanels were made taller with fewer repeated
+  legends/labels and visually checked on rendered page 30; Figure 1 TikZ box
+  hyphenation was removed and visually checked on rendered page 7. Remaining
+  layout risk: the Plasticity3D derivative-degree table on page 25 is dense but
+  readable; the SOTA table remains a later structural-table candidate.
 
 ## First Edit Backlog
 

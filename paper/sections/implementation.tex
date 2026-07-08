@@ -1,7 +1,7 @@
 \label{sec:implementation}
 
-The implementation is organized around three solver paths with different
-scientific roles.
+The computational realization is organized around three solver formulations with
+different scientific roles.
 
 \paragraph{Pure JAX reference implementations.}
 These are compact differentiable realizations of selected benchmark energies.
@@ -15,10 +15,10 @@ distributed infrastructure.
 The \fenics{} implementations remain valuable on families where they exist,
 especially $p$-Laplace, Ginzburg--Landau, and hyperelasticity. They provide a
 trusted high-level FEM reference and help distinguish modeling issues from
-solver-stack issues. In this paper they are used mainly as comparison baselines
+solver-policy issues. In this paper they are used mainly as comparison baselines
 rather than as the primary distributed realization.
 
-\paragraph{Primary \jaxpetsc{} path.}
+\paragraph{Primary \jaxpetsc{} realization.}
 This is the central solver realization of the paper. It combines JAX-based local
 physics with PETSc distributed vectors, matrices, Krylov solvers, and
 preconditioners. Problem-specific kernels stay in JAX; sparse distributed
@@ -26,20 +26,20 @@ assembly, nonlinear globalization, and linear algebra stay in PETSc.
 
 \subsection{Autodiff modes}
 
-The \jaxpetsc{} stack supports several second-order modes. The precise available
+The \jaxpetsc{} framework supports several second-order modes. The precise available
 choices depend on the benchmark family, but the common logic is:
 \begin{itemize}
   \item \textbf{element AD}: exact local Hessians from differentiating the full
         element energy;
   \item \textbf{constitutive AD}: exact local constitutive tangents assembled
         from quadrature-point energy densities;
-  \item \textbf{local SFD / colored SFD}: sparse approximate Hessian recovery
+  \item \textbf{colored SFD}: sparse approximate Hessian recovery
         when exact second-order information is not the appropriate cost tradeoff.
 \end{itemize}
 
 This split is scientifically important. It lets us compare exact second-order
 information against carefully structured sparse approximations without changing
-the rest of the nonlinear solver stack. In other words, the paper is not only a
+the rest of the nonlinear solver framework. In other words, the paper is not only a
 comparison of frameworks, but also a comparison of derivative strategies inside
 one common solver infrastructure.
 
@@ -63,12 +63,19 @@ one common solver infrastructure.
 \begin{figure}[H]
   \centering
   \PaperAutodiffModesDiagram
-  \caption{Second-order derivative modes exposed in the \jaxpetsc{} stack. The
+  \caption{Second-order derivative modes exposed in the \jaxpetsc{} framework. The
   methodological choice is that the source of truth remains an energy or
   energy-density expression even when the tangent path changes from element AD
   to constitutive AD or colored SFD.}
   \label{fig:derivative-stack}
 \end{figure}
+
+Figures~\ref{fig:framework-overview}--\ref{fig:derivative-stack} summarize the
+computational construction used in the rest of the paper. The primary
+\jaxpetsc{} realization is the distributed nonlinear solve; the reference
+formulations provide matched comparisons; and the derivative modes differ only
+in where the second-order information is constructed before PETSc receives
+sparse algebraic objects.
 
 \subsection{Linear solvers and preconditioners}
 
@@ -76,7 +83,7 @@ The benchmark families use different Krylov and preconditioner combinations
 because the linear systems are qualitatively different:
 \begin{itemize}
   \item \textbf{$p$-Laplace:} mostly CG with Hypre, with exact element
-        Hessians or local-SFD Hessians in the \jaxpetsc{} path.
+        Hessians or colored-SFD Hessians in the \jaxpetsc{} path.
   \item \textbf{Ginzburg--Landau:} GMRES with Hypre, reflecting the more
         indefinite linearization.
   \item \textbf{Hyperelasticity:} trust-region outer iterations with
@@ -99,7 +106,7 @@ because the linear systems are qualitatively different:
 \end{itemize}
 
 The comparison material later in the manuscript also includes a reference-model
-PMG-shell variant and alternative Krylov/preconditioner diagnostics. Those are
+fixed-PMG variant and alternative Krylov/preconditioner diagnostics. Those are
 not the primary defaults, but they are informative because they reveal how much
 of the final performance difference comes from derivative paths,
 preconditioners, or outer solver logic.
@@ -126,10 +133,16 @@ owned sparse insertion in the dominant assembly loop.
   \centering
   \PaperColoringDiagram
   \caption{Schematic view of the colored sparse-recovery logic used by the
-  local SFD Hessian path: a sparsity pattern, a distance-2 coloring, and the
+  colored-SFD Hessian path: a sparsity pattern, a distance-2 coloring, and the
   corresponding grouped probes used for recovery.}
   \label{fig:globalization-coloring}
 \end{figure}
+
+Figures~\ref{fig:globalization} and~\ref{fig:globalization-coloring} make two
+solver-policy choices explicit. Globalization is varied independently of the
+element physics where the benchmark permits it, while colored SFD uses graph
+structure to batch directional Hessian probes without changing the nonlinear
+problem definition.
 
 \begin{table}[H]
   \centering
@@ -141,7 +154,7 @@ owned sparse insertion in the dominant assembly loop.
   \label{tab:capability-matrix}
 \end{table}
 
-\Cref{tab:capability-matrix} summarizes the implemented surface. The most
+\Cref{tab:capability-matrix} summarizes the implemented capabilities. The most
 important structural point is that the \jaxpetsc{} column is the distributed
 algebraic realization, even when a family also has \fenics{} or \purejax{}
 reference formulations.

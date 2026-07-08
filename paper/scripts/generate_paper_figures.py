@@ -119,6 +119,19 @@ MESH_ALIAS_MATH = {
 }
 
 
+PAPER_IMPLEMENTATION_LABELS = {
+    "jax_petsc_element": "JAX+PETSc element AD",
+    "jax_petsc_local_sfd": "JAX+PETSc colored SFD",
+}
+
+
+def paper_implementation_style(implementation: str) -> dict[str, object]:
+    style = dict(implementation_style(implementation))
+    if implementation in PAPER_IMPLEMENTATION_LABELS:
+        style["label"] = PAPER_IMPLEMENTATION_LABELS[implementation]
+    return style
+
+
 def _mesh_math(alias: object) -> str:
     key = str(alias)
     if key in MESH_ALIAS_MATH:
@@ -595,7 +608,7 @@ def generate_energy_levels_figure(
     rows = read_csv_rows(csv_path)
     fig, ax = plt.subplots(figsize=paper_figure_size(layout, preset="narrow", height_ratio=0.44))
     for implementation in implementations:
-        style = implementation_style(implementation)
+        style = paper_implementation_style(implementation)
         x = [int(row["level"]) for row in rows if row.get(implementation)]
         y = [float(row[implementation]) for row in rows if row.get(implementation)]
         if not x:
@@ -636,7 +649,7 @@ def generate_family_scaling_figure(
         if not impl_rows:
             continue
         impl_rows.sort(key=lambda item: int(item["nprocs"] if "nprocs" in item else item["ranks"]))
-        style = implementation_style(implementation)
+        style = paper_implementation_style(implementation)
         ranks = np.asarray([int(row["nprocs"] if "nprocs" in row else row["ranks"]) for row in impl_rows], dtype=np.int64)
         times = np.asarray([float(row["total_time_s"] if "total_time_s" in row else row["wall_time_s"]) for row in impl_rows], dtype=np.float64)
         ax.plot(
@@ -1606,7 +1619,7 @@ def _plot_plasticity3d_validation_surface_compare(
     values_candidate: np.ndarray,
     out_name: str,
 ) -> str:
-    plt = configure_paper_matplotlib(font_size=8.0)
+    plt = configure_paper_matplotlib(font_size=9.0)
     from matplotlib import cm
     from matplotlib.colors import Normalize
 
@@ -1618,15 +1631,15 @@ def _plot_plasticity3d_validation_surface_compare(
     main_norm = Normalize(vmin=0.0, vmax=max(main_vmax, 1.0e-12))
     diff_norm = Normalize(vmin=0.0, vmax=diff_vmax)
 
-    fig = plt.figure(figsize=paper_figure_size(layout, preset="medium", height_ratio=0.42))
+    fig = plt.figure(figsize=paper_figure_size(layout, preset="medium", height_ratio=0.50))
     gs = fig.add_gridspec(
         2,
         3,
-        height_ratios=[1.0, 0.10],
+        height_ratios=[1.0, 0.13],
         left=0.01,
         right=0.99,
-        bottom=0.15,
-        top=0.93,
+        bottom=0.14,
+        top=0.94,
         wspace=0.02,
         hspace=0.02,
     )
@@ -1656,7 +1669,7 @@ def _plot_plasticity3d_validation_surface_compare(
         norm=diff_norm,
     )
     for ax, title in zip(axes, ("reference model", "JAX+PETSc", r"$|\Delta \|u\||$"), strict=True):
-        ax.set_title(title, pad=1.8, fontsize=8.0)
+        ax.set_title(title, pad=2.0, fontsize=9.0)
 
     cax_main = fig.add_subplot(gs[1, :2])
     cax_diff = fig.add_subplot(gs[1, 2])
@@ -1669,7 +1682,7 @@ def _plot_plasticity3d_validation_surface_compare(
     cbar_diff = fig.colorbar(sm_diff, cax=cax_diff, orientation="horizontal")
     cbar_diff.set_label(r"abs. diff.", labelpad=0.2)
     for cbar in (cbar_main, cbar_diff):
-        cbar.ax.tick_params(labelsize=6.0, pad=1.0)
+        cbar.ax.tick_params(labelsize=7.5, pad=1.0)
 
     out = FIGURES_ROOT / out_name
     save_pdf_and_png(fig, out, png_dpi=260)
@@ -1889,8 +1902,8 @@ def generate_autodiff_modes(layout: dict[str, float]) -> str:
     fig, axes = plt.subplots(3, 1, figsize=text_figure_size(layout, height_ratio=0.44))
     panels = [
         ("Element AD", ["$\\Pi_e(u_e)$", "exact local gradient and Hessian", "higher-order elements can be costly"], "#e6f0fb"),
-        ("Constitutive AD", ["$\\psi(\\varepsilon_q)$", "$B_q^\\top C_q B_q$ assembly", "best maintained 3D plasticity path"], "#eef5e7"),
-        ("Local colored SFD", ["probe HVPs only where needed", "parallel coloring / recovery", "useful when exact Hessians are too expensive"], "#fbf1eb"),
+        ("Constitutive AD", ["$\\psi(\\varepsilon_q)$", "$B_q^\\top C_q B_q$ assembly", "lowest-cost route in fixed 3D endpoint comparison"], "#eef5e7"),
+        ("Colored SFD", ["rank-local probe HVPs only where needed", "parallel coloring / recovery", "useful when exact Hessians are too expensive"], "#fbf1eb"),
     ]
     for ax, (title, lines, color) in zip(axes, panels, strict=True):
         ax.set_axis_off()
@@ -2121,7 +2134,7 @@ def _plot_plasticity3d_degree_energy_study(layout: dict[str, float]) -> list[str
         show_ylabel: bool = True,
         y_formatter: str = "%.2f",
     ) -> str:
-        fig, ax = plt.subplots(figsize=paper_figure_size(layout, preset="subfigure", height_ratio=0.42))
+        fig, ax = plt.subplots(figsize=paper_figure_size(layout, preset="subfigure", height_ratio=0.58))
         for degree_line in degree_lines:
             style = styles[degree_line]
             selected = [row for row in rows if str(row.get("degree_line", "")) == degree_line]
@@ -2156,9 +2169,9 @@ def _plot_plasticity3d_degree_energy_study(layout: dict[str, float]) -> list[str
             )
         ax.yaxis.set_major_formatter(matplotlib.ticker.FormatStrFormatter(y_formatter))
         fig.subplots_adjust(
-            top=0.88,
-            bottom=0.31,
-            left=0.25,
+            top=0.90,
+            bottom=0.25,
+            left=0.25 if show_ylabel else 0.18,
             right=0.97,
             hspace=0.0,
             wspace=0.0,
@@ -2185,10 +2198,10 @@ def _plot_plasticity3d_degree_energy_study(layout: dict[str, float]) -> list[str
             x_key="total_time_s",
             xlabel="Total wall time [s]",
             out_name="plasticity3d_degree_energy_all_time.pdf",
-            legend=True,
+            legend=False,
             legend_loc="upper right",
             legend_ncol=2,
-            show_ylabel=True,
+            show_ylabel=False,
             y_formatter="%.2f",
         ),
         _plot_panel(
@@ -2207,10 +2220,10 @@ def _plot_plasticity3d_degree_energy_study(layout: dict[str, float]) -> list[str
             x_key="total_time_s",
             xlabel="Total wall time [s]",
             out_name="plasticity3d_degree_energy_zoom_time.pdf",
-            legend=True,
+            legend=False,
             legend_loc="lower left",
             legend_ncol=1,
-            show_ylabel=True,
+            show_ylabel=False,
             y_formatter="%.4f",
         ),
     ]

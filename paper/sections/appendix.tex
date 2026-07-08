@@ -1,7 +1,7 @@
 \label{sec:solver-evidence}
 
-This section collects supporting solver evidence that is methodologically useful
-but too narrow for the main benchmark narratives.
+This section collects supporting solver-policy diagnostics that are
+methodologically useful but narrower than the main benchmark narratives.
 
 \subsection{Plasticity3D Reference-Formula and Fixed-Operator PMG Comparisons}
 
@@ -9,7 +9,10 @@ The primary Plasticity3D numerical story in \Cref{sec:num-plasticity3d} is the
 rank-local constitutive-AD path. The tables below add two solver-policy
 comparisons on the same discrete problem from \cref{eq:plasticity3d-discrete}:
 a matched reference-formula assembly comparator and a fixed reference-operator
-PMG variant.
+PMG variant. Here reference-formula assembly means closed-form constitutive
+assembly used as a comparator for the JAX constitutive-AD kernel, while fixed
+reference-operator PMG means a preconditioning variant in which the multigrid
+operator is not rebuilt along the nonlinear path.
 
 \begin{table}[H]
   \centering
@@ -25,33 +28,34 @@ PMG variant.
   \centering
   \input{tables/generated/plasticity3d_fixed_source_operator_pmg.tex}
   \caption{Fixed reference-operator PMG alternative on the same Plasticity3D
-  problem. The status column distinguishes completed rows from rank counts
-  that hit the Newton cap before reaching the target gradient tolerance.}
+  problem. The status column distinguishes completed configurations from rank
+  counts that reach the maximum number of Newton iterations before satisfying
+  the target gradient tolerance.}
   \label{tab:plasticity3d-fixed-source-pmg}
 \end{table}
 
-These tables support two narrower statements. First, reference-formula assembly
+These diagnostics support two narrower statements. First, reference-formula assembly
 has lower reported wall time than rank-local assembly when both are embedded in
 the same PMG solver stack, although the gap narrows at higher rank counts.
 Second, the fixed reference-operator PMG profile is not the default used in the
-present study: it may appear favorable on completed low-rank rows, but it hits
-the Newton cap on more of the reported rank counts and therefore gives less
-consistent convergence evidence. The rank-local constitutive-AD path remains the
-primary Plasticity3D realization because it uses the
+present study: it may appear favorable on completed low-rank configurations, but
+it reaches the maximum number of Newton iterations on more of the reported rank
+counts and therefore gives less consistent convergence evidence. The rank-local
+constitutive-AD path remains the primary Plasticity3D realization because it uses the
 same local differentiable formulation as the derivative-route and converged
-scaling studies; the reference-formula rows are retained to expose
+scaling studies; the reference-formula configurations are retained to expose
 solver-policy sensitivity on matched discrete problems.
 
 \subsection{Plasticity2D Reference Continuation Evidence}
 
 For Plasticity2D, the reference-continuation comparison is not the primary
 method of the paper, but it is still useful as fixed-policy rank and timing
-evidence for the PMG-shell smoother under the same outer continuation logic.
+evidence for the PMG smoother policy under the same outer continuation logic.
 
 \begin{table}[H]
   \centering
   \input{tables/generated/source_continuation_compare.tex}
-  \caption{Reference continuation with the fixed PMG-shell smoother policy at 8
+  \caption{Reference continuation with the fixed PMG smoother policy at 8
   and 32 ranks. This is supporting solver evidence for a reference continuation
   setting, not a primary solver comparison.}
   \label{tab:source-cont}
@@ -60,9 +64,8 @@ evidence for the PMG-shell smoother under the same outer continuation logic.
 \subsection{Code, data, and reproducibility availability}
 
 The implementation discussed in this paper is available at
-\url{https://github.com/Beremi/fenics_nonlinear_energies}. The submission
-archive should include the source code, input data, processed benchmark
-summaries, figure and table sources, and validation records needed to reproduce
-the reported results, figures, and tables. A citable source or artifact
-archive DOI should be supplied in the final submission metadata if required by
-the target journal; this journal-neutral draft does not assert one.
+\url{https://github.com/Beremi/fenics_nonlinear_energies}. The repository
+contains the source code, input data, processed benchmark summaries, figure and
+table generation sources, and validation records used to reproduce the reported
+results, figures, and tables. No permanent artifact DOI is assigned at the time
+of writing; the repository URL identifies the available source.

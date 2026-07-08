@@ -749,11 +749,15 @@ def pass_fail(value: object) -> str:
     return "pass" if bool(value) else "fail"
 
 
-def _layer2_gate_status(layer2_metrics: dict[str, object], key: str) -> str:
+def criterion_status(value: object) -> str:
+    return "satisfied" if bool(value) else "not satisfied"
+
+
+def _layer2_criterion_status(layer2_metrics: dict[str, object], key: str) -> str:
     acceptance = dict(layer2_metrics.get("acceptance", {}))
     if key not in acceptance:
         return "--"
-    return pass_fail(acceptance[key])
+    return criterion_status(acceptance[key])
 
 
 def final_metric_header(rows: list[dict[str, object]]) -> str:
@@ -896,8 +900,8 @@ def main() -> None:
         "@{}l c c c " + pcol(r"0.38\textwidth") + "@{}",
         ["Family", "FEniCS", "pure JAX", "JAX+PETSc", "Advanced solver / derivative features"],
         [
-            ["$p$-Laplace", "yes", "yes", "yes", "element AD and local colored SFD"],
-            ["Ginzburg--Landau", "yes", "no", "yes", "element AD and local colored SFD"],
+            ["$p$-Laplace", "yes", "yes", "yes", "element AD and colored-SFD recovery"],
+            ["Ginzburg--Landau", "yes", "no", "yes", "element AD and colored-SFD recovery"],
             ["Hyperelasticity", "yes", "yes", "yes", "element AD, colored SFD comparison, and trust-region solves"],
             ["Plasticity2D", "no", "no", "yes", "scalarized endpoint potential and same-mesh PMG"],
             ["Plasticity3D", "no", "no", "yes", "constitutive AD, element AD, and same-mesh PMG"],
@@ -1649,7 +1653,7 @@ def main() -> None:
         ],
         [
             [
-                "fixed PMG-shell smoother",
+                "fixed PMG smoother policy",
                 "8",
                 fmt_wall_time(float(source8["run_info"]["runtime_seconds"])),
                 fmt_count(source8["timings"]["linear"]["init_linear_iterations"]),
@@ -1657,7 +1661,7 @@ def main() -> None:
                 fmt_float(float(source8_progress["lambda_last"]), 6),
             ],
             [
-                "fixed PMG-shell smoother",
+                "fixed PMG smoother policy",
                 "32",
                 fmt_wall_time(float(source32["run_info"]["runtime_seconds"])),
                 fmt_count(source32["timings"]["linear"]["init_linear_iterations"]),
@@ -1687,19 +1691,19 @@ def main() -> None:
                 "2",
                 "highest-successful $\\lambda_{\\mathrm{sr}}$",
                 fmt_sci(float(layer2_metrics["critical_lambda_schedule_proxy"]["relative_difference"])),
-                _layer2_gate_status(layer2_metrics, "critical_lambda_pass"),
+                _layer2_criterion_status(layer2_metrics, "critical_lambda_pass"),
             ],
             [
                 "2",
                 "$u_{\\max}(\\lambda_{\\mathrm{sr}})$ relative $L^2$",
                 fmt_sci(float(layer2_metrics["umax_curve_relative_l2"])),
-                _layer2_gate_status(layer2_metrics, "umax_curve_pass"),
+                _layer2_criterion_status(layer2_metrics, "umax_curve_pass"),
             ],
             [
                 "2",
                 "endpoint displacement relative $L^2$",
                 fmt_sci(float(layer2_metrics["endpoint_displacement_relative_l2"])),
-                _layer2_gate_status(layer2_metrics, "endpoint_disp_pass"),
+                _layer2_criterion_status(layer2_metrics, "endpoint_disp_pass"),
             ],
             [
                 "2",
@@ -1715,9 +1719,9 @@ def main() -> None:
             ],
             [
                 "2",
-                "acceptance gate",
+                "acceptance criterion",
                 "--",
-                pass_fail(layer2_metrics["acceptance"]["overall_pass"]),
+                criterion_status(layer2_metrics["acceptance"]["overall_pass"]),
             ],
         ],
     )
@@ -1788,9 +1792,9 @@ def main() -> None:
             ["Timing", "this work serial direct", "--", fmt_wall_time(float(timing["repo_serial_direct"])), "--"],
             ["Timing", "JAX-FEM UMFPACK serial", "--", fmt_wall_time(float(timing["jax_fem_umfpack_serial"])), "--"],
             r"\addlinespace",
-            ["Condition", "common mesh", "--", "--", pass_fail(fairness_checks["same_mesh_path"])],
-            ["Condition", "common displacement schedule", "--", "--", pass_fail(fairness_checks["same_schedule"])],
-            ["Condition", "agreement threshold ($5\\%$)", "--", "--", pass_fail(agreement_pass)],
+            ["Condition", "common mesh", "--", "--", criterion_status(fairness_checks["same_mesh_path"])],
+            ["Condition", "common displacement schedule", "--", "--", criterion_status(fairness_checks["same_schedule"])],
+            ["Condition", "agreement threshold ($5\\%$)", "--", "--", criterion_status(agreement_pass)],
             ["Condition", "energy re-evaluation", "--", "--", "applied"],
         ],
     )

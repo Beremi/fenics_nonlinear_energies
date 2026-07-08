@@ -28,7 +28,7 @@ solve time for completed solves and elapsed wall time for timed-out cases. In th
 line-search configurations the trust-region machinery is disabled; in particular, the
 hyperelasticity line-search baseline uses GMRES rather than the STCG
 trust-region subproblem solver. For the Plasticity3D configuration, all methods are
-judged against the stricter $\|\nabla \mathcal{F}\|_2 < 10^{-4}$ endpoint gate.
+judged against the stricter $\|\nabla \mathcal{F}\|_2 < 10^{-4}$ endpoint criterion.
 
 The clean $p$-Laplace case is the expected easy case: Newton with Armijo line
 search is sufficient and gives the lowest solve time. Ginzburg--Landau separates the
@@ -40,7 +40,7 @@ has the largest rejection count and the largest solve time. The hybrid policy ke
 the trust-region safeguard while reducing both nonlinear iterations and solver
 time relative to line-search-only Newton. The Plasticity3D endpoint gives the
 opposite conclusion from the easy scalar case: at the stricter
-$\|\nabla \mathcal{F}\|_2 < 10^{-4}$ gate, line-search-only Newton reaches the
+$\|\nabla \mathcal{F}\|_2 < 10^{-4}$ criterion, line-search-only Newton reaches the
 iteration cap, whereas both trust-region policies converge. The hybrid variant
 is the fastest of the two trust-region configurations and also uses fewer Krylov
 iterations. Together, these comparisons support a problem-dependent policy choice
@@ -86,7 +86,7 @@ scaling claim. The Plasticity3D cases use the same
 $P_2(L_1)$, $\lambda_{\mathrm{sr}}=\num{1.55}$, MUMPS-backed PMG setting as the
 globalization comparison above.
 
-Across all three benchmark cases, local colored SFD reaches the same reported
+Across all three benchmark cases, colored SFD reaches the same reported
 energy and identical nonlinear/Krylov iteration counts as element AD. The
 scalar and hyperelasticity cases still show the expected wall-time premium for
 colored SFD. On the Plasticity3D endpoint, constitutive AD is fastest, while
@@ -138,7 +138,7 @@ stress case.
 The $p$-Laplace problem definition and discrete energy are given in
 \Cref{sec:bench-plaplace,eq:plaplace-discrete}. In this clean scalar setting,
 the numerical story is easiest to interpret: exact element Hessians remain
-effective in the reported distributed runs, while local-SFD reaches nearly
+effective in the reported distributed runs, while colored SFD reaches nearly
 identical discrete energies at higher wall time.
 
 \begin{figure}[H]
@@ -174,7 +174,7 @@ are given in \Cref{sec:bench-he,eq:hyperelasticity-discrete}. Computationally,
 this is the benchmark in which globalization matters more than derivative-route
 choice: the distributed implementation completes the full load path and
 preserves the terminal energy trend from \Cref{sec:bench-he}. The
-external JAX-FEM companion comparison is reported separately in
+external JAX-FEM comparison is reported separately in
 \Cref{sec:val-hyperelasticity}; the figure below reports only distributed
 scaling for the load path in \cref{eq:hyperelasticity-discrete}.
 
@@ -374,7 +374,8 @@ matched comparison is $P_1(L_4)$, $P_2(L_3)$, and $P_4(L_2)$ at
 \num{4801816} free DOFs. The scientific message is
 therefore that the solver reaches similar terminal energies along
 both $p$- and $h$-refined paths, while higher order on coarser meshes buys
-lower energy at matched DOFs only by paying a clear wall-time premium.
+lower observed values of \cref{eq:plasticity3d-discrete} at matched DOFs only
+by paying a clear wall-time premium in this nine-case endpoint study.
 
 \begin{figure}[H]
   \centering
@@ -392,8 +393,8 @@ lower energy at matched DOFs only by paying a clear wall-time premium.
   \input{tables/generated/plasticity3d_recommended_scaling.tex}
   \caption{Auxiliary Plasticity3D strong scaling for \localpmg{} on
   $P_4(L_2)$ at $\lambda_{\mathrm{sr}} = 1.0$. These timings provide
-  solver evidence, but they should not be read as a direct timing continuation
-  of the glued-bottom $\lambda_{\mathrm{sr}} = 1.55$ benchmark figures.}
+  solver evidence for a separate load factor from the glued-bottom
+  $\lambda_{\mathrm{sr}} = 1.55$ benchmark figures.}
   \label{tab:plasticity3d-scaling}
 \end{table}
 
