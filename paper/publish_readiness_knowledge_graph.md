@@ -43,7 +43,7 @@ MATLAB/Octave literature only when there is source-backed evidence.
   an explicit contribution block with solver, derivative/assembly, and
   linear-solver pillars.
 - `RELATED`: literature framing.
-  Required edit: consolidate defensive taxonomy into fewer scientific groups:
+  Status: consolidated defensive taxonomy into fewer scientific groups:
   FEM automation, differentiable FEM/AD, nonlinear solver infrastructure,
   topology/plasticity source context, and scalable software comparators.
 - `METHOD`: mathematical and algorithmic core.
