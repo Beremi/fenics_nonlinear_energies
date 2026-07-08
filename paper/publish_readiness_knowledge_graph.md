@@ -28,6 +28,12 @@ MATLAB/Octave literature only when there is source-backed evidence.
   Method," SIAM Journal on Optimization, 2024, DOI `10.1137/22M1519444`.
   Useful structure: motivation, notation/problem classes, method, theory,
   numerical experiments, discussion. The article is open access under CC BY 4.0.
+- Recent applied SIOPT style cue:
+  Sysala, Béreš, Bérešová, Haslinger, Kružík, and Luber, "Convex Optimization
+  Problems Inspired by Geotechnical Stability Analysis," SIAM Journal on
+  Optimization, 2025, DOI `10.1137/25M1723177`. Useful structure:
+  application motivation, abstract assumptions, interpretation remarks, and a
+  numerical 3D slope-stability example after the mathematical framework.
 - SIOPT journal scope cue: SIAM describes SIOPT as covering theory and practice
   of optimization; contributions may emphasize algorithms, software,
   computational practice, applications, or links between these subjects.
@@ -37,7 +43,9 @@ MATLAB/Octave literature only when there is source-backed evidence.
 - `PAPER`: Title, abstract, and conclusion.
   Status: title, abstract, and conclusion are now framed around a scientific
   \jaxpetsc{} toolset for nonlinear FEM energy solves, derivative routes,
-  sparse assembly, and solver policy.
+  sparse assembly, and solver policy. The abstract now opens from the nonlinear
+  FEM bottleneck and avoids internal campaign terms such as locked, promoted,
+  and fairness-gated.
 - `INTRO`: positioning and contributions.
   Status: now opens with the nonlinear FEM computational bottleneck and includes
   an explicit contribution block with solver, derivative/assembly, and
@@ -46,6 +54,9 @@ MATLAB/Octave literature only when there is source-backed evidence.
   Status: consolidated defensive taxonomy into fewer scientific groups:
   FEM automation, differentiable FEM/AD, nonlinear solver infrastructure,
   topology/plasticity source context, and scalable software comparators.
+  FEniTop is now framed as topology-optimization literature context rather than
+  a direct baseline, and the Cermak--Sysala--Valdman MATLAB/Octave citation is
+  implementation-lineage context only.
 - `METHOD`: mathematical and algorithmic core.
   Current assets: common finite-element energy notation, derivative routes,
   globalization algorithms, colored sparse finite differences, constitutive AD.
@@ -63,12 +74,20 @@ MATLAB/Octave literature only when there is source-backed evidence.
   Status: repeated "repository specialization" language has been replaced with
   implemented benchmark, discrete model, endpoint surrogate, or source-family
   context as appropriate; generated tables no longer use repository/maintained
-  descriptors for paper-facing claims.
+  descriptors for paper-facing claims. The Ginzburg--Landau initial state, the
+  24-step hyperelastic rotating boundary map, and the topology continuation
+  stall rule are now stated in the benchmark text.
 - `VALIDATION`: external and source-family comparison.
   Evidence: narrow hyperelastic JAX-FEM comparison; Plasticity3D validation
   ladder with endpoint-surrogate scope.
   Rule: keep validation separate from performance and never imply
   path-consistent plastic-history equivalence.
+  Status: comparison metrics now state thresholds and the hyperelastic companion
+  schedule. The JAX-FEM gate no longer asserts constitutive-law identity; it
+  records matched mesh/schedule and terminal post-comparison under the paper
+  energy. Plasticity3D Layer 1A is phrased as direct-branch source-observable
+  agreement, while glued-bottom boundary-contract language is reserved for
+  Layer 2.
 - `RESULTS`: performance and solver behavior.
   Evidence: globalization comparison, derivative-route comparison, scaling
   studies, hyperelastic and Plasticity3D solver diagnostics, topology scaling.
@@ -89,16 +108,22 @@ MATLAB/Octave literature only when there is source-backed evidence.
   panels instead of cramped side-by-side subfigures. Rendered pages 20--21 show
   readable panel titles, colorbars, axes, captions, and a clean transition to
   the validation summary table and results section.
+  Current chunk: the globalization comparison table uses wrapped benchmark and
+  method columns. Rendered page 22 no longer shows the earlier benchmark/method
+  label collision.
 - `REPRO`: reproducibility and submission readiness.
   Known blockers from `paper/todo.md`: target journal/template/declarations,
   repository license/archive DOI, and archive-neutral provenance for critical
-  artifacts.
+  artifacts. The JAX-FEM baseline runner now writes strict JSON with `null`
+  warmup timings and `allow_nan=False`; ignored local baseline metadata was
+  corrected in the workspace, but archive-neutral submission bundles remain
+  outstanding.
 
 ## Evidence Nodes
 
 - `E1`: Derivative routes.
   Element AD, constitutive AD, and colored SFD are already described and
-  compared. Strongest result: constitutive AD preferred on the locked
+  compared. Strongest result: constitutive AD preferred on the fixed
   Plasticity3D flagship case while preserving terminal-state agreement.
 - `E2`: Nonlinear globalization.
   Tables compare line search, trust region, and hybrid policies. Needs clearer
@@ -116,7 +141,8 @@ MATLAB/Octave literature only when there is source-backed evidence.
   literature includes MATLAB references but no current direct MATLAB runtime
   comparison is yet established.
 - `E6`: Plasticity3D scope.
-  Strong source-faithfulness evidence for the endpoint surrogate, but no true
+  Direct-branch source-observable agreement and fixed-load source-operator
+  diagnostics support the endpoint surrogate, but there is no true
   path-consistent incremental-history validation. This boundary must remain.
 
 ## Subagent Threads
@@ -138,6 +164,25 @@ MATLAB/Octave literature only when there is source-backed evidence.
 - `Legacy MATLAB/Valdman comparators` (`Halley`): completed. Key finding:
   cite Cermak--Sysala--Valdman 2019 as implementation-lineage context only, not
   as a verified numerical baseline.
+- `Narrative/message` (`Mendel`): completed. Key findings: remove internal
+  terms such as fairness-gated, locked, promoted, and review-level scrutiny;
+  keep FEniTop as context rather than a baseline; make the conclusion less
+  self-conscious. Addressed in the validation/prose chunk.
+- `Math/solver contracts` (`Kant`): completed. Key findings still open:
+  Plasticity3D stopping criteria need one explicit stop-contract table;
+  Plasticity3D PMG needs separate Hypre-coarse and MUMPS-coarse profiles; the
+  Plasticity3D branch thresholds and branch potentials need a self-contained
+  definition or appendix. Smaller findings on Ginzburg--Landau initial state,
+  hyperelastic load path, and topology stall-stop policy were addressed.
+- `Evidence/provenance` (`Wegener`): completed. Key findings addressed:
+  JAX-FEM comparison metadata no longer asserts constitutive-law identity,
+  strict JSON output is enforced for the runner, and Layer 1A wording no longer
+  implies an exact glued-bottom free-mask match. Remaining blocker:
+  archive-neutral provenance bundles still contain local paths outside the
+  tracked manuscript.
+- `Layout/PDF` (`Singer`): shutdown after timeout. Local visual inspection of
+  rendered pages 1 and 19--22 found the abstract, validation pages, and
+  globalization table readable after this chunk.
 
 ## First Edit Backlog
 

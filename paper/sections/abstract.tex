@@ -1,37 +1,42 @@
 \begin{abstract}
-We present \repo{} as a computational toolset for nonlinear finite-element
-energy solves and PDE-constrained optimization. The central design point is a
-\jaxpetsc{} stack in which local energies and constitutive laws are written in
-JAX, while sparse assembly, nonlinear globalization, Krylov linear solves, and
-preconditioning are handled by PETSc. The same benchmark suite also includes
-\purejax{} references and \fenics{} references where they are available, so the
-mainline distributed implementation can be compared against compact
-differentiable and high-level FEM formulations. The paper studies nonlinear
-scalar problems ($p$-Laplace and Ginzburg--Landau), finite-strain
-hyperelasticity, two- and three-dimensional Mohr--Coulomb plasticity, and
-topology optimization. Across these families, the methodological comparison
-centers on three routes to second-order information: element automatic
-differentiation, constitutive automatic differentiation, and colored sparse
-finite-difference recovery.
+Large nonlinear finite-element energy problems couple several numerical
+difficulties: local energies and constitutive laws need reliable derivatives,
+Newton-type methods need robust globalization, and distributed runs need sparse
+assembly, Krylov solvers, and preconditioners that match the mechanics of the
+problem. We present \repo{} as a computational toolset for studying these
+choices together in nonlinear finite-element solves and energy-based topology
+optimization. The mainline realization is a \jaxpetsc{} stack in which local
+energies and constitutive laws are written in JAX, while sparse assembly,
+nonlinear globalization, Krylov linear solves, and preconditioning are handled
+by PETSc. The same benchmark suite also includes \purejax{} references and
+\fenics{} references where they are available, so the distributed stack can be
+compared against compact differentiable and high-level FEM formulations. The
+paper studies nonlinear scalar problems ($p$-Laplace and Ginzburg--Landau),
+finite-strain hyperelasticity, two- and three-dimensional Mohr--Coulomb
+plasticity, and topology optimization. Across these families, the
+methodological comparison centers on three routes to second-order information:
+element automatic differentiation, constitutive automatic differentiation, and
+colored sparse finite-difference recovery.
 
-The evidence is deliberately separated into validation, derivative-route
-comparison, and parallel-solver behavior. The hyperelastic benchmark includes a
-serial companion comparison against JAX-FEM on a matched mesh and prescribed
-displacement schedule; all fairness-gated differences are below the configured
-5\% threshold, and the displacement-field and energy differences are below
-$10^{-3}$ under the comparison contract. For the three-dimensional
-heterogeneous plasticity benchmark, same-case source-faithfulness of the
-endpoint surrogate is tight, with relative differences \num{3.877e-5} in work,
-\num{3.517e-3} in displacement, and \num{8.720e-3} in deviatoric-strain norm.
+We separate validation, derivative-route comparison, and parallel-solver
+behavior. The hyperelastic benchmark includes a serial companion comparison
+against JAX-FEM on a matched mesh and prescribed displacement schedule; all
+predefined agreement quantities are below the 5\% threshold, and the
+displacement-field and energy differences are below $10^{-3}$ under the
+comparison contract. For the three-dimensional
+heterogeneous plasticity benchmark, direct-branch source-observable agreement
+of the endpoint surrogate is tight, with relative differences \num{3.877e-5}
+in work, \num{3.517e-3} in displacement, and \num{8.720e-3} in
+deviatoric-strain norm.
 A separate fixed-load source-operator diagnostic passes the gated
 $u_{\max}(\lambda)$ and endpoint-displacement checks. These results support the
 implemented endpoint-surrogate workflow for the tested cases, but they do not
 claim path-consistent equivalence to an incremental elastoplastic history solve.
 
-On the locked $P_4(L_1)$, $\lambda_{\mathrm{sr}}=1.5$, 8-rank plasticity
-derivative ablation, constitutive AD has the lowest median wall time among the
-three tested second-order routes while reaching the same terminal state as
-element AD and colored SFD. The promoted distributed \plasticitythree{} study
+On a fixed $P_4(L_1)$, $\lambda_{\mathrm{sr}}=1.5$, 8-rank plasticity
+derivative comparison, constitutive AD has the lowest median wall time among
+the three tested second-order routes while reaching the same terminal state as
+element AD and colored SFD. The distributed \plasticitythree{} study
 on $P_4(L_2)$ with \localpmg{} attains $\num{18.05}\times$ end-to-end speedup
 on 32 MPI ranks relative to one rank at the same nonlinear target. The topology
 optimization study complements this with a distributed design-and-mechanics

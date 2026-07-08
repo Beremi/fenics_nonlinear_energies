@@ -6,35 +6,29 @@ differentiation, sparse PETSc nonlinear solves, and multiple second-order routes
 are kept together across a heterogeneous benchmark suite.
 
 The Plasticity3D evidence is intentionally narrower than a broad mechanics
-claim. Same-case source-faithfulness of the endpoint surrogate is strong, and
-the fixed-lambda source-operator comparison
-passes the configured gated quantities after matching the glued-bottom
-boundary contract, with additional field-agreement diagnostics reported
-separately. These results support the endpoint-surrogate workflow for this
-benchmark family, while still not
-supporting constitutive-equivalence language or path-consistent
-incremental-history claims. Constitutive AD emerges as the preferred
-cost-quality route on the locked flagship case. On Hyperelasticity, the
+claim. For the tested cases, the endpoint surrogate agrees closely with the
+reported source-family observables and passes the predefined acceptance
+quantities, while the evidence remains below the level needed for
+path-consistent incremental-history validation. Constitutive AD gives the best
+cost-quality tradeoff in the derivative-route study. On Hyperelasticity, the
 companion comparison
 against JAX-FEM shows that the \jaxpetsc{} solver can agree very closely with a
 recent external implementation when the mesh and prescribed displacement
 schedule are matched and terminal states are post-compared with
-\cref{eq:hyperelasticity-energy}. The promoted Plasticity3D timing study and
-the distributed topology workflow then show that the same toolset remains
-operational beyond small validation comparisons.
+\cref{eq:hyperelasticity-energy}. The distributed Plasticity3D and topology
+runs then show that the same toolset extends beyond the small validation cases
+to larger sparse nonlinear solves.
 
 Future work should follow the boundaries made visible by these results:
 \begin{itemize}
   \item extend the validation surface for path-dependent mechanics beyond the
         present surrogate-versus-source-operator comparison, including a true
         incremental-history reference;
-  \item add more fairness-first external baselines on tightly matched problem
+  \item add more agreement-focused external baselines on tightly matched problem
         contracts;
   \item continue reducing linear-setup and multigrid costs in the flagship 3D
         mechanics workflows.
 \end{itemize}
 
-The next scientific step is not to overclaim this implementation, but
-to turn this workflow into a stronger reusable template for
-additional nonlinear multiphysics and design problems with equally explicit
-validation and fairness criteria.
+The next scientific step is to extend the same validation discipline to
+additional nonlinear multiphysics and design problems.

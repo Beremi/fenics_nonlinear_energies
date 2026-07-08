@@ -19,7 +19,7 @@ available, and it uses external or source-family comparisons only under narrow
 contracts. Thus the paper is not a claim that one framework dominates all
 finite-element workflows. It is a focused study of how local automatic
 differentiation, sparse assembly, nonlinear globalization, and distributed
-linear algebra can be kept in one reproducible nonlinear FEM workflow.
+linear algebra can be kept in one documented nonlinear FEM workflow.
 
 Recent open-source finite-element and PDE-optimization frameworks cover
 different parts of this workflow. High-level finite-element systems such as
@@ -35,7 +35,7 @@ AutoPDEx, JAX-CPFEM, the Firedrake--JAX bridge, and recent \code{FEniCSx}
 external-operator work, push automatic differentiation deeper into constitutive
 modeling and differentiable simulation
 \citep{xue2023jaxfem,xue2026implicit,bode2025autopdex,hu2025jaxcpfem,yashchuk2023bringing,latyshev2025externaloperators}.
-The recently submitted JetSCI preprint is especially close in architecture
+The JetSCI preprint is especially close in architecture
 because it also couples JAX-local finite-element kernels to PETSc for
 distributed sparse solves \citep{cattaneo2026jetsci}. Recent
 topology-optimization implementations such as \code{FEniTop} show that compact
@@ -62,12 +62,16 @@ organized around three solver components:
         policies used in the larger mechanics and topology runs.
 \end{enumerate}
 
+Together, these components make derivative construction, sparse assembly,
+globalization, and preconditioning part of one numerical-method choice rather
+than separate implementation details.
+
 We evaluate these components on six benchmark families: $p$-Laplace, scalar
 Ginzburg--Landau, hyperelasticity, Plasticity2D, \plasticitythree{}, and
 topology optimization. The scalar problems isolate formulation and derivative
 agreement. Hyperelasticity adds finite-strain mechanics and a narrow JAX-FEM
 companion comparison. Plasticity2D and \plasticitythree{} test nonsmooth
-constitutive structure, source-faithfulness, and multigrid policy. Topology
+constitutive structure, source-observable agreement, and multigrid policy. Topology
 optimization tests a distributed design-and-mechanics loop. The geomechanics
 context follows the finite-element strength-reduction and 3D slope-stability
 literature

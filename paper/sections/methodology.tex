@@ -105,7 +105,7 @@ energy, gradient, and Hessian solves/matvecs
 \end{algorithmic}
 \end{algorithm}
 
-For the principal 3D plasticity path promoted in this paper, the chosen policy
+For the principal 3D plasticity path reported in this paper, the chosen policy
 is simpler: Newton with Armijo backtracking and a PMG-preconditioned
 flexible-GMRES linear solve \citep[Sec.~3.1]{nocedal2006numerical}. This is the
 baseline workflow used for the flagship benchmark reported later in
@@ -155,7 +155,7 @@ layouts.
 
 \subsection{Constitutive autodiff for 3D plasticity}
 
-The promoted \plasticitythree{} result in this paper uses constitutive AD.
+The main \plasticitythree{} result in this paper uses constitutive AD.
 Rather than applying second-order AD to the full $P_4$ element vector, we define
 one scalar Mohr--Coulomb branch potential
 $\Phi_q(\varepsilon_q,m_q)$ per quadrature point, where $m_q$ collects the

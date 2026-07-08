@@ -158,8 +158,8 @@ required support for the current scoped contribution.
 - `./.venv/bin/python paper/scripts/generate_paper_tables.py`: passed.
 - `./.venv/bin/python paper/scripts/generate_paper_figures.py`: passed and
   rewrote the figure manifest.
-- `./.venv/bin/python paper/scripts/validate_paper_assets.py`: passed with 27
-  figures and 18 generated tables checked.
+- `./.venv/bin/python paper/scripts/validate_paper_assets.py`: passed on
+  2026-07-08 with 29 figures and 28 generated tables checked.
 - `make -C paper pdf`: passed after the script/table/figure changes and
   produced a 29-page PDF. A later rerun after the final prose cleanup was
   terminated after `generate_paper_figures.py` stalled for more than three

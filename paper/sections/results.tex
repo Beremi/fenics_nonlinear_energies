@@ -279,25 +279,25 @@ deviatoric-strain norm are defined in
 \Cref{sec:bench-plasticity3d,eq:plasticity3d-discrete,eq:plasticity3d-davis,eq:plasticity3d-potential,eq:plasticity3d-devnorm}.
 The validation limits for this endpoint surrogate are reported in
 \Cref{sec:val-plasticity3d}. With that interpretation fixed, this section asks
-two performance questions: which second-order route is preferred on the locked
+two performance questions: which second-order route is preferred on the fixed
 flagship case, and how the endpoint surrogate behaves across degree,
 resolution, and rank count.
 
 \paragraph{Derivative-route ablation.}
 The first question is which second-order route has the most useful
-cost-quality profile for the promoted workflow. On the locked
+cost-quality profile for the reported workflow. On the fixed
 $P_4(L_1)$ case at $\lambda_{\mathrm{sr}}=1.5$ and 8 MPI ranks, all three
 routes converge to essentially the same terminal state, with identical Newton
 and total Krylov counts. The differences are therefore cost differences, not
 state-quality differences: constitutive AD has the lowest median wall time on
-this locked case, with median wall time \SI{222}{s} and median solve time
+this fixed case, with median wall time \SI{222}{s} and median solve time
 \SI{191}{s}, compared with \SI{288}{s}/\SI{255}{s} for element AD
 and \SI{372}{s}/\SI{253}{s} for colored SFD.
 
 \begin{figure}[H]
   \centering
   \includegraphics[width=\PaperFigureMedium]{plasticity3d_derivative_ablation_bars.pdf}
-  \caption{Locked Plasticity3D derivative-route ablation on
+  \caption{Fixed Plasticity3D derivative-route comparison on
   $P_4(L_1)$, $\lambda_{\mathrm{sr}}=1.5$, and 8 MPI ranks.}
   \label{fig:plasticity3d-derivative-ablation}
 \end{figure}
@@ -305,7 +305,7 @@ and \SI{372}{s}/\SI{253}{s} for colored SFD.
 \begin{table}[H]
   \centering
   \input{tables/generated/plasticity3d_derivative_ablation.tex}
-  \caption{Plasticity3D derivative-route ablation on the locked
+  \caption{Plasticity3D derivative-route comparison on the fixed
   $P_4(L_1)$, $\lambda_{\mathrm{sr}}=1.5$, 8-rank case.}
   \label{tab:plasticity3d-derivative-ablation}
 \end{table}
@@ -313,7 +313,7 @@ and \SI{372}{s}/\SI{253}{s} for colored SFD.
 \paragraph{Discretization and scaling.}
 The remaining figures in this subsection answer a different question: how the
 endpoint surrogate behaves across degree/resolution choices, and how the
-recommended stack scales on the separate promoted
+recommended stack scales on the separate selected
 $P_4(L_2)$ timing studies.
 
 \begin{figure}[H]
@@ -367,7 +367,7 @@ lower energy at matched DOFs only by paying a clear wall-time premium.
 \begin{figure}[H]
   \centering
   \includegraphics[width=\PaperFigureMedium]{plasticity3d_recommended_scaling.pdf}
-  \caption{Historical strong scaling for the promoted Plasticity3D
+  \caption{Historical strong scaling for the selected Plasticity3D
   stack: \localpmg{} on $P_4(L_2)$ at
   $\lambda_{\mathrm{sr}} = 1.0$. This is a separate timing study from the
   glued-bottom $\lambda_{\mathrm{sr}} = 1.55$ results shown in
@@ -387,7 +387,7 @@ lower energy at matched DOFs only by paying a clear wall-time premium.
 
 \Cref{fig:plasticity3d-scaling,tab:plasticity3d-scaling} give the paper's
 largest distributed mechanics timing result. This scaling evidence uses
-the promoted $P_4(L_2)$ mesh family but a different load factor,
+the selected $P_4(L_2)$ mesh family but a different load factor,
 $\lambda_{\mathrm{sr}} = 1.0$, so it complements rather than extends the
 glued-bottom $\lambda_{\mathrm{sr}} = 1.55$ benchmark figures above. Within
 that timing study, the reported nonlinear and linear iteration counts
@@ -515,7 +515,7 @@ the harder Ginzburg--Landau and Plasticity3D endpoints. Second, the
 derivative-route comparisons show that access to several second-order routes is
 useful in practice. Colored SFD is a credible verification and fallback route
 on the tested local problems, but constitutive AD gives the best cost-quality
-profile on the locked Plasticity3D flagship case. Third, the hyperelasticity
+profile on the fixed Plasticity3D flagship case. Third, the hyperelasticity
 distribution and PMG ablations, together with the Plasticity3D partitioning
 diagnostics, show that sparse ownership, overlap size, coarse solves, and
 preconditioner policy are part of the numerical method, not merely software

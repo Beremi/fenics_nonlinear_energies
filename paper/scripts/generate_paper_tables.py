@@ -115,6 +115,13 @@ GLOBALIZATION_METHOD_LABELS = {
     "hybrid_trust_linesearch": "Hybrid TR+LS",
 }
 
+GLOBALIZATION_BENCHMARK_LABELS = {
+    "plaplace_l10_np32": "$p$-Laplace $L_{10}$",
+    "gl_l10_np16": "\\shortstack[l]{Ginzburg--Landau\\\\$L_{10}$}",
+    "he_l4_np32_steps8": "Hyperelasticity $L_4$",
+    "plasticity3d_p2_l1_np32_lambda155": "\\shortstack[l]{Plasticity3D\\\\$P_2(L_1)$}",
+}
+
 DERIVATIVE_BENCHMARK_ORDER = {
     "plaplace_l9_np32": 0,
     "he_l4_step1_np32": 1,
@@ -792,7 +799,7 @@ def main() -> None:
             [
                 "Plasticity3D",
                 f"constitutive-AD PMG solver, {element_label('P4', 'L1_2')}, $\\lambda_{{\\mathrm{{sr}}}}=\\num{{1.0}}$, 32 ranks: {fmt_wall_time(float(p3d_highlight['wall_time_s']))} s",
-                "Historical timing context for the promoted load factor; the main glued-bottom discretization study uses $\\lambda_{\\mathrm{sr}}=\\num{1.55}$.",
+                "Historical timing context for this load factor; the main glued-bottom discretization study uses $\\lambda_{\\mathrm{sr}}=\\num{1.55}$.",
             ],
             [
                 "Topology",
@@ -832,7 +839,7 @@ def main() -> None:
             ["Ginzburg--Landau", mesh_label("L9"), "Newton + line search", "FEniCS, JAX+PETSc", "indefinite local curvature from the double well"],
             ["Hyperelasticity", f"{mesh_label('L4')}, 24 steps", "trust-region path", "FEniCS, pure JAX, JAX+PETSc", "nonconvex large-deformation mechanics"],
             ["Plasticity2D", f"{element_label('P4', 'L5')}--{element_label('P4', 'L7')}", "endpoint or fixed work", "JAX+PETSc only", "same-mesh PMG and nonlinear tail behavior"],
-            ["Plasticity3D", f"{degree_label('P1')}/{degree_label('P2')}/{degree_label('P4')}", "$\\|g\\| < \\num{0.01}$", "constitutive-AD and source PMG variants", "heterogeneous 3D Mohr--Coulomb with constitutive AD"],
+            ["Plasticity3D", f"{degree_label('P1')}/{degree_label('P2')}/{degree_label('P4')}", "campaign-specific", "constitutive-AD and source PMG variants", "heterogeneous 3D Mohr--Coulomb with constitutive AD"],
             ["Topology", "$768\\times384$", "stall-stop continuation", "pure JAX, JAX+PETSc", "distributed design-mechanics coupling"],
         ],
     )
@@ -1020,7 +1027,11 @@ def main() -> None:
 
     write_table_star(
         "globalization_method_compare.tex",
-        fill_spec("l l c c c c c c c c c"),
+        "@{}"
+        + pcol(r"0.15\textwidth")
+        + "@{\\hspace{0.6em}}"
+        + pcol(r"0.105\textwidth")
+        + r"@{\extracolsep{\fill}}c c c c c c c c c@{}",
         [
             "Benchmark",
             "Method",
@@ -1036,7 +1047,7 @@ def main() -> None:
         ],
         [
             [
-                str(row["benchmark_label"]),
+                GLOBALIZATION_BENCHMARK_LABELS.get(str(row["benchmark"]), str(row["benchmark_label"])),
                 GLOBALIZATION_METHOD_LABELS.get(str(row["method"]), str(row["method"]).replace("_", r"\_")),
                 fmt_count(row["nprocs"]),
                 str(row["result"]).replace("_", r"\_"),
@@ -1567,7 +1578,7 @@ def main() -> None:
             r"\addlinespace",
             ["Contract/gate", "same mesh path", "--", "--", pass_fail(fairness_checks["same_mesh_path"])],
             ["Contract/gate", "same displacement schedule", "--", "--", pass_fail(fairness_checks["same_schedule"])],
-            ["Contract/gate", "agreement thresholds", "--", "--", pass_fail(agreement_pass)],
+            ["Contract/gate", "agreement thresholds ($5\\%$)", "--", "--", pass_fail(agreement_pass)],
             ["Contract/gate", "energy post-comparison", "--", "--", "used"],
         ],
     )

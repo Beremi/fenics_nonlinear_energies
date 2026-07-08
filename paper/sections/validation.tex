@@ -10,31 +10,43 @@ endpoint surrogate.
 \subsection{Comparison Metrics}
 \label{sec:val-metrics}
 
-For vector and field comparisons, we report relative differences of the form
+For vector and field comparisons with nonzero reference norm, we report
+relative differences of the form
 \begin{equation}
   \delta_M(a,b)
   =
   \frac{\|a-b\|_M}
-       {\max\{\|a\|_M,\|b\|_M,\epsilon_{\mathrm{abs}}\}},
+       {\|a\|_M},
   \label{eq:validation-relative-difference}
 \end{equation}
-where $M$ denotes the discrete norm used for the compared observable and
-$\epsilon_{\mathrm{abs}}$ prevents division by a nearly zero reference value.
-For nodal displacement vectors, $M$ is the Euclidean norm on the compared free
-degrees of freedom. For sampled profiles and quadrature-derived fields, $M$
-denotes the corresponding sampled or quadrature-weighted norm used by the
-comparison. Work and energy differences use the same relative-denominator
-convention applied to the scalar quantities being compared. The acceptance gates
-therefore apply only to the observables named in each table.
+where $a$ is the reference observable and $M$ denotes the discrete norm used for
+the comparison. For nodal displacement vectors, $M$ is the Euclidean norm on the
+compared free degrees of freedom. For sampled profiles and quadrature-derived
+fields, $M$ denotes the corresponding sampled or quadrature-weighted norm used
+by the comparison. The reported field and profile observables have nonzero
+reference norms. Scalar work and energy differences use the same
+reference-denominator convention; the hyperelastic energy post-comparison uses
+an absolute denominator floor of $10^{-12}$.
+
+The hyperelastic companion comparison uses a 5\% acceptance threshold for the
+final energy, full-field displacement, centerline displacement, and
+$u_{\max}$-curve differences. The \plasticitythree{} Layer 2 acceptance gate
+uses three thresholds from its validation manifest: at most $0.03$ relative
+difference in the highest successful load factor, at most $0.05$ relative
+$L^2$ difference for the $u_{\max}(\lambda)$ curve, and at most $0.10$
+relative $L^2$ difference for the endpoint displacement. The deviatoric-strain
+and boundary-profile differences in \Cref{tab:plasticity3d-validation} are
+diagnostics, not acceptance gates.
 
 \subsection{Hyperelasticity Companion Comparison}
 \label{sec:val-hyperelasticity}
 
-The hyperelasticity problem definition, energy, and load path are
-defined in \Cref{sec:bench-he,eq:hyperelasticity-discrete}. The external
-comparison here is deliberately narrow. It uses a serial companion case against
-JAX-FEM on the same mesh and prescribed displacement schedule, then
-post-compares both terminal states with the energy from
+The hyperelasticity energy is defined in \Cref{sec:bench-he}. The external
+comparison here is deliberately narrow and uses a serial companion case rather
+than the 24-step rotating benchmark path. Both implementations use the same
+level-1 mesh and the same right-face $x$-translation schedule
+$d=(0.0025,0.005,0.0075,0.01)$, then post-compare both terminal states with
+the energy from
 \cref{eq:hyperelasticity-energy}. This supports a solution-level
 implementation comparison for this hyperelastic problem only. It should not be
 read as a plasticity validation, a broad framework ranking, or constitutive-law
@@ -64,11 +76,11 @@ uses the $D_1(J-1)^2$ volumetric penalty.
 \begin{table}[H]
   \centering
   \input{tables/generated/jax_fem_hyperelastic_baseline.tex}
-  \caption{Fairness-gated hyperelastic companion comparison against JAX-FEM.}
+  \caption{Agreement-gated hyperelastic companion comparison against JAX-FEM.}
   \label{tab:hyperelasticity-jaxfem-baseline}
 \end{table}
 
-The fairness gate in \Cref{tab:hyperelasticity-jaxfem-baseline} passes on all
+The agreement gate in \Cref{tab:hyperelasticity-jaxfem-baseline} passes on all
 checked quantities. The final energy relative difference is
 \num{8.244e-6}, the full-field displacement relative $L^2$ difference is
 \num{2.011e-4}, the centerline relative $L^2$ difference is
@@ -93,9 +105,9 @@ context for this problem class
 they are not used here as verified numeric paper baselines.
 
 The validation ladder therefore separates two questions. Layer 1A tests
-same-case source-faithfulness of the endpoint surrogate on the direct-branch
-$P_2(L_1)$ glued-bottom case. This layer is tight: the work relative difference
-is \num{3.877e-5}, the displacement relative $L^2$ difference is
+direct-branch source-observable agreement for the endpoint surrogate on the
+$P_2(L_1)$ source-family case. This layer is tight: the work relative
+difference is \num{3.877e-5}, the displacement relative $L^2$ difference is
 \num{3.517e-3}, and the deviatoric-strain relative $L^2$ difference is
 \num{8.720e-3}. Layer 2 is different: it is a fixed-$\lambda$ diagnostic
 against a source-operator comparison, not proof of path-consistent
@@ -103,7 +115,7 @@ incremental-history equivalence. After matching the source boundary contract
 to the glued-bottom free-DOF mask, the validation schedule is capped
 at the main-figure load level $\lambda_{\mathrm{sr}}=1.55$. It keeps the
 highest-successful-$\lambda$ schedule proxy aligned on the tested grid and
-passes the configured gates for the $u_{\max}(\lambda)$ curve and endpoint
+passes the predefined gates for the $u_{\max}(\lambda)$ curve and endpoint
 displacement: the $u_{\max}(\lambda)$ relative $L^2$ difference is
 \num{6.396e-6}, and the endpoint displacement relative $L^2$ difference is
 \num{8.299e-4}. The endpoint deviatoric-strain relative $L^2$ difference
@@ -119,7 +131,7 @@ reference.
   \begin{subfigure}[t]{\PaperFigureMedium}
     \centering
     \includegraphics[width=\linewidth]{plasticity3d_validation_layer1a_boundary.pdf}
-    \caption{Layer 1A: same-case source-faithfulness on the surrogate.}
+    \caption{Layer 1A: direct-branch source-observable agreement.}
   \end{subfigure}
 
   \vspace{0.45em}
@@ -130,7 +142,7 @@ reference.
     \caption{Layer 2: fixed-$\lambda$ source-operator diagnostic.}
   \end{subfigure}
   \caption{Plasticity3D validation ladder. The upper panel documents tight
-  same-case source-faithfulness for the implemented endpoint surrogate; the
+  direct-branch source-observable agreement for the endpoint surrogate; the
   lower panel shows close fixed-$\lambda$ source-operator agreement after
   matching the glued-bottom boundary contract.}
   \label{fig:plasticity3d-validation}
@@ -139,13 +151,14 @@ reference.
 \begin{table}[H]
   \centering
   \input{tables/generated/plasticity3d_validation_summary.tex}
-  \caption{Plasticity3D validation summary for same-case source-faithfulness
+  \caption{Plasticity3D validation summary for direct-branch source-observable
+  agreement
   (layer 1A) and the fixed-$\lambda$ source-operator diagnostic (layer 2).}
   \label{tab:plasticity3d-validation}
 \end{table}
 
 The resulting interpretation is limited but useful. \plasticitythree{} is
-validated here as a source-faithful endpoint-surrogate workflow in
-Layer 1A, while Layer 2 supports the same endpoint surrogate under a fixed-load
-source-operator contract. Neither layer is a path-consistent
+supported here by direct-branch source-observable agreement in Layer 1A, while
+Layer 2 supports the same endpoint surrogate under a fixed-load source-operator
+contract. Neither layer is a path-consistent
 incremental-plasticity history validation.

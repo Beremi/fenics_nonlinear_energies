@@ -144,7 +144,15 @@ same triangular hierarchy:
 \end{equation}
 Relative to $p$-Laplace, the additional difficulty here is not geometry but
 indefinite local curvature from the double-well potential in
-\cref{eq:gl-energy}.
+\cref{eq:gl-energy}. All compared routes use the same initial state
+\[
+  u_0(x,y)
+  =
+  \sin\!\left(\frac{\pi(x-1)}{2}\right)
+  \sin\!\left(\frac{\pi(y-1)}{2}\right),
+\]
+restricted to the free degrees of freedom, so the nonconvex branch selection
+is part of the benchmark contract.
 
 \begin{figure}[H]
   \centering
@@ -196,7 +204,17 @@ on $\Omega = [0,0.4] \times [-0.005,0.005]^2$ with
 $C_1 \approx \num{3.846e7}$ and
 $D_1 \approx \num{8.333e7}$. The left face is clamped, while the right
 face carries the prescribed rotating Dirichlet load path used throughout this
-benchmark, parametrized by load step $\eta$. The strong form is
+benchmark. For a reference point $X=(X_1,X_2,X_3)$ on the right face and
+$N=24$ reported load steps, the prescribed position at step $k$ is
+\[
+  \bar y_k(X)
+  =
+  \bigl(X_1,\cos\eta_k\,X_2+\sin\eta_k\,X_3,
+  -\sin\eta_k\,X_2+\cos\eta_k\,X_3\bigr),
+  \qquad
+  \eta_k = \frac{8\pi k}{N}.
+\]
+The strong form is
 \begin{equation}
   -\nabla \cdot P(F) = 0 \quad \text{in }\Omega,
   \qquad
@@ -259,7 +277,7 @@ deferred to \Cref{sec:num-hyperelasticity}. The separate validation section
 adds one serial companion comparison against JAX-FEM on the same mesh and
 prescribed displacement schedule, with energy post-comparison under
 \cref{eq:hyperelasticity-energy}; it is
-included as a fairness-first hyperelastic implementation comparison rather than
+included as an agreement-focused hyperelastic implementation comparison rather than
 as a broad framework ranking exercise.
 
 \subsection{Plasticity2D}
@@ -406,7 +424,7 @@ We write $P_k(L_\ell)$ for polynomial degree $k$ on mesh level $\ell$ and use
 $L_1,\ldots,L_4$ for the four displayed mesh levels.
 The figures below use the corrected glued-bottom $P_4(L_2)$ showcase at
 $\lambda_{\mathrm{sr}}=1.55$ and the finished nine-case study
-at the same load factor. The promoted $\lambda_{\mathrm{sr}}=1.0$ strong-scaling
+at the same load factor. The $\lambda_{\mathrm{sr}}=1.0$ strong-scaling
 study is kept later in the paper as separate historical timing evidence.
 For those endpoint and continuation studies, we evaluate the
 following algorithmic scalar surrogate:
@@ -564,8 +582,8 @@ which matches the engineering-shear convention of
 Because \cref{eq:plasticity3d-discrete,eq:plasticity3d-potential} define an
 algorithmic endpoint surrogate rather than a path-consistent incremental
 history functional, the results section reports this family with a separate
-validation ladder. Same-case source-faithfulness of the endpoint surrogate
-is treated separately from a fixed-lambda source-operator
+validation ladder. Direct-branch source-observable agreement for the endpoint
+surrogate is treated separately from a fixed-lambda source-operator
 comparison. The latter checks source-family behavior under matched geometry,
 materials, Davis-B reduction parameters, load schedule, and glued-bottom
 free-DOF mask, but it is not a path-consistent incremental-history validation.
@@ -717,5 +735,8 @@ notation. The outer loop alternates mechanics solves for
 \end{table}
 
 For topology, the relevant notion of ``convergence'' is the reduced objective
-history rather than a single equilibrium energy. Parallel timing and scaling
-for the same family are reported in \Cref{sec:num-topology}.
+history rather than a single equilibrium energy. The reported continuation
+starts at SIMP exponent $p=1$, increases $p$ by $0.2$ on each outer iteration up
+to $p=10$, and treats the fine-grid run as stalled once $p\ge 4$ and both the
+design change and state change are at most $10^{-6}$. Parallel timing and
+scaling for the same family are reported in \Cref{sec:num-topology}.

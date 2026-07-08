@@ -5,7 +5,7 @@ The results support four main conclusions.
 \paragraph{Constitutive AD is the preferred derivative route on the flagship
 Plasticity3D case.}
 \Cref{fig:plasticity3d-derivative-ablation,tab:plasticity3d-derivative-ablation}
-show a clean cost-quality picture on the locked
+show a clean cost-quality picture on the fixed
 $P_4(L_1)$, $\lambda_{\mathrm{sr}}=1.5$, 8-rank case. All three routes
 reach essentially the same terminal state with the same nonlinear and Krylov
 counts, so the comparison is about cost rather than about different converged
@@ -15,24 +15,21 @@ substantially relative to full element AD and colored SFD.
 
 \paragraph{Validation has to be separated by claim level.}
 The Plasticity3D validation ladder in
-\Cref{fig:plasticity3d-validation,tab:plasticity3d-validation} changes how the
-paper should phrase its mechanics claims. Same-case source-faithfulness of the
-endpoint surrogate is strong, and that is an important
-result for solver credibility. The fixed-lambda source-operator comparison
-also satisfies the configured endpoint field-agreement thresholds once the
-source boundary condition is matched to the glued-bottom mask. The right
-interpretation is therefore stronger but still scoped: the implementation
-faithfully reproduces the intended endpoint surrogate, yet the present
-evidence does not justify describing that surrogate as a path-consistent
-incremental elastoplastic history solve or as a verified numeric reproduction
-of the Sysala source-family papers.
+\Cref{fig:plasticity3d-validation,tab:plasticity3d-validation} supports a
+scoped mechanics interpretation. The tested endpoint surrogate agrees closely
+with the source-family observables reported here, and the fixed-lambda
+source-operator comparison satisfies the endpoint field-agreement thresholds
+after matching the glued-bottom boundary contract. The evidence therefore
+supports the intended endpoint surrogate for the tested cases, but it does not
+establish path-consistent incremental elastoplastic-history equivalence or a
+verified numeric reproduction of the Sysala source-family papers.
 
 \paragraph{Matched external baselines are useful when the contract is narrow.}
 The hyperelastic companion comparison against JAX-FEM in
 \Cref{fig:hyperelasticity-jaxfem-baseline,tab:hyperelasticity-jaxfem-baseline}
-shows that a narrow, fairness-first external baseline can survive review-level
-scrutiny. Here the mesh and prescribed displacement schedule are matched, and
-the terminal states are post-compared with the energy in
+is informative because the mesh, prescribed displacement schedule, and
+terminal-state energy evaluation are explicitly matched. The terminal states
+are post-compared with the energy in
 \cref{eq:hyperelasticity-energy}; the resulting energy and field differences
 are very small. The comparison is useful precisely because it is narrow and
 hyperelastic-only. The paper should not generalize it into a broad ranking
@@ -42,7 +39,7 @@ matched on a shared hyperelastic problem contract.
 
 \paragraph{Fairness and limitations remain part of the scientific result.}
 Several limitations should stay explicit. The historical Plasticity3D strong
-scaling study at $\lambda_{\mathrm{sr}}=1.0$ remains workflow evidence, while
+scaling study at $\lambda_{\mathrm{sr}}=1.0$ remains timing evidence, while
 the newer glued-bottom $\lambda_{\mathrm{sr}}=1.55$ scaling sweep is the
 converged comparison tied to the benchmark. The topology study is
 reported as end-to-end workflow scaling rather than fixed-work strong scaling.
@@ -50,13 +47,13 @@ Some source/local PMG studies remain solver-engineering diagnostics rather than
 fully symmetric scientific baselines. None of these caveats erase the paper's
 main contribution, but they do define its proper scope: a software-and-methods
 workflow with explicit derivative-route choices, explicit validation surfaces,
-and explicit fairness boundaries.
+and explicit agreement boundaries.
 
 The broader methodological lesson is that differentiable FEM becomes most
 scientifically useful when local differentiation and sparse solver engineering
 are designed together. Automatic differentiation alone does not settle the
 behavior of large nonlinear FEM workflows; globalization, sparse ownership,
 preconditioning, and the interpretation of surrogate models matter just as
-much. Within that scoped claim, \repo{} contributes a reproducible nonlinear
+much. Within that scoped claim, \repo{} contributes a documented nonlinear
 FEM workflow rather than a universal differentiable-PDE platform or a new
 constitutive theory.
