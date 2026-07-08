@@ -4,12 +4,12 @@
 \par\vspace{0.2em}
 \begin{tabularx}{\textwidth}{@{}>{\hsize=1.073\hsize\linewidth=\hsize\RaggedRight\arraybackslash}X>{\hsize=0.927\hsize\linewidth=\hsize\RaggedRight\arraybackslash}X@{\hspace{0.45em}}c c c c@{}}
 \toprule
-Precond. & Result & Newton & Krylov & Solver [s] & Energy \\
+Precond. & Nonlinear work & Newton & Krylov & Solver [s] & Energy \\
 \midrule
-GAMG & fixed work & 8 & 42 & \num{22.3} & \num{1.608441} \\
-PMG $L_2$ + Hypre & fixed work & 8 & 92 & \num{23.3} & \num{0.5252349427} \\
-PMG $L_2$ + MUMPS & fixed work & 8 & 17 & \num{15.3} & \num{0.3848912708} \\
-PMG $L_3$ + MUMPS & fixed work & 8 & 17 & \num{16.3} & \num{0.3864166034} \\
+GAMG & 8 Newton linearizations & 8 & 42 & \num{22.3} & \num{1.608441} \\
+PMG $L_2$ + Hypre & 8 Newton linearizations & 8 & 92 & \num{23.3} & \num{0.5252349427} \\
+PMG $L_2$ + MUMPS & 8 Newton linearizations & 8 & 17 & \num{15.3} & \num{0.3848912708} \\
+PMG $L_3$ + MUMPS & 8 Newton linearizations & 8 & 17 & \num{16.3} & \num{0.3864166034} \\
 \bottomrule
 \end{tabularx}
 

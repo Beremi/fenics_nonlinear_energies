@@ -4,19 +4,19 @@
 \par\vspace{0.2em}
 \begin{tabularx}{\textwidth}{@{}c@{\hspace{0.45em}}>{\hsize=1.100\hsize\linewidth=\hsize\RaggedRight\arraybackslash}X>{\hsize=0.900\hsize\linewidth=\hsize\RaggedRight\arraybackslash}X@{\hspace{0.45em}}c c c c@{}}
 \toprule
-Element & Route & Result & Free DOFs & Elem DOFs & Overlap DOFs & RSS max [GiB] \\
+Element & Route & Linearization & Free DOFs & Elem DOFs & Overlap DOFs & RSS max [GiB] \\
 \midrule
-$P_{1}(L_{1})$ & Element AD & fixed work & \num{10526} & 12 & 675 & \num{0.5} \\
-$P_{1}(L_{1})$ & Colored SFD & fixed work & \num{10526} & 12 & 675 & \num{0.5} \\
-$P_{1}(L_{1})$ & Constitutive AD & fixed work & \num{10526} & 12 & 675 & \num{0.5} \\
-$P_{1}(L_{2})$ & Element AD & fixed work & \num{79024} & 12 & 3624 & \num{0.6} \\
-$P_{1}(L_{2})$ & Colored SFD & fixed work & \num{79024} & 12 & 3624 & \num{0.6} \\
-$P_{1}(L_{2})$ & Constitutive AD & fixed work & \num{79024} & 12 & 3624 & \num{0.5} \\
-$P_{2}(L_{1})$ & Element AD & fixed work & \num{79024} & 30 & 3933 & \num{0.9} \\
-$P_{2}(L_{1})$ & Colored SFD & fixed work & \num{79024} & 30 & 3933 & \num{1.1} \\
-$P_{2}(L_{1})$ & Constitutive AD & fixed work & \num{79024} & 30 & 3933 & \num{0.6} \\
-$P_{4}(L_{1})$ & Element AD & fixed work & \num{610964} & 105 & 27177 & \num{1.2} \\
-$P_{4}(L_{1})$ & Constitutive AD & fixed work & \num{610964} & 105 & 27177 & \num{1.1} \\
+$P_{1}(L_{1})$ & Element AD & one Newton linearization & \num{10526} & 12 & 675 & \num{0.5} \\
+$P_{1}(L_{1})$ & Colored SFD & one Newton linearization & \num{10526} & 12 & 675 & \num{0.5} \\
+$P_{1}(L_{1})$ & Constitutive AD & one Newton linearization & \num{10526} & 12 & 675 & \num{0.5} \\
+$P_{1}(L_{2})$ & Element AD & one Newton linearization & \num{79024} & 12 & 3624 & \num{0.6} \\
+$P_{1}(L_{2})$ & Colored SFD & one Newton linearization & \num{79024} & 12 & 3624 & \num{0.6} \\
+$P_{1}(L_{2})$ & Constitutive AD & one Newton linearization & \num{79024} & 12 & 3624 & \num{0.5} \\
+$P_{2}(L_{1})$ & Element AD & one Newton linearization & \num{79024} & 30 & 3933 & \num{0.9} \\
+$P_{2}(L_{1})$ & Colored SFD & one Newton linearization & \num{79024} & 30 & 3933 & \num{1.1} \\
+$P_{2}(L_{1})$ & Constitutive AD & one Newton linearization & \num{79024} & 30 & 3933 & \num{0.6} \\
+$P_{4}(L_{1})$ & Element AD & one Newton linearization & \num{610964} & 105 & 27177 & \num{1.2} \\
+$P_{4}(L_{1})$ & Constitutive AD & one Newton linearization & \num{610964} & 105 & 27177 & \num{1.1} \\
 \bottomrule
 \end{tabularx}
 

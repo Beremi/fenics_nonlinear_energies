@@ -172,7 +172,17 @@ MATLAB/Octave literature only when there is source-backed evidence.
   caption with availability language, and changes the Hyperelasticity
   distribution-memory generated table labels from probe/build/result jargon to
   purpose, assembly layout, outcome, agreement check, memory comparison, and
-  one-linearization terminology.
+  one-linearization terminology. Current notation-and-claims chunk removes an
+  unsupported "near target" claim for failed Plasticity3D line-search Newton,
+  removes a hyperelastic energy-in-table claim not supported by the visible
+  table, scopes trust-region necessity to the tested Plasticity3D gate, and
+  reframes topology as end-to-end timing under rank-dependent stopping with a
+  separate fixed-schedule consistency check. Current results-label chunk
+  removes remaining body-facing `row`, `probe`, and `ablation` wording from the
+  main results prose; names Hyperelasticity and Plasticity3D fixed-work cases
+  as fixed-cost, fixed-nonlinear-work, or single-linearization comparisons; and
+  regenerates result tables with `Outcome`, `Linearization`, `Nonlinear work`,
+  and `Schedule` labels instead of generic `Result` or `fixed work` cells.
 - `DISCUSSION_CONCLUSION`: interpretation and scope.
   Current prose states the toolset lesson in paper-facing terms: automatic
   differentiation alone does not determine large nonlinear FEM behavior;
@@ -229,7 +239,16 @@ MATLAB/Octave literature only when there is source-backed evidence.
   and 35. The shorter title/abstract, condensed introduction, implementation
   caption, Plasticity2D endpoint table, validation comparison table,
   Hyperelasticity distribution-memory table, discussion, and conclusion are
-  readable and unclipped.
+  readable and unclipped. Current notation-and-claims chunk renames visible
+  generated labels such as `Solve contract` and `Platform` to paper-facing
+  `Stopping rule` and `CPU setting`, adds PDF metadata, and records Banach's
+  residual layout warning: dense `[H]` floats, the SOTA table, and the 10-column
+  Plasticity3D scaling table remain template-fragile even though the current A4
+  PDF samples were clean. Current results-label chunk rebuilt the 37-page PDF
+  and visually checked rendered pages 23, 24, 26, 27, 28, 29, and 32. The
+  globalization/derivative-route outcome tables, Plasticity3D linearization
+  table, Hyperelasticity memory/PMG tables, and topology schedule table are
+  readable, unclipped, and within the text block.
 - `REPRO`: reproducibility and submission readiness.
   Known blockers from `paper/todo.md`: target journal/template/declarations,
   repository license/archive DOI, and archive-neutral provenance for critical
@@ -389,8 +408,46 @@ MATLAB/Octave literature only when there is source-backed evidence.
   implementation caption, Plasticity2D endpoint labels, selected results
   opening phrases, appendix reproducibility wording, and the JAX-FEM and
   Hyperelasticity distribution generated table labels were revised. Remaining
-  style work: a broader results-section pass for residual "fixed-work",
-  "probe", "ablation", "row", and topology rank-consistency wording.
+  style work from Kuhn was addressed in the current results-label chunk for the
+  main results section and generated result tables.
+- `Results prose label audit` (`Raman`): completed. Findings addressed in the
+  current results-label chunk: globalization and derivative-route rows are now
+  cases/configurations/comparisons, Hyperelasticity memory evidence is a
+  fixed-cost memory comparison, Plasticity3D derivative ablation is a
+  derivative-route comparison, and topology rank consistency is described as a
+  fixed-schedule test.
+- `Generated results table label audit` (`Leibniz`): completed. Findings
+  addressed in the current results-label chunk: generated result tables now use
+  `Outcome`, `Linearization`, `Nonlinear work`, and `Schedule` labels; the
+  Plasticity3D globalization failed state is rendered as `iteration cap`; and
+  `fixed work` cells were removed from the affected result tables.
+- `Front/back matter current audit` (`Dalton`): completed. Findings addressed
+  in the notation-and-claims chunk: abstract comparison and validation wording
+  made self-contained, related-work defensive phrasing removed, discussion
+  validation/baseline wording made evidence-scoped, conclusion names the PETSc
+  solver components, and `Additional Solver Evidence` was renamed
+  `Solver-Policy Diagnostics`. Remaining structural note: the SOTA table is
+  still dense and partly duplicates related-work positioning.
+- `Methodology/implementation current audit` (`Kant-current`): completed.
+  Findings addressed: coefficient-vector notation added, `\Pi_h` and
+  `\mathcal{J}_h` roles separated, element contributions and quadrature
+  densities defined before derivative routes, capability matrix aligned with
+  colored-SFD evidence, and implementation prose made less codebase-like.
+  Remaining mathematical work: make the trust-region and colored-SFD algorithms
+  more formal if the target venue expects algorithm-level reproducibility.
+- `Benchmarks/validation/results current audit` (`Bernoulli`): completed.
+  Findings addressed: removed unsupported "near target" and hyperelastic
+  energy-in-table claims, reframed Plasticity2D reference continuation as
+  fixed-policy rank/timing evidence, corrected fixed reference-operator PMG
+  convergence wording, and recast topology timing as rank-dependent stopping
+  with a separate fixed-schedule consistency check. Remaining style work:
+  additional body-text interpretation for some early state/scaling figures.
+- `Figures/tables/layout current audit` (`Banach`): completed. Findings partly
+  addressed: visible revision-history caption wording removed, generated table
+  labels made paper-facing, section title improved, and PDF metadata added.
+  Remaining layout risk: `[H]` float placement, the dense SOTA table, and the
+  Plasticity3D scaling table should be revisited after a target journal template
+  is chosen.
 
 ## First Edit Backlog
 

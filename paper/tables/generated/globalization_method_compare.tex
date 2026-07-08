@@ -4,7 +4,7 @@
 \par\vspace{0.2em}
 \begin{tabularx}{\textwidth}{@{}>{\hsize=1.143\hsize\linewidth=\hsize\RaggedRight\arraybackslash}X>{\hsize=0.857\hsize\linewidth=\hsize\RaggedRight\arraybackslash}X@{\hspace{0.45em}}c c c c c@{}}
 \toprule
-Benchmark & Method & Ranks & Result & Steps & Time [s] & Energy \\
+Benchmark & Method & Ranks & Outcome & Steps & Time [s] & Energy \\
 \midrule
 $p$-Laplace $L_{10}$ & Newton + LS & 32 & completed & 1/1 & \num{6.95} & \num{-0.2517224496} \\
 $p$-Laplace $L_{10}$ & Steihaug TR & 32 & completed & 1/1 & \num{11.7} & \num{-0.2517227312} \\
@@ -15,7 +15,7 @@ $p$-Laplace $L_{10}$ & Hybrid TR+LS & 32 & completed & 1/1 & \num{12} & \num{-0.
 Hyperelasticity $L_4$ & Newton + LS & 32 & completed & 8/8 & \num{194} & \num{9.733145} \\
 Hyperelasticity $L_4$ & Steihaug TR & 32 & completed & 8/8 & \num{178} & \num{9.73101} \\
 Hyperelasticity $L_4$ & Hybrid TR+LS & 32 & completed & 8/8 & \num{149} & \num{9.730978} \\
-\shortstack[l]{Plasticity3D\\$P_2(L_1)$} & Newton + LS & 32 & failed & 0/1 & \num{70.2} & \num{-3012813} \\
+\shortstack[l]{Plasticity3D\\$P_2(L_1)$} & Newton + LS & 32 & iteration cap & 0/1 & \num{70.2} & \num{-3012813} \\
 \shortstack[l]{Plasticity3D\\$P_2(L_1)$} & Steihaug TR & 32 & completed & 1/1 & \num{20.8} & \num{-3012813} \\
 \shortstack[l]{Plasticity3D\\$P_2(L_1)$} & Hybrid TR+LS & 32 & completed & 1/1 & \num{16.4} & \num{-3012813} \\
 \bottomrule

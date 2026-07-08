@@ -168,6 +168,27 @@ HE_DISTRIBUTION_OUTCOME_LABELS = {
     "fixed_work_completed": "one linearization",
 }
 
+GLOBALIZATION_OUTCOME_LABELS = {
+    "completed": "completed",
+    "failed": "iteration cap",
+    "timeout": "timeout",
+}
+
+HE_PMG_WORK_LABELS = {
+    "fixed_work": "8 Newton linearizations",
+    "fixed_work_completed": "8 Newton linearizations",
+}
+
+TOPOLOGY_SCHEDULE_LABELS = {
+    "fixed_work": "fixed schedule",
+    "fixed_work_completed": "fixed schedule",
+}
+
+P3D_DERIVATIVE_DEGREE_WORK_LABELS = {
+    "fixed_work": "one Newton linearization",
+    "fixed_work_completed": "one Newton linearization",
+}
+
 REVIEWER_HE_PMG_LABELS = {
     "gamg": "GAMG",
     "pmg_l2_hypre": "PMG $L_2$ + Hypre",
@@ -1099,13 +1120,13 @@ def main() -> None:
                 "@{}"
                 + xspec((1.20, "RaggedRight"), (0.90, "RaggedRight"))
                 + r"@{\hspace{0.45em}}c c c c c@{}",
-                ["Benchmark", "Method", "Ranks", "Result", "Steps", "Time [s]", "Energy"],
+                ["Benchmark", "Method", "Ranks", "Outcome", "Steps", "Time [s]", "Energy"],
                 [
                     [
                         GLOBALIZATION_BENCHMARK_LABELS.get(str(row["benchmark"]), str(row["benchmark_label"])),
                         GLOBALIZATION_METHOD_LABELS.get(str(row["method"]), str(row["method"]).replace("_", r"\_")),
                         fmt_count(row["nprocs"]),
-                        str(row["result"]).replace("_", r"\_"),
+                        GLOBALIZATION_OUTCOME_LABELS.get(str(row["result"]), _result_label(row["result"])),
                         f"{fmt_count(row['completed_steps'])}/{fmt_count(row['steps_requested'])}",
                         _fmt_optional_wall(row.get("solve_time_s") or row.get("wall_time_s")),
                         _fmt_optional_energy(row.get("final_energy")),
@@ -1143,12 +1164,12 @@ def main() -> None:
                 "@{}"
                 + xspec((1.25, "RaggedRight"), (0.95, "RaggedRight"))
                 + r"@{\hspace{0.45em}}c c c@{}",
-                ["Benchmark", "Route", "Result", "Time [s]", "Energy"],
+                ["Benchmark", "Route", "Outcome", "Time [s]", "Energy"],
                 [
                     [
                         DERIVATIVE_BENCHMARK_LABELS.get(str(row["benchmark"]), str(row["benchmark_label"])),
                         DERIVATIVE_ROUTE_LABELS.get(str(row["route"]), str(row["route_label"])),
-                        str(row["result"]).replace("_", r"\_"),
+                        _result_label(row["result"]),
                         _derivative_row_time(row),
                         _fmt_optional_energy(row.get("final_energy")),
                     ]
@@ -1256,11 +1277,11 @@ def main() -> None:
                 "@{}"
                 + xspec((1.10, "RaggedRight"), (0.95, "RaggedRight"))
                 + r"@{\hspace{0.45em}}c c c c@{}",
-                ["Precond.", "Result", "Newton", "Krylov", "Solver [s]", "Energy"],
+                ["Precond.", "Nonlinear work", "Newton", "Krylov", "Solver [s]", "Energy"],
                 [
                     [
                         REVIEWER_HE_PMG_LABELS.get(str(row.get("candidate", "")), str(row.get("candidate", "")).replace("_", r"\_")),
-                        _result_label(row.get("result", "")),
+                        HE_PMG_WORK_LABELS.get(str(row.get("result", "")), _result_label(row.get("result", ""))),
                         _fmt_optional_count(row.get("newton_iters", "")),
                         _fmt_optional_count(row.get("krylov_iters", "")),
                         _fmt_optional_wall(row.get("solve_time_s", "")),
@@ -1294,7 +1315,7 @@ def main() -> None:
         fill_spec("l c c c c c c c c"),
         [
             "Method",
-            "Result",
+            "Outcome",
             "Newton",
             "Krylov",
             "LS evals",
@@ -1324,7 +1345,7 @@ def main() -> None:
         fill_spec("c c c c c c c c c"),
         [
             "Ranks",
-            "Result",
+            "Schedule",
             "Outer",
             "Solve [s]",
             "Compliance",
@@ -1336,7 +1357,7 @@ def main() -> None:
         [
             [
                 fmt_count(row["nprocs"]),
-                _result_label(row.get("result", "")),
+                TOPOLOGY_SCHEDULE_LABELS.get(str(row.get("result", "")), _result_label(row.get("result", ""))),
                 _fmt_optional_count(row.get("outer_iterations", "")),
                 _fmt_optional_wall(row.get("solve_time_s", "")),
                 _fmt_optional_float(row.get("final_compliance", ""), 4),
@@ -1357,12 +1378,15 @@ def main() -> None:
                 r"@{}c@{\hspace{0.45em}}"
                 + xspec((1.10, "RaggedRight"), (0.90, "RaggedRight"))
                 + r"@{\hspace{0.45em}}c c c c@{}",
-                ["Element", "Route", "Result", "Free DOFs", "Elem DOFs", "Overlap DOFs", "RSS max [GiB]"],
+                ["Element", "Route", "Linearization", "Free DOFs", "Elem DOFs", "Overlap DOFs", "RSS max [GiB]"],
                 [
                     [
                         _p3d_discretization_label(row),
                         REVIEWER_P3D_ROUTE_LABELS.get(str(row.get("route", "")), str(row.get("route", "")).replace("_", r"\_")),
-                        _result_label(row.get("result", "")),
+                        P3D_DERIVATIVE_DEGREE_WORK_LABELS.get(
+                            str(row.get("result", "")),
+                            _result_label(row.get("result", "")),
+                        ),
                         _fmt_optional_dofs(row.get("free_dofs", "")),
                         _fmt_optional_count(row.get("local_element_dofs", "")),
                         _fmt_optional_count(row.get("local_overlap_dofs", "")),
