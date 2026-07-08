@@ -3,13 +3,14 @@
 ## Publishability Verdict
 
 Not yet publishable. The manuscript is scientifically close and now better
-aligned with its evidence: major claims are scoped to repository-backed
-workflow, SOTA positioning has been refreshed, citations build cleanly, and the
-generated figure/table pipeline and archive-neutral provenance gate pass against
-a curated local submission bundle. Submission is still blocked by missing
-target-journal metadata, submission declarations, and license/archive decisions.
-Validation is adequate for the narrowed claims, but the paper must not be
-submitted until the external submission metadata and citable archive are fixed.
+aligned with its evidence: major claims are scoped to the implemented toolset,
+SOTA positioning has been refreshed, citations build cleanly, and the generated
+figure/table pipeline and archive-neutral provenance gate pass against a curated
+local submission bundle. Submission is still blocked by missing target-journal
+metadata, submission declarations, license/archive decisions, and final
+per-artifact provenance. Validation is adequate for the narrowed claims, but
+the paper must not be submitted until the external submission metadata and
+citable archive are fixed.
 
 ## Review Pass Scope
 
@@ -54,6 +55,21 @@ scientific claims were introduced without supporting evidence.
 - Updated `paper/scripts/generate_literature_sources.py` so the default command
   uses cached local full texts unless a required download is missing; the new
   `--refresh-downloads` flag forces a network refresh.
+- Tightened the abstract, introduction, related work, discussion, and conclusion
+  around the primary \jaxpetsc{} realization, scoped comparator language to
+  internal reference implementations versus narrow external/reference-model
+  checks, and removed repeated or broad performance/validation claims.
+- Made the methods and benchmark definitions more self-contained by defining
+  quadrature stress/tangent symbols, algorithm labels, the reported p-Laplace
+  discrete energy, hyperelastic density-before-stress notation, Plasticity2D
+  regularization, and Plasticity3D marker language.
+- Regenerated generated tables after revising benchmark availability,
+  Plasticity3D validation status labels, JAX-FEM threshold status labels, and
+  SOTA bridge wording.
+- Added body-text interpretation for Plasticity2D endpoint versus fixed-work
+  diagnostics, the fixed Plasticity3D derivative-route comparison, and topology
+  rank-variation evidence; reduced the page-30 Plasticity3D float gap in the
+  current A4 PDF.
 - Rebuilt the paper PDF through the paper generation pipeline.
 
 ## Blocking Issues Before Submission
@@ -79,6 +95,17 @@ scientific claims were introduced without supporting evidence.
   `artifacts/reproduction/paper_submission_2026_07_08/` in the submission
   release or artifact archive, mint or record its DOI if applicable, and update
   the manuscript availability statement.
+- Issue: Final per-artifact provenance is not yet complete.
+  Why it blocks publishability: the archive-neutral gate passes for the current
+  paper-facing validation surface, but a reproducibility-oriented submission
+  should include complete provenance for every submitted figure and generated
+  table, not only the critical validation and comparison inputs.
+  Evidence path or citation: `paper/figures/generated/manifest.json`,
+  `paper/scripts/validate_paper_assets.py`, and
+  `artifacts/reproduction/paper_submission_2026_07_08/manifest.json`.
+  Exact next action: complete or explicitly scope the final figure/table
+  manifest, include all final submitted visual/table inputs in the durable
+  archive, and rerun the archive-neutral validator.
 
 ## Major Revisions Needed
 
@@ -86,21 +113,26 @@ scientific claims were introduced without supporting evidence.
   venue is chosen.
 - Fold the curated submission bundle into the final release/archive and make
   the manuscript availability statement cite that durable version.
+- Complete per-figure and per-table provenance coverage for the final submitted
+  visual and table artifacts.
+- After choosing the target journal template, revisit forced `[H]` floats and
+  split or simplify the dense SOTA, Plasticity3D, and appendix tables if the
+  venue class narrows the text block.
 - Decide whether locally cached full texts under `paper/literature/fulltext/`
   should remain an ignored private audit cache or become part of a controlled
   review artifact; do not imply public availability for restricted sources.
 - Obtain accessible full text for Davis, Ginzburg, and Sysala2017 if the paper
   needs claims beyond the currently conservative metadata/context use.
-- Keep Plasticity3D claims scoped to same-case source-faithfulness,
-  fixed-lambda source-operator diagnostics, and endpoint-surrogate behavior
+- Keep Plasticity3D claims scoped to same-case reference-formula agreement,
+  fixed-load reference-operator diagnostics, and endpoint-surrogate behavior
   unless a true incremental-history validation campaign is added.
 
 ## Minor Polish Items
 
-- Visually inspect the rendered SOTA table after the JetSCI and Xue rows were
-  added; the build passes, but the table is dense.
-- Review regenerated figure labels in the final PDF for crowding after the
-  notation cleanup.
+- Recheck the SOTA table and dense result tables after the target template is
+  applied; they are readable in the current A4 article but template-fragile.
+- Review compound Plasticity3D figure labels in the final template for crowding
+  and regenerate at the final physical size if needed.
 - Revisit the availability statement after the archive/license decision so it
   reads like final submission metadata rather than a repository-local note.
 
@@ -121,7 +153,8 @@ diagnostic evidence, the former deflated-GMRES wording is softened to
 alternative Krylov/preconditioner diagnostics, and source-family Plasticity3D
 language stays endpoint-surrogate only. The remaining claim/evidence risk is
 final archival publication: paper-critical provenance now points to a curated
-bundle, but that bundle still needs the final release/DOI context.
+bundle, but that bundle still needs the final release/DOI context and complete
+per-artifact coverage for the submitted figures and tables.
 
 ## SOTA Check Outcome
 
@@ -157,20 +190,20 @@ required support for the current scoped contribution.
 - `./.venv/bin/python paper/scripts/validate_paper_assets.py --archive-neutral`:
   passed on 2026-07-08 against the curated submission bundle.
 - `make -C paper publish-check`: passed on 2026-07-08.
-- `make -C paper pdf`: passed after the script/table/figure changes and
-  produced a 29-page PDF. A later rerun after the final prose cleanup was
-  terminated after `generate_paper_figures.py` stalled for more than three
-  minutes inside a `luatex --luaonly ... kpsewhich.lua` subprocess; the
-  existing regenerated assets still passed validation.
-- `(cd paper && latexmk -pdf main.tex)`: passed after the generated table rename
-  and again after the final prose cleanup, refreshing `paper/build/main.pdf`.
+- `(cd paper && latexmk -pdf -interaction=nonstopmode -halt-on-error main.tex)`:
+  passed after the generated table and prose cleanup, refreshing a 40-page
+  `paper/build/main.pdf`.
+- `qpdf --check paper/build/main.pdf`: passed with no syntax or stream errors.
+- Rendered and visually inspected representative pages 1, 5, 9, 21, and
+  30--32 after the latest rebuild; the current A4 PDF is readable and unclipped,
+  with page 30 improved but dense floats/tables still template-fragile.
 - `./.venv/bin/python -m pytest tests/test_docs_publication.py`: passed
   13 tests.
 - `./.venv/bin/python -m pytest tests/test_final_report_figure_generators.py`:
   passed 3 tests.
-- `rg -n "TODO|FIXME|placeholder|constitutively equivalent|validated incremental|P4\\(L1|local_constitutiveAD|sourcefixed" paper/main.tex paper/sections paper/tables/generated paper/literature`:
+- `rg -n "TODO|FIXME|placeholder|constitutively equivalent|validated incremental|P4\\(L1" paper/main.tex paper/sections paper/tables/generated paper/literature`:
   no matches.
-- `rg -n "Warning|Citation|undefined|Overfull" paper/build/main.log paper/build/main.blg`:
+- `rg -n "LaTeX Warning|Package .* Warning|Overfull|Underfull|Undefined|undefined|Citation|Reference|Fatal|Emergency|Error|Warning" paper/build/main.log paper/build/main.blg`:
   no matches in the final build logs.
 - `git diff --check`: passed.
 

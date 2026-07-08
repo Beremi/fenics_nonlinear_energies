@@ -68,7 +68,9 @@ energy-centered whenever possible. This gives three derivative routes:
   \item \textbf{constitutive AD:} differentiate a quadrature-point energy
         density $\psi(\varepsilon_q)$, then assemble
         $r_e = \sum_q w_q B_q^\top \sigma_q$ and
-        $K_e = \sum_q w_q B_q^\top C_q B_q$;
+        $K_e = \sum_q w_q B_q^\top C_q B_q$, where
+        $\sigma_q := \partial\psi/\partial\varepsilon_q$ and
+        $C_q := \partial^2\psi/\partial\varepsilon_q^2$;
   \item \textbf{colored sparse finite differences (SFD):} recover sparse
         Hessian information through directionally probed gradients or
         Hessian-vector products (HVPs) and graph coloring.
@@ -101,13 +103,13 @@ tables.
 \label{alg:hybrid-newton}
 \begin{algorithmic}[1]
 \State Given $x_0$, trust radius $\Delta_0$, tolerances, and callbacks for
-energy, gradient, and Hessian solves/matvecs
+energy, gradient, Hessian assembly or application, and linear solves
 \For{$k=0,1,\dots$}
   \State Assemble $g_k = \nabla \mathcal{F}(x_k)$
   \If{convergence criteria are satisfied}
     \State terminate
   \EndIf
-  \State Compute a Newton-like direction from
+  \State Approximately solve for a Newton-like direction from
     $\nabla^2 \mathcal{F}(x_k)p = -g_k$
   \If{trust region is enabled}
     \State Build a small reduced model in the span of Newton and gradient directions
@@ -145,6 +147,7 @@ study reported later in \Cref{sec:num-plasticity3d}.
 
 \begin{algorithm}[H]
 \caption{Armijo line search used in Newton solves}
+\label{alg:armijo-linesearch}
 \begin{algorithmic}[1]
 \State Given state $x$, direction $p$, initial step $\alpha_0$, backtracking
 parameters $\beta\in(0,1)$, $c_1\in(0,1)$, and maximum count $m_{\max}$
@@ -173,7 +176,8 @@ uses distance-2 coloring on the Hessian sparsity graph, which is especially
 effective when combined with overlap-domain assembly and owned-plus-ghost PETSc
 layouts.
 
-Let $H$ denote the Hessian and let $\mathcal{S}$ be its sparsity pattern. A
+Let $H := \nabla^2\mathcal{F}(x)$ denote the Hessian of the merit functional at
+the current state, and let $\mathcal{S}$ be its sparsity pattern. A
 distance-2 coloring partitions the column indices into groups $\mathcal{C}_c$
 such that, for each row $i$, at most one column $j\in\mathcal{C}_c$ satisfies
 $(i,j)\in\mathcal{S}$. For the color seed
@@ -181,11 +185,11 @@ $v_c=\sum_{j\in\mathcal{C}_c} e_j$, one probe produces
 \begin{equation}
   y_c =
   \begin{cases}
-    \bigl(\nabla \Pi_h(x+\delta v_c)-\nabla \Pi_h(x)\bigr)/\delta,
+    \bigl(\nabla \mathcal{F}(x+\delta v_c)-\nabla \mathcal{F}(x)\bigr)/\delta,
       & \text{finite-difference gradient probe},\\
-    H(x)v_c,
+    Hv_c,
       & \text{AD Hessian-vector probe}.
-  \end{cases}
+  \end{cases}.
   \label{eq:colored-sfd-recovery}
 \end{equation}
 The structural separation then recovers $H_{ij}=(y_c)_i$ for
@@ -198,6 +202,7 @@ local probe evaluation.
 
 \begin{algorithm}[H]
 \caption{Distributed colored Hessian recovery}
+\label{alg:colored-hessian-recovery}
 \begin{algorithmic}[1]
 \State Build or import local sparsity information for the free-DOF graph
 \State Compute a distance-2 coloring of the Hessian pattern
@@ -224,6 +229,7 @@ information on high-order tetrahedra.
 
 \begin{algorithm}[H]
 \caption{Constitutive AD assembly for high-order plasticity}
+\label{alg:constitutive-ad-assembly}
 \begin{algorithmic}[1]
 \For{each local element $e$}
   \For{each quadrature point $q$}

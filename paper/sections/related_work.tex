@@ -54,8 +54,8 @@ differentiation for general constitutive models inside \code{FEniCSx},
 including a Mohr--Coulomb example. The JetSCI preprint is especially
 close architecturally because it uses JAX for local finite-element
 discretization and PETSc for robust distributed sparse solves in heterogeneous
-micromechanics \citep{cattaneo2026jetsci}. These works motivate the
-JAX-local/PETSc-global design point. The distinction here is that we compare
+micromechanics \citep{cattaneo2026jetsci}. These works motivate the primary
+\jaxpetsc{} realization studied here. The distinction is that we compare
 element AD, constitutive AD, and colored SFD inside one nonlinear
 energy-minimization suite spanning the benchmark families below.
 

@@ -10,8 +10,8 @@ only a modeling interface, but also the derivative route, assembly layout,
 nonlinear solver policy, and preconditioner design.
 
 We develop and evaluate such a scientific toolset for nonlinear finite-element
-energy solves and optimization. In the primary JAX-local/PETSc-global
-realization, JAX represents local energies and constitutive laws, while PETSc
+energy solves and optimization. In the primary \jaxpetsc{} realization, JAX
+represents local energies and constitutive laws, while PETSc
 owns sparse vectors and matrices, nonlinear globalization, Krylov methods, and
 preconditioners. The \purejax{} and \fenics{} formulations serve as reference
 formulations where they are available; JAX-FEM, FEniCSx-family work, and the
@@ -22,7 +22,7 @@ they are restricted to explicitly matched benchmark definitions and observables.
 \subsection{Contributions}
 \label{sec:intro-contributions}
 
-We contribute a JAX-local/PETSc-global scientific toolset in which derivative
+We contribute a \jaxpetsc{} scientific toolset in which derivative
 construction, sparse ownership, nonlinear globalization, and preconditioning are
 treated as coupled design choices for nonlinear FEM energy minimization. The
 implemented toolset is organized around three solver components:

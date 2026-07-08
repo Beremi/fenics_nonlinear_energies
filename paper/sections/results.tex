@@ -242,7 +242,8 @@ only local elements plus overlap.
 The level-4 agreement row verifies that replicated and rank-local assembly give
 the same Newton and Krylov work. On the larger level-5 one-linearization memory
 rows, rank-local assembly reduces summed RSS from \SI{215.6}{GiB} to
-\SI{104.9}{GiB} at 32 ranks while leaving solve time essentially unchanged.
+\SI{104.9}{GiB} at 32 ranks while leaving solve time at the same reported
+precision.
 
 \Cref{tab:hyperelasticity-pmg-sensitivity} isolates the first-step level-5 PMG
 choice on the same 32-rank local problem with fixed nonlinear work. All configurations perform the same
@@ -301,7 +302,12 @@ paper is not a single strong-scaling curve. The benchmark section separates the
 completed endpoint case from the larger fixed-cost studies in
 \Cref{fig:plasticity2d-energy-levels,tab:plasticity2d-benchmark}, and the
 reference-continuation comparison is collected later in
-\Cref{sec:solver-evidence}.
+\Cref{sec:solver-evidence}. Thus the $P_4(L_5)$ case is the endpoint evidence
+for this family, while the $P_4(L_6)$ and $P_4(L_7)$ cases are fixed-work
+diagnostics for nonlinear-tail and PMG behavior. The 8-rank and 32-rank
+reference-continuation rows in \Cref{tab:plasticity2d-reference-continuation}
+support solver-policy timing under a common continuation logic; they are not a
+separate validation result or a strong-scaling claim.
 
 \subsection{Plasticity3D}
 \label{sec:num-plasticity3d}
@@ -319,9 +325,9 @@ the endpoint surrogate behaves across degree, resolution, and rank count.
 The first question is which second-order route gives the lowest measured cost
 without changing the reported terminal observables. On the fixed
 $P_4(L_1)$ case at $\lambda_{\mathrm{sr}}=1.5$ and 8 MPI ranks, all three
-routes converge to essentially the same terminal state, with identical Newton
-and total Krylov counts. This residual-bisection Newton comparison uses the
-Hypre-backed rank-local linear-solver profile, so it should be read as
+routes converge to the same reported terminal observables, with identical
+Newton and total Krylov counts. This residual-bisection Newton comparison uses
+the Hypre-backed rank-local linear-solver profile, so it should be read as
 derivative-route timing evidence rather than as the MUMPS-backed PMG profile
 used by the later $\lambda_{\mathrm{sr}}=\num{1.55}$ convergence studies. The
 differences are cost differences, not state-quality differences: constitutive
@@ -355,8 +361,18 @@ reported terminal observables.
 The remaining figures in this subsection answer a different question: how the
 endpoint surrogate behaves across degree/resolution choices, and how the
 selected solver configurations scale on the separate $P_4(L_2)$ timing studies.
+The zoomed panels in \Cref{fig:plasticity3d-degree-energy} are included because
+the full figure is dominated by coarse $P_1$ variation. Under the bottom-clamped
+constraint, the first matched comparison is
+$P_4(L_1)$ versus $P_1(L_3)$ at \num{610964} free DOFs. The second
+matched comparison is $P_1(L_4)$, $P_2(L_3)$, and $P_4(L_2)$ at
+\num{4801816} free DOFs. The scientific message is
+therefore that the solver reaches similar terminal energies along
+both $p$- and $h$-refined paths, while higher order on coarser meshes buys
+lower observed values of \cref{eq:plasticity3d-discrete} at matched DOFs only
+by paying a clear wall-time premium in this nine-case endpoint study.
 
-\begin{figure}[H]
+\begin{figure}[!t]
   \centering
   \begin{subfigure}[t]{0.46\PaperFigureFull}
     \centering
@@ -375,13 +391,13 @@ selected solver configurations scale on the separate $P_4(L_2)$ timing studies.
   \begin{subfigure}[t]{0.46\PaperFigureFull}
     \centering
     \includegraphics[width=\linewidth]{plasticity3d_degree_energy_zoom_dofs.pdf}
-    \caption{$P2/P4$ zoom: final energy versus free DOFs.}
+    \caption{$P_2/P_4$ zoom: final energy versus free DOFs.}
   \end{subfigure}
   \hfill
   \begin{subfigure}[t]{0.46\PaperFigureFull}
     \centering
     \includegraphics[width=\linewidth]{plasticity3d_degree_energy_zoom_time.pdf}
-    \caption{$P2/P4$ zoom: final energy versus total wall time.}
+    \caption{$P_2/P_4$ zoom: final energy versus total wall time.}
   \end{subfigure}
   \caption{Bottom-clamped Plasticity3D
   degree-versus-resolution study at $\lambda_{\mathrm{sr}} = 1.55$. The top
@@ -393,17 +409,6 @@ selected solver configurations scale on the separate $P_4(L_2)$ timing studies.
   same 32-rank configuration.}
   \label{fig:plasticity3d-degree-energy}
 \end{figure}
-
-The zoomed panels in \Cref{fig:plasticity3d-degree-energy} are essential because the
-full figure is dominated by coarse $P_1$ variation. Under the bottom-clamped
-constraint, the first matched comparison is
-$P_4(L_1)$ versus $P_1(L_3)$ at \num{610964} free DOFs. The second
-matched comparison is $P_1(L_4)$, $P_2(L_3)$, and $P_4(L_2)$ at
-\num{4801816} free DOFs. The scientific message is
-therefore that the solver reaches similar terminal energies along
-both $p$- and $h$-refined paths, while higher order on coarser meshes buys
-lower observed values of \cref{eq:plasticity3d-discrete} at matched DOFs only
-by paying a clear wall-time premium in this nine-case endpoint study.
 
 \begin{figure}[H]
   \centering
@@ -541,7 +546,7 @@ one-rank reference after 40 outer iterations. All rank counts complete the same
 40 outer iterations. The compliance difference stays below \num{0.2}\%,
 and the density relative $L^2$ difference remains below \num{0.04}, which
 checks that the distributed design-gradient exchange and mechanics coupling
-remain insensitive to rank variation at this resolution.
+remain bounded under rank variation at this resolution.
 
 \begin{table}[H]
   \centering

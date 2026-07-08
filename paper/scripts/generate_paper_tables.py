@@ -922,7 +922,7 @@ def main() -> None:
             ["Ginzburg--Landau", mesh_label("L9"), "Newton + line search", "FEniCS, JAX+PETSc", "indefinite local curvature from the double well"],
             ["Hyperelasticity", f"{mesh_label('L4')}, 24 steps", "trust-region solve", "FEniCS, pure JAX, JAX+PETSc", "nonconvex large-deformation mechanics"],
             ["Plasticity2D", f"{element_label('P4', 'L5')}--{element_label('P4', 'L7')}", "endpoint solve or fixed nonlinear work", "JAX+PETSc only", "same-mesh PMG and nonlinear tail behavior"],
-            ["Plasticity3D", f"{degree_label('P1')}/{degree_label('P2')}/{degree_label('P4')}", "configuration-specific", "constitutive and reference PMG variants", "heterogeneous 3D Mohr--Coulomb with constitutive AD"],
+            ["Plasticity3D", f"{degree_label('P1')}/{degree_label('P2')}/{degree_label('P4')}", "endpoint, scaling, and diagnostic PMG policies", "constitutive and reference PMG variants", "heterogeneous 3D Mohr--Coulomb with constitutive AD"],
             ["Topology", "$768\\times384$", "adaptive continuation", "pure JAX, JAX+PETSc", "distributed design-mechanics coupling"],
         ],
     )
@@ -940,7 +940,7 @@ def main() -> None:
         + "@{}",
         ["Family", "FEniCS", "pure JAX", "Notes"],
         [
-            ["$p$-Laplace", "yes", "yes", "All three stacks exist on representative reported cases."],
+            ["$p$-Laplace", "yes", "yes", "All three implementations exist on representative reported cases."],
             ["Ginzburg--Landau", "yes", "no", "FEniCS and JAX+PETSc form the reported comparison."],
             ["Hyperelasticity", "yes", "yes", "pure JAX is a serial formulation reference only."],
             ["Plasticity2D", "no", "no", "The reported realization is JAX+PETSc only."],
@@ -983,7 +983,7 @@ def main() -> None:
                 "FEM--JAX and JAX--PETSc bridge architectures "
                 "\\citep{yashchuk2023bringing,latyshev2025externaloperators,cattaneo2026jetsci}",
                 "AD-enabled local or variational representations combined with host FEM infrastructure or PETSc sparse solvers.",
-                "Closest architectural context for JAX-local/PETSc-global computation; this work adds a benchmark-wide comparison of derivative construction, globalization, and preconditioning.",
+                "Closest architectural context for the \\jaxpetsc{} realization; this work adds a benchmark-wide comparison of derivative construction, globalization, and preconditioning.",
             ],
             [
                 "Mechanics and topology benchmark lineage "
@@ -1630,13 +1630,13 @@ def main() -> None:
         "@{}" + pcol(r"0.25\textwidth") + "@{\\hspace{1.0em}}" + pcol(r"0.36\textwidth") + r"@{\extracolsep{\fill}}c c@{}",
         ["Check", "Comparison", "Relative difference", "Status"],
         [
-            ["endpoint observable", "work", fmt_sci(float(layer1a_metrics["work_relative_difference"])), "--"],
-            ["endpoint observable", "displacement relative $L^2$", fmt_sci(float(layer1a_metrics["displacement_relative_l2"])), "--"],
+            ["endpoint observable", "work", fmt_sci(float(layer1a_metrics["work_relative_difference"])), "comparison"],
+            ["endpoint observable", "displacement relative $L^2$", fmt_sci(float(layer1a_metrics["displacement_relative_l2"])), "comparison"],
             [
                 "endpoint observable",
                 "deviatoric-strain relative $L^2$",
                 fmt_sci(float(layer1a_metrics["deviatoric_strain_relative_l2"])),
-                "--",
+                "comparison",
             ],
             [
                 "fixed-load comparison",
@@ -1670,7 +1670,7 @@ def main() -> None:
             ],
             [
                 "fixed-load comparison",
-                "acceptance criterion",
+                "fixed-load criteria, 3/3 satisfied",
                 "--",
                 criterion_status(layer2_metrics["acceptance"]["overall_pass"]),
             ],
@@ -1734,10 +1734,10 @@ def main() -> None:
         + r"@{\extracolsep{\fill}}c c@{}",
         ["Group", "Quantity", "Relative difference", "Status"],
         [
-            ["Agreement", "final energy", fmt_sci(float(final_metrics["energy_rel_diff"])), "--"],
-            ["Agreement", "full-field displacement relative $L^2$", fmt_sci(float(final_metrics["field_relative_l2"])), "--"],
-            ["Agreement", "centerline relative $L^2$", fmt_sci(float(final_metrics["centerline_relative_l2"])), "--"],
-            ["Agreement", "$u_{\\max}$ curve relative $L^2$", fmt_sci(float(final_metrics["umax_curve_relative_l2"])), "--"],
+            ["Agreement", "final energy", fmt_sci(float(final_metrics["energy_rel_diff"])), "below $5\\%$"],
+            ["Agreement", "full-field displacement relative $L^2$", fmt_sci(float(final_metrics["field_relative_l2"])), "below $5\\%$"],
+            ["Agreement", "centerline relative $L^2$", fmt_sci(float(final_metrics["centerline_relative_l2"])), "below $5\\%$"],
+            ["Agreement", "$u_{\\max}$ curve relative $L^2$", fmt_sci(float(final_metrics["umax_curve_relative_l2"])), "below $5\\%$"],
             r"\addlinespace",
             ["Condition", "common mesh", "--", criterion_status(fairness_checks["same_mesh_path"])],
             ["Condition", "common displacement schedule", "--", criterion_status(fairness_checks["same_schedule"])],

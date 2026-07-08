@@ -52,8 +52,8 @@ MATLAB literature only when there is source-backed evidence.
   Status: title, abstract, and conclusion are now framed around a scientific
   \jaxpetsc{} toolset for nonlinear FEM energy solves, derivative routes,
   sparse assembly, and solver policy. The abstract now opens from the nonlinear
-  FEM bottleneck, avoids internal campaign terms such as locked, promoted, and
-  fairness-gated, and no longer attributes the historical lambda=1.0
+  FEM bottleneck, avoids internal campaign terms such as locked and promoted,
+  and no longer attributes the historical lambda=1.0
   Plasticity3D speedup to the converged lambda=1.55 scaling sweep. Current
   prose chunk removes the remaining `\repo{}`-centered framing from the
   abstract, introduction, related work, discussion, and conclusion, so the
@@ -71,7 +71,12 @@ MATLAB literature only when there is source-backed evidence.
   to name PETSc sparse assembly, Newton globalization, Krylov solvers, and
   preconditioner policy explicitly. Current label/notation chunk removes the
   remaining `mainline` wording from the abstract and opening message in favor
-  of primary \jaxpetsc{} realization.
+  of primary \jaxpetsc{} realization. Current style-scope chunk splits the
+  abstract comparator surface into internal reference implementations versus
+  narrow external/reference-model comparisons, changes validation and
+  performance verbs from broad establishment claims to reported tolerances and
+  measured costs, normalizes the \jaxpetsc{} object name, and shortens the
+  conclusion so it ends as synthesis rather than repeated caveat management.
 - `INTRO`: positioning and contributions.
   Status: now opens with the nonlinear FEM computational bottleneck and includes
   an explicit contribution block with solver, derivative/assembly, and
@@ -126,7 +131,12 @@ MATLAB literature only when there is source-backed evidence.
   distance-2 color groups, seed vectors, gradient-difference probes, AD
   Hessian-vector probes, and owned PETSc scatter; the reported JAX+PETSc
   colored-SFD cases are stated as using AD HVP probes, so no finite-difference
-  perturbation parameter is introduced for those runs.
+  perturbation parameter is introduced for those runs. Current style-scope
+  chunk defines the quadrature stress and tangent symbols before use, labels
+  the three displayed algorithms for cross-reference stability, makes the
+  hybrid Newton solve line distinguish Hessian assembly/application from the
+  linear solve, and rewrites colored SFD with a generic Hessian
+  `H=\nabla^2\mathcal{F}(x)` rather than hyperelastic-specific notation.
 - `IMPLEMENTATION`: realization of the method.
   Current assets: pure JAX, FEniCS, and JAX+PETSc strata; autodiff modes;
   Krylov/preconditioner matrix; distributed assembly.
@@ -168,8 +178,8 @@ MATLAB literature only when there is source-backed evidence.
   thresholds, return denominators, branch multipliers, and branch energies are
   now defined explicitly in the benchmark section instead of being left implicit.
   The benchmark specification matrix now labels problem-specific stopping rules
-  as stopping rules and uses configuration-specific rather than
-  campaign-specific wording for Plasticity3D. Current chunk makes the
+  as stopping rules and now describes Plasticity3D endpoint, scaling, and
+  diagnostic PMG policies without campaign labels. Current chunk makes the
   benchmark definitions more self-contained: Hyperelasticity now consistently
   uses displacement notation with `F(u)` and `J(u)`; Plasticity2D states the
   slope geometry, boundary conditions, material constants, gravity, zero old
@@ -188,7 +198,12 @@ MATLAB literature only when there is source-backed evidence.
   topology elasticity tensor and SIMP exponent before use, punctuates the
   Davis-B and Plasticity3D potential displays, and replaces remaining raw/local
   or study-row wording with unreduced, endpoint-surrogate, and study-case
-  terminology. Current evidence-scope chunk states that the hyperelastic
+  terminology. Current style-scope chunk defines the reported discrete
+  p-Laplace energy symbol, defines the hyperelastic energy density before the
+  first Piola stress, records the Plasticity2D branch-discriminant
+  regularization value, replaces raw Plasticity3D boundary/source labels with
+  mesh and marker language, and updates generated benchmark/availability rows
+  to avoid internal stack labels. Current evidence-scope chunk states that the hyperelastic
   Neo-Hookean potential is defined on admissible displacements with positive
   Jacobian determinant and that globalization rejects nonpositive-J trial
   states. It also narrows the Plasticity2D endpoint surrogate by saying the full
@@ -219,7 +234,11 @@ MATLAB literature only when there is source-backed evidence.
   visible labels read `reference model`. Current SOTA/math polish chunk renames
   the Plasticity3D section, caption, and prose from validation
   sequence/schedule to endpoint-surrogate comparison, and defines the compared
-  observable `b` in the validation relative-difference metric.
+  observable `b` in the validation relative-difference metric. Current
+  style-scope chunk updates generated validation rows so endpoint observables
+  are marked as comparisons, the fixed-load summary row is the only criteria
+  count, and the JAX-FEM hyperelastic table reports checked differences as
+  below the stated 5 percent threshold.
 - `RESULTS`: performance and solver behavior.
   Evidence: globalization comparison, derivative-route comparison, scaling
   studies, hyperelastic and Plasticity3D solver diagnostics, topology scaling.
@@ -227,10 +246,11 @@ MATLAB literature only when there is source-backed evidence.
   nonlinear policy is problem-dependent, multiple derivative routes are useful,
   sparse ownership/preconditioning are part of the numerical method, and the
   primary \jaxpetsc{} realization solves the largest tested cases while
-  serial/external formulations serve scoped reference roles. Plasticity3D result prose now marks
-  the fixed P4(L1), lambda=1.5 derivative ablation as Hypre-backed rank-local
-  timing evidence and separates it from the MUMPS-backed PMG convergence/scaling
-  evidence at lambda=1.55. The converged P4(L2), lambda=1.55 scaling table now
+  serial/external formulations serve scoped reference roles. Plasticity3D result
+  prose now marks the fixed P4(L1), lambda=1.5 derivative ablation as
+  Hypre-backed rank-local timing evidence and separates it from the
+  MUMPS-backed PMG convergence/scaling evidence at lambda=1.55. The converged
+  P4(L2), lambda=1.55 scaling table now
   includes Newton iterations and the gradient-to-target ratio, so the stop
   contract is visible next to the final gradient values. Current chunk defines
   the Plasticity3D derivative-ablation observables `\omega` and `u_{\max}`,
@@ -274,6 +294,11 @@ MATLAB literature only when there is source-backed evidence.
   Current evidence-scope chunk adds explicit interpretations for the
   hyperelastic multi-node fixed-work timing table and the topology scaling
   summary, separating fixed nonlinear work from adaptive-stopping timing.
+  Current style-scope chunk adds Plasticity2D prose that separates the
+  completed endpoint case from fixed-work diagnostics, describes topology
+  rank-consistency variation as bounded rather than rank-invariant, and
+  rewrites the fixed Plasticity3D derivative-route result as a measured cost
+  comparison under identical reported terminal observables.
 - `DISCUSSION_CONCLUSION`: interpretation and scope.
   Current prose states the toolset lesson in paper-facing terms: automatic
   differentiation alone does not determine large nonlinear FEM behavior;
@@ -314,7 +339,7 @@ MATLAB literature only when there is source-backed evidence.
   adds Newton and gradient-target columns. Rendered pages 29--30 remain within
   the text block, with no clipping or table overlap.
   Current chunk: paper-facing generated table files and labels no longer use
-  `reviewer_*` names; they were renamed to scientific names for fixed-budget
+  source-submission names; they were renamed to scientific names for fixed-budget
   Ginzburg--Landau globalization, Hyperelasticity distribution/PMG evidence,
   Plasticity3D derivative-degree evidence, and topology rank consistency. The
   Plasticity3D convergence figure was regenerated taller with more legend
@@ -380,16 +405,25 @@ MATLAB literature only when there is source-backed evidence.
   those assets. Current submission-bundle chunk did not intentionally refresh
   figure binaries or the rendered PDF; it redirected paper-critical figure
   manifest inputs to the curated submission bundle and revalidated the existing
-  generated surface.
+  generated surface. Current style/layout chunk rebuilt the 40-page PDF after
+  prose and generated-table edits, moved the Plasticity3D degree/resolution
+  interpretation before the forced figure to reduce the page-30 blank region,
+  and visually checked rendered pages 1, 5, 9, 21, and 30--32. The PDF log
+  scan, `qpdf --check`, and asset validators are clean. Remaining layout risks
+  from the audit are target-template fragility rather than current A4 build
+  failures: dense `[H]` float placement, Table 16 and related scriptsize result
+  tables, appendix fixed-reference tables, the SOTA table, and compound
+  Plasticity3D figures should be revisited after the venue class is chosen.
 - `REPRO`: reproducibility and submission readiness.
   Known blockers from `paper/todo.md`: target journal/template/declarations,
   repository license/archive DOI, and archive-neutral provenance for critical
   artifacts. The JAX-FEM baseline runner now writes strict JSON with `null`
   warmup timings and `allow_nan=False`; ignored local baseline metadata was
-  corrected in the workspace, but archive-neutral submission bundles remain
-  outstanding. Current subagent audit confirmed the same remaining blockers:
-  target venue/template and declarations, repository license plus archival DOI,
-  and archive-neutral provenance for paper-critical artifacts. Current chunk
+  corrected in the workspace, but archive-neutral submission bundles remained
+  outstanding before the submission-bundle chunk. Current subagent audit
+  confirmed the same remaining process blockers: target venue/template and
+  declarations, repository license plus archival DOI, and final release
+  provenance for paper-critical artifacts. Current chunk
   restored source/generated consistency for all edited generated tables and
   the single changed Plasticity3D scaling figure. Current evidence-scope chunk
   regenerated the ignored reproducibility note without host, platform, or local
@@ -414,7 +448,11 @@ MATLAB literature only when there is source-backed evidence.
   The default asset validator, `--archive-neutral`, and `make publish-check`
   now pass for the paper-facing figure/table provenance surface. Remaining
   submission blockers are target venue metadata/declarations, repository
-  license, and a permanent archival release or DOI.
+  license, and a permanent archival release or DOI. Current style-scope chunk
+  records the remaining provenance audit risk: the curated bundle supports the
+  current paper-facing validation gate, but the final release should still
+  provide complete per-figure and per-table provenance for every submitted
+  visual artifact.
 
 ## Evidence Nodes
 
@@ -470,7 +508,7 @@ MATLAB literature only when there is source-backed evidence.
   cite Cermak--Sysala--Valdman 2019 as implementation-lineage context only, not
   as a verified numerical baseline.
 - `Narrative/message` (`Mendel`): completed. Key findings: remove internal
-  terms such as fairness-gated, locked, promoted, and review-level scrutiny;
+  campaign-review terms such as locked, promoted, and review-level scrutiny;
   keep FEniTop as context rather than a baseline; make the conclusion less
   self-conscious. Addressed in the validation/prose chunk.
 - `Math/solver contracts` (`Kant`): completed. Plasticity3D PMG profiles,
@@ -491,7 +529,7 @@ MATLAB literature only when there is source-backed evidence.
   the Plasticity3D KSP tolerance as a PETSc relative residual tolerance, and
   added a reference-formula/mainline scope sentence.
 - `Reproducibility/submission` (`Epicurus`): completed. Findings partly
-  addressed: source-submission `reviewer_*` table names were removed. Remaining
+  addressed: source-submission table names were made scientific. Remaining
   blockers are process-level: archive-neutral provenance, venue/declarations,
   license/archive DOI, and a provenance validator that rejects local paths.
 - `Layout/narrow-template` (`Copernicus`): completed. Findings partly
@@ -724,9 +762,10 @@ MATLAB literature only when there is source-backed evidence.
   blocker through `--archive-neutral` and `make publish-check`.
 - `Layout/provenance audit` (`Darwin-current`): completed. Findings addressed:
   no PDF build blocker was found, and the provenance gate now reports the
-  concrete archive-neutral failures. Remaining layout polish: page 30 still has
-  a blank lower half from forced Plasticity3D result floats, and dense tables
-  remain template-fragile until a target class is chosen.
+  concrete archive-neutral failures. Remaining layout polish: the page-30 blank
+  region has been reduced by moving interpretation before the Plasticity3D
+  degree/resolution figure, but dense tables and forced floats remain
+  template-fragile until a target class is chosen.
 - `Archive bundle input audit` (`Erdos-current`): completed. Findings
   addressed in the current submission-bundle chunk: the minimal paper-critical
   bundle includes Plasticity3D validation JSON plus source and maintained branch
@@ -739,6 +778,29 @@ MATLAB literature only when there is source-backed evidence.
   followed: keep the global `artifacts/` ignore rule intact and force-add only
   the narrow curated submission bundle rather than unignoring broad artifact
   trees or staging unrelated generated outputs.
+- `Narrative/front-matter audit` (`Bohr-current`): completed. Findings addressed
+  in the current style-scope chunk: abstract comparison scope is split between
+  internal references and narrow external/reference-model comparisons; broad
+  validation/performance verbs are scoped to reported tolerances and measured
+  costs; \jaxpetsc{} naming is normalized; and the conclusion no longer repeats
+  the same caveat paragraph.
+- `Methods/math audit` (`Poincare-current`): completed. Findings partly
+  addressed: quadrature stress/tangent symbols, algorithm labels, colored-SFD
+  Hessian notation, hyperelastic density-before-stress order, Plasticity2D
+  regularization value, and Plasticity3D marker language are fixed. Deferred
+  item: the implementation linear-solver summary still needs a careful
+  evidence-backed policy statement if expanded.
+- `Evidence/results/repro audit` (`James-current`): completed. Findings
+  addressed: Plasticity3D validation table status labels, Plasticity2D
+  endpoint-versus-diagnostic interpretation, topology rank-variation wording,
+  and JAX-FEM table threshold labels. Remaining blockers are release-level:
+  target metadata, license/archive DOI, and complete final per-artifact
+  provenance.
+- `PDF/layout audit` (`Newton-current`): completed. Current A4 PDF has no log
+  warnings, overfull boxes, or structural PDF errors. Findings partly addressed
+  by the page-30 flow fix. Remaining target-template risks: forced `[H]` floats,
+  dense scriptsize result tables, appendix tables, the SOTA table, and compound
+  Plasticity3D figures.
 
 ## First Edit Backlog
 

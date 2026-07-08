@@ -10,12 +10,13 @@ supported by the present evidence.
 \paragraph{Derivative routes interact with the sparse solver.}
 \Cref{fig:plasticity3d-derivative-ablation,tab:plasticity3d-derivative-ablation}
 show a consistent cost comparison on the fixed $P_4(L_1)$,
-$\lambda_{\mathrm{sr}}=1.5$, 8-rank case. All three routes reach essentially
-the same terminal state with the same nonlinear and Krylov counts, so the
-comparison is about derivative cost rather than about different converged
-solutions. In this fixed test, constitutive AD preserves the same scalar-energy
-definition while reducing wall time substantially relative to full element AD
-and colored SFD.
+$\lambda_{\mathrm{sr}}=1.5$, 8-rank case. All three routes report the same
+terminal observables with 8 Newton iterations and 376 Krylov
+iterations, so the comparison is about derivative cost rather than about
+different converged solutions. In this fixed test, constitutive AD preserves the
+same scalar-energy definition and has the lowest measured wall time:
+\SI{222}{s}, compared with \SI{288}{s} for element AD and \SI{372}{s} for
+colored SFD.
 
 \paragraph{Plasticity3D validation is endpoint-scoped.}
 The Plasticity3D endpoint-surrogate comparison in

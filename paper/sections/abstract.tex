@@ -4,20 +4,21 @@ derivatives, robust nonlinear globalization, and sparse distributed linear
 algebra that is matched to the mechanics of the problem. We develop a
 scientific toolset for studying these requirements as coupled numerical choices
 in nonlinear finite-element energy minimization and energy-based topology
-optimization. The primary JAX-local/PETSc-global realization couples local
-energy and constitutive kernels with PETSc sparse assembly, Newton
-globalization, Krylov solvers, and preconditioners. The benchmark suite covers
+optimization. The primary \jaxpetsc{} realization uses JAX for local energy and
+constitutive kernels and PETSc for sparse assembly, Newton globalization,
+Krylov solvers, and preconditioners. The benchmark suite covers
 $p$-Laplace, Ginzburg--Landau, finite-strain hyperelasticity, two- and
-three-dimensional Mohr--Coulomb plasticity, and topology optimization, with
-\purejax{}, \fenics{}, JAX-FEM, and reference-model comparisons used only where
-benchmark definitions and observables are matched.
+three-dimensional Mohr--Coulomb plasticity, and topology optimization.
+Where available, \purejax{} and \fenics{} runs serve as internal reference
+implementations; the JAX-FEM and reference-model comparisons are restricted to
+matched benchmark definitions and observables.
 
 Across these problems, we compare element automatic differentiation,
 constitutive automatic differentiation, and colored sparse finite-difference
-recovery as routes to second-order information. The validation checks establish
-matched hyperelastic energy and field agreement and final-load scalar and field
-agreement for the three-dimensional plasticity endpoint surrogate. The
-performance studies then show how derivative routes, sparse ownership,
+recovery as routes to second-order information. The validation checks report
+matched hyperelastic energy and field agreement within the stated tolerances and
+final-load scalar and field agreement for the three-dimensional plasticity
+endpoint surrogate. The performance studies then quantify how derivative routes, sparse ownership,
 nonlinear globalization, Krylov linear algebra, and preconditioner policy affect
 cost and robustness under those definitions. On the tested Plasticity3D
 derivative-route case, constitutive AD gives the lowest measured wall time while

@@ -57,7 +57,9 @@ The weak problem is: find $u \in W_0^{1,p}(\Omega)$ such that
 \end{equation}
 The implemented benchmark used in this paper takes
 $\Omega = (0,1)^2$, exponent $p=3$, forcing $f=-10$, and a conforming $P_1$
-triangular hierarchy. The discrete problem is
+triangular hierarchy. Here and below, $\mathcal{E}_h$ denotes the
+finite-element restriction of $\mathcal{E}$ evaluated with the quadrature used
+in the reported implementation. The discrete problem is
 \begin{equation}
   u_h \in V_h \subset W_0^{1,p}(\Omega):
   \qquad
@@ -81,7 +83,7 @@ geometric complications.
   \includegraphics[width=\PaperFigureNarrow]{plaplace_energy_levels.pdf}
   \caption{Final discrete energies from \cref{eq:plaplace-discrete} across the
   selected mesh hierarchy. The element-AD and colored-SFD \jaxpetsc{} paths are
-  essentially energy-consistent with the \fenics{} reference.}
+  energy-consistent with the \fenics{} reference at the plotted scale.}
   \label{fig:plaplace-energy-levels}
 \end{figure}
 
@@ -188,18 +190,21 @@ for this family are reported in \Cref{sec:num-gl}.
 
 The literature model is a standard finite-strain hyperelastic equilibrium
 problem written in terms of a displacement $u$ and deformation
-$y_u(X) = X + u(X)$. We define
-$F(u) = I + \nabla u$, $J(u) = \det F(u)$, and
-$P(F) = \partial W / \partial F$ \citep[Chs.~4--6]{bonet2008nonlinear}. The
+$y_u(X) = X + u(X)$. We define $F(u) = I + \nabla u$,
+$J(u) = \det F(u)$, and the compressible Neo-Hookean-type density
+\[
+  W(F) :=
+  C_1 \left( \operatorname{tr}(F^\top F) - 3 - 2\ln\det F \right)
+  + D_1(\det F - 1)^2.
+\]
+The first Piola stress is $P(F) = \partial W/\partial F$
+\citep[Chs.~4--6]{bonet2008nonlinear}. The
 implemented benchmark used in this paper is a cantilever problem with the
-compressible Neo-Hookean-type potential, defined on admissible displacements
-with $J(u)>0$ almost everywhere,
+potential, defined on admissible displacements with $J(u)>0$ almost everywhere,
 \begin{equation}
   \Pi(u;\eta)
   =
-  \int_{\Omega}
-    C_1 \left( \operatorname{tr}(F(u)^\top F(u)) - 3 - 2 \ln J(u) \right)
-    + D_1 (J(u) - 1)^2 \, dx,
+  \int_{\Omega} W(F(u))\,dx,
   \label{eq:hyperelasticity-energy}
 \end{equation}
 on $\Omega = [0,0.4] \times [-0.005,0.005]^2$ with
@@ -414,8 +419,10 @@ and either the elastic energy or the corresponding line/apex return energy. We
 do not reproduce the full set of 2D branch-energy formulas here; they are used
 as an implemented endpoint surrogate whose role is to test solver behavior under
 nonsmooth Mohr--Coulomb-type switching. The small square-root regularization
-used in the principal-stress calculation is a numerical smoothing of this
-endpoint surrogate, not a separate material parameter.
+used in the principal-stress calculation replaces the branch discriminant by
+its regularized value with parameter $\epsilon_{\mathrm{reg}}=\num{1e-12}$.
+This is a numerical smoothing of the endpoint surrogate, not a separate material
+parameter.
 
 \begin{figure}[H]
   \centering
@@ -493,12 +500,12 @@ The corresponding weak form is
   \qquad \forall v \in V_0.
   \label{eq:plasticity3d-weak}
 \end{equation}
-The studied discrete model uses a heterogeneous tetrahedral source mesh with
-four material physical groups, refined into the displayed mesh hierarchy and
-elevated locally to same-mesh $P_1/P_2/P_4$ spaces. The source boundary labels
-define the component-wise constraints: $u_x$ is constrained on labels $1$ and
-$2$, $u_y$ is constrained on label $5$, and $u_z$ is constrained on labels $3$
-and $4$. The bottom-clamped model additionally fixes every node with
+The studied discrete model uses a heterogeneous tetrahedral mesh with four
+material physical groups, refined into the displayed mesh hierarchy and elevated
+locally to same-mesh $P_1/P_2/P_4$ spaces. The mesh boundary markers define the
+component-wise constraints: $u_x$ is constrained on markers $1$ and $2$, $u_y$
+is constrained on marker $5$, and $u_z$ is constrained on markers $3$ and $4$.
+The bottom-clamped model additionally fixes every node with
 $|y| \le 10^{-12}$ in all three displacement components. Here
 $\Gamma_{D,i}$ denotes the resulting Dirichlet set for displacement component
 $i$, $\Gamma_N$ is the remaining traction-free boundary, and $V_0$ is the

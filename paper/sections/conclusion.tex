@@ -3,7 +3,9 @@ differentiation with PETSc sparse distributed assembly, Newton globalization,
 Krylov solvers, and preconditioner policy for nonlinear finite-element energy
 minimization. Across the tested benchmark suite, the construction links scalar
 energy definitions, derivative-route selection, sparse ownership, and validation
-comparisons within one distributed solver setting.
+comparisons within one distributed solver setting. The tested problems show
+that differentiable local modeling and distributed nonlinear solvers interact at
+the level of numerical-method design.
 
 The numerical results support this pattern on a deliberately heterogeneous
 benchmark suite. Scalar problems check formulation and derivative agreement,
@@ -25,13 +27,3 @@ matched problem definitions. The third is continued reduction of setup and
 multigrid costs in the largest sparse mechanics runs. Together, these
 directions extend the validation discipline of the present study toward broader
 nonlinear multiphysics and design problems.
-
-The main lesson from the tested problems is that differentiable local modeling
-and distributed nonlinear solvers interact at the level of numerical method
-design. In this toolset, JAX supplies the local energy and constitutive
-derivatives, PETSc supplies the sparse nonlinear solve, and the comparison
-surfaces delimit what each benchmark result means. The contribution is the
-documented realization and benchmark evidence for a disciplined nonlinear FEM
-toolset in which
-derivative construction, assembly ownership, globalization, linear algebra, and
-interpretation are designed together.
