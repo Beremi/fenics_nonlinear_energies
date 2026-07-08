@@ -44,8 +44,9 @@ MATLAB/Octave literature only when there is source-backed evidence.
   Status: title, abstract, and conclusion are now framed around a scientific
   \jaxpetsc{} toolset for nonlinear FEM energy solves, derivative routes,
   sparse assembly, and solver policy. The abstract now opens from the nonlinear
-  FEM bottleneck and avoids internal campaign terms such as locked, promoted,
-  and fairness-gated.
+  FEM bottleneck, avoids internal campaign terms such as locked, promoted, and
+  fairness-gated, and no longer attributes the historical lambda=1.0
+  Plasticity3D speedup to the converged lambda=1.55 scaling sweep.
 - `INTRO`: positioning and contributions.
   Status: now opens with the nonlinear FEM computational bottleneck and includes
   an explicit contribution block with solver, derivative/assembly, and
@@ -101,9 +102,11 @@ MATLAB/Octave literature only when there is source-backed evidence.
   sparse ownership/preconditioning are part of the numerical method, and the
   \jaxpetsc{} mainline remains the scalable path while serial/external
   formulations serve scoped reference roles. Plasticity3D result prose now marks
-  the fixed P4(L1), lambda=1.5 derivative ablation as Hypre-backed local timing
-  evidence and separates it from the MUMPS-backed PMG convergence/scaling
-  evidence at lambda=1.55.
+  the fixed P4(L1), lambda=1.5 derivative ablation as Hypre-backed rank-local
+  timing evidence and separates it from the MUMPS-backed PMG convergence/scaling
+  evidence at lambda=1.55. The converged P4(L2), lambda=1.55 scaling table now
+  includes Newton iterations and the gradient-to-target ratio, so the stop
+  contract is visible next to the final gradient values.
 - `FIGURES_TABLES`: visual and layout quality.
   Current fact: `paper/build/main.pdf` is 36 pages, A4, 10 pt article,
   text width about 7.09 in. Many floats use `[H]`, so placement is highly manual.
@@ -116,9 +119,12 @@ MATLAB/Octave literature only when there is source-backed evidence.
   panels instead of cramped side-by-side subfigures. Rendered pages 20--21 show
   readable panel titles, colorbars, axes, captions, and a clean transition to
   the validation summary table and results section.
-  Current chunk: the globalization comparison table uses wrapped benchmark and
+  Layout chunk: the globalization comparison table uses wrapped benchmark and
   method columns. Rendered page 22 no longer shows the earlier benchmark/method
   label collision.
+  Current chunk: the Plasticity3D lambda=1.55 scaling table uses scriptsize and
+  adds Newton and gradient-target columns. Rendered pages 29--30 remain within
+  the text block, with no clipping or table overlap.
 - `REPRO`: reproducibility and submission readiness.
   Known blockers from `paper/todo.md`: target journal/template/declarations,
   repository license/archive DOI, and archive-neutral provenance for critical
@@ -131,11 +137,13 @@ MATLAB/Octave literature only when there is source-backed evidence.
 
 - `E1`: Derivative routes.
   Element AD, constitutive AD, and colored SFD are already described and
-  compared. Strongest result: constitutive AD preferred on the fixed
-  Plasticity3D flagship case while preserving terminal-state agreement.
+  compared. Strongest result: constitutive AD preferred on the fixed high-order
+  Plasticity3D derivative-route case while preserving terminal-state agreement.
 - `E2`: Nonlinear globalization.
-  Tables compare line search, trust region, and hybrid policies. Needs clearer
-  narrative as nonlinear-solver expertise, not isolated diagnostics.
+  Tables compare line search, trust region, and hybrid policies. The synthesis
+  now scopes trust-region conclusions to the nonconvex Ginzburg--Landau probes
+  and the stricter P2(L1) Plasticity3D globalization probe, while Armijo Newton
+  remains the converged P4(L2), lambda=1.55 scaling path.
 - `E3`: Linear solvers/preconditioners.
   PETSc Krylov, Hypre, GAMG, PMG, MUMPS/redundant coarse solves appear across
   implementation and results. Plasticity3D now distinguishes Hypre-coarse and
@@ -178,11 +186,17 @@ MATLAB/Octave literature only when there is source-backed evidence.
   terms such as fairness-gated, locked, promoted, and review-level scrutiny;
   keep FEniTop as context rather than a baseline; make the conclusion less
   self-conscious. Addressed in the validation/prose chunk.
-- `Math/solver contracts` (`Kant`): completed. Key findings still open:
-  Plasticity3D stopping criteria need one explicit stop-contract table;
-  Plasticity3D PMG profiles and the constitutive branch formulas have now been
+- `Math/solver contracts` (`Kant`): completed. Plasticity3D PMG profiles,
+  constitutive branch formulas, and the lambda=1.55 stop contract have now been
   addressed in the manuscript. Smaller findings on Ginzburg--Landau initial
   state, hyperelastic load path, and topology stall-stop policy were addressed.
+- `Plasticity3D stop/claim audit` (`Hubble`): completed. Findings addressed:
+  the abstract no longer uses the historical lambda=1.0 speedup for the
+  converged lambda=1.55 claim, the globalization synthesis no longer overstates
+  trust-region necessity for all Plasticity3D endpoints, the MUMPS-backed
+  scaling table now shows Newton iterations and gradient-target ratio, and
+  "flagship" wording was removed from the P4(L1), lambda=1.5 derivative
+  ablation.
 - `Evidence/provenance` (`Wegener`): completed. Key findings addressed:
   JAX-FEM comparison metadata no longer asserts constitutive-law identity,
   strict JSON output is enforced for the runner, and Layer 1A wording no longer

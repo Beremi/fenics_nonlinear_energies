@@ -280,8 +280,8 @@ deviatoric-strain norm are defined in
 The validation limits for this endpoint surrogate are reported in
 \Cref{sec:val-plasticity3d}. With that interpretation fixed, this section asks
 two performance questions: which second-order route is preferred on the fixed
-high-order derivative-route case, and how the endpoint surrogate behaves across degree,
-resolution, and rank count.
+high-order derivative-route case, and how the endpoint surrogate behaves across
+degree, resolution, and rank count.
 
 \paragraph{Derivative-route ablation.}
 The first question is which second-order route has the most useful
@@ -289,7 +289,7 @@ cost-quality profile for the reported workflow. On the fixed
 $P_4(L_1)$ case at $\lambda_{\mathrm{sr}}=1.5$ and 8 MPI ranks, all three
 routes converge to essentially the same terminal state, with identical Newton
 and total Krylov counts. This residual-bisection Newton probe uses the
-Hypre-backed local linear-solver profile, so it should be read as
+Hypre-backed rank-local linear-solver profile, so it should be read as
 derivative-route timing evidence rather than as the MUMPS-backed PMG profile
 used by the later $\lambda_{\mathrm{sr}}=\num{1.55}$ convergence studies. The
 differences are cost differences, not state-quality differences: constitutive
@@ -311,8 +311,8 @@ SFD.
   \input{tables/generated/plasticity3d_derivative_ablation.tex}
   \caption{Plasticity3D derivative-route comparison on the fixed
   $P_4(L_1)$, $\lambda_{\mathrm{sr}}=1.5$, 8-rank case. These rows use the
-  Hypre-backed local profile and are separate from the MUMPS-backed PMG rows in
-  the $\lambda_{\mathrm{sr}}=\num{1.55}$ studies.}
+  Hypre-backed rank-local profile and are separate from the MUMPS-backed PMG
+  rows in the $\lambda_{\mathrm{sr}}=\num{1.55}$ studies.}
   \label{tab:plasticity3d-derivative-ablation}
 \end{table}
 
@@ -409,11 +409,13 @@ the nonlinear method is Armijo Newton, and the Krylov tolerance is
 \num{1e-2}. The nonlinear stop requires both relative correction below
 \num{0.002} and gradient norm below one percent of the first Newton gradient.
 \Cref{fig:plasticity3d-local-karolina-scaling,tab:plasticity3d-local-karolina-scaling}
-compare the single-node workstation sweep with the Karolina CPU-node sweep at
-16 MPI ranks per node. All plotted rows converge in 29 Newton iterations and
+compare the workstation MPI sweep with the Karolina CPU-node sweep at 16 MPI
+ranks per node. All plotted rows converge in 29 Newton iterations and
 1240 total Krylov iterations to the same energy and gradient norm to the
-precision shown in the table, so the timing comparison is not confounded by
-different nonlinear work.
+precision shown in the table. The apparently large final gradient norm is below
+the relative gradient target; the table therefore reports both $\|g\|$ and the
+ratio $\|g\|/\|g\|_{\mathrm{target}}$. The timing comparison is not confounded
+by different nonlinear work.
 
 \begin{figure}[H]
   \centering
@@ -427,11 +429,14 @@ different nonlinear work.
 
 \begin{table}[H]
   \centering
+  \scriptsize
   \input{tables/generated/plasticity3d_local_karolina_scaling.tex}
   \caption{Converged timings for the Plasticity3D
   $P_4(L_2)$, $\lambda_{\mathrm{sr}}=\num{1.55}$ run in
   \cref{fig:plasticity3d-local-karolina-scaling}. Workstation rows are
-  single-workstation MPI runs; Karolina rows use 16 ranks per CPU node.}
+  workstation MPI runs; Karolina rows use 16 ranks per CPU node. The nonlinear
+  stop requires relative correction below \num{0.002} and final gradient below
+  one percent of the first Newton gradient.}
   \label{tab:plasticity3d-local-karolina-scaling}
 \end{table}
 
@@ -515,12 +520,14 @@ serial reference path discussed earlier in \Cref{tab:reference-availability}.
 The results above should be read as a coupled solver study rather than as a
 collection of isolated benchmark timings. First, the globalization tables show
 that the nonlinear policy is problem-dependent: line-search Newton is adequate
-on the clean $p$-Laplace case, while trust-region safeguards are decisive on
-the harder Ginzburg--Landau and Plasticity3D endpoints. Second, the
-derivative-route comparisons show that access to several second-order routes is
-useful in practice. Colored SFD is a credible verification and fallback route
-on the tested local problems, but constitutive AD gives the best cost-quality
-profile on the fixed Plasticity3D flagship case. Third, the hyperelasticity
+on the clean $p$-Laplace case, while trust-region safeguards are beneficial on
+the nonconvex Ginzburg--Landau probes and necessary for the stricter
+$P_2(L_1)$ Plasticity3D globalization probe. Second, the derivative-route
+comparisons show that access to several second-order routes is useful in
+practice. Colored SFD is a credible verification and fallback route on the
+tested fixed-size problems, but constitutive AD gives the best cost-quality
+profile on the fixed high-order Plasticity3D derivative-route case. Third, the
+hyperelasticity
 distribution and PMG ablations, together with the Plasticity3D partitioning
 diagnostics, show that sparse ownership, overlap size, coarse solves, and
 preconditioner policy are part of the numerical method, not merely software

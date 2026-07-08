@@ -46,6 +46,10 @@ P3D_KAROLINA_LAMBDA155_SCALING = (
     REPO_ROOT
     / "artifacts/reports/plasticity3d_p4_l1_2_mumps_pmg_step_grad_local_karolina_scaling/karolina_rpn16_solver_total_scaling.csv"
 )
+P3D_LAMBDA155_STOP_SUMMARY = (
+    REPO_ROOT
+    / "artifacts/raw_results/example_runs/plasticity3d_p4_l1_2_lambda1p55_mumps_pmg_step_grad_convergence_20260507_190225/step_grad_convergence_summary.csv"
+)
 
 PLAPLACE_PARITY = REPO_ROOT / "experiments/analysis/docs_assets/data/plaplace/parity_showcase.csv"
 GL_PARITY = REPO_ROOT / "experiments/analysis/docs_assets/data/ginzburg_landau/parity_showcase.csv"
@@ -399,20 +403,35 @@ def select_topology_rows(labels: tuple[str, ...]) -> list[dict[str, str]]:
 
 
 def plasticity3d_local_karolina_rows() -> list[dict[str, object]]:
+    stop_rows = {int(row["ranks"]): row for row in read_csv_rows(P3D_LAMBDA155_STOP_SUMMARY)}
+    grad_targets = [
+        float(row["grad_target"])
+        for row in stop_rows.values()
+        if str(row.get("grad_target", "")).strip()
+    ]
+    grad_target = grad_targets[0] if grad_targets else math.nan
     rows: list[dict[str, object]] = []
     for row in read_csv_rows(P3D_LOCAL_LAMBDA155_SCALING):
         owned = float(row["owned_free_dofs_sum"])
         overlap = float(row["overlap_total_dofs_sum"])
+        stop_row = stop_rows.get(int(row["ranks"]))
+        grad = float(row["final_grad_norm"])
         rows.append(
             {
-                "source": "local workstation",
+                "source": "workstation MPI",
                 "ranks": int(row["ranks"]),
                 "nodes": None,
                 "solver_total_s": float(row["solver_total_s"]),
                 "solve_time_s": float(row["nonlinear_solve_s"]),
+                "newton_iterations": int(row["newton_iterations"]),
                 "linear_iterations_total": int(row["linear_iterations_total"]),
                 "energy": float(row["energy"]),
-                "grad": float(row["final_grad_norm"]),
+                "grad": grad,
+                "grad_over_target": (
+                    float(stop_row["final_grad_over_target"])
+                    if stop_row is not None and str(stop_row.get("final_grad_over_target", "")).strip()
+                    else grad / grad_target
+                ),
                 "max_local_dofs": int(row["max_local_dofs"]),
                 "owned_free_dofs_sum": int(owned),
                 "overlap_total_dofs_sum": int(overlap),
@@ -424,6 +443,8 @@ def plasticity3d_local_karolina_rows() -> list[dict[str, object]]:
             continue
         owned = float(row["owned_free_dofs_sum"])
         overlap = float(row["overlap_total_dofs_sum"])
+        stop_row = stop_rows.get(int(row["ranks"]))
+        grad = float(row["grad"])
         rows.append(
             {
                 "source": "Karolina",
@@ -431,16 +452,22 @@ def plasticity3d_local_karolina_rows() -> list[dict[str, object]]:
                 "nodes": int(row["nodes"]),
                 "solver_total_s": float(row["solver_total"]),
                 "solve_time_s": float(row["solve_time"]),
+                "newton_iterations": int(row["nit"]),
                 "linear_iterations_total": int(row["ksp_its"]),
                 "energy": float(row["energy"]),
-                "grad": float(row["grad"]),
+                "grad": grad,
+                "grad_over_target": (
+                    float(stop_row["final_grad_over_target"])
+                    if stop_row is not None and str(stop_row.get("final_grad_over_target", "")).strip()
+                    else grad / grad_target
+                ),
                 "max_local_dofs": int(row["max_local_dofs"]),
                 "owned_free_dofs_sum": int(owned),
                 "overlap_total_dofs_sum": int(overlap),
                 "replication_ratio": float(row.get("replication_ratio") or overlap / owned),
             }
         )
-    rows.sort(key=lambda row: (str(row["source"]) != "local workstation", int(row["ranks"])))
+    rows.sort(key=lambda row: (str(row["source"]) != "workstation MPI", int(row["ranks"])))
     return rows
 
 
@@ -1331,16 +1358,18 @@ def main() -> None:
 
     write_table_star(
         "plasticity3d_local_karolina_scaling.tex",
-        fill_spec("l c c c c c c c"),
+        fill_spec("l c c c c c c c c c"),
         [
             "Platform",
             "Ranks",
             "Nodes",
             "Solver total [s]",
             "Solve [s]",
+            "Newton iters",
             "Krylov iters",
             "Energy",
             "$\\|g\\|$",
+            "$\\|g\\|$/target",
         ],
         [
             [
@@ -1349,9 +1378,11 @@ def main() -> None:
                 "--" if row["nodes"] is None else fmt_count(row["nodes"]),
                 fmt_wall_time(float(row["solver_total_s"])),
                 fmt_wall_time(float(row["solve_time_s"])),
+                fmt_count(row["newton_iterations"]),
                 fmt_count(row["linear_iterations_total"]),
                 fmt_energy(float(row["energy"])),
                 fmt_float(float(row["grad"]), 3),
+                fmt_float(float(row["grad_over_target"]), 3),
             ]
             for row in p3d_local_karolina_rows
         ],
@@ -1613,9 +1644,11 @@ def main() -> None:
                 "ranks": int(row["ranks"]),
                 "solver_total_s": float(row["solver_total_s"]),
                 "solve_time_s": float(row["solve_time_s"]),
+                "newton_iterations": int(row["newton_iterations"]),
                 "linear_iterations_total": int(row["linear_iterations_total"]),
                 "energy": float(row["energy"]),
                 "grad": float(row["grad"]),
+                "grad_over_target": float(row["grad_over_target"]),
                 "max_local_dofs": int(row["max_local_dofs"]),
                 "owned_free_dofs_sum": int(row["owned_free_dofs_sum"]),
                 "overlap_total_dofs_sum": int(row["overlap_total_dofs_sum"]),

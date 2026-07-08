@@ -36,9 +36,10 @@ claim path-consistent equivalence to an incremental elastoplastic history solve.
 On a fixed $P_4(L_1)$, $\lambda_{\mathrm{sr}}=1.5$, 8-rank plasticity
 derivative comparison, constitutive AD has the lowest median wall time among
 the three tested second-order routes while reaching the same terminal state as
-element AD and colored SFD. The distributed \plasticitythree{} study
-on $P_4(L_2)$ with \localpmg{} attains $\num{18.05}\times$ end-to-end speedup
-on 32 MPI ranks relative to one rank at the same nonlinear target. The topology
+element AD and colored SFD. In the converged glued-bottom $P_4(L_2)$,
+$\lambda_{\mathrm{sr}}=1.55$ scaling sweep, all workstation and Karolina rows
+take the same nonlinear and Krylov work, while the workstation solver-total time
+drops from \SI{17890}{s} on one rank to \SI{1110}{s} on 32 ranks. The topology
 optimization study complements this with a distributed design-and-mechanics
 workflow that remains operational at $768\times384$ resolution and 32 ranks.
 Within this scoped evidence, the contribution is a reusable nonlinear FEM

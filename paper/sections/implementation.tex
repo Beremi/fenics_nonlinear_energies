@@ -87,7 +87,8 @@ because the linear systems are qualitatively different:
   \item \textbf{Plasticity3D:} same-mesh polynomial multigrid hierarchies,
         $P_4 \to P_2 \to P_1$ or $P_2 \to P_1$ depending on degree. The
         historical $\lambda_{\mathrm{sr}}=\num{1.0}$ scaling and
-        degree/resolution endpoint probes use a CG--Hypre coarse profile,
+        degree/resolution endpoint probes use FGMRES with same-mesh PMG and a
+        CG--Hypre coarse solve,
         whereas the $P_2$ globalization and derivative-route comparisons and
         the converged $P_4(L_2)$, $\lambda_{\mathrm{sr}}=\num{1.55}$ scaling
         use a redundant LU/MUMPS coarse profile.
