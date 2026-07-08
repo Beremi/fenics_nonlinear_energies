@@ -503,3 +503,31 @@ The topology benchmark completes the paper's computational picture. Here the
 mainline \jaxpetsc{} path is less about exact Hessians than about stable
 distributed design-mechanics coupling, while \purejax{} remains the compact
 serial reference path discussed earlier in \Cref{tab:reference-availability}.
+
+\subsection{Synthesis of the Computational Evidence}
+\label{sec:num-synthesis}
+
+The results above should be read as a coupled solver study rather than as a
+collection of isolated benchmark timings. First, the globalization tables show
+that the nonlinear policy is problem-dependent: line-search Newton is adequate
+on the clean $p$-Laplace case, while trust-region safeguards are decisive on
+the harder Ginzburg--Landau and Plasticity3D endpoints. Second, the
+derivative-route comparisons show that access to several second-order routes is
+useful in practice. Colored SFD is a credible verification and fallback route
+on the tested local problems, but constitutive AD gives the best cost-quality
+profile on the locked Plasticity3D flagship case. Third, the hyperelasticity
+distribution and PMG ablations, together with the Plasticity3D partitioning
+diagnostics, show that sparse ownership, overlap size, coarse solves, and
+preconditioner policy are part of the numerical method, not merely software
+detail. Finally, the hyperelasticity, Plasticity3D, and topology scaling runs
+show that the same \jaxpetsc{} mainline remains operational when the problem is
+large enough that serial reference formulations mainly serve validation,
+debugging, or comparison roles.
+
+This synthesis is also the boundary of the paper's claim. The experiments
+support a nonlinear FEM toolset in which local differentiable models,
+distributed sparse assembly, nonlinear globalization, Krylov linear algebra,
+and problem-specific preconditioners are developed and assessed together. They
+do not imply that one backend or one globalization policy dominates all
+finite-element workflows, nor do they turn the Plasticity3D endpoint surrogate
+into a path-consistent incremental-history validation.

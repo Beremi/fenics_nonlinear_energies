@@ -69,7 +69,11 @@ MATLAB/Octave literature only when there is source-backed evidence.
 - `RESULTS`: performance and solver behavior.
   Evidence: globalization comparison, derivative-route comparison, scaling
   studies, hyperelastic and Plasticity3D solver diagnostics, topology scaling.
-  Required edit: add a compact synthesis of what each result block establishes.
+  Status: a synthesis subsection now states what the result blocks establish:
+  nonlinear policy is problem-dependent, multiple derivative routes are useful,
+  sparse ownership/preconditioning are part of the numerical method, and the
+  \jaxpetsc{} mainline remains the scalable path while serial/external
+  formulations serve scoped reference roles.
 - `FIGURES_TABLES`: visual and layout quality.
   Current fact: `paper/build/main.pdf` is 35 pages, A4, 10 pt article,
   text width about 7.09 in. Many floats use `[H]`, so placement is highly manual.
@@ -143,7 +147,7 @@ MATLAB/Octave literature only when there is source-backed evidence.
    self-contained terms such as "implemented benchmark," "discrete model," and
    "algorithmic constitutive surrogate." Done for the main manuscript sections.
 5. Add a results synthesis paragraph/table using existing generated assets if
-   appropriate.
+   appropriate. Done with a prose synthesis subsection.
 6. Audit figures for physical size and font consistency after the narrative
    structure stabilizes. Initial audit done; Plasticity3D validation ladder
    repaired and visually checked on rendered pages 20--21.
