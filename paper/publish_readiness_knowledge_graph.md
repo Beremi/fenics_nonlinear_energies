@@ -131,7 +131,7 @@ MATLAB/Octave literature only when there is source-backed evidence.
   preconditioning, and surrogate-model interpretation are part of the numerical
   method.
 - `FIGURES_TABLES`: visual and layout quality.
-  Current fact: `paper/build/main.pdf` is 36 pages, A4, 10 pt article,
+  Current fact: `paper/build/main.pdf` is 37 pages, A4, 10 pt article,
   text width about 7.09 in. Many floats use `[H]`, so placement is highly manual.
   Figure/layout subagent audit: assets are technically clean at current A4
   width, with embedded fonts and 600 ppi raster layers, but dense 3D
@@ -154,6 +154,14 @@ MATLAB/Octave literature only when there is source-backed evidence.
   Plasticity3D derivative-degree evidence, and topology rank consistency. The
   Plasticity3D convergence figure was regenerated taller with more legend
   clearance after the layout subagent found bottom-label crowding on page 17.
+  Layout chunk: the widest generated diagnostics now use stacked `tabularx`
+  blocks with wrapped text columns rather than single wide `tabular*` layouts:
+  globalization method comparison, derivative-route comparison,
+  Hyperelasticity distribution/memory, Hyperelasticity PMG sensitivity,
+  Plasticity3D derivative-degree evidence, Plasticity3D derivative ablation,
+  and the appendix fixed source-operator PMG table. Rendered pages 23--28 and
+  33 show the split tables within the text block, attached to their captions,
+  and free of table/figure overlap; the PDF grows from 36 to 37 pages.
 - `REPRO`: reproducibility and submission readiness.
   Known blockers from `paper/todo.md`: target journal/template/declarations,
   repository license/archive DOI, and archive-neutral provenance for critical
@@ -255,6 +263,11 @@ MATLAB/Octave literature only when there is source-backed evidence.
 - `Layout/PDF` (`Singer`): shutdown after timeout. Local visual inspection of
   rendered pages 1 and 19--22 found the abstract, validation pages, and
   globalization table readable after this chunk.
+- `Wide table/layout` (`Avicenna`): completed. Key recommendation: split or
+  wrap the largest diagnostic tables by scientific meaning rather than shrink
+  the font further. Addressed by stacked outcome/work, memory/overlap, timing,
+  and terminal-observable blocks in the generated table script; visual checks
+  passed on pages 23--28 and 33.
 
 ## First Edit Backlog
 

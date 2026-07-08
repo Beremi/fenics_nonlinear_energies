@@ -1,14 +1,38 @@
-\begin{tabular*}{\textwidth}{@{}l@{\extracolsep{\fill}} c c c c c c c c c c@{}}
+\begin{minipage}{\textwidth}
+\centering
+\textit{Solve work}
+\par\vspace{0.2em}
+\begin{tabularx}{\textwidth}{@{}>{\hsize=0.947\hsize\linewidth=\hsize\RaggedRight\arraybackslash}X>{\hsize=1.000\hsize\linewidth=\hsize\RaggedRight\arraybackslash}X>{\hsize=1.053\hsize\linewidth=\hsize\RaggedRight\arraybackslash}X@{\hspace{0.45em}}c c c c c@{}}
 \toprule
-Probe & Level & Ranks & Build & Result & Newton & Krylov & Solve [s] & RSS max/sum [GiB] & Tracked sum [GiB] & Overlap/owned \\
+Probe & Build & Result & Level & Ranks & Newton & Krylov & Solve [s] \\
 \midrule
-correctness & $L_{4}$ & 4 & replicated & completed & 26 & 571 & \num{51.2} & \num{3.6}/\num{14.2} & \num{5.49} & \num{1.01} \\
-correctness & $L_{4}$ & 4 & rank-local & completed & 26 & 571 & \num{50.8} & \num{3.3}/\num{13.2} & \num{6.01} & \num{1.01} \\
-memory & $L_{5}$ & 8 & replicated & fixed work & 1 & 1 & \num{10.7} & \num{14.9}/\num{118.7} & \num{44.34} & \num{1.01} \\
-memory & $L_{5}$ & 8 & rank-local & fixed work & 1 & 1 & \num{10.5} & \num{12.3}/\num{98.3} & \num{47.87} & \num{1.01} \\
-memory & $L_{5}$ & 16 & replicated & fixed work & 1 & 1 & \num{5.57} & \num{9.4}/\num{150.9} & \num{45.45} & \num{1.03} \\
-memory & $L_{5}$ & 16 & rank-local & fixed work & 1 & 1 & \num{5.5} & \num{6.3}/\num{100.3} & \num{47.89} & \num{1.03} \\
-memory & $L_{5}$ & 32 & replicated & fixed work & 1 & 1 & \num{3.37} & \num{6.7}/\num{215.6} & \num{47.65} & \num{1.05} \\
-memory & $L_{5}$ & 32 & rank-local & fixed work & 1 & 1 & \num{3.36} & \num{3.3}/\num{104.9} & \num{47.92} & \num{1.05} \\
+correctness & replicated & completed & $L_{4}$ & 4 & 26 & 571 & \num{51.2} \\
+correctness & rank-local & completed & $L_{4}$ & 4 & 26 & 571 & \num{50.8} \\
+memory & replicated & fixed work & $L_{5}$ & 8 & 1 & 1 & \num{10.7} \\
+memory & rank-local & fixed work & $L_{5}$ & 8 & 1 & 1 & \num{10.5} \\
+memory & replicated & fixed work & $L_{5}$ & 16 & 1 & 1 & \num{5.57} \\
+memory & rank-local & fixed work & $L_{5}$ & 16 & 1 & 1 & \num{5.5} \\
+memory & replicated & fixed work & $L_{5}$ & 32 & 1 & 1 & \num{3.37} \\
+memory & rank-local & fixed work & $L_{5}$ & 32 & 1 & 1 & \num{3.36} \\
 \bottomrule
-\end{tabular*}
+\end{tabularx}
+
+\vspace{0.45em}
+
+\textit{Memory and overlap}
+\par\vspace{0.2em}
+\begin{tabularx}{\textwidth}{@{}>{\hsize=0.950\hsize\linewidth=\hsize\RaggedRight\arraybackslash}X>{\hsize=1.050\hsize\linewidth=\hsize\RaggedRight\arraybackslash}X@{\hspace{0.45em}}c c c c c@{}}
+\toprule
+Probe & Build & Level & Ranks & RSS max/sum [GiB] & Tracked sum [GiB] & Overlap/owned \\
+\midrule
+correctness & replicated & $L_{4}$ & 4 & \num{3.6}/\num{14.2} & \num{5.49} & \num{1.01} \\
+correctness & rank-local & $L_{4}$ & 4 & \num{3.3}/\num{13.2} & \num{6.01} & \num{1.01} \\
+memory & replicated & $L_{5}$ & 8 & \num{14.9}/\num{118.7} & \num{44.34} & \num{1.01} \\
+memory & rank-local & $L_{5}$ & 8 & \num{12.3}/\num{98.3} & \num{47.87} & \num{1.01} \\
+memory & replicated & $L_{5}$ & 16 & \num{9.4}/\num{150.9} & \num{45.45} & \num{1.03} \\
+memory & rank-local & $L_{5}$ & 16 & \num{6.3}/\num{100.3} & \num{47.89} & \num{1.03} \\
+memory & replicated & $L_{5}$ & 32 & \num{6.7}/\num{215.6} & \num{47.65} & \num{1.05} \\
+memory & rank-local & $L_{5}$ & 32 & \num{3.3}/\num{104.9} & \num{47.92} & \num{1.05} \\
+\bottomrule
+\end{tabularx}
+\end{minipage}

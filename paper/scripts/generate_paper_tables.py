@@ -329,6 +329,7 @@ def pcol(width: str, align: str = "RaggedRight") -> str:
 
 
 LatexRow = list[str] | str
+LatexBlock = tuple[str, str, list[str], list[LatexRow]]
 
 
 def _latex_lines(header: list[str], rows: list[LatexRow]) -> list[str]:
@@ -365,6 +366,24 @@ def latex_tabularx(spec: str, header: list[str], rows: list[LatexRow], *, width:
     return "\n".join(lines) + "\n"
 
 
+def latex_tabularx_blocks(blocks: list[LatexBlock], *, width: str = r"\textwidth") -> str:
+    lines = [rf"\begin{{minipage}}{{{width}}}", r"\centering"]
+    for index, (title, spec, header, rows) in enumerate(blocks):
+        if title:
+            lines.extend([rf"\textit{{{title}}}", r"\par\vspace{0.2em}"])
+        lines.extend(
+            [
+                rf"\begin{{tabularx}}{{{width}}}{{{spec}}}",
+                *_latex_lines(header, rows),
+                r"\end{tabularx}",
+            ]
+        )
+        if index != len(blocks) - 1:
+            lines.extend(["", r"\vspace{0.45em}", ""])
+    lines.append(r"\end{minipage}")
+    return "\n".join(lines) + "\n"
+
+
 def load_rows(path: Path) -> list[dict[str, object]]:
     data = read_json(path)
     rows = [dict(row) for row in data["rows"]]
@@ -390,6 +409,10 @@ def write_table_star(
 
 def write_tablex(name: str, spec: str, header: list[str], rows: list[LatexRow], *, width: str = r"\textwidth") -> None:
     write_text(TABLES_ROOT / name, latex_tabularx(spec, header, rows, width=width))
+
+
+def write_tablex_blocks(name: str, blocks: list[LatexBlock], *, width: str = r"\textwidth") -> None:
+    write_text(TABLES_ROOT / name, latex_tabularx_blocks(blocks, width=width))
 
 
 def select_csv_rows(path: Path, implementations: tuple[str, ...]) -> list[dict[str, str]]:
@@ -1052,139 +1075,175 @@ def main() -> None:
         ],
     )
 
-    write_table_star(
+    write_tablex_blocks(
         "globalization_method_compare.tex",
-        "@{}"
-        + pcol(r"0.15\textwidth")
-        + "@{\\hspace{0.6em}}"
-        + pcol(r"0.105\textwidth")
-        + r"@{\extracolsep{\fill}}c c c c c c c c c@{}",
         [
-            "Benchmark",
-            "Method",
-            "Ranks",
-            "Result",
-            "Steps",
-            "Newton",
-            "Krylov",
-            "LS evals",
-            "TR rejects",
-            "Time [s]",
-            "Energy",
-        ],
-        [
-            [
-                GLOBALIZATION_BENCHMARK_LABELS.get(str(row["benchmark"]), str(row["benchmark_label"])),
-                GLOBALIZATION_METHOD_LABELS.get(str(row["method"]), str(row["method"]).replace("_", r"\_")),
-                fmt_count(row["nprocs"]),
-                str(row["result"]).replace("_", r"\_"),
-                f"{fmt_count(row['completed_steps'])}/{fmt_count(row['steps_requested'])}",
-                fmt_count(row["newton_iters"]),
-                fmt_count(row["krylov_iters"]),
-                fmt_count(row["line_search_evals"]),
-                fmt_count(row["trust_rejects"]),
-                _fmt_optional_wall(row.get("solve_time_s") or row.get("wall_time_s")),
-                _fmt_optional_energy(row.get("final_energy")),
-            ]
-            for row in globalization_rows
+            (
+                "Outcome and terminal value",
+                "@{}"
+                + xspec((1.20, "RaggedRight"), (0.90, "RaggedRight"))
+                + r"@{\hspace{0.45em}}c c c c c@{}",
+                ["Benchmark", "Method", "Ranks", "Result", "Steps", "Time [s]", "Energy"],
+                [
+                    [
+                        GLOBALIZATION_BENCHMARK_LABELS.get(str(row["benchmark"]), str(row["benchmark_label"])),
+                        GLOBALIZATION_METHOD_LABELS.get(str(row["method"]), str(row["method"]).replace("_", r"\_")),
+                        fmt_count(row["nprocs"]),
+                        str(row["result"]).replace("_", r"\_"),
+                        f"{fmt_count(row['completed_steps'])}/{fmt_count(row['steps_requested'])}",
+                        _fmt_optional_wall(row.get("solve_time_s") or row.get("wall_time_s")),
+                        _fmt_optional_energy(row.get("final_energy")),
+                    ]
+                    for row in globalization_rows
+                ],
+            ),
+            (
+                "Nonlinear and Krylov work",
+                "@{}"
+                + xspec((1.20, "RaggedRight"), (0.90, "RaggedRight"))
+                + r"@{\hspace{0.45em}}c c c c c@{}",
+                ["Benchmark", "Method", "Ranks", "Newton", "Krylov", "LS evals", "TR rejects"],
+                [
+                    [
+                        GLOBALIZATION_BENCHMARK_LABELS.get(str(row["benchmark"]), str(row["benchmark_label"])),
+                        GLOBALIZATION_METHOD_LABELS.get(str(row["method"]), str(row["method"]).replace("_", r"\_")),
+                        fmt_count(row["nprocs"]),
+                        fmt_count(row["newton_iters"]),
+                        fmt_count(row["krylov_iters"]),
+                        fmt_count(row["line_search_evals"]),
+                        fmt_count(row["trust_rejects"]),
+                    ]
+                    for row in globalization_rows
+                ],
+            ),
         ],
     )
 
-    write_table_star(
+    write_tablex_blocks(
         "derivative_route_compare.tex",
-        fill_spec("l l c c c c c c c c"),
         [
-            "Benchmark",
-            "Route",
-            "Ranks",
-            "Result",
-            "Newton",
-            "Krylov",
-            "Time [s]",
-            "Hessian [s]",
-            "SFD colors",
-            "Energy",
-        ],
-        [
-            [
-                DERIVATIVE_BENCHMARK_LABELS.get(str(row["benchmark"]), str(row["benchmark_label"])),
-                DERIVATIVE_ROUTE_LABELS.get(str(row["route"]), str(row["route_label"])),
-                fmt_count(row["nprocs"]),
-                str(row["result"]).replace("_", r"\_"),
-                fmt_count(row["newton_iters"]),
-                fmt_count(row["krylov_iters"]),
-                _derivative_row_time(row),
-                _derivative_hessian_time(row),
-                _derivative_sfd_colors(row),
-                _fmt_optional_energy(row.get("final_energy")),
-            ]
-            for row in derivative_rows
+            (
+                "Outcome and timing",
+                "@{}"
+                + xspec((1.25, "RaggedRight"), (0.95, "RaggedRight"))
+                + r"@{\hspace{0.45em}}c c c@{}",
+                ["Benchmark", "Route", "Result", "Time [s]", "Energy"],
+                [
+                    [
+                        DERIVATIVE_BENCHMARK_LABELS.get(str(row["benchmark"]), str(row["benchmark_label"])),
+                        DERIVATIVE_ROUTE_LABELS.get(str(row["route"]), str(row["route_label"])),
+                        str(row["result"]).replace("_", r"\_"),
+                        _derivative_row_time(row),
+                        _fmt_optional_energy(row.get("final_energy")),
+                    ]
+                    for row in derivative_rows
+                ],
+            ),
+            (
+                "Work and Hessian construction",
+                "@{}"
+                + xspec((1.25, "RaggedRight"), (0.95, "RaggedRight"))
+                + r"@{\hspace{0.45em}}c c c c c@{}",
+                ["Benchmark", "Route", "Ranks", "Newton", "Krylov", "Hessian [s]", "SFD colors"],
+                [
+                    [
+                        DERIVATIVE_BENCHMARK_LABELS.get(str(row["benchmark"]), str(row["benchmark_label"])),
+                        DERIVATIVE_ROUTE_LABELS.get(str(row["route"]), str(row["route_label"])),
+                        fmt_count(row["nprocs"]),
+                        fmt_count(row["newton_iters"]),
+                        fmt_count(row["krylov_iters"]),
+                        _derivative_hessian_time(row),
+                        _derivative_sfd_colors(row),
+                    ]
+                    for row in derivative_rows
+                ],
+            ),
         ],
     )
 
-    write_table_star(
+    write_tablex_blocks(
         "hyperelasticity_distribution_memory.tex",
-        fill_spec("l c c c c c c c c c c"),
         [
-            "Probe",
-            "Level",
-            "Ranks",
-            "Build",
-            "Result",
-            "Newton",
-            "Krylov",
-            "Solve [s]",
-            "RSS max/sum [GiB]",
-            "Tracked sum [GiB]",
-            "Overlap/owned",
-        ],
-        [
-            [
-                str(row.get("probe", "")).replace("_", r"\_"),
-                mesh_label(f"L{int(float(row.get('level') or 0))}"),
-                fmt_count(row["nprocs"]),
-                REVIEWER_HE_BUILD_LABELS.get(str(row.get("build_mode", "")), str(row.get("build_mode", ""))),
-                _result_label(row.get("result", "")),
-                _fmt_optional_count(row.get("newton_iters", "")),
-                _fmt_optional_count(row.get("krylov_iters", "")),
-                _fmt_optional_wall(row.get("solve_time_s", "")),
-                _fmt_mib_pair(row.get("ru_maxrss_mib_max", ""), row.get("ru_maxrss_mib_total", "")),
-                _fmt_optional_gib(row.get("tracked_total_gib_total", "")),
-                _fmt_optional_float(row.get("overlap_owned_ratio", ""), 2),
-            ]
-            for row in supplemental_he_distribution
+            (
+                "Solve work",
+                "@{}"
+                + xspec((0.90, "RaggedRight"), (0.95, "RaggedRight"), (1.00, "RaggedRight"))
+                + r"@{\hspace{0.45em}}c c c c c@{}",
+                ["Probe", "Build", "Result", "Level", "Ranks", "Newton", "Krylov", "Solve [s]"],
+                [
+                    [
+                        str(row.get("probe", "")).replace("_", r"\_"),
+                        REVIEWER_HE_BUILD_LABELS.get(str(row.get("build_mode", "")), str(row.get("build_mode", ""))),
+                        _result_label(row.get("result", "")),
+                        mesh_label(f"L{int(float(row.get('level') or 0))}"),
+                        fmt_count(row["nprocs"]),
+                        _fmt_optional_count(row.get("newton_iters", "")),
+                        _fmt_optional_count(row.get("krylov_iters", "")),
+                        _fmt_optional_wall(row.get("solve_time_s", "")),
+                    ]
+                    for row in supplemental_he_distribution
+                ],
+            ),
+            (
+                "Memory and overlap",
+                "@{}"
+                + xspec((0.95, "RaggedRight"), (1.05, "RaggedRight"))
+                + r"@{\hspace{0.45em}}c c c c c@{}",
+                ["Probe", "Build", "Level", "Ranks", "RSS max/sum [GiB]", "Tracked sum [GiB]", "Overlap/owned"],
+                [
+                    [
+                        str(row.get("probe", "")).replace("_", r"\_"),
+                        REVIEWER_HE_BUILD_LABELS.get(str(row.get("build_mode", "")), str(row.get("build_mode", ""))),
+                        mesh_label(f"L{int(float(row.get('level') or 0))}"),
+                        fmt_count(row["nprocs"]),
+                        _fmt_mib_pair(row.get("ru_maxrss_mib_max", ""), row.get("ru_maxrss_mib_total", "")),
+                        _fmt_optional_gib(row.get("tracked_total_gib_total", "")),
+                        _fmt_optional_float(row.get("overlap_owned_ratio", ""), 2),
+                    ]
+                    for row in supplemental_he_distribution
+                ],
+            ),
         ],
     )
 
-    write_table_star(
+    write_tablex_blocks(
         "hyperelasticity_pmg_sensitivity.tex",
-        fill_spec("l c c c c c c c c c"),
         [
-            "Precond.",
-            "Result",
-            "Newton",
-            "Krylov",
-            "Solver [s]",
-            "Assembly [s]",
-            "PC [s]",
-            "Linear [s]",
-            "Coarse",
-            "Energy",
-        ],
-        [
-            [
-                REVIEWER_HE_PMG_LABELS.get(str(row.get("candidate", "")), str(row.get("candidate", "")).replace("_", r"\_")),
-                _result_label(row.get("result", "")),
-                _fmt_optional_count(row.get("newton_iters", "")),
-                _fmt_optional_count(row.get("krylov_iters", "")),
-                _fmt_optional_wall(row.get("solve_time_s", "")),
-                _fmt_optional_wall(row.get("assemble_time_s", "")),
-                _fmt_optional_wall(row.get("pc_setup_time_s", "")),
-                _fmt_optional_wall(row.get("linear_solve_time_s", "")),
-                _fmt_he_coarse(row),
-                _fmt_optional_energy(row.get("energy", "")),
-            ]
-            for row in supplemental_he_pmg
+            (
+                "Outcome and solver work",
+                "@{}"
+                + xspec((1.10, "RaggedRight"), (0.95, "RaggedRight"))
+                + r"@{\hspace{0.45em}}c c c c@{}",
+                ["Precond.", "Result", "Newton", "Krylov", "Solver [s]", "Energy"],
+                [
+                    [
+                        REVIEWER_HE_PMG_LABELS.get(str(row.get("candidate", "")), str(row.get("candidate", "")).replace("_", r"\_")),
+                        _result_label(row.get("result", "")),
+                        _fmt_optional_count(row.get("newton_iters", "")),
+                        _fmt_optional_count(row.get("krylov_iters", "")),
+                        _fmt_optional_wall(row.get("solve_time_s", "")),
+                        _fmt_optional_energy(row.get("energy", "")),
+                    ]
+                    for row in supplemental_he_pmg
+                ],
+            ),
+            (
+                "Time breakdown and coarse solve",
+                "@{}"
+                + xspec((1.10, "RaggedRight"), (1.20, "RaggedRight"))
+                + r"@{\hspace{0.45em}}c c c@{}",
+                ["Precond.", "Coarse", "Assembly [s]", "PC [s]", "Linear [s]"],
+                [
+                    [
+                        REVIEWER_HE_PMG_LABELS.get(str(row.get("candidate", "")), str(row.get("candidate", "")).replace("_", r"\_")),
+                        _fmt_he_coarse(row),
+                        _fmt_optional_wall(row.get("assemble_time_s", "")),
+                        _fmt_optional_wall(row.get("pc_setup_time_s", "")),
+                        _fmt_optional_wall(row.get("linear_solve_time_s", "")),
+                    ]
+                    for row in supplemental_he_pmg
+                ],
+            ),
         ],
     )
 
@@ -1248,41 +1307,51 @@ def main() -> None:
         ],
     )
 
-    write_table_star(
+    write_tablex_blocks(
         "plasticity3d_derivative_degree.tex",
-        fill_spec("c l c c c c c c c c c"),
         [
-            "Element",
-            "Route",
-            "Result",
-            "Free DOFs",
-            "Elem DOFs",
-            "Overlap DOFs",
-            "Krylov",
-            "Solve [s]",
-            "Hessian [s]",
-            "SFD colors",
-            "RSS max [GiB]",
-        ],
-        [
-            [
-                _p3d_discretization_label(row),
-                REVIEWER_P3D_ROUTE_LABELS.get(str(row.get("route", "")), str(row.get("route", "")).replace("_", r"\_")),
-                _result_label(row.get("result", "")),
-                _fmt_optional_dofs(row.get("free_dofs", "")),
-                _fmt_optional_count(row.get("local_element_dofs", "")),
-                _fmt_optional_count(row.get("local_overlap_dofs", "")),
-                _fmt_optional_count(row.get("krylov_iters", "")),
-                _fmt_optional_wall(row.get("solve_time_s", "")),
-                _fmt_optional_wall(row.get("hessian_time_s", "")),
-                _derivative_sfd_colors(row),
-                (
-                    _fmt_optional_float(float(row.get("ru_maxrss_mib_max", 0.0)) / 1024.0, 1)
-                    if str(row.get("ru_maxrss_mib_max", "")).strip()
-                    else "--"
-                ),
-            ]
-            for row in supplemental_p3d_degree
+            (
+                "Discretization size",
+                r"@{}c@{\hspace{0.45em}}"
+                + xspec((1.10, "RaggedRight"), (0.90, "RaggedRight"))
+                + r"@{\hspace{0.45em}}c c c c@{}",
+                ["Element", "Route", "Result", "Free DOFs", "Elem DOFs", "Overlap DOFs", "RSS max [GiB]"],
+                [
+                    [
+                        _p3d_discretization_label(row),
+                        REVIEWER_P3D_ROUTE_LABELS.get(str(row.get("route", "")), str(row.get("route", "")).replace("_", r"\_")),
+                        _result_label(row.get("result", "")),
+                        _fmt_optional_dofs(row.get("free_dofs", "")),
+                        _fmt_optional_count(row.get("local_element_dofs", "")),
+                        _fmt_optional_count(row.get("local_overlap_dofs", "")),
+                        (
+                            _fmt_optional_float(float(row.get("ru_maxrss_mib_max", 0.0)) / 1024.0, 1)
+                            if str(row.get("ru_maxrss_mib_max", "")).strip()
+                            else "--"
+                        ),
+                    ]
+                    for row in supplemental_p3d_degree
+                ],
+            ),
+            (
+                "Linearization cost",
+                r"@{}c@{\hspace{0.45em}}"
+                + xcol(1.0, "RaggedRight")
+                + r"@{\hspace{0.45em}}c c c c c@{}",
+                ["Element", "Route", "Free DOFs", "Krylov", "Solve [s]", "Hessian [s]", "SFD colors"],
+                [
+                    [
+                        _p3d_discretization_label(row),
+                        REVIEWER_P3D_ROUTE_LABELS.get(str(row.get("route", "")), str(row.get("route", "")).replace("_", r"\_")),
+                        _fmt_optional_dofs(row.get("free_dofs", "")),
+                        _fmt_optional_count(row.get("krylov_iters", "")),
+                        _fmt_optional_wall(row.get("solve_time_s", "")),
+                        _fmt_optional_wall(row.get("hessian_time_s", "")),
+                        _derivative_sfd_colors(row),
+                    ]
+                    for row in supplemental_p3d_degree
+                ],
+            ),
         ],
     )
 
@@ -1427,19 +1496,27 @@ def main() -> None:
         ],
     )
 
-    write_table_star(
+    sourcefixed_rows = sourcefixed_long_rows(sourcefixed_local_rows, sourcefixed_source_rows)
+    write_tablex_blocks(
         "plasticity3d_fixed_source_operator_pmg.tex",
-        fill_spec("c l c c c c c"),
         [
-            "Ranks",
-            "Route",
-            "Wall time [s]",
-            "Newton iters",
-            "Krylov iters",
-            final_metric_header(sourcefixed_local_rows + sourcefixed_source_rows),
-            "Status",
+            (
+                "Outcome and wall time",
+                r"@{}c@{\hspace{0.7em}}"
+                + xcol(1.0, "RaggedRight")
+                + r"@{\hspace{0.45em}}c c@{}",
+                ["Ranks", "Route", "Status", "Wall time [s]"],
+                [[row[0], row[1], row[6], row[2]] for row in sourcefixed_rows],
+            ),
+            (
+                "Newton--Krylov work",
+                r"@{}c@{\hspace{0.7em}}"
+                + xcol(1.0, "RaggedRight")
+                + r"@{\hspace{0.45em}}c c c@{}",
+                ["Ranks", "Route", "Newton iters", "Krylov iters", final_metric_header(sourcefixed_local_rows + sourcefixed_source_rows)],
+                [[row[0], row[1], row[3], row[4], row[5]] for row in sourcefixed_rows],
+            ),
         ],
-        sourcefixed_long_rows(sourcefixed_local_rows, sourcefixed_source_rows),
     )
 
     write_table(
@@ -1558,22 +1635,38 @@ def main() -> None:
     )
 
     ablation_rows = [dict(row) for row in p3d_ablation["rows"]]
-    write_table_star(
+    write_tablex_blocks(
         "plasticity3d_derivative_ablation.tex",
-        fill_spec("l c c c c c c c"),
-        ["Route", "Wall time [s]", "Solve time [s]", "Newton iters", "Krylov iters", "Energy", "$\\omega$", "$u_{\\max}$"],
         [
-            [
-                str(row["display_label"]),
-                fmt_wall_time(float(row["median_wall_time_s"])),
-                fmt_wall_time(float(row["median_solve_time_s"])),
-                fmt_count(row["median_nit"]),
-                fmt_count(row["median_linear_iterations_total"]),
-                fmt_energy(float(row["median_energy"])),
-                fmt_energy(float(row["median_omega"])),
-                fmt_float(float(row["median_u_max"]), 6),
-            ]
-            for row in ablation_rows
+            (
+                "Timing and work",
+                "@{}" + xcol(1.0, "RaggedRight") + r"@{\hspace{0.45em}}c c c c@{}",
+                ["Route", "Wall time [s]", "Solve time [s]", "Newton iters", "Krylov iters"],
+                [
+                    [
+                        str(row["display_label"]),
+                        fmt_wall_time(float(row["median_wall_time_s"])),
+                        fmt_wall_time(float(row["median_solve_time_s"])),
+                        fmt_count(row["median_nit"]),
+                        fmt_count(row["median_linear_iterations_total"]),
+                    ]
+                    for row in ablation_rows
+                ],
+            ),
+            (
+                "Terminal observables",
+                "@{}" + xcol(1.0, "RaggedRight") + r"@{\hspace{0.45em}}c c c@{}",
+                ["Route", "Energy", "$\\omega$", "$u_{\\max}$"],
+                [
+                    [
+                        str(row["display_label"]),
+                        fmt_energy(float(row["median_energy"])),
+                        fmt_energy(float(row["median_omega"])),
+                        fmt_float(float(row["median_u_max"]), 6),
+                    ]
+                    for row in ablation_rows
+                ],
+            ),
         ],
     )
 

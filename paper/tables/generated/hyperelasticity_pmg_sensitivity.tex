@@ -1,10 +1,30 @@
-\begin{tabular*}{\textwidth}{@{}l@{\extracolsep{\fill}} c c c c c c c c c@{}}
+\begin{minipage}{\textwidth}
+\centering
+\textit{Outcome and solver work}
+\par\vspace{0.2em}
+\begin{tabularx}{\textwidth}{@{}>{\hsize=1.073\hsize\linewidth=\hsize\RaggedRight\arraybackslash}X>{\hsize=0.927\hsize\linewidth=\hsize\RaggedRight\arraybackslash}X@{\hspace{0.45em}}c c c c@{}}
 \toprule
-Precond. & Result & Newton & Krylov & Solver [s] & Assembly [s] & PC [s] & Linear [s] & Coarse & Energy \\
+Precond. & Result & Newton & Krylov & Solver [s] & Energy \\
 \midrule
-GAMG & fixed work & 8 & 42 & \num{22.3} & \num{9.11} & \num{6.41} & \num{3.91} & -- & \num{1.608441} \\
-PMG $L_2$ + Hypre & fixed work & 8 & 92 & \num{23.3} & \num{10.3} & \num{2.93} & \num{8.14} & hypre & \num{0.5252349427} \\
-PMG $L_2$ + MUMPS & fixed work & 8 & 17 & \num{15.3} & \num{9.13} & \num{2.55} & \num{1.91} & mumps, 1 grp. & \num{0.3848912708} \\
-PMG $L_3$ + MUMPS & fixed work & 8 & 17 & \num{16.3} & \num{9.14} & \num{2.93} & \num{2.51} & mumps, 1 grp. & \num{0.3864166034} \\
+GAMG & fixed work & 8 & 42 & \num{22.3} & \num{1.608441} \\
+PMG $L_2$ + Hypre & fixed work & 8 & 92 & \num{23.3} & \num{0.5252349427} \\
+PMG $L_2$ + MUMPS & fixed work & 8 & 17 & \num{15.3} & \num{0.3848912708} \\
+PMG $L_3$ + MUMPS & fixed work & 8 & 17 & \num{16.3} & \num{0.3864166034} \\
 \bottomrule
-\end{tabular*}
+\end{tabularx}
+
+\vspace{0.45em}
+
+\textit{Time breakdown and coarse solve}
+\par\vspace{0.2em}
+\begin{tabularx}{\textwidth}{@{}>{\hsize=0.957\hsize\linewidth=\hsize\RaggedRight\arraybackslash}X>{\hsize=1.043\hsize\linewidth=\hsize\RaggedRight\arraybackslash}X@{\hspace{0.45em}}c c c@{}}
+\toprule
+Precond. & Coarse & Assembly [s] & PC [s] & Linear [s] \\
+\midrule
+GAMG & -- & \num{9.11} & \num{6.41} & \num{3.91} \\
+PMG $L_2$ + Hypre & hypre & \num{10.3} & \num{2.93} & \num{8.14} \\
+PMG $L_2$ + MUMPS & mumps, 1 grp. & \num{9.13} & \num{2.55} & \num{1.91} \\
+PMG $L_3$ + MUMPS & mumps, 1 grp. & \num{9.14} & \num{2.93} & \num{2.51} \\
+\bottomrule
+\end{tabularx}
+\end{minipage}
