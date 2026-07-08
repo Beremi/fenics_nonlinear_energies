@@ -29,10 +29,10 @@ reference norms. Scalar work and energy differences use the same
 reference-denominator convention; the hyperelastic energy post-comparison uses
 an absolute denominator floor of $10^{-12}$.
 
-The hyperelastic JAX-FEM comparison uses a 5\% acceptance threshold for the
+The hyperelastic JAX-FEM comparison uses a 5\% predefined threshold for the
 final energy, full-field displacement, centerline displacement, and
-$u_{\max}$-curve differences. The \plasticitythree{} Layer 2 acceptance
-criterion uses three thresholds from its validation manifest: at most $0.03$ relative
+$u_{\max}$-curve differences. The \plasticitythree{} fixed-load
+reference-operator check uses three predefined criteria: at most $0.03$ relative
 difference in the highest successful load factor, at most $0.05$ relative
 $L^2$ difference for the $u_{\max}(\lambda_{\mathrm{sr}})$ curve, and at most $0.10$
 relative $L^2$ difference for the endpoint displacement. The deviatoric-strain
@@ -77,7 +77,7 @@ $D_1(J-1)^2$ volumetric penalty.
 \begin{table}[H]
   \centering
   \input{tables/generated/jax_fem_hyperelastic_baseline.tex}
-  \caption{Thresholded hyperelastic comparison against JAX-FEM.}
+  \caption{Thresholded hyperelastic agreement comparison against JAX-FEM.}
   \label{tab:hyperelasticity-jaxfem-baseline}
 \end{table}
 
@@ -86,11 +86,9 @@ satisfied for all checked quantities. The final energy relative difference is
 \num{8.244e-6}, the full-field displacement relative $L^2$ difference is
 \num{2.011e-4}, the centerline relative $L^2$ difference is
 \num{5.473e-5}, and the $u_{\max}$-curve relative $L^2$ difference is
-effectively zero. On this small serial CPU companion case, the \jaxpetsc{} solve
-is faster (\SI{0.176}{s} median wall time versus \SI{2.524}{s} for JAX-FEM),
-but the scientific role of this table is terminal-state agreement under a
-matched mesh, displacement schedule, and common energy post-comparison rather
-than a software ranking.
+effectively zero. The scientific role of this table is terminal-state agreement
+under a matched mesh, displacement schedule, and common energy post-comparison
+rather than a software ranking.
 
 \subsection{Plasticity3D Endpoint-Surrogate Comparison}
 \label{sec:val-plasticity3d}
@@ -106,13 +104,12 @@ method context for this problem class
 \citep{sysala2017returnmapping,sysala2021optimization,sysala2025convexoptimization,sysala2025advancedcontinuation};
 they are not used here as verified numeric paper baselines.
 
-The endpoint-surrogate comparison therefore uses two diagnostics. The first
-diagnostic, labeled Layer 1A in \Cref{fig:plasticity3d-validation}, tests
-direct-branch endpoint-observable agreement with the reference model on the
-$P_2(L_1)$ reference case. This comparison is tight: the work relative
+The endpoint-surrogate comparison therefore uses two diagnostics. The
+endpoint-observable check tests direct-branch agreement with the reference model
+on the $P_2(L_1)$ reference case. The work relative
 difference is \num{3.877e-5}, the displacement relative $L^2$ difference is
 \num{3.517e-3}, and the deviatoric-strain relative $L^2$ difference is
-\num{8.720e-3}. The second diagnostic, labeled Layer 2, asks a narrower
+\num{8.720e-3}. The fixed-load reference-operator check asks a narrower
 fixed-$\lambda_{\mathrm{sr}}$ question against a reference-operator comparison;
 it is not proof of path-consistent incremental-history equivalence. After
 aligning the reference-model boundary conditions with the active boundary
@@ -136,8 +133,7 @@ path-consistent plastic-history reference.
   \begin{subfigure}[t]{\PaperFigureMedium}
     \centering
     \includegraphics[width=\linewidth]{plasticity3d_validation_layer1a_boundary.pdf}
-    \caption{Layer 1A: direct-branch endpoint-observable agreement with the
-    reference model.}
+    \caption{Endpoint-observable agreement with the reference model.}
   \end{subfigure}
 
   \vspace{0.45em}
@@ -145,31 +141,27 @@ path-consistent plastic-history reference.
   \begin{subfigure}[t]{\PaperFigureMedium}
     \centering
     \includegraphics[width=\linewidth]{plasticity3d_validation_umax_curve.pdf}
-    \caption{Layer 2: fixed-$\lambda_{\mathrm{sr}}$ reference-operator
-    diagnostic.}
+    \caption{Fixed-$\lambda_{\mathrm{sr}}$ reference-operator diagnostic.}
   \end{subfigure}
-  \caption{Plasticity3D endpoint-surrogate comparison. The upper panel documents
-  tight direct-branch endpoint-observable agreement with the reference model for the
-  endpoint surrogate; the
-  lower panel shows close fixed-$\lambda_{\mathrm{sr}}$ reference-operator
-  agreement after
-  matching the boundary conditions and active free degrees of freedom.}
+  \caption{Plasticity3D endpoint-surrogate comparison. The upper panel compares
+  direct-branch endpoint observables with the reference model for the endpoint
+  surrogate; the lower panel shows the fixed-$\lambda_{\mathrm{sr}}$
+  reference-operator diagnostic after matching the boundary conditions and
+  active free degrees of freedom.}
   \label{fig:plasticity3d-validation}
 \end{figure}
 
 \begin{table}[H]
   \centering
   \input{tables/generated/plasticity3d_validation_summary.tex}
-  \caption{Plasticity3D validation summary for direct-branch endpoint-observable
-  agreement with the reference model
-  (layer 1A) and the fixed-$\lambda_{\mathrm{sr}}$ reference-operator
-  diagnostic (layer 2).}
+  \caption{Plasticity3D validation summary for direct-branch
+  endpoint-observable agreement with the reference model and the
+  fixed-$\lambda_{\mathrm{sr}}$ reference-operator diagnostic.}
   \label{tab:plasticity3d-validation}
 \end{table}
 
 The resulting interpretation is limited but useful. \plasticitythree{} is
 supported here by direct-branch endpoint-observable agreement with the reference
-model in Layer 1A, while
-Layer 2 supports the same endpoint surrogate under a fixed-load
-reference-operator comparison. Neither layer is a path-consistent
-incremental-plasticity history validation.
+model, while the fixed-load reference-operator check supports the same endpoint
+surrogate under matched boundary conditions and active free degrees of freedom.
+Neither check is a path-consistent incremental-plasticity history validation.

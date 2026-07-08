@@ -21,6 +21,8 @@ MATLAB/Octave literature only when there is source-backed evidence.
   Apply the 2025 accepted KL-paper style: formal applied mathematics,
   motivation before technical construction, authorial `we`, definitions before
   dense notation, punctuated displays, and evidence-scoped claims.
+  The snapshot is intentionally local-only and ignored through
+  `.git/info/exclude`; do not stage it with manuscript changes.
 - Local conflict rule: preserve this manuscript's existing `cleveref`/`\Cref`
   convention while applying the style guide's prose and claim discipline.
 - Recent SIAM optimization style cue:
@@ -233,7 +235,7 @@ MATLAB/Octave literature only when there is source-backed evidence.
   removes a hyperelastic energy-in-table claim not supported by the visible
   table, scopes trust-region necessity to the tested Plasticity3D gate, and
   reframes topology as end-to-end timing under rank-dependent stopping with a
-  separate fixed-schedule consistency check. Current results-label chunk
+  separate controlled rank-consistency check. Current results-label chunk
   removes remaining body-facing `row`, `probe`, and `ablation` wording from the
   main results prose; names Hyperelasticity and Plasticity3D fixed-work cases
   as fixed-cost, fixed-nonlinear-work, or single-linearization comparisons; and
@@ -246,7 +248,11 @@ MATLAB/Octave literature only when there is source-backed evidence.
   SOTA/math polish chunk retitles affected result captions as fixed-case,
   matched-case, or rank-local comparisons, removes corrected-glued-bottom
   revision language, and scopes colored SFD as a comparison and fallback route
-  rather than a verification claim.
+  rather than a verification claim. Current publish-readiness chunk adds
+  body-text interpretations for the main scaling, memory, and PMG-sensitivity
+  figures/tables; removes stale glued-bottom, workflow, fixed-schedule, and
+  rank-dependent wording from the visible manuscript; and scopes the
+  Ginzburg--Landau fixed-budget result to the observed line-search timeout.
 - `DISCUSSION_CONCLUSION`: interpretation and scope.
   Current prose states the toolset lesson in paper-facing terms: automatic
   differentiation alone does not determine large nonlinear FEM behavior;
@@ -262,9 +268,12 @@ MATLAB/Octave literature only when there is source-backed evidence.
   hyperelastic comparison discrepancy scale, and classifies solver-policy
   diagnostics separately from symmetric external comparisons. Current SOTA/math
   polish chunk makes the Plasticity3D discussion use endpoint-surrogate
-  comparison terminology consistently.
+  comparison terminology consistently. Current publish-readiness chunk centers
+  the abstract, introduction, discussion, and conclusion on the scientific
+  \jaxpetsc{} toolset and evidence limits, replacing novelty-heavy language with
+  documented realization plus benchmark evidence.
 - `FIGURES_TABLES`: visual and layout quality.
-  Current fact: `paper/build/main.pdf` is 38 pages, A4, 10 pt article,
+  Current fact: `paper/build/main.pdf` is 39 pages, A4, 10 pt article,
   text width about 7.09 in. Many floats use `[H]`, so placement is highly manual.
   Figure/layout subagent audit: assets are technically clean at current A4
   width, with embedded fonts and 600 ppi raster layers, but dense 3D
@@ -329,7 +338,12 @@ MATLAB/Octave literature only when there is source-backed evidence.
   comparison, derivative-route tables, Hyperelasticity rank-local tables, and
   Plasticity3D degree/scaling figures are readable, unclipped, and within the
   text block. The log scan, PDF text scan, asset validator, `qpdf --check`, and
-  `git diff --check` were clean.
+  `git diff --check` were clean. Current publish-readiness chunk rebuilt the
+  39-page PDF and visually checked pages 17, 20, 25, 27, 31, and 37--39 after
+  targeted figure/table regeneration and the `xurl` bibliography break fix. The
+  Plasticity3D convergence caption, JAX-FEM panels, dense derivative-degree
+  table, Hyperelasticity scaling page, Plasticity3D degree/scaling page, and
+  bibliography pages are readable and unclipped.
 - `REPRO`: reproducibility and submission readiness.
   Known blockers from `paper/todo.md`: target journal/template/declarations,
   repository license/archive DOI, and archive-neutral provenance for critical
@@ -589,6 +603,31 @@ MATLAB/Octave literature only when there is source-backed evidence.
   hyphenation was removed and visually checked on rendered page 7. Remaining
   layout risk: the Plasticity3D derivative-degree table on page 25 is dense but
   readable; the SOTA table remains a later structural-table candidate.
+- `Narrative/message audit` (`Volta-current`): completed. Findings addressed in
+  the current publish-readiness chunk: the abstract and introduction now present
+  a scientific toolset rather than a loose framework/workflow family; related
+  work is less defensive; and the conclusion states documented realization and
+  benchmark evidence instead of broader contribution claims.
+- `Math/self-containedness audit` (`Franklin-current`): completed. Findings
+  addressed: generic potential data now define external loads and element
+  parameters; SFD, HVP, and PMG acronyms are expanded; Plasticity2D and
+  Plasticity3D boundary/test-space definitions are more explicit; topology
+  spaces, load patch, mesh spacings, pads, and element-restricted bilinear form
+  are stated before use. Deferred risk: the full Plasticity2D branch family
+  remains summarized rather than exhaustively reproduced.
+- `Evidence/claims audit` (`Lorentz-current`): completed. Findings addressed:
+  hyperelastic validation no longer includes a speed comparison; Plasticity3D
+  validation is endpoint-surrogate scoped; generated tables use factual family
+  highlights; failed globalization rows render as iteration-cap evidence; and
+  appendix/source-operator comparisons are described as wall/solve/ratio
+  evidence rather than equal-iteration claims. Deferred risk: final submission
+  still needs archive-neutral provenance and DOI/license decisions.
+- `PDF/layout audit` (`Boyle-current`): completed. Findings addressed:
+  bibliography URL breaking now uses `xurl`; JAX-FEM comparison figure fonts
+  were enlarged; Plasticity3D convergence wording was regenerated; dense pages
+  and bibliography pages were rendered and inspected. Remaining layout risk:
+  page-25 derivative-degree and the SOTA table are acceptable in the current A4
+  article but template-fragile.
 
 ## First Edit Backlog
 

@@ -1174,7 +1174,7 @@ def _generate_plasticity3d_convergence_figure(layout: dict[str, float]) -> str:
     axes[1].set_ylabel(r"$\|g\|$")
     axes[1].grid(True, which="both", alpha=0.25)
     axes[0].yaxis.set_major_formatter(matplotlib.ticker.FormatStrFormatter("%.4f"))
-    axes[0].set_title("All nine glued-bottom study runs", pad=4)
+    axes[0].set_title("All nine bottom-clamped study runs", pad=4)
     fig.legend(
         legend_handles,
         legend_labels,
@@ -1776,7 +1776,7 @@ def generate_plasticity3d_derivative_ablation_bars(layout: dict[str, float]) -> 
 
 
 def generate_jax_fem_hyperelastic_baseline_energy_history(layout: dict[str, float]) -> str:
-    plt = configure_paper_matplotlib(font_size=8.0)
+    plt = configure_paper_matplotlib(font_size=9.0)
     summary = _read_json(JAX_FEM_BASELINE_ROOT / "comparison_summary.json")
     step_rows = [dict(row) for row in summary["step_rows"]]
     steps = np.asarray([int(row["step"]) for row in step_rows], dtype=np.int64)
@@ -1792,7 +1792,7 @@ def generate_jax_fem_hyperelastic_baseline_energy_history(layout: dict[str, floa
     ax.set_xticks(steps)
     ax.grid(True, alpha=0.25)
     ax.legend(frameon=False, loc="best", handlelength=1.7)
-    ax.text(0.03, 0.95, rf"terminal rel. diff. $={_latex_scientific(rel_diff)}$", transform=ax.transAxes, ha="left", va="top", fontsize=7.0)
+    ax.text(0.03, 0.95, rf"terminal rel. diff. $={_latex_scientific(rel_diff)}$", transform=ax.transAxes, ha="left", va="top", fontsize=8.0)
     fig.subplots_adjust(left=0.20, right=0.97, bottom=0.23, top=0.95)
     out = FIGURES_ROOT / "jax_fem_hyperelastic_baseline_energy_history.pdf"
     save_pdf_and_png(fig, out, png_dpi=240)
@@ -1801,7 +1801,7 @@ def generate_jax_fem_hyperelastic_baseline_energy_history(layout: dict[str, floa
 
 
 def generate_jax_fem_hyperelastic_baseline_centerline(layout: dict[str, float]) -> str:
-    plt = configure_paper_matplotlib(font_size=8.0)
+    plt = configure_paper_matplotlib(font_size=9.0)
     summary = _read_json(JAX_FEM_BASELINE_ROOT / "comparison_summary.json")
     impls = [dict(row) for row in summary["implementations"]]
     repo_state = _load_npz(Path(str(impls[0]["state_npz"])))
@@ -1818,7 +1818,7 @@ def generate_jax_fem_hyperelastic_baseline_centerline(layout: dict[str, float]) 
     ax.set_ylabel(r"Centerline $u_x$")
     ax.grid(True, alpha=0.25)
     ax.legend(frameon=False, loc="best", handlelength=1.7)
-    ax.text(0.03, 0.95, rf"rel. $L^2={_latex_scientific(rel_l2)}$", transform=ax.transAxes, ha="left", va="top", fontsize=7.0)
+    ax.text(0.03, 0.95, rf"rel. $L^2={_latex_scientific(rel_l2)}$", transform=ax.transAxes, ha="left", va="top", fontsize=8.0)
     fig.subplots_adjust(left=0.20, right=0.97, bottom=0.23, top=0.95)
     out = FIGURES_ROOT / "jax_fem_hyperelastic_baseline_centerline.pdf"
     save_pdf_and_png(fig, out, png_dpi=240)

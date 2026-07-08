@@ -17,10 +17,10 @@ operator is not rebuilt along the nonlinear path.
 \begin{table}[H]
   \centering
   \input{tables/generated/plasticity3d_local_vs_source.tex}
-  \caption{Matched constitutive-assembly versus reference-formula assembly comparison for
-  the same PMG solver stack. At each listed rank both rows converge in the same
-  number of nonlinear and linear iterations, so this is a timing-only
-  comparison on \cref{eq:plasticity3d-discrete}.}
+  \caption{Matched constitutive-assembly versus reference-formula assembly
+  comparison for the same PMG solver configuration. The table reports wall time,
+  solve time, and their ratio for matched rank counts on
+  \cref{eq:plasticity3d-discrete}.}
   \label{tab:plasticity3d-local-vs-source}
 \end{table}
 
@@ -35,8 +35,8 @@ operator is not rebuilt along the nonlinear path.
 \end{table}
 
 These diagnostics support two narrower statements. First, reference-formula assembly
-has lower reported wall time than rank-local assembly when both are embedded in
-the same PMG solver stack, although the gap narrows at higher rank counts.
+has lower reported wall time than rank-local assembly in the listed matched-rank
+comparisons, although the gap narrows at higher rank counts.
 Second, the fixed reference-operator PMG profile is not the default used in the
 present study: it may appear favorable on completed low-rank configurations, but
 it reaches the maximum number of Newton iterations on more of the reported rank

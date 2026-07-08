@@ -2,27 +2,25 @@
 Large nonlinear finite-element energy problems require reliable local
 derivatives, robust nonlinear globalization, and sparse distributed linear
 algebra that is matched to the mechanics of the problem. We develop a
-computational toolset for studying these requirements together in nonlinear
-finite-element solves and energy-based topology optimization. The primary
-realization couples JAX local energy and constitutive kernels with PETSc sparse
-assembly, Newton globalization, Krylov solvers, and preconditioners. The
-\purejax{} and \fenics{} formulations provide scoped reference implementations,
-and external comparisons are restricted to matched observables. The benchmark suite
-covers $p$-Laplace, Ginzburg--Landau, finite-strain hyperelasticity, two- and
-three-dimensional Mohr--Coulomb plasticity, and topology optimization.
+scientific toolset for studying these requirements as coupled numerical choices
+in nonlinear finite-element energy minimization and energy-based topology
+optimization. The primary JAX-local/PETSc-global realization couples local
+energy and constitutive kernels with PETSc sparse assembly, Newton
+globalization, Krylov solvers, and preconditioners. The benchmark suite covers
+$p$-Laplace, Ginzburg--Landau, finite-strain hyperelasticity, two- and
+three-dimensional Mohr--Coulomb plasticity, and topology optimization, with
+\purejax{}, \fenics{}, JAX-FEM, and reference-model comparisons used only where
+benchmark definitions and observables are matched.
 
 Across these problems, we compare element automatic differentiation,
 constitutive automatic differentiation, and colored sparse finite-difference
-recovery as routes to second-order information. The evidence separates
-agreement checks from performance claims: the hyperelastic benchmark satisfies
-matched energy and field criteria, the three-dimensional plasticity comparison
-is restricted to final-load scalar and field observables for the endpoint
-surrogate, and the timing studies characterize derivative-route and
-solver-policy costs under those definitions. On the tested Plasticity3D
+recovery as routes to second-order information. The validation checks establish
+matched hyperelastic energy and field agreement and final-load scalar and field
+agreement for the three-dimensional plasticity endpoint surrogate. The
+performance studies then show how derivative routes, sparse ownership,
+nonlinear globalization, Krylov linear algebra, and preconditioner policy affect
+cost and robustness under those definitions. On the tested Plasticity3D
 derivative-route case, constitutive AD gives the lowest measured wall time while
-preserving terminal observables; the larger mechanics and topology runs exercise
-the same sparse-solver design at distributed scale. For the tested benchmark
-classes, the results show that derivative construction, sparse ownership,
-nonlinear globalization, and preconditioner policy are coupled numerical choices
-for distributed nonlinear FEM.
+preserving terminal observables, and the larger mechanics and topology runs
+exercise the same sparse-solver design at distributed scale.
 \end{abstract}

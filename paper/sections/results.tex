@@ -56,12 +56,11 @@ rather than a universal preference for any single globalization strategy.
 \end{table}
 
 We additionally evaluate the Ginzburg--Landau level-10 case under an eight-rank
-budget in which all policies reach the nonlinear solver rather than timing out
-during setup. \Cref{tab:gl-globalization-fixed-budget}
-reports this scalar-nonconvex comparison separately from the
-multi-family table above. Its purpose is narrower: it checks whether the
-trust-region conclusions survive when the setup budget is not the dominant
-failure mode.
+budget. \Cref{tab:gl-globalization-fixed-budget} reports this scalar-nonconvex
+comparison separately from the multi-family table above. Its purpose is
+narrower: it records that the trust-region variants complete with matching
+energy and Newton--Krylov work, while the line-search-only configuration still
+times out under the fixed wall-time cap.
 
 \begin{table}[H]
   \centering
@@ -108,7 +107,7 @@ $P_2(L_1)$ case, not by an under-colored finite-difference reconstruction.
 
 \Cref{tab:plasticity3d-derivative-degree} adds the degree sensitivity
 behind the Plasticity3D derivative-route claim. This single-linearization
-comparison uses one Newton linearization on glued-bottom heterogeneous meshes at
+comparison uses one Newton linearization on bottom-clamped heterogeneous meshes at
 $\lambda_{\mathrm{sr}}=\num{1.55}$, 32 MPI ranks, and the degree-appropriate
 PMG hierarchy. This table should be read as derivative cost evidence, not as
 a convergence-quality replacement for the full Plasticity3D endpoint studies.
@@ -149,6 +148,12 @@ identical discrete energies at higher wall time.
   \label{fig:plaplace-results}
 \end{figure}
 
+In the finest plotted case, the \jaxpetsc{} element-AD path reports
+\SI{1.14}{s} on 32 ranks, while colored SFD reports \SI{1.45}{s} with the same
+Newton and Krylov iteration counts. The final energies agree to the displayed
+precision, so this block mainly measures the overhead of sparse recovery on a
+smooth scalar problem.
+
 \subsection{Ginzburg--Landau}
 \label{sec:num-gl}
 
@@ -165,6 +170,12 @@ convergent on this nonconvex scalar energy with the same sparse infrastructure.
   governed by \cref{eq:gl-discrete}.}
   \label{fig:gl-results}
 \end{figure}
+
+At 32 ranks, the element-AD and colored-SFD \jaxpetsc{} runs report
+\SI{2.10}{s} and \SI{2.72}{s}, respectively, and both reach the same displayed
+energy with identical nonlinear and Krylov counts. This supports the same
+derivative-route interpretation as in the $p$-Laplace case, but on a
+nonconvex scalar energy.
 
 \subsection{Hyperelasticity}
 \label{sec:num-hyperelasticity}
@@ -228,6 +239,11 @@ only local elements plus overlap.
   \label{tab:hyperelasticity-distribution-memory}
 \end{table}
 
+The level-4 agreement row verifies that replicated and rank-local assembly give
+the same Newton and Krylov work. On the larger level-5 one-linearization memory
+rows, rank-local assembly reduces summed RSS from \SI{215.6}{GiB} to
+\SI{104.9}{GiB} at 32 ranks while leaving solve time essentially unchanged.
+
 \Cref{tab:hyperelasticity-pmg-sensitivity} isolates the first-step level-5 PMG
 choice on the same 32-rank local problem with fixed nonlinear work. All configurations perform the same
 eight Newton linearizations, so differences in total time are attributable to
@@ -245,6 +261,11 @@ than an endpoint-accuracy ranking.
   rank-local element path as the scaling runs.}
   \label{tab:hyperelasticity-pmg-sensitivity}
 \end{table}
+
+The fixed-work table shows that the MUMPS-coarse PMG variants reduce total
+Krylov iterations from 92 with Hypre coarse solves to 17, and reduce solver time
+from \SI{23.3}{s} to about \SI{16}{s}. This is preconditioner-policy evidence
+for a fixed nonlinear workload, not a statement about final load-path accuracy.
 
 \begin{figure}[H]
   \centering
@@ -355,7 +376,7 @@ selected solver configurations scale on the separate $P_4(L_2)$ timing studies.
     \includegraphics[width=\linewidth]{plasticity3d_degree_energy_zoom_time.pdf}
     \caption{$P2/P4$ zoom: final energy versus total wall time.}
   \end{subfigure}
-  \caption{Glued-bottom Plasticity3D
+  \caption{Bottom-clamped Plasticity3D
   degree-versus-resolution study at $\lambda_{\mathrm{sr}} = 1.55$. The top
   panels show the full $P_1/P_2/P_4$ comparison, while the bottom panels zoom to
   $P_2/P_4$ so the near-overlap hidden by the coarse $P_1$ points becomes
@@ -367,7 +388,7 @@ selected solver configurations scale on the separate $P_4(L_2)$ timing studies.
 \end{figure}
 
 The zoomed panels in \Cref{fig:plasticity3d-degree-energy} are essential because the
-full figure is dominated by coarse $P_1$ variation. Under the glued-bottom
+full figure is dominated by coarse $P_1$ variation. Under the bottom-clamped
 constraint, the first matched comparison is
 $P_4(L_1)$ versus $P_1(L_3)$ at \num{610964} free DOFs. The second
 matched comparison is $P_1(L_4)$, $P_2(L_3)$, and $P_4(L_2)$ at
@@ -383,7 +404,7 @@ by paying a clear wall-time premium in this nine-case endpoint study.
   \caption{Auxiliary strong scaling for the selected Plasticity3D solver
   configuration: \localpmg{} on $P_4(L_2)$ at
   $\lambda_{\mathrm{sr}} = 1.0$. This is a separate timing study from the
-  glued-bottom $\lambda_{\mathrm{sr}} = 1.55$ results shown in
+  bottom-clamped $\lambda_{\mathrm{sr}} = 1.55$ results shown in
   \cref{fig:plasticity3d-state,fig:plasticity3d-convergence,fig:plasticity3d-degree-energy}.}
   \label{fig:plasticity3d-scaling}
 \end{figure}
@@ -393,7 +414,7 @@ by paying a clear wall-time premium in this nine-case endpoint study.
   \input{tables/generated/plasticity3d_recommended_scaling.tex}
   \caption{Auxiliary Plasticity3D strong scaling for \localpmg{} on
   $P_4(L_2)$ at $\lambda_{\mathrm{sr}} = 1.0$. These timings provide
-  solver evidence for a separate load factor from the glued-bottom
+  solver evidence for a separate load factor from the bottom-clamped
   $\lambda_{\mathrm{sr}} = 1.55$ benchmark figures.}
   \label{tab:plasticity3d-scaling}
 \end{table}
@@ -402,14 +423,14 @@ by paying a clear wall-time premium in this nine-case endpoint study.
 largest distributed mechanics timing result for the Hypre-coarse auxiliary PMG
 profile. This scaling evidence uses the selected $P_4(L_2)$ mesh family but a
 different load factor, $\lambda_{\mathrm{sr}} = 1.0$, so it complements rather
-than extends the glued-bottom $\lambda_{\mathrm{sr}} = 1.55$ benchmark figures
+than extends the bottom-clamped $\lambda_{\mathrm{sr}} = 1.55$ benchmark figures
 above. Within that timing study, the reported nonlinear and linear iteration
 counts remain matched on 1/2/4/8/16/32 ranks, while the end-to-end time drops
 from \SI{5424}{s} on one rank to \SI{300}{s} on 32 ranks. Additional
 reference-formula assembly and continuation evidence is reported later in
 \Cref{sec:solver-evidence}.
 
-The converged glued-bottom $P_4(L_2)$,
+The converged bottom-clamped $P_4(L_2)$,
 $\lambda_{\mathrm{sr}}=\num{1.55}$ scaling run repeats the benchmark with the
 constitutive-AD rank-local assembly and MUMPS-backed PMG profile. The PMG
 hierarchy is the same-mesh $P_4 \rightarrow P_2 \rightarrow P_1$ hierarchy,
@@ -428,7 +449,7 @@ by different nonlinear work.
 \begin{figure}[H]
   \centering
   \includegraphics[width=\PaperFigureMedium]{plasticity3d_local_vs_karolina_scaling.pdf}
-  \caption{Single-node and multi-node CPU converged scaling for the glued-bottom
+  \caption{Single-node and multi-node CPU converged scaling for the bottom-clamped
   Plasticity3D $P_4(L_2)$ case at $\lambda_{\mathrm{sr}}=\num{1.55}$. Dashed
   references are ideal $1/r$ lines anchored separately to the first point of
   each CPU setting.}
@@ -477,7 +498,7 @@ The numerical question here is distributed outer-loop stability: the mechanics
 solve and the design update must remain synchronized under continuation in $p$
 and move-regularized updates. Because the outer-loop work can vary with the
 continuation schedule, the timing evidence here should be read as end-to-end
-timing under rank-dependent stopping rather than strong scaling at a fixed
+timing under adaptive stopping rather than strong scaling at a fixed
 computational workload.
 
 \begin{figure}[H]
@@ -486,7 +507,7 @@ computational workload.
   \caption{Topology end-to-end parallel timing trend for the
   fine-grid run. The plotted wall times correspond to the coupled reduced-design
   problem defined by \cref{eq:topology-reduced-objective}, with
-  rank-dependent stopping behavior reported in \cref{tab:topology-summary}.}
+  per-rank stopping behavior reported in \cref{tab:topology-summary}.}
   \label{fig:topology-results}
 \end{figure}
 
@@ -499,7 +520,7 @@ computational workload.
 \end{table}
 
 \Cref{tab:topology-rank-consistency} complements the end-to-end timing
-table with a fixed-schedule rank-consistency test on a smaller
+table with a controlled 40-iteration rank-consistency test on a smaller
 $384\times192$ grid. Early convergence and stall stopping are disabled, and all
 rank counts use the same initial design and smoother continuation schedule
 ($p \leftarrow p+\num{0.1}$). The final density field is compared with the
@@ -507,13 +528,13 @@ one-rank reference after 40 outer iterations. All rank counts complete the same
 40 outer iterations. The compliance difference stays below \num{0.2}\%,
 and the density relative $L^2$ difference remains below \num{0.04}, which
 checks that the distributed design-gradient exchange and mechanics coupling
-are no longer visibly rank-dependent at this resolution.
+remain insensitive to rank variation at this resolution.
 
 \begin{table}[H]
   \centering
   \footnotesize
   \input{tables/generated/topology_rank_consistency.tex}
-  \caption{Topology fixed-schedule rank consistency. Each rank count completes the
+  \caption{Topology controlled 40-iteration rank-consistency check. Each rank count completes the
   same 40 outer iterations; compliance and density differences are relative to
   the one-rank case.}
   \label{tab:topology-rank-consistency}
@@ -552,5 +573,5 @@ support a nonlinear FEM toolset in which local differentiable models,
 distributed sparse assembly, nonlinear globalization, Krylov linear algebra,
 and problem-specific preconditioners are developed and assessed together. They
 do not imply that one backend or one globalization policy dominates all
-finite-element workflows, nor do they turn the Plasticity3D endpoint surrogate
+finite-element computations, nor do they turn the Plasticity3D endpoint surrogate
 into a path-consistent incremental-history validation.

@@ -90,9 +90,9 @@ because the linear systems are qualitatively different:
         GAMG-preconditioned Krylov solves in the main benchmark and
         globalization rows, and same-hierarchy PMG with redundant LU/MUMPS
         coarse solves in the larger fixed-work scaling profile.
-  \item \textbf{Plasticity (2D):} deep-tail multigrid hierarchies whose
-        bottlenecks are dominated by the top smoother and repeated Krylov
-        work.
+  \item \textbf{Plasticity (2D):} same-mesh multigrid hierarchies whose
+        bottlenecks are dominated by the finest-level smoother and repeated
+        Krylov work.
   \item \textbf{Plasticity3D:} same-mesh polynomial multigrid hierarchies,
         $P_4 \to P_2 \to P_1$ or $P_2 \to P_1$ depending on degree. The
         auxiliary $\lambda_{\mathrm{sr}}=\num{1.0}$ scaling and

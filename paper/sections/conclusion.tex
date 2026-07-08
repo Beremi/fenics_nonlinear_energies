@@ -15,7 +15,7 @@ derivative-route comparison, constitutive AD is the lowest measured wall-time
 route among the tested alternatives. In the reported $P_4(L_2)$,
 $\lambda_{\mathrm{sr}}=\num{1.55}$ Plasticity3D scaling sweep, all rank counts
 converge with the same nonlinear and Krylov work. The topology runs demonstrate
-end-to-end distributed design-mechanics timing with a separate fixed-schedule
+end-to-end distributed design-mechanics timing with a separate controlled
 rank-consistency check.
 
 These results point to three scientific extensions. The first is
@@ -30,7 +30,8 @@ The main lesson from the tested problems is that differentiable local modeling
 and distributed nonlinear solvers interact at the level of numerical method
 design. In this toolset, JAX supplies the local energy and constitutive
 derivatives, PETSc supplies the sparse nonlinear solve, and the comparison
-surfaces delimit what each benchmark result means. This combination is the
-scientific contribution: a disciplined nonlinear FEM workflow in which
+surfaces delimit what each benchmark result means. The contribution is the
+documented realization and benchmark evidence for a disciplined nonlinear FEM
+toolset in which
 derivative construction, assembly ownership, globalization, linear algebra, and
 interpretation are designed together.

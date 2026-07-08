@@ -25,8 +25,10 @@ endpoint surrogate is written as
   \label{eq:generic-potential}
 \end{equation}
 where $\theta$ collects load, material, lift, continuation, or
-strength-reduction parameters. A reduced optimization objective with design
-variable $z$ is written schematically as
+strength-reduction parameters, $\theta_e$ is the element-local restriction of
+those data, and $f_{\mathrm{ext}}$ is the assembled load vector on the free
+degrees of freedom. A reduced optimization objective with design variable $z$ is
+written schematically as
 \begin{equation}
   \mathcal{J}_h(z)
   =
@@ -67,8 +69,9 @@ energy-centered whenever possible. This gives three derivative routes:
         density $\psi(\varepsilon_q)$, then assemble
         $r_e = \sum_q w_q B_q^\top \sigma_q$ and
         $K_e = \sum_q w_q B_q^\top C_q B_q$;
-  \item \textbf{colored SFD:} recover sparse Hessian information through
-        directionally probed gradients/HVPs and graph coloring.
+  \item \textbf{colored sparse finite differences (SFD):} recover sparse
+        Hessian information through directionally probed gradients or
+        Hessian-vector products (HVPs) and graph coloring.
 \end{enumerate}
 
 Element AD is the most literal route and is often the cleanest mathematically.
@@ -134,7 +137,8 @@ reports the corresponding configuration rather than treating
 \Cref{alg:hybrid-newton} as a complete algorithmic specification.
 
 For the principal 3D plasticity path reported in this paper, the chosen policy
-is simpler: Newton with Armijo backtracking and a PMG-preconditioned
+is simpler: Newton with Armijo backtracking and a polynomial-multigrid
+(PMG)-preconditioned
 flexible-GMRES linear solve \citep[Sec.~3.1]{nocedal2006numerical}. This is the
 baseline nonlinear-solver policy used for the converged 3D plasticity scaling
 study reported later in \Cref{sec:num-plasticity3d}.
@@ -188,7 +192,7 @@ layouts.
 The main \plasticitythree{} result in this paper uses constitutive AD.
 Rather than applying second-order AD to the full $P_4$ element vector, we define
 one scalar Mohr--Coulomb branch potential
-$\Phi_q(\varepsilon_q,m_q)$ per quadrature point, where $m_q$ collects the
+$\psi_q(\varepsilon_q,m_q)$ per quadrature point, where $m_q$ collects the
 local material parameters. We differentiate this scalar potential with respect
 to the six engineering-strain components and assemble the element tangent from
 the resulting stress and constitutive tangent. This keeps the scalar-energy
@@ -201,9 +205,9 @@ information on high-order tetrahedra.
 \For{each local element $e$}
   \For{each quadrature point $q$}
     \State Evaluate strain $\varepsilon_q = B_q u_e(x;\theta)$
-    \State Evaluate scalar energy density $\Phi_q(\varepsilon_q)$
-    \State Obtain stress $\sigma_q = \partial \Phi_q / \partial \varepsilon_q$
-    \State Obtain constitutive tangent $C_q = \partial^2 \Phi_q / \partial \varepsilon_q^2$
+    \State Evaluate scalar energy density $\psi_q(\varepsilon_q)$
+    \State Obtain stress $\sigma_q = \partial \psi_q / \partial \varepsilon_q$
+    \State Obtain constitutive tangent $C_q = \partial^2 \psi_q / \partial \varepsilon_q^2$
   \EndFor
   \State Assemble $r_e = \sum_q w_q B_q^\top \sigma_q$
   \State Assemble $K_e = \sum_q w_q B_q^\top C_q B_q$

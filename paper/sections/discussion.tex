@@ -9,7 +9,7 @@ supported by the present evidence.
 
 \paragraph{Derivative routes interact with the sparse solver.}
 \Cref{fig:plasticity3d-derivative-ablation,tab:plasticity3d-derivative-ablation}
-show a clean cost-quality picture on the fixed $P_4(L_1)$,
+show a consistent cost comparison on the fixed $P_4(L_1)$,
 $\lambda_{\mathrm{sr}}=1.5$, 8-rank case. All three routes reach essentially
 the same terminal state with the same nonlinear and Krylov counts, so the
 comparison is about derivative cost rather than about different converged
@@ -17,7 +17,7 @@ solutions. In this fixed test, constitutive AD preserves the same scalar-energy
 definition while reducing wall time substantially relative to full element AD
 and colored SFD.
 
-    \paragraph{Plasticity3D validation is endpoint-scoped.}
+\paragraph{Plasticity3D validation is endpoint-scoped.}
 The Plasticity3D endpoint-surrogate comparison in
 \Cref{fig:plasticity3d-validation,tab:plasticity3d-validation} supports a
 scoped mechanics interpretation. The tested endpoint surrogate agrees closely
@@ -44,10 +44,10 @@ agree closely.
 \paragraph{Scope of the evidence.}
 The same evidence also defines the scope of the conclusions. The
 $\lambda_{\mathrm{sr}}=1.0$ Plasticity3D strong-scaling study is timing-only
-evidence, while the glued-bottom $\lambda_{\mathrm{sr}}=1.55$ scaling sweep is
+evidence, while the bottom-clamped $\lambda_{\mathrm{sr}}=1.55$ scaling sweep is
 the converged comparison tied to the benchmark. The topology study is reported
-as end-to-end timing under rank-dependent stopping, with a separate
-fixed-schedule rank-consistency check. The reference-operator PMG studies are
+as end-to-end timing under adaptive stopping, with a separate controlled
+rank-consistency check. The reference-operator PMG studies are
 solver-policy diagnostics rather than symmetric external comparisons. These
 distinctions define the contribution: a nonlinear FEM toolset with explicit
 derivative-route choices, validation surfaces, and agreement limits. Automatic

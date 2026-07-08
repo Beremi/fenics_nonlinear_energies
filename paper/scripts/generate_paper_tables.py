@@ -645,7 +645,7 @@ def _result_label(value: object) -> str:
         "timeout": "timeout",
         "skipped_oom_guard": "OOM guarded",
         "missing_json": "missing JSON",
-        "failed": "failed",
+        "failed": "iteration cap",
     }
     return labels.get(text, text.replace("_", r"\_"))
 
@@ -793,7 +793,7 @@ def sourcefixed_long_rows(
                     fmt_count(row["nit"]),
                     fmt_count(row["linear_iterations_total"]),
                     fmt_sci(float(row["final_metric"])),
-                    str(row["status"]),
+                    _result_label(row["status"]),
                 ]
             )
     return table_rows
@@ -865,32 +865,32 @@ def main() -> None:
             [
                 "$p$-Laplace",
                 f"JAX+PETSc element AD, {mesh_label('L9')}, 32 ranks: {fmt_wall_time(float(pl_highlight['total_time_s']))} s",
-                "Exact element Hessians are competitive with FEniCS and faster than colored SFD on the finest reported case.",
+                "The element-AD and colored-SFD paths report the same displayed final energy; colored SFD has higher wall time on this case.",
             ],
             [
                 "Ginzburg--Landau",
                 f"JAX+PETSc element AD, {mesh_label('L9')}, 32 ranks: {fmt_wall_time(float(gl_highlight['total_time_s']))} s",
-                "Element AD remains effectively tied with FEniCS custom Newton on the fine-grid benchmark.",
+                "The JAX+PETSc and FEniCS rows report the same displayed final energy on the fine-grid benchmark.",
             ],
             [
                 "Hyperelasticity",
                 f"JAX+PETSc element AD, {mesh_label('L4')}, 32 ranks: {fmt_wall_time(float(he_highlight['total_time_s']))} s",
-                "Hybrid trust-region/line-search globalization sustains large-deformation solves in distributed mode.",
+                "The 24-step load path completes with the reported terminal energy in distributed mode.",
             ],
             [
                 "Plasticity (2D)",
-                f"JAX+PETSc deep-tail PMG, {p2d_highlight['label']}, 16 ranks: {fmt_wall_time(float(p2d_highlight['total_time_s']))} s",
-                "The dominant bottlenecks shift from the coarse end to the top smoother and repeated Krylov work.",
+                f"JAX+PETSc same-mesh PMG, {p2d_highlight['label']}, 16 ranks: {fmt_wall_time(float(p2d_highlight['total_time_s']))} s",
+                "This fixed-iteration diagnostic reports the largest listed 2D plasticity case.",
             ],
             [
                 "Plasticity3D",
                 f"constitutive-AD PMG solver, {element_label('P4', 'L1_2')}, $\\lambda_{{\\mathrm{{sr}}}}=\\num{{1.0}}$, 32 ranks: {fmt_wall_time(float(p3d_highlight['wall_time_s']))} s",
-                "Auxiliary timing context for this load factor; the main glued-bottom discretization study uses $\\lambda_{\\mathrm{sr}}=\\num{1.55}$.",
+                "Auxiliary timing context for this load factor; the main bottom-clamped discretization study uses $\\lambda_{\\mathrm{sr}}=\\num{1.55}$.",
             ],
             [
                 "Topology",
                 f"parallel JAX+PETSc, $768\\times384$, 32 ranks: {fmt_wall_time(float(topo_highlight['wall_time_s']))} s",
-                "Distributed design updates and PETSc mechanics deliver stable fine-grid end-to-end timing while pure JAX remains the serial formulation reference.",
+                "The fine-grid distributed run reports the listed end-to-end wall time; pure JAX remains the serial formulation reference.",
             ],
         ],
     )
@@ -926,7 +926,7 @@ def main() -> None:
             ["Hyperelasticity", f"{mesh_label('L4')}, 24 steps", "trust-region path", "FEniCS, pure JAX, JAX+PETSc", "nonconvex large-deformation mechanics"],
             ["Plasticity2D", f"{element_label('P4', 'L5')}--{element_label('P4', 'L7')}", "endpoint solve or fixed nonlinear work", "JAX+PETSc only", "same-mesh PMG and nonlinear tail behavior"],
             ["Plasticity3D", f"{degree_label('P1')}/{degree_label('P2')}/{degree_label('P4')}", "configuration-specific", "constitutive and reference PMG variants", "heterogeneous 3D Mohr--Coulomb with constitutive AD"],
-            ["Topology", "$768\\times384$", "stall-stop continuation", "pure JAX, JAX+PETSc", "distributed design-mechanics coupling"],
+            ["Topology", "$768\\times384$", "adaptive continuation", "pure JAX, JAX+PETSc", "distributed design-mechanics coupling"],
         ],
     )
 
@@ -1676,49 +1676,49 @@ def main() -> None:
     endpoint_dev = layer2_metrics.get("endpoint_deviatoric_strain_relative_l2")
     write_table_star(
         "plasticity3d_validation_summary.tex",
-        "@{}c@{\\hspace{1.0em}}" + pcol(r"0.36\textwidth") + r"@{\extracolsep{\fill}}c c@{}",
-        ["Layer", "Comparison", "Relative difference", "Status"],
+        "@{}" + pcol(r"0.25\textwidth") + "@{\\hspace{1.0em}}" + pcol(r"0.36\textwidth") + r"@{\extracolsep{\fill}}c c@{}",
+        ["Check", "Comparison", "Relative difference", "Status"],
         [
-            ["1A", "work", fmt_sci(float(layer1a_metrics["work_relative_difference"])), "--"],
-            ["1A", "displacement relative $L^2$", fmt_sci(float(layer1a_metrics["displacement_relative_l2"])), "--"],
+            ["endpoint observable", "work", fmt_sci(float(layer1a_metrics["work_relative_difference"])), "--"],
+            ["endpoint observable", "displacement relative $L^2$", fmt_sci(float(layer1a_metrics["displacement_relative_l2"])), "--"],
             [
-                "1A",
+                "endpoint observable",
                 "deviatoric-strain relative $L^2$",
                 fmt_sci(float(layer1a_metrics["deviatoric_strain_relative_l2"])),
                 "--",
             ],
             [
-                "2",
+                "fixed-load operator",
                 "highest-successful $\\lambda_{\\mathrm{sr}}$",
                 fmt_sci(float(layer2_metrics["critical_lambda_schedule_proxy"]["relative_difference"])),
                 _layer2_criterion_status(layer2_metrics, "critical_lambda_pass"),
             ],
             [
-                "2",
+                "fixed-load operator",
                 "$u_{\\max}(\\lambda_{\\mathrm{sr}})$ relative $L^2$",
                 fmt_sci(float(layer2_metrics["umax_curve_relative_l2"])),
                 _layer2_criterion_status(layer2_metrics, "umax_curve_pass"),
             ],
             [
-                "2",
+                "fixed-load operator",
                 "endpoint displacement relative $L^2$",
                 fmt_sci(float(layer2_metrics["endpoint_displacement_relative_l2"])),
                 _layer2_criterion_status(layer2_metrics, "endpoint_disp_pass"),
             ],
             [
-                "2",
+                "fixed-load operator",
                 "endpoint deviatoric-strain relative $L^2$",
                 fmt_sci(float(endpoint_dev)) if endpoint_dev is not None else "--",
                 "diagnostic",
             ],
             [
-                "2",
+                "fixed-load operator",
                 "boundary profile relative $L^2$",
                 fmt_sci(float(layer2_metrics["boundary_profile_relative_l2"])),
                 "diagnostic",
             ],
             [
-                "2",
+                "fixed-load operator",
                 "acceptance criterion",
                 "--",
                 criterion_status(layer2_metrics["acceptance"]["overall_pass"]),
@@ -1764,7 +1764,6 @@ def main() -> None:
 
     fairness = dict(jax_fem_baseline["fairness_gate"])
     final_metrics = dict(jax_fem_baseline["final_metrics"])
-    timing = dict(jax_fem_baseline["timing_medians_s"])
     fairness_checks = dict(fairness["checks"])
     agreement_pass = all(
         bool(fairness_checks[key])
@@ -1781,21 +1780,18 @@ def main() -> None:
         + pcol(r"0.15\textwidth")
         + "@{\\hspace{1.0em}}"
         + pcol(r"0.30\textwidth")
-        + r"@{\extracolsep{\fill}}c c c@{}",
-        ["Group", "Quantity", "Relative difference", "Median wall time [s]", "Status"],
+        + r"@{\extracolsep{\fill}}c c@{}",
+        ["Group", "Quantity", "Relative difference", "Status"],
         [
-            ["Agreement", "final energy", fmt_sci(float(final_metrics["energy_rel_diff"])), "--", "--"],
-            ["Agreement", "full-field displacement relative $L^2$", fmt_sci(float(final_metrics["field_relative_l2"])), "--", "--"],
-            ["Agreement", "centerline relative $L^2$", fmt_sci(float(final_metrics["centerline_relative_l2"])), "--", "--"],
-            ["Agreement", "$u_{\\max}$ curve relative $L^2$", fmt_sci(float(final_metrics["umax_curve_relative_l2"])), "--", "--"],
+            ["Agreement", "final energy", fmt_sci(float(final_metrics["energy_rel_diff"])), "--"],
+            ["Agreement", "full-field displacement relative $L^2$", fmt_sci(float(final_metrics["field_relative_l2"])), "--"],
+            ["Agreement", "centerline relative $L^2$", fmt_sci(float(final_metrics["centerline_relative_l2"])), "--"],
+            ["Agreement", "$u_{\\max}$ curve relative $L^2$", fmt_sci(float(final_metrics["umax_curve_relative_l2"])), "--"],
             r"\addlinespace",
-            ["Timing", "this work serial direct", "--", fmt_wall_time(float(timing["repo_serial_direct"])), "--"],
-            ["Timing", "JAX-FEM UMFPACK serial", "--", fmt_wall_time(float(timing["jax_fem_umfpack_serial"])), "--"],
-            r"\addlinespace",
-            ["Condition", "common mesh", "--", "--", criterion_status(fairness_checks["same_mesh_path"])],
-            ["Condition", "common displacement schedule", "--", "--", criterion_status(fairness_checks["same_schedule"])],
-            ["Condition", "agreement threshold ($5\\%$)", "--", "--", criterion_status(agreement_pass)],
-            ["Condition", "energy re-evaluation", "--", "--", "applied"],
+            ["Condition", "common mesh", "--", criterion_status(fairness_checks["same_mesh_path"])],
+            ["Condition", "common displacement schedule", "--", criterion_status(fairness_checks["same_schedule"])],
+            ["Condition", "agreement threshold ($5\\%$)", "--", criterion_status(agreement_pass)],
+            ["Condition", "energy re-evaluation", "--", "applied"],
         ],
     )
 

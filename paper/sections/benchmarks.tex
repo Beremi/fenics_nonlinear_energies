@@ -2,7 +2,7 @@
 
 The benchmark suite is intentionally heterogeneous. The central claim of the
 paper is not that one solver policy dominates every nonlinear PDE family, but
-that one differentiable sparse-solver stack can cover scalar elliptic problems,
+that one differentiable sparse-solver framework can cover scalar elliptic problems,
 phase-field-type energies, finite-strain mechanics, elastoplastic slope
 stability, and reduced topology optimization without switching conceptual
 frameworks.
@@ -304,7 +304,9 @@ geometry. At increment $n+1$, the continuum equilibrium equations are
   -\nabla \cdot \sigma^{n+1} = b^{n+1}
   \quad \text{in }\Omega,
   \qquad
-  u^{n+1} = \bar u^{n+1} \quad \text{on }\Gamma_D,
+  u_x^{n+1} = \bar u_x^{n+1} \quad \text{on }\Gamma_{D,x},
+  \qquad
+  u_y^{n+1} = \bar u_y^{n+1} \quad \text{on }\Gamma_{D,y},
   \qquad
   \sigma^{n+1}n = t^{n+1} \quad \text{on }\Gamma_N,
   \label{eq:plasticity2d-strong}
@@ -321,9 +323,14 @@ $E=\num{40000}$, $\nu=\num{0.30}$, $c_0=\num{6.0}$,
 $\phi=45^\circ$, $\psi=0^\circ$, and gravity magnitude $\gamma=\num{20}$,
 so $b=(0,-\gamma)^\top$ in the endpoint solves.
 The endpoint studies set the old plastic strain to zero at all quadrature
-points. Let $\Gamma_D$ be the union of the constrained bottom and side
-boundaries described above, let $\Gamma_N=\partial\Omega\setminus\Gamma_D$, and
-let $V_0$ denote the homogeneous displacement test space.
+points. Let $\Gamma_{\mathrm{bot}}$ denote the bottom edge and let
+$\Gamma_{\mathrm{side}}$ denote the constrained vertical side edges. We use
+$\Gamma_{D,x}=\Gamma_{\mathrm{bot}}\cup\Gamma_{\mathrm{side}}$ and
+$\Gamma_{D,y}=\Gamma_{\mathrm{bot}}$, so the homogeneous test space $V_0$
+contains functions with $v_x=0$ on $\Gamma_{D,x}$ and $v_y=0$ on
+$\Gamma_{D,y}$. The traction boundary is
+$\Gamma_N=\partial\Omega\setminus
+(\Gamma_{\mathrm{bot}}\cup\Gamma_{\mathrm{side}})$.
 The corresponding weak form is
 \begin{equation}
   \int_{\Omega} \sigma^{n+1} : \varepsilon(v) \, dx
@@ -479,17 +486,20 @@ The corresponding weak form is
   \qquad \forall v \in V_0.
   \label{eq:plasticity3d-weak}
 \end{equation}
-The studied discrete model uses a heterogeneous slope mesh
-hierarchy with same-mesh tetrahedral $P_1/P_2/P_4$ spaces, component-wise
-displacement boundary regions, and an additional glued-bottom condition that
-fixes every node with $|y| \le 10^{-12}$ in all three displacement components.
-Here $\Gamma_{D,i}$ denotes the Dirichlet set for displacement component $i$,
-$\Gamma_N$ is the remaining traction-free boundary, and $V_0$ is the
+The studied discrete model uses a heterogeneous tetrahedral source mesh with
+four material physical groups, refined into the displayed mesh hierarchy and
+elevated locally to same-mesh $P_1/P_2/P_4$ spaces. The source boundary labels
+define the component-wise constraints: $u_x$ is constrained on labels $1$ and
+$2$, $u_y$ is constrained on label $5$, and $u_z$ is constrained on labels $3$
+and $4$. The bottom-clamped model additionally fixes every node with
+$|y| \le 10^{-12}$ in all three displacement components. Here
+$\Gamma_{D,i}$ denotes the resulting Dirichlet set for displacement component
+$i$, $\Gamma_N$ is the remaining traction-free boundary, and $V_0$ is the
 homogeneous vector-valued test space after applying these component-wise
 constraints.
 We write $P_k(L_\ell)$ for polynomial degree $k$ on mesh level $\ell$ and use
 $L_1,\ldots,L_4$ for the four displayed mesh levels.
-The figures below use the glued-bottom $P_4(L_2)$ representative endpoint at
+The figures below use the bottom-clamped $P_4(L_2)$ representative endpoint at
 $\lambda_{\mathrm{sr}}=1.55$ and the finished nine-case study
 at the same load factor. The $\lambda_{\mathrm{sr}}=1.0$ strong-scaling
 study is kept later in the paper as separate auxiliary timing evidence.
@@ -751,7 +761,7 @@ surrogate is a full incremental elastoplastic solver.
 \begin{figure}[H]
   \centering
   \includegraphics[width=\PaperFigureMedium]{plasticity3d_state_pair.pdf}
-  \caption{Glued-bottom Plasticity3D representative endpoint at
+  \caption{Bottom-clamped Plasticity3D representative endpoint at
   $\lambda_{\mathrm{sr}}=1.55$: displacement magnitude and surface deviatoric
   strain for the $P_4(L_2)$ run, both derived from the
   scalar surrogate in
@@ -762,7 +772,7 @@ surrogate is a full incremental elastoplastic solver.
 \begin{figure}[H]
   \centering
   \includegraphics[width=\PaperFigureMedium]{plasticity3d_convergence.pdf}
-  \caption{Newton-history convergence for all nine completed glued-bottom
+  \caption{Newton-history convergence for all nine completed bottom-clamped
   Plasticity3D study runs at
   $\lambda_{\mathrm{sr}}=1.55$. The upper panel shows the value of the
   algorithmic surrogate from \cref{eq:plasticity3d-discrete}; the lower panel
@@ -774,7 +784,7 @@ surrogate is a full incremental elastoplastic solver.
 \begin{table}[H]
   \centering
   \input{tables/generated/plasticity3d_benchmark_summary.tex}
-  \caption{All nine completed glued-bottom Plasticity3D
+  \caption{All nine completed bottom-clamped Plasticity3D
   study cases at $\lambda_{\mathrm{sr}} = 1.55$, reported as endpoint values of
   \cref{eq:plasticity3d-discrete}.}
   \label{tab:plasticity3d-benchmark}
@@ -787,7 +797,7 @@ surrogate is a full incremental elastoplastic solver.
   $\|\varepsilon_{\mathrm{dev}}\|$ from \cref{eq:plasticity3d-devnorm} at the
   highest mesh level of each degree line:
   $P_1(L_4)$, $P_2(L_3)$, and $P_4(L_2)$. The three
-  runs use the glued-bottom solver configuration at
+  runs use the bottom-clamped solver configuration at
   $\lambda_{\mathrm{sr}} = 1.55$ and are compared on one common color scale.}
   \label{fig:plasticity3d-highest-slice}
 \end{figure}
@@ -806,9 +816,10 @@ setting on a cantilever domain, together with filtering and continuation ideas
 from the classical topology literature
 \citep{bendsoe2003topology,sigmund2001topology,ferrari2020top99,bourdin2001filters}.
 In the implemented setting studied here, the topology benchmark is a
-reduced optimization problem rather than a single equilibrium minimization. The
-design variable is a latent nodal field
-$z_h \in Z_h$, mapped to a physical density through the logistic transform
+reduced optimization problem rather than a single equilibrium minimization. Let
+$Z_h$ be the scalar continuous $P_1$ space on the structured triangular mesh.
+The design variable is a latent nodal field $z_h \in Z_h$, mapped to a physical
+density through the logistic transform
 \begin{equation}
   \theta_h(z_h)
   =
@@ -825,18 +836,24 @@ target volume fraction $0.4$, $\theta_{\min}=\num{1e-6}$, Young's modulus
 $E=\num{1}$, Poisson ratio $0.3$, and a downward unit traction over the centered
 $20\%$ patch of the right edge. The left edge is clamped, while fixed solid
 design pads are imposed near the clamp and around the load patch.
-Let $C$ denote the plane-stress elasticity tensor and let $p$ be the current
-SIMP exponent. For fixed density, define the bilinear form
+For the domain $\Omega=(0,2)\times(0,1)$ this load patch is
+$\{2\}\times[0.4,0.6]$. With $h_x=2/768$ and $h_y=1/384$, the fixed-solid
+design pads are $x\le 32h_x$ and
+$x\ge 2-32h_x$, $y\in[0.4-32h_y,0.6+32h_y]$.
+Let $V_h$ be the continuous vector $P_1$ displacement space and let
+$V_{h,0}\subset V_h$ impose the homogeneous left-edge clamp. Let $C$ denote the
+plane-stress elasticity tensor and let $p$ be the current SIMP exponent. For
+fixed density, define the bilinear form
 \begin{equation}
   a_{\theta_h}(w_h,v_h)
   :=
   \sum_{e=1}^{n_{\mathrm{el}}}
     |e|\,\theta_e^{p}
-    \varepsilon(w_h)^\top C \varepsilon(v_h).
+    \left(\varepsilon(w_h)|_e\right)^\top C
+    \left(\varepsilon(v_h)|_e\right).
   \label{eq:topology-mechanics}
 \end{equation}
-On the cantilever domain $\Omega = (0,2)\times(0,1)$, the mechanics step finds
-$u_h(\theta_h)$ in the affine displacement space such that
+The mechanics step finds $u_h(\theta_h)$ in the affine displacement space such that
 $a_{\theta_h}(u_h,v_h)=\ell(v_h)$ for all $v_h\in V_{h,0}$, where $\ell$ is the
 load functional defined by that right-edge traction. At outer design iteration
 $m$, after solving for $u_h^m=u_h(\theta_h^m)$, the design step freezes, on each

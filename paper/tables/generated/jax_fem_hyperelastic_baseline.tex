@@ -1,18 +1,15 @@
-\begin{tabular*}{\textwidth}{@{}>{\RaggedRight\arraybackslash}p{0.15\textwidth}@{\hspace{1.0em}}>{\RaggedRight\arraybackslash}p{0.30\textwidth}@{\extracolsep{\fill}}c c c@{}}
+\begin{tabular*}{\textwidth}{@{}>{\RaggedRight\arraybackslash}p{0.15\textwidth}@{\hspace{1.0em}}>{\RaggedRight\arraybackslash}p{0.30\textwidth}@{\extracolsep{\fill}}c c@{}}
 \toprule
-Group & Quantity & Relative difference & Median wall time [s] & Status \\
+Group & Quantity & Relative difference & Status \\
 \midrule
-Agreement & final energy & $\num{8.24}\times 10^{-6}$ & -- & -- \\
-Agreement & full-field displacement relative $L^2$ & $\num{2.01}\times 10^{-4}$ & -- & -- \\
-Agreement & centerline relative $L^2$ & $\num{5.47}\times 10^{-5}$ & -- & -- \\
-Agreement & $u_{\max}$ curve relative $L^2$ & $\num{8.85}\times 10^{-16}$ & -- & -- \\
+Agreement & final energy & $\num{8.24}\times 10^{-6}$ & -- \\
+Agreement & full-field displacement relative $L^2$ & $\num{2.01}\times 10^{-4}$ & -- \\
+Agreement & centerline relative $L^2$ & $\num{5.47}\times 10^{-5}$ & -- \\
+Agreement & $u_{\max}$ curve relative $L^2$ & $\num{8.85}\times 10^{-16}$ & -- \\
 \addlinespace
-Timing & this work serial direct & -- & \num{0.176} & -- \\
-Timing & JAX-FEM UMFPACK serial & -- & \num{2.52} & -- \\
-\addlinespace
-Condition & common mesh & -- & -- & satisfied \\
-Condition & common displacement schedule & -- & -- & satisfied \\
-Condition & agreement threshold ($5\%$) & -- & -- & satisfied \\
-Condition & energy re-evaluation & -- & -- & applied \\
+Condition & common mesh & -- & satisfied \\
+Condition & common displacement schedule & -- & satisfied \\
+Condition & agreement threshold ($5\%$) & -- & satisfied \\
+Condition & energy re-evaluation & -- & applied \\
 \bottomrule
 \end{tabular*}
