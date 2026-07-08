@@ -103,7 +103,16 @@ MATLAB/Octave literature only when there is source-backed evidence.
   now defined explicitly in the benchmark section instead of being left implicit.
   The benchmark specification matrix now labels problem-specific stopping and
   work definitions as a solve contract and uses configuration-specific rather
-  than campaign-specific wording for Plasticity3D.
+  than campaign-specific wording for Plasticity3D. Current chunk makes the
+  benchmark definitions more self-contained: Hyperelasticity now consistently
+  uses displacement notation with `F(u)` and `J(u)`; Plasticity2D states the
+  slope geometry, boundary conditions, material constants, gravity, zero old
+  plastic strain, and Davis-B reduction scope; Plasticity3D states the material
+  tuples, vertical body-force convention, elastic constants including bulk
+  modulus `K`, and avoids overloading the quadrature index with the invariant
+  `Q(\varepsilon)`; Topology now states the fine-grid mesh, target volume,
+  density floor, elasticity/load data, fixed design pads, frozen element energy,
+  and reduced-objective penalty constants.
 - `VALIDATION`: external and source-family comparison.
   Evidence: narrow hyperelastic JAX-FEM comparison; Plasticity3D validation
   ladder with endpoint-surrogate scope.
@@ -182,7 +191,12 @@ MATLAB/Octave literature only when there is source-backed evidence.
   chunk visually checked rendered pages 9, 30, and 33 after rebuild: the solve
   contract/reference-availability tables, single-node/multi-node scaling
   figure, and reference-formula appendix tables are readable and within the
-  text block.
+  text block. Current benchmark-self-containment chunk rebuilt the 37-page PDF
+  and visually checked rendered pages 13--22. The Plasticity2D handoff, dense
+  Plasticity3D definitions, topology/validation transition, and page-22
+  validation-to-results transition are readable and unclipped; Section 6 now
+  starts on page 20 and Section 7 starts low on page 22, so future validation
+  edits should recheck this boundary.
 - `REPRO`: reproducibility and submission readiness.
   Known blockers from `paper/todo.md`: target journal/template/declarations,
   repository license/archive DOI, and archive-neutral provenance for critical
@@ -314,6 +328,22 @@ MATLAB/Octave literature only when there is source-backed evidence.
   repository license plus archival DOI, target venue/template/declarations,
   strict JSON rejection of existing `NaN` provenance, stale reproducibility
   notes, and limited-access citation verification.
+- `Math/self-contained benchmark audit` (`Schrodinger`): completed. Findings
+  addressed in the current chunk: hyperelastic displacement/deformation
+  notation is unified; Plasticity2D data and Davis-B scope are explicit;
+  Plasticity3D material/body-force/bulk-modulus/invariant notation is explicit;
+  topology objective constants and frozen element energy are explicit.
+  Remaining low-risk polish: a full display-equation punctuation pass and
+  failed-row semantics outside the benchmark-definition scope.
+- `Narrative/style audit` (`Sagan`): completed. Findings not yet addressed in
+  this chunk: compress the abstract, make the introduction and contribution
+  labels more methods-forward, shorten the SOTA transition, and lead the
+  discussion/conclusion with synthesis before caveats.
+- `Layout/provenance benchmark audit` (`Herschel`): completed. Findings
+  addressed locally: pages 13--22 were rebuilt and visually checked after the
+  benchmark edit; no overfull boxes, unresolved refs, or clipping were found.
+  Remaining process note before submission: refresh the reproducibility note
+  when preparing a final publish bundle.
 
 ## First Edit Backlog
 
@@ -324,7 +354,8 @@ MATLAB/Octave literature only when there is source-backed evidence.
    substance.
 4. Replace broad "repository" wording in benchmark definitions with
    self-contained terms such as "implemented benchmark," "discrete model," and
-   "algorithmic constitutive surrogate." Done for the main manuscript sections.
+   "algorithmic constitutive surrogate." Done for the main manuscript sections;
+   current chunk also added missing benchmark data and notation definitions.
 5. Add a results synthesis paragraph/table using existing generated assets if
    appropriate. Done with a prose synthesis subsection.
 6. Audit figures for physical size and font consistency after the narrative
