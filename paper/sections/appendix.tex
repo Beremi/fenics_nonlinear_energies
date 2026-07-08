@@ -3,15 +3,15 @@
 This section collects supporting solver-policy diagnostics that are
 methodologically useful but narrower than the main benchmark narratives.
 
-\subsection{Plasticity3D Reference-Formula and Fixed-Operator PMG Comparisons}
+\subsection{Plasticity3D Reference-Formula and Fixed-Reference PMG Comparisons}
 
 The primary Plasticity3D numerical story in \Cref{sec:num-plasticity3d} is the
 rank-local constitutive-AD path. The tables below add two solver-policy
 comparisons on the same discrete problem from \cref{eq:plasticity3d-discrete}:
-a matched reference-formula assembly comparator and a fixed reference-operator
-PMG variant. Here reference-formula assembly means closed-form constitutive
-assembly used as a comparator for the JAX constitutive-AD kernel, while fixed
-reference-operator PMG means a preconditioning variant in which the multigrid
+a matched reference-formula assembly comparator and a fixed-reference PMG
+variant. Here reference-formula assembly means closed-form constitutive
+assembly used as a comparator for the JAX constitutive-AD kernel, while
+fixed-reference PMG means a preconditioning variant in which the multigrid
 operator is not rebuilt along the nonlinear path.
 
 \begin{table}[H]
@@ -21,23 +21,23 @@ operator is not rebuilt along the nonlinear path.
   comparison for the same PMG solver configuration. The table reports wall time,
   solve time, and their ratio for matched rank counts on
   \cref{eq:plasticity3d-discrete}.}
-  \label{tab:plasticity3d-local-vs-source}
+  \label{tab:plasticity3d-constitutive-reference-formula}
 \end{table}
 
 \begin{table}[H]
   \centering
   \input{tables/generated/plasticity3d_fixed_reference_operator_pmg.tex}
-  \caption{Fixed reference-operator PMG alternative on the same Plasticity3D
+  \caption{Fixed-reference PMG alternative on the same Plasticity3D
   problem. The status column distinguishes completed configurations from rank
   counts that reach the maximum number of Newton iterations before satisfying
   the target gradient tolerance.}
-  \label{tab:plasticity3d-fixed-source-pmg}
+  \label{tab:plasticity3d-fixed-reference-pmg}
 \end{table}
 
 These diagnostics support two narrower statements. First, reference-formula assembly
 has lower reported wall time than rank-local assembly in the listed matched-rank
 comparisons, although the gap narrows at higher rank counts.
-Second, the fixed reference-operator PMG profile is not the default used in the
+Second, the fixed-reference PMG profile is not the default used in the
 present study: it may appear favorable on completed low-rank configurations, but
 it reaches the maximum number of Newton iterations on more of the reported rank
 counts and therefore gives less consistent convergence evidence. The rank-local
@@ -58,7 +58,7 @@ evidence for the PMG smoother policy under the same outer continuation logic.
   \caption{Reference continuation with the fixed PMG smoother policy at 8
   and 32 ranks. This is supporting solver evidence for a reference continuation
   setting, not a primary solver comparison.}
-  \label{tab:source-cont}
+  \label{tab:plasticity2d-reference-continuation}
 \end{table}
 
 \subsection{Code, data, and reproducibility availability}

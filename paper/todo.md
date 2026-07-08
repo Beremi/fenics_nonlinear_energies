@@ -87,7 +87,9 @@ scientific claims were introduced without supporting evidence.
   `artifacts/reproduction/<submission-id>/` with relative paths, source
   snapshot hashes, command manifests, environment metadata, and corrected
   JAX-FEM comparison contract metadata; update paper scripts/manifests to point
-  to that bundle.
+  to that bundle, then require
+  `./.venv/bin/python paper/scripts/validate_paper_assets.py --archive-neutral`
+  or `make -C paper publish-check` to pass.
 
 ## Major Revisions Needed
 
@@ -159,7 +161,13 @@ required support for the current scoped contribution.
 - `./.venv/bin/python paper/scripts/generate_paper_figures.py`: passed and
   rewrote the figure manifest.
 - `./.venv/bin/python paper/scripts/validate_paper_assets.py`: passed on
-  2026-07-08 with 29 figures and 28 generated tables checked.
+  2026-07-08 with 29 figures, 28 generated tables, and 42 paper-facing
+  provenance-scan files checked.
+- `./.venv/bin/python paper/scripts/validate_paper_assets.py --archive-neutral`:
+  intentionally fails until the submission bundle exists. The current failure
+  reports raw-results/report manifest inputs, the external reference state,
+  absolute `/home` paths, `.venv`, `tmp/source_compare`, `NaN`, and the ignored
+  build reproducibility note.
 - `make -C paper pdf`: passed after the script/table/figure changes and
   produced a 29-page PDF. A later rerun after the final prose cleanup was
   terminated after `generate_paper_figures.py` stalled for more than three
@@ -178,9 +186,11 @@ required support for the current scoped contribution.
 - `git diff --check`: passed.
 
 Exact remaining blockers are submission metadata, license/archive DOI, and
-archive-neutral provenance. The only command instability observed in the final
-rerun was the intermittent TeX/font lookup stall in the Makefile figure target;
-direct asset validation and direct LaTeX rebuild are clean.
+archive-neutral provenance. The archive-neutral validator now makes the last
+blocker executable and currently failing by design. The only command instability
+observed in the final rerun was the intermittent TeX/font lookup or mesh-loading
+stall in the Makefile figure target; direct asset validation and direct LaTeX
+rebuild are clean.
 
 ## Optional Future Work
 

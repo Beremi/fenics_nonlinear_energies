@@ -22,7 +22,7 @@ The Plasticity3D endpoint-surrogate comparison in
 \Cref{fig:plasticity3d-validation,tab:plasticity3d-validation} supports a
 scoped mechanics interpretation. The tested endpoint surrogate agrees closely
 with the reported reference observables, and the fixed-$\lambda_{\mathrm{sr}}$
-reference-operator comparison satisfies the endpoint field-agreement thresholds
+reference comparison satisfies the endpoint field-agreement thresholds
 under the same boundary conditions and active free degrees of freedom. The
 evidence supports final-load scalar and field observables for the tested
 endpoint surrogate, but it does not validate incremental plastic-history paths
@@ -47,8 +47,8 @@ $\lambda_{\mathrm{sr}}=1.0$ Plasticity3D strong-scaling study is timing-only
 evidence, while the bottom-clamped $\lambda_{\mathrm{sr}}=1.55$ scaling sweep is
 the converged comparison tied to the benchmark. The topology study is reported
 as end-to-end timing under adaptive stopping, with a separate controlled
-rank-consistency check. The reference-operator PMG studies are
-solver-policy diagnostics rather than symmetric external comparisons. These
+rank-consistency check. The fixed-reference PMG studies are solver-policy
+diagnostics rather than symmetric external comparisons. These
 distinctions define the contribution: a nonlinear FEM toolset with explicit
 derivative-route choices, validation surfaces, and agreement limits. Automatic
 differentiation alone does not determine the behavior of large nonlinear FEM;

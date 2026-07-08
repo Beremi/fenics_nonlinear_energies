@@ -95,7 +95,7 @@ IMPLEMENTATION_LABELS = {
     "jax_petsc_local_sfd": "JAX+PETSc colored SFD",
     "jax_serial": "serial JAX",
     LOCAL_IMPL: "constitutive-AD PMG solver",
-    SOURCE_IMPL: "reference-operator PMG variant",
+    SOURCE_IMPL: "fixed-reference PMG variant",
     LOCAL_SOURCEFIXED_IMPL: "constitutive-AD PMG solver",
     SOURCE_SOURCEFIXED_IMPL: "reference-formula assembly PMG variant",
 }
@@ -292,7 +292,7 @@ def implementation_label(name: object) -> str:
     if "sourcefixed" in key:
         return "reference-formula assembly PMG variant"
     if key.startswith("source") or "_source" in key:
-        return "reference-operator PMG variant"
+        return "fixed-reference PMG variant"
     return key.replace("_", r"\_")
 
 
@@ -1642,37 +1642,37 @@ def main() -> None:
                 "--",
             ],
             [
-                "fixed-load operator",
+                "fixed-load comparison",
                 "highest-successful $\\lambda_{\\mathrm{sr}}$",
                 fmt_sci(float(layer2_metrics["critical_lambda_schedule_proxy"]["relative_difference"])),
                 _layer2_criterion_status(layer2_metrics, "critical_lambda_pass"),
             ],
             [
-                "fixed-load operator",
+                "fixed-load comparison",
                 "$u_{\\max}(\\lambda_{\\mathrm{sr}})$ relative $L^2$",
                 fmt_sci(float(layer2_metrics["umax_curve_relative_l2"])),
                 _layer2_criterion_status(layer2_metrics, "umax_curve_pass"),
             ],
             [
-                "fixed-load operator",
+                "fixed-load comparison",
                 "endpoint displacement relative $L^2$",
                 fmt_sci(float(layer2_metrics["endpoint_displacement_relative_l2"])),
                 _layer2_criterion_status(layer2_metrics, "endpoint_disp_pass"),
             ],
             [
-                "fixed-load operator",
+                "fixed-load comparison",
                 "endpoint deviatoric-strain relative $L^2$",
                 fmt_sci(float(endpoint_dev)) if endpoint_dev is not None else "--",
                 "diagnostic",
             ],
             [
-                "fixed-load operator",
+                "fixed-load comparison",
                 "boundary profile relative $L^2$",
                 fmt_sci(float(layer2_metrics["boundary_profile_relative_l2"])),
                 "diagnostic",
             ],
             [
-                "fixed-load operator",
+                "fixed-load comparison",
                 "acceptance criterion",
                 "--",
                 criterion_status(layer2_metrics["acceptance"]["overall_pass"]),

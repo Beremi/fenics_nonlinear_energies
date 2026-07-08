@@ -371,7 +371,13 @@ MATLAB literature only when there is source-backed evidence.
   1, 2, 4, 5, 13, 17, 18, 29, 34, 35, 37, 38, and 40; compressed the SOTA table
   into a readable role taxonomy; fixed `siunitx` digit grouping for signed
   decimal values; and found no unresolved refs, overfull boxes, PDF structural
-  errors, or banned local/process labels in the visible text scan.
+  errors, or banned local/process labels in the visible text scan. Current
+  provenance-gate chunk rebuilt the 40-page PDF after validation/appendix label
+  edits; `qpdf --check`, the log scan, PDF text scan, and default paper asset
+  validator were clean. The full figure-generation script was interrupted in
+  the known mesh/TeX-helper stall, so binary figure churn from that attempted
+  regeneration remains unstaged unless a later chunk intentionally refreshes
+  those assets.
 - `REPRO`: reproducibility and submission readiness.
   Known blockers from `paper/todo.md`: target journal/template/declarations,
   repository license/archive DOI, and archive-neutral provenance for critical
@@ -387,7 +393,15 @@ MATLAB literature only when there is source-backed evidence.
   interpreter-path details, renamed appendix table files from source-local names
   to reference-formula/reference-operator/continuation names, and left final
   archive-neutral provenance manifests, venue declarations, DOI, and license
-  decisions as submission blockers.
+  decisions as submission blockers. Current provenance-gate chunk makes the
+  figure manifest use structured repository-relative and explicit external
+  inputs, adds a default paper-facing provenance scan to
+  `validate_paper_assets.py`, and adds `--archive-neutral` plus
+  `make publish-check` for submission readiness. The default validator passes
+  on the manuscript-facing surface; `--archive-neutral` intentionally fails on
+  the remaining raw-results/report inputs, the external reference state,
+  `/home`, `.venv`, `tmp/source_compare`, `NaN`, and the ignored build
+  reproducibility note until a real submission bundle exists.
 
 ## Evidence Nodes
 
@@ -652,7 +666,7 @@ MATLAB literature only when there is source-backed evidence.
   hyperelastic validation no longer includes a speed comparison; Plasticity3D
   validation is endpoint-surrogate scoped; generated tables use factual family
   highlights; failed globalization rows render as iteration-cap evidence; and
-  appendix/source-operator comparisons are described as wall/solve/ratio
+  appendix fixed-reference comparisons are described as wall/solve/ratio
   evidence rather than equal-iteration claims. Deferred risk: final submission
   still needs archive-neutral provenance and DOI/license decisions.
 - `PDF/layout audit` (`Boyle-current`): completed. Findings addressed:
@@ -683,6 +697,23 @@ MATLAB literature only when there is source-backed evidence.
   grouping, and body-text interpretation for the Plasticity3D,
   Hyperelasticity, and Topology result tables. Remaining risk: full
   Plasticity2D branch formulas are still summarized rather than reproduced.
+- `Manuscript/process leakage audit` (`Planck-current`): completed. Findings
+  addressed in the current provenance-gate chunk: paper-facing figure-manifest
+  inputs no longer leak absolute `/home` or `tmp/source_compare` paths;
+  fixed-load/reference-operator labels were replaced by fixed-load comparison
+  and fixed-reference terminology; and appendix labels no longer carry
+  source/local process names. Remaining note: the ignored reproducibility note
+  is still an internal run note unless folded into a final archive bundle.
+- `Provenance tooling audit` (`Heisenberg-current`): completed. Findings
+  addressed: the validator now parses structured manifest inputs, recursively
+  scans text provenance in archive-neutral mode, blocks raw-results/report
+  inputs and external references for publish checks, and exposes the current
+  blocker through `--archive-neutral` and `make publish-check`.
+- `Layout/provenance audit` (`Darwin-current`): completed. Findings addressed:
+  no PDF build blocker was found, and the provenance gate now reports the
+  concrete archive-neutral failures. Remaining layout polish: page 30 still has
+  a blank lower half from forced Plasticity3D result floats, and dense tables
+  remain template-fragile until a target class is chosen.
 
 ## First Edit Backlog
 
