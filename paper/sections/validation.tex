@@ -47,12 +47,12 @@ than the 24-step rotating benchmark path. Both implementations use the same
 level-1 mesh and the same right-face $x$-translation schedule
 $d=(0.0025,0.005,0.0075,0.01)$, then post-compare both terminal states with
 the energy from
-\cref{eq:hyperelasticity-energy}. This supports a solution-level
-implementation comparison for this hyperelastic problem only. It should not be
-read as a plasticity validation, a broad framework ranking, or constitutive-law
-identity between the two implementations: the JAX-FEM companion implementation
-uses a logarithmic-$J$ Piola form, whereas \cref{eq:hyperelasticity-energy}
-uses the $D_1(J-1)^2$ volumetric penalty.
+\cref{eq:hyperelasticity-energy}. This supports a solution-level comparison
+for this hyperelastic problem only. It should not be read as a plasticity
+validation, a broad software comparison, or constitutive-law identity between
+the two implementations: the JAX-FEM companion implementation uses a
+logarithmic-$J$ Piola form, whereas \cref{eq:hyperelasticity-energy} uses the
+$D_1(J-1)^2$ volumetric penalty.
 
 \begin{figure}[H]
   \centering
@@ -87,8 +87,8 @@ checked quantities. The final energy relative difference is
 \num{5.473e-5}, and the $u_{\max}$-curve relative $L^2$ difference is
 effectively zero. On this small serial CPU companion case, the \jaxpetsc{} solve
 is faster (\SI{0.176}{s} median wall time versus \SI{2.524}{s} for JAX-FEM),
-but the scientific role of this table is solution agreement
-under a narrow hyperelastic comparison contract rather than framework ranking.
+but the scientific role of this table is solution agreement under a matched
+hyperelastic definition rather than a software ranking.
 
 \subsection{Plasticity3D Validation Ladder}
 \label{sec:val-plasticity3d}
@@ -112,7 +112,7 @@ difference is \num{3.877e-5}, the displacement relative $L^2$ difference is
 \num{8.720e-3}. Layer 2 is different: it is a fixed-$\lambda_{\mathrm{sr}}$
 diagnostic
 against a reference-operator comparison, not proof of path-consistent
-incremental-history equivalence. After matching the source boundary contract
+incremental-history equivalence. After matching the source boundary conditions
 to the glued-bottom free-DOF mask, the validation schedule is capped
 at the main-figure load level $\lambda_{\mathrm{sr}}=1.55$. It keeps the
 highest-successful-$\lambda_{\mathrm{sr}}$ schedule proxy aligned on the tested
@@ -148,7 +148,7 @@ reference.
   direct-branch source-observable agreement for the endpoint surrogate; the
   lower panel shows close fixed-$\lambda_{\mathrm{sr}}$ reference-operator
   agreement after
-  matching the glued-bottom boundary contract.}
+  matching the glued-bottom boundary conditions and free-DOF mask.}
   \label{fig:plasticity3d-validation}
 \end{figure}
 
@@ -164,6 +164,6 @@ reference.
 
 The resulting interpretation is limited but useful. \plasticitythree{} is
 supported here by direct-branch source-observable agreement in Layer 1A, while
-Layer 2 supports the same endpoint surrogate under a fixed-load reference-operator
-contract. Neither layer is a path-consistent
+Layer 2 supports the same endpoint surrogate under a fixed-load
+reference-operator comparison. Neither layer is a path-consistent
 incremental-plasticity history validation.

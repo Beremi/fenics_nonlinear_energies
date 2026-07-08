@@ -1,35 +1,23 @@
-This paper presented a computational toolset for nonlinear finite-element solves
-and optimization with a mainline \jaxpetsc{} distributed path. The central
-contribution is not a new constitutive theory or a universal differentiable-PDE
-abstraction, but an implementation pattern in which local JAX differentiation,
-sparse PETSc nonlinear solves, and multiple second-order routes are kept
-together across a heterogeneous benchmark suite.
+This paper developed a \jaxpetsc{} toolset that connects local JAX
+differentiation with PETSc nonlinear algebra for nonlinear finite-element
+energy minimization. Across the tested benchmark suite, the construction links
+scalar energy definitions, derivative-route selection, globalization, sparse
+ownership, and validation comparisons within one distributed solver setting.
 
-The Plasticity3D evidence is intentionally narrower than a broad mechanics
-claim. For the tested cases, the endpoint surrogate agrees closely with the
-reported source-family observables and passes the predefined acceptance
-quantities, while the evidence remains below the level needed for
-path-consistent incremental-history validation. Constitutive AD gives the
-lowest measured wall time in the fixed high-order derivative-route study. On
-hyperelasticity, the
-companion comparison
-against JAX-FEM shows that the \jaxpetsc{} solver can agree very closely with a
-recent external implementation when the mesh and prescribed displacement
-schedule are matched and terminal states are post-compared with
-\cref{eq:hyperelasticity-energy}. The distributed Plasticity3D and topology
-runs then show that the same toolset extends beyond the small validation cases
-to larger sparse nonlinear solves.
+The numerical results support this pattern on a deliberately heterogeneous
+benchmark suite. Scalar problems check formulation and derivative agreement,
+hyperelasticity provides a tightly matched external comparison, Plasticity3D
+tests nonsmooth constitutive structure and distributed sparse solves under an
+endpoint-surrogate interpretation, and topology optimization exercises a
+coupled design-and-mechanics problem. Constitutive AD is the lowest-cost route
+in the fixed high-order Plasticity3D derivative test, and the larger
+distributed Plasticity3D and topology runs show that the same \jaxpetsc{} path
+remains operational beyond the validation cases.
 
-Future work should follow the boundaries made visible by these results:
-\begin{itemize}
-  \item extend the validation surface for path-dependent mechanics beyond the
-        present surrogate-versus-reference-operator comparison, including a true
-        incremental-history reference;
-  \item add more agreement-focused external baselines on tightly matched problem
-        contracts;
-  \item continue reducing linear-setup and multigrid costs in the largest 3D
-        mechanics workflows.
-\end{itemize}
-
-The next scientific step is to extend the same validation discipline to
-additional nonlinear multiphysics and design problems.
+These results point to three scientific extensions. The first is
+path-dependent mechanics validation against an incremental-history reference.
+The second is a wider set of agreement-focused external comparisons under
+matched problem definitions. The third is continued reduction of setup and
+multigrid costs in the largest sparse mechanics runs. Together, these
+directions extend the validation discipline of the present study toward broader
+nonlinear multiphysics and design problems.

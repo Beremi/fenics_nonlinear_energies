@@ -157,6 +157,17 @@ REVIEWER_HE_BUILD_LABELS = {
     "rank_local": "rank-local",
 }
 
+HE_DISTRIBUTION_PURPOSE_LABELS = {
+    "correctness": "agreement check",
+    "memory": "memory comparison",
+}
+
+HE_DISTRIBUTION_OUTCOME_LABELS = {
+    "completed": "completed",
+    "fixed_work": "one linearization",
+    "fixed_work_completed": "one linearization",
+}
+
 REVIEWER_HE_PMG_LABELS = {
     "gamg": "GAMG",
     "pmg_l2_hypre": "PMG $L_2$ + Hypre",
@@ -691,7 +702,7 @@ def plasticity2d_resolution_rows() -> list[dict[str, object]]:
             "energy": float(l5_result["energy"]),
             "total_time_s": float(showcase["timings"]["total_time"]),
             "status": "endpoint converged",
-            "note": "curated showcase",
+            "note": "completed endpoint",
         }
     ]
     for path, ranks, label in (
@@ -707,7 +718,7 @@ def plasticity2d_resolution_rows() -> list[dict[str, object]]:
                 "energy": float(selected["energy"]),
                 "total_time_s": float(selected["total_time_sec"]),
                 "status": str(selected["status"]),
-                "note": f"fixed-work at {ranks} ranks",
+                "note": f"fixed-iteration diagnostic at {ranks} ranks",
             }
         )
     return rows
@@ -1174,12 +1185,27 @@ def main() -> None:
                 "@{}"
                 + xspec((0.90, "RaggedRight"), (0.95, "RaggedRight"), (1.00, "RaggedRight"))
                 + r"@{\hspace{0.45em}}c c c c c@{}",
-                ["Probe", "Build", "Result", "Level", "Ranks", "Newton", "Krylov", "Solve [s]"],
+                [
+                    "Purpose",
+                    "Assembly layout",
+                    "Outcome",
+                    "Level",
+                    "Ranks",
+                    "Newton",
+                    "Krylov",
+                    "Solve [s]",
+                ],
                 [
                     [
-                        str(row.get("probe", "")).replace("_", r"\_"),
+                        HE_DISTRIBUTION_PURPOSE_LABELS.get(
+                            str(row.get("probe", "")),
+                            str(row.get("probe", "")).replace("_", r"\_"),
+                        ),
                         REVIEWER_HE_BUILD_LABELS.get(str(row.get("build_mode", "")), str(row.get("build_mode", ""))),
-                        _result_label(row.get("result", "")),
+                        HE_DISTRIBUTION_OUTCOME_LABELS.get(
+                            str(row.get("result", "")),
+                            _result_label(row.get("result", "")),
+                        ),
                         mesh_label(f"L{int(float(row.get('level') or 0))}"),
                         fmt_count(row["nprocs"]),
                         _fmt_optional_count(row.get("newton_iters", "")),
@@ -1194,10 +1220,21 @@ def main() -> None:
                 "@{}"
                 + xspec((0.95, "RaggedRight"), (1.05, "RaggedRight"))
                 + r"@{\hspace{0.45em}}c c c c c@{}",
-                ["Probe", "Build", "Level", "Ranks", "RSS max/sum [GiB]", "Tracked sum [GiB]", "Overlap/owned"],
+                [
+                    "Purpose",
+                    "Assembly layout",
+                    "Level",
+                    "Ranks",
+                    "RSS max/sum [GiB]",
+                    "Tracked sum [GiB]",
+                    "Overlap/owned",
+                ],
                 [
                     [
-                        str(row.get("probe", "")).replace("_", r"\_"),
+                        HE_DISTRIBUTION_PURPOSE_LABELS.get(
+                            str(row.get("probe", "")),
+                            str(row.get("probe", "")).replace("_", r"\_"),
+                        ),
                         REVIEWER_HE_BUILD_LABELS.get(str(row.get("build_mode", "")), str(row.get("build_mode", ""))),
                         mesh_label(f"L{int(float(row.get('level') or 0))}"),
                         fmt_count(row["nprocs"]),
@@ -1719,10 +1756,10 @@ def main() -> None:
             ["Timing", "this work serial direct", "--", fmt_wall_time(float(timing["repo_serial_direct"])), "--"],
             ["Timing", "JAX-FEM UMFPACK serial", "--", fmt_wall_time(float(timing["jax_fem_umfpack_serial"])), "--"],
             r"\addlinespace",
-            ["Contract/gate", "same mesh path", "--", "--", pass_fail(fairness_checks["same_mesh_path"])],
-            ["Contract/gate", "same displacement schedule", "--", "--", pass_fail(fairness_checks["same_schedule"])],
-            ["Contract/gate", "agreement thresholds ($5\\%$)", "--", "--", pass_fail(agreement_pass)],
-            ["Contract/gate", "energy post-comparison", "--", "--", "used"],
+            ["Condition", "common mesh", "--", "--", pass_fail(fairness_checks["same_mesh_path"])],
+            ["Condition", "common displacement schedule", "--", "--", pass_fail(fairness_checks["same_schedule"])],
+            ["Condition", "agreement threshold ($5\\%$)", "--", "--", pass_fail(agreement_pass)],
+            ["Condition", "energy re-evaluation", "--", "--", "applied"],
         ],
     )
 

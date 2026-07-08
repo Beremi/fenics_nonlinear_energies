@@ -16,7 +16,7 @@ The \fenics{} implementations remain valuable on families where they exist,
 especially $p$-Laplace, Ginzburg--Landau, and hyperelasticity. They provide a
 trusted high-level FEM reference and help distinguish modeling issues from
 solver-stack issues. In this paper they are used mainly as comparison baselines
-rather than as the mainline distributed path.
+rather than as the primary distributed realization.
 
 \paragraph{Mainline \jaxpetsc{} path.}
 This is the central solver realization of the paper. It combines JAX-based local
@@ -46,9 +46,9 @@ one common solver infrastructure.
 \begin{figure}[H]
   \centering
   \PaperFrameworkOverviewDiagram
-  \caption{Software structure of the manuscript. The \jaxpetsc{}
-  stack is the mainline distributed path; \purejax{} and \fenics{} remain
-  reference paths where matching benchmark formulations exist.}
+  \caption{Computational structure used in the study. The \jaxpetsc{}
+  formulation is the distributed realization; \purejax{} and \fenics{} provide
+  reference formulations where matched benchmark definitions are available.}
   \label{fig:framework-overview}
 \end{figure}
 

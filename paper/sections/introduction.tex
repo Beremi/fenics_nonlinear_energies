@@ -9,54 +9,41 @@ computational toolset for this class of problems should therefore expose not
 only a modeling interface, but also the derivative route, assembly layout,
 nonlinear solver policy, and preconditioner design.
 
-This paper studies that design point through an implemented toolset for
-nonlinear finite-element energy solves and optimization. The mainline path is a
-solver-centric \jaxpetsc{} stack: local energies and constitutive laws are
-written in JAX, while PETSc owns sparse vectors and matrices, nonlinear
-globalization, Krylov methods, and preconditioners. The benchmark suite also
-contains \purejax{} and \fenics{} references where those formulations are
-available, and it uses external or source-family comparisons only under narrow
-contracts. Thus the paper is not a claim that one framework dominates all
-finite-element workflows. It is a focused study of how local automatic
-differentiation, sparse assembly, nonlinear globalization, and distributed
-linear algebra can be kept in one documented nonlinear FEM workflow.
+We develop and evaluate this design point through a solver-centered toolset for
+nonlinear finite-element energy solves and optimization. In the mainline
+\jaxpetsc{} realization, JAX represents local energies and constitutive laws,
+while PETSc owns sparse vectors and matrices, nonlinear globalization, Krylov
+methods, and preconditioners. The \purejax{} and \fenics{} formulations provide
+reference paths where they are available, and external or reference-family
+comparisons are used only when the benchmark definition and observables are
+explicitly matched. This comparison surface lets us study derivative and solver
+choices for nonlinear energy minimization without ranking full software
+ecosystems.
 
-Recent open-source finite-element and PDE-optimization frameworks cover
-different parts of this workflow. High-level finite-element systems such as
-\fenics{} and \code{DOLFINx} emphasize expressive variational modeling together
-with compiled kernels and parallel assembly
-\citep{logg2012fenicsbook,baratta2025dolfinx}. PDE-level adjoint frameworks
-such as \code{dolfin-adjoint}, \code{pyadjoint}, and \code{cashocs} automate
-adjoint-centered optimization workflows and PDE-level sensitivity automation
-\citep{farrell2013dolfinadjoint,mitusch2019pyadjoint,blauth2023cashocsv2}.
-JAX-native or JAX-connected workflows, including JAX-FEM, second-order
-implicit-differentiation benchmarks for finite-element differentiable physics,
-AutoPDEx, JAX-CPFEM, the Firedrake--JAX bridge, and recent \code{FEniCSx}
-external-operator work, push automatic differentiation deeper into constitutive
-modeling and differentiable simulation
-\citep{xue2023jaxfem,xue2026implicit,bode2025autopdex,hu2025jaxcpfem,yashchuk2023bringing,latyshev2025externaloperators}.
-The JetSCI preprint is especially close in architecture
-because it also couples JAX-local finite-element kernels to PETSc for
-distributed sparse solves \citep{cattaneo2026jetsci}. Recent
-topology-optimization implementations such as \code{FEniTop} show that compact
-parallel design-mechanics workflows can also be built on modern \code{FEniCSx}
-infrastructure \citep{jia2024fenitop}.
+The surrounding literature separates into high-level FEM and adjoint
+automation, JAX-native differentiable FEM, bridge architectures that combine
+JAX-style local differentiation with established solver environments, and
+parallel topology-optimization workflows. \Cref{sec:related} gives the detailed
+account. The positioning needed here is narrower: we study a
+JAX-local/PETSc-global toolset for sparse nonlinear energy solves, with
+comparison claims limited to the matched definitions and observables stated in
+\Cref{sec:validation}.
 
 \subsection{Contributions}
 \label{sec:intro-contributions}
 
-The contribution is a methods-and-software study of a nonlinear FEM toolset,
-organized around three solver components:
+The contribution is an implemented \jaxpetsc{} scientific toolset for nonlinear
+FEM energy minimization, organized around three solver components:
 \begin{enumerate}
-  \item \textbf{Nonlinear solver policy.} We compare line-search,
+  \item \textbf{Globalized energy minimization.} We compare line-search,
         trust-region, and hybrid globalization choices on representative
         nonlinear finite-element benchmarks, and we keep the reported
-        conclusions tied to the tested problem contracts.
-  \item \textbf{Derivative and assembly routes.} We implement and compare
+        conclusions tied to the tested benchmark definitions.
+  \item \textbf{Derivative construction in sparse assembly.} We implement and compare
         element automatic differentiation, constitutive automatic
         differentiation, and colored sparse finite-difference recovery inside
         the same sparse assembly framework.
-  \item \textbf{Sparse linear solver realization.} We connect the nonlinear and
+  \item \textbf{Distributed PETSc realization.} We connect the nonlinear and
         derivative choices to PETSc Krylov methods and preconditioners,
         including Hypre, GAMG, and problem-specific polynomial multigrid
         policies used in the larger mechanics and topology runs.
@@ -67,14 +54,14 @@ globalization, and preconditioning part of one numerical-method choice rather
 than separate implementation details.
 
 We evaluate these components on six benchmark families: $p$-Laplace, scalar
-Ginzburg--Landau, hyperelasticity, Plasticity2D, \plasticitythree{}, and
-topology optimization. The scalar problems isolate formulation and derivative
-agreement. Hyperelasticity adds finite-strain mechanics and a narrow JAX-FEM
-companion comparison. Plasticity2D and \plasticitythree{} test nonsmooth
-constitutive structure, source-observable agreement, and multigrid policy. Topology
-optimization tests a distributed design-and-mechanics loop. The geomechanics
-context follows the finite-element strength-reduction and 3D slope-stability
-literature
+Ginzburg--Landau, hyperelasticity, two- and three-dimensional
+Mohr--Coulomb-type plasticity, and topology optimization. The scalar problems
+isolate formulation and derivative agreement. Hyperelasticity adds
+finite-strain mechanics and a narrow JAX-FEM companion comparison. The
+plasticity benchmarks test nonsmooth constitutive structure,
+reference-observable agreement, and multigrid policy. Topology optimization
+tests a distributed design-and-mechanics loop. The geomechanics context follows
+the finite-element strength-reduction and 3D slope-stability literature
 \citep{tschuchnigg2015nonassociated,sysala2017returnmapping,sysala2021optimization,sysala2025convexoptimization,sysala2025advancedcontinuation},
 but the plasticity object studied here is explicitly an algorithmic endpoint
 surrogate, not a claim of path-consistent incremental-history equivalence.
@@ -88,7 +75,7 @@ information enters the workflow, the parallel execution model, and the benchmark
 families closest to our suite. \Cref{tab:sota-comparison} summarizes that
 comparison using conservative, source-backed descriptors.
 
-\begin{table}[tbp]
+\begin{table}[H]
   \centering
   \scriptsize
   \setlength{\tabcolsep}{3pt}
@@ -119,19 +106,21 @@ into benchmarked PETSc sparse assembly, Krylov solves, and nonlinear
 globalization for benchmark families that include topology optimization and 3D
 Mohr--Coulomb-type mechanics.
 
-The resulting positioning statement is intentionally modest. The toolset is not
-presented as a general differentiable-PDE platform, nor as a replacement for the
-high-level FEM and adjoint ecosystems cited above. It is presented as a
-\jaxpetsc{} workflow for distributed nonlinear energy minimization and
-equilibrium solves in which derivative fidelity, sparse assembly, nonlinear
-globalization, and preconditioner policy are all part of the experimental design
-rather than merely implementation detail.
+The comparison in \Cref{tab:sota-comparison} therefore places the present
+toolset between high-level FEM and adjoint ecosystems, JAX-native
+differentiable mechanics, and recent JAX--solver bridge architectures. Its
+distinguishing feature is the joint treatment of local differentiation,
+PETSc-owned sparse MPI assembly, nonlinear globalization, and preconditioner
+policy across a heterogeneous benchmark suite. The \purejax{}, \fenics{},
+JAX-FEM, and reference-family tests serve as scoped reference surfaces for
+specific benchmark definitions and observables.
 
 The paper is organized as follows. \Cref{sec:related} deepens the literature
 context behind the summary above. \Cref{sec:methodology} describes the common
 finite-element energy notation, derivative routes, nonlinear globalization, and
-sparse derivative recovery. \Cref{sec:implementation} explains how these ideas
-are realized through \purejax{}, \fenics{}, and \jaxpetsc{} paths.
+sparse derivative recovery. \Cref{sec:implementation} explains the mainline
+\jaxpetsc{} implementation and the narrower \purejax{} and \fenics{} reference
+paths used in selected checks.
 \Cref{sec:benchmarks} defines the benchmark suite, with each benchmark separated
 into literature model and implemented discrete problem. \Cref{sec:validation}
 then reports validation and external-comparison evidence, deliberately

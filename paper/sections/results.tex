@@ -6,9 +6,8 @@ equations, discrete energies, and representative states, and
 \Cref{sec:validation} separated the validation and external-comparison
 evidence. Here we focus on parallel timings, scaling trends, solver behavior,
 and the comparative cost of alternative derivative or discretization choices.
-Evidence from older timing studies is retained when it is still informative for
-workflow viability, but it is labeled as timing evidence rather than merged into
-the validation story.
+Earlier timing evidence is retained when it clarifies scalability, but it is
+treated as performance evidence rather than validation evidence.
 
 \subsection{Globalization Method Comparison}
 \label{sec:num-globalization}
@@ -56,10 +55,10 @@ rather than a universal preference for any single globalization strategy.
   \label{tab:globalization-method-compare}
 \end{table}
 
-The Ginzburg--Landau row is also rerun as a fixed-budget scalar probe on
-the level-10 mesh with eight MPI ranks, so every policy reaches the nonlinear
-solver rather than timing out during setup. \Cref{tab:gl-globalization-fixed-budget}
-reports this cleaned scalar-nonconvex comparison separately from the
+We additionally evaluate the Ginzburg--Landau level-10 case under an eight-rank
+budget in which all policies reach the nonlinear solver rather than timing out
+during setup. \Cref{tab:gl-globalization-fixed-budget}
+reports this scalar-nonconvex comparison separately from the
 multi-family table above. Its purpose is narrower: it checks whether the
 trust-region conclusions survive when the setup budget is not the dominant
 failure mode.
@@ -79,7 +78,7 @@ failure mode.
 
 \Cref{tab:derivative-route-compare} isolates the cost of the second-order
 route on three representative local cases. The $p$-Laplace rows reuse the
-curated level-9, 32-rank timing data. The hyperelasticity rows run only
+selected level-9, 32-rank timing data. The hyperelasticity rows run only
 the first level-4 load step and intentionally use the replicated element path
 for both routes, because the rank-local hyperelasticity configuration does not use
 colored SFD. This makes the row a derivative-route comparison rather than a
@@ -103,7 +102,7 @@ $P_2(L_1)$ case, not by an under-colored finite-difference reconstruction.
   \input{tables/generated/derivative_route_compare.tex}
   \caption{Local derivative-route comparison. Colored SFD denotes local
   subgraph finite-difference Hessian recovery; the SFD-color range is shown
-  where the current run records per-rank color counts.}
+  where per-rank color counts are available.}
   \label{tab:derivative-route-compare}
 \end{table}
 
@@ -157,8 +156,7 @@ The Ginzburg--Landau family from \Cref{sec:bench-gl,eq:gl-discrete} shows the
 same high-level derivative story under a more indefinite linearization. The
 important computational message is not a dramatic separation between exact and
 approximate second-order routes, but that the distributed solver remains
-convergent on this nonconvex scalar energy with the same sparse-infrastructure
-contract.
+convergent on this nonconvex scalar energy with the same sparse infrastructure.
 
 \begin{figure}[H]
   \centering
@@ -271,7 +269,7 @@ The Plasticity2D model and Davis-B reduction are defined in
 \Cref{sec:bench-plasticity2d,eq:plasticity2d-discrete,eq:plasticity2d-davis}.
 For this family, the most informative computational evidence in the present
 paper is not a single strong-scaling curve. The benchmark section separates the
-curated endpoint row from the larger fixed-work diagnostics in
+completed endpoint case from the larger fixed-work diagnostics in
 \Cref{fig:plasticity2d-energy-levels,tab:plasticity2d-benchmark}, and the
 source-continuation comparison is collected later in \Cref{sec:solver-evidence}.
 

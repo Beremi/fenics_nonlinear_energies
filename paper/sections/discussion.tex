@@ -1,60 +1,56 @@
 \label{sec:discussion}
 
-The results support four main conclusions.
+The results support one methodological conclusion: in large nonlinear FEM,
+local differentiation and sparse solver engineering must be designed together.
+Across the benchmark suite, derivative routes, globalization, ownership layout,
+and preconditioner policy affect cost and robustness even when terminal
+observables agree. The remaining conclusions specify where this claim is
+supported by the present evidence.
 
-\paragraph{Constitutive AD is fastest in the fixed high-order
-Plasticity3D derivative test.}
+\paragraph{Derivative routes interact with the sparse solver.}
 \Cref{fig:plasticity3d-derivative-ablation,tab:plasticity3d-derivative-ablation}
-show a clean cost-quality picture on the fixed
-$P_4(L_1)$, $\lambda_{\mathrm{sr}}=1.5$, 8-rank case. All three routes
-reach essentially the same terminal state with the same nonlinear and Krylov
-counts, so the comparison is about cost rather than about different converged
-solutions. In this fixed test, constitutive AD preserves the scalar-energy
-implementation contract while reducing wall time substantially relative to full
-element AD and colored SFD.
+show a clean cost-quality picture on the fixed $P_4(L_1)$,
+$\lambda_{\mathrm{sr}}=1.5$, 8-rank case. All three routes reach essentially
+the same terminal state with the same nonlinear and Krylov counts, so the
+comparison is about derivative cost rather than about different converged
+solutions. In this fixed test, constitutive AD preserves the same scalar-energy
+definition while reducing wall time substantially relative to full element AD
+and colored SFD.
 
-\paragraph{Validation has to be separated by claim level.}
+\paragraph{Validation is organized by claim level.}
 The Plasticity3D validation ladder in
 \Cref{fig:plasticity3d-validation,tab:plasticity3d-validation} supports a
 scoped mechanics interpretation. The tested endpoint surrogate agrees closely
-with the source-family observables reported here, and the fixed-$\lambda_{\mathrm{sr}}$
+with the reported reference observables, and the fixed-$\lambda_{\mathrm{sr}}$
 reference-operator comparison satisfies the endpoint field-agreement thresholds
-after matching the glued-bottom boundary contract. The evidence therefore
-supports the intended endpoint surrogate for the tested cases, but it does not
-establish path-consistent incremental elastoplastic-history equivalence or a
-verified numeric reproduction of the Sysala source-family papers.
+after matching the glued-bottom boundary conditions and free-DOF mask. The
+evidence supports the intended endpoint surrogate for the tested cases, but it
+does not establish path-consistent incremental elastoplastic-history
+equivalence or a verified numeric reproduction of the cited incremental-history
+studies.
 
-\paragraph{Matched external baselines are useful when the contract is narrow.}
+\paragraph{External baselines are useful when definitions are matched.}
 The hyperelastic companion comparison against JAX-FEM in
 \Cref{fig:hyperelasticity-jaxfem-baseline,tab:hyperelasticity-jaxfem-baseline}
 is informative because the mesh, prescribed displacement schedule, and
 terminal-state energy evaluation are explicitly matched. The terminal states
 are post-compared with the energy in
 \cref{eq:hyperelasticity-energy}; the resulting energy and field differences
-are very small. The comparison is useful precisely because it is narrow and
-hyperelastic-only. The paper should not generalize it into a broad ranking
-between frameworks or into plasticity validation, but it does strengthen the
-manuscript by showing that at least one recent external implementation can be
-matched on a shared hyperelastic problem contract.
+are very small. Its role is solver-consistency evidence for this hyperelastic
+benchmark: under a matched mesh, displacement schedule, and terminal-energy
+post-comparison, the \jaxpetsc{} and JAX-FEM terminal states agree closely.
 
 \paragraph{Scope of the evidence.}
 The same evidence also defines the scope of the conclusions. The auxiliary
 Plasticity3D strong
 scaling study at $\lambda_{\mathrm{sr}}=1.0$ remains timing evidence, while
 the newer glued-bottom $\lambda_{\mathrm{sr}}=1.55$ scaling sweep is the
-converged comparison tied to the benchmark. The topology study is
-reported as end-to-end workflow scaling rather than fixed-work strong scaling.
-Some reference-operator PMG studies remain solver-engineering diagnostics rather than
-fully symmetric scientific baselines. These boundaries give the proper
-interpretation of the contribution: a software-and-methods workflow with
-explicit derivative-route choices, explicit validation surfaces, and explicit
-agreement limits.
-
-The broader methodological lesson is that differentiable FEM becomes most
-scientifically useful when local differentiation and sparse solver engineering
-are designed together. Automatic differentiation alone does not settle the
-behavior of large nonlinear FEM workflows; globalization, sparse ownership,
-overlap replication, coarse-level policy, preconditioning, and the interpretation
-of surrogate models matter just as much. Within that scoped claim, the toolset
-contributes a documented nonlinear FEM workflow rather than a universal
-differentiable-PDE platform or a new constitutive theory.
+converged comparison tied to the benchmark. The topology study is reported as
+end-to-end design-and-mechanics scaling rather than fixed-work strong scaling.
+Some reference-operator PMG studies remain solver-engineering diagnostics
+rather than fully symmetric scientific baselines. These distinctions define the
+contribution: a nonlinear FEM toolset with explicit derivative-route choices,
+validation surfaces, and agreement limits. Automatic differentiation alone does
+not determine the behavior of large nonlinear FEM; globalization, sparse
+ownership, overlap replication, coarse-level policy, preconditioning, and
+surrogate-model interpretation are part of the numerical method.

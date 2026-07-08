@@ -1,50 +1,28 @@
 \begin{abstract}
-Large nonlinear finite-element energy problems couple several numerical
-difficulties: local energies and constitutive laws need reliable derivatives,
-Newton-type methods need robust globalization, and distributed runs need sparse
-assembly, Krylov solvers, and preconditioners that match the mechanics of the
-problem. We present a computational toolset for studying these choices together
-in nonlinear finite-element solves and energy-based topology optimization. The
-mainline realization is a \jaxpetsc{} stack in which local
-energies and constitutive laws are written in JAX, while sparse assembly,
-nonlinear globalization, Krylov linear solves, and preconditioning are handled
-by PETSc. The same benchmark suite also includes \purejax{} references and
-\fenics{} references where they are available, so the distributed stack can be
-compared against compact differentiable and high-level FEM formulations. The
-paper studies nonlinear scalar problems ($p$-Laplace and Ginzburg--Landau),
-finite-strain hyperelasticity, two- and three-dimensional Mohr--Coulomb
-plasticity, and topology optimization. Across these families, the
-methodological comparison centers on three routes to second-order information:
-element automatic differentiation, constitutive automatic differentiation, and
-colored sparse finite-difference recovery.
+Large nonlinear finite-element energy problems require reliable local
+derivatives, robust nonlinear globalization, and sparse distributed linear
+algebra that is matched to the mechanics of the problem. We develop a
+computational toolset for studying these requirements together in nonlinear
+finite-element solves and energy-based topology optimization. The mainline
+realization couples JAX local energy and constitutive kernels with PETSc sparse
+assembly, Newton globalization, Krylov solvers, and preconditioners. The
+\purejax{} and \fenics{} formulations, together with narrowly matched external or
+reference-family comparisons, define the comparison surface. The benchmark suite
+covers $p$-Laplace, Ginzburg--Landau, finite-strain hyperelasticity, two- and
+three-dimensional Mohr--Coulomb plasticity, and topology optimization.
 
-We separate validation, derivative-route comparison, and parallel-solver
-behavior. The hyperelastic benchmark includes a serial companion comparison
-against JAX-FEM on a matched mesh and prescribed displacement schedule; all
-predefined agreement quantities are below the 5\% threshold, and the
-displacement-field and energy differences are below $10^{-3}$ under the
-comparison contract. For the three-dimensional
-heterogeneous plasticity benchmark, direct-branch source-observable agreement
-of the endpoint surrogate is tight, with relative differences \num{3.877e-5}
-in work, \num{3.517e-3} in displacement, and \num{8.720e-3} in
-deviatoric-strain norm.
-A separate fixed-load reference-operator diagnostic satisfies the prescribed
-$u_{\max}(\lambda_{\mathrm{sr}})$ and endpoint-displacement checks. These results support the
-implemented endpoint-surrogate workflow for the tested cases, but they do not
-claim path-consistent equivalence to an incremental elastoplastic history solve.
-
-On a fixed $P_4(L_1)$, $\lambda_{\mathrm{sr}}=1.5$, 8-rank plasticity
-derivative comparison, constitutive AD has the lowest median wall time among
-the three tested second-order routes while reaching the same terminal state as
-element AD and colored SFD. In the converged glued-bottom $P_4(L_2)$,
-$\lambda_{\mathrm{sr}}=1.55$ scaling sweep, all single-node and multi-node CPU
-rows take the same nonlinear and Krylov work, while the single-node solver-total
-time drops from \SI{17890}{s} on one rank to \SI{1110}{s} on 32 ranks. The
-topology optimization study complements this with a distributed
-design-and-mechanics workflow that remains operational at $768\times384$
-resolution and 32 ranks.
-Within this scoped evidence, the contribution is a reusable nonlinear FEM
-toolset pattern: derivative-rich local models, sparse nonlinear solver policy,
-and distributed execution can be developed and assessed together across a
-heterogeneous family of energy-based problems.
+Across these problems, we compare element automatic differentiation,
+constitutive automatic differentiation, and colored sparse finite-difference
+recovery as routes to second-order information. The validation evidence
+satisfies the prescribed agreement checks for the matched hyperelasticity and
+Plasticity3D endpoint-surrogate comparisons, without claiming
+path-consistent plastic-history equivalence. In the fixed high-order
+Plasticity3D derivative test, constitutive AD gives the lowest median wall time
+among the three routes while preserving terminal observables; in the converged
+parallel scaling sweep, the nonlinear and Krylov work remain fixed while solver
+time decreases substantially. The topology study adds a distributed
+design-and-mechanics test at $768\times384$ resolution. These results support
+the central methodological point: derivative construction, sparse ownership,
+nonlinear globalization, and preconditioner policy must be designed as one
+numerical method for distributed nonlinear FEM.
 \end{abstract}

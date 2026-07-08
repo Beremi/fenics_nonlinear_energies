@@ -59,11 +59,19 @@ MATLAB/Octave literature only when there is source-backed evidence.
   name. Current chunk removes remaining platform-local labels from the
   Plasticity3D evidence narrative, replacing workstation/Karolina wording with
   single-node and multi-node CPU wording, and uses auxiliary rather than
-  historical for timing-only Plasticity3D evidence.
+  historical for timing-only Plasticity3D evidence. Current narrative chunk
+  shortens the title to the JAX--PETSc toolset, local AD, sparse assembly, and
+  solver-policy message; compresses the abstract from detailed audit prose into
+  a two-paragraph methods-and-evidence summary; and rewrites the conclusion as
+  synthesis plus three scientific extensions rather than caveat management.
 - `INTRO`: positioning and contributions.
   Status: now opens with the nonlinear FEM computational bottleneck and includes
   an explicit contribution block with solver, derivative/assembly, and
-  linear-solver pillars.
+  linear-solver pillars. Current narrative chunk names the implemented
+  \jaxpetsc{} scientific toolset before the contribution list, condenses the
+  first literature tour so the SOTA table and related-work section carry the
+  detailed taxonomy, and states that non-mainline comparisons are matched
+  reference surfaces rather than framework rankings.
 - `RELATED`: literature framing.
   Status: consolidated defensive taxonomy into fewer scientific groups:
   FEM automation, differentiable FEM/AD, nonlinear solver infrastructure,
@@ -90,6 +98,9 @@ MATLAB/Octave literature only when there is source-backed evidence.
   mislabeled as AD only. Paper-facing Plasticity3D PMG prose now uses
   reference-formula and reference-operator labels instead of source-assembly or
   source-operator labels, while preserving the scientific comparison contract.
+  Current narrative chunk changes the framework-overview caption from
+  manuscript/software-structure wording to computational structure and
+  distributed/reference formulation roles.
 - `BENCHMARKS`: mathematical problem coverage.
   Families: p-Laplace, Ginzburg--Landau, Hyperelasticity, Plasticity2D,
   Plasticity3D, Topology.
@@ -112,7 +123,10 @@ MATLAB/Octave literature only when there is source-backed evidence.
   modulus `K`, and avoids overloading the quadrature index with the invariant
   `Q(\varepsilon)`; Topology now states the fine-grid mesh, target volume,
   density floor, elasticity/load data, fixed design pads, frozen element energy,
-  and reduced-objective penalty constants.
+  and reduced-objective penalty constants. Current narrative chunk removes
+  "curated" and "showcase" wording from the Plasticity2D endpoint text and
+  generated summary table, distinguishing the completed endpoint case from
+  fixed-iteration diagnostics.
 - `VALIDATION`: external and source-family comparison.
   Evidence: narrow hyperelastic JAX-FEM comparison; Plasticity3D validation
   ladder with endpoint-surrogate scope.
@@ -126,6 +140,10 @@ MATLAB/Octave literature only when there is source-backed evidence.
   Layer 2. Current chunk writes strength-reduction evidence as
   `\lambda_{\mathrm{sr}}` in prose, captions, and generated tables, and
   describes the fixed-operator diagnostic as a reference-operator diagnostic.
+  Current narrative chunk removes remaining "boundary contract" wording from
+  the validation ladder and changes the JAX-FEM generated table rows from
+  "Contract/gate" to comparison-condition rows with common mesh, common
+  displacement schedule, agreement threshold, and energy re-evaluation labels.
 - `RESULTS`: performance and solver behavior.
   Evidence: globalization comparison, derivative-route comparison, scaling
   studies, hyperelastic and Plasticity3D solver diagnostics, topology scaling.
@@ -147,7 +165,14 @@ MATLAB/Octave literature only when there is source-backed evidence.
   high-order derivative-route test and describes it as the lowest measured wall
   time under matched terminal observables, not a general preference. The
   single-node/multi-node CPU scaling evidence now has matching generated table
-  labels, figure legend labels, and body-text interpretation.
+  labels, figure legend labels, and body-text interpretation. Current narrative
+  chunk removes "older timing/workflow viability" wording from the results
+  opening, recasts the fixed-budget Ginzburg--Landau line as an eight-rank
+  budgeted comparison, replaces "current run records" in a derivative-route
+  caption with availability language, and changes the Hyperelasticity
+  distribution-memory generated table labels from probe/build/result jargon to
+  purpose, assembly layout, outcome, agreement check, memory comparison, and
+  one-linearization terminology.
 - `DISCUSSION_CONCLUSION`: interpretation and scope.
   Current prose states the toolset lesson in paper-facing terms: automatic
   differentiation alone does not determine large nonlinear FEM behavior;
@@ -155,7 +180,10 @@ MATLAB/Octave literature only when there is source-backed evidence.
   preconditioning, and surrogate-model interpretation are part of the numerical
   method. Current chunk reframes caveat-led language as scope of evidence and
   keeps the conclusion tied to fixed-test evidence rather than broad best-path
-  claims.
+  claims. Current narrative chunk moves the discussion's main methodological
+  lesson to the opening, replaces implementation-contract vocabulary with
+  scalar-energy definition and matched-boundary language, and rewrites the
+  future-work paragraph as scientific extensions.
 - `FIGURES_TABLES`: visual and layout quality.
   Current fact: `paper/build/main.pdf` is 37 pages, A4, 10 pt article,
   text width about 7.09 in. Many floats use `[H]`, so placement is highly manual.
@@ -196,7 +224,12 @@ MATLAB/Octave literature only when there is source-backed evidence.
   Plasticity3D definitions, topology/validation transition, and page-22
   validation-to-results transition are readable and unclipped; Section 6 now
   starts on page 20 and Section 7 starts low on page 22, so future validation
-  edits should recheck this boundary.
+  edits should recheck this boundary. Current narrative chunk rebuilt the
+  37-page PDF and visually checked rendered pages 1, 2, 6, 14, 20, 25, 26, 34,
+  and 35. The shorter title/abstract, condensed introduction, implementation
+  caption, Plasticity2D endpoint table, validation comparison table,
+  Hyperelasticity distribution-memory table, discussion, and conclusion are
+  readable and unclipped.
 - `REPRO`: reproducibility and submission readiness.
   Known blockers from `paper/todo.md`: target journal/template/declarations,
   repository license/archive DOI, and archive-neutral provenance for critical
@@ -335,15 +368,29 @@ MATLAB/Octave literature only when there is source-backed evidence.
   topology objective constants and frozen element energy are explicit.
   Remaining low-risk polish: a full display-equation punctuation pass and
   failed-row semantics outside the benchmark-definition scope.
-- `Narrative/style audit` (`Sagan`): completed. Findings not yet addressed in
-  this chunk: compress the abstract, make the introduction and contribution
-  labels more methods-forward, shorten the SOTA transition, and lead the
-  discussion/conclusion with synthesis before caveats.
+- `Narrative/style audit` (`Sagan`): completed. Findings addressed in the
+  current narrative chunk: abstract compressed, title shortened, introduction
+  and contribution labels made more methods-forward, SOTA transition shortened,
+  and discussion/conclusion made synthesis-first.
 - `Layout/provenance benchmark audit` (`Herschel`): completed. Findings
   addressed locally: pages 13--22 were rebuilt and visually checked after the
   benchmark edit; no overfull boxes, unresolved refs, or clipping were found.
   Remaining process note before submission: refresh the reproducibility note
   when preparing a final publish bundle.
+- `Front-matter narrative` (`Huygens`): completed. Findings addressed in the
+  current narrative chunk: title shortened, abstract compressed, comparison
+  surface clarified, duplicated literature setup reduced, and organization text
+  updated for mainline/reference paths.
+- `Back-matter synthesis` (`Mill`): completed. Findings addressed in the
+  current narrative chunk: conclusion opens synthetically, discussion leads with
+  the methodological lesson, contract vocabulary is reduced, and future work is
+  phrased as scientific extensions.
+- `Paper-facing label sweep` (`Kuhn`): completed. Findings partly addressed:
+  implementation caption, Plasticity2D endpoint labels, selected results
+  opening phrases, appendix reproducibility wording, and the JAX-FEM and
+  Hyperelasticity distribution generated table labels were revised. Remaining
+  style work: a broader results-section pass for residual "fixed-work",
+  "probe", "ablation", "row", and topology rank-consistency wording.
 
 ## First Edit Backlog
 
