@@ -2,8 +2,8 @@
 
 The literature most relevant to this manuscript can be organized around four
 questions. How are finite-element models and PDE-constrained optimization
-workflows expressed? Where does automatic differentiation enter the finite-
-element computation? Which mechanics and topology benchmarks define the
+workflows expressed? Where does automatic differentiation enter the
+finite-element computation? Which mechanics and topology benchmarks define the
 scientific problem classes? Which sparse nonlinear solver infrastructure makes
 the resulting methods scalable? We use these questions to position the present
 toolset without ranking the surrounding software ecosystems.
@@ -97,16 +97,14 @@ while Coleman and Mor{\'e} extended the approach to sparse Jacobian and Hessian
 estimation with graph-coloring structure
 \citep{coleman1983sparsejacobian,coleman1984sparsehessian}. PETSc supplies the
 distributed vectors, matrices, Krylov methods, nonlinear solvers, and multigrid
-infrastructure needed to turn those derivative objects into scalable workflows
-\citep{balay1997petsc,petsc2024web}. In this paper, PETSc is not treated as a
-mere back-end library: ownership layout, Krylov policy, nonlinear globalization,
-and preconditioner design are all part of the scientific comparison.
+infrastructure needed to turn those derivative objects into scalable
+distributed algorithms \citep{balay1997petsc,petsc2024web}. In the present
+toolset, PETSc ownership layout, Krylov policy, nonlinear globalization, and
+preconditioner design are part of the numerical method.
 
-Against that background, the niche of the present toolset can be stated
-precisely. It sits between high-level differentiable modeling and scalable sparse
-nonlinear solver engineering. The contribution is not that it replaces the
-ecosystems above, but that it documents one specific point in the contemporary
-design space: implemented distributed nonlinear FEM workflows that combine
-JAX-based local differentiation, multiple second-order routes, and PETSc-based
-sparse execution on benchmark families ranging from scalar nonlinear diffusion
-to topology optimization and 3D Mohr--Coulomb-type mechanics.
+Against that background, the present toolset documents a JAX-local,
+PETSc-sparse design point for distributed nonlinear FEM benchmarks. It combines
+JAX-based local differentiation, multiple second-order routes, PETSc sparse
+execution, nonlinear globalization, and problem-specific preconditioning on
+benchmark families ranging from scalar nonlinear diffusion to topology
+optimization and 3D Mohr--Coulomb-type mechanics.

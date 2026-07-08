@@ -11,7 +11,7 @@ finite-element energy problems. The central object is a JAX+PETSc solver stack
 that couples local automatic differentiation, sparse distributed assembly,
 nonlinear globalization, Krylov linear solvers, and preconditioner policy. The
 comparison surface includes pure JAX and FEniCS reference paths where available,
-external or source-family comparators where the contract is narrow, and legacy
+external or reference-model comparators where the scope is narrow, and legacy
 MATLAB/Octave literature only when there is source-backed evidence.
 
 ## External Style Anchors
@@ -64,6 +64,12 @@ MATLAB/Octave literature only when there is source-backed evidence.
   solver-policy message; compresses the abstract from detailed audit prose into
   a two-paragraph methods-and-evidence summary; and rewrites the conclusion as
   synthesis plus three scientific extensions rather than caveat management.
+  Current notation-and-claims chunk makes the abstract validation wording
+  self-contained, adds PDF title/author metadata, and rewrites the conclusion
+  to name PETSc sparse assembly, Newton globalization, Krylov solvers, and
+  preconditioner policy explicitly. Current label/notation chunk removes the
+  remaining `mainline` wording from the abstract and opening message in favor
+  of primary \jaxpetsc{} realization.
 - `INTRO`: positioning and contributions.
   Status: now opens with the nonlinear FEM computational bottleneck and includes
   an explicit contribution block with solver, derivative/assembly, and
@@ -71,19 +77,36 @@ MATLAB/Octave literature only when there is source-backed evidence.
   \jaxpetsc{} scientific toolset before the contribution list, condenses the
   first literature tour so the SOTA table and related-work section carry the
   detailed taxonomy, and states that non-mainline comparisons are matched
-  reference surfaces rather than framework rankings.
+  reference surfaces rather than framework rankings. Current
+  notation-and-claims chunk replaces remaining comparison-surface and
+  reference-family wording with scoped reference implementations, matched
+  observables, and reference-model diagnostics. Current label/notation chunk
+  narrows the Plasticity3D introduction claim to reference-observable agreement
+  and replaces remaining organization-text `mainline` wording with primary
+  \jaxpetsc{} realization.
 - `RELATED`: literature framing.
   Status: consolidated defensive taxonomy into fewer scientific groups:
   FEM automation, differentiable FEM/AD, nonlinear solver infrastructure,
   topology/plasticity source context, and scalable software comparators.
   FEniTop is now framed as topology-optimization literature context rather than
   a direct baseline, and the Cermak--Sysala--Valdman MATLAB/Octave citation is
-  implementation-lineage context only.
+  implementation-lineage context only. Current notation-and-claims chunk makes
+  the PETSc paragraph affirmative: ownership layout, Krylov policy,
+  globalization, and preconditioner design are part of the numerical method.
 - `METHOD`: mathematical and algorithmic core.
   Current assets: common finite-element energy notation, derivative routes,
   globalization algorithms, colored sparse finite differences, constitutive AD.
   Status: generic algorithms now use the merit functional `\mathcal{F}` rather
   than the hyperelasticity-reserved symbol `J`; prose is more paper-facing.
+  Current notation-and-claims chunk separates finite-element functions from
+  coefficient vectors, defines `x_e=R_e x`, distinguishes load-step potentials
+  `\Pi_h(x;\theta)` from reduced objectives `\mathcal{J}_h(z)`, and defines
+  integrated element contributions versus quadrature-point densities before the
+  derivative-route discussion. Current label/notation chunk makes the
+  free-DOF convention self-contained for nonhomogeneous essential data by
+  introducing `V_{h,0}`, the affine lift `\bar u_h(\theta)`, and the local
+  element state `u_e(x;\theta)`; it also treats topology as a schematic reduced
+  objective rather than a mechanics potential plus regularization.
 - `IMPLEMENTATION`: realization of the method.
   Current assets: pure JAX, FEniCS, and JAX+PETSc strata; autodiff modes;
   Krylov/preconditioner matrix; distributed assembly.
@@ -100,7 +123,11 @@ MATLAB/Octave literature only when there is source-backed evidence.
   source-operator labels, while preserving the scientific comparison contract.
   Current narrative chunk changes the framework-overview caption from
   manuscript/software-structure wording to computational structure and
-  distributed/reference formulation roles.
+  distributed/reference formulation roles. Current label/notation chunk changes
+  the visible implementation heading to `Primary \jaxpetsc{} path` and removes
+  the remaining Figure 1 `mainline` label. Current notation-and-claims chunk
+  removes remaining "hot loop" and "engineering choice" wording and aligns the
+  capability matrix with the Hyperelasticity colored-SFD comparison evidence.
 - `BENCHMARKS`: mathematical problem coverage.
   Families: p-Laplace, Ginzburg--Landau, Hyperelasticity, Plasticity2D,
   Plasticity3D, Topology.
@@ -112,9 +139,9 @@ MATLAB/Octave literature only when there is source-backed evidence.
   stall rule are now stated in the benchmark text. The Plasticity3D branch
   thresholds, return denominators, branch multipliers, and branch energies are
   now defined explicitly in the benchmark section instead of being left implicit.
-  The benchmark specification matrix now labels problem-specific stopping and
-  work definitions as a solve contract and uses configuration-specific rather
-  than campaign-specific wording for Plasticity3D. Current chunk makes the
+  The benchmark specification matrix now labels problem-specific stopping rules
+  as stopping rules and uses configuration-specific rather than
+  campaign-specific wording for Plasticity3D. Current chunk makes the
   benchmark definitions more self-contained: Hyperelasticity now consistently
   uses displacement notation with `F(u)` and `J(u)`; Plasticity2D states the
   slope geometry, boundary conditions, material constants, gravity, zero old
@@ -126,8 +153,9 @@ MATLAB/Octave literature only when there is source-backed evidence.
   and reduced-objective penalty constants. Current narrative chunk removes
   "curated" and "showcase" wording from the Plasticity2D endpoint text and
   generated summary table, distinguishing the completed endpoint case from
-  fixed-iteration diagnostics.
-- `VALIDATION`: external and source-family comparison.
+  fixed-iteration diagnostics. Current notation-and-claims chunk removes
+  remaining visible "showcase" and "corrected glued-bottom" caption wording.
+- `VALIDATION`: external and reference-model comparison.
   Evidence: narrow hyperelastic JAX-FEM comparison; Plasticity3D validation
   ladder with endpoint-surrogate scope.
   Rule: keep validation separate from performance and never imply
@@ -135,23 +163,30 @@ MATLAB/Octave literature only when there is source-backed evidence.
   Status: comparison metrics now state thresholds and the hyperelastic companion
   schedule. The JAX-FEM gate no longer asserts constitutive-law identity; it
   records matched mesh/schedule and terminal post-comparison under the paper
-  energy. Plasticity3D Layer 1A is phrased as direct-branch source-observable
-  agreement, while glued-bottom boundary-contract language is reserved for
-  Layer 2. Current chunk writes strength-reduction evidence as
+  energy. Plasticity3D Layer 1A is phrased as direct-branch observable
+  agreement with the reference formulation, while glued-bottom boundary matching
+  is reserved for Layer 2. Current chunk writes strength-reduction evidence as
   `\lambda_{\mathrm{sr}}` in prose, captions, and generated tables, and
   describes the fixed-operator diagnostic as a reference-operator diagnostic.
   Current narrative chunk removes remaining "boundary contract" wording from
   the validation ladder and changes the JAX-FEM generated table rows from
   "Contract/gate" to comparison-condition rows with common mesh, common
   displacement schedule, agreement threshold, and energy re-evaluation labels.
+  Current notation-and-claims chunk removes source-family/source-observable
+  wording from the validation section and table captions. Current
+  label/notation chunk renames Plasticity3D validation from ladder to sequence,
+  changes Layer 1A wording to direct-branch endpoint-observable agreement with
+  the reference model, replaces remaining source-boundary wording with
+  reference-model boundary conditions, and regenerates the validation figures so
+  visible labels read `reference model`.
 - `RESULTS`: performance and solver behavior.
   Evidence: globalization comparison, derivative-route comparison, scaling
   studies, hyperelastic and Plasticity3D solver diagnostics, topology scaling.
   Status: a synthesis subsection now states what the result blocks establish:
   nonlinear policy is problem-dependent, multiple derivative routes are useful,
   sparse ownership/preconditioning are part of the numerical method, and the
-  \jaxpetsc{} mainline remains the scalable path while serial/external
-  formulations serve scoped reference roles. Plasticity3D result prose now marks
+  primary \jaxpetsc{} realization solves the largest tested cases while
+  serial/external formulations serve scoped reference roles. Plasticity3D result prose now marks
   the fixed P4(L1), lambda=1.5 derivative ablation as Hypre-backed rank-local
   timing evidence and separates it from the MUMPS-backed PMG convergence/scaling
   evidence at lambda=1.55. The converged P4(L2), lambda=1.55 scaling table now
@@ -183,6 +218,10 @@ MATLAB/Octave literature only when there is source-backed evidence.
   as fixed-cost, fixed-nonlinear-work, or single-linearization comparisons; and
   regenerates result tables with `Outcome`, `Linearization`, `Nonlinear work`,
   and `Schedule` labels instead of generic `Result` or `fixed work` cells.
+  Current label/notation chunk renames the benchmark-specification column from
+  `Stopping rule` to `Solve policy`, aligns the Plasticity3D CPU scaling caption
+  with `CPU setting`, and converts visible JAX-FEM/Plasticity3D figure
+  annotations from raw `e` notation to rendered scientific notation.
 - `DISCUSSION_CONCLUSION`: interpretation and scope.
   Current prose states the toolset lesson in paper-facing terms: automatic
   differentiation alone does not determine large nonlinear FEM behavior;
@@ -193,7 +232,10 @@ MATLAB/Octave literature only when there is source-backed evidence.
   claims. Current narrative chunk moves the discussion's main methodological
   lesson to the opening, replaces implementation-contract vocabulary with
   scalar-energy definition and matched-boundary language, and rewrites the
-  future-work paragraph as scientific extensions.
+  future-work paragraph as scientific extensions. Current notation-and-claims
+  chunk makes the discussion endpoint-scoped for Plasticity3D, quotes the
+  hyperelastic comparison discrepancy scale, and classifies solver-policy
+  diagnostics separately from symmetric external comparisons.
 - `FIGURES_TABLES`: visual and layout quality.
   Current fact: `paper/build/main.pdf` is 37 pages, A4, 10 pt article,
   text width about 7.09 in. Many floats use `[H]`, so placement is highly manual.
@@ -248,7 +290,12 @@ MATLAB/Octave literature only when there is source-backed evidence.
   and visually checked rendered pages 23, 24, 26, 27, 28, 29, and 32. The
   globalization/derivative-route outcome tables, Plasticity3D linearization
   table, Hyperelasticity memory/PMG tables, and topology schedule table are
-  readable, unclipped, and within the text block.
+  readable, unclipped, and within the text block. Current label/notation chunk
+  rebuilt the 37-page PDF after targeted figure regeneration and visually
+  checked rendered pages 1, 6, 7, 20, 21, and 30. The abstract/opening, primary
+  \jaxpetsc{} implementation heading, Figure 1, JAX-FEM panels, Plasticity3D
+  validation sequence, and CPU-scaling caption are readable, unclipped, and free
+  of the flagged raw labels.
 - `REPRO`: reproducibility and submission readiness.
   Known blockers from `paper/todo.md`: target journal/template/declarations,
   repository license/archive DOI, and archive-neutral provenance for critical
@@ -448,6 +495,21 @@ MATLAB/Octave literature only when there is source-backed evidence.
   Remaining layout risk: `[H]` float placement, the dense SOTA table, and the
   Plasticity3D scaling table should be revisited after a target journal template
   is chosen.
+- `Front/back matter label audit` (`Curie-current`): completed. Findings
+  addressed in the current label/notation chunk: reference-formulation wording
+  was narrowed to reference-observable agreement, and Plasticity3D diagnostic
+  ladder wording was replaced by validation sequence. The SOTA `SNES` note
+  remains a later clarity polish rather than a blocker.
+- `Method/math consistency audit` (`Lovelace-current`): completed. Findings
+  addressed in the current label/notation chunk: free-DOF and affine-lift
+  notation is explicit, `u_e` is defined, the topology objective is no longer
+  overstated as a mechanics potential plus regularization, and the benchmark
+  table now says `Solve policy`.
+- `Figure/table label audit` (`Tesla-current`): completed. Findings addressed
+  in the current label/notation chunk: visible `mainline` wording was removed,
+  JAX-FEM and Plasticity3D validation figure annotations use LaTeX scientific
+  notation rather than raw `e` notation, and only semantically changed figure
+  assets should be staged; metadata-only figure churn should remain unstaged.
 
 ## First Edit Backlog
 

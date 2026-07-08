@@ -143,6 +143,18 @@ def _degree_math_label(degree: object) -> str:
     return rf"${_degree_math(degree)}$"
 
 
+def _latex_scientific(value: float, digits: int = 2) -> str:
+    if value == 0:
+        return "0"
+    exponent = int(np.floor(np.log10(abs(value))))
+    mantissa = value / (10.0**exponent)
+    rounded = round(mantissa, digits)
+    if abs(rounded) >= 10.0:
+        rounded /= 10.0
+        exponent += 1
+    return rf"{rounded:.{digits}f}\times 10^{{{exponent}}}"
+
+
 def _read_json(path: Path) -> dict:
     return json.loads(path.read_text(encoding="utf-8"))
 
@@ -1497,7 +1509,7 @@ def generate_framework_overview(layout: dict[str, float]) -> str:
         (0.25, 0.15),
         title="",
         body=[
-            "JAX+PETSc mainline",
+            "JAX+PETSc realization",
             "Newton--Krylov + PMG",
         ],
         facecolor="#e6f0fb",
@@ -1642,7 +1654,7 @@ def _plot_plasticity3d_validation_surface_compare(
         cmap_name="cividis",
         norm=diff_norm,
     )
-    for ax, title in zip(axes, ("source", "JAX+PETSc", r"$|\Delta \|u\||$"), strict=True):
+    for ax, title in zip(axes, ("reference model", "JAX+PETSc", r"$|\Delta \|u\||$"), strict=True):
         ax.set_title(title, pad=1.8, fontsize=8.0)
 
     cax_main = fig.add_subplot(gs[1, :2])
@@ -1703,7 +1715,7 @@ def generate_plasticity3d_validation_umax_curve(layout: dict[str, float]) -> str
     rel_l2 = float(dict(summary["layer2"])["umax_curve_relative_l2"])
 
     fig, ax = plt.subplots(figsize=paper_figure_size(layout, preset="medium", height_ratio=0.42))
-    ax.plot(x, source, marker="o", linewidth=1.8, markersize=4.5, color="#111111", label="source")
+    ax.plot(x, source, marker="o", linewidth=1.8, markersize=4.5, color="#111111", label="reference model")
     ax.plot(x, maintained, marker="s", linewidth=1.6, markersize=4.3, color="#777777", linestyle="--", label="JAX+PETSc")
     ax.set_xlabel(r"$\lambda_{\mathrm{sr}}$")
     ax.set_ylabel(r"$u_{\max}$")
@@ -1712,7 +1724,7 @@ def generate_plasticity3d_validation_umax_curve(layout: dict[str, float]) -> str
     ax.text(
         0.98,
         0.05,
-        rf"rel. $L^2={rel_l2:.2e}$",
+        rf"rel. $L^2={_latex_scientific(rel_l2)}$",
         transform=ax.transAxes,
         ha="right",
         va="bottom",
@@ -1759,14 +1771,14 @@ def generate_jax_fem_hyperelastic_baseline_energy_history(layout: dict[str, floa
     rel_diff = float(dict(summary["final_metrics"])["energy_rel_diff"])
 
     fig, ax = plt.subplots(figsize=paper_figure_size(layout, preset="subfigure", height_ratio=0.72))
-    ax.plot(steps, repo, marker="o", linewidth=1.6, markersize=4.0, color="#111111", label="repo")
+    ax.plot(steps, repo, marker="o", linewidth=1.6, markersize=4.0, color="#111111", label="JAX+PETSc")
     ax.plot(steps, jax_fem, marker="s", linewidth=1.4, markersize=3.8, color="#777777", linestyle="--", label="JAX-FEM")
     ax.set_xlabel("Load step")
     ax.set_ylabel("Stored energy")
     ax.set_xticks(steps)
     ax.grid(True, alpha=0.25)
     ax.legend(frameon=False, loc="best", handlelength=1.7)
-    ax.text(0.03, 0.95, rf"terminal rel. diff. $={rel_diff:.2e}$", transform=ax.transAxes, ha="left", va="top", fontsize=7.0)
+    ax.text(0.03, 0.95, rf"terminal rel. diff. $={_latex_scientific(rel_diff)}$", transform=ax.transAxes, ha="left", va="top", fontsize=7.0)
     fig.subplots_adjust(left=0.20, right=0.97, bottom=0.23, top=0.95)
     out = FIGURES_ROOT / "jax_fem_hyperelastic_baseline_energy_history.pdf"
     save_pdf_and_png(fig, out, png_dpi=240)
@@ -1786,13 +1798,13 @@ def generate_jax_fem_hyperelastic_baseline_centerline(layout: dict[str, float]) 
     rel_l2 = float(dict(summary["final_metrics"])["centerline_relative_l2"])
 
     fig, ax = plt.subplots(figsize=paper_figure_size(layout, preset="subfigure", height_ratio=0.72))
-    ax.plot(repo_profile["x"], repo_profile["ux"], marker="o", linewidth=1.6, markersize=4.0, color="#111111", label="repo")
+    ax.plot(repo_profile["x"], repo_profile["ux"], marker="o", linewidth=1.6, markersize=4.0, color="#111111", label="JAX+PETSc")
     ax.plot(jax_profile["x"], jax_profile["ux"], marker="s", linewidth=1.4, markersize=3.8, color="#777777", linestyle="--", label="JAX-FEM")
     ax.set_xlabel(r"Reference $x$")
     ax.set_ylabel(r"Centerline $u_x$")
     ax.grid(True, alpha=0.25)
     ax.legend(frameon=False, loc="best", handlelength=1.7)
-    ax.text(0.03, 0.95, rf"rel. $L^2={rel_l2:.2e}$", transform=ax.transAxes, ha="left", va="top", fontsize=7.0)
+    ax.text(0.03, 0.95, rf"rel. $L^2={_latex_scientific(rel_l2)}$", transform=ax.transAxes, ha="left", va="top", fontsize=7.0)
     fig.subplots_adjust(left=0.20, right=0.97, bottom=0.23, top=0.95)
     out = FIGURES_ROOT / "jax_fem_hyperelastic_baseline_centerline.pdf"
     save_pdf_and_png(fig, out, png_dpi=240)

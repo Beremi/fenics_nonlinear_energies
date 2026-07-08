@@ -10,7 +10,7 @@ frameworks.
 \begin{table}[H]
   \centering
   \input{tables/generated/benchmark_specification_matrix.tex}
-  \caption{Benchmark families, stopping rules, and principal comparison paths.
+  \caption{Benchmark families, solve policies, and principal comparison paths.
   The later numerical section revisits the same families from the timing and
   scaling viewpoint.}
   \label{tab:benchmark-spec}
@@ -89,7 +89,7 @@ geometric complications.
   \centering
   \input{tables/generated/plaplace_benchmark_summary.tex}
   \caption{Representative final discrete energies from
-  \cref{eq:plaplace-discrete} on the showcase case.}
+  \cref{eq:plaplace-discrete} on the selected case.}
   \label{tab:plaplace-benchmark}
 \end{table}
 
@@ -152,7 +152,7 @@ indefinite local curvature from the double-well potential in
   \sin\!\left(\frac{\pi(y-1)}{2}\right),
 \]
 restricted to the free degrees of freedom, so the nonconvex branch selection
-is part of the benchmark contract.
+is part of the benchmark definition.
 
 \begin{figure}[H]
   \centering
@@ -175,7 +175,7 @@ is part of the benchmark contract.
   \centering
   \input{tables/generated/ginzburg_landau_benchmark_summary.tex}
   \caption{Representative final discrete energies associated with
-  \cref{eq:gl-discrete} on the showcase case.}
+  \cref{eq:gl-discrete} on the selected case.}
   \label{tab:gl-benchmark}
 \end{table}
 
@@ -371,7 +371,7 @@ angle, respectively, the benchmark uses
   \psi_{\lambda} &= \arctan\!\left(\beta \tan \psi_1\right),
   \label{eq:plasticity2d-davis}
 \end{align}
-The showcase endpoint runs in this paper use $\lambda_{\mathrm{sr}} = 1$ and
+The reported endpoint runs in this paper use $\lambda_{\mathrm{sr}} = 1$ and
 $\psi = 0^\circ$, hence $\psi_{\lambda}=0^\circ$; the reported states should
 therefore be read as algorithmic endpoint surrogates rather than
 path-consistent history updates.
@@ -458,7 +458,7 @@ displacement boundary regions, and an additional glued-bottom condition that
 fixes every node with $|y| \le 10^{-12}$ in all three displacement components.
 We write $P_k(L_\ell)$ for polynomial degree $k$ on mesh level $\ell$ and use
 $L_1,\ldots,L_4$ for the four displayed mesh levels.
-The figures below use the corrected glued-bottom $P_4(L_2)$ showcase at
+The figures below use the glued-bottom $P_4(L_2)$ representative endpoint at
 $\lambda_{\mathrm{sr}}=1.55$ and the finished nine-case study
 at the same load factor. The $\lambda_{\mathrm{sr}}=1.0$ strong-scaling
 study is kept later in the paper as separate auxiliary timing evidence.
@@ -685,7 +685,7 @@ For the strain visualizations in this paper we use the deviatoric norm
     \varepsilon
   },
   \qquad
-  m = (1,1,1,0,0,0)^T,
+  m = (1,1,1,0,0,0)^\top,
   \label{eq:plasticity3d-devnorm}
 \end{equation}
 which matches the engineering-shear convention of
@@ -694,23 +694,24 @@ which matches the engineering-shear convention of
 Because \cref{eq:plasticity3d-discrete,eq:plasticity3d-potential} define an
 algorithmic endpoint surrogate rather than a path-consistent incremental
 history functional, the results section reports this family with a separate
-validation ladder. Direct-branch reference-observable agreement for the
-endpoint surrogate is treated separately from a fixed-$\lambda_{\mathrm{sr}}$
-reference-operator comparison. The latter checks reference-family behavior under matched geometry,
-materials, Davis-B reduction parameters, load schedule, and glued-bottom
-free-DOF mask, but it is not a path-consistent incremental-history validation.
+validation sequence. Direct-branch endpoint-observable agreement with the
+reference model for the endpoint surrogate is treated separately from a
+fixed-$\lambda_{\mathrm{sr}}$ reference-operator comparison. The latter checks
+matched geometry, materials, Davis-B reduction parameters, load schedule, and
+glued-bottom free-DOF mask, but it is not a path-consistent
+incremental-history validation.
 The paper therefore keeps the Plasticity3D claims at the level of a
 problem-specific endpoint surrogate rather than a path-consistent
 replacement. The related
 return-mapping, optimization, convex-optimization, and continuation literature
-\citep{sysala2017returnmapping,sysala2021optimization,sysala2025convexoptimization,sysala2025advancedcontinuation} is used as
-reference-family context, not as evidence that this endpoint surrogate is a full
-incremental elastoplastic solver.
+\citep{sysala2017returnmapping,sysala2021optimization,sysala2025convexoptimization,sysala2025advancedcontinuation}
+is used as reference-model context, not as evidence that this endpoint
+surrogate is a full incremental elastoplastic solver.
 
 \begin{figure}[H]
   \centering
   \includegraphics[width=\PaperFigureMedium]{plasticity3d_state_pair.pdf}
-  \caption{Corrected glued-bottom Plasticity3D showcase at
+  \caption{Glued-bottom Plasticity3D representative endpoint at
   $\lambda_{\mathrm{sr}}=1.55$: displacement magnitude and surface deviatoric
   strain for the $P_4(L_2)$ run, both derived from the
   scalar surrogate in
@@ -721,8 +722,8 @@ incremental elastoplastic solver.
 \begin{figure}[H]
   \centering
   \includegraphics[width=\PaperFigureMedium]{plasticity3d_convergence.pdf}
-  \caption{Newton-history convergence for all nine completed corrected
-  glued-bottom Plasticity3D study runs at
+  \caption{Newton-history convergence for all nine completed glued-bottom
+  Plasticity3D study runs at
   $\lambda_{\mathrm{sr}}=1.55$. The upper panel shows the value of the
   algorithmic surrogate from \cref{eq:plasticity3d-discrete}; the lower panel
   shows the gradient norm used as the nonlinear stopping metric, with color
@@ -746,7 +747,7 @@ incremental elastoplastic solver.
   $\|\varepsilon_{\mathrm{dev}}\|$ from \cref{eq:plasticity3d-devnorm} at the
   highest mesh level of each degree line:
   $P_1(L_4)$, $P_2(L_3)$, and $P_4(L_2)$. The three
-  runs use the corrected glued-bottom solver stack at
+  runs use the glued-bottom solver configuration at
   $\lambda_{\mathrm{sr}} = 1.55$ and are compared on one common color scale.}
   \label{fig:plasticity3d-highest-slice}
 \end{figure}

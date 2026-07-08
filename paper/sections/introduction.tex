@@ -10,13 +10,13 @@ only a modeling interface, but also the derivative route, assembly layout,
 nonlinear solver policy, and preconditioner design.
 
 We develop and evaluate this design point through a solver-centered toolset for
-nonlinear finite-element energy solves and optimization. In the mainline
+nonlinear finite-element energy solves and optimization. In the primary
 \jaxpetsc{} realization, JAX represents local energies and constitutive laws,
 while PETSc owns sparse vectors and matrices, nonlinear globalization, Krylov
 methods, and preconditioners. The \purejax{} and \fenics{} formulations provide
-reference paths where they are available, and external or reference-family
-comparisons are used only when the benchmark definition and observables are
-explicitly matched. This comparison surface lets us study derivative and solver
+scoped reference implementations where they are available, and external
+comparisons are restricted to explicitly matched benchmark definitions and
+observables. These matched reference checks let us study derivative and solver
 choices for nonlinear energy minimization without ranking full software
 ecosystems.
 
@@ -112,19 +112,20 @@ differentiable mechanics, and recent JAX--solver bridge architectures. Its
 distinguishing feature is the joint treatment of local differentiation,
 PETSc-owned sparse MPI assembly, nonlinear globalization, and preconditioner
 policy across a heterogeneous benchmark suite. The \purejax{}, \fenics{},
-JAX-FEM, and reference-family tests serve as scoped reference surfaces for
-specific benchmark definitions and observables.
+JAX-FEM, and reference-model tests serve as scoped checks for specific benchmark
+definitions and observables.
 
 The paper is organized as follows. \Cref{sec:related} deepens the literature
 context behind the summary above. \Cref{sec:methodology} describes the common
 finite-element energy notation, derivative routes, nonlinear globalization, and
-sparse derivative recovery. \Cref{sec:implementation} explains the mainline
+sparse derivative recovery. \Cref{sec:implementation} explains the primary
 \jaxpetsc{} implementation and the narrower \purejax{} and \fenics{} reference
 paths used in selected checks.
 \Cref{sec:benchmarks} defines the benchmark suite, with each benchmark separated
 into literature model and implemented discrete problem. \Cref{sec:validation}
 then reports validation and external-comparison evidence, deliberately
-separating hyperelastic JAX-FEM agreement from the Plasticity3D source-family
-diagnostic ladder. \Cref{sec:numerical-examples} reports timing, scaling,
-derivative-route, and discretization-comparison evidence, followed by supporting
-solver evidence and a discussion of limitations.
+separating hyperelastic JAX-FEM agreement from the Plasticity3D
+reference-model validation sequence. \Cref{sec:numerical-examples} reports timing, scaling,
+derivative-route, and discretization-comparison evidence.
+\Cref{sec:solver-evidence} adds solver-policy diagnostics, followed by a
+discussion of limitations.

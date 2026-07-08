@@ -8,7 +8,7 @@ Family & Modeling & Differentiation & Second-order route & Parallel & Closest ov
 \shortstack[l]{JetSCI\\\citep{cattaneo2026jetsci}} & JAX local discretizations plus PETSc sparse solves & JAX-differentiated discretization kernels & Differentiable simulation kernels with PETSc solves & JAX/GPU within node; PETSc MPI across nodes & Heterogeneous micromechanics \\
 \shortstack[l]{Firedrake--JAX\\FEniCSx ext. ops\\\citep{yashchuk2023bringing,latyshev2025externaloperators}} & Host FEM stack plus AD bridge & Tangent, adjoint, or local constitutive AD & Local-operator derivatives, not full sparse Hessians & Host framework parallel back end & Parameterized PDEs and constitutive models \\
 \shortstack[l]{JAX-CPFEM\\\citep{hu2025jaxcpfem}} & JAX-native crystal-plasticity FEM & Differentiable constitutive simulator & AD constitutive derivatives & GPU-oriented execution & Crystal plasticity \\
-\shortstack[l]{FEniTop\\\citep{jia2024fenitop}} & FEniCSx topology code & Sensitivity-based design updates & Not a second-order solver paper & Parallel FEniCSx workflow & 2D and 3D topology optimization \\
+\shortstack[l]{FEniTop\\\citep{jia2024fenitop}} & FEniCSx topology code & Sensitivity-based design updates & Not a second-order solver paper & Parallel FEniCSx realization & 2D and 3D topology optimization \\
 This work & JAX local energies plus PETSc sparse solvers & Element AD, constitutive AD, and colored SFD & Local Hessians/tangents or sparse recovery & PETSc MPI vectors, matrices, SNES, and multigrid & $p$-Laplace, GL, hyperelasticity, plasticity, topology \\
 \bottomrule
 \end{tabular*}

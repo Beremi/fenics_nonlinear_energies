@@ -886,7 +886,7 @@ def main() -> None:
             [
                 "Topology",
                 f"parallel JAX+PETSc, $768\\times384$, 32 ranks: {fmt_wall_time(float(topo_highlight['wall_time_s']))} s",
-                "Distributed design updates and PETSc mechanics deliver a stable fine-grid workflow while pure JAX remains the serial formulation reference.",
+                "Distributed design updates and PETSc mechanics deliver stable fine-grid end-to-end timing while pure JAX remains the serial formulation reference.",
             ],
         ],
     )
@@ -898,7 +898,7 @@ def main() -> None:
         [
             ["$p$-Laplace", "yes", "yes", "yes", "element AD and local colored SFD"],
             ["Ginzburg--Landau", "yes", "no", "yes", "element AD and local colored SFD"],
-            ["Hyperelasticity", "yes", "yes", "yes", "trust-region element AD"],
+            ["Hyperelasticity", "yes", "yes", "yes", "element AD, colored SFD comparison, and trust-region solves"],
             ["Plasticity2D", "no", "no", "yes", "scalarized endpoint potential and same-mesh PMG"],
             ["Plasticity3D", "no", "no", "yes", "constitutive AD, element AD, and same-mesh PMG"],
             ["Topology optimization", "no", "yes", "yes", "distributed design updates and PETSc mechanics"],
@@ -915,12 +915,12 @@ def main() -> None:
         + " "
         + pcol(r"0.26\textwidth")
         + "@{}",
-        ["Family", "Grid / mesh", "Solve contract", "Compared paths", "Main difficulty"],
+        ["Family", "Grid / mesh", "Solve policy", "Compared paths", "Main difficulty"],
         [
             ["$p$-Laplace", mesh_label("L9"), "Newton + line search", "FEniCS, pure JAX, JAX+PETSc", "nonlinear elliptic solve with exact sparse Hessians"],
             ["Ginzburg--Landau", mesh_label("L9"), "Newton + line search", "FEniCS, JAX+PETSc", "indefinite local curvature from the double well"],
             ["Hyperelasticity", f"{mesh_label('L4')}, 24 steps", "trust-region path", "FEniCS, pure JAX, JAX+PETSc", "nonconvex large-deformation mechanics"],
-            ["Plasticity2D", f"{element_label('P4', 'L5')}--{element_label('P4', 'L7')}", "endpoint or fixed work", "JAX+PETSc only", "same-mesh PMG and nonlinear tail behavior"],
+            ["Plasticity2D", f"{element_label('P4', 'L5')}--{element_label('P4', 'L7')}", "endpoint solve or fixed nonlinear work", "JAX+PETSc only", "same-mesh PMG and nonlinear tail behavior"],
             ["Plasticity3D", f"{degree_label('P1')}/{degree_label('P2')}/{degree_label('P4')}", "configuration-specific", "constitutive and reference PMG variants", "heterogeneous 3D Mohr--Coulomb with constitutive AD"],
             ["Topology", "$768\\times384$", "stall-stop continuation", "pure JAX, JAX+PETSc", "distributed design-mechanics coupling"],
         ],
@@ -1022,7 +1022,7 @@ def main() -> None:
                 "FEniCSx topology code",
                 "Sensitivity-based design updates",
                 "Not a second-order solver paper",
-                "Parallel FEniCSx workflow",
+                "Parallel FEniCSx realization",
                 "2D and 3D topology optimization",
             ],
             [
@@ -1495,7 +1495,7 @@ def main() -> None:
         "plasticity3d_local_karolina_scaling.tex",
         fill_spec("l c c c c c c c c c"),
         [
-            "Platform",
+            "CPU setting",
             "Ranks",
             "Nodes",
             "Solver total [s]",
@@ -1527,7 +1527,7 @@ def main() -> None:
         "plasticity3d_local_karolina_partitioning.tex",
         fill_spec("l c c c c"),
         [
-            "Platform",
+            "CPU setting",
             "Ranks",
             "Nodes",
             "Max local DOFs",

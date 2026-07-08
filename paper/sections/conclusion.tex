@@ -1,8 +1,9 @@
 This paper developed a \jaxpetsc{} toolset that connects local JAX
-differentiation with PETSc nonlinear algebra for nonlinear finite-element
-energy minimization. Across the tested benchmark suite, the construction links
-scalar energy definitions, derivative-route selection, globalization, sparse
-ownership, and validation comparisons within one distributed solver setting.
+differentiation with PETSc sparse distributed assembly, Newton globalization,
+Krylov solvers, and preconditioner policy for nonlinear finite-element energy
+minimization. Across the tested benchmark suite, the construction links scalar
+energy definitions, derivative-route selection, sparse ownership, and validation
+comparisons within one distributed solver setting.
 
 The numerical results support this pattern on a deliberately heterogeneous
 benchmark suite. Scalar problems check formulation and derivative agreement,
@@ -10,9 +11,10 @@ hyperelasticity provides a tightly matched external comparison, Plasticity3D
 tests nonsmooth constitutive structure and distributed sparse solves under an
 endpoint-surrogate interpretation, and topology optimization exercises a
 coupled design-and-mechanics problem. Constitutive AD is the lowest-cost route
-in the fixed high-order Plasticity3D derivative test, and the larger
-distributed Plasticity3D and topology runs show that the same \jaxpetsc{} path
-remains operational beyond the validation cases.
+in the fixed high-order Plasticity3D derivative test. The largest Plasticity3D
+scaling runs converge with fixed nonlinear and Krylov work across rank counts,
+and the topology runs demonstrate end-to-end distributed design-mechanics timing
+with a separate fixed-schedule rank-consistency check.
 
 These results point to three scientific extensions. The first is
 path-dependent mechanics validation against an incremental-history reference.

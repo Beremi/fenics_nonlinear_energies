@@ -3,20 +3,20 @@ Large nonlinear finite-element energy problems require reliable local
 derivatives, robust nonlinear globalization, and sparse distributed linear
 algebra that is matched to the mechanics of the problem. We develop a
 computational toolset for studying these requirements together in nonlinear
-finite-element solves and energy-based topology optimization. The mainline
+finite-element solves and energy-based topology optimization. The primary
 realization couples JAX local energy and constitutive kernels with PETSc sparse
 assembly, Newton globalization, Krylov solvers, and preconditioners. The
-\purejax{} and \fenics{} formulations, together with narrowly matched external or
-reference-family comparisons, define the comparison surface. The benchmark suite
+\purejax{} and \fenics{} formulations provide scoped reference implementations,
+and external comparisons are restricted to matched observables. The benchmark suite
 covers $p$-Laplace, Ginzburg--Landau, finite-strain hyperelasticity, two- and
 three-dimensional Mohr--Coulomb plasticity, and topology optimization.
 
 Across these problems, we compare element automatic differentiation,
 constitutive automatic differentiation, and colored sparse finite-difference
-recovery as routes to second-order information. The validation evidence
-satisfies the prescribed agreement checks for the matched hyperelasticity and
-Plasticity3D endpoint-surrogate comparisons, without claiming
-path-consistent plastic-history equivalence. In the fixed high-order
+recovery as routes to second-order information. The hyperelastic companion
+comparison satisfies matched energy and field tolerances, while the Plasticity3D
+evidence is limited to endpoint observables for the scalar surrogate and does
+not claim path-consistent plastic-history equivalence. In the fixed high-order
 Plasticity3D derivative test, constitutive AD gives the lowest median wall time
 among the three routes while preserving terminal observables; in the converged
 parallel scaling sweep, the nonlinear and Krylov work remain fixed while solver

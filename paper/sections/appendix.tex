@@ -34,25 +34,26 @@ These tables support two narrower statements. First, reference-formula assembly
 has lower reported wall time than rank-local assembly when both are embedded in
 the same PMG solver stack, although the gap narrows at higher rank counts.
 Second, the fixed reference-operator PMG profile is not the default used in the
-present study: it may appear favorable on some rows, but it does more nonlinear
-and Krylov work and converges less consistently across the reported runs.
-The rank-local constitutive-AD path remains the mainline because it uses the
+present study: it may appear favorable on completed low-rank rows, but it hits
+the Newton cap on more of the reported rank counts and therefore gives less
+consistent convergence evidence. The rank-local constitutive-AD path remains the
+primary Plasticity3D realization because it uses the
 same local differentiable formulation as the derivative-route and converged
 scaling studies; the reference-formula rows are retained to expose
 solver-policy sensitivity on matched discrete problems.
 
-\subsection{Plasticity2D Source Continuation Evidence}
+\subsection{Plasticity2D Reference Continuation Evidence}
 
-For Plasticity2D, the source-continuation comparison is not the mainline method
-of the paper, but it is still useful because it isolates how much preconditioner
-policy matters even when the outer continuation logic is held fixed.
+For Plasticity2D, the reference-continuation comparison is not the primary
+method of the paper, but it is still useful as fixed-policy rank and timing
+evidence for the PMG-shell smoother under the same outer continuation logic.
 
 \begin{table}[H]
   \centering
   \input{tables/generated/source_continuation_compare.tex}
-  \caption{Source continuation with the fixed PMG-shell smoother policy at 8
-  and 32 ranks. This is supporting solver evidence only; it is not part of the
-  paper's mainline solver story.}
+  \caption{Reference continuation with the fixed PMG-shell smoother policy at 8
+  and 32 ranks. This is supporting solver evidence for a reference continuation
+  setting, not a primary solver comparison.}
   \label{tab:source-cont}
 \end{table}
 
@@ -62,6 +63,6 @@ The implementation discussed in this paper is available at
 \url{https://github.com/Beremi/fenics_nonlinear_energies}. The submission
 archive should include the source code, input data, processed benchmark
 summaries, figure and table sources, and validation records needed to reproduce
-the reported results and PDF. A citable source or artifact
+the reported results, figures, and tables. A citable source or artifact
 archive DOI should be supplied in the final submission metadata if required by
 the target journal; this journal-neutral draft does not assert one.

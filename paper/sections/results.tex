@@ -272,7 +272,8 @@ For this family, the most informative computational evidence in the present
 paper is not a single strong-scaling curve. The benchmark section separates the
 completed endpoint case from the larger fixed-cost studies in
 \Cref{fig:plasticity2d-energy-levels,tab:plasticity2d-benchmark}, and the
-source-continuation comparison is collected later in \Cref{sec:solver-evidence}.
+reference-continuation comparison is collected later in
+\Cref{sec:solver-evidence}.
 
 \subsection{Plasticity3D}
 \label{sec:num-plasticity3d}
@@ -429,7 +430,7 @@ by different nonlinear work.
   \caption{Single-node and multi-node CPU converged scaling for the glued-bottom
   Plasticity3D $P_4(L_2)$ case at $\lambda_{\mathrm{sr}}=\num{1.55}$. Dashed
   references are ideal $1/r$ lines anchored separately to the first point of
-  each platform.}
+  each CPU setting.}
   \label{fig:plasticity3d-local-karolina-scaling}
 \end{figure}
 
@@ -483,7 +484,8 @@ computational workload.
   \includegraphics[width=\PaperFigureMedium]{topology_scaling.pdf}
   \caption{Topology end-to-end parallel timing trend for the
   fine-grid run. The plotted wall times correspond to the coupled reduced-design
-  workflow defined by \cref{eq:topology-reduced-objective}.}
+  problem defined by \cref{eq:topology-reduced-objective}, with
+  rank-dependent stopping behavior reported in \cref{tab:topology-summary}.}
   \label{fig:topology-results}
 \end{figure}
 
@@ -517,9 +519,10 @@ are no longer visibly rank-dependent at this resolution.
 \end{table}
 
 The topology benchmark completes the paper's computational picture. Here the
-mainline \jaxpetsc{} path is less about exact Hessians than about stable
-distributed design-mechanics coupling, while \purejax{} remains the compact
-serial reference path discussed earlier in \Cref{tab:reference-availability}.
+primary scalable \jaxpetsc{} realization is less about exact Hessians than about
+stable distributed design-mechanics coupling, while \purejax{} remains the
+compact serial reference path discussed earlier in
+\Cref{tab:reference-availability}.
 
 \subsection{Synthesis of the Computational Evidence}
 \label{sec:num-synthesis}
@@ -539,9 +542,9 @@ distribution and PMG comparisons, together with the Plasticity3D partitioning
 measurements, show that sparse ownership, overlap size, coarse solves, and
 preconditioner policy are part of the numerical method, not merely software
 detail. Finally, the hyperelasticity, Plasticity3D, and topology scaling runs
-show that the same \jaxpetsc{} mainline remains operational when the problem is
-large enough that serial reference formulations mainly serve validation,
-debugging, or comparison roles.
+show that the primary \jaxpetsc{} realization solves the largest tested cases in
+settings where serial reference formulations mainly serve validation, debugging,
+or comparison roles.
 
 This synthesis is also the boundary of the paper's claim. The experiments
 support a nonlinear FEM toolset in which local differentiable models,

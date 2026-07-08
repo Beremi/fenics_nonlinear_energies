@@ -18,7 +18,7 @@ trusted high-level FEM reference and help distinguish modeling issues from
 solver-stack issues. In this paper they are used mainly as comparison baselines
 rather than as the primary distributed realization.
 
-\paragraph{Mainline \jaxpetsc{} path.}
+\paragraph{Primary \jaxpetsc{} path.}
 This is the central solver realization of the paper. It combines JAX-based local
 physics with PETSc distributed vectors, matrices, Krylov solvers, and
 preconditioners. Problem-specific kernels stay in JAX; sparse distributed
@@ -64,7 +64,7 @@ one common solver infrastructure.
   \centering
   \PaperAutodiffModesDiagram
   \caption{Second-order derivative modes exposed in the \jaxpetsc{} stack. The
-  important engineering choice is that the source of truth remains an energy or
+  methodological choice is that the source of truth remains an energy or
   energy-density expression even when the tangent path changes from element AD
   to constitutive AD or colored SFD.}
   \label{fig:derivative-stack}
@@ -89,7 +89,7 @@ because the linear systems are qualitatively different:
   \item \textbf{Plasticity3D:} same-mesh polynomial multigrid hierarchies,
         $P_4 \to P_2 \to P_1$ or $P_2 \to P_1$ depending on degree. The
         auxiliary $\lambda_{\mathrm{sr}}=\num{1.0}$ scaling and
-        degree/resolution endpoint probes use FGMRES with same-mesh PMG and a
+        degree/resolution endpoint studies use FGMRES with same-mesh PMG and a
         CG--Hypre coarse solve,
         whereas the $P_2$ globalization and derivative-route comparisons and
         the converged $P_4(L_2)$, $\lambda_{\mathrm{sr}}=\num{1.55}$ scaling
@@ -98,11 +98,11 @@ because the linear systems are qualitatively different:
         to a separate distributed design update.
 \end{itemize}
 
-The comparison material later in the manuscript also includes a source-family
+The comparison material later in the manuscript also includes a reference-model
 PMG-shell variant and alternative Krylov/preconditioner diagnostics. Those are
-not the primary defaults, but they are informative because they
-reveal how much of the final performance difference comes from derivative
-paths, preconditioners, or outer solver logic.
+not the primary defaults, but they are informative because they reveal how much
+of the final performance difference comes from derivative paths,
+preconditioners, or outer solver logic.
 
 \subsection{Distributed assembly and coloring}
 
@@ -112,7 +112,7 @@ approximate second-order information. Exact element or constitutive assembly can
 write directly into local sparse buffers. Colored SFD requires an additional
 graph-coloring step, but once the coloring is known the probe evaluations can
 still be carried out in a rank-local manner with only scalar reductions or
-owned sparse insertion in the hot loop.
+owned sparse insertion in the dominant assembly loop.
 
 \begin{figure}[H]
   \centering
@@ -142,6 +142,6 @@ owned sparse insertion in the hot loop.
 \end{table}
 
 \Cref{tab:capability-matrix} summarizes the implemented surface. The most
-important structural point is that the \jaxpetsc{} distributed story is always
-the \jaxpetsc{} column, even when a family also has \fenics{} or \purejax{}
-references.
+important structural point is that the \jaxpetsc{} column is the distributed
+algebraic realization, even when a family also has \fenics{} or \purejax{}
+reference formulations.

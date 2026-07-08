@@ -1,42 +1,60 @@
 \label{sec:methodology}
 
 We use a common finite-element notation across all benchmark families. The
-continuous domain is $\Omega \subset \mathbb{R}^d$, the conforming trial space
-is $V_h \subset V$, the state vector is $u_h \in V_h$, and the element-restricted
-state on element $e$ is $u_e$. When a family is posed as an energy or reduced
-objective minimization, we write its discrete functional as
-$\mathcal{J}_h(u_h)$; when a family is posed as a sequence of equilibrium
-solves or by a scalar equilibrium surrogate, we write the associated scalar
-functional as $\Pi_h(u_h)$. This distinction records the modeling role of the
-functional, not a difference in the sparse assembly pattern. When an algorithm
-is stated independently of a benchmark family, we denote its merit functional by
-$\mathcal{F}$.
-Hyperelasticity is the only family in which $J=\det F$ denotes the deformation
-Jacobian, so we avoid the bare symbol $J$ for generic objectives elsewhere in
-the paper.
-For finite-element labels, $P_k(L_\ell)$ denotes degree-$k$ Lagrange elements
-on mesh level $L_\ell$; problem-specific sections define the mesh hierarchy
-behind those levels when it matters for interpretation.
+continuous domain is $\Omega \subset \mathbb{R}^d$, and
+$V_{h,0}=\operatorname{span}\{\varphi_i\}_{i=1}^{n}$ is the conforming space of
+free basis functions after homogeneous essential constraints have been
+applied. Nonhomogeneous essential data are represented by an affine lift
+$\bar u_h(\theta)$, with $\bar u_h=0$ in the homogeneous cases. A free
+coefficient vector $x\in\mathbb{R}^{n}$ defines the finite-element state
+\[
+  u_h(x;\theta)=\bar u_h(\theta)+\sum_{i=1}^{n} x_i\varphi_i.
+\]
+When no confusion is possible, we identify $u_h$ with its coefficient vector in
+algebraic formulas. On element $e$, $x_e=R_e x$ denotes the local coefficient
+vector selected by the element restriction $R_e$, while $u_e(x;\theta)$ denotes
+the corresponding local element state including any contribution from the lift.
 
-At the discrete algebraic level, the common sparse-assembly task is therefore
-one of two closely related forms:
+The benchmark families use two scalar functional roles. A load-step potential or
+endpoint surrogate is written as
 \begin{equation}
-  \mathcal{J}_h(u_h)
-  = \sum_{e=1}^{n_{\mathrm{el}}} \Phi_e(u_e) - f_{\mathrm{ext}}^T u_h,
-  \label{eq:generic-objective}
-\end{equation}
-or
-\begin{equation}
-  \Pi_h(u_h)
-  = \sum_{e=1}^{n_{\mathrm{el}}} \Phi_e(u_e) - f_{\mathrm{ext}}^T u_h,
+  \Pi_h(x;\theta)
+  =
+  \sum_{e=1}^{n_{\mathrm{el}}} \Phi_e(x_e;\theta_e)
+  - f_{\mathrm{ext}}^\top x,
   \label{eq:generic-potential}
 \end{equation}
-where $\Phi_e$ may represent a scalar diffusion energy, a phase-field
-potential, a finite-strain stored-energy density, an algorithmic scalarized
-plasticity surrogate, or the reduced design objective used in topology
-optimization. The benchmark sections specialize
-\cref{eq:generic-objective,eq:generic-potential} to each family and define any
-additional symbols locally.
+where $\theta$ collects load, material, lift, continuation, or
+strength-reduction parameters. A reduced optimization objective with design
+variable $z$ is written schematically as
+\begin{equation}
+  \mathcal{J}_h(z)
+  =
+  \mathcal{R}_h(z) + \mathcal{S}_h(z,x(z);\theta(z)),
+  \label{eq:generic-objective}
+\end{equation}
+where $z$ is a design variable, $x(z)$ is the associated state, and
+$\mathcal{R}_h$ contains regularization or design penalties. The term
+$\mathcal{S}_h$ denotes the state-dependent scalar part; in topology
+optimization it is the frozen compliance term defined in
+\cref{sec:bench-topology}, not the load-step potential
+\cref{eq:generic-potential}. Thus \cref{eq:generic-potential} covers the scalar
+PDE, mechanics, and endpoint-surrogate solves, while
+\cref{eq:generic-objective} records the reduced-objective role. When an
+algorithm is stated independently of a benchmark family, we denote its merit
+functional by $\mathcal{F}$. Hyperelasticity is the only family in which
+$J=\det F$ denotes the deformation Jacobian, so we avoid the bare symbol $J$ for
+generic objectives elsewhere in the paper.
+
+In \cref{eq:generic-potential}, $\Phi_e$ is the integrated scalar contribution
+of element $e$. In quadrature-based mechanics examples,
+$\Phi_e(x_e;\theta_e)=\sum_q w_q\psi_q(B_q x_e;\theta_q)$, where $q$ indexes
+quadrature points, $w_q$ are quadrature weights, $B_q$ maps element coefficients
+to the local strain or gradient argument, and $\psi_q$ is the pointwise energy
+density or branch potential. For finite-element labels, $P_k(L_\ell)$ denotes
+degree-$k$ Lagrange elements on mesh level $L_\ell$; problem-specific sections
+define the mesh hierarchy behind those levels when it matters for
+interpretation.
 
 \subsection{Finite-element and derivative structure}
 
@@ -44,11 +62,11 @@ The main design choice in the toolset is that problem definitions should remain
 energy-centered whenever possible. This gives three derivative routes:
 \begin{enumerate}
   \item \textbf{element AD:} differentiate the full scalar element contribution
-        $\Phi_e(u_e)$ with respect to the element DOF vector;
+        $\Phi_e(x_e;\theta_e)$ with respect to the element free-DOF vector;
   \item \textbf{constitutive AD:} differentiate a quadrature-point energy
         density $\psi(\varepsilon_q)$, then assemble
-        $r_e = \sum_q w_q B_q^T \sigma_q$ and
-        $K_e = \sum_q w_q B_q^T C_q B_q$;
+        $r_e = \sum_q w_q B_q^\top \sigma_q$ and
+        $K_e = \sum_q w_q B_q^\top C_q B_q$;
   \item \textbf{colored SFD:} recover sparse Hessian information through
         directionally probed gradients/HVPs and graph coloring.
 \end{enumerate}
@@ -108,8 +126,8 @@ energy, gradient, and Hessian solves/matvecs
 For the principal 3D plasticity path reported in this paper, the chosen policy
 is simpler: Newton with Armijo backtracking and a PMG-preconditioned
 flexible-GMRES linear solve \citep[Sec.~3.1]{nocedal2006numerical}. This is the
-baseline workflow used for the converged 3D plasticity scaling study reported
-later in \Cref{sec:num-plasticity3d}.
+baseline nonlinear-solver policy used for the converged 3D plasticity scaling
+study reported later in \Cref{sec:num-plasticity3d}.
 
 \begin{algorithm}[H]
 \caption{Armijo line search used in Newton solves}
@@ -120,7 +138,7 @@ later in \Cref{sec:num-plasticity3d}.
   \State $\alpha \gets \alpha_0 \beta^m$
   \State $x_{\mathrm{trial}} \gets x + \alpha p$
   \If{$\mathcal{F}(x_{\mathrm{trial}}) \le
-    \mathcal{F}(x) + c_1 \alpha g^T p$}
+    \mathcal{F}(x) + c_1 \alpha g^\top p$}
     \State accept $\alpha$
     \State \Return
   \EndIf
@@ -170,13 +188,13 @@ information on high-order tetrahedra.
 \begin{algorithmic}[1]
 \For{each local element $e$}
   \For{each quadrature point $q$}
-    \State Evaluate strain $\varepsilon_q = B_q u_e$
+    \State Evaluate strain $\varepsilon_q = B_q u_e(x;\theta)$
     \State Evaluate scalar energy density $\Phi_q(\varepsilon_q)$
     \State Obtain stress $\sigma_q = \partial \Phi_q / \partial \varepsilon_q$
     \State Obtain constitutive tangent $C_q = \partial^2 \Phi_q / \partial \varepsilon_q^2$
   \EndFor
-  \State Assemble $r_e = \sum_q w_q B_q^T \sigma_q$
-  \State Assemble $K_e = \sum_q w_q B_q^T C_q B_q$
+  \State Assemble $r_e = \sum_q w_q B_q^\top \sigma_q$
+  \State Assemble $K_e = \sum_q w_q B_q^\top C_q B_q$
 \EndFor
 \end{algorithmic}
 \end{algorithm}
