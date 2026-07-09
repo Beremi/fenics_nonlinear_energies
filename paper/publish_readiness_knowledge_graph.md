@@ -482,8 +482,12 @@ MATLAB literature only when there is source-backed evidence.
   generator path/function and archive status. The validator now requires these
   records for TeX-included figures. The refreshed manifest records 34 generated
   figure sources, 19 archive-neutral input maps, and 10 figures marked
-  `needs_final_archive` because they depend on large raw/state inputs. Table
-  provenance remains the next unrepaired per-artifact gap.
+  `needs_final_archive` because they depend on large raw/state inputs. Current
+  table-provenance chunk adds `paper/tables/generated/manifest.json` with source
+  provenance for all 30 generated tables. The validator now requires table
+  source records for all 28 TeX-included generated tables. Of those included
+  tables, 15 are marked `needs_final_archive` because they depend on raw-results
+  or report inputs that still need durable archive coverage.
 
 ## Evidence Nodes
 
@@ -845,13 +849,27 @@ MATLAB literature only when there is source-backed evidence.
   useful but needs careful evidence collation.
 - `Provenance audit` (`Aquinas-current`): completed. Findings partly addressed:
   validator now requires figure source provenance and the figure manifest records
-  all generated figure sources with archive status. Remaining provenance work:
-  complete table provenance and either bundle or explicitly scope the large raw
-  state inputs behind the `needs_final_archive` figure entries.
+  all generated figure sources with archive status. Current table-provenance
+  follow-up also requires generated-table source provenance. Remaining
+  provenance work: bundle or explicitly scope the raw/report inputs behind the
+  table entries marked `needs_final_archive` and the large raw state inputs
+  behind the `needs_final_archive` figure entries.
 - `PDF/layout audit` (`Ptolemy-current`): completed. Findings partly addressed
   by relaxing selected `[H]` floats. Remaining risk: current A4 pages must be
   rendered after rebuild to confirm the page-20, page-23, page-33, and page-35
   blank-region behavior improved rather than merely moved.
+- `Generated-table provenance audit` (`Confucius-current`): completed. Key
+  finding: 28 generated tables are included by TeX, while two generated table
+  files are currently unused. Included-table inputs are known: static constants,
+  tracked docs assets, curated bundle inputs, or raw/report paths; no included
+  table had unknown file inputs. This informed the table manifest and validator
+  added in the current table-provenance chunk.
+- `Figure/archive gap audit` (`Einstein-current`): completed. Key finding:
+  10 figures remain `needs_final_archive`; the practical large item is exact
+  Plasticity3D state/HDF5 coverage for the degree/resolution figures, roughly
+  13 GiB if scoped to the submitted state/slice requirements. Smaller raw
+  Plasticity2D and Plasticity3D scaling inputs should also be bundled or
+  explicitly scoped in the final durable archive.
 
 ## First Edit Backlog
 

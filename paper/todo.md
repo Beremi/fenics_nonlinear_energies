@@ -7,8 +7,8 @@ aligned with its evidence: major claims are scoped to the implemented toolset,
 SOTA positioning has been refreshed, citations build cleanly, and the generated
 figure/table pipeline and archive-neutral provenance gate pass against a curated
 local submission bundle. Submission is still blocked by missing target-journal
-metadata, submission declarations, license/archive decisions, complete table
-provenance, and final archive coverage for large raw/state figure inputs.
+metadata, submission declarations, license/archive decisions, and final archive
+coverage for raw/report-backed table inputs and large raw/state figure inputs.
 Validation is adequate for the narrowed claims, but the paper must not be
 submitted until the external submission metadata and citable archive are fixed.
 
@@ -74,6 +74,10 @@ scientific claims were introduced without supporting evidence.
   manifest, tightened the asset validator so TeX-included figures must have
   source records, and marked figures that still depend on large raw/state inputs
   as `needs_final_archive`.
+- Added generated-table source provenance for every generated table, tightened
+  the asset validator so TeX-included generated tables must have source records,
+  and marked raw/report-backed tables that still need final archive coverage as
+  `needs_final_archive`.
 - Rebuilt the curated submission bundle after fixing the JAX-FEM comparison
   summary paths to point at bundle-local terminal states.
 - Sharpened remaining prose and notation issues from the latest audits:
@@ -110,15 +114,17 @@ scientific claims were introduced without supporting evidence.
   the manuscript availability statement.
 - Issue: Final per-artifact provenance is not yet complete.
   Why it blocks publishability: the archive-neutral gate passes and all
-  generated figures now have source records, but the final submission still
-  lacks complete generated-table provenance and archive coverage for the large
-  raw/state inputs behind the figures marked `needs_final_archive`.
+  generated figures and TeX-included generated tables now have source records,
+  but the final submission still lacks archive coverage for the large raw/state
+  inputs behind figures marked `needs_final_archive` and for 15 TeX-included
+  generated tables with raw/report-backed inputs.
   Evidence path or citation: `paper/figures/generated/manifest.json`,
+  `paper/tables/generated/manifest.json`,
   `paper/scripts/validate_paper_assets.py`, and
   `artifacts/reproduction/paper_submission_2026_07_08/manifest.json`.
-  Exact next action: add generated-table source/input provenance, include or
-  explicitly scope all large raw/state figure inputs in the durable archive, and
-  rerun the archive-neutral validator.
+  Exact next action: include or explicitly scope all `needs_final_archive`
+  figure and table inputs in the durable archive, then rerun the archive-neutral
+  validator and update the availability statement.
 
 ## Major Revisions Needed
 
@@ -126,8 +132,8 @@ scientific claims were introduced without supporting evidence.
   venue is chosen.
 - Fold the curated submission bundle into the final release/archive and make
   the manuscript availability statement cite that durable version.
-- Complete generated-table provenance and final archive coverage for the
-  `needs_final_archive` figure inputs.
+- Complete final archive coverage for all figure and table entries marked
+  `needs_final_archive`.
 - After choosing the target journal template, revisit forced `[H]` floats and
   split or simplify the dense SOTA, Plasticity3D, and appendix tables if the
   venue class narrows the text block.
@@ -192,17 +198,21 @@ required support for the current scoped contribution.
   command passed and generated `paper/literature/sources.md` with 24 public
   entries, 9 non-public local entries, and 3 unavailable entries.
 - `./.venv/bin/python paper/scripts/generate_paper_tables.py`: passed.
+  The current generated table manifest records 30 generated tables; all 28
+  TeX-included generated tables have source records, with 15 still marked
+  `needs_final_archive` because their direct inputs are raw/report-backed.
 - `./.venv/bin/python paper/scripts/generate_paper_figures.py`: passed and
   rewrote the figure manifest.
 - `./.venv/bin/python paper/scripts/build_submission_bundle.py`: passed and
   wrote `artifacts/reproduction/paper_submission_2026_07_08/manifest.json` with
   source and bundle SHA256 hashes for paper-critical inputs.
 - `./.venv/bin/python paper/scripts/validate_paper_assets.py`: passed on
-  2026-07-08 with 29 figures, 28 generated tables, and 42 paper-facing
-  provenance-scan files checked.
+  2026-07-09 with 29 figures, 28 generated tables, figure source records, table
+  source records, and 42 paper-facing provenance-scan files checked.
 - `./.venv/bin/python paper/scripts/validate_paper_assets.py --archive-neutral`:
-  passed on 2026-07-08 against the curated submission bundle.
-- `make -C paper publish-check`: passed on 2026-07-08.
+  passed on 2026-07-09 against the curated submission bundle and
+  archive-neutral table inputs.
+- `make -C paper publish-check`: passed on 2026-07-09.
 - `(cd paper && latexmk -pdf -interaction=nonstopmode -halt-on-error main.tex)`:
   passed after the generated table and prose cleanup, refreshing a 40-page
   `paper/build/main.pdf`.
@@ -222,10 +232,11 @@ required support for the current scoped contribution.
 
 Exact remaining blockers are submission metadata and license/archive DOI. The
 archive-neutral validator now passes against the local curated bundle; final
-submission still must include that bundle in a durable release/archive. The only
-command instability observed in the final rerun was the intermittent TeX/font
-lookup or mesh-loading stall in the Makefile figure target; direct asset
-validation and direct LaTeX rebuild are clean.
+submission still must include that bundle plus all final-scoped
+`needs_final_archive` figure and table inputs in a durable release/archive. The
+only command instability observed in the final rerun was the intermittent
+TeX/font lookup or mesh-loading stall in the Makefile figure target; direct
+asset validation and direct LaTeX rebuild are clean.
 
 ## Optional Future Work
 

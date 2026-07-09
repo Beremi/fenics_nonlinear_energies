@@ -81,6 +81,61 @@ SOURCE_CONT_NP32_PROGRESS = (
     / "artifacts/raw_results/source_compare/ssr_indirect_p4_l1_omega6p7e6_np32_shell_default_afterfix/data/progress_latest.json"
 )
 
+TABLE_SOURCE_INPUTS = {
+    "family_highlights.tex": (
+        PLAPLACE_SCALING,
+        GL_SCALING,
+        HE_SCALING,
+        P2D_SHOWCASE,
+        P2D_L6_SUMMARY,
+        P2D_L7_SUMMARY,
+        LOCAL_P3D_SUMMARY,
+        TOPO_SCALING,
+    ),
+    "implementation_capability_matrix.tex": (),
+    "benchmark_specification_matrix.tex": (),
+    "reference_availability.tex": (),
+    "sota_framework_comparison.tex": (),
+    "plaplace_benchmark_summary.tex": (PLAPLACE_PARITY,),
+    "ginzburg_landau_benchmark_summary.tex": (GL_PARITY,),
+    "hyperelasticity_benchmark_summary.tex": (HE_PARITY,),
+    "hyperelasticity_karolina_pmg_scaling.tex": (HE_KAROLINA_PMG_SCALING,),
+    "globalization_method_compare.tex": (GLOBALIZATION_METHOD_COMPARE,),
+    "derivative_route_compare.tex": (DERIVATIVE_ROUTE_COMPARE,),
+    "hyperelasticity_distribution_memory.tex": (SUPPLEMENTAL_HE_DISTRIBUTION,),
+    "hyperelasticity_pmg_sensitivity.tex": (SUPPLEMENTAL_HE_PMG,),
+    "ginzburg_landau_globalization_fixed_budget.tex": (SUPPLEMENTAL_GL_GLOBALIZATION,),
+    "topology_rank_consistency.tex": (SUPPLEMENTAL_TOPOLOGY_CONSISTENCY,),
+    "plasticity3d_derivative_degree.tex": (SUPPLEMENTAL_P3D_DERIVATIVE_DEGREE,),
+    "plasticity2d_benchmark_summary.tex": (P2D_SHOWCASE, P2D_L6_SUMMARY, P2D_L7_SUMMARY),
+    "plasticity3d_benchmark_summary.tex": (P3D_DEGREE_ENERGY_STUDY_SUMMARY,),
+    "topology_benchmark_summary.tex": (TOPO_RESOLUTION,),
+    "plasticity3d_recommended_scaling.tex": (LOCAL_P3D_SUMMARY,),
+    "plasticity3d_local_karolina_scaling.tex": (
+        P3D_LOCAL_LAMBDA155_SCALING,
+        P3D_KAROLINA_LAMBDA155_SCALING,
+        P3D_LAMBDA155_STOP_SUMMARY,
+    ),
+    "plasticity3d_local_karolina_partitioning.tex": (
+        P3D_LOCAL_LAMBDA155_SCALING,
+        P3D_KAROLINA_LAMBDA155_SCALING,
+        P3D_LAMBDA155_STOP_SUMMARY,
+    ),
+    "plasticity3d_constitutive_vs_reference_formula.tex": (MIXED_P3D_SUMMARY,),
+    "plasticity3d_fixed_reference_operator_pmg.tex": (SOURCEFIXED_P3D_SUMMARY,),
+    "plasticity3d_degree_energy_study.tex": (P3D_DEGREE_ENERGY_STUDY_SUMMARY,),
+    "topology_summary.tex": (TOPO_SCALING,),
+    "plasticity2d_reference_continuation.tex": (
+        SOURCE_CONT_NP8,
+        SOURCE_CONT_NP32,
+        SOURCE_CONT_NP8_PROGRESS,
+        SOURCE_CONT_NP32_PROGRESS,
+    ),
+    "plasticity3d_validation_summary.tex": (P3D_VALIDATION_SUMMARY,),
+    "plasticity3d_derivative_ablation.tex": (P3D_DERIVATIVE_ABLATION_SUMMARY,),
+    "jax_fem_hyperelastic_baseline.tex": (JAX_FEM_BASELINE_SUMMARY,),
+}
+
 LOCAL_IMPL = "local_constitutiveAD_local_pmg_armijo"
 SOURCE_IMPL = "source_local_pmg_armijo"
 LOCAL_SOURCEFIXED_IMPL = "local_constitutiveAD_local_pmg_sourcefixed_armijo"
@@ -442,6 +497,57 @@ def write_tablex(name: str, spec: str, header: list[str], rows: list[LatexRow], 
 
 def write_tablex_blocks(name: str, blocks: list[LatexBlock], *, width: str = r"\textwidth") -> None:
     write_text(TABLES_ROOT / name, latex_tabularx_blocks(blocks, width=width))
+
+
+def _repo_rel(path: Path) -> str:
+    try:
+        return path.resolve().relative_to(REPO_ROOT.resolve()).as_posix()
+    except ValueError as exc:
+        raise ValueError(f"Paper table manifest input is outside the repository: {path}") from exc
+
+
+def _manifest_repo_input(path: Path) -> dict[str, str]:
+    return {"kind": "repository_path", "path": _repo_rel(path)}
+
+
+def _archive_status(inputs: tuple[Path, ...]) -> str:
+    raw_prefixes = ("artifacts/raw_results/", "artifacts/reports/")
+    for path in inputs:
+        if _repo_rel(path).startswith(raw_prefixes):
+            return "needs_final_archive"
+    return "archive_neutral"
+
+
+def _write_table_manifest(out_dir: Path) -> None:
+    generated_tables = sorted(TABLE_SOURCE_INPUTS)
+    generated_table_sources = {}
+    generated_table_inputs = {}
+    for name in generated_tables:
+        inputs = TABLE_SOURCE_INPUTS[name]
+        source = {
+            "generator": {
+                "path": _repo_rel(Path(__file__)),
+                "function": "main",
+                "output": name,
+            },
+            "archive_status": _archive_status(inputs),
+            "data_inputs": [_manifest_repo_input(path) for path in inputs],
+        }
+        generated_table_sources[name] = source
+        if source["archive_status"] == "archive_neutral":
+            generated_table_inputs[name] = source["data_inputs"]
+    write_json(
+        out_dir / "manifest.json",
+        {
+            "generated_tables": generated_tables,
+            "generated_table_sources": generated_table_sources,
+            "generated_table_inputs": generated_table_inputs,
+            "notes": [
+                "Tables with archive_status=needs_final_archive have explicit source provenance but still depend on raw or report inputs that must be covered by the final durable archive.",
+                "Static comparison tables have empty data_inputs because their content is defined directly in paper/scripts/generate_paper_tables.py.",
+            ],
+        },
+    )
 
 
 def select_csv_rows(path: Path, implementations: tuple[str, ...]) -> list[dict[str, str]]:
@@ -1867,6 +1973,7 @@ def main() -> None:
         },
     }
     write_json(REPO_ROOT / "paper/build/tables_summary.json", payload)
+    _write_table_manifest(args.out_dir)
 
 
 if __name__ == "__main__":

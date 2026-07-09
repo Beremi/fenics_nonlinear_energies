@@ -172,6 +172,89 @@ def _validate_manifest_sources(required_figures: set[str], figures_dir: Path) ->
         raise SystemExit("Figure source provenance is malformed:\n" + "\n".join(findings))
 
 
+def _table_manifest(tables_dir: Path) -> dict[str, object]:
+    manifest_path = tables_dir / "manifest.json"
+    if not manifest_path.exists():
+        return {}
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    if not isinstance(manifest, dict):
+        raise SystemExit("Table manifest must be a JSON object.")
+    return manifest
+
+
+def _manifest_tables(tables_dir: Path) -> set[str]:
+    manifest = _table_manifest(tables_dir)
+    tables: set[str] = set()
+    for name in manifest.get("generated_tables", []):
+        if isinstance(name, str):
+            tables.add(Path(name).name)
+    return tables
+
+
+def _table_manifest_sources(tables_dir: Path) -> dict[str, object]:
+    manifest = _table_manifest(tables_dir)
+    sources = manifest.get("generated_table_sources", {})
+    if not isinstance(sources, dict):
+        raise SystemExit("Table manifest field `generated_table_sources` must be an object.")
+    return {str(Path(name).name): value for name, value in sources.items()}
+
+
+def _validate_manifest_input_reference(label: str, entry: object) -> list[str]:
+    findings: list[str] = []
+    if not isinstance(entry, dict):
+        return [f"{label}: data input must be an object, got {type(entry).__name__}."]
+    kind = entry.get("kind")
+    if kind != "repository_path":
+        return [f"{label}: data input kind must be 'repository_path', got {kind!r}."]
+    raw_path = entry.get("path")
+    if not isinstance(raw_path, str):
+        return [f"{label}: repository_path input is missing a string `path` field."]
+    if raw_path.startswith("/") or ".." in Path(raw_path).parts:
+        return [f"{label}: repository_path input is not a safe repo-relative path: {raw_path}"]
+    candidate = (REPO_ROOT / raw_path).resolve()
+    try:
+        candidate.relative_to(REPO_ROOT)
+    except ValueError:
+        return [f"{label}: repository_path resolves outside the repository: {raw_path}"]
+    if not candidate.exists():
+        findings.append(f"{label}: repository_path input is missing: {raw_path}")
+    return findings
+
+
+def _validate_table_manifest_sources(required_tables: set[str], tables_dir: Path) -> None:
+    manifest_tables = _manifest_tables(tables_dir)
+    missing_tables = sorted(required_tables - manifest_tables)
+    if missing_tables:
+        raise SystemExit("TeX-included generated tables missing from table manifest:\n" + "\n".join(missing_tables))
+    sources = _table_manifest_sources(tables_dir)
+    missing_sources = sorted(required_tables - set(sources))
+    if missing_sources:
+        raise SystemExit("TeX-included generated tables missing source provenance:\n" + "\n".join(missing_sources))
+    findings: list[str] = []
+    allowed_status = {"archive_neutral", "needs_final_archive"}
+    for name in sorted(required_tables):
+        source = sources[name]
+        if not isinstance(source, dict):
+            findings.append(f"{name}: generated_table_sources entry must be an object.")
+            continue
+        generator = source.get("generator")
+        if not isinstance(generator, dict):
+            findings.append(f"{name}: source provenance is missing a generator object.")
+        status = source.get("archive_status")
+        if status not in allowed_status:
+            findings.append(
+                f"{name}: archive_status must be one of {sorted(allowed_status)}, got {status!r}."
+            )
+        data_inputs = source.get("data_inputs", [])
+        if not isinstance(data_inputs, list):
+            findings.append(f"{name}: data_inputs must be a list.")
+            continue
+        for entry in data_inputs:
+            findings.extend(_validate_manifest_input_reference(name, entry))
+    if findings:
+        raise SystemExit("Table source provenance is malformed:\n" + "\n".join(findings))
+
+
 def _provenance_targets(
     tex_path: Path,
     seen_tex: set[Path],
@@ -224,6 +307,21 @@ def _iter_manifest_inputs(manifest: dict[str, object]) -> list[tuple[str, object
             raise SystemExit(f"Figure manifest inputs for {asset!r} must be a list.")
         for value in values:
             entries.append((asset, value))
+    return entries
+
+
+def _iter_table_manifest_inputs(manifest: dict[str, object]) -> list[tuple[str, object]]:
+    inputs = manifest.get("generated_table_inputs", {})
+    if not isinstance(inputs, dict):
+        raise SystemExit("Table manifest field `generated_table_inputs` must be an object.")
+    entries: list[tuple[str, object]] = []
+    for asset, values in sorted(inputs.items()):
+        if not isinstance(asset, str):
+            raise SystemExit("Table manifest asset names must be strings.")
+        if not isinstance(values, list):
+            raise SystemExit(f"Table manifest inputs for {asset!r} must be a list.")
+        for value in values:
+            entries.append((f"table:{asset}", value))
     return entries
 
 
@@ -304,6 +402,23 @@ def _validate_archive_neutral_manifest(figures_dir: Path) -> None:
         raise SystemExit("Archive-neutral paper provenance check failed:\n" + "\n".join(findings))
 
 
+def _validate_archive_neutral_table_manifest(tables_dir: Path) -> None:
+    manifest_path = tables_dir / "manifest.json"
+    if not manifest_path.exists():
+        raise SystemExit(f"Table manifest missing for archive-neutral check: {manifest_path}")
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    findings: list[str] = []
+    paths_to_scan: set[Path] = set()
+    for asset, entry in _iter_table_manifest_inputs(manifest):
+        entry_findings, entry_paths = _archive_neutral_findings_for_input(asset, entry)
+        findings.extend(entry_findings)
+        paths_to_scan.update(path for path in entry_paths if path.suffix.lower() in TEXT_SCAN_SUFFIXES)
+    for path in sorted(paths_to_scan):
+        findings.extend(_find_banned_snippets(path, PROVENANCE_BANNED_SNIPPETS))
+    if findings:
+        raise SystemExit("Archive-neutral table provenance check failed:\n" + "\n".join(findings))
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Validate that the paper asset generation produced the expected files.")
     parser.add_argument("--figures-dir", type=Path, default=FIGURES_ROOT)
@@ -333,10 +448,12 @@ def main() -> None:
     if untracked_figures:
         raise SystemExit("TeX-included figures missing from figure manifest:\n" + "\n".join(untracked_figures))
     _validate_manifest_sources(required_figures, args.figures_dir)
+    _validate_table_manifest_sources(required_tables, args.tables_dir)
     provenance_targets = _provenance_targets(args.tex, seen_tex, required_tables, args.figures_dir, args.tables_dir)
     _validate_provenance_text(provenance_targets)
     if args.archive_neutral:
         _validate_archive_neutral_manifest(args.figures_dir)
+        _validate_archive_neutral_table_manifest(args.tables_dir)
     print(
         f"Paper assets validated ({len(required_figures)} figures, {len(required_tables)} tables); "
         f"provenance scan passed ({len(provenance_targets)} files)."

@@ -1,0 +1,564 @@
+{
+  "generated_table_inputs": {
+    "benchmark_specification_matrix.tex": [],
+    "ginzburg_landau_benchmark_summary.tex": [
+      {
+        "kind": "repository_path",
+        "path": "experiments/analysis/docs_assets/data/ginzburg_landau/parity_showcase.csv"
+      }
+    ],
+    "hyperelasticity_benchmark_summary.tex": [
+      {
+        "kind": "repository_path",
+        "path": "experiments/analysis/docs_assets/data/hyperelasticity/parity_showcase.csv"
+      }
+    ],
+    "hyperelasticity_karolina_pmg_scaling.tex": [
+      {
+        "kind": "repository_path",
+        "path": "experiments/analysis/docs_assets/data/hyperelasticity/karolina_l5_pmg_scaling.csv"
+      }
+    ],
+    "implementation_capability_matrix.tex": [],
+    "jax_fem_hyperelastic_baseline.tex": [
+      {
+        "kind": "repository_path",
+        "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/jax_fem_hyperelastic_baseline/comparison_summary.json"
+      }
+    ],
+    "plaplace_benchmark_summary.tex": [
+      {
+        "kind": "repository_path",
+        "path": "experiments/analysis/docs_assets/data/plaplace/parity_showcase.csv"
+      }
+    ],
+    "plasticity3d_derivative_ablation.tex": [
+      {
+        "kind": "repository_path",
+        "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_derivative_ablation/comparison_summary.json"
+      }
+    ],
+    "plasticity3d_validation_summary.tex": [
+      {
+        "kind": "repository_path",
+        "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_validation/comparison_summary.json"
+      }
+    ],
+    "reference_availability.tex": [],
+    "sota_framework_comparison.tex": [],
+    "topology_benchmark_summary.tex": [
+      {
+        "kind": "repository_path",
+        "path": "experiments/analysis/docs_assets/data/topology/resolution_objectives.csv"
+      }
+    ],
+    "topology_summary.tex": [
+      {
+        "kind": "repository_path",
+        "path": "experiments/analysis/docs_assets/data/topology/strong_scaling.csv"
+      }
+    ]
+  },
+  "generated_table_sources": {
+    "benchmark_specification_matrix.tex": {
+      "archive_status": "archive_neutral",
+      "data_inputs": [],
+      "generator": {
+        "function": "main",
+        "output": "benchmark_specification_matrix.tex",
+        "path": "paper/scripts/generate_paper_tables.py"
+      }
+    },
+    "derivative_route_compare.tex": {
+      "archive_status": "needs_final_archive",
+      "data_inputs": [
+        {
+          "kind": "repository_path",
+          "path": "artifacts/reports/derivative_route_compare/full_summary.csv"
+        }
+      ],
+      "generator": {
+        "function": "main",
+        "output": "derivative_route_compare.tex",
+        "path": "paper/scripts/generate_paper_tables.py"
+      }
+    },
+    "family_highlights.tex": {
+      "archive_status": "needs_final_archive",
+      "data_inputs": [
+        {
+          "kind": "repository_path",
+          "path": "experiments/analysis/docs_assets/data/plaplace/strong_scaling.csv"
+        },
+        {
+          "kind": "repository_path",
+          "path": "experiments/analysis/docs_assets/data/ginzburg_landau/strong_scaling.csv"
+        },
+        {
+          "kind": "repository_path",
+          "path": "experiments/analysis/docs_assets/data/hyperelasticity/strong_scaling.csv"
+        },
+        {
+          "kind": "repository_path",
+          "path": "artifacts/raw_results/docs_showcase/mc_plasticity_p4_l5/output.json"
+        },
+        {
+          "kind": "repository_path",
+          "path": "artifacts/raw_results/slope_stability_l6_p4_deep_p1_tail_scaling_lambda1_maxit20/summary.json"
+        },
+        {
+          "kind": "repository_path",
+          "path": "artifacts/raw_results/slope_stability_l7_p4_deep_p1_tail_scaling_lambda1_maxit20/summary.json"
+        },
+        {
+          "kind": "repository_path",
+          "path": "artifacts/raw_results/source_compare/plasticity3d_l1_2_lambda1_grad1e2_local_pmg_scaling/comparison_summary.json"
+        },
+        {
+          "kind": "repository_path",
+          "path": "experiments/analysis/docs_assets/data/topology/strong_scaling.csv"
+        }
+      ],
+      "generator": {
+        "function": "main",
+        "output": "family_highlights.tex",
+        "path": "paper/scripts/generate_paper_tables.py"
+      }
+    },
+    "ginzburg_landau_benchmark_summary.tex": {
+      "archive_status": "archive_neutral",
+      "data_inputs": [
+        {
+          "kind": "repository_path",
+          "path": "experiments/analysis/docs_assets/data/ginzburg_landau/parity_showcase.csv"
+        }
+      ],
+      "generator": {
+        "function": "main",
+        "output": "ginzburg_landau_benchmark_summary.tex",
+        "path": "paper/scripts/generate_paper_tables.py"
+      }
+    },
+    "ginzburg_landau_globalization_fixed_budget.tex": {
+      "archive_status": "needs_final_archive",
+      "data_inputs": [
+        {
+          "kind": "repository_path",
+          "path": "artifacts/reports/paper_reviewer_gap_experiments/full_gl_globalization.csv"
+        }
+      ],
+      "generator": {
+        "function": "main",
+        "output": "ginzburg_landau_globalization_fixed_budget.tex",
+        "path": "paper/scripts/generate_paper_tables.py"
+      }
+    },
+    "globalization_method_compare.tex": {
+      "archive_status": "needs_final_archive",
+      "data_inputs": [
+        {
+          "kind": "repository_path",
+          "path": "artifacts/reports/globalization_method_compare/full_summary.csv"
+        }
+      ],
+      "generator": {
+        "function": "main",
+        "output": "globalization_method_compare.tex",
+        "path": "paper/scripts/generate_paper_tables.py"
+      }
+    },
+    "hyperelasticity_benchmark_summary.tex": {
+      "archive_status": "archive_neutral",
+      "data_inputs": [
+        {
+          "kind": "repository_path",
+          "path": "experiments/analysis/docs_assets/data/hyperelasticity/parity_showcase.csv"
+        }
+      ],
+      "generator": {
+        "function": "main",
+        "output": "hyperelasticity_benchmark_summary.tex",
+        "path": "paper/scripts/generate_paper_tables.py"
+      }
+    },
+    "hyperelasticity_distribution_memory.tex": {
+      "archive_status": "needs_final_archive",
+      "data_inputs": [
+        {
+          "kind": "repository_path",
+          "path": "artifacts/reports/paper_reviewer_gap_experiments/full_he_distribution.csv"
+        }
+      ],
+      "generator": {
+        "function": "main",
+        "output": "hyperelasticity_distribution_memory.tex",
+        "path": "paper/scripts/generate_paper_tables.py"
+      }
+    },
+    "hyperelasticity_karolina_pmg_scaling.tex": {
+      "archive_status": "archive_neutral",
+      "data_inputs": [
+        {
+          "kind": "repository_path",
+          "path": "experiments/analysis/docs_assets/data/hyperelasticity/karolina_l5_pmg_scaling.csv"
+        }
+      ],
+      "generator": {
+        "function": "main",
+        "output": "hyperelasticity_karolina_pmg_scaling.tex",
+        "path": "paper/scripts/generate_paper_tables.py"
+      }
+    },
+    "hyperelasticity_pmg_sensitivity.tex": {
+      "archive_status": "needs_final_archive",
+      "data_inputs": [
+        {
+          "kind": "repository_path",
+          "path": "artifacts/reports/paper_reviewer_gap_experiments/full_he_pmg.csv"
+        }
+      ],
+      "generator": {
+        "function": "main",
+        "output": "hyperelasticity_pmg_sensitivity.tex",
+        "path": "paper/scripts/generate_paper_tables.py"
+      }
+    },
+    "implementation_capability_matrix.tex": {
+      "archive_status": "archive_neutral",
+      "data_inputs": [],
+      "generator": {
+        "function": "main",
+        "output": "implementation_capability_matrix.tex",
+        "path": "paper/scripts/generate_paper_tables.py"
+      }
+    },
+    "jax_fem_hyperelastic_baseline.tex": {
+      "archive_status": "archive_neutral",
+      "data_inputs": [
+        {
+          "kind": "repository_path",
+          "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/jax_fem_hyperelastic_baseline/comparison_summary.json"
+        }
+      ],
+      "generator": {
+        "function": "main",
+        "output": "jax_fem_hyperelastic_baseline.tex",
+        "path": "paper/scripts/generate_paper_tables.py"
+      }
+    },
+    "plaplace_benchmark_summary.tex": {
+      "archive_status": "archive_neutral",
+      "data_inputs": [
+        {
+          "kind": "repository_path",
+          "path": "experiments/analysis/docs_assets/data/plaplace/parity_showcase.csv"
+        }
+      ],
+      "generator": {
+        "function": "main",
+        "output": "plaplace_benchmark_summary.tex",
+        "path": "paper/scripts/generate_paper_tables.py"
+      }
+    },
+    "plasticity2d_benchmark_summary.tex": {
+      "archive_status": "needs_final_archive",
+      "data_inputs": [
+        {
+          "kind": "repository_path",
+          "path": "artifacts/raw_results/docs_showcase/mc_plasticity_p4_l5/output.json"
+        },
+        {
+          "kind": "repository_path",
+          "path": "artifacts/raw_results/slope_stability_l6_p4_deep_p1_tail_scaling_lambda1_maxit20/summary.json"
+        },
+        {
+          "kind": "repository_path",
+          "path": "artifacts/raw_results/slope_stability_l7_p4_deep_p1_tail_scaling_lambda1_maxit20/summary.json"
+        }
+      ],
+      "generator": {
+        "function": "main",
+        "output": "plasticity2d_benchmark_summary.tex",
+        "path": "paper/scripts/generate_paper_tables.py"
+      }
+    },
+    "plasticity2d_reference_continuation.tex": {
+      "archive_status": "needs_final_archive",
+      "data_inputs": [
+        {
+          "kind": "repository_path",
+          "path": "artifacts/raw_results/source_compare/ssr_indirect_p4_l1_omega6p7e6_np8_shell_default_afterfix/data/run_info.json"
+        },
+        {
+          "kind": "repository_path",
+          "path": "artifacts/raw_results/source_compare/ssr_indirect_p4_l1_omega6p7e6_np32_shell_default_afterfix/data/run_info.json"
+        },
+        {
+          "kind": "repository_path",
+          "path": "artifacts/raw_results/source_compare/ssr_indirect_p4_l1_omega6p7e6_np8_shell_default_afterfix/data/progress_latest.json"
+        },
+        {
+          "kind": "repository_path",
+          "path": "artifacts/raw_results/source_compare/ssr_indirect_p4_l1_omega6p7e6_np32_shell_default_afterfix/data/progress_latest.json"
+        }
+      ],
+      "generator": {
+        "function": "main",
+        "output": "plasticity2d_reference_continuation.tex",
+        "path": "paper/scripts/generate_paper_tables.py"
+      }
+    },
+    "plasticity3d_benchmark_summary.tex": {
+      "archive_status": "needs_final_archive",
+      "data_inputs": [
+        {
+          "kind": "repository_path",
+          "path": "artifacts/raw_results/plasticity3d_lambda1p55_degree_mesh_energy_study/comparison_summary.json"
+        }
+      ],
+      "generator": {
+        "function": "main",
+        "output": "plasticity3d_benchmark_summary.tex",
+        "path": "paper/scripts/generate_paper_tables.py"
+      }
+    },
+    "plasticity3d_constitutive_vs_reference_formula.tex": {
+      "archive_status": "needs_final_archive",
+      "data_inputs": [
+        {
+          "kind": "repository_path",
+          "path": "artifacts/raw_results/source_compare/plasticity3d_l1_2_lambda1_grad1e2_scaling/comparison_summary.json"
+        }
+      ],
+      "generator": {
+        "function": "main",
+        "output": "plasticity3d_constitutive_vs_reference_formula.tex",
+        "path": "paper/scripts/generate_paper_tables.py"
+      }
+    },
+    "plasticity3d_degree_energy_study.tex": {
+      "archive_status": "needs_final_archive",
+      "data_inputs": [
+        {
+          "kind": "repository_path",
+          "path": "artifacts/raw_results/plasticity3d_lambda1p55_degree_mesh_energy_study/comparison_summary.json"
+        }
+      ],
+      "generator": {
+        "function": "main",
+        "output": "plasticity3d_degree_energy_study.tex",
+        "path": "paper/scripts/generate_paper_tables.py"
+      }
+    },
+    "plasticity3d_derivative_ablation.tex": {
+      "archive_status": "archive_neutral",
+      "data_inputs": [
+        {
+          "kind": "repository_path",
+          "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_derivative_ablation/comparison_summary.json"
+        }
+      ],
+      "generator": {
+        "function": "main",
+        "output": "plasticity3d_derivative_ablation.tex",
+        "path": "paper/scripts/generate_paper_tables.py"
+      }
+    },
+    "plasticity3d_derivative_degree.tex": {
+      "archive_status": "needs_final_archive",
+      "data_inputs": [
+        {
+          "kind": "repository_path",
+          "path": "artifacts/reports/paper_reviewer_gap_experiments/full_p3d_derivative_degree.csv"
+        }
+      ],
+      "generator": {
+        "function": "main",
+        "output": "plasticity3d_derivative_degree.tex",
+        "path": "paper/scripts/generate_paper_tables.py"
+      }
+    },
+    "plasticity3d_fixed_reference_operator_pmg.tex": {
+      "archive_status": "needs_final_archive",
+      "data_inputs": [
+        {
+          "kind": "repository_path",
+          "path": "artifacts/raw_results/source_compare/plasticity3d_l1_2_lambda1_grad1e2_scaling_all_pmg/comparison_summary.json"
+        }
+      ],
+      "generator": {
+        "function": "main",
+        "output": "plasticity3d_fixed_reference_operator_pmg.tex",
+        "path": "paper/scripts/generate_paper_tables.py"
+      }
+    },
+    "plasticity3d_local_karolina_partitioning.tex": {
+      "archive_status": "needs_final_archive",
+      "data_inputs": [
+        {
+          "kind": "repository_path",
+          "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_lambda155_scaling/local_solver_total_scaling.csv"
+        },
+        {
+          "kind": "repository_path",
+          "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_lambda155_scaling/karolina_rpn16_solver_total_scaling.csv"
+        },
+        {
+          "kind": "repository_path",
+          "path": "artifacts/raw_results/example_runs/plasticity3d_p4_l1_2_lambda1p55_mumps_pmg_step_grad_convergence_20260507_190225/step_grad_convergence_summary.csv"
+        }
+      ],
+      "generator": {
+        "function": "main",
+        "output": "plasticity3d_local_karolina_partitioning.tex",
+        "path": "paper/scripts/generate_paper_tables.py"
+      }
+    },
+    "plasticity3d_local_karolina_scaling.tex": {
+      "archive_status": "needs_final_archive",
+      "data_inputs": [
+        {
+          "kind": "repository_path",
+          "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_lambda155_scaling/local_solver_total_scaling.csv"
+        },
+        {
+          "kind": "repository_path",
+          "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_lambda155_scaling/karolina_rpn16_solver_total_scaling.csv"
+        },
+        {
+          "kind": "repository_path",
+          "path": "artifacts/raw_results/example_runs/plasticity3d_p4_l1_2_lambda1p55_mumps_pmg_step_grad_convergence_20260507_190225/step_grad_convergence_summary.csv"
+        }
+      ],
+      "generator": {
+        "function": "main",
+        "output": "plasticity3d_local_karolina_scaling.tex",
+        "path": "paper/scripts/generate_paper_tables.py"
+      }
+    },
+    "plasticity3d_recommended_scaling.tex": {
+      "archive_status": "needs_final_archive",
+      "data_inputs": [
+        {
+          "kind": "repository_path",
+          "path": "artifacts/raw_results/source_compare/plasticity3d_l1_2_lambda1_grad1e2_local_pmg_scaling/comparison_summary.json"
+        }
+      ],
+      "generator": {
+        "function": "main",
+        "output": "plasticity3d_recommended_scaling.tex",
+        "path": "paper/scripts/generate_paper_tables.py"
+      }
+    },
+    "plasticity3d_validation_summary.tex": {
+      "archive_status": "archive_neutral",
+      "data_inputs": [
+        {
+          "kind": "repository_path",
+          "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_validation/comparison_summary.json"
+        }
+      ],
+      "generator": {
+        "function": "main",
+        "output": "plasticity3d_validation_summary.tex",
+        "path": "paper/scripts/generate_paper_tables.py"
+      }
+    },
+    "reference_availability.tex": {
+      "archive_status": "archive_neutral",
+      "data_inputs": [],
+      "generator": {
+        "function": "main",
+        "output": "reference_availability.tex",
+        "path": "paper/scripts/generate_paper_tables.py"
+      }
+    },
+    "sota_framework_comparison.tex": {
+      "archive_status": "archive_neutral",
+      "data_inputs": [],
+      "generator": {
+        "function": "main",
+        "output": "sota_framework_comparison.tex",
+        "path": "paper/scripts/generate_paper_tables.py"
+      }
+    },
+    "topology_benchmark_summary.tex": {
+      "archive_status": "archive_neutral",
+      "data_inputs": [
+        {
+          "kind": "repository_path",
+          "path": "experiments/analysis/docs_assets/data/topology/resolution_objectives.csv"
+        }
+      ],
+      "generator": {
+        "function": "main",
+        "output": "topology_benchmark_summary.tex",
+        "path": "paper/scripts/generate_paper_tables.py"
+      }
+    },
+    "topology_rank_consistency.tex": {
+      "archive_status": "needs_final_archive",
+      "data_inputs": [
+        {
+          "kind": "repository_path",
+          "path": "artifacts/reports/paper_reviewer_gap_experiments/full_topology_consistency.csv"
+        }
+      ],
+      "generator": {
+        "function": "main",
+        "output": "topology_rank_consistency.tex",
+        "path": "paper/scripts/generate_paper_tables.py"
+      }
+    },
+    "topology_summary.tex": {
+      "archive_status": "archive_neutral",
+      "data_inputs": [
+        {
+          "kind": "repository_path",
+          "path": "experiments/analysis/docs_assets/data/topology/strong_scaling.csv"
+        }
+      ],
+      "generator": {
+        "function": "main",
+        "output": "topology_summary.tex",
+        "path": "paper/scripts/generate_paper_tables.py"
+      }
+    }
+  },
+  "generated_tables": [
+    "benchmark_specification_matrix.tex",
+    "derivative_route_compare.tex",
+    "family_highlights.tex",
+    "ginzburg_landau_benchmark_summary.tex",
+    "ginzburg_landau_globalization_fixed_budget.tex",
+    "globalization_method_compare.tex",
+    "hyperelasticity_benchmark_summary.tex",
+    "hyperelasticity_distribution_memory.tex",
+    "hyperelasticity_karolina_pmg_scaling.tex",
+    "hyperelasticity_pmg_sensitivity.tex",
+    "implementation_capability_matrix.tex",
+    "jax_fem_hyperelastic_baseline.tex",
+    "plaplace_benchmark_summary.tex",
+    "plasticity2d_benchmark_summary.tex",
+    "plasticity2d_reference_continuation.tex",
+    "plasticity3d_benchmark_summary.tex",
+    "plasticity3d_constitutive_vs_reference_formula.tex",
+    "plasticity3d_degree_energy_study.tex",
+    "plasticity3d_derivative_ablation.tex",
+    "plasticity3d_derivative_degree.tex",
+    "plasticity3d_fixed_reference_operator_pmg.tex",
+    "plasticity3d_local_karolina_partitioning.tex",
+    "plasticity3d_local_karolina_scaling.tex",
+    "plasticity3d_recommended_scaling.tex",
+    "plasticity3d_validation_summary.tex",
+    "reference_availability.tex",
+    "sota_framework_comparison.tex",
+    "topology_benchmark_summary.tex",
+    "topology_rank_consistency.tex",
+    "topology_summary.tex"
+  ],
+  "notes": [
+    "Tables with archive_status=needs_final_archive have explicit source provenance but still depend on raw or report inputs that must be covered by the final durable archive.",
+    "Static comparison tables have empty data_inputs because their content is defined directly in paper/scripts/generate_paper_tables.py."
+  ]
+}
