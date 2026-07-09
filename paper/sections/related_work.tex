@@ -1,15 +1,10 @@
 \label{sec:related}
 
-Existing systems cover important parts of the nonlinear finite-element
-calculation:
-high-level FEM automation, differentiable FEM, solver bridges, mechanics
-benchmarks, and scalable nonlinear algebra. The gap addressed here is the
-combined study of local derivative construction, sparse MPI assembly,
-globalization, and preconditioning on one heterogeneous energy-minimization
-suite. We therefore organize the relevant literature into four groups:
-finite-element and PDE-optimization automation, differentiable FEM and
-JAX--solver bridges, mechanics and topology benchmark context, and sparse
-nonlinear solver infrastructure.
+The relevant literature separates into high-level FEM automation,
+differentiable FEM and JAX--solver bridges, mechanics and topology benchmark
+context, and sparse nonlinear algebra. The gap addressed here is the combined
+study of local derivative construction, sparse MPI assembly, globalization, and
+preconditioning on one heterogeneous energy-minimization suite.
 
 \Cref{tab:sota-comparison} summarizes the computational roles needed for this
 positioning: modeling layer, differentiation scope, second-order information,

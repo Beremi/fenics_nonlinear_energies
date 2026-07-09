@@ -13,12 +13,10 @@ evidence narrative.
 The Plasticity3D derivative-route ablation is the clearest fixed-work example;
 see
 \Cref{fig:plasticity3d-derivative-ablation,tab:plasticity3d-derivative-ablation}.
-On the fixed $P_4(L_1)$,
-$\lambda_{\mathrm{sr}}=1.5$, 8-rank case, the three routes report terminal
-observables with the same rounded energy, external-work observable, and maximum
-displacement, with 8 Newton iterations and 376 Krylov iterations. Thus the
-reported evidence isolates derivative-route cost only after the residual,
-Jacobian, preconditioner, and nonlinear stopping policy have been fixed.
+On the fixed high-order Plasticity3D case, the three derivative routes preserve
+the reported terminal observables and iteration counts. The comparison therefore
+isolates derivative-route cost only after the residual, Jacobian,
+preconditioner, and nonlinear stopping policy have been fixed.
 
 In this setting, constitutive AD has the lowest measured wall time, while
 colored SFD remains a useful sparse-recovery comparison and fallback route on

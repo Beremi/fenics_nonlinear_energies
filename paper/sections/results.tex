@@ -1,26 +1,20 @@
 \label{sec:performance-solver-behavior}
 
-This section turns from problem definition to computational behavior. The
-benchmark families in \Cref{sec:benchmarks} defined the governing
-equations, discrete energies, and representative states, and
-\Cref{sec:validation} separated the validation and external-comparison
-evidence. Here we focus on parallel timings, scaling trends, solver behavior,
-and the comparative cost of alternative derivative or discretization choices.
-Earlier timing evidence is retained when it clarifies scalability, but it is
-treated as performance evidence rather than validation evidence. The
-cross-section protocol table below recalls validation rows only to fix the
-terminology used when those rows are discussed alongside timing evidence. The
-status and timing terms used below follow the protocol in
+Having defined the benchmark models and validation evidence, we now report
+computational behavior: globalization, derivative-route cost, sparse-solver
+policy, memory, and scaling. Timing rows from validation studies are used only
+when they clarify solver behavior; validation and performance interpretations
+remain separate. \Cref{tab:numerical-protocol-summary} fixes the row-level terms
+used across the result blocks and follows the protocol in
 \Cref{tab:solver-reporting-protocol}.
 
 \begin{table}[!htbp]
   \centering
   \scriptsize
-  \caption{Numerical evidence blocks and reporting protocol. Validation rows are
-  recalled only for terminology; the performance interpretations below use the
-  timing, stopping, and solver-policy columns. The linear-solve column gives the
-  representative KSP tolerance and maximum-iteration policy; result-specific
-  rows override it when stated.}
+  \caption{Numerical evidence blocks and reporting protocol. Validation rows fix
+  terminology only; performance claims use the stated timing, stopping, and
+  solver-policy columns. The KSP column gives representative tolerance and
+  iteration policies, overridden by result-specific rows.}
   \label{tab:numerical-protocol-summary}
   \input{tables/generated/numerical_protocol_summary.tex}
 \end{table}
@@ -60,8 +54,8 @@ excerpt all three policies complete; the hybrid policy reduces nonlinear
 iterations and solver time relative to line-search-only Newton, while the pure
 Steihaug variant has more trust-region rejections.
 
-The Plasticity3D endpoint gives the strongest warning against a universal
-policy. At the stricter $\|\nabla \mathcal{F}\|_2 < 10^{-4}$ criterion,
+The Plasticity3D endpoint is the clearest case in this suite against a
+universal policy. At the stricter $\|\nabla \mathcal{F}\|_2 < 10^{-4}$ criterion,
 line-search-only Newton reaches the iteration cap, whereas both trust-region
 policies converge. The capped row matches the displayed energy but remains above
 the gradient target, as reported by the gradient-to-target column. The hybrid

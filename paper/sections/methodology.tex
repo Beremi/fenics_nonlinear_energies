@@ -169,13 +169,23 @@ $\mathrm{pred}_k$ is the decrease predicted by the local quadratic or reduced
 trust-region model. A nonpositive predicted decrease is treated as model
 failure for the trust-region acceptance test. The admissible line-search
 families are Armijo backtracking, bounded merit search, and residual-bisection
-safeguards. Benchmark tables instantiate the finite set of remaining policy
-parameters, including accept/reject thresholds, radius updates, caps, and
-fallback rules, wherever they affect interpretation. Reported PETSc linear
-solves use the relative KSP residual tolerance summarized in
-\Cref{tab:numerical-protocol-summary} or stated with the corresponding run when
-the policy varies. Failed linear solves and non-descent directions are handled
-by the stated globalization safeguard or reported as capped solver behavior.
+safeguards. An Armijo step satisfies
+\[
+  \mathcal{F}(x_k+\alpha d_k)
+  \le \mathcal{F}(x_k) + c_1 \alpha g_k^\top d_k,
+\]
+with $c_1\in(0,1)$; bounded merit search examines a prescribed bounded interval
+and accepts only a decreasing finite trial value;
+residual-bisection safeguards bisect the trial step until the residual-direction
+test used by the run is satisfied; in the PETSc Newton rows this test is
+$g(x_k+\alpha d_k)^\top d_k<0$, unless the line-search cap is reached. Benchmark
+tables instantiate the finite set of remaining policy parameters, including
+accept/reject thresholds, radius updates, caps, and fallback rules, wherever
+they affect interpretation. Reported PETSc linear solves use the relative KSP
+residual tolerance summarized in \Cref{tab:numerical-protocol-summary} or stated
+with the corresponding run when the policy varies. Failed linear solves and
+non-descent directions are handled by the stated globalization safeguard or
+reported as capped solver behavior.
 
 For the converged bottom-clamped three-dimensional plasticity scaling
 configuration reported in this paper, the chosen policy is simpler: Newton with

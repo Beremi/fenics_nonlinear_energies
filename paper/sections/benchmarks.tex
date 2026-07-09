@@ -263,9 +263,9 @@ is part of the benchmark definition.
 terminal-state consistency from the prescribed initial state. The local picture
 is again one of formulation consistency, now for a more solver-sensitive
 nonconvex energy: the \fenics{} reference, element AD, and colored sparse
-recovery all report 8 Newton iterations, 33 Krylov iterations, and final
-energies within about $\num{1e-6}$. Strong scaling and solver-time comparisons
-for this family are reported in \Cref{sec:num-gl}.
+recovery report matching Newton--Krylov counts and final energies within about
+$\num{1e-6}$. Strong scaling and solver-time comparisons for this family are
+reported in \Cref{sec:num-gl}.
 
 \FloatBarrier
 
@@ -729,8 +729,8 @@ $L_1,\ldots,L_4$ for the four displayed mesh levels.
 
 Here and in the Davis-B reduction below,
 $\lambda_{\mathrm{sr}}>0$ denotes the strength-reduction factor.
-The figures below use the bottom-clamped $P_4(L_2)$ representative endpoint at
-$\lambda_{\mathrm{sr}}=1.55$ and the finished nine-case study
+The representative figures use the bottom-clamped $P_4(L_2)$ endpoint at
+$\lambda_{\mathrm{sr}}=1.55$ and the completed nine-case study
 at the same load factor. The $\lambda_{\mathrm{sr}}=1.0$ strong-scaling
 study is reported separately in \Cref{sec:num-plasticity3d} as auxiliary timing
 evidence.

@@ -10,19 +10,12 @@ problems, the main lesson is that local AD choices and distributed nonlinear
 solver design must be considered together.
 
 The validation and performance evidence in
-\Cref{sec:validation,sec:performance-solver-behavior} support this pattern on a
-deliberately heterogeneous benchmark suite. Scalar problems check formulation
-and derivative agreement, hyperelasticity provides a narrow matched
-terminal-state companion comparison, three-dimensional plasticity tests
-nonsmooth constitutive structure
-and distributed sparse solves under an endpoint-surrogate interpretation, and
-topology optimization exercises a coupled design-and-mechanics problem. The
-high-order plasticity derivative-route comparison identifies constitutive AD as
-the lowest measured wall-time route among the tested alternatives. The converged
-three-dimensional plasticity scaling sweep preserves the same nonlinear and
-Krylov work across the tested rank counts. The topology runs provide distributed
-timing evidence for the coupled design-and-mechanics loop, with a separate
-controlled rank-consistency check.
+\Cref{sec:validation,sec:performance-solver-behavior} combines formulation
+checks, scoped external comparisons, fixed-work derivative-route studies, and
+distributed timing and scaling measurements. Across the tested cases, it
+supports the methodological point that derivative construction, sparse assembly,
+nonlinear globalization, Krylov algebra, and preconditioning should be evaluated
+as one solver design.
 
 The resulting contribution is a scientific computing framework for asking which
 derivative route, sparse ownership pattern, globalization policy, and

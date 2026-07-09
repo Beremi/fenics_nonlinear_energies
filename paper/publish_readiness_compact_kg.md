@@ -122,6 +122,13 @@ stage or commit `paper/style_guide/`.
   solver-policy prose and citations, comparator-role citations were moved into
   the opening scope paragraph, and topology rank-consistency wording now uses a
   one-rank reference run. The rebuilt PDF is a 44-page A4 article.
+- Current thematic polish pass: Results now opens with a shorter protocol
+  transition, generated protocol-table cells use paper-facing wording, Methods
+  defines the Armijo, bounded-merit, and residual-bisection line-search
+  acceptance policies, Implementation includes an owned-row residual/matrix
+  assembly display, and Discussion/Conclusion synthesize rather than re-list
+  exact result numbers. No small missing experiment is required for current
+  claims; path-history plasticity validation remains future work.
 
 ## Figure And Table Rules
 
@@ -165,6 +172,9 @@ rechecked after target-template conversion.
 Deferred layout risks from the 2026-07-09 audit: dense hyperelasticity and
 Plasticity3D result clusters, early schematic-heavy implementation pages, long
 result tables, and target-template sensitivity in the benchmark float groups.
+The latest Results audit specifically flags dense globalization/protocol tables,
+the derivative-route table cluster, the four-panel Plasticity3D degree figure,
+and the Plasticity3D CPU-scaling table as template-sensitive but readable on A4.
 Stale non-manuscript generated figure/table outputs are now removed and guarded
 by `validate_paper_assets.py`; figure sizing now fails fast if the current A4
 article layout contract changes without updating the measurement policy.

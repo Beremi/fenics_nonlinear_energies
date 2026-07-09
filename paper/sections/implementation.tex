@@ -143,12 +143,20 @@ Matrix entries are inserted only for rows in $I_r$, with values on $G_r$ used to
 evaluate local stencils but not to duplicate ownership. Scalar energy values
 reported in the results are the solver-reported global reductions for the
 corresponding configuration; the ownership contract here concerns derivative and
-matrix assembly. This communication order matters for both direct second-order
-assembly and colored sparse recovery. Exact element or constitutive assembly can
-write directly into local sparse buffers. Colored sparse recovery requires an
-additional graph-coloring step, but once the coloring is known the AD-HVP or
-finite-difference probe evaluations use the same ghost fill on $\widetilde I_r$
-and still produce owned-row sparse insertions.
+matrix assembly. Equivalently, if
+$\mathcal{T}_r=\{K:\operatorname{dofs}(K)\cap I_r\ne\emptyset\}$, then rank $r$
+inserts
+\[
+  R_i(u)=\sum_{K\in\mathcal{T}_r} r_{K,i}(u_{\widetilde I_r}),\qquad
+  A_{ij}(u)=\sum_{K\in\mathcal{T}_r} a_{K,ij}(u_{\widetilde I_r}),
+  \quad i\in I_r,\; j\in \widetilde I_r,
+\]
+and uses ghost columns only through the local stencil. This communication order
+matters for both direct second-order assembly and colored sparse recovery. Exact
+element or constitutive assembly can write directly into local sparse buffers.
+Colored sparse recovery requires an additional graph-coloring step, but once the
+coloring is known the AD-HVP or finite-difference probe evaluations use the same
+ghost fill on $\widetilde I_r$ and still produce owned-row sparse insertions.
 
 \begin{figure}[!htbp]
   \centering

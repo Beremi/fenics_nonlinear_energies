@@ -1407,6 +1407,23 @@ MATLAB literature only when there is source-backed evidence.
   preprint; and the topology rank-consistency paragraph uses a one-rank
   reference run rather than baseline language. The rebuilt A4 PDF is 44 pages
   and remains target-template/page-budget sensitive.
+- `Current thematic prose/methods/results audit`
+  (`Rawls the 2nd`/`Dirac the 2nd`/`Locke the 2nd`): completed and integrated
+  in the current polish chunk. Findings addressed: Results opens with a shorter
+  protocol transition; the numerical protocol table uses paper-facing wording;
+  Methods defines Armijo, bounded-merit, and residual-bisection acceptance
+  policies; Implementation adds an owned-row residual/matrix assembly display;
+  Benchmarks avoids exact Ginzburg--Landau iteration counts in model-definition
+  prose and uses more formal representative-figure wording; the Plasticity3D
+  validation summary labels endpoint-observable differences as reported rather
+  than comparison status; the Plasticity3D globalization interpretation uses
+  suite-scoped cautious language; and Discussion/Conclusion synthesize the
+  solver-design message rather than re-reporting result tables. Dirac found no
+  genuinely small missing experiment for the current claims; path-history
+  plasticity validation remains a future-work extension. The rebuilt A4 PDF is
+  44 pages. Remaining layout risks are target-template sensitivity in dense
+  Results table clusters, the four-panel Plasticity3D degree figure, and the
+  Plasticity3D CPU-scaling table.
 
 ## First Edit Backlog
 
