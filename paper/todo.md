@@ -418,13 +418,14 @@ required support for the current scoped contribution.
   already cached full text; after the cache-first generator fix, the exact
   command passed and generated `paper/literature/sources.md` with 24 public
   entries, 9 non-public local entries, and 3 unavailable entries.
-- `./.venv/bin/python paper/scripts/generate_paper_tables.py`: passed.
-  The current generated table manifest records 32 generated tables; all 30
-  TeX-included generated tables have source records, and all 32 generated table
-  sources are archive-neutral.
+- `./.venv/bin/python paper/scripts/generate_paper_tables.py`: passed for the
+  table-manifest refresh. That pass recorded 32 generated tables, 30 of them
+  included by TeX, with archive-neutral source records. The current
+  paper-facing validation gate now reports 30 generated tables.
 - `./.venv/bin/python paper/scripts/generate_paper_figures.py --manifest-only`:
-  passed and rewrote the figure manifest; the manifest records 34 generated
-  figure sources, all archive-neutral.
+  passed for the figure-manifest refresh. That pass recorded 34 generated
+  figure sources, all archive-neutral. The current paper-facing validation gate
+  now reports 29 TeX-included figures.
 - `./.venv/bin/python paper/scripts/build_submission_bundle.py`: passed and
   wrote `artifacts/reproduction/paper_submission_2026_07_08/manifest.json` with
   source and bundle SHA256 hashes for 51 paper-critical inputs.
@@ -741,6 +742,23 @@ required support for the current scoped contribution.
 - `./.venv/bin/python paper/scripts/check_release_blockers.py --expect-blockers`:
   passed after the manifest refresh and still reports the four expected
   final-submission blockers: target template/declarations, repository license,
+  archival DOI, and durable archive integration.
+- `make -C paper figures`: passed after regenerating the Plasticity3D validation
+  assets with matched-comparator labels.
+- `make -C paper submission-check`: passed after the PETSc citation,
+  comparator-scope, topology-timing, and overfull-line cleanup, rebuilding a
+  42-page A4 PDF and rerunning the LaTeX-log scan, `qpdf`, aux-order check,
+  hard-float placement check, manuscript hygiene gate, submission-bundle
+  manifest verifier, and archive-neutral asset validation.
+- `pdftoppm -png -r 165 -f 25 -l 25 paper/build/main.pdf ...` plus visual
+  inspection confirmed the Plasticity3D validation figure titles, legend, and
+  caption now use matched-comparator wording.
+- `git diff --check`, `git check-ignore -v paper/style_guide/README.md`, and
+  `git status --short --ignored paper/style_guide` passed for the current
+  patch; the style-guide snapshot remains ignored.
+- `./.venv/bin/python paper/scripts/check_release_blockers.py --expect-blockers`:
+  passed for the current patch and still reports only the four expected
+  external blockers: target template/declarations, repository license,
   archival DOI, and durable archive integration.
 
 Exact remaining blockers are submission metadata and license/archive DOI. The

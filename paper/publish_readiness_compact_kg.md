@@ -137,6 +137,18 @@ stage or commit `paper/style_guide/`.
   to commit `3febc92239be9f0c9fc8f129459377cb5fb9340a`; manifest-hash,
   archive-neutral asset, submission, release-blocker, diff-whitespace, and
   ignored-style-guide checks pass.
+- Current citation/comparator chunk: replaced the PETSc web citation with the
+  official PETSc/TAO Users Manual DOI record, narrowed Plasticity3D validation
+  wording and figure labels to matched-comparator diagnostics, and recast the
+  topology parallel evidence as rank-varied adaptive timing plus a controlled
+  rank-consistency check. The current A4 submission gate passes and produces a
+  42-page PDF.
+- Current message/math/layout chunk: removed draft availability prose that
+  called out the absent DOI, put the primary JAX+PETSc implementation path
+  before reference paths, defined AD/AD-HVP on first use, added the topology
+  volume-multiplier recurrence, normalized equation references/differentials,
+  and moved captions above the most fragile long result tables. Release checks
+  still flag the unresolved DOI/archive/license/template blockers.
 
 ## Figure And Table Rules
 
@@ -174,7 +186,7 @@ external release decisions:
 - durable software/artifact archive;
 - archival DOI in the availability statement.
 
-The current PDF is a 43-page A4 article. Page budget and float behavior must be
+The current PDF is a 42-page A4 article. Page budget and float behavior must be
 rechecked after target-template conversion.
 
 Deferred layout risks from the 2026-07-09 audit: the hyperelasticity diagnostic

@@ -100,8 +100,8 @@ and its associated energy formulation \citep[Ch.~2]{lindqvist2019plaplace}. The
 unknown is a scalar field $u:\Omega \to \mathbb{R}$ and the continuous energy is
 \begin{equation}
   \mathcal{E}(u)
-  = \int_{\Omega} \frac{1}{p} \lvert \nabla u \rvert^p \, dx
-    - \int_{\Omega} f u \, dx,
+  = \int_{\Omega} \frac{1}{p} \lvert \nabla u \rvert^p \,\mathrm{d}x
+    - \int_{\Omega} f u \,\mathrm{d}x,
   \label{eq:plaplace-energy}
 \end{equation}
 whose Euler--Lagrange equation is
@@ -115,9 +115,9 @@ whose Euler--Lagrange equation is
 The weak problem is: find $u \in W_0^{1,p}(\Omega)$ such that
 \begin{equation}
   \int_{\Omega}
-    \lvert \nabla u \rvert^{p-2} \nabla u \cdot \nabla v \, dx
+    \lvert \nabla u \rvert^{p-2} \nabla u \cdot \nabla v \,\mathrm{d}x
   =
-  \int_{\Omega} f v \, dx
+  \int_{\Omega} f v \,\mathrm{d}x
   \qquad \forall v \in W_0^{1,p}(\Omega).
   \label{eq:plaplace-weak}
 \end{equation}
@@ -151,7 +151,7 @@ which the derivative routes are compared in the energy plot and summary table.
 \begin{figure}[!htbp]
   \centering
   \includegraphics[width=\PaperFigureNarrow]{plaplace_energy_levels.pdf}
-  \caption{Final discrete energies from \cref{eq:plaplace-discrete} across the
+  \caption{Final discrete energies from \eqref{eq:plaplace-discrete} across the
   selected mesh hierarchy. The element-AD and colored sparse-recovery
   \jaxpetsc{} paths are energy-consistent with the \fenics{} reference at the
   plotted scale.}
@@ -164,14 +164,14 @@ which the derivative routes are compared in the energy plot and summary table.
   \centering
   \input{tables/generated/plaplace_benchmark_summary.tex}
   \caption{Representative final discrete energies from
-  \cref{eq:plaplace-discrete} on the selected case.}
+  \eqref{eq:plaplace-discrete} on the selected case.}
   \label{tab:plaplace-benchmark}
 \end{table}
 
 The within-benchmark picture is therefore one of formulation agreement:
 \cref{fig:plaplace-energy-levels,tab:plaplace-benchmark} report JAX+PETSc
 discrete energies within about $\num{1e-8}$ of the \fenics{} Newton reference
-for \cref{eq:plaplace-discrete}. Scaling and timing for this family are reported in
+for \eqref{eq:plaplace-discrete}. Scaling and timing for this family are reported in
 \Cref{sec:num-plaplace}.
 
 \FloatBarrier
@@ -188,7 +188,7 @@ $\Omega = [-1,1]^2$ with homogeneous Dirichlet boundary conditions and energy
   =
   \int_{\Omega}
     \frac{\varepsilon}{2} \lvert \nabla u \rvert^2
-    + \frac{1}{4}(u^2 - 1)^2 \, dx,
+    + \frac{1}{4}(u^2 - 1)^2 \,\mathrm{d}x,
   \qquad
   \varepsilon = 10^{-2}.
   \label{eq:gl-energy}
@@ -205,13 +205,13 @@ and the weak problem is: find $u \in H_0^1(\Omega)$ such that
 \begin{equation}
   \int_{\Omega}
     \varepsilon \nabla u \cdot \nabla v
-    + (u^2 - 1) u v \, dx
+    + (u^2 - 1) u v \,\mathrm{d}x
   = 0
   \qquad \forall v \in H_0^1(\Omega).
   \label{eq:gl-weak}
 \end{equation}
-The discrete problem is a conforming $P_1$ stationary problem on the
-same triangular hierarchy:
+The discrete problem is a conforming $P_1$ stationary problem on its uniform
+triangular hierarchy:
 \begin{equation}
   u_h \in V_h:
   \qquad
@@ -221,7 +221,7 @@ same triangular hierarchy:
 \end{equation}
 Relative to $p$-Laplace, the additional difficulty here is not geometry but
 indefinite local curvature from the double-well potential in
-\cref{eq:gl-energy}. All compared routes use the same initial state
+\eqref{eq:gl-energy}. All compared routes use the same initial state
 \[
   u_0(x,y)
   =
@@ -242,7 +242,7 @@ is part of the benchmark definition.
   \centering
   \includegraphics[width=\PaperFigureNarrow]{ginzburg_landau_energy_levels.pdf}
   \caption{Final discrete energies associated with the stationary problem
-  \cref{eq:gl-discrete} across mesh
+  \eqref{eq:gl-discrete} across mesh
   levels. The element-AD and colored sparse-recovery \jaxpetsc{} routes agree with the
   \fenics{} reference within about $\num{1e-6}$ in final energy.}
   \label{fig:gl-energy-levels}
@@ -252,7 +252,7 @@ is part of the benchmark definition.
   \centering
   \input{tables/generated/ginzburg_landau_benchmark_summary.tex}
   \caption{Representative final discrete energies associated with
-  \cref{eq:gl-discrete} on the selected case.}
+  \eqref{eq:gl-discrete} on the selected case.}
   \label{tab:gl-benchmark}
 \end{table}
 
@@ -285,7 +285,7 @@ potential, defined on admissible displacements with $J(u)>0$ almost everywhere,
 \begin{equation}
   \Pi(u)
   =
-  \int_{\Omega} W(F(u))\,dx,
+  \int_{\Omega} W(F(u))\,\mathrm{d}x,
   \label{eq:hyperelasticity-energy}
 \end{equation}
 on $\Omega = [0,0.4] \times [-0.005,0.005]^2$ with
@@ -323,7 +323,7 @@ The strong form is
 where $P = \partial W / \partial F$ is the first Piola stress. The weak form is:
 find $u \in V(\eta_k)$ such that
 \begin{equation}
-  \int_{\Omega} P(F(u)) : \nabla v \, dx = 0
+  \int_{\Omega} P(F(u)) : \nabla v \,\mathrm{d}x = 0
   \qquad \forall v \in V_0.
   \label{eq:hyperelasticity-weak}
 \end{equation}
@@ -357,7 +357,7 @@ scientifically important than derivative parity alone.
   \centering
   \includegraphics[width=\PaperFigureNarrow]{hyperelasticity_energy_levels.pdf}
   \caption{Final discrete energies along the stationary sequence
-  \cref{eq:hyperelasticity-discrete} across the selected mesh hierarchy. The
+  \eqref{eq:hyperelasticity-discrete} across the selected mesh hierarchy. The
   comparison records completion of the same 24-step schedule and comparable
   terminal energies; this figure does not assess trajectory-level agreement.}
   \label{fig:hyperelasticity-energy-levels}
@@ -367,7 +367,7 @@ scientifically important than derivative parity alone.
   \centering
   \input{tables/generated/hyperelasticity_benchmark_summary.tex}
   \caption{Representative 24-step terminal energies along
-  \cref{eq:hyperelasticity-discrete}.}
+  \eqref{eq:hyperelasticity-discrete}.}
   \label{tab:hyperelasticity-benchmark}
 \end{table}
 
@@ -378,7 +378,7 @@ terminal deformed state and terminal energies, while globalization and scaling
 evidence are deferred to \Cref{sec:num-hyperelasticity}. The separate validation
 section adds one serial JAX-FEM comparison on the same mesh and
 prescribed displacement schedule, with energy post-comparison under
-\cref{eq:hyperelasticity-energy}; it is
+\eqref{eq:hyperelasticity-energy}; it is
 included as an agreement-focused hyperelastic companion comparison for this
 specific terminal-state contract.
 
@@ -429,10 +429,10 @@ $\Gamma_N=\partial\Omega\setminus
 (\Gamma_{\mathrm{bot}}\cup\Gamma_{\mathrm{side}})$.
 The corresponding weak form is
 \begin{equation}
-  \int_{\Omega} \sigma^{n+1} : \varepsilon(v) \, dx
+  \int_{\Omega} \sigma^{n+1} : \varepsilon(v) \,\mathrm{d}x
   =
-  \int_{\Omega} b^{n+1} \cdot v \, dx
-  + \int_{\Gamma_N} t^{n+1} \cdot v \, ds
+  \int_{\Omega} b^{n+1} \cdot v \,\mathrm{d}x
+  + \int_{\Gamma_N} t^{n+1} \cdot v \,\mathrm{d}s
   \qquad \forall v \in V_0.
   \label{eq:plasticity2d-weak}
 \end{equation}
@@ -576,7 +576,7 @@ $eq$ means element $e$ and quadrature point $q$, $w_{eq}$ is the corresponding
 quadrature weight including the element Jacobian, and $B_{eq}$ maps the element
 displacement vector to the two-dimensional engineering-strain vector used by the
 branch potential. The load vector $f_{\mathrm{ext}}$ is assembled from the
-right-hand side of \cref{eq:plasticity2d-weak}; for the endpoint solves this is
+right-hand side of \eqref{eq:plasticity2d-weak}; for the endpoint solves this is
 the gravity load with $b=(0,-\gamma)^\top$ and zero traction on the free
 boundary. The dilation angle enters this endpoint model only through the Davis-B
 reduction.
@@ -586,7 +586,7 @@ reduction.
   \includegraphics[width=\PaperFigureMedium]{plasticity2d_state_pair.pdf}
   \caption{Representative Plasticity2D state: displacement magnitude and
   deviatoric strain derived from the scalar surrogate
-  \cref{eq:plasticity2d-discrete}.}
+  \eqref{eq:plasticity2d-discrete}.}
   \label{fig:plasticity2d-state}
 \end{figure}
 
@@ -601,7 +601,7 @@ separately below.
   \centering
   \includegraphics[width=\PaperFigureNarrow]{plasticity2d_resolution_energy.pdf}
   \caption{Resolution trend for the Plasticity2D family. The plotted
-  terminal energies are evaluations of \cref{eq:plasticity2d-discrete} on the
+  terminal energies are evaluations of \eqref{eq:plasticity2d-discrete} on the
   completed $P_4(L_5)$ endpoint case and on the larger 20-iteration capped
   $P_4(L_6)$ and $P_4(L_7)$ diagnostics, which are not used as
   endpoint-convergence evidence.}
@@ -614,7 +614,7 @@ separately below.
   \centering
   \input{tables/generated/plasticity2d_benchmark_summary.tex}
   \caption{Representative Plasticity2D endpoint and fixed-work diagnostic
-  values from \cref{eq:plasticity2d-discrete}.}
+  values from \eqref{eq:plasticity2d-discrete}.}
   \label{tab:plasticity2d-benchmark}
 \end{table}
 
@@ -670,9 +670,9 @@ The elastic constants used below are
 \]
 With these regionwise quantities, the weak form used by the endpoint solve is
 \begin{equation}
-  \int_{\Omega} \sigma^{n+1} : \varepsilon(v) \, dx
+  \int_{\Omega} \sigma^{n+1} : \varepsilon(v) \,\mathrm{d}x
   =
-  -\int_{\Omega} \gamma(x) e_y \cdot v \, dx
+  -\int_{\Omega} \gamma(x) e_y \cdot v \,\mathrm{d}x
   \qquad \forall v \in V_0.
   \label{eq:plasticity3d-weak}
 \end{equation}
@@ -908,7 +908,7 @@ applicable row:
   \label{eq:plasticity3d-potential}
 \end{equation}
 The constitutive-AD path differentiates the smooth branches of
-\cref{eq:plasticity3d-potential} directly with JAX rather than substituting a
+\eqref{eq:plasticity3d-potential} directly with JAX rather than substituting a
 hand-derived return-map tangent; the branch interfaces remain nonsmooth and are
 treated as part of the algorithmic constitutive surrogate rather than as a
 globally smooth continuum potential.
@@ -938,7 +938,7 @@ where $\lambda_{\mathrm{sr}}$ is again the strength-reduction factor and
 $\lambda_{\mathrm{L}}$ is the Lam{\'e} parameter of the elastic predictor. The
 subscript $eq$ means that each material parameter is evaluated at element $e$
 and quadrature point $q$. The load vector $f_{\mathrm{ext}}$ is assembled from
-the body force $-\gamma_q e_y$ in \cref{eq:plasticity3d-weak}, with no Neumann
+the body force $-\gamma_q e_y$ in \eqref{eq:plasticity3d-weak}, with no Neumann
 traction contribution in the reported cases.
 
 For the strain visualizations in this paper we use the deviatoric norm
@@ -958,7 +958,7 @@ For the strain visualizations in this paper we use the deviatoric norm
   \label{eq:plasticity3d-devnorm}
 \end{equation}
 which matches the engineering-shear convention of
-\cref{eq:plasticity3d-engineering-strain}.
+\eqref{eq:plasticity3d-engineering-strain}.
 
 Equations \eqref{eq:plasticity3d-discrete} and
 \eqref{eq:plasticity3d-potential} define an algorithmic endpoint surrogate
@@ -977,7 +977,7 @@ provides reference-model context for that boundary.
   $\lambda_{\mathrm{sr}}=1.55$: displacement magnitude and surface deviatoric
   strain for the $P_4(L_2)$ run, both derived from the
   scalar surrogate in
-  \cref{eq:plasticity3d-discrete}.}
+  \eqref{eq:plasticity3d-discrete}.}
   \label{fig:plasticity3d-state}
 \end{figure}
 
@@ -987,7 +987,7 @@ provides reference-model context for that boundary.
   \caption{Newton-history convergence for all nine completed bottom-clamped
   Plasticity3D study runs at
   $\lambda_{\mathrm{sr}}=1.55$. The upper panel shows the value of the
-  algorithmic surrogate from \cref{eq:plasticity3d-discrete}; the lower panel
+  algorithmic surrogate from \eqref{eq:plasticity3d-discrete}; the lower panel
   shows the gradient norm used as the nonlinear stopping metric, with color
   indicating degree and line style indicating mesh level.}
   \label{fig:plasticity3d-convergence}
@@ -1000,7 +1000,7 @@ provides reference-model context for that boundary.
   \input{tables/generated/plasticity3d_benchmark_summary.tex}
   \caption{All nine completed bottom-clamped Plasticity3D
   study cases at $\lambda_{\mathrm{sr}} = 1.55$, reported as endpoint values of
-  \cref{eq:plasticity3d-discrete}.}
+  \eqref{eq:plasticity3d-discrete}.}
   \label{tab:plasticity3d-benchmark}
 \end{table}
 
@@ -1009,14 +1009,14 @@ provides reference-model context for that boundary.
 \Cref{fig:plasticity3d-state,fig:plasticity3d-convergence,tab:plasticity3d-benchmark}
 define the endpoint-surrogate benchmark object used later in the results
 section. The nine completed endpoint solves converge in the nonlinear stopping
-metric while the terminal values of \cref{eq:plasticity3d-discrete} decrease
+metric while the terminal values of \eqref{eq:plasticity3d-discrete} decrease
 along both mesh and degree refinements.
 
 \begin{figure}[!htbp]
   \centering
   \includegraphics[width=\PaperFigureFull]{plasticity3d_highest_mesh_y_slice_comparison.pdf}
   \caption{Shared-scale upper $y$-slice comparison of
-  $\|\varepsilon_{\mathrm{dev}}\|$ from \cref{eq:plasticity3d-devnorm} at the
+  $\|\varepsilon_{\mathrm{dev}}\|$ from \eqref{eq:plasticity3d-devnorm} at the
   highest mesh level of each degree line:
   $P_1(L_4)$, $P_2(L_3)$, and $P_4(L_2)$. The three
   runs use the bottom-clamped solver configuration at
@@ -1034,8 +1034,8 @@ changes of the physical problem.
 
 Plasticity3D is the benchmark where detailed constitutive definitions are most
 important: the equations above define the endpoint-surrogate quantities reported
-in the results section, namely \cref{eq:plasticity3d-discrete} and
-\cref{eq:plasticity3d-devnorm}.
+in the results section, namely \eqref{eq:plasticity3d-discrete} and
+\eqref{eq:plasticity3d-devnorm}.
 Timing, scaling, and degree-versus-resolution evidence for this family are
 reported in \Cref{sec:num-plasticity3d}.
 
@@ -1060,8 +1060,8 @@ mapped to a physical density through the logistic transform
   \label{eq:topology-density-map}
 \end{equation}
 On each triangular element $e$, we use the element averages
-$\theta_e := |e|^{-1}\int_e \theta_h\,dx$ and
-$z_e := |e|^{-1}\int_e z_h\,dx$; for the linear elements used here these are
+$\theta_e := |e|^{-1}\int_e \theta_h\,\mathrm{d}x$ and
+$z_e := |e|^{-1}\int_e z_h\,\mathrm{d}x$; for the linear elements used here these are
 the vertex averages. The reported fine-grid run uses a $768\times384$ mesh,
 target volume fraction $0.4$, $\theta_{\min}=\num{1e-6}$, Young's modulus
 $E=\num{1}$, Poisson ratio $0.3$, and a downward unit traction over the centered
@@ -1073,10 +1073,11 @@ design pads are $x\le 32h_x$ and
 $x\ge 2-32h_x$, $y\in[0.4-32h_y,0.6+32h_y]$.
 On these pads the physical density is held at $\theta_e=1$ during design
 updates; outside the pads, the latent variable is unconstrained and
-\cref{eq:topology-density-map} enforces
+\eqref{eq:topology-density-map} enforces
 $\theta_h\in[\theta_{\min},1]$. The target volume fraction is enforced through
 the effective multiplier $\lambda_V$ in
-\cref{eq:topology-reduced-objective}, updated by the penalty rule stated below.
+\eqref{eq:topology-reduced-objective}, updated by the penalty rule stated
+below.
 
 The second ingredient is the mechanics solve for a fixed density field.
 Let $V_h$ be the continuous vector $P_1$ displacement space and let
@@ -1109,7 +1110,7 @@ The load functional is
 \[
   \ell(v)
   =
-  \int_{\{2\}\times[0.4,0.6]} (0,-1)\cdot v\,ds.
+  \int_{\{2\}\times[0.4,0.6]} (0,-1)\cdot v\,\mathrm{d}s.
 \]
 The mechanics step finds $u_h(\theta_h)$ in the affine displacement space such
 that $a_{\theta_h}(u_h,v_h)=\ell(v_h)$ for all $v_h\in V_{h,0}$.
@@ -1148,18 +1149,39 @@ design vector $z_h^{m+1}$ is
   \label{eq:topology-reduced-objective}
 \end{align}
 where $\theta_e$ and $z_e$ are computed from the trial $z_h$, while $z_e^m$ is
-the element average from the previous design iterate. The SIMP-style
-continuation in $p$ and the regularization terms play a mesh-control
-role analogous to filtering/regularization in \citet{bourdin2001filters}. Here
-$\lambda_V$ is the effective volume multiplier, updated with penalty weight
-$10$ and multiplier step factor $12$, while
+the element average from the previous design iterate. Let
+$V(\theta_h)$ denote the density-weighted volume fraction and let
+$V_\star=0.4$ be the target value. Before the $m$th design solve we use
+\[
+  r_V^m = V(\theta_h^m)-V_\star,\qquad
+  \lambda_V^m =
+  \lambda_{\mathrm{ref}}^m
+  + \lambda_{\mathrm{corr}}^m
+  + \rho_V r_V^m,
+\]
+where $\lambda_{\mathrm{ref}}^m$ is a sensitivity-scale reference value,
+$\lambda_{\mathrm{corr}}^m$ is the carried multiplier correction, and
+$\rho_V=10$. After the design update, with
+$r_V^{m+1}=V(\theta_h^{m+1})-V_\star$, the carried correction is updated by
+\[
+  \lambda_{\mathrm{corr}}^{m+1}
+  =
+  \lambda_{\mathrm{corr}}^m
+  + \beta_V \max(1,\lambda_{\mathrm{ref}}^m) r_V^{m+1},
+  \qquad \beta_V=12.
+\]
+The SIMP-style
+continuation in $p$ and the regularization terms control mesh-scale design
+features, following the role of filters in \citet{bourdin2001filters}. Here
+$\lambda_V$ is the effective volume multiplier in the current design subproblem,
+while
 $\alpha_{\mathrm{reg}}=\num{5e-3}$,
 $\ell_{\mathrm{pf}}=\num{8e-2}$, and
 $\mu_{\mathrm{move}}=\num{1e-2}$ set the phase-field and latent-move terms.
 These are algorithmic design choices rather than standard SIMP notation. The
 outer loop alternates mechanics solves for
-\cref{eq:topology-mechanics} with reduced design updates for
-\cref{eq:topology-reduced-objective}.
+\eqref{eq:topology-mechanics} with reduced design updates for
+\eqref{eq:topology-reduced-objective}.
 
 \begin{figure}[!htbp]
   \centering
@@ -1173,7 +1195,7 @@ outer loop alternates mechanics solves for
   \centering
   \includegraphics[width=\PaperFigureNarrow]{topology_history.pdf}
   \caption{Objective-history view for the reduced topology objective
-  \cref{eq:topology-reduced-objective}, with compliance on the left axis and
+  \eqref{eq:topology-reduced-objective}, with compliance on the left axis and
   volume fraction plus the continuation schedule in $p$ on the right axis.}
   \label{fig:topology-history}
 \end{figure}
@@ -1184,7 +1206,7 @@ outer loop alternates mechanics solves for
   \centering
   \input{tables/generated/topology_benchmark_summary.tex}
   \caption{Representative topology endpoint values from
-  \cref{eq:topology-reduced-objective}.}
+  \eqref{eq:topology-reduced-objective}.}
   \label{tab:topology-benchmark}
 \end{table}
 
@@ -1198,7 +1220,8 @@ For topology, the relevant notion of
 equilibrium energy. The reported continuation starts at SIMP exponent $p=1$,
 increases $p$ by $0.2$ on each outer iteration up to $p=10$, and treats the
 fine-grid run as stalled once $p\ge 4$ and both the reported design-change and
-state-change stopping diagnostics are at most $10^{-6}$. Parallel timing and
-scaling for the same family are reported in \Cref{sec:num-topology}.
+state-change stopping diagnostics are at most $10^{-6}$. Rank-varied adaptive
+timing and a controlled rank-consistency check for the same family are reported
+in \Cref{sec:num-topology}.
 
 \FloatBarrier

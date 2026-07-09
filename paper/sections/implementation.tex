@@ -1,7 +1,13 @@
 \label{sec:implementation}
 
-The computational realization is organized around three solver formulations with
-different scientific roles.
+The computational realization starts from the primary \jaxpetsc{} path and then
+uses narrower reference formulations to check selected benchmark definitions.
+
+\paragraph{Primary \jaxpetsc{} realization.}
+This is the central solver realization of the paper. It combines JAX-based local
+physics with PETSc distributed vectors, matrices, Krylov solvers, and
+preconditioners. Problem-specific local evaluations stay in JAX; sparse
+distributed assembly, nonlinear globalization, and linear algebra stay in PETSc.
 
 \paragraph{Pure JAX reference implementations.}
 These are compact differentiable realizations of selected benchmark energies.
@@ -17,12 +23,6 @@ especially $p$-Laplace, Ginzburg--Landau, and hyperelasticity. They provide a
 trusted high-level FEM reference and help distinguish modeling issues from
 solver-policy issues. In this paper they are used mainly as scoped reference
 comparisons rather than as the primary distributed realization.
-
-\paragraph{Primary \jaxpetsc{} realization.}
-This is the central solver realization of the paper. It combines JAX-based local
-physics with PETSc distributed vectors, matrices, Krylov solvers, and
-preconditioners. Problem-specific local evaluations stay in JAX; sparse distributed
-assembly, nonlinear globalization, and linear algebra stay in PETSc.
 
 \subsection{Autodiff modes}
 

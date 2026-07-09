@@ -763,9 +763,12 @@ MATLAB literature only when there is source-backed evidence.
   bundle-refresh chunk updates the local submission-bundle manifest to the
   stabilized-figure source state, uses the canonical GitHub repository URL in
   the manuscript availability statement, and keeps archive-neutral validation
-  green. Remaining provenance risks are release-level: the curated bundle must
-  be refreshed once more from the final released tree, included in a durable
-  licensed archive, and cited with its DOI or permanent record. Current
+  green. The current message/math/layout chunk removes draft prose about the
+  absent DOI from the manuscript availability statement while leaving the
+  release-blocker audit responsible for flagging that missing DOI. Remaining
+  provenance risks are release-level: the curated bundle must be refreshed once
+  more from the final released tree, included in a durable licensed archive,
+  and cited with its DOI or permanent record. Current
   thematic-audit chunk keeps archive-neutral validation green after removing
   unused generated schematic assets from the manifest. The local Git remote
   still uses the historical `fenics_nonlinear_energies` URL, but `gh repo view`

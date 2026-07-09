@@ -47,15 +47,15 @@ regularization or design penalties. The term
 $\mathcal{S}_h$ denotes the state-dependent scalar part; in topology
 optimization it is the frozen compliance term defined in
 \cref{sec:bench-topology}, not the load-step potential
-\cref{eq:generic-potential}. Thus \cref{eq:generic-potential} covers the scalar
+\eqref{eq:generic-potential}. Thus \eqref{eq:generic-potential} covers the scalar
 PDE, mechanics, and endpoint-surrogate solves, while
-\cref{eq:generic-objective} records the reduced-objective role. When an
+\eqref{eq:generic-objective} records the reduced-objective role. When an
 algorithm is stated independently of a benchmark family, we denote its merit
 functional by $\mathcal{F}$. Hyperelasticity is the only family in which
 $J=\det F$ denotes the deformation Jacobian, so we avoid the bare symbol $J$ for
 generic objectives elsewhere in the paper.
 
-In \cref{eq:generic-potential}, $\Phi_e$ is the integrated scalar contribution
+In \eqref{eq:generic-potential}, $\Phi_e$ is the integrated scalar contribution
 of element $e$. In quadrature-based mechanics examples,
 $\Phi_e(x_e;\theta_e)=\sum_q w_q\mathcal{W}_q(\varepsilon_q;\theta_q)$, where
 $\varepsilon_q := B_q u_e(x;\theta)$ is the local strain or gradient argument,

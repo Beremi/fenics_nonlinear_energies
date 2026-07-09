@@ -16,13 +16,13 @@ status and timing terms used below follow the protocol in
 \begin{table}[!htbp]
   \centering
   \scriptsize
-  \input{tables/generated/numerical_protocol_summary.tex}
   \caption{Numerical evidence blocks and reporting protocol. Validation rows are
   recalled only for terminology; the performance interpretations below use the
   timing, stopping, and solver-policy columns. The linear-solve column gives the
   representative KSP tolerance and maximum-iteration policy; result-specific
   rows override it when stated.}
   \label{tab:numerical-protocol-summary}
+  \input{tables/generated/numerical_protocol_summary.tex}
 \end{table}
 
 \subsection{Globalization Method Comparison}
@@ -168,9 +168,9 @@ comparison already isolates the stencil-density effect.
 \subsection{\texorpdfstring{$p$-Laplace}{p-Laplace}}
 \label{sec:num-plaplace}
 
-The $p$-Laplace problem definition and discrete energy are given in
-\Cref{sec:bench-plaplace,eq:plaplace-discrete}. In this clean scalar setting,
-the numerical story is easiest to interpret: exact element Hessians remain
+The $p$-Laplace problem definition is given in \Cref{sec:bench-plaplace}, with
+discrete energy \eqref{eq:plaplace-discrete}. In this clean scalar setting, the
+numerical story is easiest to interpret: exact element Hessians remain
 effective in the reported distributed runs, while colored SFD reaches nearly
 identical discrete energies at higher wall time.
 
@@ -178,7 +178,7 @@ identical discrete energies at higher wall time.
   \centering
   \includegraphics[width=\PaperFigureMedium]{plaplace_scaling.pdf}
   \caption{$p$-Laplace strong scaling on the finest tested grid. All curves
-  correspond to the same discrete problem from \cref{eq:plaplace-discrete}.}
+  correspond to the same discrete problem from \eqref{eq:plaplace-discrete}.}
   \label{fig:plaplace-results}
 \end{figure}
 
@@ -194,17 +194,18 @@ same trend with persistent recovery overhead.
 \subsection{Ginzburg--Landau}
 \label{sec:num-gl}
 
-The Ginzburg--Landau family from \Cref{sec:bench-gl,eq:gl-discrete} shows the
-same high-level derivative story under a more indefinite linearization. The
-important computational message is not a dramatic separation between exact and
-approximate second-order routes, but that the distributed solver converges in
-the reported nonconvex scalar-energy runs with the same sparse infrastructure.
+The Ginzburg--Landau family from \Cref{sec:bench-gl}, with discrete problem
+\eqref{eq:gl-discrete}, shows the same high-level derivative story under a more
+indefinite linearization. The important computational message is not a dramatic
+separation between exact and approximate second-order routes, but that the
+distributed solver converges in the reported nonconvex scalar-energy runs with
+the same sparse infrastructure.
 
 \begin{figure}[H]
   \centering
   \includegraphics[width=\PaperFigureMedium]{ginzburg_landau_scaling.pdf}
   \caption{Ginzburg--Landau strong scaling for the tested fine-grid case
-  governed by \cref{eq:gl-discrete}.}
+  governed by \eqref{eq:gl-discrete}.}
   \label{fig:gl-results}
 \end{figure}
 
@@ -219,21 +220,22 @@ around 4--8 ranks before the 32-rank point.
 \subsection{Hyperelasticity}
 \label{sec:num-hyperelasticity}
 
-The hyperelasticity problem definition, boundary data, and terminal energies
-are given in \Cref{sec:bench-he,eq:hyperelasticity-discrete}. In the full
-load-path evidence, the main solver-policy questions are globalization and
+The hyperelasticity problem definition and boundary data are given in
+\Cref{sec:bench-he}, with discrete stationarity problem
+\eqref{eq:hyperelasticity-discrete}. In the full load-path evidence, the main
+solver-policy questions are globalization and
 preconditioning; the derivative-route comparison is limited to the first-step
 replicated-element case. The distributed implementation completes the full load
 path and preserves the terminal energy trend from \Cref{sec:bench-he}. The
 external JAX-FEM comparison is reported separately in
 \Cref{sec:val-hyperelasticity}; the figure below reports only distributed
-scaling for the load path in \cref{eq:hyperelasticity-discrete}.
+scaling for the load path in \eqref{eq:hyperelasticity-discrete}.
 
 \begin{figure}[H]
   \centering
   \includegraphics[width=\PaperFigureMedium]{hyperelasticity_scaling.pdf}
   \caption{Hyperelasticity strong scaling for the 24-step load path defined by
-  \cref{eq:hyperelasticity-discrete}.}
+  \eqref{eq:hyperelasticity-discrete}.}
   \label{fig:hyperelasticity-results}
 \end{figure}
 
@@ -263,12 +265,11 @@ All configurations reach the same nonlinear and linear iteration counts shown in
 \Cref{tab:hyperelasticity-karolina-pmg-scaling}: 21 Newton iterations and
 43 Krylov iterations.
 
-\Cref{tab:hyperelasticity-distribution-memory} reports the fixed-work memory
-comparison that supports using the rank-local assembly variant in the larger
-CPU sweeps. The fixed-work equivalence rows compare the replicated and
-rank-local level-4 first-step solve at four MPI ranks; the
-single-linearization memory rows use one Newton linearization on the level-5
-mesh at 8, 16, and 32 ranks. The table reports
+\Cref{tab:hyperelasticity-distribution-memory} reports the memory evidence that
+supports using the rank-local assembly variant in the larger CPU sweeps. The
+fixed-work agreement rows compare the replicated and rank-local level-4
+first-step solve at four MPI ranks; the one-linearization memory rows use one
+Newton linearization on the level-5 mesh at 8, 16, and 32 ranks. The table reports
 energy, operating-system peak RSS, and the measured footprint of assembly
 arrays, making clear whether a configuration stores global mesh and adjacency
 data or only local elements plus overlap.
@@ -276,18 +277,18 @@ data or only local elements plus overlap.
 \begin{table}[!htbp]
   \centering
   \scriptsize
-  \input{tables/generated/hyperelasticity_distribution_memory.tex}
-  \caption{Rank-local hyperelasticity distribution and memory comparison. RSS
-  max/sum gives the maximum and summed per-rank resident set size. Tracked sum
-  is the reported assembly-array footprint, and overlap/owned is the summed
-  rank-local overlap DOF count divided by global owned free DOFs for the
-  rank-local overlap assembly.}
+  \caption{Rank-local hyperelasticity memory and overlap evidence. RSS max/sum
+  gives the maximum and summed per-rank resident set size. Tracked sum is the
+  reported assembly-array footprint, and overlap/owned is the summed rank-local
+  overlap DOF count divided by global owned free DOFs for the rank-local overlap
+  assembly.}
   \label{tab:hyperelasticity-distribution-memory}
+  \input{tables/generated/hyperelasticity_distribution_memory.tex}
 \end{table}
 
-The level-4 same-work rows show matching Newton and Krylov counts and the same
+The level-4 fixed-work rows show matching Newton and Krylov counts and the same
 rounded energy value for replicated and rank-local assembly. On the larger
-level-5 one-linearization memory rows, rank-local assembly reduces summed RSS
+level-5 one-linearization rows, rank-local assembly reduces summed RSS
 from \SI{215.6}{GiB} to \SI{104.9}{GiB} at 32 ranks, with solve times
 \SI{3.37}{s} and \SI{3.36}{s}. The level-5 energy values are fixed-work
 terminal states after one linearization, so these rows are memory/cost
@@ -305,11 +306,11 @@ than an equal-accuracy timing comparison or endpoint-accuracy ranking.
 \begin{table}[H]
   \centering
   \footnotesize
-  \input{tables/generated/hyperelasticity_pmg_sensitivity.tex}
   \caption{Rank-local hyperelasticity level-5 PMG and coarse-solver sensitivity at
   32 MPI ranks with fixed nonlinear work. The PMG configurations use the same
   rank-local element path as the scaling runs.}
   \label{tab:hyperelasticity-pmg-sensitivity}
+  \input{tables/generated/hyperelasticity_pmg_sensitivity.tex}
 \end{table}
 
 The fixed-work table reports that the MUMPS-coarse PMG variants reduce total
@@ -330,10 +331,10 @@ after the same eight Newton linearizations.
 
 \begin{table}[H]
   \centering
-  \input{tables/generated/hyperelasticity_karolina_pmg_scaling.tex}
   \caption{Single- and multi-node CPU level-5 hyperelasticity first-step timings used in
   \cref{fig:hyperelasticity-karolina-pmg-scaling}.}
   \label{tab:hyperelasticity-karolina-pmg-scaling}
+  \input{tables/generated/hyperelasticity_karolina_pmg_scaling.tex}
 \end{table}
 
 \Cref{fig:hyperelasticity-karolina-pmg-scaling,tab:hyperelasticity-karolina-pmg-scaling}
@@ -346,8 +347,9 @@ full load path.
 \subsection{Plasticity2D}
 \label{sec:num-plasticity2d}
 
-The Plasticity2D model and Davis-B reduction are defined in
-\Cref{sec:bench-plasticity2d,eq:plasticity2d-discrete,eq:plasticity2d-davis}.
+The Plasticity2D model is defined in \Cref{sec:bench-plasticity2d}, with
+Davis-B reduction \eqref{eq:plasticity2d-davis} and discrete surrogate
+\eqref{eq:plasticity2d-discrete}.
 For this family, the most informative computational evidence in the present
 paper is not a single strong-scaling curve. The benchmark section separates the
 completed endpoint case from the larger fixed-cost studies in
@@ -369,9 +371,11 @@ continuation Krylov totals differ, 733 versus 829.
 \subsection{Plasticity3D}
 \label{sec:num-plasticity3d}
 
-The governing problem, Davis-B reduction, scalar constitutive potential, and
-deviatoric-strain norm are defined in
-\Cref{sec:bench-plasticity3d,eq:plasticity3d-discrete,eq:plasticity3d-davis,eq:plasticity3d-potential,eq:plasticity3d-devnorm}.
+The governing problem is defined in \Cref{sec:bench-plasticity3d}, with
+Davis-B reduction \eqref{eq:plasticity3d-davis}, scalar constitutive potential
+\eqref{eq:plasticity3d-potential}, discrete surrogate
+\eqref{eq:plasticity3d-discrete}, and deviatoric-strain norm
+\eqref{eq:plasticity3d-devnorm}.
 The validation limits for this endpoint surrogate are reported in
 \Cref{sec:val-plasticity3d}. With that interpretation fixed, this section asks
 two performance questions: which second-order route is fastest on the fixed
@@ -427,7 +431,7 @@ $P_1(L_3)$, $P_2(L_2)$, and $P_4(L_1)$. The matched set at
 \num{4801816} free DOFs is $P_1(L_4)$, $P_2(L_3)$, and $P_4(L_2)$. The
 scientific message is therefore that the solver reaches similar terminal
 energies along both $p$- and $h$-refined paths, while higher order on coarser
-meshes buys lower observed values of \cref{eq:plasticity3d-discrete} at matched
+meshes buys lower observed values of \eqref{eq:plasticity3d-discrete} at matched
 DOFs only by paying a clear wall-time premium in this nine-case endpoint study.
 At \num{610964} DOFs, for example, $P_4(L_1)$ reports energy \num{-3013227}
 and wall time \SI{208}{s}, compared with \num{-3013032} and \SI{98.3}{s} for
@@ -466,7 +470,7 @@ $P_2(L_2)$. At \num{4801816} DOFs, $P_4(L_2)$ reports \num{-3013348} and
   panels show the full $P_1/P_2/P_4$ comparison, while the bottom panels zoom to
   $P_2/P_4$ so the near-overlap hidden by the coarse $P_1$ points becomes
   visible. The left column plots final values of
-  \cref{eq:plasticity3d-discrete} against free DOFs; the right column plots
+  \eqref{eq:plasticity3d-discrete} against free DOFs; the right column plots
   the same converged energies against end-to-end wall time. All timings use the
   same 32-rank configuration.}
   \label{fig:plasticity3d-degree-energy}
@@ -477,7 +481,7 @@ $P_2(L_2)$. At \num{4801816} DOFs, $P_4(L_2)$ reports \num{-3013348} and
 \begin{figure}[!htbp]
   \centering
   \includegraphics[width=\PaperFigureMedium]{plasticity3d_recommended_scaling.pdf}
-  \caption{Auxiliary strong scaling for the selected Plasticity3D solver
+  \caption{Separate strong-scaling study for the selected Plasticity3D solver
   configuration: \localpmg{} on $P_4(L_2)$ at
   $\lambda_{\mathrm{sr}} = 1.0$. This is a separate timing study from the
   bottom-clamped $\lambda_{\mathrm{sr}} = 1.55$ results shown in
@@ -488,7 +492,7 @@ $P_2(L_2)$. At \num{4801816} DOFs, $P_4(L_2)$ reports \num{-3013348} and
 \begin{table}[!htbp]
   \centering
   \input{tables/generated/plasticity3d_recommended_scaling.tex}
-  \caption{Auxiliary Plasticity3D strong scaling for \localpmg{} on
+  \caption{Separate Plasticity3D strong-scaling study for \localpmg{} on
   $P_4(L_2)$ at $\lambda_{\mathrm{sr}} = 1.0$. These timings provide
   solver evidence for a separate load factor from the bottom-clamped
   $\lambda_{\mathrm{sr}} = 1.55$ benchmark figures.}
@@ -498,8 +502,8 @@ $P_2(L_2)$. At \num{4801816} DOFs, $P_4(L_2)$ reports \num{-3013348} and
 \FloatBarrier
 
 \Cref{fig:plasticity3d-scaling,tab:plasticity3d-scaling} give a high-DOF
-Plasticity3D distributed timing result for the Hypre-coarse auxiliary PMG
-profile. This scaling evidence uses the selected $P_4(L_2)$ mesh family but a
+Plasticity3D distributed timing result for the Hypre-coarse PMG variant. This
+scaling evidence uses the selected $P_4(L_2)$ mesh family but a
 different load factor, $\lambda_{\mathrm{sr}} = 1.0$, so it complements rather
 than extends the bottom-clamped $\lambda_{\mathrm{sr}} = 1.55$ benchmark figures
 above. Within that timing study, the reported nonlinear and linear iteration
@@ -539,7 +543,6 @@ work.
 \begin{table}[!htbp]
   \centering
   \scriptsize
-  \input{tables/generated/plasticity3d_local_karolina_scaling.tex}
   \caption{Converged timings for the Plasticity3D
   $P_4(L_2)$, $\lambda_{\mathrm{sr}}=\num{1.55}$ run in
   \cref{fig:plasticity3d-local-karolina-scaling}. Single-node configurations use one CPU
@@ -549,6 +552,7 @@ work.
   table is the relative-gradient stopping metric for this scaling run, not the
   absolute final-gradient column in the degree benchmark table.}
   \label{tab:plasticity3d-local-karolina-scaling}
+  \input{tables/generated/plasticity3d_local_karolina_scaling.tex}
 \end{table}
 
 \FloatBarrier
@@ -564,12 +568,12 @@ storage.
 
 \begin{table}[!htbp]
   \centering
-  \input{tables/generated/plasticity3d_local_karolina_partitioning.tex}
   \caption{Distributed layout measurements for the converged Plasticity3D
   scaling run. ``Max local DOFs'' is the largest local-overlap vector size on
   any rank; ``Overlap / owned DOFs'' is the summed rank-local overlap DOF count
   divided by the global owned free-DOF count.}
   \label{tab:plasticity3d-local-karolina-partitioning}
+  \input{tables/generated/plasticity3d_local_karolina_partitioning.tex}
 \end{table}
 
 \FloatBarrier
@@ -577,9 +581,9 @@ storage.
 \subsection{Topology Optimization}
 \label{sec:num-topology}
 
-The reduced design problem, mechanics subproblem, and objective history are
-defined in
-\Cref{sec:bench-topology,eq:topology-mechanics,eq:topology-reduced-objective}.
+The reduced design problem and objective history are defined in
+\Cref{sec:bench-topology}, with mechanics subproblem \eqref{eq:topology-mechanics}
+and reduced objective \eqref{eq:topology-reduced-objective}.
 The numerical question here is distributed outer-loop stability: the mechanics
 solve and the design update must remain synchronized under continuation in $p$
 and move-regularized updates. Because the outer-loop work can vary with the
@@ -592,7 +596,7 @@ computational workload.
   \includegraphics[width=\PaperFigureMedium]{topology_scaling.pdf}
   \caption{Topology end-to-end parallel timing trend for the
   fine-grid run. The plotted wall times correspond to the coupled reduced-design
-  problem defined by \cref{eq:topology-reduced-objective}, with
+  problem defined by \eqref{eq:topology-reduced-objective}, with
   per-rank stopping behavior reported in \cref{tab:topology-summary}.}
   \label{fig:topology-results}
 \end{figure}
@@ -603,7 +607,7 @@ computational workload.
   \centering
   \input{tables/generated/topology_summary.tex}
   \caption{Parallel topology summary for the fine-grid study,
-  reported for the reduced objective in \cref{eq:topology-reduced-objective}.}
+  reported for the reduced objective in \eqref{eq:topology-reduced-objective}.}
   \label{tab:topology-summary}
 \end{table}
 

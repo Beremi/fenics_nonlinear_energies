@@ -196,8 +196,8 @@ REVIEWER_HE_BUILD_LABELS = {
 }
 
 HE_DISTRIBUTION_PURPOSE_LABELS = {
-    "correctness": "fixed-work equivalence",
-    "memory": "single-linearization memory probe",
+    "correctness": "fixed-work agreement",
+    "memory": "one-linearization memory",
 }
 
 HE_DISTRIBUTION_OUTCOME_LABELS = {
@@ -1050,9 +1050,9 @@ def main() -> None:
             ["$p$-Laplace", f"{mesh_label('L5')} serial agreement; {mesh_label('L9')} distributed scaling", "Newton + line search", "FEniCS and JAX+PETSc on the distributed case; pure JAX in the serial agreement case", "nonlinear elliptic solve with exact sparse Hessians"],
             ["Ginzburg--Landau", f"{mesh_label('L5')} agreement; {mesh_label('L9')} distributed scaling", "Newton + line search", "FEniCS and JAX+PETSc comparison", "indefinite local curvature from the double well"],
             ["Hyperelasticity", f"{mesh_label('L1')} serial agreement; {mesh_label('L4')}, 24-step distributed scaling", "trust-region solve", "FEniCS and JAX+PETSc on the distributed suite; pure JAX only as a serial reference", "nonconvex large-deformation mechanics"],
-            ["Plasticity2D", f"{element_label('P4', 'L5')}--{element_label('P4', 'L7')}", "endpoint solve or fixed nonlinear work", "JAX+PETSc endpoint and solver-policy evidence", "same-mesh PMG and nonlinear tail behavior"],
-            ["Plasticity3D", f"{degree_label('P1')}/{degree_label('P2')}/{degree_label('P4')}", "endpoint, scaling, and diagnostic PMG policies", "constitutive-AD, constitutive-assembly, and PMG sensitivity diagnostics", "heterogeneous 3D Mohr--Coulomb with constitutive AD"],
-            ["Topology", "$192\\times96$ serial reference; $768\\times384$ parallel benchmark", "adaptive continuation", "pure JAX on the serial reference; JAX+PETSc on the fine-grid parallel run and distributed scaling", "distributed design-mechanics coupling"],
+            ["Plasticity2D", f"{element_label('P4', 'L5')}--{element_label('P4', 'L7')}", "endpoint solve and capped fixed work", "JAX+PETSc endpoint and solver-policy evidence", "same-mesh PMG and nonlinear tail behavior"],
+            ["Plasticity3D", f"{degree_label('P1')}/{degree_label('P2')}/{degree_label('P4')}", "endpoint, scaling, and PMG-policy studies", "constitutive AD, closed-form tangent assembly, and PMG-policy evidence", "heterogeneous 3D Mohr--Coulomb with constitutive AD"],
+            ["Topology", "$192\\times96$ serial reference; $768\\times384$ parallel benchmark", "adaptive continuation", "pure JAX on the serial reference; JAX+PETSc on the fine-grid rank-varied adaptive timing run and controlled rank-consistency check", "distributed design-mechanics coupling"],
         ],
     )
 
@@ -1162,7 +1162,7 @@ def main() -> None:
             [
                 "Plasticity3D validation",
                 "endpoint-surrogate agreement, not path-history validation",
-                "fixed-load reference-model comparisons under matched boundary conditions",
+                "fixed-load matched-comparator diagnostics under matched boundary conditions",
                 "not the primary timing target",
                 "validation criteria use fixed-load observables; strain/profile rows are diagnostic",
                 "timing is secondary to agreement metrics",

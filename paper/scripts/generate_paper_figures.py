@@ -1710,7 +1710,7 @@ def _plot_plasticity3d_validation_surface_compare(
         cmap_name="cividis",
         norm=diff_norm,
     )
-    for ax, title in zip(axes, ("reference model", "JAX+PETSc", r"$|\Delta \|u\||$"), strict=True):
+    for ax, title in zip(axes, ("matched comparator", "JAX+PETSc", r"$|\Delta \|u\||$"), strict=True):
         ax.set_title(title, pad=2.0, fontsize=9.0)
 
     cax_main = fig.add_subplot(gs[1, :2])
@@ -1778,7 +1778,7 @@ def generate_plasticity3d_validation_umax_curve(layout: dict[str, float]) -> str
     rel_l2 = float(dict(summary["layer2"])["umax_curve_relative_l2"])
 
     fig, ax = plt.subplots(figsize=paper_figure_size(layout, preset="medium", height_ratio=0.42))
-    ax.plot(x, source, marker="o", linewidth=1.8, markersize=4.5, color="#111111", label="reference model")
+    ax.plot(x, source, marker="o", linewidth=1.8, markersize=4.5, color="#111111", label="matched comparator")
     ax.plot(x, maintained, marker="s", linewidth=1.6, markersize=4.3, color="#777777", linestyle="--", label="JAX+PETSc")
     ax.set_xlabel(r"$\lambda_{\mathrm{sr}}$")
     ax.set_ylabel(r"$u_{\max}$")
