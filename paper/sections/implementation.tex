@@ -33,9 +33,9 @@ choices depend on the benchmark family, but the common logic is:
         element energy;
   \item \textbf{constitutive AD}: branchwise local constitutive tangents
         assembled from quadrature-point energy densities;
-  \item \textbf{colored SFD}: colored sparse recovery from HVP or
-        finite-difference probes when full element Hessians are not the
-        appropriate cost tradeoff.
+  \item \textbf{colored sparse recovery}: colored recovery from AD-HVP or
+        finite-difference gradient probes when full element Hessians are not the
+        appropriate cost tradeoff; tables label this route as colored SFD.
 \end{itemize}
 
 This split is scientifically important. It lets us compare exact second-order
@@ -115,12 +115,19 @@ preconditioners, or outer solver logic.
 \subsection{Distributed assembly and coloring}
 
 The \jaxpetsc{} implementation uses PETSc-owned ranges, local-plus-ghost
-layouts, and owned-row sparse assembly. This matters for both exact and
-approximate second-order information. Exact element or constitutive assembly can
-write directly into local sparse buffers. Colored SFD requires an additional
-graph-coloring step, but once the coloring is known the probe evaluations can
-still be carried out in a rank-local manner with only scalar reductions or
-owned sparse insertion in the dominant assembly loop.
+layouts, and owned-row sparse assembly. Each MPI rank owns a contiguous subset of
+free degrees of freedom and stores overlap values for elements touching that
+owned set. Before energy, gradient, Hessian, or HVP work, owned coefficients are
+scattered into the local ghost layout; the JAX kernels then evaluate element and
+quadrature contributions rank-locally on this filled overlap state. Matrix
+entries are inserted only for owned rows, with ghost data used to evaluate local
+stencils but not to duplicate ownership. Scalar energies are summed from
+rank-local contributions through PETSc/MPI reductions. This communication order
+matters for both exact and approximate second-order information. Exact element
+or constitutive assembly can write directly into local sparse buffers. Colored
+SFD requires an additional graph-coloring step, but once the coloring is known
+the probe evaluations can still be carried out in a rank-local manner with only
+scalar reductions or owned sparse insertion in the dominant assembly loop.
 
 \begin{figure}[H]
   \centering

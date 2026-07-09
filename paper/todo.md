@@ -94,6 +94,14 @@ scientific claims were introduced without supporting evidence.
   validation scope.
 - Relaxed selected hard-pinned floats in the validation, results, and appendix
   sections to reduce current blank-page regions and target-template fragility.
+- Addressed the latest message/method/evidence/layout audit: named the
+  \v{C}erm{\'a}k--Sysala--Valdman MATLAB slope-stability lineage, made the
+  reduced objective and constitutive AD notation self-contained, clarified
+  colored sparse recovery as AD-HVP probes in reported runs with
+  finite-difference probes as the classical variant, added owned/ghost
+  distributed-assembly prose, interpreted benchmark and appendix tables in body
+  text, expanded capability and fixed-reference PMG table labels, and tuned
+  float-page/table readability.
 - Rebuilt the paper PDF through the paper generation pipeline.
 
 ## Blocking Issues Before Submission

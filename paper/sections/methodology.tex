@@ -35,8 +35,9 @@ written schematically as
   \mathcal{R}_h(z) + \mathcal{S}_h(z,x(z);\theta(z)),
   \label{eq:generic-objective}
 \end{equation}
-where $z$ is a design variable, $x(z)$ is the associated state, and
-$\mathcal{R}_h$ contains regularization or design penalties. The term
+where $z$ is a design variable, $x(z)$ is the associated state determined by the
+benchmark state equation or stationarity condition, and $\mathcal{R}_h$ contains
+regularization or design penalties. The term
 $\mathcal{S}_h$ denotes the state-dependent scalar part; in topology
 optimization it is the frozen compliance term defined in
 \cref{sec:bench-topology}, not the load-step potential
@@ -50,11 +51,12 @@ generic objectives elsewhere in the paper.
 
 In \cref{eq:generic-potential}, $\Phi_e$ is the integrated scalar contribution
 of element $e$. In quadrature-based mechanics examples,
-$\Phi_e(x_e;\theta_e)=\sum_q w_q\psi_q(B_q x_e;\theta_q)$, where $q$ indexes
-quadrature points, $w_q$ are quadrature weights, $B_q$ maps element coefficients
-to the local strain or gradient argument, $\theta_q$ is the quadrature-point
-restriction of the element data, and $\psi_q$ is the pointwise energy density or
-branch potential. For finite-element labels, $P_k(L_\ell)$ denotes
+$\Phi_e(x_e;\theta_e)=\sum_q w_q\psi_q(\varepsilon_q;\theta_q)$, where
+$\varepsilon_q := B_q u_e(x;\theta)$ is the local strain or gradient argument,
+$q$ indexes quadrature points, $w_q$ are quadrature weights, $B_q$ is the
+corresponding element operator, $\theta_q$ is the quadrature-point restriction of
+the element data, and $\psi_q$ is the pointwise energy density or branch
+potential. For finite-element labels, $P_k(L_\ell)$ denotes
 degree-$k$ Lagrange elements on mesh level $L_\ell$; problem-specific sections
 define the mesh hierarchy behind those levels when it matters for
 interpretation.
@@ -67,12 +69,13 @@ energy-centered whenever possible. This gives three derivative routes:
   \item \textbf{element AD:} differentiate the full scalar element contribution
         $\Phi_e(x_e;\theta_e)$ with respect to the element free-DOF vector;
   \item \textbf{constitutive AD:} differentiate a quadrature-point energy
-        density $\psi(\varepsilon_q)$, then assemble
+        density $\psi_q(\varepsilon_q,m_q)$ with respect to $\varepsilon_q$,
+        holding branch and material data $m_q$ fixed, then assemble
         $r_e = \sum_q w_q B_q^\top \sigma_q$ and
         $K_e = \sum_q w_q B_q^\top C_q B_q$, where
-        $\sigma_q := \partial\psi/\partial\varepsilon_q$ and
-        $C_q := \partial^2\psi/\partial\varepsilon_q^2$;
-  \item \textbf{colored sparse finite differences (SFD):} recover sparse
+        $\sigma_q := \partial_\varepsilon\psi_q(\varepsilon_q,m_q)$ and
+        $C_q := \partial^2_{\varepsilon\varepsilon}\psi_q(\varepsilon_q,m_q)$;
+  \item \textbf{colored sparse recovery:} recover sparse
         Hessian information through directionally probed gradients or
         Hessian-vector products (HVPs) and graph coloring.
 \end{enumerate}
@@ -82,8 +85,9 @@ Constitutive AD preserves the same defining scalar-energy expression but changes
 the differentiation boundary from the full element vector to the local strain
 state. This is especially effective for high-order plasticity, where the full
 element Hessian is often much more expensive than the $6\times6$
-constitutive tangent. Colored SFD is used when exact second-order information
-is too costly or unnecessary.
+constitutive tangent. We use colored sparse recovery as the umbrella term for
+the colored-SFD rows in the tables: the reported cases use AD-HVP probes, while
+finite-difference gradient probes are the classical variant.
 
 \subsection{Newton--Krylov globalization}
 
@@ -120,13 +124,13 @@ energy, gradient, Hessian assembly or application, and linear solves
   \Else
     \State Use the Newton direction directly
   \EndIf
-  \State Perform one-dimensional search on the chosen direction
+  \State Perform the configured one-dimensional line search on the chosen direction
   \State Compute actual and predicted reductions, $\mathrm{ared}$ and
     $\mathrm{pred}$
   \If{trust region is enabled}
     \State accept/reject using $\rho = \mathrm{ared}/\mathrm{pred}$ and update $\Delta_k$
   \Else
-    \State accept only if the merit function decreases
+    \State accept according to the configured merit-decrease rule
   \EndIf
 \EndFor
 \end{algorithmic}
@@ -134,17 +138,21 @@ energy, gradient, Hessian assembly or application, and linear solves
 
 Here $\mathrm{ared}$ is the achieved decrease in the merit functional and
 $\mathrm{pred}$ is the decrease predicted by the local quadratic or reduced
-trust-region model. The accept/reject thresholds and radius-update factors are
-policy parameters; where they affect the interpretation of a result, the paper
-reports the corresponding configuration rather than treating
+trust-region model. The line-search callback can be Armijo backtracking, a
+bounded merit search, or a residual-bisection safeguard, depending on the
+reported configuration. The accept/reject thresholds and radius-update factors
+are policy parameters; where they affect the interpretation of a result, the
+paper reports the corresponding configuration rather than treating
 \Cref{alg:hybrid-newton} as a complete algorithmic specification.
 
-For the principal 3D plasticity configuration reported in this paper, the chosen policy
-is simpler: Newton with Armijo backtracking and a polynomial-multigrid
-(PMG)-preconditioned
-flexible-GMRES linear solve \citep[Sec.~3.1]{nocedal2006numerical}. This is the
-nonlinear-solver policy used for the converged 3D plasticity scaling
-study reported later in \Cref{sec:num-plasticity3d}.
+For the converged bottom-clamped three-dimensional plasticity scaling
+configuration reported in this paper, the chosen policy is simpler: Newton with
+Armijo backtracking and a same-mesh polynomial-multigrid
+$P_4\to P_2\to P_1$ hierarchy for the flexible-GMRES linear solve
+\citep[Sec.~3.1]{nocedal2006numerical}. The reported
+$\lambda_{\mathrm{sr}}=\num{1.55}$ scaling profile uses a redundant LU/MUMPS
+coarse solve and PETSc relative KSP tolerance \num{1e-2}; the auxiliary
+$\lambda_{\mathrm{sr}}=\num{1.0}$ timing runs use the Hypre-coarse PMG profile.
 
 \begin{algorithm}[H]
 \caption{Armijo line search used in Newton solves}
@@ -167,15 +175,16 @@ steepest-descent fallback when that policy is enabled
 \end{algorithmic}
 \end{algorithm}
 
-\subsection{Colored sparse finite differences}
+\subsection{Colored sparse recovery}
 
 Sparse derivative recovery is built around the observation that if columns that
 do not interfere in the sparsity pattern are perturbed together, one gradient
 or HVP evaluation can recover multiple columns of the Jacobian or Hessian
-\citep{curtis1974sparsejacobian,coleman1984sparsehessian}. The colored-SFD path
-uses distance-2 coloring on the Hessian sparsity graph, which is especially
-effective when combined with overlap-domain assembly and owned-plus-ghost PETSc
-layouts.
+\citep{curtis1974sparsejacobian,coleman1984sparsehessian}. The reported
+colored-SFD path uses distance-2 coloring on the Hessian sparsity graph and
+AD-HVP probes; the same recovery formula also describes the classical
+finite-difference gradient-probe variant. This structure is especially effective
+when combined with overlap-domain assembly and owned-plus-ghost PETSc layouts.
 
 Let $H := \nabla^2\mathcal{F}(x)$ denote the Hessian of the merit functional at
 the current state, and let $\mathcal{S}$ be its sparsity pattern. A
@@ -235,9 +244,9 @@ information on high-order tetrahedra.
 \For{each local element $e$}
   \For{each quadrature point $q$}
     \State Evaluate strain $\varepsilon_q = B_q u_e(x;\theta)$
-    \State Evaluate scalar energy density $\psi_q(\varepsilon_q)$
-    \State Obtain stress $\sigma_q = \partial \psi_q / \partial \varepsilon_q$
-    \State Obtain constitutive tangent $C_q = \partial^2 \psi_q / \partial \varepsilon_q^2$
+    \State Evaluate scalar energy density $\psi_q(\varepsilon_q,m_q)$
+    \State Obtain stress $\sigma_q = \partial_\varepsilon \psi_q(\varepsilon_q,m_q)$
+    \State Obtain tangent $C_q = \partial^2_{\varepsilon\varepsilon}\psi_q(\varepsilon_q,m_q)$
   \EndFor
   \State Assemble $r_e = \sum_q w_q B_q^\top \sigma_q$
   \State Assemble $K_e = \sum_q w_q B_q^\top C_q B_q$

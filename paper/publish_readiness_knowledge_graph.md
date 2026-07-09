@@ -875,6 +875,20 @@ MATLAB literature only when there is source-backed evidence.
   figure. Full raw-state recomputation would still require the original
   Plasticity3D state/HDF5 material, roughly 13 GiB, but that is no longer a
   submitted-figure provenance gap.
+- `Current message/method/evidence/layout audit` (`Ampere`/`Rawls`/`Kierkegaard`/`Carver`):
+  completed. Findings addressed in the current clarity chunk: the abstract and
+  introduction now name the \v{C}erm{\'a}k--Sysala--Valdman MATLAB
+  slope-stability lineage; remaining paper-facing `Plasticity3D` labels were
+  softened in the abstract, discussion, and conclusion; the generic reduced
+  objective and constitutive AD route now define the state, strain argument,
+  branch/material data, and AD-HVP versus finite-difference colored recovery;
+  distributed assembly prose now states owned/free, ghost-fill, owned-row
+  insertion, and scalar-reduction order; benchmark and appendix tables now have
+  body-text interpretation; fixed-reference PMG rows explicitly say
+  `fixed-reference operator`; and float-page/table readability was checked on
+  rendered pages 25--26 and 31. Remaining target-template risks are the same
+  submission-level layout risks: dense tables and compound figures should be
+  checked again after the final journal class is chosen.
 
 ## First Edit Backlog
 

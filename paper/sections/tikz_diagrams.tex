@@ -29,13 +29,13 @@
   \node[paper box, fill=paperdiagbeige, text width=3.7cm] (ref) at (0,0)
     {\textbf{Reference}\\\textbf{implementations}\\pure JAX, FEniCS};
   \node[paper box, fill=paperdiagblue, text width=3.8cm] (main) at (5.7,0)
-    {\textbf{JAX+PETSc}\\\textbf{realization}\\Newton--Krylov + PMG};
+    {\textbf{JAX+PETSc}\\\textbf{realization}\\Newton--Krylov with Hypre/GAMG/PMG};
   \node[paper box, fill=paperdiaggreen, text width=3.85cm] (bench) at (11.4,0)
-    {\textbf{Benchmark families}\\elliptic, elasticity, topology};
+    {\textbf{Benchmark families}\\scalar PDEs, mechanics, topology};
   \node[paper box, fill=paperdiagviolet, text width=4.55cm] (deriv) at (3.0,-2.0)
     {\textbf{Derivative modes}\\element AD, constitutive AD, colored SFD};
   \node[paper box, fill=paperdiagrose, text width=4.15cm] (solver) at (8.7,-2.0)
-    {\textbf{Solver modes}\\Armijo, Krylov, PMG};
+    {\textbf{Solver modes}\\line search, trust region, multigrid};
 
   \draw[paper arrow] (ref.east) -- (main.west);
   \draw[paper arrow] (main.east) -- (bench.west);
@@ -73,9 +73,9 @@
   \node[paper box, fill=paperdiagblue, text width=15.2cm] (e) at (0,0)
     {\textbf{Element AD}\\$\Pi_e(u_e)$; exact local gradient and Hessian; higher-order elements can be costly};
   \node[paper box, fill=paperdiaggreen, text width=15.2cm, below=0.45cm of e] (c)
-    {\textbf{Constitutive AD}\\$\psi(\varepsilon_q)$; quadrature-point tangent assembly; exact local constitutive derivatives};
+    {\textbf{Constitutive AD}\\$\psi_q(\varepsilon_q,m_q)$; quadrature-point tangent assembly; branchwise AD constitutive tangents};
   \node[paper box, fill=paperdiagrose, text width=15.2cm, below=0.45cm of c] (s)
-    {\textbf{Colored SFD}\\rank-local probe HVPs only where needed; parallel coloring / recovery; useful when exact Hessians are too expensive};
+    {\textbf{Colored SFD}\\rank-local AD-HVP probes in reported rows; parallel coloring / recovery; finite-difference gradient probes as the classical variant};
 \end{tikzpicture}%
 }
 

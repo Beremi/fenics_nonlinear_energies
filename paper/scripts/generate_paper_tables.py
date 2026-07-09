@@ -129,8 +129,8 @@ IMPLEMENTATION_LABELS = {
     "jax_serial": "serial JAX",
     LOCAL_IMPL: "constitutive-AD PMG solver",
     SOURCE_IMPL: "fixed-reference PMG variant",
-    LOCAL_SOURCEFIXED_IMPL: "constitutive-AD PMG solver",
-    SOURCE_SOURCEFIXED_IMPL: "reference-formula assembly PMG variant",
+    LOCAL_SOURCEFIXED_IMPL: "fixed-reference operator, constitutive AD",
+    SOURCE_SOURCEFIXED_IMPL: "fixed-reference operator, reference formula",
 }
 
 GLOBALIZATION_BENCHMARK_ORDER = {
@@ -218,8 +218,8 @@ TOPOLOGY_SCHEDULE_LABELS = {
 }
 
 P3D_DERIVATIVE_DEGREE_WORK_LABELS = {
-    "fixed_work": "one Newton linearization",
-    "fixed_work_completed": "one Newton linearization",
+    "fixed_work": "one Newton step",
+    "fixed_work_completed": "one Newton step",
 }
 
 REVIEWER_HE_PMG_LABELS = {
@@ -320,10 +320,12 @@ def implementation_label(name: object) -> str:
     key = str(name)
     if key in IMPLEMENTATION_LABELS:
         return IMPLEMENTATION_LABELS[key]
+    if "local_constitutiveAD" in key and "sourcefixed" in key:
+        return "fixed-reference operator, constitutive AD"
     if "local_constitutiveAD" in key and "local_pmg" in key:
         return "constitutive-AD PMG solver"
     if "sourcefixed" in key:
-        return "reference-formula assembly PMG variant"
+        return "fixed-reference operator, reference formula"
     if key.startswith("source") or "_source" in key:
         return "fixed-reference PMG variant"
     return key.replace("_", r"\_")
@@ -526,6 +528,7 @@ def _write_table_manifest(out_dir: Path) -> None:
             "notes": [
                 "Tables with archive_status=needs_final_archive have explicit source provenance but still depend on raw or report inputs that must be covered by the final durable archive.",
                 "Static comparison tables have empty data_inputs because their content is defined directly in paper/scripts/generate_paper_tables.py.",
+                "implementation_capability_matrix.tex is a curated static summary of solver components, derivative routes, and reference availability; numeric evidence appears in the result-specific tables.",
             ],
         },
     )
@@ -958,7 +961,7 @@ def main() -> None:
             ],
             [
                 "Hyperelasticity",
-                f"JAX+PETSc element AD, {mesh_label('L4')}, 32 ranks: {fmt_wall_time(float(he_highlight['total_time_s']))} s",
+                f"JAX+PETSc element AD, distributed 24-step {mesh_label('L4')}, 32 ranks: {fmt_wall_time(float(he_highlight['total_time_s']))} s",
                 "The 24-step load path completes with the reported terminal energy in distributed mode.",
             ],
             [
@@ -981,15 +984,15 @@ def main() -> None:
 
     write_table(
         "implementation_capability_matrix.tex",
-        "@{}l c c c " + pcol(r"0.38\textwidth") + "@{}",
+        "@{}l c c c " + pcol(r"0.40\textwidth") + "@{}",
         ["Family", "FEniCS", "pure JAX", "JAX+PETSc", "Solver and derivative components"],
         [
-            ["$p$-Laplace", "yes", "yes", "yes", "element AD and colored-SFD recovery"],
-            ["Ginzburg--Landau", "yes", "no", "yes", "element AD and colored-SFD recovery"],
-            ["Hyperelasticity", "yes", "yes", "yes", "element AD, colored SFD comparison, and trust-region solves"],
-            ["Plasticity2D", "no", "no", "yes", "scalarized endpoint potential and same-mesh PMG"],
-            ["Plasticity3D", "no", "no", "yes", "constitutive AD, element AD, and same-mesh PMG"],
-            ["Topology optimization", "no", "yes", "yes", "distributed design updates and PETSc mechanics"],
+            ["$p$-Laplace", "yes", "yes", "yes", "element AD and colored sparse recovery; Newton--CG with Hypre"],
+            ["Ginzburg--Landau", "yes", "no", "yes", "element AD and colored sparse recovery; Armijo Newton with GMRES--Hypre"],
+            ["Hyperelasticity", "yes", "yes", "yes", "element AD in the main path, scoped colored-recovery comparison, and trust-region/GAMG or PMG diagnostics"],
+            ["Plasticity2D", "no", "no", "yes", "endpoint potential and continuation diagnostics with same-mesh PMG smoother policy"],
+            ["Plasticity3D", "no", "no", "yes", "constitutive AD, element AD, and colored-recovery diagnostics; FGMRES with same-mesh PMG and Hypre or LU/MUMPS coarse profiles"],
+            ["Topology optimization", "no", "yes", "yes", "distributed design updates with PETSc mechanics and GAMG-preconditioned FGMRES"],
         ],
     )
 
@@ -1428,7 +1431,7 @@ def main() -> None:
                 r"@{}c@{\hspace{0.45em}}"
                 + xspec((1.10, "RaggedRight"), (0.90, "RaggedRight"))
                 + r"@{\hspace{0.45em}}c c c c@{}",
-                ["Element", "Route", "Linearization", "Free DOFs", "Elem DOFs", "Overlap DOFs", "RSS max [GiB]"],
+                ["Element", "Route", "Work", "Free DOFs", "Elem.", "Overlap", "RSS [GiB]"],
                 [
                     [
                         _p3d_discretization_label(row),
@@ -1454,7 +1457,7 @@ def main() -> None:
                 r"@{}c@{\hspace{0.45em}}"
                 + xcol(1.0, "RaggedRight")
                 + r"@{\hspace{0.45em}}c c c c c@{}",
-                ["Element", "Route", "Free DOFs", "Krylov", "Solve [s]", "Hessian [s]", "SFD colors"],
+                ["Element", "Route", "Free DOFs", "Krylov", "Solve [s]", "Hess. [s]", "Colors"],
                 [
                     [
                         _p3d_discretization_label(row),

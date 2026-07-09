@@ -4,7 +4,7 @@ Family & Representative result & Highlight \\
 \midrule
 $p$-Laplace & JAX+PETSc element AD, $L_{9}$, 32 ranks: \num{1.14} s & The element-AD and colored-SFD paths report the same displayed final energy; colored SFD has higher wall time on this case. \\
 Ginzburg--Landau & JAX+PETSc element AD, $L_{9}$, 32 ranks: \num{2.1} s & The JAX+PETSc and FEniCS rows report the same displayed final energy on the fine-grid benchmark. \\
-Hyperelasticity & JAX+PETSc element AD, $L_{4}$, 32 ranks: \num{529} s & The 24-step load path completes with the reported terminal energy in distributed mode. \\
+Hyperelasticity & JAX+PETSc element AD, distributed 24-step $L_{4}$, 32 ranks: \num{529} s & The 24-step load path completes with the reported terminal energy in distributed mode. \\
 Plasticity (2D) & JAX+PETSc same-mesh PMG, $P_{4}(L_{7})$, 16 ranks: \num{253} s & This fixed-iteration diagnostic reports the largest listed 2D plasticity case. \\
 Plasticity3D & constitutive-AD PMG solver, $P_{4}(L_{2})$, $\lambda_{\mathrm{sr}}=\num{1.0}$, 32 ranks: \num{300} s & Auxiliary timing context for this load factor; the main bottom-clamped discretization study uses $\lambda_{\mathrm{sr}}=\num{1.55}$. \\
 Topology & parallel JAX+PETSc, $768\times384$, 32 ranks: \num{25.1} s & The fine-grid distributed run reports the listed end-to-end wall time; pure JAX remains the serial formulation reference. \\

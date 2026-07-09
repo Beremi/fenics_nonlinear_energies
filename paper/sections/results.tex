@@ -100,8 +100,9 @@ $P_2(L_1)$ case, not by an under-colored finite-difference reconstruction.
   \footnotesize
   \input{tables/generated/derivative_route_compare.tex}
   \caption{Matched-case derivative-route comparison. Colored SFD denotes local
-  subgraph finite-difference Hessian recovery; the SFD-color range is shown
-  where per-rank color counts are available.}
+  colored sparse recovery; the reported rows use AD-HVP probes, while
+  finite-difference gradient probes are the classical recovery variant. The
+  SFD-color range is shown where per-rank color counts are available.}
   \label{tab:derivative-route-compare}
 \end{table}
 
@@ -122,7 +123,7 @@ stress case.
 
 \begin{table}[!htbp]
   \centering
-  \scriptsize
+  \footnotesize
   \input{tables/generated/plasticity3d_derivative_degree.tex}
   \caption{Plasticity3D one-Newton derivative-route cost versus discretization.
   Elem DOFs is the local vector element size used by the Hessian callback;
@@ -484,13 +485,13 @@ by different nonlinear work.
 \end{table}
 
 The distributed layout measurements in
-\Cref{tab:plasticity3d-local-karolina-partitioning} explain why the observed
-scaling cannot follow the ideal reference indefinitely. The maximum local
-overlap vector shrinks with rank count, but the sum of rank-local overlap DOFs
-increases from about the owned problem size on one rank to more than four times
-the owned size on 128 ranks. This overlap replication comes from subdomain
-boundaries and high-order element support, so it is a decomposition cost rather
-than duplicated global mesh storage.
+\Cref{tab:plasticity3d-local-karolina-partitioning} identify one cost that
+limits ideal scaling. The maximum local overlap vector shrinks with rank count,
+but the sum of rank-local overlap DOFs increases from about the owned problem
+size on one rank to more than four times the owned size on 128 ranks. This
+overlap replication comes from subdomain boundaries and high-order element
+support, so it is a decomposition cost rather than duplicated global mesh
+storage.
 
 \begin{table}[!htbp]
   \centering

@@ -26,6 +26,19 @@ formulations.
   \label{tab:reference-availability}
 \end{table}
 
+\Cref{tab:benchmark-spec,tab:reference-availability} define the comparison
+scope before the individual models are introduced. The scalar problems and
+hyperelasticity have \fenics{} reference formulations, while \purejax{} is used
+only where a compact serial formulation is available. The two plasticity
+families are primarily \jaxpetsc{} studies: the two-dimensional case supplies
+supporting continuation diagnostics, and the three-dimensional case uses the
+\v{C}erm{\'a}k--Sysala--Valdman slope-stability implementation lineage as
+endpoint-surrogate context rather than as a path-history validation baseline.
+Topology optimization combines a parallel \jaxpetsc{} realization with a serial
+\purejax{} design reference. Thus some entries below are validation comparisons,
+whereas others are timing or solver-policy diagnostics under a stated benchmark
+definition.
+
 \subsection{\texorpdfstring{$p$-Laplace}{p-Laplace}}
 \label{sec:bench-plaplace}
 
@@ -290,11 +303,12 @@ scientifically important than derivative parity alone.
   \label{tab:hyperelasticity-benchmark}
 \end{table}
 
-The within-benchmark takeaway is therefore a globalization result:
+The within-benchmark takeaway is therefore that the 24-step stationary sequence
+is followed consistently:
 \cref{fig:hyperelasticity-state,fig:hyperelasticity-energy-levels} show the
-terminal deformed state and terminal energies, while the scaling evidence is
-deferred to \Cref{sec:num-hyperelasticity}. The separate validation section
-adds one serial JAX-FEM comparison on the same mesh and
+terminal deformed state and terminal energies, while globalization and scaling
+evidence are deferred to \Cref{sec:num-hyperelasticity}. The separate validation
+section adds one serial JAX-FEM comparison on the same mesh and
 prescribed displacement schedule, with energy post-comparison under
 \cref{eq:hyperelasticity-energy}; it is
 included as an agreement-focused hyperelastic implementation comparison rather than

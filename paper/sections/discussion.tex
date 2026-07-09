@@ -18,8 +18,8 @@ same scalar-energy definition and has the lowest measured wall time:
 \SI{222}{s}, compared with \SI{288}{s} for element AD and \SI{372}{s} for
 colored SFD.
 
-\paragraph{Plasticity3D validation is endpoint-scoped.}
-The Plasticity3D endpoint-surrogate comparison in
+\paragraph{Three-dimensional plasticity validation is endpoint-scoped.}
+The three-dimensional plasticity endpoint-surrogate comparison in
 \Cref{fig:plasticity3d-validation,tab:plasticity3d-validation} supports a
 scoped mechanics interpretation. The tested endpoint surrogate agrees closely
 with the reported reference observables, and the fixed-$\lambda_{\mathrm{sr}}$
@@ -44,11 +44,11 @@ agree closely.
 
 \paragraph{Scope of the evidence.}
 The same evidence also defines the scope of the conclusions. The
-$\lambda_{\mathrm{sr}}=1.0$ Plasticity3D strong-scaling study is timing-only
-evidence, while the bottom-clamped $\lambda_{\mathrm{sr}}=1.55$ scaling sweep is
-the converged comparison tied to the benchmark. The topology study is reported
-as end-to-end timing under adaptive stopping, with a separate controlled
-rank-consistency check. The fixed-reference PMG studies are solver-policy
+$\lambda_{\mathrm{sr}}=1.0$ three-dimensional plasticity strong-scaling study is
+timing-only evidence, while the bottom-clamped $\lambda_{\mathrm{sr}}=1.55$
+scaling sweep is the converged comparison tied to the benchmark. The topology
+study is reported as end-to-end timing under adaptive stopping, with a separate
+controlled rank-consistency check. The fixed-reference PMG studies are solver-policy
 diagnostics rather than symmetric external comparisons. These
 distinctions define the contribution: a nonlinear FEM toolset with explicit
 derivative-route choices, matched validation comparisons, and stated limits of
