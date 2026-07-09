@@ -12,9 +12,10 @@ validation scope, and external comparison evidence.
 \Cref{fig:plasticity3d-derivative-ablation,tab:plasticity3d-derivative-ablation}
 show a consistent cost comparison on the fixed $P_4(L_1)$,
 $\lambda_{\mathrm{sr}}=1.5$, 8-rank case. The three routes report terminal
-observables that agree to the displayed precision, with 8 Newton iterations and 376 Krylov
-iterations, so the comparison is about derivative cost rather than about
-different converged solutions. In this fixed test, constitutive AD preserves the
+observables that agree to the displayed precision, with 8 Newton iterations and
+376 Krylov iterations. Thus the reported evidence primarily isolates
+derivative-route cost under matching terminal observables. In this fixed test,
+constitutive AD preserves the
 same scalar-energy definition and has the lowest measured wall time:
 \SI{222}{s}, compared with \SI{288}{s} for element AD and \SI{372}{s} for
 colored SFD.

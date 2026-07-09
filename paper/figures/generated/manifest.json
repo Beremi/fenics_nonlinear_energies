@@ -245,38 +245,6 @@
     ]
   },
   "generated_asset_sources": {
-    "autodiff_modes.pdf": {
-      "archive_status": "archive_neutral",
-      "generator": {
-        "function": "generate_autodiff_modes",
-        "kind": "repository_path",
-        "path": "paper/scripts/generate_paper_figures.py"
-      }
-    },
-    "coloring_schematic.pdf": {
-      "archive_status": "archive_neutral",
-      "generator": {
-        "function": "generate_coloring_schematic",
-        "kind": "repository_path",
-        "path": "paper/scripts/generate_paper_figures.py"
-      }
-    },
-    "derivative_paths.pdf": {
-      "archive_status": "archive_neutral",
-      "generator": {
-        "function": "generate_derivative_path_diagram",
-        "kind": "repository_path",
-        "path": "paper/scripts/generate_paper_figures.py"
-      }
-    },
-    "framework_overview.pdf": {
-      "archive_status": "archive_neutral",
-      "generator": {
-        "function": "generate_framework_overview",
-        "kind": "repository_path",
-        "path": "paper/scripts/generate_paper_figures.py"
-      }
-    },
     "ginzburg_landau_energy_levels.pdf": {
       "archive_status": "archive_neutral",
       "data_inputs": [
@@ -315,14 +283,6 @@
       ],
       "generator": {
         "function": "generate_scalar_state_figure",
-        "kind": "repository_path",
-        "path": "paper/scripts/generate_paper_figures.py"
-      }
-    },
-    "globalization_schematic.pdf": {
-      "archive_status": "archive_neutral",
-      "generator": {
-        "function": "generate_globalization_schematic",
         "kind": "repository_path",
         "path": "paper/scripts/generate_paper_figures.py"
       }
@@ -765,11 +725,6 @@
     }
   },
   "generated_assets": [
-    "framework_overview.pdf",
-    "derivative_paths.pdf",
-    "globalization_schematic.pdf",
-    "coloring_schematic.pdf",
-    "autodiff_modes.pdf",
     "plaplace_state.pdf",
     "plaplace_energy_levels.pdf",
     "plaplace_scaling.pdf",

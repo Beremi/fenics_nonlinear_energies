@@ -2341,11 +2341,6 @@ def _figure_sources() -> dict[str, dict[str, object]]:
     tracked_or_bundle = "archive_neutral"
     needs_archive = "needs_final_archive"
     return {
-        "framework_overview.pdf": _figure_source(generator="generate_framework_overview"),
-        "derivative_paths.pdf": _figure_source(generator="generate_derivative_path_diagram"),
-        "globalization_schematic.pdf": _figure_source(generator="generate_globalization_schematic"),
-        "coloring_schematic.pdf": _figure_source(generator="generate_coloring_schematic"),
-        "autodiff_modes.pdf": _figure_source(generator="generate_autodiff_modes"),
         "plaplace_state.pdf": _figure_source(
             generator="generate_scalar_state_figure",
             data_inputs=[_manifest_repo_input(PLAPLACE_STATE)],
@@ -2545,11 +2540,6 @@ def _write_figure_manifest(out_dir: Path, layout: dict[str, float], generated: l
 
 def _expected_generated_assets() -> list[str]:
     return [
-        "framework_overview.pdf",
-        "derivative_paths.pdf",
-        "globalization_schematic.pdf",
-        "coloring_schematic.pdf",
-        "autodiff_modes.pdf",
         "plaplace_state.pdf",
         "plaplace_energy_levels.pdf",
         "plaplace_scaling.pdf",
@@ -2600,11 +2590,6 @@ def main() -> None:
         return
 
     generated: list[str] = []
-    generated.append(generate_framework_overview(layout))
-    generated.append(generate_derivative_path_diagram(layout))
-    generated.append(generate_globalization_schematic(layout))
-    generated.append(generate_coloring_schematic(layout))
-    generated.append(generate_autodiff_modes(layout))
     generated.append(
         generate_scalar_state_figure(
             layout,

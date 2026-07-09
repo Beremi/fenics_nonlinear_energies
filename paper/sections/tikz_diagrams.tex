@@ -96,11 +96,11 @@
   \tikzstyle{stagearrow}=[paper arrow, line width=1.0pt]
 
   \node[paper box, fill=paperdiaggray, text width=4.0cm] (patternbox) at (0.0,0.0)
-    {\textbf{1. Sparse coupling pattern}\\Nearby DOFs interfere, far-away columns do not.};
+    {\textbf{1. Sparse coupling}\\\textbf{pattern}\\Nearby DOFs interfere; far-away columns do not.};
   \node[paper box, fill=paperdiagviolet, text width=4.0cm] (colorbox) at (5.6,0.0)
     {\textbf{2. Distance-2 coloring}\\Independent columns share one probe color.};
   \node[paper box, fill=paperdiaggreen, text width=4.0cm] (recoverbox) at (11.2,0.0)
-    {\textbf{3. Probe and recover}\\One directional probe reconstructs several sparse columns.};
+    {\textbf{3. Probe and recover}\\One directional probe recovers several sparse columns.};
 
   \draw[stagearrow] (patternbox.east) -- (colorbox.west);
   \draw[stagearrow] (colorbox.east) -- (recoverbox.west);

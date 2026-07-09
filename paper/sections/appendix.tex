@@ -14,7 +14,7 @@ Both use Armijo Newton, a gradient-only stopping target
 $\|\nabla\mathcal{F}\|_2<\num{0.01}$, at most 50 Newton iterations, and PETSc
 relative KSP tolerance \num{1e-1}. Here reference-formula assembly means
 closed-form constitutive assembly used as a comparator for the JAX
-constitutive-AD kernel, while fixed-reference PMG means a preconditioning
+constitutive-AD evaluation, while fixed-reference PMG means a preconditioning
 variant in which the multigrid operator is not rebuilt along the nonlinear path.
 
 \begin{table}[!htbp]

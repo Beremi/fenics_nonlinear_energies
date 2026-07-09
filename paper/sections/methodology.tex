@@ -79,7 +79,7 @@ three derivative routes:
         $\Phi_e(x_e;\theta_e)$ with respect to the element free-DOF vector;
   \item \textbf{constitutive AD:} differentiate a quadrature-point energy
         density $\psi_q(\varepsilon_q,m_q)$ with respect to $\varepsilon_q$,
-        holding branch, material, and history data
+        holding the active branch together with local material and history data
         $m_q\subset\theta_q$ fixed, then assemble
         $r_e = \sum_q w_q B_q^\top \sigma_q$ and
         $K_e = \sum_q w_q B_q^\top C_q B_q$, where
@@ -109,8 +109,8 @@ search. Some benchmark configurations use a hybrid
 trust-region/line-search algorithm in which a reduced trust-region model
 provides the direction, while a bounded line search chooses the accepted step.
 The line-search and trust-region ingredients follow standard globalization ideas
-\citep[Chs.~2--4]{nocedal2006numerical}. \Cref{alg:hybrid-newton} is a
-schematic solver-policy template; the reported runs use the stopping
+\citep[Chs.~2--4]{nocedal2006numerical,conn2000trust}. \Cref{alg:hybrid-newton}
+is a schematic solver-policy template; the reported runs use the stopping
 tolerances, caps, globalization choices, and linear-solver/preconditioner
 choices stated in the benchmark and results tables.
 
@@ -118,28 +118,30 @@ choices stated in the benchmark and results tables.
 \caption{Hybrid trust-region / line-search Newton}
 \label{alg:hybrid-newton}
 \begin{algorithmic}[1]
-\State Given $x_0$, trust radius $\Delta_0$, tolerances, and callbacks for
+\State Given $x_0$, trust radius $\Delta_0$, tolerances, and evaluation routines for
 energy, gradient, Hessian assembly or application, and linear solves
 \For{$k=0,1,\dots$}
   \State Assemble $g_k = \nabla \mathcal{F}(x_k)$
   \If{convergence criteria are satisfied}
     \State terminate
   \EndIf
-  \State Approximately solve for a Newton-like direction from
-    $\nabla^2 \mathcal{F}(x_k)p = -g_k$
+  \State Form or define the Hessian operator
+    $H_k=\nabla^2 \mathcal{F}(x_k)$
+  \State Approximately solve for a Newton-like direction from $H_k p_k = -g_k$
   \If{trust region is enabled}
     \State Build a small reduced model in the span of Newton and gradient directions
     \State Solve the reduced trust subproblem with radius $\Delta_k$
     \State Optionally compare against a pure gradient trust step
-    \State Restrict the line-search interval so the accepted step stays in the trust ball
+    \State Restrict the line-search interval so the trial step stays in the trust ball
   \Else
     \State Use the Newton direction directly
   \EndIf
-  \State Perform the configured one-dimensional line search on the chosen direction
+  \State Select a trial step $s_k=\alpha_k p_k$ with the configured one-dimensional line-search rule
   \State Compute actual and predicted reductions, $\mathrm{ared}$ and
-    $\mathrm{pred}$
+    $\mathrm{pred}= -g_k^\top s_k-\frac12 s_k^\top H_k s_k$
   \If{trust region is enabled}
-    \State accept/reject using $\rho = \mathrm{ared}/\mathrm{pred}$ and update $\Delta_k$
+    \State accept/reject using $\rho = \mathrm{ared}/\mathrm{pred}$ when
+      $\mathrm{pred}>0$, otherwise reject as model failure; update $\Delta_k$
   \Else
     \State accept according to the configured merit-decrease rule
   \EndIf
@@ -149,16 +151,18 @@ energy, gradient, Hessian assembly or application, and linear solves
 
 Here $\mathrm{ared}$ is the achieved decrease in the merit functional and
 $\mathrm{pred}$ is the decrease predicted by the local quadratic or reduced
-trust-region model. The line-search callback may use Armijo backtracking, a
-bounded merit search, or a residual-bisection safeguard, depending on the
-reported configuration. The accept/reject thresholds and radius-update factors
-are policy parameters; where they affect the interpretation of a result, the
-paper reports the corresponding configuration rather than treating
-\Cref{alg:hybrid-newton} as a complete algorithmic specification.
-Reported PETSc linear solves use the relative KSP residual tolerance stated with
-the corresponding run. Failed linear solves and non-descent directions are
-handled by the configured globalization safeguard or reported as capped solver
-behavior.
+trust-region model. A nonpositive predicted decrease is treated as model
+failure for the trust-region acceptance test. The line-search rule may use
+Armijo backtracking, a bounded merit search, or a residual-bisection safeguard,
+depending on the reported configuration. The accept/reject thresholds and
+radius-update factors are policy parameters; where they affect the
+interpretation of a result, the paper reports the corresponding configuration
+rather than treating \Cref{alg:hybrid-newton} as a complete algorithmic
+specification. Reported PETSc linear solves use the relative KSP residual
+tolerance summarized in \Cref{tab:numerical-protocol-summary} or stated with
+the corresponding run when the policy varies. Failed linear solves and
+non-descent directions are handled by the configured globalization safeguard or
+reported as capped solver behavior.
 
 For the converged bottom-clamped three-dimensional plasticity scaling
 configuration reported in this paper, the chosen policy is simpler: Newton with
@@ -242,12 +246,13 @@ $v_c=\sum_{j\in\mathcal{C}_c} e_j$, one probe produces
 In the finite-difference branch, $\delta>0$ is the chosen gradient-probe step
 size.
 The structural separation then recovers $H_{ij}=(y_c)_i$ for
-$j\in\mathcal{C}_c$ and $(i,j)\in\mathcal{P}(H)$. The reported \jaxpetsc{}
-colored sparse-recovery cases use the AD Hessian-vector probe mode, so no
-finite-difference perturbation parameter is introduced in those runs; the
-finite-difference formula states the classical recovery variant. After recovery, each rank scatters
-only owned sparse entries to the PETSc matrix, with overlap data used only for
-local probe evaluation.
+$j\in\mathcal{C}_c$ and $(i,j)\in\mathcal{P}(H)$ in the AD-HVP branch. In the
+finite-difference branch it gives $H_{ij}=(y_c)_i+O(\delta)$ under local
+smoothness. The reported \jaxpetsc{} colored sparse-recovery cases use the AD
+Hessian-vector probe mode, so no finite-difference perturbation parameter is
+introduced in those runs; the finite-difference formula states the classical
+recovery variant. After recovery, each rank scatters only owned sparse entries
+to the PETSc matrix, with overlap data used only for local probe evaluation.
 
 \begin{algorithm}[H]
 \caption{Distributed colored Hessian recovery}
@@ -270,8 +275,9 @@ The main \plasticitythree{} result in this paper uses constitutive AD.
 Rather than applying second-order AD to the full $P_4$ element vector, we define
 one scalar Mohr--Coulomb branch potential
 $\psi_q(\varepsilon_q,m_q)$ per quadrature point, where $m_q$ collects the
-local material parameters. We differentiate this scalar potential with respect
-to the six engineering-strain components and assemble the element tangent from
+active branch together with the local material and history data selected from
+$\theta_q$. We differentiate this scalar potential with respect to the six
+engineering-strain components and assemble the element tangent from
 the resulting stress and constitutive tangent. This keeps the scalar-energy
 definition intact while reducing the cost of branchwise second-order
 information on high-order tetrahedra. The operator $B_q$, stress vector

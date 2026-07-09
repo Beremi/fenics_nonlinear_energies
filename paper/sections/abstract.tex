@@ -5,7 +5,7 @@ algebra that is matched to the mechanics of the problem. We develop a
 scientific toolset for studying these requirements as coupled numerical choices
 in nonlinear finite-element energy minimization and energy-based topology
 optimization. The primary \jaxpetsc{} realization uses JAX for local energy and
-constitutive kernels and PETSc for sparse assembly, Newton globalization,
+constitutive evaluations and PETSc for sparse assembly, Newton globalization,
 Krylov solvers, and preconditioners. The benchmark suite covers
 $p$-Laplace, Ginzburg--Landau, finite-strain hyperelasticity, two- and
 three-dimensional Mohr--Coulomb plasticity, and topology optimization.
@@ -22,7 +22,7 @@ constructing second-order information, and measure their interaction with PETSc
 assembly, nonlinear globalization, Krylov solvers, and preconditioners. In the
 fixed high-order three-dimensional plasticity derivative-route comparison,
 constitutive AD has the lowest measured wall time while preserving the reported
-terminal observables. The
-distributed mechanics and topology examples provide MPI timing,
-solver-behavior, and rank-consistency evidence under the stated protocols.
+terminal observables. The distributed mechanics examples report MPI timing and
+solver-policy behavior, and the topology example adds a controlled
+rank-consistency check under the stated protocol.
 \end{abstract}

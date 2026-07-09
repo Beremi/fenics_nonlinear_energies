@@ -201,6 +201,14 @@ scientific claims were introduced without supporting evidence.
   source state, changed the manuscript availability statement to the canonical
   GitHub repository URL, and removed stale `needs_final_archive` manifest notes
   from figure/table manifests whose current inputs are archive-neutral.
+- Addressed the thematic message/math/evidence/layout audit: sharpened the
+  contribution distinction versus adjacent JAX/FEM/PETSc work, clarified hybrid
+  Newton trial-step and predicted-reduction semantics, scoped colored
+  finite-difference recovery as first-order in the perturbation, changed the
+  benchmark matrix from reference availability to tested scope, added
+  representative KSP targets to the numerical protocol, split the related-work
+  plasticity/topology lineage row, removed unused generated schematic assets,
+  and fixed the topology figure/table order.
 - Addressed the benchmark-readability audit: split Plasticity2D and Plasticity3D
   setup prose into staged continuum-model, geometry/material, surrogate, and
   claim-scope paragraphs without changing formulas or numerical evidence.
@@ -459,6 +467,13 @@ required support for the current scoped contribution.
   passed after the bundle-manifest and canonical-availability update.
 - `make -C paper submission-check`: passed after the canonical-availability
   update and refreshed bundle manifest.
+- `make -C paper submission-check`: passed after the thematic audit edits; the
+  rebuilt `paper/build/main.pdf` is a 43-page A4 article with no LaTeX/log,
+  qpdf, aux-order, manuscript-hygiene, or archive-neutral asset failures.
+- Rendered and visually inspected pages 9, 20, 21, and 37 after the thematic
+  audit rebuild; the coloring schematic has no in-node hyphenation, the
+  Plasticity3D interpretation follows the relevant evidence, and the topology
+  figure appears before its summary table.
 - `./.venv/bin/python -m pytest tests/test_docs_publication.py`: passed
   13 tests.
 - `./.venv/bin/python -m pytest tests/test_final_report_figure_generators.py`:

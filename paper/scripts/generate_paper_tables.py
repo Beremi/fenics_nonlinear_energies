@@ -1046,7 +1046,7 @@ def main() -> None:
             [
                 "$p$-Laplace",
                 f"JAX+PETSc element AD, {mesh_label('L9')}, 32 ranks: {fmt_wall_time(float(pl_highlight['total_time_s']))} s",
-                "The element-AD and colored-SFD paths report the same displayed final energy; colored SFD has higher wall time on this case.",
+                "The element-AD and colored sparse-recovery paths agree within about $\\num{1e-8}$ in final energy; colored sparse recovery has higher wall time on this case.",
             ],
             [
                 "Ginzburg--Landau",
@@ -1093,21 +1093,24 @@ def main() -> None:
     write_table(
         "benchmark_specification_matrix.tex",
         "@{}"
-        + "l c "
-        + pcol(r"0.14\textwidth")
+        + pcol(r"0.135\textwidth")
         + " "
-        + pcol(r"0.23\textwidth")
+        + pcol(r"0.185\textwidth")
         + " "
-        + pcol(r"0.26\textwidth")
+        + pcol(r"0.140\textwidth")
+        + " "
+        + pcol(r"0.275\textwidth")
+        + " "
+        + pcol(r"0.170\textwidth")
         + "@{}",
-        ["Family", "Grid / mesh", "Solve policy", "Compared formulations", "Main difficulty"],
+        ["Family", "Tested scope", "Solve policy", "Comparison evidence", "Main difficulty"],
         [
-            ["$p$-Laplace", mesh_label("L9"), "Newton + line search", "FEniCS, pure JAX, JAX+PETSc", "nonlinear elliptic solve with exact sparse Hessians"],
-            ["Ginzburg--Landau", mesh_label("L9"), "Newton + line search", "FEniCS, JAX+PETSc", "indefinite local curvature from the double well"],
-            ["Hyperelasticity", f"{mesh_label('L4')}, 24 steps", "trust-region solve", "FEniCS, pure JAX, JAX+PETSc", "nonconvex large-deformation mechanics"],
+            ["$p$-Laplace", f"{mesh_label('L5')} serial parity; {mesh_label('L9')} distributed scaling", "Newton + line search", "FEniCS and JAX+PETSc on the scaling matrix; pure JAX only in the serial parity case", "nonlinear elliptic solve with exact sparse Hessians"],
+            ["Ginzburg--Landau", f"{mesh_label('L5')} parity; {mesh_label('L9')} distributed scaling", "Newton + line search", "FEniCS and JAX+PETSc comparison", "indefinite local curvature from the double well"],
+            ["Hyperelasticity", f"{mesh_label('L1')} serial parity; {mesh_label('L4')}, 24-step distributed scaling", "trust-region solve", "FEniCS and JAX+PETSc on the distributed suite; pure JAX only as a serial reference", "nonconvex large-deformation mechanics"],
             ["Plasticity2D", f"{element_label('P4', 'L5')}--{element_label('P4', 'L7')}", "endpoint solve or fixed nonlinear work", "JAX+PETSc only", "same-mesh PMG and nonlinear tail behavior"],
             ["Plasticity3D", f"{degree_label('P1')}/{degree_label('P2')}/{degree_label('P4')}", "endpoint, scaling, and diagnostic PMG policies", "constitutive-AD, reference-formula, and frozen-operator PMG diagnostics", "heterogeneous 3D Mohr--Coulomb with constitutive AD"],
-            ["Topology", "$768\\times384$", "adaptive continuation", "pure JAX, JAX+PETSc", "distributed design-mechanics coupling"],
+            ["Topology", "$192\\times96$ serial reference; $768\\times384$ parallel benchmark", "adaptive continuation", "pure JAX on the serial reference; JAX+PETSc on the fine-grid parallel run and scaling matrix", "distributed design-mechanics coupling"],
         ],
     )
 
@@ -1124,7 +1127,7 @@ def main() -> None:
         + "@{}",
         ["Family", "FEniCS", "pure JAX", "Notes"],
         [
-            ["$p$-Laplace", "yes", "yes", "All three implementations exist on representative reported cases."],
+            ["$p$-Laplace", "yes", "yes", "All three implementations exist; pure JAX is used in the serial parity case."],
             ["Ginzburg--Landau", "yes", "no", "FEniCS and JAX+PETSc form the reported comparison."],
             ["Hyperelasticity", "yes", "yes", "pure JAX is a serial formulation reference only."],
             ["Plasticity2D", "no", "no", "The reported realization is JAX+PETSc only."],
@@ -1180,19 +1183,21 @@ def main() -> None:
         "numerical_protocol_summary.tex",
         "@{}"
         + xspec(
-            (0.78, "RaggedRight"),
-            (0.82, "RaggedRight"),
-            (1.12, "RaggedRight"),
+            (0.70, "RaggedRight"),
+            (0.75, "RaggedRight"),
             (1.05, "RaggedRight"),
-            (0.88, "RaggedRight"),
+            (0.82, "RaggedRight"),
+            (1.00, "RaggedRight"),
+            (0.68, "RaggedRight"),
         )
         + "@{}",
-        ["Evidence block", "Role", "Solver policy", "Stop or fixed work", "Reported time"],
+        ["Evidence block", "Role", "Solver policy", "Linear target", "Stop or fixed work", "Reported time"],
         [
             [
                 "Scalar benchmarks",
                 "formulation, derivative-route, and globalization evidence",
                 "Newton with Armijo or the stated trust-region variant; CG or GMRES with Hypre in PETSc rows",
+                "$p$-Laplace: $10^{-1}$/30; Ginzburg--Landau: $10^{-3}$/200",
                 "configured nonlinear tolerances; capped rows are diagnostic",
                 "wall or solve/elapsed time in globalization rows",
             ],
@@ -1200,6 +1205,7 @@ def main() -> None:
                 "Hyperelasticity",
                 "finite-strain mechanics, JAX-FEM comparison, and scaling",
                 "trust-region or line-search Newton; GAMG or same-mesh PMG profiles as stated",
+                "GAMG rows: $10^{-1}$/30; PMG rows stated with diagnostics",
                 "per-load-step stationarity; fixed-step rows are solver diagnostics",
                 "wall time for benchmark rows; solver total for first-step scaling",
             ],
@@ -1207,6 +1213,7 @@ def main() -> None:
                 "Plasticity2D",
                 "endpoint evidence plus larger fixed-work diagnostics",
                 "Armijo continuation with same-mesh PMG smoother policy",
+                "typically $10^{-2}$/15 unless a diagnostic states otherwise",
                 "$P_4(L_5)$ is the endpoint solve; $P_4(L_6)$--$P_4(L_7)$ are fixed-iteration diagnostics",
                 "wall time for the stated endpoint or fixed-work run",
             ],
@@ -1214,6 +1221,7 @@ def main() -> None:
                 "Plasticity3D validation",
                 "endpoint-surrogate agreement, not path-history validation",
                 "fixed-load reference-model comparisons under matched boundary conditions",
+                "not the primary timing target",
                 "validation criteria use fixed-load observables; strain/profile rows are diagnostic",
                 "timing is secondary to agreement metrics",
             ],
@@ -1221,6 +1229,7 @@ def main() -> None:
                 "Plasticity3D performance",
                 "second-order routes, globalization, and parallel scaling",
                 "Armijo, residual-bisection, or trust-region Newton with FGMRES and same-mesh PMG",
+                "$10^{-1}$ or $10^{-2}$ with max 100, as stated by row",
                 "relative correction, gradient target, cap, or fixed work as stated",
                 "wall, solve, or solver-total time according to the table header",
             ],
@@ -1228,6 +1237,7 @@ def main() -> None:
                 "Topology",
                 "distributed design-mechanics timing and rank consistency",
                 "adaptive reduced-objective continuation with PETSc mechanics and GAMG",
+                "mechanics FGMRES/GAMG: $10^{-4}$/100",
                 "design/state-change stall criterion or fixed schedule",
                 "end-to-end wall time",
             ],
@@ -1266,10 +1276,16 @@ def main() -> None:
                 "Architectural context for the \\jaxpetsc{} realization; this study evaluates derivative construction, globalization, and preconditioning on the stated benchmark suite.",
             ],
             [
-                "Mechanics and topology benchmark lineage "
-                "\\citep{tschuchnigg2015nonassociated,sysala2017returnmapping,sysala2021optimization,sysala2025convexoptimization,sysala2025advancedcontinuation,cermak2019efficient,sigmund2001topology,bendsoe2003topology,ferrari2020top99,bourdin2001filters,jia2024fenitop}",
-                "Strength-reduction plasticity, elastoplastic implementation practice, SIMP topology optimization, filtering, and compact parallel topology software.",
-                "Defines the scientific problem classes and lineage; the numerical claims remain limited to the implemented endpoint surrogate and reported comparison observables.",
+                "Slope-stability and elastoplastic benchmark lineage "
+                "\\citep{tschuchnigg2015nonassociated,sysala2017returnmapping,sysala2021optimization,sysala2025convexoptimization,sysala2025advancedcontinuation,cermak2019efficient}",
+                "Strength-reduction plasticity, nonsmooth return mapping, continuation, and practical 2D/3D elastoplastic implementation.",
+                "Defines the plasticity problem class and lineage; the numerical claims remain limited to the implemented endpoint surrogate and reported comparison observables.",
+            ],
+            [
+                "Topology-optimization benchmark lineage "
+                "\\citep{sigmund2001topology,bendsoe2003topology,ferrari2020top99,bourdin2001filters,jia2024fenitop}",
+                "SIMP compliance minimization, density filtering, compact educational implementations, and modern parallel topology software.",
+                "Defines the topology problem context; the numerical claims are the reported design-and-mechanics timing and rank-consistency diagnostics.",
             ],
         ],
     )

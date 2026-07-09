@@ -2,7 +2,7 @@
 \toprule
 Family & Representative result & Highlight \\
 \midrule
-$p$-Laplace & JAX+PETSc element AD, $L_{9}$, 32 ranks: \num{1.14} s & The element-AD and colored-SFD paths report the same displayed final energy; colored SFD has higher wall time on this case. \\
+$p$-Laplace & JAX+PETSc element AD, $L_{9}$, 32 ranks: \num{1.14} s & The element-AD and colored sparse-recovery paths agree within about $\num{1e-8}$ in final energy; colored sparse recovery has higher wall time on this case. \\
 Ginzburg--Landau & JAX+PETSc element AD, $L_{9}$, 32 ranks: \num{2.1} s & The JAX+PETSc and FEniCS rows agree within about $\num{1e-6}$ in final energy on the fine-grid benchmark. \\
 Hyperelasticity & JAX+PETSc element AD, distributed 24-step $L_{4}$, 32 ranks: \num{529} s & The 24-step load path completes with the reported terminal energy in distributed mode. \\
 Plasticity (2D) & JAX+PETSc same-mesh PMG, $P_{4}(L_{7})$, 16 ranks: \num{253} s & This is the highest-resolution 2D plasticity diagnostic reported here. \\

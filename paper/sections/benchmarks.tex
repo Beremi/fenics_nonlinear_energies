@@ -10,9 +10,9 @@ reduced-objective viewpoint.
 \begin{table}[!htbp]
   \centering
   \input{tables/generated/benchmark_specification_matrix.tex}
-  \caption{Benchmark families, solve policies, and principal comparison paths.
-  The later numerical section revisits the same families from the timing and
-  scaling viewpoint.}
+  \caption{Benchmark families, tested scopes, solver policies, and principal
+  comparison evidence. The later numerical section revisits the same families
+  from the timing and scaling viewpoint.}
   \label{tab:benchmark-spec}
 \end{table}
 
@@ -148,8 +148,9 @@ geometric complications.
   \centering
   \includegraphics[width=\PaperFigureNarrow]{plaplace_energy_levels.pdf}
   \caption{Final discrete energies from \cref{eq:plaplace-discrete} across the
-  selected mesh hierarchy. The element-AD and colored-SFD \jaxpetsc{} paths are
-  energy-consistent with the \fenics{} reference at the plotted scale.}
+  selected mesh hierarchy. The element-AD and colored sparse-recovery
+  \jaxpetsc{} paths are energy-consistent with the \fenics{} reference at the
+  plotted scale.}
   \label{fig:plaplace-energy-levels}
 \end{figure}
 
@@ -162,9 +163,9 @@ geometric complications.
 \end{table}
 
 The within-benchmark picture is therefore one of formulation agreement:
-\cref{fig:plaplace-energy-levels,tab:plaplace-benchmark} report matching
-discrete energies to the displayed precision for the implemented routes in
-\cref{eq:plaplace-discrete}. Scaling and timing for this family are reported in
+\cref{fig:plaplace-energy-levels,tab:plaplace-benchmark} report JAX+PETSc
+discrete energies within about $\num{1e-8}$ of the \fenics{} custom reference
+for \cref{eq:plaplace-discrete}. Scaling and timing for this family are reported in
 \Cref{sec:num-plaplace}.
 
 \subsection{Ginzburg--Landau}
@@ -234,7 +235,7 @@ is part of the benchmark definition.
   \includegraphics[width=\PaperFigureNarrow]{ginzburg_landau_energy_levels.pdf}
   \caption{Final discrete energies associated with the stationary problem
   \cref{eq:gl-discrete} across mesh
-  levels. The element-AD and colored-SFD \jaxpetsc{} routes agree with the
+  levels. The element-AD and colored sparse-recovery \jaxpetsc{} routes agree with the
   \fenics{} reference within about $\num{1e-6}$ in final energy.}
   \label{fig:gl-energy-levels}
 \end{figure}
@@ -963,6 +964,12 @@ surrogate is a full incremental elastoplastic solver.
   \label{tab:plasticity3d-benchmark}
 \end{table}
 
+\Cref{fig:plasticity3d-state,fig:plasticity3d-convergence,tab:plasticity3d-benchmark}
+define the endpoint-surrogate benchmark object used later in the results
+section. The nine completed endpoint solves converge in the nonlinear stopping
+metric while the terminal values of \cref{eq:plasticity3d-discrete} decrease
+along both mesh and degree refinements.
+
 \begin{figure}[H]
   \centering
   \includegraphics[width=\PaperFigureFull]{plasticity3d_highest_mesh_y_slice_comparison.pdf}
@@ -975,16 +982,11 @@ surrogate is a full incremental elastoplastic solver.
   \label{fig:plasticity3d-highest-slice}
 \end{figure}
 
-\Cref{fig:plasticity3d-state,fig:plasticity3d-convergence,tab:plasticity3d-benchmark,fig:plasticity3d-highest-slice}
-define the endpoint-surrogate benchmark object used later in the results
-section. The nine
-completed endpoint solves converge in the nonlinear stopping metric while the
-terminal values of \cref{eq:plasticity3d-discrete} decrease along both mesh and
-degree refinements. The shared-scale slice comparison indicates that the larger
-values of $\|\varepsilon_{\mathrm{dev}}\|$ remain localized near the same upper
-slope region across $P_1$, $P_2$, and $P_4$, so the later degree and timing
-comparisons are interpreted as endpoint-solver comparisons rather than changes
-of the physical problem.
+\Cref{fig:plasticity3d-highest-slice} adds a shared-scale slice comparison. The
+larger values of $\|\varepsilon_{\mathrm{dev}}\|$ remain localized near the same
+upper slope region across $P_1$, $P_2$, and $P_4$, so the later degree and
+timing comparisons are interpreted as endpoint-solver comparisons rather than
+changes of the physical problem.
 
 Plasticity3D is the benchmark where detailed constitutive definitions are most
 important: the paper later plots values of \cref{eq:plasticity3d-discrete} and

@@ -43,6 +43,11 @@ organized around three solver components:
         policies used in the larger mechanics and topology runs.
 \end{enumerate}
 
+Relative to JAX-native differentiable FEM and FEM-adjoint automation, the
+distinction is the integrated evaluation of local AD routes inside PETSc-owned
+sparse MPI Newton solvers, with globalization and preconditioner policy varied
+on a heterogeneous benchmark suite.
+
 This organization lets the numerical experiments vary derivative information and
 solver policy without changing the benchmark definition.
 

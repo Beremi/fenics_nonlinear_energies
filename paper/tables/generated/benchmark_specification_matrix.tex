@@ -1,12 +1,12 @@
-\begin{tabular}{@{}l c >{\RaggedRight\arraybackslash}p{0.14\textwidth} >{\RaggedRight\arraybackslash}p{0.23\textwidth} >{\RaggedRight\arraybackslash}p{0.26\textwidth}@{}}
+\begin{tabular}{@{}>{\RaggedRight\arraybackslash}p{0.135\textwidth} >{\RaggedRight\arraybackslash}p{0.185\textwidth} >{\RaggedRight\arraybackslash}p{0.140\textwidth} >{\RaggedRight\arraybackslash}p{0.275\textwidth} >{\RaggedRight\arraybackslash}p{0.170\textwidth}@{}}
 \toprule
-Family & Grid / mesh & Solve policy & Compared formulations & Main difficulty \\
+Family & Tested scope & Solve policy & Comparison evidence & Main difficulty \\
 \midrule
-$p$-Laplace & $L_{9}$ & Newton + line search & FEniCS, pure JAX, JAX+PETSc & nonlinear elliptic solve with exact sparse Hessians \\
-Ginzburg--Landau & $L_{9}$ & Newton + line search & FEniCS, JAX+PETSc & indefinite local curvature from the double well \\
-Hyperelasticity & $L_{4}$, 24 steps & trust-region solve & FEniCS, pure JAX, JAX+PETSc & nonconvex large-deformation mechanics \\
+$p$-Laplace & $L_{5}$ serial parity; $L_{9}$ distributed scaling & Newton + line search & FEniCS and JAX+PETSc on the scaling matrix; pure JAX only in the serial parity case & nonlinear elliptic solve with exact sparse Hessians \\
+Ginzburg--Landau & $L_{5}$ parity; $L_{9}$ distributed scaling & Newton + line search & FEniCS and JAX+PETSc comparison & indefinite local curvature from the double well \\
+Hyperelasticity & $L_{1}$ serial parity; $L_{4}$, 24-step distributed scaling & trust-region solve & FEniCS and JAX+PETSc on the distributed suite; pure JAX only as a serial reference & nonconvex large-deformation mechanics \\
 Plasticity2D & $P_{4}(L_{5})$--$P_{4}(L_{7})$ & endpoint solve or fixed nonlinear work & JAX+PETSc only & same-mesh PMG and nonlinear tail behavior \\
 Plasticity3D & $P_{1}$/$P_{2}$/$P_{4}$ & endpoint, scaling, and diagnostic PMG policies & constitutive-AD, reference-formula, and frozen-operator PMG diagnostics & heterogeneous 3D Mohr--Coulomb with constitutive AD \\
-Topology & $768\times384$ & adaptive continuation & pure JAX, JAX+PETSc & distributed design-mechanics coupling \\
+Topology & $192\times96$ serial reference; $768\times384$ parallel benchmark & adaptive continuation & pure JAX on the serial reference; JAX+PETSc on the fine-grid parallel run and scaling matrix & distributed design-mechanics coupling \\
 \bottomrule
 \end{tabular}

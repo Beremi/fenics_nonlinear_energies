@@ -48,7 +48,7 @@ MATLAB literature only when there is source-backed evidence.
 - SIOPT submission-shape cue checked on 2026-07-09: SIAM's author instructions
   ask for figures to be embedded inline and state that SIOPT has a 25-page
   policy, with longer papers published only in exceptional justified cases. The
-  current 42-page A4 article is therefore a journal-template/page-budget blocker
+  current 43-page A4 article is therefore a journal-template/page-budget blocker
   rather than a solved formatting issue.
 
 ## Manuscript Nodes
@@ -100,7 +100,10 @@ MATLAB literature only when there is source-backed evidence.
   Current evidence-scope chunk keeps that separation in both the abstract and
   introduction, scopes the Plasticity3D timing sentence to the fixed high-order
   derivative-route comparison, and names the contribution as a scientific
-  \jaxpetsc{} toolset rather than a broad framework.
+  \jaxpetsc{} toolset rather than a broad framework. Current thematic-audit
+  chunk makes the abstract's final evidence sentence distinguish distributed
+  mechanics timing/solver-policy behavior from the topology rank-consistency
+  check.
 - `INTRO`: positioning and contributions.
   Status: now opens with the nonlinear FEM computational bottleneck and includes
   an explicit contribution block with solver, derivative/assembly, and
@@ -123,7 +126,11 @@ MATLAB literature only when there is source-backed evidence.
   language so only reported external numerical comparisons are covered by the
   matched-observable statement. Current evidence-gate chunk splits the
   \v{C}erm{\'a}k--Sysala--Valdman implementation lineage from the
-  Sysala-family reference-model and reference-observable context.
+  Sysala-family reference-model and reference-observable context. Current
+  thematic-audit chunk adds an explicit novelty sentence: relative to
+  JAX-native differentiable FEM and FEM-adjoint automation, the distinction is
+  evaluating local AD routes inside PETSc-owned sparse MPI Newton solvers with
+  globalization and preconditioner policy varied across a heterogeneous suite.
 - `RELATED`: literature framing.
   Status: consolidated defensive taxonomy into fewer scientific groups:
   FEM automation, differentiable FEM/AD, nonlinear solver infrastructure,
@@ -139,6 +146,9 @@ MATLAB literature only when there is source-backed evidence.
   updates the PETSc web citation key to the current 2026 entry. Current
   evidence-gate chunk names the \v{C}erm{\'a}k--Sysala--Valdman MATLAB
   implementation line explicitly, avoiding a vague single-author lineage.
+  Current thematic-audit chunk splits the SOTA role table into separate
+  slope-stability/elastoplastic and topology-optimization lineage rows, so the
+  endpoint-surrogate caveat applies only to the plasticity context.
 - `METHOD`: mathematical and algorithmic core.
   Current assets: common finite-element energy notation, derivative routes,
   globalization algorithms, colored sparse finite differences, constitutive AD.
@@ -183,6 +193,12 @@ MATLAB literature only when there is source-backed evidence.
   away from switching sets. It also defines colored SFD as the compact label for
   colored sparse recovery; the reported graph-colored configurations use AD-HVP
   probes, while finite-difference gradient probes are the classical variant.
+  Current thematic-audit chunk clarifies hybrid Newton trial-step semantics,
+  defines the predicted decrease, treats nonpositive predicted decrease as
+  model failure, points KSP tolerances to the numerical-protocol table or
+  result-specific rows, makes finite-difference colored recovery first-order in
+  `\delta`, and normalizes `m_q` as active branch plus local material/history
+  data.
 - `IMPLEMENTATION`: realization of the method.
   Current assets: pure JAX, FEniCS, and JAX+PETSc strata; autodiff modes;
   Krylov/preconditioner matrix; distributed assembly.
@@ -211,7 +227,11 @@ MATLAB literature only when there is source-backed evidence.
   realization, construction, toolset, and formulation language, interprets the
   implementation figures in body text, and changes the constitutive-AD diagram
   label from a lowest-cost route to quadrature-point tangent assembly with exact
-  local constitutive derivatives.
+  local constitutive derivatives. Current thematic-audit chunk replaces
+  remaining implementation-flavored `kernel`/`callback` prose with local or
+  Hessian evaluations, states the p-Laplace reported policy as Newton--CG with
+  Hypre unless overridden by a table, and makes Plasticity2D PMG wording
+  diagnostic rather than a broad bottleneck claim.
 - `BENCHMARKS`: mathematical problem coverage.
   Families: p-Laplace, Ginzburg--Landau, Hyperelasticity, Plasticity2D,
   Plasticity3D, Topology.
@@ -276,7 +296,14 @@ MATLAB literature only when there is source-backed evidence.
   Current benchmark-readability chunk splits Plasticity2D and Plasticity3D setup
   prose into staged paragraphs for continuum model, geometry/material data,
   endpoint-surrogate functional, and claim-scope caveats without changing
-  equations, numerical evidence, or validation claims.
+  equations, numerical evidence, or validation claims. Current thematic-audit
+  chunk changes the benchmark matrix from reference availability to tested
+  scope, separating p-Laplace serial parity from distributed scaling,
+  Hyperelasticity serial parity from 24-step distributed scaling, and topology
+  serial reference from the fine-grid parallel benchmark. It also moves
+  Plasticity3D endpoint interpretation immediately after the state/convergence
+  figure and endpoint table, with the shared-scale slice interpretation after
+  the slice figure.
 - `VALIDATION`: external and reference-model comparison.
   Evidence: narrow hyperelastic JAX-FEM comparison; Plasticity3D validation
   ladder with endpoint-surrogate scope.
@@ -434,7 +461,7 @@ MATLAB literature only when there is source-backed evidence.
   keeps broad conclusions tied to documented solver construction and numerical
   evidence rather than a software-ranking or framework-ranking claim.
 - `FIGURES_TABLES`: visual and layout quality.
-  Current fact: `paper/build/main.pdf` is 42 pages, A4, 10 pt article,
+  Current fact: `paper/build/main.pdf` is 43 pages, A4, 10 pt article,
   text width about 7.09 in. Many floats use `[H]`, so placement is highly manual.
   Figure/layout subagent audit: assets are technically clean at current A4
   width, with embedded fonts and 600 ppi raster layers, but dense 3D
@@ -610,6 +637,19 @@ MATLAB literature only when there is source-backed evidence.
   byte-stable across repeated `make -C paper figures` runs. The rebuilt 42-page
   PDF passed `make -C paper submission-check`; rendered pages 8--9, 14, 23,
   25, 28, 34, 36, and 39--40 are readable, unclipped, and in order.
+  Current thematic-audit chunk removes unused generated schematic PDF/PNG
+  assets that had been superseded by in-manuscript TikZ figures, drops them
+  from the figure generator and manifest, and keeps the manifest aligned with
+  the 29 TeX-included generated PDFs. The TikZ coloring schematic now avoids
+  in-node hyphenation, the topology timing figure is forced before its summary
+  table, and the 43-page A4 PDF passed `make -C paper submission-check`.
+  Rendered pages 9, 20, 21, and 37 were visually checked for schematic
+  readability, Plasticity3D interpretation placement, and topology float order.
+  Current thematic-audit chunk softens the discussion's derivative-route
+  equivalence wording to cost isolation under matching terminal observables,
+  extends the numerical-protocol table with representative KSP tolerance/max-it
+  targets, adds `conn2000trust` at the trust-region discussion, and makes the
+  IT4I hardware citation include `howpublished`.
 - `REPRO`: reproducibility and submission readiness.
   Known blockers from `paper/todo.md`: target journal/template/declarations,
   repository license/archive DOI, and a durable release/archive for critical
@@ -698,7 +738,15 @@ MATLAB literature only when there is source-backed evidence.
   the manuscript availability statement, and keeps archive-neutral validation
   green. Remaining provenance risks are release-level: the curated bundle must
   be refreshed once more from the final released tree, included in a durable
-  licensed archive, and cited with its DOI or permanent record.
+  licensed archive, and cited with its DOI or permanent record. Current
+  thematic-audit chunk keeps archive-neutral validation green after removing
+  unused generated schematic assets from the manifest. The local Git remote
+  still uses the historical `fenics_nonlinear_energies` URL, but `gh repo view`
+  resolves both that name and `jax_petsc_nonlinear_energies` to the canonical
+  GitHub repository `Beremi/jax_petsc_nonlinear_energies`; the manuscript
+  availability URL therefore remains canonical. The final release still needs
+  license, DOI/archive, target declarations, and a final bundle refresh from
+  the released tree.
 
 ## Evidence Nodes
 

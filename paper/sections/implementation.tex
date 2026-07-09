@@ -21,7 +21,7 @@ comparisons rather than as the primary distributed realization.
 \paragraph{Primary \jaxpetsc{} realization.}
 This is the central solver realization of the paper. It combines JAX-based local
 physics with PETSc distributed vectors, matrices, Krylov solvers, and
-preconditioners. Problem-specific kernels stay in JAX; sparse distributed
+preconditioners. Problem-specific local evaluations stay in JAX; sparse distributed
 assembly, nonlinear globalization, and linear algebra stay in PETSc.
 
 \subsection{Autodiff modes}
@@ -92,8 +92,9 @@ GAMG PETSc's geometric-algebraic multigrid preconditioner, Hypre an algebraic
 multigrid/preconditioning backend, MUMPS a multifrontal sparse direct solver,
 and PMG polynomial multigrid:
 \begin{itemize}
-  \item \textbf{$p$-Laplace:} mostly CG with Hypre, with exact element
-        Hessians or colored-SFD Hessians in the \jaxpetsc{} path.
+  \item \textbf{$p$-Laplace:} reported \jaxpetsc{} configurations use
+        Newton--CG with Hypre unless a result table states otherwise, with exact
+        element Hessians or colored sparse-recovery Hessians.
   \item \textbf{Ginzburg--Landau:} GMRES with Hypre, reflecting the more
         indefinite linearization.
   \item \textbf{Hyperelasticity:} trust-region outer iterations with
@@ -101,8 +102,7 @@ and PMG polynomial multigrid:
         globalization comparison cases, and same-hierarchy PMG with redundant LU/MUMPS
         coarse solves in the larger fixed-work scaling profile.
   \item \textbf{Plasticity (2D):} same-mesh multigrid hierarchies whose
-        bottlenecks are dominated by the finest-level smoother and repeated
-        Krylov work.
+        diagnostics track the finest-level smoother and repeated Krylov work.
   \item \textbf{Plasticity3D:} same-mesh polynomial multigrid hierarchies,
         $P_4 \to P_2 \to P_1$ or $P_2 \to P_1$ depending on degree. The
         auxiliary $\lambda_{\mathrm{sr}}=\num{1.0}$ scaling and
@@ -126,7 +126,7 @@ The \jaxpetsc{} implementation uses PETSc-owned ranges, local-plus-ghost
 layouts, and owned-row sparse assembly. Each MPI rank owns a contiguous subset of
 free degrees of freedom and stores overlap values for elements touching that
 owned set. Before energy, gradient, Hessian, or HVP work, owned coefficients are
-scattered into the local ghost layout; the JAX kernels then evaluate element and
+scattered into the local ghost layout; the JAX evaluations then compute element and
 quadrature contributions rank-locally on this filled overlap state. Matrix
 entries are inserted only for owned rows, with ghost data used to evaluate local
 stencils but not to duplicate ownership. Scalar energy values reported in the
