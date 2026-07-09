@@ -31,6 +31,15 @@ DEFAULT_PATTERNS = (
         re.compile(r"(?i)\b(mainline|sourcefixed|source[- ]operator|source[- ]formula|source[- ]submission)\b"),
     ),
     HygienePattern(
+        "process-local or defensive comparison framing",
+        re.compile(
+            r"(?i)\b("
+            r"codebase|repository[- ]local|run[- ]tag|"
+            r"broad\s+software(?:\s+ranking|\s+comparison)?|software\s+ranking|framework\s+ranking"
+            r")\b"
+        ),
+    ),
+    HygienePattern(
         "local platform name in manuscript body",
         re.compile(r"\b(Karolina|Barbora)\b"),
     ),

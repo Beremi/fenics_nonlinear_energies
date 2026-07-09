@@ -224,6 +224,9 @@ scientific claims were introduced without supporting evidence.
 - Refreshed the local submission-bundle manifest from the current
   publish-readiness branch commit, keeping archive-neutral provenance in sync
   without rerunning MPI campaigns.
+- Strengthened the PDF-text manuscript hygiene gate so future edits fail on
+  process-local wording such as codebase/repository-local labels and defensive
+  software/framework-ranking phrases.
 - Rebuilt the paper PDF through the paper generation pipeline.
 
 ## Blocking Issues Before Submission
@@ -488,6 +491,13 @@ required support for the current scoped contribution.
   `561947fa6a39b22e455ead956153149f641c440f`.
 - `./.venv/bin/python paper/scripts/validate_paper_assets.py --archive-neutral`:
   passed against the refreshed local submission-bundle manifest.
+- `./.venv/bin/python -m pytest tests/test_paper_manuscript_hygiene.py`: passed
+  2 tests after extending the manuscript hygiene gate to defensive
+  process/local comparison language.
+- `./.venv/bin/python paper/scripts/check_manuscript_hygiene.py paper/build/main.pdf`:
+  passed against the current PDF with the stricter wording patterns.
+- `make -C paper submission-check`: passed with the stricter PDF-text
+  manuscript hygiene gate.
 - `./.venv/bin/python -m pytest tests/test_docs_publication.py`: passed
   13 tests.
 - `./.venv/bin/python -m pytest tests/test_final_report_figure_generators.py`:

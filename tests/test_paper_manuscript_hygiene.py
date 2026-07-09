@@ -31,7 +31,10 @@ def test_manuscript_body_omits_references_by_default() -> None:
 
 def test_hygiene_finds_process_and_local_labels() -> None:
     hygiene = _load_module()
-    text = "The mainline campaign used tmp/source_compare and P4(L1_2).\n"
+    text = (
+        "The mainline campaign used tmp/source_compare and P4(L1_2).\n"
+        "This was a repository-local software ranking.\n"
+    )
 
     findings = hygiene.find_hygiene_findings(text)
 
@@ -39,3 +42,4 @@ def test_hygiene_finds_process_and_local_labels() -> None:
     assert any("draft or review-process marker" in finding for finding in findings)
     assert any("local filesystem or raw-result path" in finding for finding in findings)
     assert any("implementation mesh alias" in finding for finding in findings)
+    assert any("process-local or defensive comparison framing" in finding for finding in findings)

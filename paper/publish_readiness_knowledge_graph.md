@@ -756,7 +756,10 @@ MATLAB literature only when there is source-backed evidence.
   submission-bundle manifest from commit
   `561947fa6a39b22e455ead956153149f641c440f`; archive-neutral validation still
   passes. This reduces manifest staleness for the current working paper but
-  does not replace the final licensed archive/DOI step.
+  does not replace the final licensed archive/DOI step. Current hygiene-guard
+  chunk extends the PDF-text manuscript scan to reject codebase/repository-local
+  wording and defensive software/framework-ranking phrases, making the recent
+  evidence-scope prose polish enforceable in future edits.
 
 ## Evidence Nodes
 
