@@ -142,6 +142,10 @@ scientific claims were introduced without supporting evidence.
   formulas, named Plasticity3D material regions, mapped Plasticity3D boundary
   labels to geometric faces, and stated the 3D ordered-principal-strain branch
   convention.
+- Completed a display-equation punctuation audit across the manuscript TeX
+  sources: all `equation`, `align`, and display-math blocks already treat the
+  displayed formulas as sentence parts after labels and trailing line breaks are
+  ignored.
 - Rebuilt the paper PDF through the paper generation pipeline.
 
 ## Blocking Issues Before Submission
@@ -209,8 +213,6 @@ scientific claims were introduced without supporting evidence.
   reads like final submission metadata rather than a repository-local note.
 - Consider a compact exact solver-policy table once the final target template is
   known and the result-table width budget is clear.
-- Run a remaining display-equation punctuation pass outside the benchmark blocks
-  touched by the latest self-containedness edit.
 
 ## Claim And Citation Audit Summary
 

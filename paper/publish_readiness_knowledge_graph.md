@@ -1023,9 +1023,11 @@ MATLAB literature only when there is source-backed evidence.
   visible in generated tables and backed by the curated bundle. The follow-up
   benchmark-self-containment chunk addressed the mesh-hierarchy,
   `P_k(L_\ell)`, Plasticity3D marker, and Mohr--Coulomb convention findings.
-  Deferred findings for a later pass: a compact exact solver-policy table,
-  display-equation punctuation outside the touched blocks, and target-template
-  cleanup for dense result tables and forced float regions.
+  The follow-up display-equation audit checked all manuscript `equation`,
+  `align`, and display-math blocks; each already carries sentence punctuation
+  once labels and trailing line breaks are ignored. Deferred findings for a
+  later pass: a compact exact solver-policy table and target-template cleanup
+  for dense result tables and forced float regions.
 
 ## First Edit Backlog
 
