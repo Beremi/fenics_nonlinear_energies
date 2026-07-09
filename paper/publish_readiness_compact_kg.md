@@ -119,6 +119,12 @@ stage or commit `paper/style_guide/`.
   derivative-route and hyperelasticity result pages, early schematic-heavy
   implementation pages, and final conclusion/appendix compression. Major layout
   moves are best paired with a target-template/page-budget decision.
+- Final-section synthesis pass: Results now ends with a compact evidence-block
+  handoff, Discussion carries the cross-cutting interpretation of derivative
+  routes, matched agreement contracts, and solver-policy scope, and Conclusions
+  close on the scientific-computing contribution plus next research steps. This
+  reduces repeated endpoint-scope and coupled-solver language without changing
+  numerical evidence.
 
 ## Figure And Table Rules
 
@@ -156,12 +162,13 @@ external release decisions:
 - durable software/artifact archive;
 - archival DOI in the availability statement.
 
-The current PDF is a 45-page A4 article. Page budget and float behavior must be
+The current PDF is a 44-page A4 article. Page budget and float behavior must be
 rechecked after target-template conversion.
 
 Deferred layout risks from the 2026-07-09 audit: the hyperelasticity diagnostic
-cluster around PDF page 31, the Plasticity3D degree/scaling block around PDF
-page 34, dense Table 19, early schematic-heavy implementation pages, and unused
+cluster around PDF pages 32--33, the Plasticity3D degree/scaling block around
+PDF pages 34--38, dense Table 19, early schematic-heavy implementation pages,
+and unused
 generated assets that should be excluded or cleaned before the final submission
 bundle.
 

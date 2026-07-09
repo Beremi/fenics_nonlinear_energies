@@ -1,60 +1,57 @@
 \label{sec:discussion}
 
-The numerical evidence supports a single methodological lesson for the tested
-benchmark classes: local differentiation and sparse solver policy are coupled
-numerical choices. In several fixed-case comparisons, derivative routes and
-ownership layouts preserve displayed terminal observables while changing cost;
-globalization and preconditioner policies also change robustness, work, and
-timing. The following paragraphs delimit that lesson by derivative route,
-validation scope, and external comparison evidence.
+The numerical evidence supports a methodological conclusion for the tested
+benchmark classes: in nonlinear finite-element energy minimization, the useful
+unit of algorithmic design is not the AD route alone. Local derivative
+construction, sparse ownership, nonlinear globalization, Krylov algebra, and
+preconditioning together determine the observed solver behavior. This coupling
+is why the paper reports formulation checks, matched terminal-state comparisons,
+fixed-work route studies, and distributed scaling evidence in one validation
+chain.
 
-\paragraph{Derivative routes interact with the sparse solver.}
+\paragraph{Derivative information is realized through the nonlinear solve.}
 \Cref{fig:plasticity3d-derivative-ablation,tab:plasticity3d-derivative-ablation}
-show a consistent cost comparison on the fixed $P_4(L_1)$,
-$\lambda_{\mathrm{sr}}=1.5$, 8-rank case. The three routes report terminal
+is the clearest fixed-work example. On the fixed $P_4(L_1)$,
+$\lambda_{\mathrm{sr}}=1.5$, 8-rank case, the three routes report terminal
 observables with the same rounded energy, external-work observable, and maximum
 displacement, with 8 Newton iterations and 376 Krylov iterations. Thus the
-reported evidence primarily isolates derivative-route cost under matching
-terminal observables. In this fixed test, constitutive AD preserves the
-same scalar-energy definition and has the lowest measured wall time:
-\SI{222}{s}, compared with \SI{288}{s} for element AD and \SI{372}{s} for
-colored SFD.
+reported evidence isolates derivative-route cost only after the residual,
+Jacobian, preconditioner, and nonlinear stopping policy have been fixed. In
+this setting, constitutive AD has the lowest measured wall time, while colored
+SFD remains a useful sparse-recovery comparison and fallback route on the tested
+fixed-size problems. The conclusion is therefore not that one derivative route
+is uniformly best, but that derivative placement should be assessed inside the
+assembled sparse nonlinear solve that will use it.
 
-\paragraph{Three-dimensional plasticity validation is endpoint-scoped.}
-The three-dimensional plasticity endpoint-surrogate comparison in
-\Cref{fig:plasticity3d-validation,tab:plasticity3d-validation} supports a
-scoped mechanics interpretation. The reported endpoint observables satisfy the
-stated fixed-load tolerances under the matched boundary-condition setup. The
-endpoint displacement is part of that fixed-load criterion, whereas the
-deviatoric-strain and boundary-profile comparisons are diagnostic. The
-evidence supports final-load scalar and field observables for the tested
-endpoint surrogate, but it does not validate incremental plastic-history paths
-or provide a numerical reproduction of the cited incremental-history studies.
-
-\paragraph{External comparisons are useful when definitions are matched.}
+\paragraph{Agreement evidence depends on matched definitions.}
 The hyperelastic JAX-FEM comparison in
 \Cref{fig:hyperelasticity-jaxfem-baseline,tab:hyperelasticity-jaxfem-baseline}
-is informative because the mesh, prescribed displacement schedule, and
-terminal-state energy evaluation are explicitly matched. The terminal states
-are post-compared with the energy in \eqref{eq:hyperelasticity-energy}; the
-final energy relative difference is \num{8.244e-6}, and the displacement and
-centerline relative differences are below the prescribed 5\% threshold. Its
-role is solver-consistency evidence for this companion hyperelastic case: under
-a matched mesh, displacement schedule, and terminal-energy post-comparison, the
-\jaxpetsc{} and JAX-FEM terminal states agree closely.
+is useful because the mesh, displacement schedule, and terminal-energy
+post-comparison are explicitly matched. The three-dimensional plasticity
+comparison in \Cref{fig:plasticity3d-validation,tab:plasticity3d-validation}
+uses a different agreement contract: fixed-load endpoint observables satisfy
+the stated tolerances, while deviatoric-strain and boundary-profile comparisons
+serve as diagnostics. These two examples illustrate the same validation rule:
+external or surrogate comparisons are informative when the problem definition
+and compared observables are named before agreement is interpreted. The
+Plasticity3D result is therefore endpoint-scoped mechanics evidence, not a
+path-consistent reproduction of incremental-history plasticity references.
 
-\paragraph{Scope of the evidence.}
-The same evidence also defines the scope of the conclusions. The
+\paragraph{Scalability evidence reflects solver policy.}
+The distribution and PMG studies show that sparse ownership, overlap size,
+coarse solves, and preconditioner choices enter the numerical method. The
 $\lambda_{\mathrm{sr}}=1.0$ three-dimensional plasticity strong-scaling study is
-timing-only evidence, while the bottom-clamped $\lambda_{\mathrm{sr}}=1.55$
-scaling sweep is the converged comparison tied to the benchmark. The topology
-study reports end-to-end timing under adaptive stopping, with a separate
-controlled rank-consistency check. The fixed-reference PMG studies should be
-read as solver-sensitivity tests, not external baselines.
+timing-only evidence, whereas the bottom-clamped $\lambda_{\mathrm{sr}}=1.55$
+scaling sweep is the converged benchmark comparison. The topology study reports
+end-to-end timing under adaptive stopping, then adds a controlled
+rank-consistency check to separate distributed design-gradient exchange from
+adaptive termination effects. The fixed-reference PMG results should similarly
+be read as solver-sensitivity tests, not as external baselines.
 
-Together, these distinctions state the contribution: a nonlinear FEM toolset
-that couples JAX-based local differentiation with PETSc sparse distributed
-solvers and reports matched comparison evidence, with explicit agreement limits
-where predefined. Automatic differentiation alone does not determine the
-behavior of large nonlinear FEM; nonlinear globalization, MPI assembly, coarse
-solvers, and preconditioning also enter the numerical method.
+Together, these distinctions state the contribution. We present a nonlinear FEM
+toolset that couples JAX-based local differentiation with PETSc sparse
+distributed solvers, and we evaluate that coupling with comparison contracts
+that specify their own limits. The results support this toolset and its
+validation discipline for the tested benchmark classes. They do not imply that
+a single backend, globalization policy, preconditioner, or derivative
+construction dominates nonlinear finite-element computations in general.

@@ -644,31 +644,12 @@ compact serial reference path discussed earlier in
 \subsection{Synthesis of the Computational Evidence}
 \label{sec:num-synthesis}
 
-The results above should be read as a coupled solver study rather than as a
-collection of isolated benchmark timings. First, the globalization tables show
-that the nonlinear policy is problem-dependent: line-search Newton completes
-the tested $p$-Laplace unit-load case with the lowest reported solve time, while
-trust-region safeguards are beneficial on
-the nonconvex Ginzburg--Landau tests and needed for convergence in the stricter
-$P_2(L_1)$ Plasticity3D globalization test reported here. Second, the
-derivative-route comparisons indicate that access to several second-order routes
-is useful in practice. Colored sparse recovery is a comparison and fallback
-route on the tested fixed-size problems, while constitutive AD gives the lowest
-measured wall time on the fixed high-order Plasticity3D derivative-route case.
-Third, the
-hyperelasticity distribution and PMG comparisons, together with the
-Plasticity3D partitioning measurements, indicate that sparse ownership, overlap
-size, coarse solves, and
-preconditioner policy are part of the numerical method, not merely software
-detail. Finally, the hyperelasticity, Plasticity3D, and topology scaling runs
-document the primary \jaxpetsc{} realization on the largest reported
-hyperelasticity, Plasticity3D, and topology cases in this study, while serial
-reference formulations mainly serve validation or scoped comparison roles.
-
-This synthesis is also the boundary of the paper's claim. The experiments
-support a nonlinear FEM toolset in which local differentiable models,
-distributed sparse assembly, nonlinear globalization, Krylov linear algebra,
-and problem-specific preconditioners are developed and assessed together. They
-do not imply that one backend or one globalization policy dominates all
-finite-element computations, nor do they turn the Plasticity3D endpoint surrogate
-into a path-consistent incremental-history validation.
+The results above provide the evidence blocks used in
+\Cref{sec:discussion}. The globalization tests separate problem-dependent
+nonlinear policies; the derivative-route comparisons isolate cost under fixed
+terminal observables; the distribution, PMG, and partitioning studies expose
+solver-policy and sparse-ownership effects; and the topology study closes with
+an end-to-end design-and-mechanics loop plus a controlled rank-consistency
+check. Read together, these measurements support interpretation at the level of
+a coupled nonlinear FEM method, rather than a universal ranking of backends,
+globalization policies, or derivative constructions.

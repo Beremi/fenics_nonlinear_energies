@@ -288,7 +288,12 @@ scientific claims were introduced without supporting evidence.
   comparator provenance explicit in the claim audit, added Conn trust-region
   source metadata, cleaned Plasticity2D/3D forward notation, and made the
   topology reduced-objective notation self-contained.
-- Rebuilt the paper PDF through the paper generation pipeline.
+- Addressed the final-section synthesis audit: shortened the Results synthesis
+  into an evidence-block handoff, rewrote Discussion around derivative-route
+  realization, matched agreement contracts, and solver-policy scope, and
+  strengthened the Conclusion's scientific-computing contribution without adding
+  new numerical claims.
+- Rebuilt the 44-page paper PDF through the paper generation pipeline.
 
 ## Blocking Issues Before Submission
 

@@ -1,8 +1,8 @@
 \label{sec:conclusion}
 
 We developed a \jaxpetsc{} toolset for nonlinear finite-element energy
-minimization in which local differentiable energy models are coupled to PETSc
-sparse distributed nonlinear solvers. The methodology in
+minimization that couples local differentiable energy models to PETSc sparse
+distributed nonlinear solvers. The methodology in
 \Cref{sec:methodology,sec:implementation} connects finite-element energy
 notation, second-order derivative construction, sparse MPI assembly, nonlinear
 globalization, Krylov solvers, and preconditioner policy. Across the tested
@@ -25,9 +25,12 @@ all tested rank counts converge with the same nonlinear and Krylov work. The
 topology runs provide distributed timing evidence for the coupled
 design-and-mechanics loop, with a separate controlled rank-consistency check.
 
+The resulting contribution is a scientific computing framework for asking which
+derivative route, sparse ownership pattern, globalization policy, and
+preconditioner should be used together for a given nonlinear energy problem.
 Natural extensions are path-dependent mechanics validation against
 incremental-history references, broader agreement-focused external comparisons
-under matched problem definitions, and reducing preconditioner-setup and
-multigrid costs in the reported sparse mechanics runs. Together, these
-directions would test whether the validation discipline of the present study
-carries over to broader nonlinear mechanics and design problems.
+under matched problem definitions, and reduced preconditioner-setup and
+multigrid costs in sparse mechanics runs. Those extensions would test whether
+the validation discipline of the present study carries over to broader
+nonlinear mechanics and design problems.
