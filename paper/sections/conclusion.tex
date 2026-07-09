@@ -7,12 +7,12 @@ Across the tested problems, the numerical evidence supports treating derivative
 construction, sparse ownership, nonlinear globalization, Krylov algebra, and
 preconditioning as one solver design rather than as separable implementation
 details. The concrete contribution is therefore not a single winning backend or
-preconditioner, but a paper-facing toolset and evaluation protocol: fixed-model
+preconditioner, but a scientific toolset and evaluation protocol: fixed-model
 derivative-route comparisons, PETSc-owned sparse MPI assembly, scoped
 validation checks, and timing studies whose solver-policy assumptions are
 reported explicitly.
 
-The strongest evidence comes from the high-order 3D plasticity derivative-route
+Key evidence comes from the high-order 3D plasticity derivative-route
 comparison, the endpoint-scoped hyperelasticity and plasticity validation
 checks, the distributed mechanics solver-policy studies, and the topology
 rank-consistency diagnostic. These evidence blocks support the \jaxpetsc{}
@@ -22,5 +22,5 @@ extensions are path-dependent mechanics validation against
 incremental-history references, broader agreement-focused external comparisons
 under matched problem definitions, and reduced preconditioner-setup and
 multigrid costs in sparse mechanics configurations. Those extensions would test
-whether the coupled solver-design discipline of the present study carries over to broader
-nonlinear mechanics and design problems.
+whether the coupled solver-design discipline of the present study carries over
+to broader nonlinear mechanics and design problems.

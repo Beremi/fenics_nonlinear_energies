@@ -47,17 +47,17 @@ z_i\ge q_{0.6}(z)\}$, ordered by $x_i$, and the compared observable is the
 displacement magnitude. The candidate upper-slope profile is linearly interpolated
 to the reference $x_i$ coordinates before computing \eqref{eq:validation-relative-difference}.
 
-The hyperelastic JAX-FEM comparison uses a 5\% predefined threshold for the
+The hyperelastic JAX-FEM comparison uses a fixed 5\% engineering gate for the
 final energy, Euclidean nodal full-field displacement, centerline displacement, and
 $u_{\max}$-curve differences. The \plasticitythree{} fixed-$\lambda_{\mathrm{sr}}$
-matched-comparator diagnostic uses three predefined criteria: at most $0.03$
+matched-comparator diagnostic uses three fixed criteria: at most $0.03$
 relative difference in the highest successful strength-reduction factor, at most
 $0.05$ relative Euclidean difference on the ordered
 $u_{\max}(\lambda_{\mathrm{sr}})$ samples, and at most $0.10$ relative
 discrete-norm difference for the endpoint displacement. The deviatoric-strain
 and upper-slope profile differences in \Cref{tab:plasticity3d-validation} are
 diagnostics, not acceptance criteria.
-These thresholds are predeclared engineering agreement gates for companion and
+These thresholds are fixed engineering agreement gates for companion and
 surrogate comparisons. They are not literature validation tolerances and do not
 replace path-history validation for elastoplastic evolution.
 
@@ -162,7 +162,7 @@ $\lambda_{\mathrm{sr}}=\num{1.55}$. Here
 $\lambda_{\max}^{\mathrm{succ}}$ denotes the largest value in the tested grid
 $\{\num{1.0},\num{1.2},\num{1.4},\num{1.5},\num{1.55}\}$ that satisfies the relative-correction stopping
 criterion. The comparison matches $\lambda_{\max}^{\mathrm{succ}}$ on that grid
-and satisfies the predefined criteria for the
+and satisfies the fixed engineering criteria for the
 $u_{\max}(\lambda_{\mathrm{sr}})$ curve and endpoint displacement: the
 $u_{\max}(\lambda_{\mathrm{sr}})$ relative Euclidean difference is
 \num{6.396e-6}, and the endpoint displacement relative discrete-norm difference
@@ -203,7 +203,8 @@ reference.
   \caption{3D plasticity endpoint-surrogate comparison summary for the
   direct-branch endpoint-observable comparison ending at
   $\lambda_{\mathrm{sr}}=\num{1.6}$ and the fixed-$\lambda_{\mathrm{sr}}$
-  matched-comparator diagnostic.}
+  matched-comparator diagnostic. The gate column marks which quantities are
+  acceptance checks and which are reported diagnostics.}
   \label{tab:plasticity3d-validation}
   \input{tables/generated/plasticity3d_validation_summary.tex}
 \end{table}

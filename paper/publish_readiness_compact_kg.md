@@ -182,7 +182,7 @@ not resolve the final durable archive/DOI blocker.
   validation metrics, renamed the Plasticity2D local stress vector to
   `d_\sigma`, narrowed Plasticity3D validation wording to the
   highest-successful-load value on the tested grid, and relaxed layout barriers
-  that isolated benchmark floats. The rebuilt PDF is a 43-page A4 article;
+  that isolated benchmark floats. The rebuilt PDF is a 44-page A4 article;
   rendered pages 8--23, 26--38, and page 34 were visually checked.
 - Current SIOPT-scope and self-containment pass: Bohr/Plato/Euler/Hypatia
   audits found no current A4 layout blocker and no small missing experiment for
@@ -266,12 +266,12 @@ not resolve the final durable archive/DOI blocker.
   table headers now use `Reported time [s]` consistently, the stale hard-float
   unit test now matches the current allowlist of three method algorithms, and
   `make -C paper submission-bundle` documents the bundle-refresh step. Figure
-  annotations for the hyperelastic centerline and 3D plasticity `u_{\max}` curve
-  now use `rel. Eucl.` to match the prose. The submission bundle was rebuilt and
-  the manifest verifies; it records the pre-commit source-control anchor
-  `8b8a6c9b8ce0dd06f9dd2099f18475dc88d284e8` plus current file hashes. Rendered
-  checks of pages 25 and 27 and the late-results pages 31--38 found no clipping
-  or unreadable updated labels.
+annotations for the hyperelastic centerline and 3D plasticity `u_{\max}` curve
+now use `rel. Eucl.` to match the prose. The submission bundle was rebuilt and
+the manifest verifies; it records a committed source-control anchor plus current
+file hashes for the curated bundle. Rendered
+checks of pages 25 and 27 and the late-results pages 31--38 found no clipping
+or unreadable updated labels.
 - Final provenance/math/layout gate pass:
   Poincare found no message/comparator issue. Locke found local mathematical
   polish items now fixed: validation defines the two `u_{\max}` curve sample
@@ -283,6 +283,18 @@ not resolve the final durable archive/DOI blocker.
   were regenerated. Ampere found the stale bundle-manifest anchor; the manifest
   checker now enforces freshness for paper bundle-refresh paths, with unit-test
   coverage for stale commits.
+- Final style/literature gate pass:
+  Pauli/Helmholtz/Ptolemy/Beauvoir/Kierkegaard audits found no small missing
+  experiment and no remaining A4 clipping blocker. Integrated fixes replace
+  conclusion process wording with scientific contribution wording, define
+  topology volume and `\theta_h^m` before use, define `e_j` and `R_K`, make
+  plasticity load-increment indices local, report topology density consistency
+  as a grid `\ell_2` diagnostic, correct the DOLFINx Zenodo record DOI, add a
+  `literature-check` gate, and make the submission-bundle freshness checker
+  track bibliography and literature-source changes. The derivative-route table
+  is now a normal float followed by a `\FloatBarrier`, so the LaTeX warning scan
+  is clean while table interpretation remains after the table. The current PDF is
+  a 45-page A4 article.
 
 ## Figure And Table Rules
 
@@ -322,7 +334,7 @@ external release decisions:
 - durable software/artifact archive;
 - archival DOI in the availability statement.
 
-The current PDF is a 43-page A4 article. Page budget and float behavior must be
+The current PDF is a 45-page A4 article. Page budget and float behavior must be
 rechecked after target-template conversion.
 
 Deferred layout risks from the 2026-07-09 audits are now target-template risks
@@ -338,12 +350,14 @@ without updating the measurement policy.
 
 ## Standard Validation
 
-- `./.venv/bin/python -m py_compile paper/scripts/check_submission_bundle_manifest.py paper/scripts/generate_paper_tables.py paper/scripts/generate_paper_figures.py paper/scripts/build_submission_bundle.py`
+- `./.venv/bin/python -m py_compile paper/scripts/check_submission_bundle_manifest.py paper/scripts/generate_literature_sources.py paper/scripts/generate_paper_tables.py paper/scripts/generate_paper_figures.py paper/scripts/build_submission_bundle.py`
 - `make -C paper tables` after table-generator edits
 - `make -C paper figures` after figure-generator edits
+- `make -C paper literature` after bibliography or literature-manifest edits
+- `make -C paper literature-check`
 - commit manuscript/generated-paper/provenance-checker changes
 - `make -C paper submission-bundle` after manuscript, generated-table,
-  generated-figure, or provenance-source changes
+  generated-figure, bibliography, literature-source, or provenance-source changes
 - `make -C paper submission-check`
 - `./.venv/bin/python paper/scripts/check_release_blockers.py --expect-blockers`
 - `git check-ignore -v paper/style_guide/README.md`

@@ -29,14 +29,18 @@ Run commands from the repository root unless noted otherwise.
   plotting changes.
 - `make -C paper tables`: regenerate generated tables after table-source or
   table-generator changes.
+- `make -C paper literature`: regenerate the literature source index after
+  bibliography or literature-manifest changes.
+- `make -C paper literature-check`: validate bibliography metadata and require
+  the generated literature source index to be current without rewriting it.
 - `make -C paper submission-bundle`: refresh the local submission bundle after
-  manuscript, table, figure, or provenance-source changes.
+  manuscript, bibliography, table, figure, or provenance-source changes.
 - `make -C paper publish-check`: verify archive-neutral paper provenance,
   including submission-bundle manifest SHA-256 records.
 - `make -C paper submission-check`: build the PDF and run the LaTeX-log scan,
   `qpdf`, figure/table aux-order check, hard-float placement allowlist,
-  PDF-text manuscript hygiene check, submission-bundle hash check, and
-  archive-neutral asset validation.
+  PDF-text manuscript hygiene check, literature-source check, submission-bundle
+  hash check, and archive-neutral asset validation.
 - `make -C paper release-blockers`: print final-release blockers that local
   build checks cannot resolve.
 - `make -C paper release-check`: run `submission-check` and then fail unless

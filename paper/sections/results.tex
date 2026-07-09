@@ -52,8 +52,8 @@ on Ginzburg--Landau; the hyperelasticity excerpt completes under all three
 policies, with the hybrid reducing nonlinear iterations and reported solve time
 relative to line-search-only Newton.
 
-The 3D plasticity endpoint provides the strongest evidence in this suite that
-policy choice is problem-dependent: at the stricter
+The 3D plasticity endpoint is the most discriminating case in this suite for
+nonlinear-policy choice: at the stricter
 $\|\nabla \mathcal{F}\|_2 < 10^{-4}$ criterion, line-search-only Newton reaches
 the iteration cap while both trust-region policies converge, and the hybrid is
 the faster trust-region configuration. We therefore keep the Ginzburg--Landau
@@ -83,7 +83,7 @@ available, constitutive AD under the same nonlinear problem definition. The
 timing-scope column states whether the reported time is wall time, solve time,
 or a solver-internal total for the specific configuration.
 
-\begin{table}[H]
+\begin{table}[!htbp]
   \centering
   \footnotesize
   \caption{Matched-case derivative-route comparison. Colored sparse recovery uses
@@ -91,6 +91,8 @@ or a solver-internal total for the specific configuration.
   \label{tab:derivative-route-compare}
   \input{tables/generated/derivative_route_compare.tex}
 \end{table}
+
+\FloatBarrier
 
 Across all three benchmark cases, colored sparse recovery reaches the same
 table-reported energy, up to displayed precision, and identical
@@ -126,7 +128,7 @@ raises colors from 66--90 to 240--420, Hessian time from \num{0.332} to
 
 The $p$-Laplace problem definition is given in \Cref{sec:bench-plaplace}, with
 discrete problem \eqref{eq:plaplace-discrete}. In this scalar setting, the
-numerical evidence is clearest: exact element Hessians remain
+derivative-route evidence is direct: exact element Hessians remain
 effective in the reported distributed configurations, while colored sparse
 recovery reaches nearly identical discrete energies at higher wall time.
 
@@ -201,12 +203,12 @@ JAX-FEM comparison remains in \Cref{sec:val-hyperelasticity}.
 \FloatBarrier
 
 The 24-step hyperelasticity scaling curve reduces \jaxpetsc{} element-AD wall
-time from \SI{1894}{s} at 8 ranks to \SI{529}{s} at 32 ranks. The speedup is
-substantial but not ideal, which motivates the more targeted fixed-work
-distribution and PMG diagnostics below.
+time from \SI{1894}{s} at 8 ranks to \SI{529}{s} at 32 ranks, a factor of
+\num{3.58} over a fourfold rank increase. This motivates the more targeted
+fixed-work distribution and PMG diagnostics below.
 
 The fixed-work multi-node experiment uses the same trust-region Newton path as
-\cref{sec:bench-he} and asks how rank-local level-5 first-step assembly behaves
+\Cref{sec:bench-he} and asks how rank-local level-5 first-step assembly behaves
 as ranks and PMG coarse-solver layouts vary. Runs use one MPI rank per core on
 dual-socket AMD EPYC 7H12 nodes \citep{it4i-karolina-compute-nodes}, local CPU
 and memory binding, rank-local elements, coordinate-format preallocation,
@@ -434,7 +436,9 @@ nine-case endpoint study at a clear wall-time premium.
   \caption{Strong-scaling timing study for the 3D plasticity $P_4(L_2)$ case at
   $\lambda_{\mathrm{sr}}=\num{1.0}$ using the \localpmg{}. These timings provide
   solver evidence for a separate strength-reduction factor from the bottom-clamped
-  $\lambda_{\mathrm{sr}}=\num{1.55}$ benchmark figures.}
+  $\lambda_{\mathrm{sr}}=\num{1.55}$ benchmark figures. The stopping target is
+  $\|g\|<\num{0.01}$, the KSP relative tolerance is \num{0.1}, and the Newton
+  cap is 50 iterations.}
   \label{tab:plasticity3d-scaling}
   \input{tables/generated/plasticity3d_recommended_scaling.tex}
 \end{table}
@@ -446,7 +450,7 @@ nine-case endpoint study at a clear wall-time premium.
   $\lambda_{\mathrm{sr}}=\num{1.0}$ using the \localpmg{}. This is a separate
   timing study from the
   bottom-clamped $\lambda_{\mathrm{sr}}=\num{1.55}$ results shown in
-  \cref{fig:plasticity3d-state,fig:plasticity3d-convergence,fig:plasticity3d-degree-energy}.}
+  \Cref{fig:plasticity3d-state,fig:plasticity3d-convergence,fig:plasticity3d-degree-energy}.}
   \label{fig:plasticity3d-scaling}
 \end{figure}
 
@@ -533,7 +537,7 @@ rather than strong scaling at a fixed computational workload.
   \centering
   \includegraphics[width=\PaperFigureMedium]{topology_scaling.pdf}
   \caption{Topology end-to-end timing for the fine-grid reduced-design problem
-  \eqref{eq:topology-reduced-objective}; \cref{tab:topology-summary} reports the
+  \eqref{eq:topology-reduced-objective}; \Cref{tab:topology-summary} reports the
   per-rank stopping behavior.}
   \label{fig:topology-results}
 \end{figure}
@@ -544,7 +548,8 @@ rather than strong scaling at a fixed computational workload.
   \centering
   \caption{Parallel topology endpoint observables and timing for the fine-grid
   reduced-design study. Wall time is adaptive end-to-end timing, not fixed-work
-  strong scaling.}
+  strong scaling; the table reports the adaptive schedule and completion
+  status explicitly.}
   \label{tab:topology-summary}
   \input{tables/generated/topology_summary.tex}
 \end{table}
@@ -561,9 +566,9 @@ equality, fixed-work strong scaling, or a rank-invariant endpoint.
 smaller $384\times192$ grid: fixed initial design, disabled early/stall
 stopping, and smoother continuation ($p \leftarrow p+\num{0.1}$). Relative to
 the one-rank reference, all ranks complete 40 iterations, with compliance
-difference below \num{0.2}\% and density relative $L^2$ difference below
-\num{0.04}; these are observed discrepancies for this controlled case, not
-general rank-invariance thresholds.
+difference below \num{0.2}\% and density relative grid $\ell_2$ difference
+$\|\theta_r-\theta_1\|_2/\|\theta_1\|_2$ below \num{0.04}; these are observed
+discrepancies for this controlled case, not general rank-invariance thresholds.
 
 \begin{table}[!htbp]
   \centering
@@ -592,8 +597,9 @@ The globalization tests separate problem-dependent nonlinear policies; the
 derivative-route comparisons isolate cost under fixed endpoint observables; the
 distribution, PMG, and partitioning studies expose solver-policy and
 sparse-ownership effects; and the topology study closes with an end-to-end
-design-and-mechanics loop plus a controlled rank-consistency check. Read
-together, these measurements support the paper's main message: local
-differentiable constitutive or energy evaluations can be coupled to PETSc-owned
-sparse nonlinear and linear solves across scalar PDEs, mechanics, plasticity,
-and topology, with comparator evidence scoped by problem family.
+design-and-mechanics loop plus a controlled rank-consistency check. Together,
+these measurements show where the coupled design succeeds and where solver
+policy remains visible: local differentiable constitutive or energy evaluations
+can be coupled to PETSc-owned sparse nonlinear and linear solves across the
+tested scalar PDE, mechanics, plasticity, and topology cases, with comparator
+evidence scoped by problem family.

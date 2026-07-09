@@ -11,6 +11,7 @@ def test_paper_readme_documents_readiness_gates() -> None:
     text = PAPER_README.read_text(encoding="utf-8")
 
     for command in (
+        "make -C paper literature-check",
         "make -C paper publish-check",
         "make -C paper submission-check",
         "make -C paper release-blockers",

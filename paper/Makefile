@@ -2,7 +2,7 @@ PYTHON := ../.venv/bin/python
 LATEXMK := latexmk
 MAIN := main.tex
 
-.PHONY: all layout figures tables literature validate publish-check submission-check release-check release-blockers submission-bundle pdf clean \
+.PHONY: all layout figures tables literature literature-check validate publish-check submission-check release-check release-blockers submission-bundle pdf clean \
 	plasticity3d-validation-run plasticity3d-validation-assets \
 	plasticity3d-derivative-ablation-run plasticity3d-derivative-ablation-assets \
 	jax-fem-baseline-run jax-fem-baseline-assets reproducibility
@@ -20,6 +20,9 @@ tables: layout
 
 literature:
 	$(PYTHON) scripts/generate_literature_sources.py
+
+literature-check:
+	$(PYTHON) scripts/generate_literature_sources.py --skip-download --check
 
 plasticity3d-validation-run:
 	$(PYTHON) ../experiments/runners/run_plasticity3d_validation.py
@@ -49,6 +52,7 @@ validate: figures tables
 	$(PYTHON) scripts/validate_paper_assets.py
 
 publish-check:
+	$(MAKE) literature-check
 	$(PYTHON) scripts/check_submission_bundle_manifest.py
 	$(PYTHON) scripts/validate_paper_assets.py --archive-neutral
 
@@ -59,6 +63,7 @@ submission-check:
 	$(PYTHON) scripts/check_pdf_aux_order.py build/main.aux
 	$(PYTHON) scripts/check_float_placements.py
 	$(PYTHON) scripts/check_manuscript_hygiene.py build/main.pdf
+	$(MAKE) literature-check
 	$(PYTHON) scripts/check_submission_bundle_manifest.py
 	$(PYTHON) scripts/validate_paper_assets.py --archive-neutral
 

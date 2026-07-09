@@ -23,7 +23,6 @@ ALLOWED_H_FLOATS: dict[tuple[str, str], str] = {
     ("algorithm", "alg:hybrid-newton"): "method pseudocode kept adjacent to solver-policy definition",
     ("algorithm", "alg:colored-hessian-recovery"): "method pseudocode kept adjacent to sparse-recovery definition",
     ("algorithm", "alg:constitutive-ad-assembly"): "method pseudocode kept adjacent to constitutive-AD definition",
-    ("table", "tab:derivative-route-compare"): "route-comparison table kept before its interpretation",
 }
 
 

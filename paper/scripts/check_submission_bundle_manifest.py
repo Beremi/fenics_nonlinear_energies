@@ -21,11 +21,15 @@ GIT_COMMIT_RE = re.compile(r"^[0-9a-f]{40}$")
 EXTERNAL_PREFIXES = ("external_reference/",)
 BUNDLE_REFRESH_PATHS = (
     "paper/main.tex",
+    "paper/references.bib",
     "paper/sections/",
+    "paper/literature/manifest.json",
+    "paper/literature/sources.md",
     "paper/figures/generated/",
     "paper/tables/generated/",
     "paper/scripts/build_submission_bundle.py",
     "paper/scripts/generate_paper_figures.py",
+    "paper/scripts/generate_literature_sources.py",
     "paper/scripts/generate_paper_tables.py",
 )
 SOURCE_PATH_ALIASES = (

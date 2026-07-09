@@ -2,10 +2,10 @@
 
 The benchmark suite is intentionally heterogeneous. The central claim of the
 paper is not that one solver policy dominates every nonlinear PDE family, but
-that one differentiable sparse-solver toolset can cover scalar elliptic problems,
-phase-field-type energies, finite-strain mechanics, elastoplastic slope
-stability, and reduced topology optimization through a common energy and
-reduced-objective viewpoint.
+that one differentiable sparse-solver toolset can be exercised across
+representative scalar elliptic problems, phase-field-type energies,
+finite-strain mechanics, elastoplastic slope stability, and reduced topology
+optimization through a common energy and reduced-objective viewpoint.
 
 \begin{table}[!htbp]
   \centering
@@ -174,7 +174,7 @@ which the derivative routes are compared in the energy plot and summary table.
 \end{table}
 
 The within-benchmark picture is therefore one of formulation agreement:
-\cref{fig:plaplace-energy-levels,tab:plaplace-benchmark} report JAX+PETSc
+\Cref{fig:plaplace-energy-levels,tab:plaplace-benchmark} report JAX+PETSc
 discrete energies within about $\num{1e-8}$ of the \fenics{} Newton reference
 for \eqref{eq:plaplace-discrete}. Scaling and timing for this family are reported in
 \Cref{sec:num-plaplace}.
@@ -299,10 +299,11 @@ displacements with $J(u)>0$ almost everywhere, the elastic potential is
 which is the quantity compared in the benchmark summaries.
 
 The left face is clamped, while the right face carries a prescribed rotating
-Dirichlet displacement path. Let $\Gamma_{\mathrm{L}}$ and
-$\Gamma_{\mathrm{R}}$ denote the left and right end faces, respectively. For
-$X=(X_1,X_2,X_3)\in\Gamma_{\mathrm{R}}$ and $N=24$ load steps, the prescribed
-position at step $k$ is
+Dirichlet displacement path. Let
+$\Gamma_{\mathrm{L}}=\{0\}\times[-0.005,0.005]^2$ and
+$\Gamma_{\mathrm{R}}=\{0.4\}\times[-0.005,0.005]^2$ denote the left and right
+end faces, respectively. For $X=(X_1,X_2,X_3)\in\Gamma_{\mathrm{R}}$ and
+$N=24$ load steps, the prescribed position at step $k$ is
   \[
     \bar y_k(X)
     =
@@ -403,7 +404,8 @@ history variables
 \citep{davis1968plasticity,simo1985consistent,simo1998compinel,tschuchnigg2015nonassociated,sysala2017returnmapping,sysala2021optimization}.
 The unknown is the displacement field
 $u = (u_x,u_y):\Omega \to \mathbb{R}^2$ on a homogeneous slope
-geometry. At increment $n+1$, the continuum equilibrium equations are
+geometry. With local load-increment index $n$, the continuum equilibrium
+equations at increment $n+1$ are
 \begin{equation}
   -\nabla \cdot \sigma^{n+1} = b^{n+1}
   \quad \text{in }\Omega,
@@ -551,9 +553,11 @@ In that case $\sigma^\star=\sigma^{\mathrm{tr}}$. Otherwise let
   =
   (\sigma_1^{\mathrm{tr}},\sigma_2^{\mathrm{tr}})^\top-\eta d_\sigma,
 \]
-where $\widehat S=\begin{bmatrix}S_{11}&S_{12}\\ S_{12}&S_{22}\end{bmatrix}$
-is the normal block of $S_{2\mathrm{D}}$ in the ordered principal-stress
-coordinates. If
+where $\widehat S$ is the compliance map from the ordered principal-stress pair
+$(\sigma_1,\sigma_2)$ to the corresponding normal strain pair in the trial
+principal basis; equivalently, it is the $2\times2$ normal block of
+$S_{2\mathrm{D}}$ after rotating from Cartesian engineering components to that
+basis. If
 $\widehat\sigma^\ell_1\ge \widehat\sigma^\ell_2$, set
 $\widehat\sigma^\star=\widehat\sigma^\ell$; otherwise set
 $\widehat\sigma^\star_1=\widehat\sigma^\star_2=
@@ -698,8 +702,8 @@ $y$-direction. Let $e_y=(0,1,0)^\top$. Let $\Gamma_{D,i}$ denote the
 component-wise Dirichlet boundary for displacement component $i$, let
 $\Gamma_N$ be the remaining traction-free boundary, and let $V_0$ be the
 homogeneous vector-valued test space after applying these component-wise
-constraints. With material-region weight $\gamma(x)$, the continuum equilibrium
-equations are
+constraints. With local load-increment index $n$ and material-region weight
+$\gamma(x)$, the continuum equilibrium equations are
 \begin{equation}
   -\nabla \cdot \sigma^{n+1} = -\gamma(x) e_y
   \quad \text{in }\Omega,
@@ -712,14 +716,22 @@ equations are
 where $\sigma^{n+1}$ and the internal variables are obtained from the
 elastoplastic update driven by $\varepsilon(u^{n+1})$ and the previous state.
 
-The heterogeneous benchmark uses four material regions. Their
-$(c_0,\phi,\psi,E,\nu,\gamma)$ values, in the order cover layer, general
-foundation, weak foundation, and slope mass, are
-$(15,30^\circ,0^\circ,\num{10000},0.33,19)$,
-$(15,38^\circ,0^\circ,\num{50000},0.30,22)$,
-$(10,35^\circ,0^\circ,\num{50000},0.30,21)$, and
-$(18,32^\circ,0^\circ,\num{20000},0.33,20)$. At quadrature point $q$, the body
-force is $-\gamma_q e_y$, where $\gamma_q$ is selected by the material region.
+The heterogeneous benchmark uses a mesh-labeled material partition
+$\Omega=\bigcup_{m=0}^3\Omega_m$. The labels
+$m=0,1,2,3$ denote, respectively, the cover layer, general foundation, weak
+foundation, and slope mass. Each tetrahedron belongs to one of these regions,
+and all quadrature points in that tetrahedron use the corresponding tuple
+$(c_0,\phi,\psi,E,\nu,\gamma)$. The four tuples are, in label order,
+\[
+  \begin{aligned}
+  \Omega_0 &: (15,30^\circ,0^\circ,\num{10000},0.33,19),\\
+  \Omega_1 &: (15,38^\circ,0^\circ,\num{50000},0.30,22),\\
+  \Omega_2 &: (10,35^\circ,0^\circ,\num{50000},0.30,21),\\
+  \Omega_3 &: (18,32^\circ,0^\circ,\num{20000},0.33,20).
+  \end{aligned}
+\]
+Thus, at quadrature point $q$, the body force is $-\gamma_q e_y$, where
+$\gamma_q$ is selected by the material region of the containing tetrahedron.
 The elastic constants used below are
 \[
   \mu = \frac{E}{2(1+\nu)}, \qquad
@@ -786,7 +798,10 @@ We use the engineering-strain ordering
   \end{bmatrix}^{\top},
   \label{eq:plasticity3d-engineering-strain}
 \end{equation}
-which is first mapped to tensor shear before principal values are formed.
+which is first mapped to tensor shear before principal values are formed. Here
+$\gamma$ without coordinate subscripts denotes the material-region unit weight,
+whereas $\gamma_{xy}$, $\gamma_{yz}$, and $\gamma_{xz}$ denote engineering shear
+components.
 Following the same later strength-reduction descriptions used for the
 two-dimensional case, the benchmark keeps the Davis-B reduction explicitly at
 quadrature points:
@@ -987,10 +1002,13 @@ treated as part of the algorithmic constitutive surrogate rather than as a
 globally smooth continuum potential.
 
 For the endpoint and continuation studies, these local definitions are assembled
-into the following scalar surrogate. Let $V_{h,0}^{3\mathrm{D}}\subset V_0$
-denote the constrained discrete displacement space, and take
-$u_h\in V_{h,0}^{3\mathrm{D}}$. Let $\bar c_{\lambda,eq}$ and $s_{\lambda,eq}$
-denote the quadrature-point Davis-B-reduced quantities, and set
+into the following scalar surrogate. The endpoint surrogate sets the previous
+plastic/history variables to zero and applies
+\eqref{eq:plasticity3d-potential} to the total engineering strain at the current
+endpoint. Let $V_{h,0}^{3\mathrm{D}}\subset V_0$ denote the constrained
+discrete displacement space, and take $u_h\in V_{h,0}^{3\mathrm{D}}$. Let
+$\bar c_{\lambda,eq}$ and $s_{\lambda,eq}$ denote the quadrature-point
+Davis-B-reduced quantities, and set
 $\varepsilon_{eq}(u_e)=B_{eq}u_e$ for the six-component engineering strain at
 quadrature point $q$ of element $e$:
 \begin{equation}
@@ -1081,6 +1099,8 @@ provides reference-model context for that boundary.
   \input{tables/generated/plasticity3d_benchmark_summary.tex}
 \end{table}
 
+\FloatBarrier
+
 \Cref{fig:plasticity3d-state,fig:plasticity3d-convergence,tab:plasticity3d-benchmark}
 define the endpoint-surrogate benchmark object used later in the results
 section. The nine completed endpoint solves converge in the nonlinear stopping
@@ -1153,17 +1173,25 @@ than the generic benchmark-parameter symbol used in \Cref{sec:methodology}.
 On each triangular element $e$, we use the element averages
 $\theta_e := |e|^{-1}\int_e \theta_h\,\mathrm{d}x$ and
 $z_e := |e|^{-1}\int_e z_h\,\mathrm{d}x$; for the linear elements used here
-these are vertex averages. Let $\mathcal{P}_h$ be the fixed-pad design nodes and
-let $\mathcal{D}_h$ be the remaining design nodes. During design updates,
+these are vertex averages. The fixed-solid pads are included in the measured
+volume, and the normalized volume is
+\[
+  V(\theta_h)
+  :=
+  \frac{1}{|\Omega|}
+  \sum_{e=1}^{n_{\mathrm{el}}} |e|\,\theta_e.
+\]
+Let $\mathcal{P}_h$ be the fixed-pad design nodes and let $\mathcal{D}_h$ be
+the remaining design nodes. At outer iteration $m$ we write
+$\theta_h^m:=\theta_h(z_h^m)$. During design updates,
 $z_h$ is varied only on $\mathcal{D}_h$; on $\mathcal{P}_h$ the latent value is
 held at $z_{\mathrm{pad}}=10$, so the corresponding physical density is held
 near $\theta_h=1$. The initial field $z_h^0$ uses this same pad value on
 $\mathcal{P}_h$ and a constant value on $\mathcal{D}_h$ chosen so that
-$V(\theta_h(z_h^0))=0.4$ after the pad volume is included in the quadrature
-volume measure defined below. No element is removed from the objective.
-Elements touching a pad enter the element sums through their fixed nodal pad
-values and through any remaining free design nodes. Outside the pads, the latent
-variable is unconstrained and \eqref{eq:topology-density-map} enforces
+$V(\theta_h^0)=0.4$. No element is removed from the objective. Elements touching
+a pad enter the element sums through their fixed nodal pad values and through
+any remaining free design nodes. Outside the pads, the latent variable is
+unconstrained and \eqref{eq:topology-density-map} enforces
 $\theta_h\in[\theta_{\min},1]$.
 
 The second ingredient is the mechanics solve for a fixed density field. Let
@@ -1230,11 +1258,11 @@ density field used in the phase-field term, and define the double-well density
 \[
   W_{\mathrm{dw}}(\theta):=\theta^2(1-\theta)^2.
 \]
-The effective volume multiplier $\lambda_V^m$ is defined below, and
-$\alpha_{\mathrm{reg}}$, $\ell_{\mathrm{pf}}$, and $\mu_{\mathrm{move}}$ are,
-respectively, the phase-field weight, phase-field length scale, and move
-regularization parameter. The frozen reduced objective for the next design
-vector $z_h^{m+1}$ is
+The scalar $\lambda_V^m$ is the current effective volume multiplier, specified
+after the objective, and $\alpha_{\mathrm{reg}}$, $\ell_{\mathrm{pf}}$, and
+$\mu_{\mathrm{move}}$ are, respectively, the phase-field weight, phase-field
+length scale, and move regularization parameter. The frozen reduced objective
+for the next design vector $z_h^{m+1}$ is
 \begin{align}
   \mathcal{J}_h^m(z_h;u_h^m)
   &=
@@ -1261,15 +1289,7 @@ values on $\mathcal{D}_h$; the fixed-pad nodal values on $\mathcal{P}_h$ remain
 constant during the design step.
 
 The target volume fraction is imposed through an iteration-dependent effective
-multiplier. The fixed-solid pads are included in the measured volume, and the
-normalized volume is
-\[
-  V(\theta_h)
-  :=
-  \frac{1}{|\Omega|}
-  \sum_{e=1}^{n_{\mathrm{el}}} |e|\,\theta_e.
-\]
-Let $V_\star=0.4$ be the target value and initialize
+multiplier. Let $V_\star=0.4$ be the target value and initialize
 $\lambda_{\mathrm{corr}}^0=0$. Before the $m$th design solve we use
 \[
   r_V^m = V(\theta_h^m)-V_\star,\qquad

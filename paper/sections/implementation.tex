@@ -11,19 +11,18 @@ same local-to-global construction is used before narrower reference
 formulations are introduced for selected benchmark checks.
 
 \paragraph{Primary \jaxpetsc{} realization.}
-This is the central solver realization of the paper. It combines JAX-based local
-physics with PETSc distributed vectors, matrices, Krylov solvers, and
-preconditioners. Problem-specific local evaluations stay in JAX; sparse
-distributed assembly, nonlinear globalization, and linear algebra stay in PETSc.
+This realization combines JAX-based local physics with PETSc distributed
+vectors, matrices, Krylov solvers, and preconditioners. Problem-specific local
+evaluations stay in JAX; sparse distributed assembly, nonlinear globalization,
+and linear algebra stay in PETSc.
 
 \paragraph{Pure JAX reference implementations.}
 These are compact differentiable realizations of selected benchmark energies.
 They are useful for serial formulation checks and AD diagnostics where a matched
 serial formulation exists, and for compact design demonstrations where the
 benchmark role is narrower. They are not intended to be the primary distributed
-route for the largest distributed benchmarks. Their main scientific role in this
-paper is to show how selected energy formulations can also be expressed without
-sparse distributed infrastructure.
+route for the largest distributed benchmarks. They show how selected energy
+formulations can also be expressed without sparse distributed infrastructure.
 
 \paragraph{FEniCS reference implementations.}
 The \fenics{} implementations remain valuable on families where they exist,
@@ -147,8 +146,8 @@ assembly. Here $\mathcal{G}_i(u)$ and $\mathcal{A}_{ij}(u)$ are assembled residu
 tangent entries, while $r_{K,i}$ and $a_{K,ij}$ are element contributions.
 Equivalently, if
 $\mathcal{T}_r=\{K:\operatorname{dofs}(K)\cap I_r\ne\emptyset\}$ and
-$u_K=R_Ku_{\widetilde I_r}$ is the element restriction of the ghosted rank
-state, then rank $r$ inserts
+$R_K$ is the element restriction from the ghosted rank state to element $K$,
+then $u_K=R_Ku_{\widetilde I_r}$ and rank $r$ inserts
 \[
   \mathcal{G}_i(u)=\sum_{K\in\mathcal{T}_r:\,i\in\operatorname{dofs}(K)}
     r_{K,i}(u_K),\qquad

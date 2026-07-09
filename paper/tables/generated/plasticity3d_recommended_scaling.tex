@@ -1,12 +1,12 @@
 \begin{tabular*}{\textwidth}{@{}c@{\extracolsep{\fill}} c c c c c c@{}}
 \toprule
-Ranks & Wall time [s] & Solve time [s] & Speedup & Efficiency & Newton iters & Krylov iters \\
+Ranks & Wall time [s] & Speedup & Newton iters & Krylov iters & Stop target & Status \\
 \midrule
-1 & \num{5424} & \num{5176} & \num{1} & \num{1} & 17 & 114 \\
-2 & \num{2914} & \num{2777} & \num{1.861} & \num{0.931} & 17 & 114 \\
-4 & \num{1717} & \num{1634} & \num{3.16} & \num{0.79} & 17 & 114 \\
-8 & \num{1164} & \num{1107} & \num{4.658} & \num{0.582} & 17 & 114 \\
-16 & \num{608} & \num{575} & \num{8.916} & \num{0.557} & 17 & 114 \\
-32 & \num{300} & \num{284} & \num{18.053} & \num{0.564} & 17 & 114 \\
+1 & \num{5424} & \num{1} & 17 & 114 & $\|g\| < \num{0.01}$ & completed \\
+2 & \num{2914} & \num{1.861} & 17 & 114 & $\|g\| < \num{0.01}$ & completed \\
+4 & \num{1717} & \num{3.16} & 17 & 114 & $\|g\| < \num{0.01}$ & completed \\
+8 & \num{1164} & \num{4.658} & 17 & 114 & $\|g\| < \num{0.01}$ & completed \\
+16 & \num{608} & \num{8.916} & 17 & 114 & $\|g\| < \num{0.01}$ & completed \\
+32 & \num{300} & \num{18.053} & 17 & 114 & $\|g\| < \num{0.01}$ & completed \\
 \bottomrule
 \end{tabular*}

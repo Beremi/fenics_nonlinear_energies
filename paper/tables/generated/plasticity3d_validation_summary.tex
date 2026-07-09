@@ -1,15 +1,15 @@
-\begin{tabular*}{\textwidth}{@{}>{\RaggedRight\arraybackslash}p{0.25\textwidth}@{\hspace{1.0em}}>{\RaggedRight\arraybackslash}p{0.36\textwidth}@{\extracolsep{\fill}}c c@{}}
+\begin{tabular*}{\textwidth}{@{}>{\RaggedRight\arraybackslash}p{0.18\textwidth}@{\hspace{0.55em}}>{\RaggedRight\arraybackslash}p{0.29\textwidth}@{\hspace{0.5em}}c@{\hspace{0.5em}}>{\RaggedRight\arraybackslash}p{0.12\textwidth}@{\extracolsep{\fill}}c@{}}
 \toprule
-Check & Comparison & Relative difference & Status \\
+Check & Observable & Rel. diff. & Gate & Status \\
 \midrule
-endpoint observable & work & $\num{3.88}\times 10^{-5}$ & reported \\
-endpoint observable & displacement relative discrete norm & $\num{3.52}\times 10^{-3}$ & reported \\
-endpoint observable & deviatoric-strain relative discrete norm & $\num{8.72}\times 10^{-3}$ & reported \\
-fixed-$\lambda_{\mathrm{sr}}$ comparison & relative difference in $\lambda_{\max}^{\mathrm{succ}}$ & \num{0} & satisfied \\
-fixed-$\lambda_{\mathrm{sr}}$ comparison & $u_{\max}(\lambda_{\mathrm{sr}})$ relative Euclidean curve norm & $\num{6.4}\times 10^{-6}$ & satisfied \\
-fixed-$\lambda_{\mathrm{sr}}$ comparison & endpoint displacement relative discrete norm & $\num{8.3}\times 10^{-4}$ & satisfied \\
-fixed-$\lambda_{\mathrm{sr}}$ comparison & endpoint deviatoric-strain relative discrete norm & $\num{4.31}\times 10^{-3}$ & diagnostic \\
-fixed-$\lambda_{\mathrm{sr}}$ comparison & upper-slope profile relative Euclidean curve norm & $\num{5.23}\times 10^{-4}$ & diagnostic \\
-fixed-$\lambda_{\mathrm{sr}}$ comparison & fixed-$\lambda_{\mathrm{sr}}$ criteria, 3/3 satisfied & -- & satisfied \\
+endpoint observable & work & $\num{3.88}\times 10^{-5}$ & reported only & reported \\
+endpoint observable & displacement relative discrete norm & $\num{3.52}\times 10^{-3}$ & reported only & reported \\
+endpoint observable & deviatoric-strain relative discrete norm & $\num{8.72}\times 10^{-3}$ & reported only & reported \\
+fixed-$\lambda_{\mathrm{sr}}$ comparison & relative difference in $\lambda_{\max}^{\mathrm{succ}}$ & \num{0} & $\le\num{0.03}$ & satisfied \\
+fixed-$\lambda_{\mathrm{sr}}$ comparison & $u_{\max}(\lambda_{\mathrm{sr}})$ relative Euclidean curve norm & $\num{6.4}\times 10^{-6}$ & $\le\num{0.05}$ & satisfied \\
+fixed-$\lambda_{\mathrm{sr}}$ comparison & endpoint displacement relative discrete norm & $\num{8.3}\times 10^{-4}$ & $\le\num{0.10}$ & satisfied \\
+fixed-$\lambda_{\mathrm{sr}}$ comparison & endpoint deviatoric-strain relative discrete norm & $\num{4.31}\times 10^{-3}$ & diagnostic & diagnostic \\
+fixed-$\lambda_{\mathrm{sr}}$ comparison & upper-slope profile relative Euclidean curve norm & $\num{5.23}\times 10^{-4}$ & diagnostic & diagnostic \\
+fixed-$\lambda_{\mathrm{sr}}$ comparison & fixed-$\lambda_{\mathrm{sr}}$ criteria, 3/3 satisfied & -- & summary & satisfied \\
 \bottomrule
 \end{tabular*}

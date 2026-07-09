@@ -993,6 +993,7 @@ def main() -> None:
     ensure_paper_dirs()
     args.out_dir.mkdir(parents=True, exist_ok=True)
 
+    local_summary = read_json(LOCAL_P3D_SUMMARY)
     local_rows = load_rows(LOCAL_P3D_SUMMARY)
     mixed_rows = load_rows(MIXED_P3D_SUMMARY)
     sourcefixed_rows = load_rows(SOURCEFIXED_P3D_SUMMARY)
@@ -1071,7 +1072,7 @@ def main() -> None:
             ["Hyperelasticity", f"{mesh_label('L1')} serial agreement; {mesh_label('L4')}, 24-step distributed scaling; {mesh_label('L5')} PMG/memory diagnostics", "trust-region solve", "FEniCS and JAX+PETSc on the distributed suite; pure JAX only as a serial formulation check", "nonconvex large-deformation mechanics"],
             ["2D Mohr--Coulomb", f"{element_label('P4', 'L5')}--{element_label('P4', 'L7')}", "endpoint solve and capped fixed work", "JAX+PETSc endpoint and solver-policy evidence", "same-mesh PMG and nonlinear tail behavior"],
             ["3D Mohr--Coulomb", f"{degree_label('P1')}/{degree_label('P2')}/{degree_label('P4')}", "endpoint, scaling, and PMG-policy studies", "constitutive AD, reference-formula assembly diagnostic, and PMG-policy evidence", "heterogeneous 3D Mohr--Coulomb with constitutive AD"],
-            ["Topology", "$192\\times96$ serial demonstration; $768\\times384$ parallel benchmark", "adaptive continuation", "pure JAX on the serial demonstration; JAX+PETSc on the fine-grid adaptive MPI timing study and controlled rank-consistency check", "distributed design-mechanics coupling"],
+            ["Topology", "$192\\times96$ serial demonstration; $768\\times384$ parallel benchmark; $384\\times192$ controlled rank check", "adaptive continuation", "pure JAX on the serial demonstration; JAX+PETSc on the fine-grid adaptive MPI timing study and controlled rank-consistency check", "distributed design-mechanics coupling"],
         ],
     )
 
@@ -1580,7 +1581,7 @@ def main() -> None:
             "Volume",
             "$p$",
             "Rel. compliance diff.",
-            "Density rel. $L^2$",
+            "Density rel. grid $\\ell_2$",
         ],
         [
             [
@@ -1716,16 +1717,24 @@ def main() -> None:
     write_table_star(
         "plasticity3d_recommended_scaling.tex",
         fill_spec("c c c c c c c"),
-        ["Ranks", "Wall time [s]", "Solve time [s]", "Speedup", "Efficiency", "Newton iters", "Krylov iters"],
+        [
+            "Ranks",
+            "Wall time [s]",
+            "Speedup",
+            "Newton iters",
+            "Krylov iters",
+            "Stop target",
+            "Status",
+        ],
         [
             [
                 fmt_count(row["ranks"]),
                 fmt_wall_time(float(row["wall_time_s"])),
-                fmt_wall_time(float(row["solve_time_s"])),
                 fmt_float(float(local_scaling_rows[0]["wall_time_s"]) / float(row["wall_time_s"])),
-                fmt_float((float(local_scaling_rows[0]["wall_time_s"]) / float(row["wall_time_s"])) / float(row["ranks"])),
                 fmt_count(row["nit"]),
                 fmt_count(row["linear_iterations_total"]),
+                rf"$\|g\| < {fmt_float(float(local_summary['grad_stop_tol']), 2)}$",
+                _result_label(row.get("status", "")),
             ]
             for row in local_scaling_rows
         ],
@@ -1844,17 +1853,18 @@ def main() -> None:
     topo_best.sort(key=lambda row: int(row["ranks"]))
     write_table_star(
         "topology_summary.tex",
-        fill_spec("c c c c c c c"),
-        ["Ranks", "Wall time [s]", "Solve time [s]", "Outer iters", "$p$", "Compliance", "Volume fraction"],
+        fill_spec("c c c c c c c c"),
+        ["Ranks", "Wall time [s]", "Outer iters", "$p$", "Compliance", "Volume", "Schedule", "Status"],
         [
             [
                 fmt_count(row["ranks"]),
                 fmt_wall_time(float(row["wall_time_s"])),
-                fmt_wall_time(float(row["solve_time_s"])),
                 fmt_count(row["outer_iterations"]),
                 fmt_float(float(row["final_p_penal"]), 2),
                 fmt_float(float(row["final_compliance"]), 4),
                 fmt_float(float(row["final_volume_fraction"]), 4),
+                "adaptive",
+                _result_label(row.get("result", "")),
             ]
             for row in topo_best
         ],
@@ -1896,33 +1906,57 @@ def main() -> None:
     endpoint_dev = layer2_metrics.get("endpoint_deviatoric_strain_relative_l2")
     write_table_star(
         "plasticity3d_validation_summary.tex",
-        "@{}" + pcol(r"0.25\textwidth") + "@{\\hspace{1.0em}}" + pcol(r"0.36\textwidth") + r"@{\extracolsep{\fill}}c c@{}",
-        ["Check", "Comparison", "Relative difference", "Status"],
+        (
+            "@{}"
+            + pcol(r"0.18\textwidth")
+            + "@{\\hspace{0.55em}}"
+            + pcol(r"0.29\textwidth")
+            + r"@{\hspace{0.5em}}c@{\hspace{0.5em}}"
+            + pcol(r"0.12\textwidth")
+            + r"@{\extracolsep{\fill}}c@{}"
+        ),
+        ["Check", "Observable", "Rel. diff.", "Gate", "Status"],
         [
-            ["endpoint observable", "work", fmt_sci(float(layer1a_metrics["work_relative_difference"])), "reported"],
-            ["endpoint observable", "displacement relative discrete norm", fmt_sci(float(layer1a_metrics["displacement_relative_l2"])), "reported"],
+            [
+                "endpoint observable",
+                "work",
+                fmt_sci(float(layer1a_metrics["work_relative_difference"])),
+                "reported only",
+                "reported",
+            ],
+            [
+                "endpoint observable",
+                "displacement relative discrete norm",
+                fmt_sci(float(layer1a_metrics["displacement_relative_l2"])),
+                "reported only",
+                "reported",
+            ],
             [
                 "endpoint observable",
                 "deviatoric-strain relative discrete norm",
                 fmt_sci(float(layer1a_metrics["deviatoric_strain_relative_l2"])),
+                "reported only",
                 "reported",
             ],
             [
                 r"fixed-$\lambda_{\mathrm{sr}}$ comparison",
                 "relative difference in $\\lambda_{\\max}^{\\mathrm{succ}}$",
                 fmt_sci(float(layer2_metrics["critical_lambda_schedule_proxy"]["relative_difference"])),
+                r"$\le\num{0.03}$",
                 _layer2_criterion_status(layer2_metrics, "critical_lambda_pass"),
             ],
             [
                 r"fixed-$\lambda_{\mathrm{sr}}$ comparison",
                 "$u_{\\max}(\\lambda_{\\mathrm{sr}})$ relative Euclidean curve norm",
                 fmt_sci(float(layer2_metrics["umax_curve_relative_l2"])),
+                r"$\le\num{0.05}$",
                 _layer2_criterion_status(layer2_metrics, "umax_curve_pass"),
             ],
             [
                 r"fixed-$\lambda_{\mathrm{sr}}$ comparison",
                 "endpoint displacement relative discrete norm",
                 fmt_sci(float(layer2_metrics["endpoint_displacement_relative_l2"])),
+                r"$\le\num{0.10}$",
                 _layer2_criterion_status(layer2_metrics, "endpoint_disp_pass"),
             ],
             [
@@ -1930,17 +1964,20 @@ def main() -> None:
                 "endpoint deviatoric-strain relative discrete norm",
                 fmt_sci(float(endpoint_dev)) if endpoint_dev is not None else "--",
                 "diagnostic",
+                "diagnostic",
             ],
             [
                 r"fixed-$\lambda_{\mathrm{sr}}$ comparison",
                 "upper-slope profile relative Euclidean curve norm",
                 fmt_sci(float(layer2_metrics["boundary_profile_relative_l2"])),
                 "diagnostic",
+                "diagnostic",
             ],
             [
                 r"fixed-$\lambda_{\mathrm{sr}}$ comparison",
                 r"fixed-$\lambda_{\mathrm{sr}}$ criteria, 3/3 satisfied",
                 "--",
+                "summary",
                 criterion_status(layer2_metrics["acceptance"]["overall_pass"]),
             ],
         ],

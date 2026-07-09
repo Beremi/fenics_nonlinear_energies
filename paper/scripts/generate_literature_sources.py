@@ -207,14 +207,19 @@ def collect_supplemental_keys(
     return supplemental_keys
 
 
-def main() -> None:
+def main(argv: list[str] | None = None) -> None:
     parser = argparse.ArgumentParser(description="Generate the paper literature source index and download public full texts.")
     parser.add_argument("--bib", type=Path, default=PAPER_ROOT / "references.bib")
     parser.add_argument("--manifest", type=Path, default=LITERATURE_ROOT / "manifest.json")
     parser.add_argument("--out-md", type=Path, default=LITERATURE_ROOT / "sources.md")
     parser.add_argument("--skip-download", action="store_true")
     parser.add_argument("--refresh-downloads", action="store_true")
-    args = parser.parse_args()
+    parser.add_argument(
+        "--check",
+        action="store_true",
+        help="validate metadata and require the generated source index to match --out-md without rewriting it",
+    )
+    args = parser.parse_args(argv)
 
     ensure_paper_dirs()
     FULLTEXT_ROOT.mkdir(parents=True, exist_ok=True)
@@ -329,7 +334,23 @@ def main() -> None:
             "| Key | Title | DOI | Canonical source | Notes |\n| --- | --- | --- | --- | --- |",
         ),
     ]
-    write_text(args.out_md, "\n".join(lines).rstrip() + "\n")
+    output = "\n".join(lines).rstrip() + "\n"
+    if args.check:
+        if not args.out_md.is_file():
+            raise SystemExit(f"Missing generated literature source index: {args.out_md}")
+        current = args.out_md.read_text(encoding="utf-8")
+        if current != output:
+            raise SystemExit(
+                f"Literature source index is stale: {args.out_md}. "
+                "Run `make -C paper literature` and commit the result."
+            )
+        print(
+            f"Literature source index OK: {len(available_rows)} public entries, "
+            f"{len(private_rows)} non-public local entries, and {len(unavailable_rows)} unavailable entries."
+        )
+        return
+
+    write_text(args.out_md, output)
     print(
         f"Generated {args.out_md} with {len(available_rows)} public entries, "
         f"{len(private_rows)} non-public local entries, and {len(unavailable_rows)} unavailable entries."

@@ -53,7 +53,7 @@ design updates instead solve frozen-state subproblems. For those steps we write
   \label{eq:generic-frozen-objective}
 \end{equation}
 where $x_h^m$ is fixed from the current outer iterate. The topology objective in
-\cref{sec:bench-topology} has this second form; its frozen compliance term is
+\Cref{sec:bench-topology} has this second form; its frozen compliance term is
 not the load-step potential \eqref{eq:generic-potential}. Thus
 \eqref{eq:generic-potential} covers scalar PDE, mechanics, and
 endpoint-surrogate solves, while
@@ -242,7 +242,8 @@ the current state, and let $\mathcal{P}(H)$ be its sparsity pattern. A
 distance-2 coloring partitions the column indices into groups $\mathcal{C}_c$
 such that, for each row $i$, at most one column $j\in\mathcal{C}_c$ satisfies
 $(i,j)\in\mathcal{P}(H)$. For the color seed
-$v_c=\sum_{j\in\mathcal{C}_c} e_j$, one probe produces
+$v_c=\sum_{j\in\mathcal{C}_c} e_j$, where $e_j$ denotes the $j$th Euclidean
+basis vector, one probe produces
 \begin{equation}
   y_c =
   \begin{cases}
