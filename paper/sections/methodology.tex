@@ -62,7 +62,11 @@ $\varepsilon_q := B_q u_e(x;\theta)$ is the local strain or gradient argument,
 $q$ indexes quadrature points, $w_q$ includes the quadrature weight and
 element-map Jacobian factor, $B_q$ is the corresponding element operator,
 $\theta_q$ is the quadrature-point restriction of the element data, and
-$\mathcal{W}_q$ is the pointwise energy density or branch potential. For
+$\mathcal{W}_q$ is the pointwise energy density or branch potential. Within
+each benchmark family, all derivative routes and solver-realization comparisons
+use the same quadrature points and weights for the stated discrete functional;
+the comparisons therefore change the differentiation, assembly, or solver path,
+not the quadrature definition of the energy. For
 finite-element labels, $P_k(L_\ell)$ denotes
 degree-$k$ Lagrange elements on mesh level $L_\ell$; problem-specific sections
 define the mesh hierarchy behind those levels when it matters for
@@ -72,7 +76,8 @@ interpretation.
 
 The main design choice in the toolset is that problem definitions should remain
 energy-centered whenever possible. For branch potentials, all second-order
-objects below are active-branch derivatives away from switching sets. We use
+objects below are active-branch derivatives away from switching sets and, for
+principal-value formulas, away from repeated-principal-value degeneracies. We use
 three derivative routes:
 \begin{enumerate}
   \item \textbf{element AD:} differentiate the full scalar element contribution
@@ -313,7 +318,7 @@ The key methodological point is that automatic differentiation is applied
 directly to the scalar branch potential defined by the benchmark. The
 constitutive tangent is therefore obtained from that same scalar potential rather
 than replaced by a separate hand-derived formula. Away from branch switching
-sets this yields branchwise exact derivatives of the surrogate; at switching
-sets the model remains nonsmooth, so the resulting tangents should be read as
-branchwise surrogate derivatives rather than globally smooth continuum
-derivatives.
+sets and repeated-principal-value degeneracies, this yields branchwise exact
+derivatives of the surrogate; on those nonsmooth sets the resulting tangents
+should be read as branchwise surrogate derivatives rather than globally smooth
+continuum derivatives.

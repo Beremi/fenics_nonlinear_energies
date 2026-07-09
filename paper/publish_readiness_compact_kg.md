@@ -125,6 +125,12 @@ stage or commit `paper/style_guide/`.
   close on the scientific-computing contribution plus next research steps. This
   reduces repeated endpoint-scope and coupled-solver language without changing
   numerical evidence.
+- Current audit chunk: tightened Plasticity2D/3D notation and nonsmooth AD
+  scope, split long validation/topology prose, made benchmark and
+  hyperelastic-memory table labels paper-facing, narrowed Sysala 2017 claim-audit
+  evidence to source-record context, added a Karolina hardware audit row, and
+  made figure/table asset validators reject stale non-manuscript generated
+  outputs.
 
 ## Figure And Table Rules
 
@@ -162,15 +168,15 @@ external release decisions:
 - durable software/artifact archive;
 - archival DOI in the availability statement.
 
-The current PDF is a 44-page A4 article. Page budget and float behavior must be
+The current PDF is a 43-page A4 article. Page budget and float behavior must be
 rechecked after target-template conversion.
 
 Deferred layout risks from the 2026-07-09 audit: the hyperelasticity diagnostic
-cluster around PDF pages 32--33, the Plasticity3D degree/scaling block around
+cluster around PDF pages 31--33, the Plasticity3D degree/scaling block around
 PDF pages 34--38, dense Table 19, early schematic-heavy implementation pages,
-and unused
-generated assets that should be excluded or cleaned before the final submission
-bundle.
+and target-template sensitivity in the benchmark float groups. Stale
+non-manuscript generated figure/table outputs are now removed and guarded by
+`validate_paper_assets.py`.
 
 ## Standard Validation
 

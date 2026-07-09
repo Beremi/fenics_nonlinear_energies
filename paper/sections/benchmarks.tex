@@ -92,8 +92,6 @@ size and mesh construction, not separate physical models.
   \label{tab:discretization-labels}
 \end{table}
 
-\FloatBarrier
-
 \subsection{\texorpdfstring{$p$-Laplace}{p-Laplace}}
 \label{sec:bench-plaplace}
 
@@ -159,6 +157,8 @@ which the derivative routes are compared in the energy plot and summary table.
   plotted scale.}
   \label{fig:plaplace-energy-levels}
 \end{figure}
+
+\FloatBarrier
 
 \begin{table}[!htbp]
   \centering
@@ -499,7 +499,8 @@ plastic strain $\varepsilon^{p,\mathrm{old}}$, set
   S_{2\mathrm{D}}=C_{2\mathrm{D}}^{-1}.
 \]
 Writing $\sigma^{\mathrm{tr}}=(\sigma_{xx},\sigma_{yy},\tau_{xy})^\top$, the
-principal stresses use
+principal stresses use the smoothing parameter
+$\epsilon_{\mathrm{reg}}=\num{1e-12}$:
 \[
   \sigma_{1,2}^{\mathrm{tr}}
   =
@@ -548,9 +549,8 @@ potential is
   -\frac{1}{2}\sigma^\star\cdot S_{2\mathrm{D}}\sigma^\star.
 \]
 The reported two-dimensional rows use this quantity as a solver-diagnostic
-endpoint surrogate. The small square-root regularization parameter
-$\epsilon_{\mathrm{reg}}=\num{1e-12}$ smooths the endpoint surrogate; it is not a
-separate material parameter.
+endpoint surrogate. The small square-root regularization smooths the endpoint
+surrogate; it is not a separate material parameter.
 
 Using these local definitions, the benchmark uses the following scalarized
 discrete surrogate functional for differentiation and comparison. Let
@@ -590,6 +590,8 @@ reduction.
   \label{fig:plasticity2d-state}
 \end{figure}
 
+\FloatBarrier
+
 \Cref{fig:plasticity2d-state} localizes the endpoint response in the expected
 slope mechanism region. The visualization supports the benchmark definition as
 an endpoint surrogate; convergence and fixed-work solver evidence are reported
@@ -605,6 +607,8 @@ separately below.
   endpoint-convergence evidence.}
   \label{fig:plasticity2d-energy-levels}
 \end{figure}
+
+\FloatBarrier
 
 \begin{table}[!htbp]
   \centering
@@ -748,7 +752,9 @@ carried in the 3D branch expressions below.
 
 The local constitutive surrogate follows the piecewise branch structure of the
 matched endpoint reference formulation. At one quadrature point we suppress the
-index $q$ and write $s_{\lambda}:=s_{\lambda,q}$. Let
+index $q$ and write $s_{\lambda}:=s_{\lambda,q}$,
+$\bar c_{\lambda}:=\bar c_{\lambda,q}$, $\mu:=\mu_q$,
+$K:=K_q$, and $\lambda_{\mathrm{L}}:=\lambda_{\mathrm{L},q}$. Let
 $\varepsilon_1 \ge \varepsilon_2 \ge \varepsilon_3$ be the ordered principal
 strains obtained after converting engineering shear components to tensor shear.
 The branch tests below use the convention that the elastic case satisfies
@@ -954,23 +960,15 @@ For the strain visualizations in this paper we use the deviatoric norm
 which matches the engineering-shear convention of
 \cref{eq:plasticity3d-engineering-strain}.
 
-Because \cref{eq:plasticity3d-discrete,eq:plasticity3d-potential} define an
-algorithmic endpoint surrogate rather than a path-consistent incremental
-history functional, the results section reports this family with a separate
-endpoint-surrogate comparison. Direct-branch endpoint-observable differences
-against the reference model are treated separately from a
-fixed-$\lambda_{\mathrm{sr}}$ reference comparison. The latter checks
-matched geometry, materials, Davis-B reduction parameters, load schedule, and
-the active boundary conditions, but it is not a path-consistent
-incremental-history validation.
-
-For this reason, the paper keeps the Plasticity3D claims at the level of a
-problem-specific endpoint surrogate rather than a path-consistent
-replacement. The related
-return-mapping, optimization, convex-optimization, and continuation literature
+Equations \eqref{eq:plasticity3d-discrete} and
+\eqref{eq:plasticity3d-potential} define an algorithmic endpoint surrogate
+rather than a path-consistent incremental-history functional. The paper
+therefore keeps Plasticity3D claims at the endpoint-surrogate level and treats
+direct-branch endpoint observables separately from the fixed-load reference
+comparison in \Cref{sec:val-plasticity3d}. The related return-mapping,
+optimization, convex-optimization, and continuation literature
 \citep{sysala2017returnmapping,sysala2021optimization,sysala2025convexoptimization,sysala2025advancedcontinuation}
-is used as reference-model context, not as evidence that this endpoint
-surrogate is a full incremental elastoplastic solver.
+provides reference-model context for that boundary.
 
 \begin{figure}[!htbp]
   \centering
@@ -995,6 +993,8 @@ surrogate is a full incremental elastoplastic solver.
   \label{fig:plasticity3d-convergence}
 \end{figure}
 
+\FloatBarrier
+
 \begin{table}[!htbp]
   \centering
   \input{tables/generated/plasticity3d_benchmark_summary.tex}
@@ -1004,13 +1004,13 @@ surrogate is a full incremental elastoplastic solver.
   \label{tab:plasticity3d-benchmark}
 \end{table}
 
+\FloatBarrier
+
 \Cref{fig:plasticity3d-state,fig:plasticity3d-convergence,tab:plasticity3d-benchmark}
 define the endpoint-surrogate benchmark object used later in the results
 section. The nine completed endpoint solves converge in the nonlinear stopping
 metric while the terminal values of \cref{eq:plasticity3d-discrete} decrease
 along both mesh and degree refinements.
-
-\FloatBarrier
 
 \begin{figure}[!htbp]
   \centering
@@ -1046,11 +1046,11 @@ The literature model is the standard SIMP-style compliance topology-optimization
 setting on a cantilever domain, together with filtering and continuation ideas
 from the classical topology literature
 \citep{bendsoe2003topology,sigmund2001topology,ferrari2020top99,bourdin2001filters}.
-In the setting studied here, the topology benchmark is a
-reduced optimization problem rather than a single equilibrium minimization. Let
-$Z_h$ be the scalar continuous $P_1$ space on the structured triangular mesh.
-The design variable is a latent nodal field $z_h \in Z_h$, mapped to a physical
-density through the logistic transform
+In the setting studied here, the topology benchmark is a reduced optimization
+problem rather than a single equilibrium minimization. Its first ingredient is
+the design map. Let $Z_h$ be the scalar continuous $P_1$ space on the structured
+triangular mesh. The design variable is a latent nodal field $z_h \in Z_h$,
+mapped to a physical density through the logistic transform
 \begin{equation}
   \theta_h(z_h)
   =
@@ -1077,6 +1077,8 @@ updates; outside the pads, the latent variable is unconstrained and
 $\theta_h\in[\theta_{\min},1]$. The target volume fraction is enforced through
 the effective multiplier $\lambda_V$ in
 \cref{eq:topology-reduced-objective}, updated by the penalty rule stated below.
+
+The second ingredient is the mechanics solve for a fixed density field.
 Let $V_h$ be the continuous vector $P_1$ displacement space and let
 $V_{h,0}\subset V_h$ impose the homogeneous left-edge clamp. Let $C$ denote the
 plane-stress elasticity tensor and let $p$ be the active SIMP exponent. For
@@ -1110,9 +1112,11 @@ The load functional is
   \int_{\{2\}\times[0.4,0.6]} (0,-1)\cdot v\,ds.
 \]
 The mechanics step finds $u_h(\theta_h)$ in the affine displacement space such
-that $a_{\theta_h}(u_h,v_h)=\ell(v_h)$ for all $v_h\in V_{h,0}$. At outer
-design iteration $m$, after solving for $u_h^m=u_h(\theta_h^m)$, the design
-step freezes, on each element,
+that $a_{\theta_h}(u_h,v_h)=\ell(v_h)$ for all $v_h\in V_{h,0}$.
+
+The third ingredient is the reduced design update. At outer design iteration
+$m$, after solving for $u_h^m=u_h(\theta_h^m)$, the design step freezes, on each
+element,
 \[
   e_{e,m}^{\mathrm{frozen}}
   =
@@ -1173,6 +1177,8 @@ outer loop alternates mechanics solves for
   volume fraction plus the continuation schedule in $p$ on the right axis.}
   \label{fig:topology-history}
 \end{figure}
+
+\FloatBarrier
 
 \begin{table}[!htbp]
   \centering

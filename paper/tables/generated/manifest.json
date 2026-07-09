@@ -7,40 +7,6 @@
         "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/derivative_route_compare/full_summary.csv"
       }
     ],
-    "family_highlights.tex": [
-      {
-        "kind": "repository_path",
-        "path": "experiments/analysis/docs_assets/data/plaplace/strong_scaling.csv"
-      },
-      {
-        "kind": "repository_path",
-        "path": "experiments/analysis/docs_assets/data/ginzburg_landau/strong_scaling.csv"
-      },
-      {
-        "kind": "repository_path",
-        "path": "experiments/analysis/docs_assets/data/hyperelasticity/strong_scaling.csv"
-      },
-      {
-        "kind": "repository_path",
-        "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity2d_resolution/output.json"
-      },
-      {
-        "kind": "repository_path",
-        "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity2d_resolution/slope_stability_l6_p4/summary.json"
-      },
-      {
-        "kind": "repository_path",
-        "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity2d_resolution/slope_stability_l7_p4/summary.json"
-      },
-      {
-        "kind": "repository_path",
-        "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_recommended_scaling/comparison_summary.json"
-      },
-      {
-        "kind": "repository_path",
-        "path": "experiments/analysis/docs_assets/data/topology/strong_scaling.csv"
-      }
-    ],
     "ginzburg_landau_benchmark_summary.tex": [
       {
         "kind": "repository_path",
@@ -161,12 +127,6 @@
         "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_reference_formula/comparison_summary.json"
       }
     ],
-    "plasticity3d_degree_energy_study.tex": [
-      {
-        "kind": "repository_path",
-        "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_degree_energy_study/comparison_summary.json"
-      }
-    ],
     "plasticity3d_derivative_ablation.tex": [
       {
         "kind": "repository_path",
@@ -268,48 +228,6 @@
       "generator": {
         "function": "main",
         "output": "derivative_route_compare.tex",
-        "path": "paper/scripts/generate_paper_tables.py"
-      }
-    },
-    "family_highlights.tex": {
-      "archive_status": "archive_neutral",
-      "data_inputs": [
-        {
-          "kind": "repository_path",
-          "path": "experiments/analysis/docs_assets/data/plaplace/strong_scaling.csv"
-        },
-        {
-          "kind": "repository_path",
-          "path": "experiments/analysis/docs_assets/data/ginzburg_landau/strong_scaling.csv"
-        },
-        {
-          "kind": "repository_path",
-          "path": "experiments/analysis/docs_assets/data/hyperelasticity/strong_scaling.csv"
-        },
-        {
-          "kind": "repository_path",
-          "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity2d_resolution/output.json"
-        },
-        {
-          "kind": "repository_path",
-          "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity2d_resolution/slope_stability_l6_p4/summary.json"
-        },
-        {
-          "kind": "repository_path",
-          "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity2d_resolution/slope_stability_l7_p4/summary.json"
-        },
-        {
-          "kind": "repository_path",
-          "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_recommended_scaling/comparison_summary.json"
-        },
-        {
-          "kind": "repository_path",
-          "path": "experiments/analysis/docs_assets/data/topology/strong_scaling.csv"
-        }
-      ],
-      "generator": {
-        "function": "main",
-        "output": "family_highlights.tex",
         "path": "paper/scripts/generate_paper_tables.py"
       }
     },
@@ -553,20 +471,6 @@
         "path": "paper/scripts/generate_paper_tables.py"
       }
     },
-    "plasticity3d_degree_energy_study.tex": {
-      "archive_status": "archive_neutral",
-      "data_inputs": [
-        {
-          "kind": "repository_path",
-          "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_degree_energy_study/comparison_summary.json"
-        }
-      ],
-      "generator": {
-        "function": "main",
-        "output": "plasticity3d_degree_energy_study.tex",
-        "path": "paper/scripts/generate_paper_tables.py"
-      }
-    },
     "plasticity3d_derivative_ablation.tex": {
       "archive_status": "archive_neutral",
       "data_inputs": [
@@ -754,7 +658,6 @@
   "generated_tables": [
     "benchmark_specification_matrix.tex",
     "derivative_route_compare.tex",
-    "family_highlights.tex",
     "ginzburg_landau_benchmark_summary.tex",
     "ginzburg_landau_globalization_fixed_budget.tex",
     "globalization_method_compare.tex",
@@ -770,7 +673,6 @@
     "plasticity2d_reference_continuation.tex",
     "plasticity3d_benchmark_summary.tex",
     "plasticity3d_constitutive_vs_reference_formula.tex",
-    "plasticity3d_degree_energy_study.tex",
     "plasticity3d_derivative_ablation.tex",
     "plasticity3d_derivative_degree.tex",
     "plasticity3d_fixed_reference_operator_pmg.tex",

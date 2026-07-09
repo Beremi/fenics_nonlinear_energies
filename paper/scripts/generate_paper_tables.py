@@ -73,16 +73,6 @@ SOURCE_CONT_NP32_PROGRESS = PAPER_SUBMISSION_INPUT_ROOT / (
 )
 
 TABLE_SOURCE_INPUTS = {
-    "family_highlights.tex": (
-        PLAPLACE_SCALING,
-        GL_SCALING,
-        HE_SCALING,
-        P2D_SHOWCASE,
-        P2D_L6_SUMMARY,
-        P2D_L7_SUMMARY,
-        LOCAL_P3D_SUMMARY,
-        TOPO_SCALING,
-    ),
     "implementation_capability_matrix.tex": (),
     "benchmark_specification_matrix.tex": (),
     "reference_availability.tex": (),
@@ -120,7 +110,6 @@ TABLE_SOURCE_INPUTS = {
     ),
     "plasticity3d_constitutive_vs_reference_formula.tex": (MIXED_P3D_SUMMARY,),
     "plasticity3d_fixed_reference_operator_pmg.tex": (SOURCEFIXED_P3D_SUMMARY,),
-    "plasticity3d_degree_energy_study.tex": (P3D_DEGREE_ENERGY_STUDY_SUMMARY,),
     "topology_summary.tex": (TOPO_SCALING,),
     "plasticity2d_reference_continuation.tex": (
         SOURCE_CONT_NP8,
@@ -207,14 +196,14 @@ REVIEWER_HE_BUILD_LABELS = {
 }
 
 HE_DISTRIBUTION_PURPOSE_LABELS = {
-    "correctness": "same-work check",
-    "memory": "memory comparison",
+    "correctness": "fixed-work equivalence",
+    "memory": "single-linearization memory probe",
 }
 
 HE_DISTRIBUTION_OUTCOME_LABELS = {
     "completed": "completed",
-    "fixed_work": "one linearization",
-    "fixed_work_completed": "one linearization",
+    "fixed_work": "single linearization",
+    "fixed_work_completed": "single linearization",
 }
 
 GLOBALIZATION_OUTCOME_LABELS = {
@@ -1029,53 +1018,6 @@ def main() -> None:
     p2d_rows = plasticity2d_resolution_rows()
     topo_benchmark_rows = select_topology_rows(("serial_reference", "parallel_final"))
 
-    pl_highlight = find_csv_row(pl_rows, "jax_petsc_element", 32)
-    gl_highlight = find_csv_row(gl_rows, "jax_petsc_element", 32)
-    he_highlight = find_csv_row(he_rows, "jax_petsc_element", 32)
-    p2d_highlight = p2d_rows[-1]
-    p3d_highlight = next(row for row in local_scaling_rows if int(row["ranks"]) == 32)
-    topo_highlight = next(row for row in topo_rows if row["solver"] == "jax_parallel" and int(row["ranks"]) == 32)
-
-    write_tablex(
-        "family_highlights.tex",
-        "@{}"
-        + xspec((0.68, "RaggedRight"), (1.55, "RaggedRight"), (2.10, "RaggedRight"))
-        + "@{}",
-        ["Family", "Representative result", "Highlight"],
-        [
-            [
-                "$p$-Laplace",
-                f"JAX+PETSc element AD, {mesh_label('L9')}, 32 ranks: {fmt_wall_time(float(pl_highlight['total_time_s']))} s",
-                "The element-AD and colored sparse-recovery paths agree within about $\\num{1e-8}$ in final energy; colored sparse recovery has higher wall time on this case.",
-            ],
-            [
-                "Ginzburg--Landau",
-                f"JAX+PETSc element AD, {mesh_label('L9')}, 32 ranks: {fmt_wall_time(float(gl_highlight['total_time_s']))} s",
-                "The JAX+PETSc and FEniCS rows agree within about $\\num{1e-6}$ in final energy on the fine-grid benchmark.",
-            ],
-            [
-                "Hyperelasticity",
-                f"JAX+PETSc element AD, distributed 24-step {mesh_label('L4')}, 32 ranks: {fmt_wall_time(float(he_highlight['total_time_s']))} s",
-                "The 24-step load path completes with the reported terminal energy in distributed mode.",
-            ],
-            [
-                "Plasticity (2D)",
-                f"JAX+PETSc same-mesh PMG, {p2d_highlight['label']}, 16 ranks: {fmt_wall_time(float(p2d_highlight['total_time_s']))} s",
-                "This is the highest-resolution 2D plasticity diagnostic reported here.",
-            ],
-            [
-                "Plasticity3D",
-                f"constitutive-AD PMG solver, {element_label('P4', 'L1_2')}, $\\lambda_{{\\mathrm{{sr}}}}=\\num{{1.0}}$, 32 ranks: {fmt_wall_time(float(p3d_highlight['wall_time_s']))} s",
-                "Auxiliary timing context for this load factor; the main bottom-clamped discretization study uses $\\lambda_{\\mathrm{sr}}=\\num{1.55}$.",
-            ],
-            [
-                "Topology",
-                f"parallel JAX+PETSc, $768\\times384$, 32 ranks: {fmt_wall_time(float(topo_highlight['wall_time_s']))} s",
-                "The fine-grid distributed run reports the listed end-to-end wall time; pure JAX remains the serial formulation reference.",
-            ],
-        ],
-    )
-
     write_table(
         "implementation_capability_matrix.tex",
         "@{}l c c c " + pcol(r"0.40\textwidth") + "@{}",
@@ -1105,12 +1047,12 @@ def main() -> None:
         + "@{}",
         ["Family", "Tested scope", "Solve policy", "Comparison evidence", "Main difficulty"],
         [
-            ["$p$-Laplace", f"{mesh_label('L5')} serial parity; {mesh_label('L9')} distributed scaling", "Newton + line search", "FEniCS and JAX+PETSc on the scaling matrix; pure JAX only in the serial parity case", "nonlinear elliptic solve with exact sparse Hessians"],
-            ["Ginzburg--Landau", f"{mesh_label('L5')} parity; {mesh_label('L9')} distributed scaling", "Newton + line search", "FEniCS and JAX+PETSc comparison", "indefinite local curvature from the double well"],
-            ["Hyperelasticity", f"{mesh_label('L1')} serial parity; {mesh_label('L4')}, 24-step distributed scaling", "trust-region solve", "FEniCS and JAX+PETSc on the distributed suite; pure JAX only as a serial reference", "nonconvex large-deformation mechanics"],
-            ["Plasticity2D", f"{element_label('P4', 'L5')}--{element_label('P4', 'L7')}", "endpoint solve or fixed nonlinear work", "JAX+PETSc only", "same-mesh PMG and nonlinear tail behavior"],
+            ["$p$-Laplace", f"{mesh_label('L5')} serial agreement; {mesh_label('L9')} distributed scaling", "Newton + line search", "FEniCS and JAX+PETSc on the distributed case; pure JAX in the serial agreement case", "nonlinear elliptic solve with exact sparse Hessians"],
+            ["Ginzburg--Landau", f"{mesh_label('L5')} agreement; {mesh_label('L9')} distributed scaling", "Newton + line search", "FEniCS and JAX+PETSc comparison", "indefinite local curvature from the double well"],
+            ["Hyperelasticity", f"{mesh_label('L1')} serial agreement; {mesh_label('L4')}, 24-step distributed scaling", "trust-region solve", "FEniCS and JAX+PETSc on the distributed suite; pure JAX only as a serial reference", "nonconvex large-deformation mechanics"],
+            ["Plasticity2D", f"{element_label('P4', 'L5')}--{element_label('P4', 'L7')}", "endpoint solve or fixed nonlinear work", "JAX+PETSc endpoint and solver-policy evidence", "same-mesh PMG and nonlinear tail behavior"],
             ["Plasticity3D", f"{degree_label('P1')}/{degree_label('P2')}/{degree_label('P4')}", "endpoint, scaling, and diagnostic PMG policies", "constitutive-AD, constitutive-assembly, and PMG sensitivity diagnostics", "heterogeneous 3D Mohr--Coulomb with constitutive AD"],
-            ["Topology", "$192\\times96$ serial reference; $768\\times384$ parallel benchmark", "adaptive continuation", "pure JAX on the serial reference; JAX+PETSc on the fine-grid parallel run and scaling matrix", "distributed design-mechanics coupling"],
+            ["Topology", "$192\\times96$ serial reference; $768\\times384$ parallel benchmark", "adaptive continuation", "pure JAX on the serial reference; JAX+PETSc on the fine-grid parallel run and distributed scaling", "distributed design-mechanics coupling"],
         ],
     )
 
@@ -1862,22 +1804,6 @@ def main() -> None:
                 ],
                 [[row[0], row[1], row[3], row[4], row[5]] for row in sourcefixed_rows],
             ),
-        ],
-    )
-
-    write_table(
-        "plasticity3d_degree_energy_study.tex",
-        "@{}l c c c c@{}",
-        ["Element", "Free DOFs", "Energy", "Wall time [s]", "Status"],
-        [
-            [
-                element_label(row["degree_line"], row["mesh_alias"]),
-                fmt_dofs(row["free_dofs"]),
-                fmt_energy(float(row["energy"])),
-                fmt_wall_time(float(row["total_time_s"])),
-                "reused" if bool(row.get("reused", False)) else str(row["status"]),
-            ]
-            for row in degree_energy_rows
         ],
     )
 

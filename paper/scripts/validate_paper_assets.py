@@ -134,6 +134,22 @@ def _manifest_assets(figures_dir: Path) -> set[str]:
     return assets
 
 
+def _validate_no_unexpected_generated_figures(figures_dir: Path, manifest_assets: set[str]) -> None:
+    expected = set(manifest_assets)
+    expected.update(Path(name).with_suffix(".png").name for name in manifest_assets if Path(name).suffix == ".pdf")
+    actual = {
+        path.name
+        for path in figures_dir.iterdir()
+        if path.is_file() and path.suffix.lower() in {".pdf", ".png"}
+    }
+    unexpected = sorted(actual - expected)
+    if unexpected:
+        raise SystemExit(
+            "Unexpected generated figure files not listed in figure manifest:\n"
+            + "\n".join(unexpected)
+        )
+
+
 def _manifest_asset_sources(figures_dir: Path) -> dict[str, object]:
     manifest_path = figures_dir / "manifest.json"
     if not manifest_path.exists():
@@ -189,6 +205,29 @@ def _manifest_tables(tables_dir: Path) -> set[str]:
         if isinstance(name, str):
             tables.add(Path(name).name)
     return tables
+
+
+def _validate_no_unexpected_generated_tables(
+    tables_dir: Path,
+    *,
+    required_tables: set[str],
+    manifest_tables: set[str],
+) -> None:
+    actual = {path.name for path in tables_dir.iterdir() if path.is_file() and path.suffix == ".tex"}
+    unexpected_files = sorted(actual - manifest_tables)
+    unused_manifest_tables = sorted(manifest_tables - required_tables)
+    findings: list[str] = []
+    if unexpected_files:
+        findings.append(
+            "Generated table files not listed in table manifest:\n" + "\n".join(unexpected_files)
+        )
+    if unused_manifest_tables:
+        findings.append(
+            "Generated tables listed in manifest but not included by the manuscript:\n"
+            + "\n".join(unused_manifest_tables)
+        )
+    if findings:
+        raise SystemExit("\n".join(findings))
 
 
 def _table_manifest_sources(tables_dir: Path) -> dict[str, object]:
@@ -447,7 +486,13 @@ def main() -> None:
         raise SystemExit("Missing paper assets:\n" + "\n".join(missing))
     if untracked_figures:
         raise SystemExit("TeX-included figures missing from figure manifest:\n" + "\n".join(untracked_figures))
+    _validate_no_unexpected_generated_figures(args.figures_dir, manifest_assets)
     _validate_manifest_sources(required_figures, args.figures_dir)
+    _validate_no_unexpected_generated_tables(
+        args.tables_dir,
+        required_tables=required_tables,
+        manifest_tables=_manifest_tables(args.tables_dir),
+    )
     _validate_table_manifest_sources(required_tables, args.tables_dir)
     provenance_targets = _provenance_targets(args.tex, seen_tex, required_tables, args.figures_dir, args.tables_dir)
     _validate_provenance_text(provenance_targets)

@@ -6,14 +6,14 @@
 \toprule
 Purpose & Assembly layout & Outcome & Level & Ranks & Newton & Krylov & Solve [s] & Energy \\
 \midrule
-same-work check & replicated & completed & $L_{4}$ & 4 & 26 & 571 & \num{51.2} & \num{0.151971} \\
-same-work check & rank-local & completed & $L_{4}$ & 4 & 26 & 571 & \num{50.8} & \num{0.151971} \\
-memory comparison & replicated & one linearization & $L_{5}$ & 8 & 1 & 1 & \num{10.7} & \num{53.95804} \\
-memory comparison & rank-local & one linearization & $L_{5}$ & 8 & 1 & 1 & \num{10.5} & \num{53.95926} \\
-memory comparison & replicated & one linearization & $L_{5}$ & 16 & 1 & 1 & \num{5.57} & \num{32.927343} \\
-memory comparison & rank-local & one linearization & $L_{5}$ & 16 & 1 & 1 & \num{5.5} & \num{32.927867} \\
-memory comparison & replicated & one linearization & $L_{5}$ & 32 & 1 & 1 & \num{3.37} & \num{23.942407} \\
-memory comparison & rank-local & one linearization & $L_{5}$ & 32 & 1 & 1 & \num{3.36} & \num{23.803027} \\
+fixed-work equivalence & replicated & completed & $L_{4}$ & 4 & 26 & 571 & \num{51.2} & \num{0.151971} \\
+fixed-work equivalence & rank-local & completed & $L_{4}$ & 4 & 26 & 571 & \num{50.8} & \num{0.151971} \\
+single-linearization memory probe & replicated & single linearization & $L_{5}$ & 8 & 1 & 1 & \num{10.7} & \num{53.95804} \\
+single-linearization memory probe & rank-local & single linearization & $L_{5}$ & 8 & 1 & 1 & \num{10.5} & \num{53.95926} \\
+single-linearization memory probe & replicated & single linearization & $L_{5}$ & 16 & 1 & 1 & \num{5.57} & \num{32.927343} \\
+single-linearization memory probe & rank-local & single linearization & $L_{5}$ & 16 & 1 & 1 & \num{5.5} & \num{32.927867} \\
+single-linearization memory probe & replicated & single linearization & $L_{5}$ & 32 & 1 & 1 & \num{3.37} & \num{23.942407} \\
+single-linearization memory probe & rank-local & single linearization & $L_{5}$ & 32 & 1 & 1 & \num{3.36} & \num{23.803027} \\
 \bottomrule
 \end{tabularx}
 
@@ -25,14 +25,14 @@ memory comparison & rank-local & one linearization & $L_{5}$ & 32 & 1 & 1 & \num
 \toprule
 Purpose & Assembly layout & Level & Ranks & RSS max/sum [GiB] & Tracked sum [GiB] & Overlap/owned \\
 \midrule
-same-work check & replicated & $L_{4}$ & 4 & \num{3.6}/\num{14.2} & \num{5.49} & \num{1.01} \\
-same-work check & rank-local & $L_{4}$ & 4 & \num{3.3}/\num{13.2} & \num{6.01} & \num{1.01} \\
-memory comparison & replicated & $L_{5}$ & 8 & \num{14.9}/\num{118.7} & \num{44.34} & \num{1.01} \\
-memory comparison & rank-local & $L_{5}$ & 8 & \num{12.3}/\num{98.3} & \num{47.87} & \num{1.01} \\
-memory comparison & replicated & $L_{5}$ & 16 & \num{9.4}/\num{150.9} & \num{45.45} & \num{1.03} \\
-memory comparison & rank-local & $L_{5}$ & 16 & \num{6.3}/\num{100.3} & \num{47.89} & \num{1.03} \\
-memory comparison & replicated & $L_{5}$ & 32 & \num{6.7}/\num{215.6} & \num{47.65} & \num{1.05} \\
-memory comparison & rank-local & $L_{5}$ & 32 & \num{3.3}/\num{104.9} & \num{47.92} & \num{1.05} \\
+fixed-work equivalence & replicated & $L_{4}$ & 4 & \num{3.6}/\num{14.2} & \num{5.49} & \num{1.01} \\
+fixed-work equivalence & rank-local & $L_{4}$ & 4 & \num{3.3}/\num{13.2} & \num{6.01} & \num{1.01} \\
+single-linearization memory probe & replicated & $L_{5}$ & 8 & \num{14.9}/\num{118.7} & \num{44.34} & \num{1.01} \\
+single-linearization memory probe & rank-local & $L_{5}$ & 8 & \num{12.3}/\num{98.3} & \num{47.87} & \num{1.01} \\
+single-linearization memory probe & replicated & $L_{5}$ & 16 & \num{9.4}/\num{150.9} & \num{45.45} & \num{1.03} \\
+single-linearization memory probe & rank-local & $L_{5}$ & 16 & \num{6.3}/\num{100.3} & \num{47.89} & \num{1.03} \\
+single-linearization memory probe & replicated & $L_{5}$ & 32 & \num{6.7}/\num{215.6} & \num{47.65} & \num{1.05} \\
+single-linearization memory probe & rank-local & $L_{5}$ & 32 & \num{3.3}/\num{104.9} & \num{47.92} & \num{1.05} \\
 \bottomrule
 \end{tabularx}
 \end{minipage}

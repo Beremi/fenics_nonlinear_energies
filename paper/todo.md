@@ -293,7 +293,17 @@ scientific claims were introduced without supporting evidence.
   realization, matched agreement contracts, and solver-policy scope, and
   strengthened the Conclusion's scientific-computing contribution without adding
   new numerical claims.
-- Rebuilt the 44-page paper PDF through the paper generation pipeline.
+- Addressed the latest thematic subagent audit: clarified quadrature consistency
+  and nonsmooth branchwise-AD scope, defined Plasticity2D regularization before
+  use, expanded suppressed Plasticity3D local symbols, split long Plasticity3D
+  validation and topology exposition blocks, made benchmark and hyperelastic
+  memory table labels paper-facing, narrowed the Sysala 2017 claim-audit row to
+  source-record evidence, and added a Karolina hardware claim-audit row.
+- Tightened generated-asset hygiene: removed obsolete non-manuscript generated
+  figure pairs and unused generated table outputs, and made the paper asset
+  validator reject generated figure/table files or manifest entries that are not
+  part of the manuscript asset set.
+- Rebuilt the 43-page paper PDF through the paper generation pipeline.
 
 ## Blocking Issues Before Submission
 
