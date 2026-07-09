@@ -134,6 +134,14 @@ stage or commit `paper/style_guide/`.
   sharpen residual-bisection and owned-row assembly notation, standardize nearby
   `\lambda_{\mathrm{sr}}` numeric styling, and clarify Plasticity3D validation
   table status text. The rebuilt PDF remains a 44-page A4 article.
+- Current paper-facing tone/notation pass: subagent audits found no hard local
+  path or campaign-tag leaks. Integrated fixes define the owned-row assembly
+  residual/tangent symbols before use, define
+  `\varepsilon_{eq}(u_e)=B_{eq}u_e` in the Plasticity3D surrogate, name the
+  matched comparator as an independent reference-formula assembly path, replace
+  residual run-log wording with configuration/comparison language, and narrow the
+  conclusion to the tested nonlinear energy families. The rebuilt PDF is now a
+  45-page A4 article.
 
 ## Figure And Table Rules
 
@@ -171,7 +179,7 @@ external release decisions:
 - durable software/artifact archive;
 - archival DOI in the availability statement.
 
-The current PDF is a 44-page A4 article. Page budget and float behavior must be
+The current PDF is a 45-page A4 article. Page budget and float behavior must be
 rechecked after target-template conversion.
 
 Deferred layout risks from the 2026-07-09 audit: dense hyperelasticity and
@@ -182,6 +190,9 @@ the derivative-route table cluster, the four-panel Plasticity3D degree figure,
 and the Plasticity3D CPU-scaling table as template-sensitive but readable on A4.
 Latest rendered-page review found no A4 clipping or illegible figures; these
 risks should be revisited only after a target template changes text width.
+The latest figure/table auditor again found the current A4 PDF acceptable, but
+flagged `[H]` floats, dense Results table clusters, the four-panel Plasticity3D
+degree figure, and the Plasticity3D CPU-scaling table as target-template risks.
 Stale non-manuscript generated figure/table outputs are now removed and guarded
 by `validate_paper_assets.py`; figure sizing now fails fast if the current A4
 article layout contract changes without updating the measurement policy.

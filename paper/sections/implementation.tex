@@ -144,7 +144,9 @@ Matrix entries are inserted only for rows in $I_r$, with values on $G_r$ used to
 evaluate local stencils but not to duplicate ownership. Scalar energy values
 reported in the results are the solver-reported global reductions for the
 corresponding configuration; the ownership contract here concerns derivative and
-matrix assembly. Equivalently, if
+matrix assembly. Here $R_i(u)$ and $A_{ij}(u)$ are assembled residual and
+tangent entries, while $r_{K,i}$ and $a_{K,ij}$ are element contributions.
+Equivalently, if
 $\mathcal{T}_r=\{K:\operatorname{dofs}(K)\cap I_r\ne\emptyset\}$, then rank $r$
 inserts
 \[
@@ -202,6 +204,6 @@ nonlinear problem definition.
 benchmark suite. The most important structural point is that the \jaxpetsc{}
 column is the distributed algebraic realization, even when a family also has
 \fenics{} or \purejax{} reference formulations. The table is intentionally a
-component map rather than a full parameter schedule; run-specific tolerances,
-caps, timing scopes, and coarse-solver variants are reported with the numerical
-evidence they qualify.
+component map rather than a full parameter schedule; configuration-specific
+stopping tolerances, iteration caps, timing scopes, and coarse-solver variants
+are reported with the numerical evidence they qualify.

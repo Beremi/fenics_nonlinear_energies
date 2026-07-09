@@ -136,8 +136,8 @@ used for the numerical comparisons. The discrete problem is
   \label{eq:plaplace-discrete}
 \end{equation}
 where $V_h$ is the chosen conforming finite-element subspace. This is the
-cleanest benchmark in the paper for checking exact gradients, exact Hessians,
-and sparse-recovery alternatives against each other without constitutive or
+most direct benchmark in the paper for checking exact gradients, exact Hessians,
+and sparse-recovery alternatives against one another without constitutive or
 geometric complications.
 
 \begin{figure}[!htbp]
@@ -260,9 +260,9 @@ is part of the benchmark definition.
 \end{table}
 
 \Cref{fig:gl-state,fig:gl-energy-levels} and \Cref{tab:gl-benchmark} show
-terminal-state consistency from the prescribed initial state. The local picture
-is again one of formulation consistency, now for a more solver-sensitive
-nonconvex energy: the \fenics{} reference, element AD, and colored sparse
+terminal-state consistency from the prescribed initial state. The benchmark
+evidence is again one of formulation consistency, now for a more
+solver-sensitive nonconvex energy: the \fenics{} reference, element AD, and colored sparse
 recovery report matching Newton--Krylov counts and final energies within about
 $\num{1e-6}$. Strong scaling and solver-time comparisons for this family are
 reported in \Cref{sec:num-gl}.
@@ -501,7 +501,7 @@ angle, respectively, the benchmark uses
   \psi_{\lambda} &= \arctan\!\left(\beta \tan \psi_1\right).
   \label{eq:plasticity2d-davis}
 \end{align}
-The reported endpoint runs in this paper use $\lambda_{\mathrm{sr}} = 1$ and
+The reported endpoint configurations use $\lambda_{\mathrm{sr}}=\num{1}$ and
 $\psi = 0^\circ$, hence $\psi_{\lambda}=0^\circ$; the reported states are
 algorithmic endpoint surrogates rather than path-consistent history updates.
 
@@ -730,8 +730,8 @@ $L_1,\ldots,L_4$ for the four displayed mesh levels.
 Here and in the Davis-B reduction below,
 $\lambda_{\mathrm{sr}}>0$ denotes the strength-reduction factor.
 The representative figures use the bottom-clamped $P_4(L_2)$ endpoint at
-$\lambda_{\mathrm{sr}}=1.55$ and the completed nine-case study
-at the same load factor. The $\lambda_{\mathrm{sr}}=1.0$ strong-scaling
+$\lambda_{\mathrm{sr}}=\num{1.55}$ and the completed nine-case study
+at the same load factor. The $\lambda_{\mathrm{sr}}=\num{1.0}$ strong-scaling
 study is reported separately in \Cref{sec:num-plasticity3d} as auxiliary timing
 evidence.
 
@@ -778,7 +778,7 @@ with
 These are the scalar constitutive parameters used by the 3D assembly path
 \citep{davis1968plasticity,tschuchnigg2015nonassociated,sysala2021optimization}.
 In this subsection, $\phi$ denotes friction angle and $\psi$ denotes dilation
-angle. All 3D material tuples used in the reported runs have
+angle. All 3D material tuples used in the reported configurations have
 $\psi=0^\circ$; the dilation angle therefore enters
 only through the Davis-B reduction above and not as a separate argument of
 $\Phi_{\mathrm{MC},3\mathrm{D}}$. No separate reduced dilation-angle argument is
@@ -951,7 +951,9 @@ globally smooth continuum potential.
 
 For the endpoint and continuation studies, these local definitions are assembled
 into the following scalar surrogate. Let $\bar c_{\lambda,eq}$ and
-$s_{\lambda,eq}$ denote the quadrature-point Davis-B-reduced quantities:
+$s_{\lambda,eq}$ denote the quadrature-point Davis-B-reduced quantities, and set
+$\varepsilon_{eq}(u_e)=B_{eq}u_e$ for the six-component engineering strain at
+quadrature point $q$ of element $e$:
 \begin{equation}
   \Pi_h^{3\mathrm{D}}(u_h;\lambda_{\mathrm{sr}})
   =
@@ -1000,8 +1002,8 @@ Equations \eqref{eq:plasticity3d-discrete} and
 \eqref{eq:plasticity3d-potential} define an algorithmic endpoint surrogate
 rather than a path-consistent incremental-history functional. The paper
 therefore keeps Plasticity3D claims at the endpoint-surrogate level and treats
-direct-branch endpoint observables separately from the fixed-load reference
-comparison in \Cref{sec:val-plasticity3d}. The related return-mapping,
+direct-branch endpoint observables separately from the fixed-load
+matched-comparator diagnostic in \Cref{sec:val-plasticity3d}. The related return-mapping,
 optimization, convex-optimization, and continuation literature
 \citep{sysala2017returnmapping,sysala2021optimization,sysala2025convexoptimization,sysala2025advancedcontinuation}
 provides reference-model context for that boundary.
@@ -1010,8 +1012,8 @@ provides reference-model context for that boundary.
   \centering
   \includegraphics[width=\PaperFigureMedium]{plasticity3d_state_pair.pdf}
   \caption{Bottom-clamped Plasticity3D representative endpoint at
-  $\lambda_{\mathrm{sr}}=1.55$: displacement magnitude and surface deviatoric
-  strain for the $P_4(L_2)$ run, both derived from the
+  $\lambda_{\mathrm{sr}}=\num{1.55}$: displacement magnitude and surface deviatoric
+  strain for the $P_4(L_2)$ configuration, both derived from the
   scalar surrogate in
   \eqref{eq:plasticity3d-discrete}.}
   \label{fig:plasticity3d-state}
@@ -1021,8 +1023,8 @@ provides reference-model context for that boundary.
   \centering
   \includegraphics[width=\PaperFigureMedium]{plasticity3d_convergence.pdf}
   \caption{Newton-history convergence for all nine completed bottom-clamped
-  Plasticity3D study runs at
-  $\lambda_{\mathrm{sr}}=1.55$. The upper panel shows the value of the
+  Plasticity3D endpoint configurations at
+  $\lambda_{\mathrm{sr}}=\num{1.55}$. The upper panel shows the value of the
   algorithmic surrogate from \eqref{eq:plasticity3d-discrete}; the lower panel
   shows the gradient norm used as the nonlinear stopping metric, with color
   indicating degree and line style indicating mesh level.}
@@ -1268,14 +1270,14 @@ reduced design updates for \eqref{eq:topology-reduced-objective}.
 \begin{table}[!htbp]
   \centering
   \caption{Representative topology endpoint observables for the reduced-design
-  run.}
+  benchmark.}
   \label{tab:topology-benchmark}
   \input{tables/generated/topology_benchmark_summary.tex}
 \end{table}
 
 \Cref{fig:topology-density,fig:topology-history} and
 \Cref{tab:topology-benchmark} show the reduced-design endpoint used for the
-topology timing study. The fine-grid run produces a connected load-bearing
+topology timing study. The fine-grid configuration produces a connected load-bearing
 density field, reaches volume fraction \num{0.3749}, and stops after 66 outer
 iterations under the continuation logic shown in \Cref{fig:topology-history}.
 The target volume is imposed through the adaptive multiplier and stopping rule,
@@ -1285,7 +1287,7 @@ For topology, the relevant notion of
 ``convergence'' is this reduced objective history rather than a single
 equilibrium energy. The reported continuation starts at SIMP exponent $p=1$,
 increases $p$ by $0.2$ on each outer iteration up to $p=10$, and treats the
-fine-grid run as stalled once $p\ge 4$ and both the reported design-change and
+fine-grid configuration as stalled once $p\ge 4$ and both the reported design-change and
 state-change stopping diagnostics are at most $10^{-6}$. Rank-varied adaptive
 timing and a controlled rank-consistency check for the same family are reported
 in \Cref{sec:num-topology}.

@@ -54,7 +54,7 @@ MATLAB literature only when there is source-backed evidence.
 - SIOPT submission-shape cue checked on 2026-07-09: SIAM's author instructions
   ask for figures to be embedded inline and state that SIOPT has a 25-page
   policy, with longer papers published only in exceptional justified cases. The
-  current 44-page A4 article is therefore a journal-template/page-budget blocker
+  current 45-page A4 article is therefore a journal-template/page-budget blocker
   rather than a solved formatting issue.
 
 ## Manuscript Nodes
@@ -1440,6 +1440,27 @@ MATLAB literature only when there is source-backed evidence.
   no A4 hard layout blocker; dense Results tables, the four-panel Plasticity3D
   degree figure, and the Plasticity3D CPU-scaling table remain target-template
   risks only. The rebuilt A4 PDF is 44 pages.
+- `Current paper-facing tone/notation/caption audit`
+  (`Sagan the 2nd`/`Carson the 2nd`/`Sartre the 2nd`): completed and integrated
+  in the current tone-and-scope chunk. Findings addressed: no hard process-local
+  paths, branch names, or campaign tags were found; remaining `run`/`story`
+  phrasing was replaced by configuration/comparison/evidence language where it
+  read like execution-log prose; the owned-row assembly display now defines
+  `R_i(u)`, `A_{ij}(u)`, `r_{K,i}`, and `a_{K,ij}` before use; the Plasticity3D
+  surrogate defines `\varepsilon_{eq}(u_e)=B_{eq}u_e` before the discrete
+  functional; the matched endpoint comparator is named as an independent
+  reference-formula assembly path rather than an alternate route; fixed-load
+  Plasticity3D evidence is consistently described as a matched-comparator
+  diagnostic; colored sparse recovery is no longer described as an approximate
+  second-order route when the reported rows use AD-HVP probes; the topology
+  rank-consistency claim is narrowed to observed rank-to-one-rank discrepancies
+  for the controlled 40-iteration case; selected captions now state timing
+  scope or fixed-work limitations; and the conclusion names the contribution as
+  a toolset and evidence protocol for the tested nonlinear energy families.
+  Sartre found the current A4 PDF acceptable, with target-template sensitivity
+  remaining for hard `[H]` floats, dense Results table clusters, the four-panel
+  Plasticity3D degree figure, and the Plasticity3D CPU-scaling table. The
+  rebuilt A4 PDF is 45 pages after the integrated caption and notation fixes.
 
 ## First Edit Backlog
 

@@ -118,7 +118,7 @@ provides the direction, while a bounded line search chooses the accepted step.
 The line-search and trust-region ingredients follow standard globalization ideas
 \citep[Chs.~2--4]{nocedal2006numerical}; see also \citet{conn2000trust}.
 \Cref{alg:hybrid-newton}
-is a schematic solver-policy template; the reported runs use the stopping
+is a schematic solver-policy template; the numerical configurations use the stopping
 tolerances, caps, globalization choices, and linear-solver/preconditioner
 choices stated in the benchmark and results tables.
 
@@ -178,13 +178,13 @@ with $c_1\in(0,1)$; bounded merit search examines a prescribed bounded interval
 and accepts only a trial value satisfying
 $\mathcal{F}(x_k+\alpha d_k)<\mathcal{F}(x_k)$;
 residual-bisection safeguards bisect the trial step until the residual-direction
-test used by the run is satisfied; in the PETSc Newton rows this test is
+test used by the configuration is satisfied; in the PETSc Newton rows this test is
 $\nabla\mathcal{F}(x_k+\alpha d_k)^\top d_k<0$, unless the line-search cap is
 reached. Benchmark tables instantiate the finite set of remaining policy
 parameters, including accept/reject thresholds, radius updates, caps, and
 fallback rules, wherever they affect interpretation. Reported PETSc linear
 solves use the relative KSP residual tolerance summarized in
-\Cref{tab:numerical-protocol-summary} or stated with the corresponding run when
+\Cref{tab:numerical-protocol-summary} or stated with the corresponding result when
 the policy varies. Failed linear solves and non-descent directions are handled
 by the stated globalization safeguard or reported as capped solver behavior.
 
@@ -195,7 +195,7 @@ $P_4\to P_2\to P_1$ hierarchy for the flexible-GMRES linear solve
 \citep[Sec.~3.1]{nocedal2006numerical}. The reported
 $\lambda_{\mathrm{sr}}=\num{1.55}$ scaling profile uses a redundant LU/MUMPS
 coarse solve and PETSc relative KSP tolerance \num{1e-2}; the auxiliary
-$\lambda_{\mathrm{sr}}=\num{1.0}$ timing runs use the Hypre-coarse PMG profile.
+$\lambda_{\mathrm{sr}}=\num{1.0}$ timing configurations use the Hypre-coarse PMG profile.
 Here $\lambda_{\mathrm{sr}}$ is the plasticity strength-reduction factor
 defined in \cref{sec:bench-plasticity3d}, PMG denotes same-mesh polynomial
 multigrid, and KSP denotes PETSc's Krylov-solver interface and residual
@@ -249,7 +249,7 @@ $j\in\mathcal{C}_c$ and $(i,j)\in\mathcal{P}(H)$ in the AD-HVP branch. In the
 finite-difference branch it gives $H_{ij}=(y_c)_i+O(\delta)$ under local
 smoothness. The reported \jaxpetsc{} colored sparse-recovery cases use the AD
 Hessian-vector probe mode, so no finite-difference perturbation parameter is
-introduced in those runs; the finite-difference formula states the classical
+introduced in those configurations; the finite-difference formula states the classical
 recovery variant. After recovery, each rank scatters only owned sparse entries
 to the PETSc matrix, with overlap data used only for local probe evaluation.
 

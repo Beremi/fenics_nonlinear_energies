@@ -125,9 +125,9 @@ matched endpoint comparator means the endpoint formulation used for these
 observable comparisons, not the cited incremental-history studies. The
 comparator uses the same endpoint functional, mesh, material table, Davis-B
 strength reduction, load schedule, boundary conditions, and active free degrees
-of freedom, but evaluates the endpoint observables through an alternate matched
-route. The endpoint-observable check tests a seven-step direct load branch,
-$\lambda_{\mathrm{sr}}=1.0,1.1,\ldots,1.6$, against the matched endpoint
+of freedom, but evaluates the endpoint observables through an independent
+reference-formula assembly path. The endpoint-observable check tests a seven-step
+direct load branch, $\lambda_{\mathrm{sr}}=\num{1.0},\num{1.1},\ldots,\num{1.6}$, against the matched endpoint
 comparator on the $P_2(L_1)$ comparator case. The work observable is the external
 work $\omega=f_{\mathrm{ext}}^\top u$ reported by the two endpoint
 formulations. Its relative difference is \num{3.877e-5}, the displacement
@@ -138,9 +138,9 @@ The fixed-load matched-comparator diagnostic asks a narrower
 fixed-$\lambda_{\mathrm{sr}}$ question against the matched endpoint comparator.
 After aligning the comparator boundary conditions with the active boundary
 condition set, the fixed-load grid is capped at the main-figure load level
-$\lambda_{\mathrm{sr}}=1.55$. Here
+$\lambda_{\mathrm{sr}}=\num{1.55}$. Here
 $\lambda_{\max}^{\mathrm{succ}}$ denotes the largest value in the tested grid
-$\{1.0,1.2,1.4,1.5,1.55\}$ that satisfies the relative-correction stopping
+$\{\num{1.0},\num{1.2},\num{1.4},\num{1.5},\num{1.55}\}$ that satisfies the relative-correction stopping
 criterion. The comparison matches $\lambda_{\max}^{\mathrm{succ}}$ on that grid
 and satisfies the predefined criteria for the
 $u_{\max}(\lambda_{\mathrm{sr}})$ curve and endpoint displacement: the
@@ -170,7 +170,7 @@ reference.
   \end{subfigure}
   \caption{Plasticity3D endpoint-surrogate comparison. The upper panel compares
   the endpoint observables after the seven-step direct branch ending at
-  $\lambda_{\mathrm{sr}}=1.6$; the lower panel shows the
+  $\lambda_{\mathrm{sr}}=\num{1.6}$; the lower panel shows the
   fixed-$\lambda_{\mathrm{sr}}$ matched-comparator diagnostic after matching the
   boundary conditions and active free degrees of freedom.}
   \label{fig:plasticity3d-validation}
@@ -180,7 +180,7 @@ reference.
   \centering
   \caption{Plasticity3D endpoint-surrogate comparison summary for the
   direct-branch endpoint-observable comparison ending at
-  $\lambda_{\mathrm{sr}}=1.6$ and the fixed-$\lambda_{\mathrm{sr}}$
+  $\lambda_{\mathrm{sr}}=\num{1.6}$ and the fixed-$\lambda_{\mathrm{sr}}$
   matched-comparator diagnostic.}
   \label{tab:plasticity3d-validation}
   \input{tables/generated/plasticity3d_validation_summary.tex}
