@@ -93,23 +93,32 @@ stage or commit `paper/style_guide/`.
 ## Current Subagent Findings
 
 - Message/front matter audit: the scientific-toolset message is clear; unresolved
-  blockers remain target template/declarations, final archive DOI/license, and
-  page-budget strategy.
-- Math audit: fixed in current chunk by adding Plasticity3D elastic-first branch
-  selection, separating return-test ratios from material weight and engineering
-  shear, replacing generic `\psi_q` energy-density notation with
-  `\mathcal{W}_q`, making the KSP target column explicit, and moving the
-  Plasticity2D/Plasticity3D discrete surrogate definitions after their local
-  Davis-B and branch-potential definitions.
-- Evidence audit: fixed in current chunk by interpreting the p-Laplace,
-  Plasticity2D, hyperelastic validation, and Plasticity3D validation figures in
-  body text.
-- Citation audit: fixed in current chunk by narrowing the
-  \v{C}ermak--Sysala--Valdman role to elastoplastic implementation context and
-  making JAX-native / bridge rows source-specific in the SOTA table.
-- Layout audit: no hard rendering failures; defer target-template-sensitive
-  float moves for dense hyperelasticity and Plasticity3D result pages until the
-  venue/template split is known.
+  blockers remain target template/declarations, final archive DOI/license,
+  durable evidence packaging, and page-budget strategy. SIAM/SIOPT pages were
+  not fetchable from this environment because of Cloudflare, so target-template
+  details require browser/manual verification.
+- Math audit: recent fixes include Plasticity3D elastic-first branch selection,
+  return-test notation, generic energy-density notation, KSP target wording,
+  Plasticity2D/Plasticity3D surrogate-definition order, `u_{\max}` definition
+  before validation thresholds, Plasticity2D trial-function definition order,
+  consistent Plasticity3D `s_{\lambda}` notation, and topology notation that
+  avoids stress/density and hyperelastic/double-well collisions.
+- Evidence/provenance audit: no missing numerical experiment is required for
+  the current scoped claims. Remaining evidence risks are release-packaging
+  risks: stale commit identifiers in generated provenance notes, source data
+  split between the curated paper bundle and broader repo assets, and derived
+  rather than full raw Plasticity3D figure data in the local bundle.
+- Citation/comparator audit: recent fixes narrow JAX-FEM wording to a
+  hyperelastic companion terminal-state comparison, keep the
+  \v{C}ermak--Sysala--Valdman role to elastoplastic implementation context,
+  add Plasticity3D endpoint-comparator provenance to the claim audit, add Conn
+  trust-region metadata, and narrow Sysala 2017 source-record claims to the
+  locally recorded DOI/CAS metadata.
+- Layout audit: no hard rendering failures. Current A4 risks are float-loop
+  breaks around Plasticity2D and Plasticity3D benchmark figures, dense
+  derivative-route and hyperelasticity result pages, early schematic-heavy
+  implementation pages, and final conclusion/appendix compression. Major layout
+  moves are best paired with a target-template/page-budget decision.
 
 ## Figure And Table Rules
 
@@ -147,7 +156,7 @@ external release decisions:
 - durable software/artifact archive;
 - archival DOI in the availability statement.
 
-The current PDF is a 44-page A4 article. Page budget and float behavior must be
+The current PDF is a 45-page A4 article. Page budget and float behavior must be
 rechecked after target-template conversion.
 
 Deferred layout risks from the 2026-07-09 audit: the hyperelasticity diagnostic

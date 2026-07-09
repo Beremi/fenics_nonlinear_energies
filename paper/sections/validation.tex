@@ -4,8 +4,8 @@ This section separates validation and external-comparison evidence from the
 performance results that follow. The distinction is important because the
 paper uses different levels of evidence for different claims: Hyperelasticity
 has a narrow external comparison against JAX-FEM, while
-\plasticitythree{} is evaluated through a reference-model endpoint-surrogate
-comparison.
+\plasticitythree{} is evaluated through a matched endpoint-comparator
+formulation for the surrogate studied here.
 
 \subsection{Comparison Metrics}
 \label{sec:val-metrics}
@@ -27,7 +27,8 @@ fields, $M$ denotes the corresponding sampled or quadrature-weighted norm used
 by the comparison. The reported field and profile observables have nonzero
 reference norms. Scalar work and energy differences use the same
 reference-denominator convention; the hyperelastic energy post-comparison uses
-an absolute denominator floor of $10^{-12}$.
+an absolute denominator floor of $10^{-12}$. We write
+$u_{\max}$ for the maximum displacement magnitude over the compared state.
 
 The hyperelastic JAX-FEM comparison uses a 5\% predefined threshold for the
 final energy, full-field displacement, centerline displacement, and
@@ -109,24 +110,24 @@ continuation papers provide reference-model and method context for this problem
 class
 \citep{sysala2017returnmapping,sysala2021optimization,sysala2025convexoptimization,sysala2025advancedcontinuation}.
 The efficient \v{C}erm{\'a}k--Sysala--Valdman MATLAB elastoplastic
-implementation of \citet{cermak2019efficient} provides solver-lineage context
+implementation of \citet{cermak2019efficient} provides implementation context
 for practical two- and three-dimensional elastoplastic finite-element solvers.
 None of these sources is
 used here as a verified numerical baseline.
 
 The endpoint-surrogate comparison therefore uses two diagnostics. Here the
-reference model means the matched endpoint reference formulation used for these
+matched endpoint comparator means the endpoint formulation used for these
 observable comparisons, not the cited incremental-history studies. The
 endpoint-observable check tests a seven-step direct load branch,
-$\lambda_{\mathrm{sr}}=1.0,1.1,\ldots,1.6$, against the reference model on the
-$P_2(L_1)$ reference case. The work observable is the external work
+$\lambda_{\mathrm{sr}}=1.0,1.1,\ldots,1.6$, against the matched endpoint
+comparator on the $P_2(L_1)$ reference case. The work observable is the external work
 $\omega=f_{\mathrm{ext}}^\top u$ reported by the two endpoint formulations. Its
 relative difference is \num{3.877e-5}, the displacement relative $L^2$ difference is
 \num{3.517e-3}, and the deviatoric-strain relative $L^2$ difference is
 \num{8.720e-3}. The fixed-load reference comparison asks a narrower
-fixed-$\lambda_{\mathrm{sr}}$ question against a matched reference model;
+fixed-$\lambda_{\mathrm{sr}}$ question against the matched endpoint comparator;
 it is not proof of path-consistent incremental-history equivalence. After
-aligning the reference-model boundary conditions with the active boundary
+aligning the comparator boundary conditions with the active boundary
 condition set, the fixed-load grid is capped at the main-figure load level
 $\lambda_{\mathrm{sr}}=1.55$. Here
 $\lambda_{\max}^{\mathrm{succ}}$ denotes the largest value in the tested grid

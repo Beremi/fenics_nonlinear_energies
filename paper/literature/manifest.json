@@ -155,6 +155,16 @@
       "local_filename": "nocedal2006numerical.pdf",
       "notes": "A local non-public copy is available in the cache."
     },
+    "conn2000trust": {
+      "canonical_source_label": "SIAM book DOI",
+      "canonical_source_url": "https://doi.org/10.1137/1.9780898719857",
+      "doi": "10.1137/1.9780898719857",
+      "fulltext_label": null,
+      "fulltext_url": null,
+      "isbns": [],
+      "local_filename": null,
+      "notes": "Bibliographic metadata from the SIAM DOI record; cited for trust-region terminology."
+    },
     "curtis1974sparsejacobian": {
       "canonical_source_label": "Oxford article",
       "canonical_source_url": "https://academic.oup.com/imamat/article-abstract/13/1/117/721987",

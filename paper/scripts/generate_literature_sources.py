@@ -11,7 +11,7 @@ import requests
 from common import FULLTEXT_ROOT, LITERATURE_ROOT, PAPER_ROOT, ensure_paper_dirs, read_json, write_text
 
 
-EXPECTED_UNCITED_KEYS = {"conn2000trust"}
+EXPECTED_UNCITED_KEYS: set[str] = set()
 USER_AGENT = (
     "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
     "(KHTML, like Gecko) Chrome/135.0.0.0 Safari/537.36"

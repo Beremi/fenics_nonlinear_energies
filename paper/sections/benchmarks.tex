@@ -35,7 +35,7 @@ only where a compact serial formulation is available. The two plasticity
 families are primarily \jaxpetsc{} studies: the two-dimensional case supplies
 supporting continuation diagnostics, and the three-dimensional case uses the
 \v{C}erm{\'a}k--Sysala--Valdman MATLAB elastoplastic implementation as
-solver-lineage context, while the Sysala-family slope-stability literature
+implementation context, while the Sysala-family slope-stability literature
 supplies the reference-model setting. Neither is used as a path-history
 validation baseline.
 Topology optimization combines a parallel \jaxpetsc{} realization with a serial
@@ -461,9 +461,7 @@ plane-strain elastic matrix
 \]
 Its compliance is $S_{2\mathrm{D}}=C_{2\mathrm{D}}^{-1}$. Principal stresses
 are ordered as
-$\sigma_1^{\mathrm{tr}}\ge\sigma_2^{\mathrm{tr}}$, and the elastic branch is
-the branch for which the trial function in the ordered variables satisfies
-$f^{\mathrm{tr}}\le0$.
+$\sigma_1^{\mathrm{tr}}\ge\sigma_2^{\mathrm{tr}}$.
 
 The benchmark uses a Davis-B-style reduction path
 \citep{davis1968plasticity,tschuchnigg2015nonassociated,sysala2021optimization}
@@ -523,6 +521,8 @@ $\kappa_\lambda=2c_\lambda\cos\phi_\lambda$, the trial state is elastic when
   -\kappa_\lambda
   \le 0.
 \]
+Thus the elastic branch is the branch for which the trial function in the
+ordered variables satisfies $f^{\mathrm{tr}}\le0$.
 
 In that case $\sigma^\star=\sigma^{\mathrm{tr}}$. Otherwise let
 \[
@@ -734,7 +734,7 @@ with
 \begin{equation}
   \bar c_{\lambda,q} = 2 c_{\lambda,q}\cos\phi_{\lambda,q},
   \qquad
-  \sin\phi_{\lambda,q} = \sin(\phi_{\lambda,q}),
+  s_{\lambda,q} := \sin(\phi_{\lambda,q}),
   \label{eq:plasticity3d-davis-bar}
 \end{equation}
 which are the scalar constitutive parameters used by the 3D assembly path
@@ -747,8 +747,8 @@ $\Phi_{\mathrm{MC},3\mathrm{D}}$. No separate reduced dilation-angle argument is
 carried in the 3D branch expressions below.
 
 The local constitutive surrogate follows the piecewise branch structure of the
-matched endpoint reference formulation. At one quadrature point we suppress the index $q$ and write
-$s_{\lambda}:=\sin\phi_{\lambda}$. Let
+matched endpoint reference formulation. At one quadrature point we suppress the
+index $q$ and write $s_{\lambda}:=s_{\lambda,q}$. Let
 $\varepsilon_1 \ge \varepsilon_2 \ge \varepsilon_3$ be the ordered principal
 strains obtained after converting engineering shear components to tensor shear.
 The branch tests below use the convention that the elastic case satisfies
@@ -909,7 +909,7 @@ globally smooth continuum potential.
 
 For the endpoint and continuation studies, these local definitions are assembled
 into the following scalar surrogate. Let $\bar c_{\lambda,eq}$ and
-$\sin\phi_{\lambda,eq}$ denote the quadrature-point Davis-B-reduced quantities:
+$s_{\lambda,eq}$ denote the quadrature-point Davis-B-reduced quantities:
 \begin{equation}
   \Pi_h^{3\mathrm{D}}(u_h;\lambda_{\mathrm{sr}})
   =
@@ -920,7 +920,7 @@ $\sin\phi_{\lambda,eq}$ denote the quadrature-point Davis-B-reduced quantities:
     \!\left(
       \varepsilon_{eq}(u_e),
       \bar c_{\lambda,eq},
-      \sin \phi_{\lambda,eq},
+      s_{\lambda,eq},
       \mu_{eq},
       K_{eq},
       \lambda_{\mathrm{L},eq}
@@ -1033,9 +1033,9 @@ changes of the physical problem.
 \FloatBarrier
 
 Plasticity3D is the benchmark where detailed constitutive definitions are most
-important: the results section reports values of
-\cref{eq:plasticity3d-discrete} and \cref{eq:plasticity3d-devnorm}, so both
-quantities are defined explicitly here.
+important: the equations above define the endpoint-surrogate quantities reported
+in the results section, namely \cref{eq:plasticity3d-discrete} and
+\cref{eq:plasticity3d-devnorm}.
 Timing, scaling, and degree-versus-resolution evidence for this family are
 reported in \Cref{sec:num-plasticity3d}.
 
@@ -1054,9 +1054,9 @@ density through the logistic transform
 \begin{equation}
   \theta_h(z_h)
   =
-  \theta_{\min} + (1-\theta_{\min}) \sigma(z_h),
+  \theta_{\min} + (1-\theta_{\min}) \operatorname{sigmoid}(z_h),
   \qquad
-  \sigma(z) = \frac{1}{1+e^{-z}}.
+  \operatorname{sigmoid}(z) = \frac{1}{1+e^{-z}}.
   \label{eq:topology-density-map}
 \end{equation}
 On each triangular element $e$, we use the element averages
@@ -1071,6 +1071,12 @@ For the domain $\Omega=(0,2)\times(0,1)$ this load patch is
 $\{2\}\times[0.4,0.6]$. With $h_x=2/768$ and $h_y=1/384$, the fixed-solid
 design pads are $x\le 32h_x$ and
 $x\ge 2-32h_x$, $y\in[0.4-32h_y,0.6+32h_y]$.
+On these pads the physical density is held at $\theta_e=1$ during design
+updates; outside the pads, the latent variable is unconstrained and
+\cref{eq:topology-density-map} enforces
+$\theta_h\in[\theta_{\min},1]$. The target volume fraction is enforced through
+the effective multiplier $\lambda_V$ in
+\cref{eq:topology-reduced-objective}, updated by the penalty rule stated below.
 Let $V_h$ be the continuous vector $P_1$ displacement space and let
 $V_{h,0}\subset V_h$ impose the homogeneous left-edge clamp. Let $C$ denote the
 plane-stress elasticity tensor and let $p$ be the active SIMP exponent. For
@@ -1114,7 +1120,11 @@ step freezes, on each element,
   \varepsilon(u_h^m)^\top C\varepsilon(u_h^m).
 \]
 Let $(\nabla\theta_h)|_e$ denote the elementwise gradient of the interpolated
-density field used in the phase-field term. The reduced objective for the next
+density field used in the phase-field term, and define the double-well density
+\[
+  W_{\mathrm{dw}}(\theta):=\theta^2(1-\theta)^2.
+\]
+The reduced objective for the next
 design vector $z_h^{m+1}$ is
 \begin{align}
   \mathcal{J}_h^m(z_h)
@@ -1127,16 +1137,15 @@ design vector $z_h^{m+1}$ is
     + \alpha_{\mathrm{reg}}
       \left(
         \frac{\ell_{\mathrm{pf}}}{2} \lvert (\nabla\theta_h)|_e \rvert^2
-        + \frac{1}{\ell_{\mathrm{pf}}} W(\theta_e)
+        + \frac{1}{\ell_{\mathrm{pf}}} W_{\mathrm{dw}}(\theta_e)
       \right)
     + \frac{\mu_{\mathrm{move}}}{2} (z_e-z_e^{m})^2
   \Bigg],
   \label{eq:topology-reduced-objective}
 \end{align}
 where $\theta_e$ and $z_e$ are computed from the trial $z_h$, while $z_e^m$ is
-the element average from the previous design iterate. The function
-$W(\theta) = \theta^2(1-\theta)^2$ supplies the double-well term, while the
-SIMP-style continuation in $p$ and the regularization terms play a mesh-control
+the element average from the previous design iterate. The SIMP-style
+continuation in $p$ and the regularization terms play a mesh-control
 role analogous to filtering/regularization in \citet{bourdin2001filters}. Here
 $\lambda_V$ is the effective volume multiplier, updated with penalty weight
 $10$ and multiplier step factor $12$, while

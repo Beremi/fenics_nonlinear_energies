@@ -281,6 +281,13 @@ scientific claims were introduced without supporting evidence.
   Davis-B reductions and branch potentials are defined before the assembled
   discrete surrogate functionals, removing forward-definition prose from the
   math-heavy benchmark sections.
+- Addressed the next thematic audit chunk: narrowed JAX-FEM wording to a
+  hyperelastic companion terminal-state comparison, replaced remaining
+  Valdman/Sysala solver-lineage phrasing with implementation context, defined
+  `u_{\max}` before validation thresholds, made the Plasticity3D endpoint
+  comparator provenance explicit in the claim audit, added Conn trust-region
+  source metadata, cleaned Plasticity2D/3D forward notation, and made the
+  topology reduced-objective notation self-contained.
 - Rebuilt the paper PDF through the paper generation pipeline.
 
 ## Blocking Issues Before Submission
@@ -667,6 +674,29 @@ required support for the current scoped contribution.
   Plasticity2D and Plasticity3D benchmark sections now define the local Davis-B
   reductions and branch potentials before the assembled discrete surrogate
   functionals.
+- `./.venv/bin/python paper/scripts/check_release_blockers.py --expect-blockers`:
+  passed and still reports the four expected final-submission blockers:
+  target template/declarations, repository license, archival DOI, and durable
+  archive integration.
+- `./.venv/bin/python -m py_compile paper/scripts/generate_literature_sources.py
+  paper/scripts/generate_paper_tables.py paper/scripts/generate_paper_figures.py`:
+  passed after the comparator/provenance cleanup.
+- `./.venv/bin/python paper/scripts/generate_literature_sources.py --skip-download`:
+  passed after adding `conn2000trust` to the cited-source manifest and
+  regenerating the literature source table.
+- `git diff --check`: passed after the comparator/provenance cleanup.
+- Source-text checks for `sigma(z)`, `W(\theta`, `solver-lineage`,
+  `hyperelastic benchmark`, and the old Plasticity2D Davis forward-reference
+  phrase returned no matches in paper sections.
+- `make -C paper submission-check`: passed after the comparator/provenance
+  cleanup, rebuilding a 45-page A4 PDF and rerunning the LaTeX-log scan,
+  `qpdf`, aux-order check, hard-float placement check, manuscript hygiene gate,
+  submission-bundle manifest verifier, and archive-neutral asset validation.
+- `pdftotext -f 1 -l 7 paper/build/main.pdf -` and
+  `pdftotext -f 16 -l 27 paper/build/main.pdf -`: checked that the JAX-FEM
+  companion-comparison wording, Davis/Conn/SFD wording, `s_{\lambda}` notation,
+  topology `sigmoid`/`W_{\mathrm{dw}}` definitions, `u_{\max}` definition, and
+  Plasticity3D matched-endpoint-comparator language render in the PDF.
 - `./.venv/bin/python paper/scripts/check_release_blockers.py --expect-blockers`:
   passed and still reports the four expected final-submission blockers:
   target template/declarations, repository license, archival DOI, and durable
