@@ -1724,7 +1724,15 @@ def _plot_plasticity3d_validation_surface_compare(
     main_pos = cax_main.get_position()
     diff_pos = cax_diff.get_position()
     cbar_gap = 0.022
-    cax_main.set_position([main_pos.x0, main_pos.y0, main_pos.width - cbar_gap, main_pos.height])
+    cbar_left_pad = 0.012
+    cax_main.set_position(
+        [
+            main_pos.x0 + cbar_left_pad,
+            main_pos.y0,
+            main_pos.width - cbar_gap - cbar_left_pad,
+            main_pos.height,
+        ]
+    )
     cax_diff.set_position([diff_pos.x0 + cbar_gap, diff_pos.y0, diff_pos.width - cbar_gap, diff_pos.height])
     sm_main = cm.ScalarMappable(norm=main_norm, cmap="viridis")
     sm_main.set_array(np.concatenate([values_source, values_candidate]))

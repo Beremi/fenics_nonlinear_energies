@@ -1664,6 +1664,26 @@ MATLAB literature only when there is source-backed evidence.
   and 3D plasticity `u_{\max}` curve now say `rel. Eucl.` to match the prose.
   Rendered checks of pages 25 and 27 plus a late-results contact sheet for pages
   31--38 found no clipping or unreadable updated labels.
+- `Final provenance/math/layout gate audit`
+  (`Poincare`/`Locke`/`Meitner`/`Ampere`): completed and integrated. Poincare
+  found no local message/comparator issue. Locke found four small mathematical
+  self-containment issues: validation now states that the hyperelastic
+  `u_{\max}` curve is sampled over the four displacement steps and the 3D
+  plasticity `u_{\max}(\lambda_{\mathrm{sr}})` curve over the tested
+  strength-reduction grid; topology now writes the frozen design objective as
+  `\mathcal{J}_h^m(z_h;u_h^m)` and calls it frozen where interpreted; the
+  converged 3D plasticity scaling comparison now says same observed
+  nonlinear/Krylov work instead of fixed nonlinear work; and the $p$-Laplace
+  Results prose refers to the discrete problem rather than calling the
+  minimization statement a discrete energy. Meitner found a fragile left
+  colorbar tick in the 3D plasticity validation surface comparison; the figure
+  generator now adds a small left inset before placing the main colorbar.
+  Ampere found the local submission-bundle manifest could pass hash validation
+  while its `git_commit` was behind changed paper paths; the manifest checker now
+  verifies that the recorded commit is an ancestor of HEAD and that no
+  manuscript, generated-table, generated-figure, or bundle-generator path changed
+  after that commit. `tests/test_submission_bundle_manifest.py` covers stale
+  bundle commits.
 
 ## First Edit Backlog
 

@@ -123,7 +123,7 @@ $P_4$ colored-recovery case is outside this table.
 \label{sec:num-plaplace}
 
 The $p$-Laplace problem definition is given in \Cref{sec:bench-plaplace}, with
-discrete energy \eqref{eq:plaplace-discrete}. In this scalar setting, the
+discrete problem \eqref{eq:plaplace-discrete}. In this scalar setting, the
 numerical evidence is clearest: exact element Hessians remain
 effective in the reported distributed configurations, while colored sparse
 recovery reaches nearly identical discrete energies at higher wall time.
@@ -458,7 +458,8 @@ and continuation evidence is reported later in \Cref{sec:solver-evidence}.
 
 The converged bottom-clamped $P_4(L_2)$, $\lambda_{\mathrm{sr}}=\num{1.55}$
 comparison instead uses constitutive-AD rank-local assembly with MUMPS-backed
-$P_4 \rightarrow P_2 \rightarrow P_1$ PMG and fixed nonlinear work; all
+$P_4 \rightarrow P_2 \rightarrow P_1$ PMG and the same observed
+nonlinear/Krylov work; all
 configurations converge in 29 Newton iterations and 1240 Krylov iterations to
 the same displayed energy. With
 $\|g\|_{\mathrm{stop}}/\|g\|_{\mathrm{target}}$ denoting the final stopping
@@ -518,9 +519,9 @@ storage.
 \subsection{Topology Optimization}
 \label{sec:num-topology}
 
-The reduced design problem and objective history are defined in
+The frozen reduced design problem and objective history are defined in
 \Cref{sec:bench-topology}, with mechanics subproblem \eqref{eq:topology-mechanics}
-and reduced objective \eqref{eq:topology-reduced-objective}.
+and frozen reduced objective \eqref{eq:topology-reduced-objective}.
 The numerical question here is distributed outer-loop stability: the mechanics
 solve and the design update must remain synchronized under continuation in $p$
 and move-regularized updates. Because the outer-loop work can vary with the

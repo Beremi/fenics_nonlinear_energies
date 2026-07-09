@@ -124,10 +124,11 @@ stage or commit `paper/style_guide/`.
   Plasticity3D remains endpoint-surrogate evidence; topology reports adaptive
   end-to-end timing plus a controlled rank-consistency check; scalar FEniCS
   curves are reference-implementation context for derivative-route results.
-- Provenance: the local submission-bundle manifest records the earlier
-  paper-cleanup commit `3febc92239be9f0c9fc8f129459377cb5fb9340a`; treat this
-  as bundle provenance, not as a claim that the manifest reflects the latest
-  manuscript HEAD. Final archive/DOI integration remains unresolved.
+- Provenance: the local submission-bundle manifest is a committed paper-source
+  anchor. `paper/scripts/check_submission_bundle_manifest.py` now fails if
+  manuscript, generated-table, generated-figure, or bundle-generator paths have
+  changed after the manifest's recorded `git_commit`. Refresh the bundle after
+  committing such changes. Final archive/DOI integration remains unresolved.
 - Layout: the current A4 PDF has no known hard rendering blocker after the last
   completed build. Only the three method algorithms remain intentionally
   hard-pinned with `[H]`; problem-specific Results, Validation, Benchmark, and
@@ -267,6 +268,17 @@ stage or commit `paper/style_guide/`.
   `8b8a6c9b8ce0dd06f9dd2099f18475dc88d284e8` plus current file hashes. Rendered
   checks of pages 25 and 27 and the late-results pages 31--38 found no clipping
   or unreadable updated labels.
+- Final provenance/math/layout gate pass:
+  Poincare found no message/comparator issue. Locke found local mathematical
+  polish items now fixed: validation defines the two `u_{\max}` curve sample
+  vectors, topology uses the frozen-objective notation
+  `\mathcal{J}_h^m(z_h;u_h^m)`, Results avoids calling a converged comparison
+  a fixed-work diagnostic, and the $p$-Laplace Results reference now points to
+  the discrete problem. Meitner found a fragile `0.0` tick on the 3D plasticity
+  validation colorbar; the figure generator adds left padding and the figure/PDF
+  were regenerated. Ampere found the stale bundle-manifest anchor; the manifest
+  checker now enforces freshness for paper bundle-refresh paths, with unit-test
+  coverage for stale commits.
 
 ## Figure And Table Rules
 
@@ -322,9 +334,10 @@ without updating the measurement policy.
 
 ## Standard Validation
 
-- `./.venv/bin/python -m py_compile paper/scripts/generate_paper_tables.py paper/scripts/generate_paper_figures.py`
+- `./.venv/bin/python -m py_compile paper/scripts/check_submission_bundle_manifest.py paper/scripts/generate_paper_tables.py paper/scripts/generate_paper_figures.py paper/scripts/build_submission_bundle.py`
 - `make -C paper tables` after table-generator edits
 - `make -C paper figures` after figure-generator edits
+- commit manuscript/generated-paper/provenance-checker changes
 - `make -C paper submission-bundle` after manuscript, generated-table,
   generated-figure, or provenance-source changes
 - `make -C paper submission-check`

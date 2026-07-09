@@ -1226,10 +1226,10 @@ density field used in the phase-field term, and define the double-well density
 The effective volume multiplier $\lambda_V^m$ is defined below, and
 $\alpha_{\mathrm{reg}}$, $\ell_{\mathrm{pf}}$, and $\mu_{\mathrm{move}}$ are,
 respectively, the phase-field weight, phase-field length scale, and move
-regularization parameter. The reduced objective for the next design vector
-$z_h^{m+1}$ is
+regularization parameter. The frozen reduced objective for the next design
+vector $z_h^{m+1}$ is
 \begin{align}
-  \mathcal{J}_h^m(z_h)
+  \mathcal{J}_h^m(z_h;u_h^m)
   &=
   \sum_{e=1}^{n_{\mathrm{el}}}
   |e|
@@ -1245,8 +1245,10 @@ $z_h^{m+1}$ is
   \Bigg],
   \label{eq:topology-reduced-objective}
 \end{align}
-where $\theta_e$ and $z_e$ are computed from the trial $z_h$, while $z_e^m$ is
-the element average from the previous design iterate. The minimization of
+where the mechanics state $u_h^m$ is fixed through
+$e_{e,m}^{\mathrm{frozen}}$, $\theta_e$ and $z_e$ are computed from the trial
+$z_h$, and $z_e^m$ is the element average from the previous design iterate. The
+minimization of
 \eqref{eq:topology-reduced-objective} is with respect to the free latent nodal
 values on $\mathcal{D}_h$; the fixed-pad nodal values on $\mathcal{P}_h$ remain
 constant during the design step.
@@ -1310,7 +1312,7 @@ reduced design updates for \eqref{eq:topology-reduced-objective}.
 \begin{figure}[!htbp]
   \centering
   \includegraphics[width=\PaperFigureNarrow]{topology_history.pdf}
-  \caption{Objective-history view for the reduced topology objective
+  \caption{Objective-history view for the frozen reduced topology objective
   \eqref{eq:topology-reduced-objective}, with compliance on the left axis and
   volume fraction plus the continuation schedule in $p$ on the right axis.}
   \label{fig:topology-history}

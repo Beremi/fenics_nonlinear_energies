@@ -7,6 +7,7 @@ import argparse
 import hashlib
 import json
 import re
+import subprocess
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -16,7 +17,17 @@ from common import REPO_ROOT
 
 DEFAULT_MANIFEST = REPO_ROOT / "artifacts" / "reproduction" / "paper_submission_2026_07_08" / "manifest.json"
 SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
+GIT_COMMIT_RE = re.compile(r"^[0-9a-f]{40}$")
 EXTERNAL_PREFIXES = ("external_reference/",)
+BUNDLE_REFRESH_PATHS = (
+    "paper/main.tex",
+    "paper/sections/",
+    "paper/figures/generated/",
+    "paper/tables/generated/",
+    "paper/scripts/build_submission_bundle.py",
+    "paper/scripts/generate_paper_figures.py",
+    "paper/scripts/generate_paper_tables.py",
+)
 SOURCE_PATH_ALIASES = (
     (
         "artifacts/reports/supplemental_solver_evidence/",
@@ -34,6 +45,7 @@ class BundleCheckResult:
     bundle_files: int
     local_sources: int
     external_sources: int
+    git_commit: str | None = None
 
 
 def _sha256(path: Path) -> str:
@@ -111,7 +123,71 @@ def _check_source_record(
     return (1 if ok else 0), 0
 
 
-def check_manifest(manifest_path: Path, *, repo_root: Path = REPO_ROOT) -> BundleCheckResult:
+def _git(
+    repo_root: Path,
+    args: list[str],
+    *,
+    check: bool = True,
+) -> subprocess.CompletedProcess[str]:
+    return subprocess.run(
+        ["git", "-C", str(repo_root), *args],
+        check=check,
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
+
+
+def _changed_bundle_refresh_paths(repo_root: Path, git_commit: str) -> list[str]:
+    result = _git(
+        repo_root,
+        ["diff", "--name-only", f"{git_commit}..HEAD", "--", *BUNDLE_REFRESH_PATHS],
+    )
+    return [line.strip() for line in result.stdout.splitlines() if line.strip()]
+
+
+def _check_git_commit_freshness(
+    repo_root: Path,
+    manifest: dict[str, Any],
+    findings: list[str],
+) -> str | None:
+    raw_commit = manifest.get("git_commit")
+    if not isinstance(raw_commit, str) or GIT_COMMIT_RE.fullmatch(raw_commit) is None:
+        findings.append("git_commit: missing or malformed 40-character Git commit SHA")
+        return None
+
+    commit = raw_commit.lower()
+    try:
+        _git(repo_root, ["cat-file", "-e", f"{commit}^{{commit}}"])
+    except (subprocess.CalledProcessError, FileNotFoundError) as exc:
+        stderr = getattr(exc, "stderr", "") or str(exc)
+        findings.append(f"git_commit: commit is not present in this repository: {commit} ({stderr.strip()})")
+        return commit
+
+    try:
+        _git(repo_root, ["merge-base", "--is-ancestor", commit, "HEAD"])
+    except subprocess.CalledProcessError:
+        findings.append(f"git_commit: commit is not an ancestor of HEAD: {commit}")
+        return commit
+
+    changed_paths = _changed_bundle_refresh_paths(repo_root, commit)
+    if changed_paths:
+        preview = ", ".join(changed_paths[:8])
+        suffix = "" if len(changed_paths) <= 8 else f", ... ({len(changed_paths)} paths)"
+        findings.append(
+            "git_commit: bundle-refresh paths changed after the recorded commit "
+            f"{commit}: {preview}{suffix}. Run `make -C paper submission-bundle` "
+            "after committing manuscript/generated paper changes."
+        )
+    return commit
+
+
+def check_manifest(
+    manifest_path: Path,
+    *,
+    repo_root: Path = REPO_ROOT,
+    check_git_commit: bool = True,
+) -> BundleCheckResult:
     repo_root = repo_root.resolve()
     if not manifest_path.is_file():
         raise SystemExit(f"missing submission-bundle manifest: {manifest_path}")
@@ -123,6 +199,7 @@ def check_manifest(manifest_path: Path, *, repo_root: Path = REPO_ROOT) -> Bundl
         raise SystemExit("submission-bundle manifest field `source_files` must be a list")
 
     findings: list[str] = []
+    git_commit = _check_git_commit_freshness(repo_root, manifest, findings) if check_git_commit else None
     bundle_files = 0
     local_sources = 0
     external_sources = 0
@@ -160,19 +237,26 @@ def check_manifest(manifest_path: Path, *, repo_root: Path = REPO_ROOT) -> Bundl
         bundle_files=bundle_files,
         local_sources=local_sources,
         external_sources=external_sources,
+        git_commit=git_commit,
     )
 
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("manifest", nargs="?", type=Path, default=DEFAULT_MANIFEST)
+    parser.add_argument(
+        "--skip-git-commit-check",
+        action="store_true",
+        help="verify hashes only; used for isolated fixture tests or non-git archive inspection",
+    )
     args = parser.parse_args(argv)
-    result = check_manifest(args.manifest)
+    result = check_manifest(args.manifest, check_git_commit=not args.skip_git_commit_check)
     print(
         "Submission bundle manifest OK: "
         f"{result.bundle_files} bundle files, "
         f"{result.local_sources} local source hashes, "
-        f"{result.external_sources} external source hashes recorded."
+        f"{result.external_sources} external source hashes recorded"
+        + (f"; git_commit {result.git_commit} is fresh for bundle-refresh paths." if result.git_commit else ".")
     )
     return 0
 

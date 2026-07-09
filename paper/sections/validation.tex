@@ -34,7 +34,11 @@ Curve metrics use unweighted Euclidean norms on ordered reference samples. For
 the hyperelastic companion, the centerline sample set is
 $C_{\mathrm{HE}}=\{i:\ y_i=z_i=0\}$ in the reference coordinates
 $X_i=(x_i,y_i,z_i)$, ordered by $x_i$, and the compared observable is $u_x$ on
-that set. For \plasticitythree{}, let
+that set. The hyperelastic $u_{\max}$ curve uses the four prescribed
+right-face displacement steps as its ordered samples, and the
+\plasticitythree{} $u_{\max}(\lambda_{\mathrm{sr}})$ curve uses the tested
+strength-reduction grid; both use the same reference-denominator Euclidean norm
+as \eqref{eq:validation-relative-difference}. For \plasticitythree{}, let
 $y_{\mathrm{mid}}=(\min_i y_i+\max_i y_i)/2$, let
 $L_y=\max_i y_i-\min_i y_i$, and let $q_{0.6}(z)$ be the 0.6 quantile of the
 reference $z$ coordinates. The upper-slope profile sample set is
