@@ -46,7 +46,7 @@ assembly in the listed matched-rank comparisons, although the gap narrows at
 higher rank counts.
 Second, the frozen-preconditioner PMG profile is not the default used in the
 present study: it may appear favorable on completed low-rank configurations, but
-three of the eight frozen-preconditioner rows reach the maximum number of Newton
+three of the eight frozen-preconditioner configurations reach the maximum number of Newton
 iterations and therefore give less consistent convergence evidence. The rank-local
 constitutive-AD path remains the primary Plasticity3D realization because it uses the
 same local differentiable formulation as the derivative-route and converged
@@ -73,7 +73,7 @@ logic.
 
 \FloatBarrier
 
-The two rows show fixed-policy timing evidence rather than a validation
+The two entries show fixed-policy timing evidence rather than a validation
 baseline: increasing from 8 to 32 ranks reduces the reported wall time from
 \SI{489}{s} to \SI{198}{s}, while the final strength-reduction values remain
 close at \num{1.568403} and \num{1.568334}.

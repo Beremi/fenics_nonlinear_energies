@@ -1846,7 +1846,7 @@ def generate_jax_fem_hyperelastic_baseline_energy_history(layout: dict[str, floa
     ax.set_xticks(steps)
     ax.grid(True, alpha=0.25)
     ax.legend(frameon=False, loc="best", handlelength=1.7)
-    ax.text(0.03, 0.95, rf"terminal rel. diff. $={_latex_scientific(rel_diff)}$", transform=ax.transAxes, ha="left", va="top", fontsize=8.0)
+    ax.text(0.03, 0.95, rf"endpoint rel. diff. $={_latex_scientific(rel_diff)}$", transform=ax.transAxes, ha="left", va="top", fontsize=8.0)
     fig.subplots_adjust(left=0.20, right=0.97, bottom=0.23, top=0.95)
     out = FIGURES_ROOT / "jax_fem_hyperelastic_baseline_energy_history.pdf"
     save_pdf_and_png(fig, out, png_dpi=240)
@@ -2655,7 +2655,7 @@ def main() -> None:
             csv_path=HYPER_ENERGY,
             implementations=("fenics_custom", "jax_serial", "jax_petsc_element"),
             out_name="hyperelasticity_energy_levels.pdf",
-            ylabel=r"Terminal energy $\Pi_h$",
+            ylabel=r"Endpoint energy $\Pi_h$",
         )
     )
     generated.append(

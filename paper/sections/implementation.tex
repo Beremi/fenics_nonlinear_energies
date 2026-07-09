@@ -146,13 +146,14 @@ configuration; the ownership contract here concerns derivative and matrix
 assembly. Here $R_i(u)$ and $A_{ij}(u)$ are assembled residual and tangent
 entries, while $r_{K,i}$ and $a_{K,ij}$ are element contributions.
 Equivalently, if
-$\mathcal{T}_r=\{K:\operatorname{dofs}(K)\cap I_r\ne\emptyset\}$, then rank $r$
-inserts
+$\mathcal{T}_r=\{K:\operatorname{dofs}(K)\cap I_r\ne\emptyset\}$ and
+$u_K=R_Ku_{\widetilde I_r}$ is the element restriction of the ghosted rank
+state, then rank $r$ inserts
 \[
   R_i(u)=\sum_{K\in\mathcal{T}_r:\,i\in\operatorname{dofs}(K)}
-    r_{K,i}(u_{\widetilde I_r}),\qquad
+    r_{K,i}(u_K),\qquad
   A_{ij}(u)=\sum_{K\in\mathcal{T}_r:\,i,j\in\operatorname{dofs}(K)}
-    a_{K,ij}(u_{\widetilde I_r}),
+    a_{K,ij}(u_K),
   \quad i\in I_r,\; j\in \widetilde I_r,
 \]
 and uses ghost columns only through the local stencil. This communication order

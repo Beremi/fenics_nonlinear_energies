@@ -18,7 +18,7 @@ Comparisons are deliberately scoped:
 
 - pure JAX: serial formulation checks where matched compact formulations exist;
   topology is a serial design demonstration, not a validation baseline;
-- FEniCS: reference implementation for scalar and hyperelastic families;
+- FEniCS: reference-formulation checks for scalar and hyperelastic families;
 - JAX-FEM: narrow hyperelastic external comparison on matched data;
 - Sysala-family literature: slope-stability, strength-reduction, and
   reference-model context for plasticity observables;
@@ -205,6 +205,20 @@ stage or commit `paper/style_guide/`.
   Results tables, the Hyperelasticity PMG/memory cluster, Plasticity3D
   degree/scaling material, appendix Table 30, and FloatBarrier behavior remain
   target-template risks only.
+- Current self-containment and hygiene pass: Wegener/Galileo/Boole/Ptolemy
+  audits found no message/citation must-fix and no current A4 layout blocker.
+  Integrated fixes replace remaining reader-facing terminal-state and row/table
+  mechanics wording with endpoint-state, entry, case, or configuration wording,
+  including generated hyperelastic figure labels; make the validation
+  curve/profile sample sets reproducible in prose; rewrite the owned-row
+  assembly display with an element-restricted state; cite the
+  Sysala-family and \v{C}ermak--Sysala--Valdman reference line at the
+  Plasticity3D path-history limitation; narrow the conclusion's validation
+  discipline to the tested nonlinear FEM energy benchmarks; and remove the
+  abstract's broad "best evaluated" phrasing. Current A4 layout remains clean;
+  target-template risks now additionally include benchmark Tables 4 and 6, the
+  compact validation page, the topology results page, and the previously noted
+  dense Results/Hyperelasticity/Plasticity3D/appendix clusters.
 
 ## Figure And Table Rules
 

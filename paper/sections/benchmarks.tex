@@ -260,7 +260,7 @@ is part of the benchmark definition.
 \end{table}
 
 \Cref{fig:gl-state,fig:gl-energy-levels} and \Cref{tab:gl-benchmark} show
-terminal-state consistency from the prescribed initial state. The benchmark
+endpoint-state consistency from the prescribed initial state. The benchmark
 evidence is again one of formulation consistency, now for a more
 solver-sensitive nonconvex energy: the \fenics{} reference, element AD, and colored sparse
 recovery report matching Newton--Krylov counts and final energies within about
@@ -353,7 +353,7 @@ stationary points
   \label{eq:hyperelasticity-discrete}
 \end{equation}
 with the boundary data above. This sequence is the basis for the hyperelastic
-terminal-energy, scaling, and globalization comparisons reported below.
+endpoint-energy, scaling, and globalization comparisons reported below.
 
 \begin{figure}[!htbp]
   \centering
@@ -369,23 +369,23 @@ terminal-energy, scaling, and globalization comparisons reported below.
   \caption{Final discrete energies along the stationary sequence
   \eqref{eq:hyperelasticity-discrete} across the selected mesh hierarchy. The
   comparison records completion of the same 24-step schedule and comparable
-  terminal energies; this figure does not assess trajectory-level agreement.}
+  endpoint energies; this figure does not assess trajectory-level agreement.}
   \label{fig:hyperelasticity-energy-levels}
 \end{figure}
 
 \begin{table}[!htbp]
   \centering
-  \caption{Representative 24-step terminal energies along
+  \caption{Representative 24-step endpoint energies along
   \eqref{eq:hyperelasticity-discrete}.}
   \label{tab:hyperelasticity-benchmark}
   \input{tables/generated/hyperelasticity_benchmark_summary.tex}
 \end{table}
 
 The within-benchmark takeaway is that all three implementations complete the
-24-step boundary schedule with comparable terminal energies.
+24-step boundary schedule with comparable endpoint energies.
 \Cref{fig:hyperelasticity-state,fig:hyperelasticity-energy-levels} show the
-terminal state and energy trend, and \Cref{tab:hyperelasticity-benchmark} gives
-terminal energies and work counts. This is not trajectory-level agreement or a
+endpoint state and energy trend, and \Cref{tab:hyperelasticity-benchmark} gives
+endpoint energies and work counts. This is not trajectory-level agreement or a
 performance ranking; scaling and globalization are in
 \Cref{sec:num-hyperelasticity}, and the separate level-1 JAX-FEM translation
 companion is in \Cref{sec:val-hyperelasticity}.
@@ -651,7 +651,7 @@ separately below.
   \centering
   \includegraphics[width=\PaperFigureNarrow]{plasticity2d_resolution_energy.pdf}
   \caption{Resolution trend for the Plasticity2D family. The plotted
-  terminal energies are evaluations of \eqref{eq:plasticity2d-discrete} on the
+  endpoint energies are evaluations of \eqref{eq:plasticity2d-discrete} on the
   completed $P_4(L_5)$ endpoint case and on the larger 20-iteration capped
   $P_4(L_6)$ and $P_4(L_7)$ diagnostics, which are not used as
   endpoint-convergence evidence.}
@@ -934,7 +934,7 @@ $\Phi_{\mathrm{MC},3\mathrm{D}}(\varepsilon;\bar c_\lambda,
 s_\lambda,\mu,K,\lambda_{\mathrm{L}})$ is the following piecewise function.
 Branch selection is elastic-first: the plastic branches are evaluated only when
 $f_{\mathrm{tr}}>0$, and ties on branch interfaces are assigned by the first
-applicable row:
+listed applicable branch:
 \begin{equation}
   \Phi_{\mathrm{MC},3\mathrm{D}}(\varepsilon;\bar c_\lambda,
   s_\lambda,\mu,K,\lambda_{\mathrm{L}})
@@ -1065,7 +1065,7 @@ provides reference-model context for that boundary.
 \Cref{fig:plasticity3d-state,fig:plasticity3d-convergence,tab:plasticity3d-benchmark}
 define the endpoint-surrogate benchmark object used later in the results
 section. The nine completed endpoint solves converge in the nonlinear stopping
-metric while the terminal values of \eqref{eq:plasticity3d-discrete} decrease
+metric while the endpoint values of \eqref{eq:plasticity3d-discrete} decrease
 along both mesh and degree refinements.
 
 \begin{figure}[!htbp]

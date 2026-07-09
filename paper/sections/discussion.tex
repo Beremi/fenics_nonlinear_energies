@@ -5,7 +5,7 @@ benchmark classes: in nonlinear finite-element energy minimization, the useful
 unit of algorithmic design is not the AD route alone. Local derivative
 construction, sparse ownership, nonlinear globalization, Krylov algebra, and
 preconditioning together determine the observed solver behavior. We therefore
-combine formulation checks, matched terminal-state comparisons, fixed-work route
+combine formulation checks, matched endpoint-state comparisons, fixed-work route
 studies, and distributed scaling evidence to isolate where each conclusion
 applies.
 
@@ -27,7 +27,7 @@ assessed inside the assembled sparse nonlinear solve that will use it.
 \paragraph{Agreement evidence depends on matched definitions.}
 The hyperelastic JAX-FEM comparison in
 \Cref{fig:hyperelasticity-jaxfem-baseline,tab:hyperelasticity-jaxfem-baseline}
-is useful because the mesh, displacement schedule, and terminal-energy
+is useful because the mesh, displacement schedule, and endpoint-energy
 post-comparison are explicitly matched. The three-dimensional plasticity
 comparison in \Cref{fig:plasticity3d-validation,tab:plasticity3d-validation}
 uses a different agreement contract: the highest-successful-load value on the
@@ -38,7 +38,11 @@ as diagnostics. These two examples illustrate the same validation rule:
 external or surrogate comparisons are informative when the problem definition
 and compared observables are named before agreement is interpreted.
 The Plasticity3D result is therefore endpoint-scoped mechanics evidence, not a
-path-consistent reproduction of incremental-history plasticity references.
+path-consistent reproduction of the Sysala-family incremental-history
+plasticity references
+\citep{sysala2017returnmapping,sysala2021optimization,sysala2025convexoptimization,sysala2025advancedcontinuation}
+or the \v{C}erm{\'a}k--Sysala--Valdman MATLAB implementation context
+\citep{cermak2019efficient}.
 
 \paragraph{Scalability evidence reflects solver policy.}
 The distribution and PMG studies show that sparse ownership, overlap size,

@@ -84,7 +84,7 @@ solver time.
 \label{sec:num-derivative-route}
 
 \Cref{tab:derivative-route-compare} asks whether the second-order route changes
-the terminal state or mainly changes the assembly and linearization cost. The
+the endpoint state or mainly changes the assembly and linearization cost. The
 three matched cases compare element AD, colored sparse recovery, and, where
 available, constitutive AD under the same nonlinear problem definition. The
 timing-scope column states whether the reported time is a solver total, solve
@@ -266,13 +266,13 @@ rounded energy value for replicated and rank-local assembly. On the larger
 level-5 one-linearization entries, rank-local assembly reduces summed RSS
 from \SI{215.6}{GiB} to \SI{104.9}{GiB} at 32 ranks, with solve times
 \SI{3.37}{s} and \SI{3.36}{s}. The level-5 energy values are fixed-work
-terminal states after one linearization, so these entries are memory/cost
+endpoint states after one linearization, so these entries are memory/cost
 diagnostics rather than endpoint-agreement checks.
 
 \Cref{tab:hyperelasticity-pmg-sensitivity} isolates the first-step level-5 PMG
 choice on the same 32-rank level-5 problem with fixed nonlinear work. All
 configurations perform the same eight Newton linearizations, so the table
-compares the cost and terminal state reached under different preconditioner and
+compares the cost and endpoint state reached under different preconditioner and
 coarse-solver policies. The energy column is the state after this fixed
 nonlinear work, so
 \Cref{tab:hyperelasticity-pmg-sensitivity} is a solver-policy comparison rather
@@ -294,7 +294,7 @@ The fixed-work table reports that the MUMPS-coarse PMG variants reduce total
 Krylov iterations from 92 with Hypre coarse solves to 17, and reduce solver time
 from \SI{23.3}{s} to about \SI{16}{s}. This is preconditioner-policy evidence
 for a fixed nonlinear workload, not a statement about final load-path accuracy.
-The energy differences in the table are fixed-work terminal-state differences
+The energy differences in the table are fixed-work endpoint-state differences
 after the same eight Newton linearizations.
 
 \begin{figure}[!htbp]
@@ -345,7 +345,7 @@ $P_4(L_6)$ and $P_4(L_7)$ cases are fixed-work diagnostics for nonlinear-tail
 and PMG behavior; both report energy \num{-212.539} after 20-iteration caps,
 with wall times \SI{147}{s} and \SI{253}{s}.
 
-The 8-rank and 32-rank reference-continuation rows in
+The 8-rank and 32-rank reference-continuation entries in
 \Cref{tab:plasticity2d-reference-continuation} support solver-policy timing
 under a common continuation logic. They are not a separate validation result or
 a strong-scaling claim. In this diagnostic, increasing from 8 to 32 ranks
@@ -415,7 +415,7 @@ $P_1(L_3)$, $P_2(L_2)$, and $P_4(L_1)$. The matched set at
 \num{4801816} free DOFs is $P_1(L_4)$, $P_2(L_3)$, and $P_4(L_2)$. The
 scientific message from
 \Cref{fig:plasticity3d-degree-energy,tab:plasticity3d-benchmark} is therefore
-that the solver reaches similar terminal energies along both $p$- and
+that the solver reaches similar endpoint energies along both $p$- and
 $h$-refined paths, while higher order on coarser meshes buys lower observed
 values of \eqref{eq:plasticity3d-discrete} at matched DOFs only by paying a
 clear wall-time premium in this nine-case endpoint study.

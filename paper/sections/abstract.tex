@@ -10,12 +10,12 @@ Krylov solvers, and preconditioners. The benchmark suite covers
 $p$-Laplace, Ginzburg--Landau, finite-strain hyperelasticity, two- and
 three-dimensional Mohr--Coulomb plasticity, and topology optimization.
 Matched \purejax{} and \fenics{} formulations provide internal checks where
-available. JAX-FEM provides a narrow hyperelastic terminal-state comparison,
+available. JAX-FEM provides a narrow hyperelastic endpoint-state comparison,
 Sysala-family slope-stability studies provide plasticity reference-model
 context, and \v{C}erm{\'a}k--Sysala--Valdman MATLAB work provides elastoplastic
 implementation context rather than a universal baseline.
 
-Across these problems, we compare element automatic differentiation,
+On representative fixed-work cases, we compare element automatic differentiation,
 constitutive automatic differentiation, and colored sparse recovery for
 constructing second-order information, and measure their interaction with PETSc
 assembly, nonlinear globalization, Krylov solvers, and preconditioners. In the
@@ -26,6 +26,6 @@ distributed mechanics examples give MPI timing and solver-policy evidence, and
 the topology example tests compliance and density consistency across MPI ranks
 under a controlled fixed-iteration protocol. Together, the evidence indicates
 that, for the tested problem classes, derivative construction, sparse assembly,
-nonlinear globalization, Krylov algebra, and preconditioning are best evaluated
+nonlinear globalization, Krylov algebra, and preconditioning should be assessed
 as coupled solver-design choices.
 \end{abstract}

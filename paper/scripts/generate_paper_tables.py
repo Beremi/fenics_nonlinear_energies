@@ -1090,8 +1090,8 @@ def main() -> None:
         [
             [
                 "completed",
-                "All row-specific stopping tests are met before the nonlinear cap or wall-time cap.",
-                "Endpoint energy and observables are terminal values for the stated benchmark.",
+                "All case-specific stopping tests are met before the nonlinear cap or wall-time cap.",
+                "Energy and observables are the values at the stated benchmark endpoint.",
             ],
             [
                 "timeout / iteration cap",
@@ -1116,7 +1116,7 @@ def main() -> None:
             [
                 "relative correction",
                 "Norm of the accepted Newton correction relative to the current iterate scale; paired gradient checks use the absolute or relative target stated with the result.",
-                "Defines the stopping metric in Plasticity3D rows that report correction or gradient targets.",
+                "Defines the stopping metric in Plasticity3D configurations that report correction or gradient targets.",
             ],
         ],
     )
@@ -1147,8 +1147,8 @@ def main() -> None:
                 "Hyperelasticity",
                 "finite-strain mechanics, JAX-FEM comparison, scaling",
                 "trust-region or line-search Newton; GAMG or PMG as stated",
-                "GAMG rows: $10^{-1}$/30; PMG tolerances stated in diagnostic rows",
-                "per-load stationarity; fixed-step rows diagnostic",
+                "GAMG entries: $10^{-1}$/30; PMG tolerances stated in diagnostic entries",
+                "per-load stationarity; fixed-step entries diagnostic",
                 "wall time; solver total for first-step scaling",
             ],
             [
@@ -1171,7 +1171,7 @@ def main() -> None:
                 "Plasticity3D performance",
                 "second-order routes, globalization, parallel scaling",
                 "Armijo, residual-bisection, or trust-region Newton with FGMRES/PMG",
-                "$10^{-1}$ or $10^{-2}$ with max 100, as stated by row",
+                "$10^{-1}$ or $10^{-2}$ with max 100, as stated by configuration",
                 "relative correction, gradient target, cap, or fixed work",
                 "wall, solve, or solver-total time",
             ],
@@ -1312,7 +1312,7 @@ def main() -> None:
         "globalization_method_compare.tex",
         [
             (
-                "Outcome and terminal value",
+                "Outcome and endpoint value",
                 "@{}"
                 + xspec((1.20, "RaggedRight"), (0.90, "RaggedRight"))
                 + r"@{\hspace{0.45em}}c c c c c c@{}",

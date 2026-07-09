@@ -29,13 +29,19 @@ energy differences use the same
 reference-denominator convention; the hyperelastic energy post-comparison uses
 an absolute denominator floor of $10^{-12}$. We write
 $u_{\max}$ for the maximum displacement magnitude over the compared state.
-Curve metrics use Euclidean weights on ordered samples. The hyperelastic
-centerline samples $u_x$ at reference nodes with $y=z=0$, ordered by $x$. The
-\plasticitythree{} boundary profile samples displacement magnitudes on reference
-nodes within 4\% of the domain $y$-span about the mid-$y$ plane and above the
-0.6 reference-$z$ quantile, ordered by $x$; the candidate profile is linearly
-interpolated to the reference $x$ coordinates before computing the relative
-$L^2$ difference.
+
+Curve metrics use unweighted Euclidean norms on ordered reference samples. For
+the hyperelastic companion, the centerline sample set is
+$C_{\mathrm{HE}}=\{i:\ y_i=z_i=0\}$ in the reference coordinates
+$X_i=(x_i,y_i,z_i)$, ordered by $x_i$, and the compared observable is $u_x$ on
+that set. For \plasticitythree{}, let
+$y_{\mathrm{mid}}=(\min_i y_i+\max_i y_i)/2$, let
+$L_y=\max_i y_i-\min_i y_i$, and let $q_{0.6}(z)$ be the 0.6 quantile of the
+reference $z$ coordinates. The boundary-profile sample set is
+$C_{\mathrm{P3D}}=\{i:\ |y_i-y_{\mathrm{mid}}|\le 0.04 L_y,\;
+z_i\ge q_{0.6}(z)\}$, ordered by $x_i$, and the compared observable is the
+displacement magnitude. The candidate boundary profile is linearly interpolated
+to the reference $x_i$ coordinates before computing \eqref{eq:validation-relative-difference}.
 
 The hyperelastic JAX-FEM comparison uses a 5\% predefined threshold for the
 final energy, Euclidean nodal full-field displacement, centerline displacement, and
@@ -57,10 +63,10 @@ The hyperelasticity energy is defined in \Cref{sec:bench-he}. The external
 comparison here is deliberately narrow and uses a serial companion case rather
 than the 24-step rotating benchmark path. Both implementations use the same
 level-1 mesh and the same right-face $x$-translation schedule
-$d=(0.0025,0.005,0.0075,0.01)$, then post-compare both terminal states with
-the energy in \eqref{eq:hyperelasticity-energy}. This supports terminal-state
+$d=(0.0025,0.005,0.0075,0.01)$, then post-compare both endpoint states with
+the energy in \eqref{eq:hyperelasticity-energy}. This supports endpoint-state
 observable agreement for this hyperelastic companion problem only. The comparison is
-therefore an energy-postprocessed terminal-state check for one hyperelastic
+therefore an energy-postprocessed endpoint-state check for one hyperelastic
 case, and it does not assert constitutive-law identity between the two
 implementations: the specific JAX-FEM companion case used here uses a
 logarithmic-$J$ Piola form, whereas \eqref{eq:hyperelasticity-energy} uses the
@@ -71,7 +77,7 @@ $D_1(J-1)^2$ volumetric penalty.
   \begin{subfigure}[t]{0.46\PaperFigureFull}
     \centering
     \includegraphics[width=\linewidth]{jax_fem_hyperelastic_baseline_energy_history.pdf}
-    \caption{Terminal energy over the matched displacement schedule.}
+    \caption{Endpoint energy over the matched displacement schedule.}
   \end{subfigure}
   \hfill
   \begin{subfigure}[t]{0.46\PaperFigureFull}
@@ -81,13 +87,13 @@ $D_1(J-1)^2$ volumetric penalty.
   \end{subfigure}
   \caption{Serial hyperelastic comparison against JAX-FEM on the
   same mesh and prescribed displacement schedule, with energy post-comparison
-  of the terminal states under \eqref{eq:hyperelasticity-energy}.}
+  of the endpoint states under \eqref{eq:hyperelasticity-energy}.}
   \label{fig:hyperelasticity-jaxfem-baseline}
 \end{figure}
 
 \begin{table}[!htbp]
   \centering
-  \caption{Thresholded terminal-state companion comparison against JAX-FEM,
+  \caption{Thresholded endpoint-state companion comparison against JAX-FEM,
   with energy post-comparison under \eqref{eq:hyperelasticity-energy}.}
   \label{tab:hyperelasticity-jaxfem-baseline}
   \input{tables/generated/jax_fem_hyperelastic_baseline.tex}
@@ -95,7 +101,7 @@ $D_1(J-1)^2$ volumetric penalty.
 
 \FloatBarrier
 
-\Cref{fig:hyperelasticity-jaxfem-baseline} shows that the terminal-energy
+\Cref{fig:hyperelasticity-jaxfem-baseline} shows that the endpoint-energy
 history and centerline displacement profile remain close on the matched
 schedule. The table quantifies that visual agreement under the common
 post-comparison energy.
@@ -105,7 +111,7 @@ satisfied for all checked quantities. The final energy relative difference is
 \num{8.244e-6}, the full-field displacement relative Euclidean nodal difference is
 \num{2.011e-4}, the centerline relative $L^2$ difference is
 \num{5.473e-5}, and the $u_{\max}$-curve relative $L^2$ difference is
-effectively zero. The scientific role of this table is terminal-state agreement
+\num{8.85e-16}. The scientific role of this table is endpoint-state agreement
 under a matched mesh, displacement schedule, and common energy post-comparison
 for this companion hyperelastic case.
 

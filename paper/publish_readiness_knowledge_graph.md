@@ -1575,6 +1575,34 @@ MATLAB literature only when there is source-backed evidence.
   are target-template/page-budget risks for dense Results tables, the
   Hyperelasticity PMG/memory block, Plasticity3D degree/scaling material,
   appendix Table 30, and FloatBarrier behavior after venue conversion.
+- `Current self-containment, hygiene, and layout audit`
+  (`Wegener the 2nd`/`Galileo the 2nd`/`Boole the 2nd`/`Ptolemy the 2nd`):
+  completed and integrated in the current chunk. Findings addressed: Wegener
+  found no must-fix message/citation issue, but the introduction now calls
+  JAX-FEM/Sysala/\v{C}ermak--Sysala--Valdman external reference points rather
+  than external comparisons, the Plasticity3D discussion cites the
+  Sysala-family incremental-history references and the
+  \v{C}ermak--Sysala--Valdman MATLAB implementation context at the exact
+  path-history limitation, and the conclusion narrows the validation/reporting
+  discipline to the tested nonlinear FEM energy benchmarks. Galileo's
+  mathematical self-containment findings were addressed by defining the
+  validation curve/profile sample sets explicitly in reference coordinates and
+  by rewriting the owned-row assembly display with the element-restricted state
+  `u_K=R_Ku_{\widetilde I_r}`. Ptolemy's prose-hygiene scan was addressed by
+  replacing remaining reader-facing terminal-state and row/table mechanics
+  language with endpoint-state, final, entry, case, or configuration wording,
+  including the generated hyperelastic energy-level and JAX-FEM comparison
+  figure labels; sparse-matrix row language remains only where it is
+  mathematical. The
+  abstract now says the solver-design ingredients should be assessed together
+  rather than being "best evaluated" together. Boole found no current A4 layout
+  blocker, embedded Type 1 fonts, no LaTeX layout-warning hits, and no
+  figure/table whose interpretation lives only in the caption. Remaining risks
+  are target-template/page-budget risks: benchmark Tables 4 and 6, the compact
+  validation page, the dense Results table cluster, Hyperelasticity
+  PMG/memory material, Plasticity3D degree/scaling material, the topology
+  figure/table/prose page, appendix Table 30, and float behavior after venue
+  conversion.
 
 ## First Edit Backlog
 

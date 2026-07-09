@@ -14,9 +14,9 @@ energy minimization and optimization. In the primary \jaxpetsc{} realization, JA
 defines local energies and constitutive laws, while PETSc provides sparse
 distributed algebra, nonlinear globalization, Krylov methods, and
 preconditioners. The \purejax{} and \fenics{} formulations provide internal
-checks where matched benchmark definitions exist. External comparisons are
+checks where matched benchmark definitions exist. External reference points are
 deliberately scoped: JAX-FEM \citep{xue2023jaxfem} is used for a narrow
-hyperelastic companion terminal-state comparison, and the Sysala-family
+hyperelastic companion endpoint-state comparison, and the Sysala-family
 slope-stability literature
 \citep{sysala2017returnmapping,sysala2021optimization,sysala2025convexoptimization,sysala2025advancedcontinuation}
 provides reference-model context for the plasticity endpoint observables. The
@@ -58,7 +58,7 @@ We evaluate these components on six benchmark families: $p$-Laplace, scalar
 Ginzburg--Landau, hyperelasticity, two- and three-dimensional
 Mohr--Coulomb-type plasticity, and topology optimization. The scalar problems
 isolate formulation and derivative agreement. Hyperelasticity adds
-finite-strain mechanics with a matched JAX-FEM terminal-state companion
+finite-strain mechanics with a matched JAX-FEM endpoint-state companion
 comparison. The plasticity
 benchmarks test nonsmooth constitutive response, endpoint-observable
 comparison, and multigrid behavior. Topology optimization tests a distributed
