@@ -1588,12 +1588,19 @@ MATLAB literature only when there is source-backed evidence.
   mathematical self-containment findings were addressed by defining the
   validation curve/profile sample sets explicitly in reference coordinates and
   by rewriting the owned-row assembly display with the element-restricted state
-  `u_K=R_Ku_{\widetilde I_r}`. Ptolemy's prose-hygiene scan was addressed by
+  `u_K=R_Ku_{\widetilde I_r}`. Follow-up self-containment edits state that the
+  Plasticity2D branch return is applied to the in-plane stress pair and that the
+  reported Plasticity3D bottom-clamped endpoint weak form uses
+  `V_0^{\mathrm{bc}}`. Ptolemy's prose-hygiene scan was addressed by
   replacing remaining reader-facing terminal-state and row/table mechanics
   language with endpoint-state, final, entry, case, or configuration wording,
   including the generated hyperelastic energy-level and JAX-FEM comparison
   figure labels; sparse-matrix row language remains only where it is
-  mathematical. The
+  mathematical. Layout follow-up work makes the Plasticity3D CPU scaling table
+  narrower by dropping redundant solve-time and absolute stopping-gradient
+  columns, regenerates the Plasticity3D state-pair figure with larger 3D tick
+  labels, and regenerates the hyperelastic state figure near its final include
+  width so LaTeX applies less downscaling. The
   abstract now says the solver-design ingredients should be assessed together
   rather than being "best evaluated" together. Boole found no current A4 layout
   blocker, embedded Type 1 fonts, no LaTeX layout-warning hits, and no

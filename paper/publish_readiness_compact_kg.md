@@ -211,7 +211,12 @@ stage or commit `paper/style_guide/`.
   mechanics wording with endpoint-state, entry, case, or configuration wording,
   including generated hyperelastic figure labels; make the validation
   curve/profile sample sets reproducible in prose; rewrite the owned-row
-  assembly display with an element-restricted state; cite the
+  assembly display with an element-restricted state; state the Plasticity2D
+  in-plane stress pair behind the branch return and the Plasticity3D
+  bottom-clamped test space; make the Plasticity3D CPU scaling table narrower
+  by dropping redundant solve-time and absolute stopping-gradient columns; tune
+  the Plasticity3D 3D tick labels and regenerate the hyperelastic state figure
+  near its final include width; cite the
   Sysala-family and \v{C}ermak--Sysala--Valdman reference line at the
   Plasticity3D path-history limitation; narrow the conclusion's validation
   discipline to the tested nonlinear FEM energy benchmarks; and remove the

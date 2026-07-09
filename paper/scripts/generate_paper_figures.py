@@ -520,7 +520,7 @@ def _apply_plasticity3d_camera(ax, xyz: np.ndarray) -> None:
     locator = matplotlib.ticker.MaxNLocator(4)
     ax.yaxis.set_major_locator(locator)
     ax.zaxis.set_major_locator(locator)
-    ax.tick_params(pad=1, labelsize=6.5)
+    ax.tick_params(pad=1, labelsize=8.0)
 
 
 def _deviatoric_strain_norm_3d(strain6: np.ndarray) -> np.ndarray:
@@ -801,7 +801,13 @@ def generate_hyperelasticity_state(layout: dict[str, float]) -> str:
         "ps.fonttype": 42,
     }
     with matplotlib.rc_context(fig_rc):
-        fig = plt.figure(figsize=(16.9, 11.999))
+        # The tightly cropped asset is included at \PaperFigureMedium. The
+        # historical large canvas cropped to about 549 pt, which LaTeX then
+        # downscaled. Scale the canvas so the cropped PDF is produced near its
+        # final physical include width and figure fonts retain their point size.
+        final_width_in = 0.84 * layout["textwidth_in"]
+        canvas_scale = final_width_in / (549.0 / 72.27)
+        fig = plt.figure(figsize=(16.9 * canvas_scale, 11.999 * canvas_scale))
         ax = fig.add_axes([0.06, 0.34, 0.88, 0.56], projection="3d")
 
         poly = Poly3DCollection(tri_xyz, linewidths=0.0, antialiased=False)
@@ -860,7 +866,6 @@ def generate_hyperelasticity_state(layout: dict[str, float]) -> str:
 
         out = FIGURES_ROOT / "hyperelasticity_state.pdf"
         raw_out = out.with_name("hyperelasticity_state_raw.pdf")
-        fig.savefig(out.with_suffix(".png"), format="png", dpi=220, metadata=PNG_METADATA)
         fig.savefig(raw_out, format="pdf", dpi=660, metadata=PDF_METADATA)
         plt.close(fig)
 
@@ -869,6 +874,7 @@ def generate_hyperelasticity_state(layout: dict[str, float]) -> str:
     subprocess.run(["pdfcrop", "--margins", "0", str(raw_out), str(out)], check=True, env=crop_env)
     subprocess.run(["qpdf", "--deterministic-id", str(out), "--replace-input"], check=True)
     _normalize_pdf_trailer_id(out)
+    subprocess.run(["pdftoppm", "-png", "-r", "220", "-singlefile", str(out), str(out.with_suffix(""))], check=True)
     if raw_out.exists():
         raw_out.unlink()
     return out.name

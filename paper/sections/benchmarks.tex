@@ -467,8 +467,10 @@ plane-strain elastic matrix
   \frac{E\nu}{(1+\nu)(1-2\nu)},\qquad
   \mu=\frac{E}{2(1+\nu)}.
 \]
-Its compliance is $S_{2\mathrm{D}}=C_{2\mathrm{D}}^{-1}$. Principal stresses
-are ordered as
+Its compliance is $S_{2\mathrm{D}}=C_{2\mathrm{D}}^{-1}$. The endpoint
+surrogate applies the branch return to the in-plane stress pair
+$(\sigma_{xx},\sigma_{yy},\tau_{xy})$, so principal stresses below are the two
+ordered in-plane values
 $\sigma_1^{\mathrm{tr}}\ge\sigma_2^{\mathrm{tr}}$.
 
 The benchmark uses a Davis-B-style reduction path, with the Davis citation used
@@ -718,12 +720,15 @@ The elastic constants used below are
   K = \frac{E}{3(1-2\nu)}, \qquad
   \lambda_{\mathrm{L}} = K-\frac{2\mu}{3}.
 \]
-With these regionwise quantities, the weak form used by the endpoint solve is
+For the reported bottom-clamped endpoint solves, let
+$V_0^{\mathrm{bc}}\subset V_0$ denote the homogeneous test space after adding the
+all-component bottom clamp specified below. With these regionwise quantities,
+the weak form used by the endpoint solve is
 \begin{equation}
   \int_{\Omega} \sigma^{n+1} : \varepsilon(v) \,\mathrm{d}x
   =
   -\int_{\Omega} \gamma(x) e_y \cdot v \,\mathrm{d}x
-  \qquad \forall v \in V_0.
+  \qquad \forall v \in V_0^{\mathrm{bc}}.
   \label{eq:plasticity3d-weak}
 \end{equation}
 
@@ -744,6 +749,12 @@ labels contain the sloped free surface and the top face. We impose
 \]
 The bottom-clamped model additionally fixes all displacement components on
 $\Gamma_{\mathrm{bot}}=\{X\in\partial\Omega:\lvert X_2\rvert\le 10^{-12}\}$.
+Equivalently, the test space in \eqref{eq:plasticity3d-weak} is
+\[
+  V_0^{\mathrm{bc}}
+  :=
+  \{v\in V_0: v=0 \text{ on } \Gamma_{\mathrm{bot}}\}.
+\]
 We write $P_k(L_\ell)$ for polynomial degree $k$ on mesh level $\ell$ and use
 $L_1,\ldots,L_4$ for the four displayed mesh levels.
 
@@ -959,7 +970,7 @@ listed applicable branch:
         \text{ and }
         r_{\mathrm{sr}} \le \Lambda_{\mathrm{r}} \le r_{\mathrm{ra}}, \\
     \Phi_{\mathrm{a}},
-      & \text{otherwise},
+      & \text{otherwise}
   \end{cases}.
   \label{eq:plasticity3d-potential}
 \end{equation}

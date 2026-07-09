@@ -5,16 +5,16 @@ benchmark classes: in nonlinear finite-element energy minimization, the useful
 unit of algorithmic design is not the AD route alone. Local derivative
 construction, sparse ownership, nonlinear globalization, Krylov algebra, and
 preconditioning together determine the observed solver behavior. We therefore
-combine formulation checks, matched endpoint-state comparisons, fixed-work route
-studies, and distributed scaling evidence to isolate where each conclusion
-applies.
+use a staged evidence base: formulation checks and matched endpoint-state
+comparisons support validation claims, while fixed-work route studies and
+distributed timing evidence support performance and solver-policy claims.
 
 \paragraph{Derivative information is realized through the nonlinear solve.}
-The Plasticity3D derivative-route ablation is the clearest fixed-work example;
-see
+The high-order three-dimensional plasticity derivative-route ablation is the
+clearest fixed-work example; see
 \Cref{fig:plasticity3d-derivative-ablation,tab:plasticity3d-derivative-ablation}.
-On the fixed high-order Plasticity3D case, the three derivative routes preserve
-the endpoint observables and iteration counts. The comparison therefore
+On this fixed endpoint problem, the three derivative routes preserve the
+reported endpoint observables and iteration counts. The comparison therefore
 isolates derivative-route cost only after the residual, Jacobian,
 preconditioner, and nonlinear stopping policy have been fixed.
 
@@ -37,9 +37,9 @@ stated criteria, while deviatoric-strain and boundary-profile comparisons serve
 as diagnostics. These two examples illustrate the same validation rule:
 external or surrogate comparisons are informative when the problem definition
 and compared observables are named before agreement is interpreted.
-The Plasticity3D result is therefore endpoint-scoped mechanics evidence, not a
-path-consistent reproduction of the Sysala-family incremental-history
-plasticity references
+The three-dimensional plasticity endpoint result is therefore endpoint-scoped
+mechanics evidence, not a path-consistent reproduction of the Sysala-family
+incremental-history plasticity references
 \citep{sysala2017returnmapping,sysala2021optimization,sysala2025convexoptimization,sysala2025advancedcontinuation}
 or the \v{C}erm{\'a}k--Sysala--Valdman MATLAB implementation context
 \citep{cermak2019efficient}.

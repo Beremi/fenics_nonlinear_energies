@@ -1702,17 +1702,15 @@ def main() -> None:
 
     write_table_star(
         "plasticity3d_cpu_scaling.tex",
-        fill_spec("l c c c c c c c c c"),
+        fill_spec("l c c c c c c c"),
         [
             "CPU setting",
             "Ranks",
             "Nodes",
             "Solver total [s]",
-            "Solve [s]",
             "Newton iters",
             "Krylov iters",
             "Energy",
-            "$\\|g\\|_{\\mathrm{stop}}$",
             "$\\|g\\|_{\\mathrm{stop}}$/target",
         ],
         [
@@ -1721,11 +1719,9 @@ def main() -> None:
                 fmt_count(row["ranks"]),
                 "--" if row["nodes"] is None else fmt_count(row["nodes"]),
                 fmt_wall_time(float(row["solver_total_s"])),
-                fmt_wall_time(float(row["solve_time_s"])),
                 fmt_count(row["newton_iterations"]),
                 fmt_count(row["linear_iterations_total"]),
                 fmt_energy(float(row["energy"])),
-                fmt_float(float(row["grad"]), 3),
                 fmt_float(float(row["grad_over_target"]), 3),
             ]
             for row in p3d_cpu_scaling_rows
