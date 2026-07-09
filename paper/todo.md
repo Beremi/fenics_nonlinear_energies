@@ -760,6 +760,24 @@ required support for the current scoped contribution.
   passed for the current patch and still reports only the four expected
   external blockers: target template/declarations, repository license,
   archival DOI, and durable archive integration.
+- Current thematic audit chunk addressed message, math, evidence, style, and
+  layout findings from five subagents: evidence-backed contribution bullets,
+  implementation pipeline, topology reduced-objective and volume definitions,
+  Plasticity2D principal-stress reconstruction, citation-scope softening,
+  neutral CPU-scaling artifact names, generated-table captions above bodies,
+  and topology pure-JAX wording as a serial demonstration rather than agreement
+  evidence. Validation commands for this chunk should include table/figure
+  regeneration, `make -C paper submission-check`, release-blocker audit,
+  caption-order/source sweeps, and ignored-style-guide checks.
+- `./.venv/bin/python -m py_compile ...`, `make -C paper tables`,
+  `make -C paper figures`, and `make -C paper submission-check`: passed for the
+  thematic audit chunk, rebuilding a 44-page A4 PDF and validating 29 figures,
+  30 tables, 44 provenance-scan files, hard-float placement, aux ordering,
+  manuscript hygiene, and the submission-bundle manifest.
+- `./.venv/bin/python paper/scripts/check_release_blockers.py --expect-blockers`,
+  `git diff --check`, generated-table caption-order sweep, stale source-name
+  sweeps, and ignored-style-guide checks passed for the thematic audit chunk.
+  The release audit still reports only the expected external blockers.
 
 Exact remaining blockers are submission metadata and license/archive DOI. The
 archive-neutral validator now passes against the local curated bundle; final

@@ -73,11 +73,11 @@ than a universal preference for any single globalization strategy.
 \begin{table}[!htbp]
   \centering
   \footnotesize
-  \input{tables/generated/globalization_method_compare.tex}
   \caption{Fixed-case comparison of nonlinear globalization policies. LS denotes
   Armijo line search and TR denotes Steihaug trust region. The gradient-to-target
   column is reported for the Plasticity3D endpoint gate.}
   \label{tab:globalization-method-compare}
+  \input{tables/generated/globalization_method_compare.tex}
 \end{table}
 
 We additionally evaluate the Ginzburg--Landau level-10 case under an eight-rank
@@ -92,12 +92,12 @@ solver time.
 \begin{table}[!htbp]
   \centering
   \footnotesize
-  \input{tables/generated/ginzburg_landau_globalization_fixed_budget.tex}
   \caption{Ginzburg--Landau level-10 fixed-budget globalization comparison on
   eight MPI ranks. The configurations use the same element assembly and Hypre
   preconditioner; only the nonlinear globalization policy changes. The timed-out
   configuration reports elapsed wall time and the configured wall-time cap.}
   \label{tab:gl-globalization-fixed-budget}
+  \input{tables/generated/ginzburg_landau_globalization_fixed_budget.tex}
 \end{table}
 
 \subsection{Derivative-Route Comparison}
@@ -111,8 +111,8 @@ for both routes, because the rank-local hyperelasticity configuration does not u
 colored sparse recovery. This makes the case a derivative-route comparison rather than a
 scaling claim. The Plasticity3D cases use the same
 $P_2(L_1)$, $\lambda_{\mathrm{sr}}=\num{1.55}$, MUMPS-backed PMG setting as the
-globalization comparison above. Because the available timing records use solver
-timers, solver totals, and wall times in different cases, the timing-scope
+globalization comparison above. These studies use solver timers, solver totals,
+and wall times in different cases, so the timing-scope
 column states which quantity is used for each configuration.
 
 Across all three benchmark cases, colored sparse recovery reaches the same reported
@@ -121,8 +121,7 @@ scalar and hyperelasticity cases still show the expected wall-time premium for
 colored sparse recovery. On the Plasticity3D endpoint, constitutive AD is
 fastest, while element AD and colored sparse recovery have matching iteration
 counts and comparable solve times. The colored sparse-recovery Plasticity3D
-configuration records 240--420 colors across
-the 32 ranks; its comparable solve time is consistent with batched
+route requires 240--420 colors across the 32 ranks; its comparable solve time is consistent with batched
 rank-local HVPs having nearly the same measured Hessian-evaluation cost as element
 AD on this $P_2(L_1)$ case, not by an under-colored finite-difference
 reconstruction.
@@ -130,12 +129,12 @@ reconstruction.
 \begin{table}[!htbp]
   \centering
   \footnotesize
-  \input{tables/generated/derivative_route_compare.tex}
   \caption{Matched-case derivative-route comparison. Colored SFD denotes rank-local
   colored sparse recovery; the reported configurations use AD-HVP probes, while
   finite-difference gradient probes are the classical recovery variant. The
   SFD-color range is shown where per-rank color counts are available.}
   \label{tab:derivative-route-compare}
+  \input{tables/generated/derivative_route_compare.tex}
 \end{table}
 
 \Cref{tab:plasticity3d-derivative-degree} adds the degree sensitivity
@@ -155,12 +154,12 @@ comparison already isolates the stencil-density effect.
 \begin{table}[!htbp]
   \centering
   \footnotesize
-  \input{tables/generated/plasticity3d_derivative_degree.tex}
   \caption{Plasticity3D one-Newton derivative-route cost versus discretization.
   Elem DOFs is the local vector element size used by the Hessian evaluation;
   overlap DOFs is the maximum local overlap vector size recorded during
   assembly.}
   \label{tab:plasticity3d-derivative-degree}
+  \input{tables/generated/plasticity3d_derivative_degree.tex}
 \end{table}
 
 \FloatBarrier
@@ -259,10 +258,10 @@ same-hierarchy PMG preconditioner, Chebyshev/Jacobi smoothing, and coarsest
 level $L_2$. The coarse solve is PETSc redundant LU with MUMPS: the partial
 one-node configurations use one redundant group over the active ranks, while the
 multi-node configurations use one 128-rank redundant group per node.
-\Cref{fig:hyperelasticity-karolina-pmg-scaling,tab:hyperelasticity-karolina-pmg-scaling}
+\Cref{fig:hyperelasticity-cpu-pmg-scaling,tab:hyperelasticity-cpu-pmg-scaling}
 report measured solver total time rather than scheduler elapsed time.
 All configurations reach the same nonlinear and linear iteration counts shown in
-\Cref{tab:hyperelasticity-karolina-pmg-scaling}: 21 Newton iterations and
+\Cref{tab:hyperelasticity-cpu-pmg-scaling}: 21 Newton iterations and
 43 Krylov iterations.
 
 \Cref{tab:hyperelasticity-distribution-memory} reports the memory evidence that
@@ -322,22 +321,22 @@ after the same eight Newton linearizations.
 
 \begin{figure}[H]
   \centering
-  \includegraphics[width=\PaperFigureMedium]{hyperelasticity_karolina_pmg_scaling.pdf}
+  \includegraphics[width=\PaperFigureMedium]{hyperelasticity_cpu_pmg_scaling.pdf}
   \caption{Single- and multi-node CPU level-5 hyperelasticity first-step scaling
   at fixed nonlinear work with the PMG coarse level fixed at $L_2$. Annotations
   show CPU-node counts.}
-  \label{fig:hyperelasticity-karolina-pmg-scaling}
+  \label{fig:hyperelasticity-cpu-pmg-scaling}
 \end{figure}
 
 \begin{table}[H]
   \centering
   \caption{Single- and multi-node CPU level-5 hyperelasticity first-step timings used in
-  \cref{fig:hyperelasticity-karolina-pmg-scaling}.}
-  \label{tab:hyperelasticity-karolina-pmg-scaling}
-  \input{tables/generated/hyperelasticity_karolina_pmg_scaling.tex}
+  \cref{fig:hyperelasticity-cpu-pmg-scaling}.}
+  \label{tab:hyperelasticity-cpu-pmg-scaling}
+  \input{tables/generated/hyperelasticity_cpu_pmg_scaling.tex}
 \end{table}
 
-\Cref{fig:hyperelasticity-karolina-pmg-scaling,tab:hyperelasticity-karolina-pmg-scaling}
+\Cref{fig:hyperelasticity-cpu-pmg-scaling,tab:hyperelasticity-cpu-pmg-scaling}
 show a fixed-work timing drop from \SI{419}{s} on 16 ranks to \SI{15.7}{s} on
 1024 ranks, with the same 21 Newton iterations and 43 Krylov iterations in all
 listed configurations. This evidence isolates the multi-node sparse-solver and
@@ -410,12 +409,12 @@ reported terminal observables.
 
 \begin{table}[!htbp]
   \centering
-  \input{tables/generated/plasticity3d_derivative_ablation.tex}
   \caption{Plasticity3D derivative-route comparison on the fixed
   $P_4(L_1)$, $\lambda_{\mathrm{sr}}=1.5$, 8-rank case. These configurations use the
   Hypre-backed rank-local profile and are separate from the MUMPS-backed PMG
   configurations in the $\lambda_{\mathrm{sr}}=\num{1.55}$ studies.}
   \label{tab:plasticity3d-derivative-ablation}
+  \input{tables/generated/plasticity3d_derivative_ablation.tex}
 \end{table}
 
 \FloatBarrier
@@ -478,6 +477,16 @@ $P_2(L_2)$. At \num{4801816} DOFs, $P_4(L_2)$ reports \num{-3013348} and
 
 \FloatBarrier
 
+\begin{table}[!htbp]
+  \centering
+  \caption{Separate Plasticity3D strong-scaling study for \localpmg{} on
+  $P_4(L_2)$ at $\lambda_{\mathrm{sr}} = 1.0$. These timings provide
+  solver evidence for a separate load factor from the bottom-clamped
+  $\lambda_{\mathrm{sr}} = 1.55$ benchmark figures.}
+  \label{tab:plasticity3d-scaling}
+  \input{tables/generated/plasticity3d_recommended_scaling.tex}
+\end{table}
+
 \begin{figure}[!htbp]
   \centering
   \includegraphics[width=\PaperFigureMedium]{plasticity3d_recommended_scaling.pdf}
@@ -488,16 +497,6 @@ $P_2(L_2)$. At \num{4801816} DOFs, $P_4(L_2)$ reports \num{-3013348} and
   \cref{fig:plasticity3d-state,fig:plasticity3d-convergence,fig:plasticity3d-degree-energy}.}
   \label{fig:plasticity3d-scaling}
 \end{figure}
-
-\begin{table}[!htbp]
-  \centering
-  \input{tables/generated/plasticity3d_recommended_scaling.tex}
-  \caption{Separate Plasticity3D strong-scaling study for \localpmg{} on
-  $P_4(L_2)$ at $\lambda_{\mathrm{sr}} = 1.0$. These timings provide
-  solver evidence for a separate load factor from the bottom-clamped
-  $\lambda_{\mathrm{sr}} = 1.55$ benchmark figures.}
-  \label{tab:plasticity3d-scaling}
-\end{table}
 
 \FloatBarrier
 
@@ -520,7 +519,7 @@ $P_4 \rightarrow P_2 \rightarrow P_1$ hierarchy, the nonlinear method is Armijo
 Newton, and the PETSc relative KSP residual tolerance is \num{1e-2}. The
 nonlinear stop requires both relative correction below \num{0.002} and a
 stopping-gradient norm below one percent of the first Newton gradient.
-\Cref{fig:plasticity3d-local-karolina-scaling,tab:plasticity3d-local-karolina-scaling}
+\Cref{fig:plasticity3d-cpu-scaling,tab:plasticity3d-cpu-scaling}
 compare the single-node CPU sweep with the 16-ranks-per-node CPU sweep. All
 plotted configurations converge in 29 Newton iterations and
 1240 total Krylov iterations to the same energy and stopping-gradient norm to
@@ -532,12 +531,12 @@ work.
 
 \begin{figure}[!htbp]
   \centering
-  \includegraphics[width=\PaperFigureMedium]{plasticity3d_local_vs_karolina_scaling.pdf}
+  \includegraphics[width=\PaperFigureMedium]{plasticity3d_cpu_scaling.pdf}
   \caption{Single-node and multi-node CPU converged scaling for the bottom-clamped
   Plasticity3D $P_4(L_2)$ case at $\lambda_{\mathrm{sr}}=\num{1.55}$. Dashed
   references are ideal $1/r$ lines anchored separately to the first point of
   each CPU setting.}
-  \label{fig:plasticity3d-local-karolina-scaling}
+  \label{fig:plasticity3d-cpu-scaling}
 \end{figure}
 
 \begin{table}[!htbp]
@@ -545,20 +544,20 @@ work.
   \scriptsize
   \caption{Converged timings for the Plasticity3D
   $P_4(L_2)$, $\lambda_{\mathrm{sr}}=\num{1.55}$ run in
-  \cref{fig:plasticity3d-local-karolina-scaling}. Single-node configurations use one CPU
+  \cref{fig:plasticity3d-cpu-scaling}. Single-node configurations use one CPU
   node; multi-node configurations use 16 ranks per CPU node. The nonlinear
   stop requires relative correction below \num{0.002} and final gradient below
   one percent of the first Newton gradient. The stopping-gradient norm in this
   table is the relative-gradient stopping metric for this scaling run, not the
   absolute final-gradient column in the degree benchmark table.}
-  \label{tab:plasticity3d-local-karolina-scaling}
-  \input{tables/generated/plasticity3d_local_karolina_scaling.tex}
+  \label{tab:plasticity3d-cpu-scaling}
+  \input{tables/generated/plasticity3d_cpu_scaling.tex}
 \end{table}
 
 \FloatBarrier
 
 The distributed layout measurements in
-\Cref{tab:plasticity3d-local-karolina-partitioning} identify one observed limit
+\Cref{tab:plasticity3d-cpu-partitioning} identify one observed limit
 on ideal scaling. The maximum local overlap vector shrinks with rank count,
 but the sum of rank-local overlap DOFs increases from about the owned problem
 size on one rank to more than four times the owned size on 128 ranks. This
@@ -572,8 +571,8 @@ storage.
   scaling run. ``Max local DOFs'' is the largest local-overlap vector size on
   any rank; ``Overlap / owned DOFs'' is the summed rank-local overlap DOF count
   divided by the global owned free-DOF count.}
-  \label{tab:plasticity3d-local-karolina-partitioning}
-  \input{tables/generated/plasticity3d_local_karolina_partitioning.tex}
+  \label{tab:plasticity3d-cpu-partitioning}
+  \input{tables/generated/plasticity3d_cpu_partitioning.tex}
 \end{table}
 
 \FloatBarrier
@@ -605,10 +604,10 @@ computational workload.
 
 \begin{table}[!htbp]
   \centering
-  \input{tables/generated/topology_summary.tex}
   \caption{Parallel topology summary for the fine-grid study,
   reported for the reduced objective in \eqref{eq:topology-reduced-objective}.}
   \label{tab:topology-summary}
+  \input{tables/generated/topology_summary.tex}
 \end{table}
 
 \Cref{fig:topology-results,tab:topology-summary} report that the fine-grid
@@ -634,11 +633,11 @@ remain bounded under rank variation at this resolution.
 \begin{table}[H]
   \centering
   \footnotesize
-  \input{tables/generated/topology_rank_consistency.tex}
   \caption{Topology controlled 40-iteration rank-consistency check. Each rank count completes the
   same 40 outer iterations; compliance and density differences are relative to
   the one-rank case.}
   \label{tab:topology-rank-consistency}
+  \input{tables/generated/topology_rank_consistency.tex}
 \end{table}
 
 The topology benchmark completes the paper's computational picture. Here the

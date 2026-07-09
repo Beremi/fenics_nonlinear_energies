@@ -40,7 +40,7 @@ SUPPLEMENTAL_GL_TIMEOUT_RUN_INFO = SUPPLEMENTAL_GL_TIMEOUT_ROOT / "run_info.json
 SUPPLEMENTAL_GL_TIMEOUT_METADATA = SUPPLEMENTAL_GL_TIMEOUT_ROOT / "case_metadata.json"
 SUPPLEMENTAL_P3D_DERIVATIVE_DEGREE = SUPPLEMENTAL_REPORT_ROOT / "full_p3d_derivative_degree.csv"
 P3D_LOCAL_LAMBDA155_SCALING = PAPER_SUBMISSION_INPUT_ROOT / "plasticity3d_lambda155_scaling/local_solver_total_scaling.csv"
-P3D_KAROLINA_LAMBDA155_SCALING = (
+P3D_MULTINODE_LAMBDA155_SCALING = (
     PAPER_SUBMISSION_INPUT_ROOT / "plasticity3d_lambda155_scaling/karolina_rpn16_solver_total_scaling.csv"
 )
 P3D_LAMBDA155_STOP_SUMMARY = PAPER_SUBMISSION_INPUT_ROOT / (
@@ -54,7 +54,7 @@ HE_PARITY = REPO_ROOT / "experiments/analysis/docs_assets/data/hyperelasticity/p
 PLAPLACE_SCALING = REPO_ROOT / "experiments/analysis/docs_assets/data/plaplace/strong_scaling.csv"
 GL_SCALING = REPO_ROOT / "experiments/analysis/docs_assets/data/ginzburg_landau/strong_scaling.csv"
 HE_SCALING = REPO_ROOT / "experiments/analysis/docs_assets/data/hyperelasticity/strong_scaling.csv"
-HE_KAROLINA_PMG_SCALING = (
+HE_CPU_PMG_SCALING = (
     REPO_ROOT / "experiments/analysis/docs_assets/data/hyperelasticity/karolina_l5_pmg_scaling.csv"
 )
 TOPO_SCALING = REPO_ROOT / "experiments/analysis/docs_assets/data/topology/strong_scaling.csv"
@@ -82,7 +82,7 @@ TABLE_SOURCE_INPUTS = {
     "plaplace_benchmark_summary.tex": (PLAPLACE_PARITY,),
     "ginzburg_landau_benchmark_summary.tex": (GL_PARITY,),
     "hyperelasticity_benchmark_summary.tex": (HE_PARITY,),
-    "hyperelasticity_karolina_pmg_scaling.tex": (HE_KAROLINA_PMG_SCALING,),
+    "hyperelasticity_cpu_pmg_scaling.tex": (HE_CPU_PMG_SCALING,),
     "globalization_method_compare.tex": (GLOBALIZATION_METHOD_COMPARE, *P3D_GLOBALIZATION_OUTPUTS),
     "derivative_route_compare.tex": (DERIVATIVE_ROUTE_COMPARE,),
     "hyperelasticity_distribution_memory.tex": (SUPPLEMENTAL_HE_DISTRIBUTION,),
@@ -98,14 +98,14 @@ TABLE_SOURCE_INPUTS = {
     "plasticity3d_benchmark_summary.tex": (P3D_DEGREE_ENERGY_STUDY_SUMMARY,),
     "topology_benchmark_summary.tex": (TOPO_RESOLUTION,),
     "plasticity3d_recommended_scaling.tex": (LOCAL_P3D_SUMMARY,),
-    "plasticity3d_local_karolina_scaling.tex": (
+    "plasticity3d_cpu_scaling.tex": (
         P3D_LOCAL_LAMBDA155_SCALING,
-        P3D_KAROLINA_LAMBDA155_SCALING,
+        P3D_MULTINODE_LAMBDA155_SCALING,
         P3D_LAMBDA155_STOP_SUMMARY,
     ),
-    "plasticity3d_local_karolina_partitioning.tex": (
+    "plasticity3d_cpu_partitioning.tex": (
         P3D_LOCAL_LAMBDA155_SCALING,
-        P3D_KAROLINA_LAMBDA155_SCALING,
+        P3D_MULTINODE_LAMBDA155_SCALING,
         P3D_LAMBDA155_STOP_SUMMARY,
     ),
     "plasticity3d_constitutive_vs_reference_formula.tex": (MIXED_P3D_SUMMARY,),
@@ -554,7 +554,7 @@ def select_topology_rows(labels: tuple[str, ...]) -> list[dict[str, str]]:
     return [row for row in rows if row.get("label") in labels]
 
 
-def plasticity3d_local_karolina_rows() -> list[dict[str, object]]:
+def plasticity3d_cpu_scaling_rows() -> list[dict[str, object]]:
     stop_rows = {int(row["ranks"]): row for row in read_csv_rows(P3D_LAMBDA155_STOP_SUMMARY)}
     grad_targets = [
         float(row["grad_target"])
@@ -590,7 +590,7 @@ def plasticity3d_local_karolina_rows() -> list[dict[str, object]]:
                 "replication_ratio": float(row.get("replication_ratio") or overlap / owned),
             }
         )
-    for row in read_csv_rows(P3D_KAROLINA_LAMBDA155_SCALING):
+    for row in read_csv_rows(P3D_MULTINODE_LAMBDA155_SCALING):
         if row.get("output") != "yes" or not row.get("solver_total"):
             continue
         owned = float(row["owned_free_dofs_sum"])
@@ -984,10 +984,10 @@ def main() -> None:
     pl_rows = read_csv_rows(PLAPLACE_SCALING)
     gl_rows = read_csv_rows(GL_SCALING)
     he_rows = read_csv_rows(HE_SCALING)
-    he_karolina_rows = [
-        row for row in read_csv_rows(HE_KAROLINA_PMG_SCALING) if row.get("result", "completed") == "completed"
+    he_cpu_rows = [
+        row for row in read_csv_rows(HE_CPU_PMG_SCALING) if row.get("result", "completed") == "completed"
     ]
-    he_karolina_rows.sort(key=lambda row: int(row["ranks"]))
+    he_cpu_rows.sort(key=lambda row: int(row["ranks"]))
     topo_rows = read_csv_rows(TOPO_SCALING)
 
     source8 = read_json(SOURCE_CONT_NP8)
@@ -1010,7 +1010,7 @@ def main() -> None:
     mixed_source_rows = find_rows(mixed_rows, SOURCE_IMPL)
     sourcefixed_local_rows = find_rows(sourcefixed_rows, LOCAL_SOURCEFIXED_IMPL)
     sourcefixed_source_rows = find_rows(sourcefixed_rows, SOURCE_SOURCEFIXED_IMPL)
-    p3d_local_karolina_rows = plasticity3d_local_karolina_rows()
+    p3d_cpu_scaling_rows = plasticity3d_cpu_scaling_rows()
 
     pl_showcase = select_csv_rows(PLAPLACE_PARITY, ("fenics_custom", "jax_petsc_element", "jax_petsc_local_sfd"))
     gl_showcase = select_csv_rows(GL_PARITY, ("fenics_custom", "jax_petsc_element", "jax_petsc_local_sfd"))
@@ -1052,7 +1052,7 @@ def main() -> None:
             ["Hyperelasticity", f"{mesh_label('L1')} serial agreement; {mesh_label('L4')}, 24-step distributed scaling", "trust-region solve", "FEniCS and JAX+PETSc on the distributed suite; pure JAX only as a serial reference", "nonconvex large-deformation mechanics"],
             ["Plasticity2D", f"{element_label('P4', 'L5')}--{element_label('P4', 'L7')}", "endpoint solve and capped fixed work", "JAX+PETSc endpoint and solver-policy evidence", "same-mesh PMG and nonlinear tail behavior"],
             ["Plasticity3D", f"{degree_label('P1')}/{degree_label('P2')}/{degree_label('P4')}", "endpoint, scaling, and PMG-policy studies", "constitutive AD, closed-form tangent assembly, and PMG-policy evidence", "heterogeneous 3D Mohr--Coulomb with constitutive AD"],
-            ["Topology", "$192\\times96$ serial reference; $768\\times384$ parallel benchmark", "adaptive continuation", "pure JAX on the serial reference; JAX+PETSc on the fine-grid rank-varied adaptive timing run and controlled rank-consistency check", "distributed design-mechanics coupling"],
+            ["Topology", "$192\\times96$ serial demonstration; $768\\times384$ parallel benchmark", "adaptive continuation", "pure JAX on the serial demonstration; JAX+PETSc on the fine-grid rank-varied adaptive timing run and controlled rank-consistency check", "distributed design-mechanics coupling"],
         ],
     )
 
@@ -1079,7 +1079,7 @@ def main() -> None:
                 "no",
                 "Closed-form constitutive assembly is used only as a supporting comparison route.",
             ],
-            ["Topology", "no", "yes", "Parallel fine-grid realization is JAX+PETSc; pure JAX remains the serial design reference."],
+            ["Topology", "no", "yes", "Parallel fine-grid realization is JAX+PETSc; pure JAX remains a compact serial design demonstration."],
         ],
     )
 
@@ -1281,7 +1281,7 @@ def main() -> None:
     )
 
     write_table_star(
-        "hyperelasticity_karolina_pmg_scaling.tex",
+        "hyperelasticity_cpu_pmg_scaling.tex",
         fill_spec("c c c c c c c c"),
         [
             "Ranks",
@@ -1304,7 +1304,7 @@ def main() -> None:
                 fmt_count(row["newton_iters"]),
                 fmt_count(row["linear_iters"]),
             ]
-            for row in he_karolina_rows
+            for row in he_cpu_rows
         ],
     )
 
@@ -1701,7 +1701,7 @@ def main() -> None:
     )
 
     write_table_star(
-        "plasticity3d_local_karolina_scaling.tex",
+        "plasticity3d_cpu_scaling.tex",
         fill_spec("l c c c c c c c c c"),
         [
             "CPU setting",
@@ -1728,12 +1728,12 @@ def main() -> None:
                 fmt_float(float(row["grad"]), 3),
                 fmt_float(float(row["grad_over_target"]), 3),
             ]
-            for row in p3d_local_karolina_rows
+            for row in p3d_cpu_scaling_rows
         ],
     )
 
     write_table_star(
-        "plasticity3d_local_karolina_partitioning.tex",
+        "plasticity3d_cpu_partitioning.tex",
         fill_spec("l c c c c"),
         [
             "CPU setting",
@@ -1750,7 +1750,7 @@ def main() -> None:
                 fmt_dofs(row["max_local_dofs"]),
                 fmt_float(float(row["replication_ratio"]), 2),
             ]
-            for row in p3d_local_karolina_rows
+            for row in p3d_cpu_scaling_rows
         ],
     )
 
@@ -1971,7 +1971,7 @@ def main() -> None:
         ["Group", "Quantity", "Relative difference", "Status"],
         [
             ["Agreement", "final energy", fmt_sci(float(final_metrics["energy_rel_diff"])), "below $5\\%$"],
-            ["Agreement", "full-field displacement relative $L^2$", fmt_sci(float(final_metrics["field_relative_l2"])), "below $5\\%$"],
+            ["Agreement", "full-field displacement relative Euclidean", fmt_sci(float(final_metrics["field_relative_l2"])), "below $5\\%$"],
             ["Agreement", "centerline relative $L^2$", fmt_sci(float(final_metrics["centerline_relative_l2"])), "below $5\\%$"],
             ["Agreement", "$u_{\\max}$ curve relative $L^2$", fmt_sci(float(final_metrics["umax_curve_relative_l2"])), "below $5\\%$"],
             r"\addlinespace",
@@ -2005,7 +2005,7 @@ def main() -> None:
             }
             for lrow, srow in zip(mixed_local_rows, mixed_source_rows, strict=True)
         ],
-        "plasticity3d_local_karolina_scaling": [
+        "plasticity3d_cpu_scaling": [
             {
                 "source": str(row["source"]),
                 "nodes": None if row["nodes"] is None else int(row["nodes"]),
@@ -2022,7 +2022,7 @@ def main() -> None:
                 "overlap_total_dofs_sum": int(row["overlap_total_dofs_sum"]),
                 "replication_ratio": float(row["replication_ratio"]),
             }
-            for row in p3d_local_karolina_rows
+            for row in p3d_cpu_scaling_rows
         ],
         "globalization_method_compare": [
             {
@@ -2080,7 +2080,7 @@ def main() -> None:
             "fairness_gate_passed": bool(fairness["passed"]),
             "energy_rel_diff": float(final_metrics["energy_rel_diff"]),
         },
-        "hyperelasticity_karolina_pmg_scaling": [
+        "hyperelasticity_cpu_pmg_scaling": [
             {
                 "nodes": int(row["nodes"]),
                 "ranks": int(row["ranks"]),
@@ -2092,7 +2092,7 @@ def main() -> None:
                 "linear_iters": int(row["linear_iters"]),
                 "energy": float(row["energy"]),
             }
-            for row in he_karolina_rows
+            for row in he_cpu_rows
         ],
         "supplemental_solver_evidence": {
             "he_distribution_rows": len(supplemental_he_distribution),

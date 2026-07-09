@@ -24,22 +24,25 @@ implementation context rather than as a numerical baseline.
 \subsection{Contributions}
 \label{sec:intro-contributions}
 
-Our contribution is a \jaxpetsc{} scientific toolset that treats derivative
-construction, MPI sparse assembly, nonlinear globalization, and preconditioning
-as coupled design choices for nonlinear FEM energy minimization. It is
-organized around three solver components:
+Our contribution is a \jaxpetsc{} scientific toolset and numerical study that
+treats derivative construction, MPI sparse assembly, nonlinear globalization,
+and preconditioning as coupled design choices for nonlinear FEM energy
+minimization. The paper contributes three connected pieces of evidence:
 \begin{enumerate}
-  \item \textbf{Globalized energy minimization.} We compare line-search,
-        trust-region, and hybrid globalization choices on representative
-        nonlinear finite-element benchmarks, with conclusions restricted to the
-        tested benchmark definitions.
-  \item \textbf{Derivative construction in sparse assembly.} We implement and compare
-        element automatic differentiation (AD), constitutive AD, and colored
-        sparse recovery inside the same sparse assembly path.
-  \item \textbf{Distributed PETSc realization.} We connect the nonlinear and
-        derivative choices to PETSc Krylov methods and preconditioners,
-        including Hypre, GAMG, and problem-specific polynomial multigrid
-        policies used in the larger mechanics and topology runs.
+  \item \textbf{An integrated derivative--assembly path.} We show how local
+        JAX energy or constitutive evaluations can feed PETSc-owned sparse MPI
+        residual, tangent, and Hessian-vector-product computations without
+        changing the benchmark functional being solved.
+  \item \textbf{Controlled derivative-route comparisons.} We compare element
+        automatic differentiation (AD), constitutive AD, and colored sparse
+        recovery inside the same solver realization, so the reported differences
+        reflect derivative construction rather than changes in the underlying
+        discrete model.
+  \item \textbf{Solver-policy evidence across model classes.} We study
+        line-search, trust-region, Krylov, algebraic-multigrid, direct-coarse,
+        and polynomial-multigrid choices on scalar, mechanics, plasticity, and
+        topology benchmarks, with conclusions restricted to the tested
+        benchmark definitions.
 \end{enumerate}
 
 Relative to JAX-native differentiable FEM and FEM-adjoint automation, the

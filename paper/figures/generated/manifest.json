@@ -19,16 +19,16 @@
         "path": "experiments/analysis/docs_assets/data/ginzburg_landau/sample_state.npz"
       }
     ],
+    "hyperelasticity_cpu_pmg_scaling.pdf": [
+      {
+        "kind": "repository_path",
+        "path": "experiments/analysis/docs_assets/data/hyperelasticity/karolina_l5_pmg_scaling.csv"
+      }
+    ],
     "hyperelasticity_energy_levels.pdf": [
       {
         "kind": "repository_path",
         "path": "experiments/analysis/docs_assets/data/hyperelasticity/energy_levels.csv"
-      }
-    ],
-    "hyperelasticity_karolina_pmg_scaling.pdf": [
-      {
-        "kind": "repository_path",
-        "path": "experiments/analysis/docs_assets/data/hyperelasticity/karolina_l5_pmg_scaling.csv"
       }
     ],
     "hyperelasticity_scaling.pdf": [
@@ -107,6 +107,16 @@
         "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_degree_energy_study/plot_summary.json"
       }
     ],
+    "plasticity3d_cpu_scaling.pdf": [
+      {
+        "kind": "repository_path",
+        "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_lambda155_scaling/local_solver_total_scaling.csv"
+      },
+      {
+        "kind": "repository_path",
+        "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_lambda155_scaling/karolina_rpn16_solver_total_scaling.csv"
+      }
+    ],
     "plasticity3d_degree_energy_all_dofs.pdf": [
       {
         "kind": "repository_path",
@@ -145,16 +155,6 @@
       {
         "kind": "repository_path",
         "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_figure_derived/highest_y_slice_panels.npz"
-      }
-    ],
-    "plasticity3d_local_vs_karolina_scaling.pdf": [
-      {
-        "kind": "repository_path",
-        "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_lambda155_scaling/local_solver_total_scaling.csv"
-      },
-      {
-        "kind": "repository_path",
-        "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_lambda155_scaling/karolina_rpn16_solver_total_scaling.csv"
       }
     ],
     "plasticity3d_recommended_scaling.pdf": [
@@ -287,6 +287,20 @@
         "path": "paper/scripts/generate_paper_figures.py"
       }
     },
+    "hyperelasticity_cpu_pmg_scaling.pdf": {
+      "archive_status": "archive_neutral",
+      "data_inputs": [
+        {
+          "kind": "repository_path",
+          "path": "experiments/analysis/docs_assets/data/hyperelasticity/karolina_l5_pmg_scaling.csv"
+        }
+      ],
+      "generator": {
+        "function": "generate_hyperelasticity_cpu_pmg_scaling",
+        "kind": "repository_path",
+        "path": "paper/scripts/generate_paper_figures.py"
+      }
+    },
     "hyperelasticity_energy_levels.pdf": {
       "archive_status": "archive_neutral",
       "data_inputs": [
@@ -297,20 +311,6 @@
       ],
       "generator": {
         "function": "generate_energy_levels_figure",
-        "kind": "repository_path",
-        "path": "paper/scripts/generate_paper_figures.py"
-      }
-    },
-    "hyperelasticity_karolina_pmg_scaling.pdf": {
-      "archive_status": "archive_neutral",
-      "data_inputs": [
-        {
-          "kind": "repository_path",
-          "path": "experiments/analysis/docs_assets/data/hyperelasticity/karolina_l5_pmg_scaling.csv"
-        }
-      ],
-      "generator": {
-        "function": "generate_hyperelasticity_karolina_pmg_scaling",
         "kind": "repository_path",
         "path": "paper/scripts/generate_paper_figures.py"
       }
@@ -472,6 +472,24 @@
         "path": "paper/scripts/generate_paper_figures.py"
       }
     },
+    "plasticity3d_cpu_scaling.pdf": {
+      "archive_status": "archive_neutral",
+      "data_inputs": [
+        {
+          "kind": "repository_path",
+          "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_lambda155_scaling/local_solver_total_scaling.csv"
+        },
+        {
+          "kind": "repository_path",
+          "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_lambda155_scaling/karolina_rpn16_solver_total_scaling.csv"
+        }
+      ],
+      "generator": {
+        "function": "generate_plasticity3d_cpu_scaling",
+        "kind": "repository_path",
+        "path": "paper/scripts/generate_paper_figures.py"
+      }
+    },
     "plasticity3d_degree_energy_all_dofs.pdf": {
       "archive_status": "archive_neutral",
       "data_inputs": [
@@ -560,24 +578,6 @@
         "path": "paper/scripts/generate_paper_figures.py"
       },
       "note": "Uses derived interpolated y-slice arrays with source hashes recorded in the bundle metadata."
-    },
-    "plasticity3d_local_vs_karolina_scaling.pdf": {
-      "archive_status": "archive_neutral",
-      "data_inputs": [
-        {
-          "kind": "repository_path",
-          "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_lambda155_scaling/local_solver_total_scaling.csv"
-        },
-        {
-          "kind": "repository_path",
-          "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_lambda155_scaling/karolina_rpn16_solver_total_scaling.csv"
-        }
-      ],
-      "generator": {
-        "function": "generate_plasticity3d_local_vs_karolina_scaling",
-        "kind": "repository_path",
-        "path": "paper/scripts/generate_paper_figures.py"
-      }
     },
     "plasticity3d_recommended_scaling.pdf": {
       "archive_status": "archive_neutral",
@@ -734,7 +734,7 @@
     "hyperelasticity_state.pdf",
     "hyperelasticity_energy_levels.pdf",
     "hyperelasticity_scaling.pdf",
-    "hyperelasticity_karolina_pmg_scaling.pdf",
+    "hyperelasticity_cpu_pmg_scaling.pdf",
     "plasticity2d_state_pair.pdf",
     "plasticity2d_resolution_energy.pdf",
     "plasticity3d_state_pair.pdf",
@@ -753,7 +753,7 @@
     "jax_fem_hyperelastic_baseline_energy_history.pdf",
     "jax_fem_hyperelastic_baseline_centerline.pdf",
     "plasticity3d_recommended_scaling.pdf",
-    "plasticity3d_local_vs_karolina_scaling.pdf"
+    "plasticity3d_cpu_scaling.pdf"
   ],
   "layout": {
     "full_width_in": 7.086614501176145,

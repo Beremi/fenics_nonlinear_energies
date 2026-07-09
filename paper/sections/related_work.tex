@@ -1,15 +1,20 @@
 \label{sec:related}
 
-The relevant literature falls into four groups: finite-element and
-PDE-optimization automation, differentiable FEM and JAX--solver bridges,
-mechanics and topology benchmark context, and sparse nonlinear solver
-infrastructure. We use this taxonomy to identify the roles that the present
-toolset combines.
+Existing systems cover important parts of the nonlinear finite-element workflow:
+high-level FEM automation, differentiable FEM, solver bridges, mechanics
+benchmarks, and scalable nonlinear algebra. The gap addressed here is the
+combined study of local derivative construction, sparse MPI assembly,
+globalization, and preconditioning on one heterogeneous energy-minimization
+suite. We therefore organize the relevant literature into four groups:
+finite-element and PDE-optimization automation, differentiable FEM and
+JAX--solver bridges, mechanics and topology benchmark context, and sparse
+nonlinear solver infrastructure.
 
-\Cref{tab:sota-comparison} records the computational roles needed for this
+\Cref{tab:sota-comparison} compares the computational roles needed for this
 positioning: modeling layer, differentiation scope, second-order information,
 parallel execution model, and benchmark families closest to the present suite.
-The paragraphs below give the source-specific discussion.
+Its main purpose is to show which roles are already covered by existing
+families and which combination is studied here.
 
 \begin{table}[!htbp]
   \centering
@@ -87,14 +92,12 @@ practice, constitutive integration, and endpoint comparisons. The Davis-style
 reduction context used in this paper traces to the plasticity treatment of
 \citet{davis1968plasticity} and to later finite-element strength-reduction
 studies such as \citet{tschuchnigg2015nonassociated}. For constitutive
-integration, the incremental reference
-frame is return mapping with consistent tangents
-\citep{simo1985consistent,simo1998compinel}, with Mohr--Coulomb-specific
-nonsmooth return operators treated by \citet{sysala2017returnmapping}. The
-recent Sysala slope-stability line documents variational and optimization
-viewpoints for shear strength reduction
-\citep{sysala2021optimization,sysala2025convexoptimization} and a 3D
-continuation/iterative-solver reference line
+integration, the incremental reference frame is return mapping with consistent
+tangents \citep{simo1985consistent,simo1998compinel}. The Sysala
+slope-stability line provides Mohr--Coulomb source-family context, variational
+and optimization viewpoints for shear strength reduction
+\citep{sysala2017returnmapping,sysala2021optimization,sysala2025convexoptimization},
+and a 3D continuation/iterative-solver reference line
 \citep{sysala2025advancedcontinuation}. The
 \v{C}erm{\'a}k--Sysala--Valdman MATLAB implementation
 \citep{cermak2019efficient} documents practical 2D/3D elastoplastic

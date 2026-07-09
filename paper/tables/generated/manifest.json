@@ -51,16 +51,16 @@
         "path": "experiments/analysis/docs_assets/data/hyperelasticity/parity_showcase.csv"
       }
     ],
+    "hyperelasticity_cpu_pmg_scaling.tex": [
+      {
+        "kind": "repository_path",
+        "path": "experiments/analysis/docs_assets/data/hyperelasticity/karolina_l5_pmg_scaling.csv"
+      }
+    ],
     "hyperelasticity_distribution_memory.tex": [
       {
         "kind": "repository_path",
         "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/supplemental_solver_evidence/full_he_distribution.csv"
-      }
-    ],
-    "hyperelasticity_karolina_pmg_scaling.tex": [
-      {
-        "kind": "repository_path",
-        "path": "experiments/analysis/docs_assets/data/hyperelasticity/karolina_l5_pmg_scaling.csv"
       }
     ],
     "hyperelasticity_pmg_sensitivity.tex": [
@@ -127,6 +127,34 @@
         "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_reference_formula/comparison_summary.json"
       }
     ],
+    "plasticity3d_cpu_partitioning.tex": [
+      {
+        "kind": "repository_path",
+        "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_lambda155_scaling/local_solver_total_scaling.csv"
+      },
+      {
+        "kind": "repository_path",
+        "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_lambda155_scaling/karolina_rpn16_solver_total_scaling.csv"
+      },
+      {
+        "kind": "repository_path",
+        "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_lambda155_scaling/step_grad_convergence_summary.csv"
+      }
+    ],
+    "plasticity3d_cpu_scaling.tex": [
+      {
+        "kind": "repository_path",
+        "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_lambda155_scaling/local_solver_total_scaling.csv"
+      },
+      {
+        "kind": "repository_path",
+        "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_lambda155_scaling/karolina_rpn16_solver_total_scaling.csv"
+      },
+      {
+        "kind": "repository_path",
+        "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_lambda155_scaling/step_grad_convergence_summary.csv"
+      }
+    ],
     "plasticity3d_derivative_ablation.tex": [
       {
         "kind": "repository_path",
@@ -143,34 +171,6 @@
       {
         "kind": "repository_path",
         "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_fixed_reference_operator/table_summary.json"
-      }
-    ],
-    "plasticity3d_local_karolina_partitioning.tex": [
-      {
-        "kind": "repository_path",
-        "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_lambda155_scaling/local_solver_total_scaling.csv"
-      },
-      {
-        "kind": "repository_path",
-        "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_lambda155_scaling/karolina_rpn16_solver_total_scaling.csv"
-      },
-      {
-        "kind": "repository_path",
-        "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_lambda155_scaling/step_grad_convergence_summary.csv"
-      }
-    ],
-    "plasticity3d_local_karolina_scaling.tex": [
-      {
-        "kind": "repository_path",
-        "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_lambda155_scaling/local_solver_total_scaling.csv"
-      },
-      {
-        "kind": "repository_path",
-        "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_lambda155_scaling/karolina_rpn16_solver_total_scaling.csv"
-      },
-      {
-        "kind": "repository_path",
-        "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_lambda155_scaling/step_grad_convergence_summary.csv"
       }
     ],
     "plasticity3d_recommended_scaling.tex": [
@@ -307,6 +307,20 @@
         "path": "paper/scripts/generate_paper_tables.py"
       }
     },
+    "hyperelasticity_cpu_pmg_scaling.tex": {
+      "archive_status": "archive_neutral",
+      "data_inputs": [
+        {
+          "kind": "repository_path",
+          "path": "experiments/analysis/docs_assets/data/hyperelasticity/karolina_l5_pmg_scaling.csv"
+        }
+      ],
+      "generator": {
+        "function": "main",
+        "output": "hyperelasticity_cpu_pmg_scaling.tex",
+        "path": "paper/scripts/generate_paper_tables.py"
+      }
+    },
     "hyperelasticity_distribution_memory.tex": {
       "archive_status": "archive_neutral",
       "data_inputs": [
@@ -318,20 +332,6 @@
       "generator": {
         "function": "main",
         "output": "hyperelasticity_distribution_memory.tex",
-        "path": "paper/scripts/generate_paper_tables.py"
-      }
-    },
-    "hyperelasticity_karolina_pmg_scaling.tex": {
-      "archive_status": "archive_neutral",
-      "data_inputs": [
-        {
-          "kind": "repository_path",
-          "path": "experiments/analysis/docs_assets/data/hyperelasticity/karolina_l5_pmg_scaling.csv"
-        }
-      ],
-      "generator": {
-        "function": "main",
-        "output": "hyperelasticity_karolina_pmg_scaling.tex",
         "path": "paper/scripts/generate_paper_tables.py"
       }
     },
@@ -471,6 +471,50 @@
         "path": "paper/scripts/generate_paper_tables.py"
       }
     },
+    "plasticity3d_cpu_partitioning.tex": {
+      "archive_status": "archive_neutral",
+      "data_inputs": [
+        {
+          "kind": "repository_path",
+          "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_lambda155_scaling/local_solver_total_scaling.csv"
+        },
+        {
+          "kind": "repository_path",
+          "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_lambda155_scaling/karolina_rpn16_solver_total_scaling.csv"
+        },
+        {
+          "kind": "repository_path",
+          "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_lambda155_scaling/step_grad_convergence_summary.csv"
+        }
+      ],
+      "generator": {
+        "function": "main",
+        "output": "plasticity3d_cpu_partitioning.tex",
+        "path": "paper/scripts/generate_paper_tables.py"
+      }
+    },
+    "plasticity3d_cpu_scaling.tex": {
+      "archive_status": "archive_neutral",
+      "data_inputs": [
+        {
+          "kind": "repository_path",
+          "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_lambda155_scaling/local_solver_total_scaling.csv"
+        },
+        {
+          "kind": "repository_path",
+          "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_lambda155_scaling/karolina_rpn16_solver_total_scaling.csv"
+        },
+        {
+          "kind": "repository_path",
+          "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_lambda155_scaling/step_grad_convergence_summary.csv"
+        }
+      ],
+      "generator": {
+        "function": "main",
+        "output": "plasticity3d_cpu_scaling.tex",
+        "path": "paper/scripts/generate_paper_tables.py"
+      }
+    },
     "plasticity3d_derivative_ablation.tex": {
       "archive_status": "archive_neutral",
       "data_inputs": [
@@ -510,50 +554,6 @@
       "generator": {
         "function": "main",
         "output": "plasticity3d_fixed_reference_operator_pmg.tex",
-        "path": "paper/scripts/generate_paper_tables.py"
-      }
-    },
-    "plasticity3d_local_karolina_partitioning.tex": {
-      "archive_status": "archive_neutral",
-      "data_inputs": [
-        {
-          "kind": "repository_path",
-          "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_lambda155_scaling/local_solver_total_scaling.csv"
-        },
-        {
-          "kind": "repository_path",
-          "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_lambda155_scaling/karolina_rpn16_solver_total_scaling.csv"
-        },
-        {
-          "kind": "repository_path",
-          "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_lambda155_scaling/step_grad_convergence_summary.csv"
-        }
-      ],
-      "generator": {
-        "function": "main",
-        "output": "plasticity3d_local_karolina_partitioning.tex",
-        "path": "paper/scripts/generate_paper_tables.py"
-      }
-    },
-    "plasticity3d_local_karolina_scaling.tex": {
-      "archive_status": "archive_neutral",
-      "data_inputs": [
-        {
-          "kind": "repository_path",
-          "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_lambda155_scaling/local_solver_total_scaling.csv"
-        },
-        {
-          "kind": "repository_path",
-          "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_lambda155_scaling/karolina_rpn16_solver_total_scaling.csv"
-        },
-        {
-          "kind": "repository_path",
-          "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_lambda155_scaling/step_grad_convergence_summary.csv"
-        }
-      ],
-      "generator": {
-        "function": "main",
-        "output": "plasticity3d_local_karolina_scaling.tex",
         "path": "paper/scripts/generate_paper_tables.py"
       }
     },
@@ -662,8 +662,8 @@
     "ginzburg_landau_globalization_fixed_budget.tex",
     "globalization_method_compare.tex",
     "hyperelasticity_benchmark_summary.tex",
+    "hyperelasticity_cpu_pmg_scaling.tex",
     "hyperelasticity_distribution_memory.tex",
-    "hyperelasticity_karolina_pmg_scaling.tex",
     "hyperelasticity_pmg_sensitivity.tex",
     "implementation_capability_matrix.tex",
     "jax_fem_hyperelastic_baseline.tex",
@@ -673,11 +673,11 @@
     "plasticity2d_reference_continuation.tex",
     "plasticity3d_benchmark_summary.tex",
     "plasticity3d_constitutive_vs_reference_formula.tex",
+    "plasticity3d_cpu_partitioning.tex",
+    "plasticity3d_cpu_scaling.tex",
     "plasticity3d_derivative_ablation.tex",
     "plasticity3d_derivative_degree.tex",
     "plasticity3d_fixed_reference_operator_pmg.tex",
-    "plasticity3d_local_karolina_partitioning.tex",
-    "plasticity3d_local_karolina_scaling.tex",
     "plasticity3d_recommended_scaling.tex",
     "plasticity3d_validation_summary.tex",
     "reference_availability.tex",

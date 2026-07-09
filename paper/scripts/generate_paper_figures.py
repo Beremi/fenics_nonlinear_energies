@@ -95,7 +95,7 @@ GL_SCALING = REPO_ROOT / "experiments/analysis/docs_assets/data/ginzburg_landau/
 HYPER_STATE = REPO_ROOT / "experiments/analysis/docs_assets/data/hyperelasticity/sample_state.npz"
 HYPER_ENERGY = REPO_ROOT / "experiments/analysis/docs_assets/data/hyperelasticity/energy_levels.csv"
 HYPER_SCALING = REPO_ROOT / "experiments/analysis/docs_assets/data/hyperelasticity/strong_scaling.csv"
-HYPER_KAROLINA_PMG_SCALING = (
+HYPER_CPU_PMG_SCALING = (
     REPO_ROOT / "experiments/analysis/docs_assets/data/hyperelasticity/karolina_l5_pmg_scaling.csv"
 )
 PLASTICITY2D_STATE = PAPER_SUBMISSION_INPUT_ROOT / "plasticity2d_resolution/state.npz"
@@ -109,7 +109,7 @@ P3D_VALIDATION_ROOT = PAPER_SUBMISSION_INPUT_ROOT / "plasticity3d_validation"
 P3D_DERIVATIVE_ABLATION_ROOT = PAPER_SUBMISSION_INPUT_ROOT / "plasticity3d_derivative_ablation"
 JAX_FEM_BASELINE_ROOT = PAPER_SUBMISSION_INPUT_ROOT / "jax_fem_hyperelastic_baseline"
 P3D_LOCAL_LAMBDA155_SCALING = PAPER_SUBMISSION_INPUT_ROOT / "plasticity3d_lambda155_scaling/local_solver_total_scaling.csv"
-P3D_KAROLINA_LAMBDA155_SCALING = (
+P3D_MULTINODE_LAMBDA155_SCALING = (
     PAPER_SUBMISSION_INPUT_ROOT / "plasticity3d_lambda155_scaling/karolina_rpn16_solver_total_scaling.csv"
 )
 
@@ -715,11 +715,11 @@ def generate_family_scaling_figure(
     return out.name
 
 
-def generate_hyperelasticity_karolina_pmg_scaling(layout: dict[str, float]) -> str:
+def generate_hyperelasticity_cpu_pmg_scaling(layout: dict[str, float]) -> str:
     plt = configure_paper_matplotlib()
     rows = [
         row
-        for row in read_csv_rows(HYPER_KAROLINA_PMG_SCALING)
+        for row in read_csv_rows(HYPER_CPU_PMG_SCALING)
         if row.get("result", "completed") == "completed"
     ]
     rows.sort(key=lambda row: int(row["ranks"]))
@@ -761,7 +761,7 @@ def generate_hyperelasticity_karolina_pmg_scaling(layout: dict[str, float]) -> s
     ax.legend(frameon=True, loc="best")
     fig.subplots_adjust(left=0.12, right=0.98, bottom=0.16, top=0.96)
 
-    out = FIGURES_ROOT / "hyperelasticity_karolina_pmg_scaling.pdf"
+    out = FIGURES_ROOT / "hyperelasticity_cpu_pmg_scaling.pdf"
     save_pdf_and_png(fig, out)
     plt.close(fig)
     return out.name
@@ -2018,16 +2018,16 @@ def _plot_plasticity_scaling(layout: dict[str, float], rows_by_impl: dict[str, l
     return outputs
 
 
-def generate_plasticity3d_local_vs_karolina_scaling(layout: dict[str, float]) -> str:
+def generate_plasticity3d_cpu_scaling(layout: dict[str, float]) -> str:
     plt = configure_paper_matplotlib()
     local_rows = read_csv_rows(P3D_LOCAL_LAMBDA155_SCALING)
-    karolina_rows = [
+    multinode_rows = [
         row
-        for row in read_csv_rows(P3D_KAROLINA_LAMBDA155_SCALING)
+        for row in read_csv_rows(P3D_MULTINODE_LAMBDA155_SCALING)
         if row.get("output") == "yes" and row.get("solver_total")
     ]
     local_rows.sort(key=lambda row: int(row["ranks"]))
-    karolina_rows.sort(key=lambda row: int(row["ranks"]))
+    multinode_rows.sort(key=lambda row: int(row["ranks"]))
 
     fig, ax = plt.subplots(figsize=paper_figure_size(layout, preset="medium", height_ratio=0.52))
     series = [
@@ -2040,8 +2040,8 @@ def generate_plasticity3d_local_vs_karolina_scaling(layout: dict[str, float]) ->
         ),
         (
             "multi-node CPU, 16 ranks/node",
-            np.asarray([int(row["ranks"]) for row in karolina_rows], dtype=np.int64),
-            np.asarray([float(row["solver_total"]) for row in karolina_rows], dtype=np.float64),
+            np.asarray([int(row["ranks"]) for row in multinode_rows], dtype=np.int64),
+            np.asarray([float(row["solver_total"]) for row in multinode_rows], dtype=np.float64),
             "#d62728",
             "s",
         ),
@@ -2063,7 +2063,7 @@ def generate_plasticity3d_local_vs_karolina_scaling(layout: dict[str, float]) ->
     ax.legend(frameon=True, loc="best")
     fig.subplots_adjust(left=0.13, right=0.98, bottom=0.16, top=0.96)
 
-    out = FIGURES_ROOT / "plasticity3d_local_vs_karolina_scaling.pdf"
+    out = FIGURES_ROOT / "plasticity3d_cpu_scaling.pdf"
     save_pdf_and_png(fig, out)
     plt.close(fig)
     return out.name
@@ -2378,9 +2378,9 @@ def _figure_sources() -> dict[str, dict[str, object]]:
             generator="generate_family_scaling_figure",
             data_inputs=[_manifest_repo_input(HYPER_SCALING)],
         ),
-        "hyperelasticity_karolina_pmg_scaling.pdf": _figure_source(
-            generator="generate_hyperelasticity_karolina_pmg_scaling",
-            data_inputs=[_manifest_repo_input(HYPER_KAROLINA_PMG_SCALING)],
+        "hyperelasticity_cpu_pmg_scaling.pdf": _figure_source(
+            generator="generate_hyperelasticity_cpu_pmg_scaling",
+            data_inputs=[_manifest_repo_input(HYPER_CPU_PMG_SCALING)],
         ),
         "plasticity2d_state_pair.pdf": _figure_source(
             generator="generate_plasticity2d_figures",
@@ -2487,11 +2487,11 @@ def _figure_sources() -> dict[str, dict[str, object]]:
             archive_status=tracked_or_bundle,
             note="The bundled scaling summary references bundled per-rank result JSON files used for local-element counts.",
         ),
-        "plasticity3d_local_vs_karolina_scaling.pdf": _figure_source(
-            generator="generate_plasticity3d_local_vs_karolina_scaling",
+        "plasticity3d_cpu_scaling.pdf": _figure_source(
+            generator="generate_plasticity3d_cpu_scaling",
             data_inputs=[
                 _manifest_repo_input(P3D_LOCAL_LAMBDA155_SCALING),
-                _manifest_repo_input(P3D_KAROLINA_LAMBDA155_SCALING),
+                _manifest_repo_input(P3D_MULTINODE_LAMBDA155_SCALING),
             ],
             archive_status=tracked_or_bundle,
         ),
@@ -2550,7 +2550,7 @@ def _expected_generated_assets() -> list[str]:
         "hyperelasticity_state.pdf",
         "hyperelasticity_energy_levels.pdf",
         "hyperelasticity_scaling.pdf",
-        "hyperelasticity_karolina_pmg_scaling.pdf",
+        "hyperelasticity_cpu_pmg_scaling.pdf",
         "plasticity2d_state_pair.pdf",
         "plasticity2d_resolution_energy.pdf",
         "plasticity3d_state_pair.pdf",
@@ -2569,7 +2569,7 @@ def _expected_generated_assets() -> list[str]:
         "jax_fem_hyperelastic_baseline_energy_history.pdf",
         "jax_fem_hyperelastic_baseline_centerline.pdf",
         "plasticity3d_recommended_scaling.pdf",
-        "plasticity3d_local_vs_karolina_scaling.pdf",
+        "plasticity3d_cpu_scaling.pdf",
     ]
 
 
@@ -2661,7 +2661,7 @@ def main() -> None:
             out_name="hyperelasticity_scaling.pdf",
         )
     )
-    generated.append(generate_hyperelasticity_karolina_pmg_scaling(layout))
+    generated.append(generate_hyperelasticity_cpu_pmg_scaling(layout))
     generated.extend(generate_plasticity2d_figures(layout))
     generated.extend(generate_plasticity3d_state_figures(layout))
     generated.append(generate_plasticity3d_highest_y_slice_comparison(layout))
@@ -2677,7 +2677,7 @@ def main() -> None:
 
     _, local_rows_by_impl = _load_impl_rows(LOCAL_P3D_SUMMARY)
     generated.extend(_plot_plasticity_scaling(layout, local_rows_by_impl))
-    generated.append(generate_plasticity3d_local_vs_karolina_scaling(layout))
+    generated.append(generate_plasticity3d_cpu_scaling(layout))
 
     _write_figure_manifest(args.out_dir, layout, generated)
     print(f"Wrote figure manifest to {args.out_dir / 'manifest.json'}")

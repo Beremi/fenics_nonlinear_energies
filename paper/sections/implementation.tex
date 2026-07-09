@@ -1,7 +1,15 @@
 \label{sec:implementation}
 
-The computational realization starts from the primary \jaxpetsc{} path and then
-uses narrower reference formulations to check selected benchmark definitions.
+The computational realization starts from a self-contained \jaxpetsc{} pipeline.
+A benchmark supplies a local energy density, branch potential, or constitutive
+law together with finite-element restrictions. JAX evaluates the local residual,
+tangent, or Hessian-vector-product contribution on each element or quadrature
+point. The distributed layer scatters owned coefficients to ghosted element
+states, accumulates owned-row sparse residuals and tangents, and gives PETSc the
+resulting nonlinear residual, matrix, or matrix-free action. PETSc then controls
+globalization, Krylov iteration, preconditioning, and convergence reporting. The
+same pipeline is used before narrower reference formulations are introduced for
+selected benchmark checks.
 
 \paragraph{Primary \jaxpetsc{} realization.}
 This is the central solver realization of the paper. It combines JAX-based local
@@ -35,8 +43,8 @@ choices depend on the benchmark family, but the common logic is:
         assembled from quadrature-point energy densities;
   \item \textbf{colored sparse recovery}: structured sparse recovery from AD-HVP or
         finite-difference gradient probes when full element Hessians are not the
-        appropriate cost tradeoff; tables and figures use the compact label
-        colored SFD for this sparse finite-difference-style recovery route.
+        appropriate cost tradeoff. We refer to this
+        sparse finite-difference-style recovery route as colored SFD.
 \end{itemize}
 
 This split is scientifically important. It lets us compare AD-derived local
@@ -86,40 +94,38 @@ sparse algebraic objects.
 \subsection{Linear solvers and preconditioners}
 
 The benchmark families use different Krylov and preconditioner combinations
-because the linear systems are qualitatively different. Here CG denotes
-conjugate gradients, GMRES generalized minimal residual, FGMRES flexible GMRES,
-GAMG PETSc's geometric-algebraic multigrid preconditioner, Hypre an algebraic
+because the Hessian and tangent systems have different definiteness, block
+structure, and coarse-level behavior. Here CG denotes conjugate gradients, GMRES
+generalized minimal residual, FGMRES flexible GMRES, GAMG PETSc's
+geometric-algebraic multigrid preconditioner, Hypre an algebraic
 multigrid/preconditioning backend, MUMPS a multifrontal sparse direct solver,
 and PMG polynomial multigrid:
 \begin{itemize}
-  \item \textbf{$p$-Laplace:} reported \jaxpetsc{} configurations use
-        Newton--CG with Hypre unless a result table states otherwise, with exact
-        element Hessians or colored sparse-recovery Hessians.
-  \item \textbf{Ginzburg--Landau:} GMRES with Hypre, reflecting the more
-        indefinite linearization.
-  \item \textbf{Hyperelasticity:} trust-region outer iterations with
-        GAMG-preconditioned Krylov solves in the main benchmark and
-        globalization comparison cases, and same-hierarchy PMG with redundant LU/MUMPS
-        coarse solves in the larger fixed-work scaling profile.
-  \item \textbf{Plasticity (2D):} same-mesh multigrid hierarchies whose
-        diagnostics track the finest-level smoother and repeated Krylov work.
-  \item \textbf{Plasticity3D:} same-mesh polynomial multigrid hierarchies,
-        $P_4 \to P_2 \to P_1$ or $P_2 \to P_1$ depending on degree. The
-        auxiliary $\lambda_{\mathrm{sr}}=\num{1.0}$ scaling and
-        degree/resolution endpoint studies use FGMRES with same-mesh PMG and a
-        CG--Hypre coarse solve,
-        whereas the $P_2$ globalization and derivative-route comparisons and
-        the converged $P_4(L_2)$, $\lambda_{\mathrm{sr}}=\num{1.55}$ scaling
-        use a redundant LU/MUMPS coarse profile.
-  \item \textbf{Topology:} flexible GMRES with GAMG for the mechanics step, coupled
-        to a separate distributed design update.
+  \item \textbf{$p$-Laplace:} the scalar positive-definite structure makes
+        Newton--CG with algebraic multigrid a natural baseline for comparing
+        exact element Hessians and colored sparse-recovery Hessians.
+  \item \textbf{Ginzburg--Landau:} the double-well energy produces more
+        indefinite linearizations, so GMRES with algebraic multigrid is used to
+        separate globalization behavior from symmetric-positive-definite
+        assumptions.
+  \item \textbf{Hyperelasticity:} large-deformation mechanics requires
+        globalization around the logarithmic energy domain, while the linearized
+        systems motivate GAMG and same-hierarchy PMG variants with robust coarse
+        solves.
+  \item \textbf{Plasticity:} nonsmooth branch structure and high-order element
+        spaces motivate flexible Krylov methods and same-mesh polynomial
+        multigrid hierarchies, with direct or algebraic coarse solves used to
+        expose the cost of the active constitutive tangent.
+  \item \textbf{Topology:} the mechanics subproblem is solved with flexible
+        Krylov iteration and GAMG inside an outer distributed design update, so
+        the solver evidence reflects the coupled state-design workflow.
 \end{itemize}
 
-The result sections also include a fixed-reference PMG variant, in which the
-preconditioning operator is kept fixed along the nonlinear path, and alternative
-Krylov/preconditioner diagnostics. Those are not the primary defaults, but they
-are informative because they reveal how much of the final performance difference
-comes from derivative paths, preconditioners, or outer solver logic.
+The result sections then instantiate these solver choices in concrete benchmark
+rows. Some rows deliberately hold the preconditioning operator fixed along the
+nonlinear path or vary only the coarse solve. These diagnostics are included to
+separate derivative-route cost, preconditioner construction, and outer
+globalization effects.
 
 \subsection{Distributed assembly and coloring}
 

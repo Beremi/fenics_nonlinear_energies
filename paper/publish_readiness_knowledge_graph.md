@@ -1351,6 +1351,22 @@ MATLAB literature only when there is source-backed evidence.
   works from the paper directory. Layout audit found the current 42-page A4 PDF
   visually acceptable aside from target-template/page-budget sensitivity; dense
   pages 25, 28, 34, 36, and 39 remain readable and unclipped.
+- `Current thematic publish-readiness audit`
+  (`Nash the 2nd`/`Lovelace the 2nd`/`Harvey the 2nd`/`Newton the 2nd`/`Feynman the 2nd`):
+  completed and integrated in the current source chunk. Findings addressed:
+  contribution bullets now state evidence-backed claims; Implementation opens
+  with the \jaxpetsc{} local-evaluation, owned/ghost assembly, PETSc
+  solve-policy pipeline; solver and preconditioner choices are motivated by
+  problem structure rather than schedule labels; Davis/Sysala citation scope is
+  softened to the verified source record; Plasticity2D principal-stress
+  reconstruction and topology volume/multiplier definitions are self-contained;
+  topology pure-JAX wording is a serial demonstration rather than agreement
+  evidence; long generated-table captions move above table bodies; and
+  hyperelasticity/Plasticity3D CPU-scaling outputs use paper-facing names.
+  Regenerating tables, figures, and the submission PDF now produces a 44-page
+  A4 article with the paper-facing CPU-scaling asset names.
+  Deferred findings remain target-template issues: venue layout measurement,
+  remaining hard floats, dense tables, and final license/archive/DOI decisions.
 
 ## First Edit Backlog
 

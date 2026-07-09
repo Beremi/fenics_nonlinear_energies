@@ -29,8 +29,8 @@ ALLOWED_H_FLOATS: dict[tuple[str, str], str] = {
     ("figure", "fig:gl-results"): "single scaling figure interpreted immediately after the float",
     ("figure", "fig:hyperelasticity-results"): "single scaling figure interpreted immediately after the float",
     ("table", "tab:hyperelasticity-pmg-sensitivity"): "fixed-work PMG table interpreted immediately after the float",
-    ("figure", "fig:hyperelasticity-karolina-pmg-scaling"): "paired fixed-work scaling figure kept with its timing table",
-    ("table", "tab:hyperelasticity-karolina-pmg-scaling"): "paired fixed-work scaling table kept with its figure",
+    ("figure", "fig:hyperelasticity-cpu-pmg-scaling"): "paired fixed-work scaling figure kept with its timing table",
+    ("table", "tab:hyperelasticity-cpu-pmg-scaling"): "paired fixed-work scaling table kept with its figure",
     ("table", "tab:topology-rank-consistency"): "rank-consistency table kept with the controlled-test interpretation",
     ("table", "tab:plasticity2d-reference-continuation"): "appendix support table kept with its brief interpretation",
 }

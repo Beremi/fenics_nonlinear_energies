@@ -31,15 +31,16 @@ reduced-objective viewpoint.
 \Cref{tab:benchmark-spec,tab:reference-availability} define the comparison
 scope before the individual models are introduced. The scalar problems and
 hyperelasticity have \fenics{} reference formulations, while \purejax{} is used
-only where a compact serial formulation is available. The two plasticity
+only where a compact serial formulation or demonstration is available. The two plasticity
 families are primarily \jaxpetsc{} studies: the two-dimensional case supplies
 supporting continuation diagnostics, and the three-dimensional case uses the
 \v{C}erm{\'a}k--Sysala--Valdman MATLAB elastoplastic implementation as
 implementation context, while the Sysala-family slope-stability literature
 supplies the reference-model setting. Neither is used as a path-history
 validation baseline.
-Topology optimization combines a parallel \jaxpetsc{} realization with a serial
-\purejax{} design reference. Thus some entries below are validation comparisons,
+Topology optimization uses a parallel \jaxpetsc{} realization and a compact
+serial \purejax{} design demonstration, but the agreement evidence for that
+family is the \jaxpetsc{} rank-consistency check. Thus some entries below are validation comparisons,
 whereas others are timing or solver-policy diagnostics under a stated benchmark
 definition.
 \Cref{tab:discretization-labels} records the compact level notation used in the
@@ -256,13 +257,13 @@ is part of the benchmark definition.
   \label{tab:gl-benchmark}
 \end{table}
 
-\Cref{fig:gl-state,fig:gl-energy-levels} and \Cref{tab:gl-benchmark} show that
-the tested routes reach the same nonconvex branch from the prescribed initial
-state. The local picture is again one of formulation consistency, now for a more
-solver-sensitive nonconvex energy: the \fenics{} reference, element AD, and
-colored sparse recovery all report 8 Newton iterations, 33 Krylov iterations,
-and final energies within about $\num{1e-6}$. Strong scaling and solver-time
-comparisons for this family are reported in \Cref{sec:num-gl}.
+\Cref{fig:gl-state,fig:gl-energy-levels} and \Cref{tab:gl-benchmark} show
+terminal-state consistency from the prescribed initial state. The local picture
+is again one of formulation consistency, now for a more solver-sensitive
+nonconvex energy: the \fenics{} reference, element AD, and colored sparse
+recovery all report 8 Newton iterations, 33 Krylov iterations, and final
+energies within about $\num{1e-6}$. Strong scaling and solver-time comparisons
+for this family are reported in \Cref{sec:num-gl}.
 
 \FloatBarrier
 
@@ -463,8 +464,10 @@ Its compliance is $S_{2\mathrm{D}}=C_{2\mathrm{D}}^{-1}$. Principal stresses
 are ordered as
 $\sigma_1^{\mathrm{tr}}\ge\sigma_2^{\mathrm{tr}}$.
 
-The benchmark uses a Davis-B-style reduction path
-\citep{davis1968plasticity,tschuchnigg2015nonassociated,sysala2021optimization}
+The benchmark uses a Davis-B-style reduction path, with the Davis citation used
+as historical lineage and the formula context taken from later strength-reduction
+descriptions
+\citep{davis1968plasticity,tschuchnigg2015nonassociated,sysala2021optimization},
 to map the unreduced
 cohesion and angles to reduced values under strength reduction; with
 $c_0,\phi,\psi$ denoting the unreduced cohesion, friction angle, and dilation
@@ -533,15 +536,30 @@ In that case $\sigma^\star=\sigma^{\mathrm{tr}}$. Otherwise let
   =
   (\sigma_1^{\mathrm{tr}},\sigma_2^{\mathrm{tr}})^\top-\eta z,
 \]
-where $\widehat S$ is the principal-stress $2\times2$ normal block of
-$S_{2\mathrm{D}}$. If
+where $\widehat S=\begin{bmatrix}S_{11}&S_{12}\\ S_{12}&S_{22}\end{bmatrix}$
+is the normal block of $S_{2\mathrm{D}}$ in the ordered principal-stress
+coordinates. If
 $\widehat\sigma^\ell_1\ge \widehat\sigma^\ell_2$, set
 $\widehat\sigma^\star=\widehat\sigma^\ell$; otherwise set
 $\widehat\sigma^\star_1=\widehat\sigma^\star_2=
 \kappa_\lambda/(a_\lambda-b_\lambda)$.
 
-After rotating $\widehat\sigma^\star$ back to Cartesian components, the branch
-potential is
+Let $\vartheta=\frac12\operatorname{atan2}(2\tau_{xy},\sigma_{xx}-\sigma_{yy})$
+be the trial principal direction. We reconstruct the Cartesian stress as
+\[
+  \sigma^\star
+  =
+  \begin{bmatrix}
+  \bar\sigma^\star + r^\star \cos(2\vartheta) \\
+  \bar\sigma^\star - r^\star \cos(2\vartheta) \\
+  r^\star \sin(2\vartheta)
+  \end{bmatrix},
+  \qquad
+  \bar\sigma^\star=\frac{\widehat\sigma^\star_1+\widehat\sigma^\star_2}{2},
+  \quad
+  r^\star=\frac{\widehat\sigma^\star_1-\widehat\sigma^\star_2}{2}.
+\]
+The branch potential is
 \[
   \Phi_{\mathrm{MC},2\mathrm{D}}
   =
@@ -717,8 +735,10 @@ We use the engineering-strain ordering
   \end{bmatrix}^{\top},
   \label{eq:plasticity3d-engineering-strain}
 \end{equation}
-which is first mapped to tensor shear before principal values are formed. The
-benchmark keeps the Davis-B reduction explicitly at quadrature points:
+which is first mapped to tensor shear before principal values are formed.
+Following the same later strength-reduction descriptions used for the
+two-dimensional case, the benchmark keeps the Davis-B reduction explicitly at
+quadrature points:
 \begin{align}
   c_{1,q} &= c_{0,q}/\lambda_{\mathrm{sr}},
   &
@@ -1075,9 +1095,7 @@ On these pads the physical density is held at $\theta_e=1$ during design
 updates; outside the pads, the latent variable is unconstrained and
 \eqref{eq:topology-density-map} enforces
 $\theta_h\in[\theta_{\min},1]$. The target volume fraction is enforced through
-the effective multiplier $\lambda_V$ in
-\eqref{eq:topology-reduced-objective}, updated by the penalty rule stated
-below.
+the iteration-dependent effective multiplier defined below.
 
 The second ingredient is the mechanics solve for a fixed density field.
 Let $V_h$ be the continuous vector $P_1$ displacement space and let
@@ -1124,6 +1142,10 @@ element,
   (\theta_{e}^{m})^{2p}\,
   \varepsilon(u_h^m)^\top C\varepsilon(u_h^m).
 \]
+This is a reciprocal local compliance approximation. The mechanics stiffness in
+\eqref{eq:topology-mechanics} is proportional to $\theta_e^p$, so
+$e_{e,m}^{\mathrm{frozen}}\theta_e^{-p}$ matches the current local compliance
+scale at $\theta_e=\theta_e^m$ while penalizing lower trial densities.
 Let $(\nabla\theta_h)|_e$ denote the elementwise gradient of the interpolated
 density field used in the phase-field term, and define the double-well density
 \[
@@ -1138,7 +1160,7 @@ design vector $z_h^{m+1}$ is
   |e|
   \Bigg[
     e_{e,m}^{\mathrm{frozen}} \theta_e^{-p}
-    + \lambda_V \theta_e
+    + \lambda_V^m \theta_e
     + \alpha_{\mathrm{reg}}
       \left(
         \frac{\ell_{\mathrm{pf}}}{2} \lvert (\nabla\theta_h)|_e \rvert^2
@@ -1149,9 +1171,18 @@ design vector $z_h^{m+1}$ is
   \label{eq:topology-reduced-objective}
 \end{align}
 where $\theta_e$ and $z_e$ are computed from the trial $z_h$, while $z_e^m$ is
-the element average from the previous design iterate. Let
-$V(\theta_h)$ denote the density-weighted volume fraction and let
-$V_\star=0.4$ be the target value. Before the $m$th design solve we use
+the element average from the previous design iterate.
+
+The volume constraint and multiplier are evaluated before each design solve.
+The fixed-solid pads are included in the measured volume. We use the normalized
+volume
+\[
+  V(\theta_h)
+  :=
+  \frac{1}{|\Omega|}
+  \sum_{e=1}^{n_{\mathrm{el}}} |e|\,\theta_e.
+\]
+Let $V_\star=0.4$ be the target value. Before the $m$th design solve we use
 \[
   r_V^m = V(\theta_h^m)-V_\star,\qquad
   \lambda_V^m =
@@ -1159,7 +1190,10 @@ $V_\star=0.4$ be the target value. Before the $m$th design solve we use
   + \lambda_{\mathrm{corr}}^m
   + \rho_V r_V^m,
 \]
-where $\lambda_{\mathrm{ref}}^m$ is a sensitivity-scale reference value,
+where $\lambda_{\mathrm{ref}}^m$ is the
+$(1-V_\star)$-quantile of
+$p\,e_{e,m}^{\mathrm{frozen}}/\max(\theta_e^m,\theta_{\min})^{p+1}$
+over the design elements,
 $\lambda_{\mathrm{corr}}^m$ is the carried multiplier correction, and
 $\rho_V=10$. After the design update, with
 $r_V^{m+1}=V(\theta_h^{m+1})-V_\star$, the carried correction is updated by
@@ -1173,8 +1207,8 @@ $r_V^{m+1}=V(\theta_h^{m+1})-V_\star$, the carried correction is updated by
 The SIMP-style
 continuation in $p$ and the regularization terms control mesh-scale design
 features, following the role of filters in \citet{bourdin2001filters}. Here
-$\lambda_V$ is the effective volume multiplier in the current design subproblem,
-while
+$\lambda_V^m$ is the effective volume multiplier in the current design
+subproblem, while
 $\alpha_{\mathrm{reg}}=\num{5e-3}$,
 $\ell_{\mathrm{pf}}=\num{8e-2}$, and
 $\mu_{\mathrm{move}}=\num{1e-2}$ set the phase-field and latent-move terms.

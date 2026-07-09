@@ -88,7 +88,7 @@ stage or commit `paper/style_guide/`.
 | Hyperelasticity | finite-strain mechanics and external comparison | FEniCS, pure JAX, JAX+PETSc, JAX-FEM | terminal-energy agreement, distribution/memory, GAMG/PMG sensitivity |
 | Plasticity2D | Davis-B reduced slope-stability endpoint/fixed-work study | JAX+PETSc only | endpoint result, fixed-work diagnostics, reference-continuation appendix |
 | Plasticity3D | high-order Mohr-Coulomb endpoint surrogate and solver-policy study | JAX+PETSc; Sysala-family reference-model context | endpoint observables, derivative-route cost, degree-energy, scaling |
-| Topology | coupled design-mechanics distributed workflow | pure JAX serial reference, JAX+PETSc parallel run | objective history, timing, rank-consistency check |
+| Topology | coupled design-mechanics distributed workflow | pure JAX serial demonstration, JAX+PETSc parallel run | objective history, timing, rank-consistency check |
 
 ## Current Subagent Findings
 
@@ -142,13 +142,22 @@ stage or commit `paper/style_guide/`.
   wording and figure labels to matched-comparator diagnostics, and recast the
   topology parallel evidence as rank-varied adaptive timing plus a controlled
   rank-consistency check. The current A4 submission gate passes and produces a
-  42-page PDF.
+  44-page PDF.
 - Current message/math/layout chunk: removed draft availability prose that
   called out the absent DOI, put the primary JAX+PETSc implementation path
   before reference paths, defined AD/AD-HVP on first use, added the topology
   volume-multiplier recurrence, normalized equation references/differentials,
   and moved captions above the most fragile long result tables. Release checks
   still flag the unresolved DOI/archive/license/template blockers.
+- Current thematic-audit chunk: rewrote the introduction contributions as
+  evidence-backed claims, added a self-contained \jaxpetsc{} implementation
+  pipeline, recast solver/preconditioner choices by problem structure, softened
+  Davis/Sysala claims to verified source scope, made the topology reduced
+  objective and volume multiplier reconstructible, renamed paper-facing CPU
+  scaling assets to remove machine-local labels, and moved captions above long
+  validation/results tables. Remaining layout work is target-template driven:
+  `measure_layout.py` still matches the current A4 article geometry, not an
+  external venue class.
 
 ## Figure And Table Rules
 
@@ -186,7 +195,7 @@ external release decisions:
 - durable software/artifact archive;
 - archival DOI in the availability statement.
 
-The current PDF is a 42-page A4 article. Page budget and float behavior must be
+The current PDF is a 44-page A4 article. Page budget and float behavior must be
 rechecked after target-template conversion.
 
 Deferred layout risks from the 2026-07-09 audit: the hyperelasticity diagnostic

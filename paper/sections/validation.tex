@@ -31,7 +31,7 @@ an absolute denominator floor of $10^{-12}$. We write
 $u_{\max}$ for the maximum displacement magnitude over the compared state.
 
 The hyperelastic JAX-FEM comparison uses a 5\% predefined threshold for the
-final energy, full-field displacement, centerline displacement, and
+final energy, Euclidean nodal full-field displacement, centerline displacement, and
 $u_{\max}$-curve differences. The \plasticitythree{} fixed-load
 matched-comparator diagnostic uses three predefined criteria: at most $0.03$ relative
 difference in the highest successful load factor, at most $0.05$ relative
@@ -77,10 +77,10 @@ $D_1(J-1)^2$ volumetric penalty.
 
 \begin{table}[!htbp]
   \centering
-  \input{tables/generated/jax_fem_hyperelastic_baseline.tex}
   \caption{Thresholded terminal-state companion comparison against JAX-FEM,
   with energy post-comparison under \eqref{eq:hyperelasticity-energy}.}
   \label{tab:hyperelasticity-jaxfem-baseline}
+  \input{tables/generated/jax_fem_hyperelastic_baseline.tex}
 \end{table}
 
 \FloatBarrier
@@ -92,7 +92,7 @@ post-comparison energy.
 
 The agreement criteria in \Cref{tab:hyperelasticity-jaxfem-baseline} are
 satisfied for all checked quantities. The final energy relative difference is
-\num{8.244e-6}, the full-field displacement relative $L^2$ difference is
+\num{8.244e-6}, the full-field displacement relative Euclidean nodal difference is
 \num{2.011e-4}, the centerline relative $L^2$ difference is
 \num{5.473e-5}, and the $u_{\max}$-curve relative $L^2$ difference is
 effectively zero. The scientific role of this table is terminal-state agreement
@@ -174,12 +174,12 @@ reference.
 
 \begin{table}[H]
   \centering
-  \input{tables/generated/plasticity3d_validation_summary.tex}
   \caption{Plasticity3D endpoint-surrogate comparison summary for the
   direct-branch endpoint-observable comparison ending at
   $\lambda_{\mathrm{sr}}=1.6$ and the fixed-$\lambda_{\mathrm{sr}}$
   matched-comparator diagnostic.}
   \label{tab:plasticity3d-validation}
+  \input{tables/generated/plasticity3d_validation_summary.tex}
 \end{table}
 
 \Cref{fig:plasticity3d-validation} shows the two endpoint-surrogate diagnostics
