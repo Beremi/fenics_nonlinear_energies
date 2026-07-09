@@ -174,6 +174,14 @@ stage or commit `paper/style_guide/`.
   generating figure-size measurements. Generated-table captions now precede
   their generated table bodies across the manuscript, including the supporting
   Plasticity2D/3D solver-policy tables in the appendix.
+- Current benchmark-prose chunk: hyperelasticity now separates the material
+  model, geometry, rotating boundary schedule, weak form, and discrete
+  stationary sequence; its evidence is scoped to completion of the prescribed
+  schedule and terminal energies, not trajectory agreement. Topology now defines
+  the scalar compliance observable separately from the frozen reduced design
+  objective, states that achieved volumes come from the adaptive
+  multiplier/stopping rule rather than exact equality solves, and keeps the
+  pure JAX role to a compact serial design demonstration.
 
 ## Figure And Table Rules
 

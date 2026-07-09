@@ -131,7 +131,7 @@ IMPLEMENTATION_LABELS = {
     "fenics_custom": "FEniCS Newton reference",
     "jax_petsc_element": "JAX+PETSc element AD",
     "jax_petsc_local_sfd": "JAX+PETSc colored SFD",
-    "jax_serial": "pure-JAX serial reference",
+    "jax_serial": "pure JAX serial formulation check",
     LOCAL_IMPL: "constitutive-AD PMG solver",
     SOURCE_IMPL: "fixed-reference PMG variant",
     LOCAL_SOURCEFIXED_IMPL: "frozen PMG operator, AD branch tangent",
@@ -1049,7 +1049,7 @@ def main() -> None:
         [
             ["$p$-Laplace", f"{mesh_label('L5')} serial agreement; {mesh_label('L9')} distributed scaling", "Newton + line search", "FEniCS and JAX+PETSc on the distributed case; pure JAX in the serial agreement case", "nonlinear elliptic solve with exact sparse Hessians"],
             ["Ginzburg--Landau", f"{mesh_label('L5')} agreement; {mesh_label('L9')} distributed scaling", "Newton + line search", "FEniCS and JAX+PETSc comparison", "indefinite local curvature from the double well"],
-            ["Hyperelasticity", f"{mesh_label('L1')} serial agreement; {mesh_label('L4')}, 24-step distributed scaling", "trust-region solve", "FEniCS and JAX+PETSc on the distributed suite; pure JAX only as a serial reference", "nonconvex large-deformation mechanics"],
+            ["Hyperelasticity", f"{mesh_label('L1')} serial agreement; {mesh_label('L4')}, 24-step distributed scaling", "trust-region solve", "FEniCS and JAX+PETSc on the distributed suite; pure JAX only as a serial formulation check", "nonconvex large-deformation mechanics"],
             ["Plasticity2D", f"{element_label('P4', 'L5')}--{element_label('P4', 'L7')}", "endpoint solve and capped fixed work", "JAX+PETSc endpoint and solver-policy evidence", "same-mesh PMG and nonlinear tail behavior"],
             ["Plasticity3D", f"{degree_label('P1')}/{degree_label('P2')}/{degree_label('P4')}", "endpoint, scaling, and PMG-policy studies", "constitutive AD, closed-form tangent assembly, and PMG-policy evidence", "heterogeneous 3D Mohr--Coulomb with constitutive AD"],
             ["Topology", "$192\\times96$ serial demonstration; $768\\times384$ parallel benchmark", "adaptive continuation", "pure JAX on the serial demonstration; JAX+PETSc on the fine-grid rank-varied adaptive timing run and controlled rank-consistency check", "distributed design-mechanics coupling"],
@@ -1071,7 +1071,7 @@ def main() -> None:
         [
             ["$p$-Laplace", "yes", "yes", "All three implementations exist; pure JAX is used in the serial parity case."],
             ["Ginzburg--Landau", "yes", "no", "FEniCS and JAX+PETSc form the reported comparison."],
-            ["Hyperelasticity", "yes", "yes", "pure JAX is a serial formulation reference only."],
+            ["Hyperelasticity", "yes", "yes", "pure JAX is a serial formulation check only."],
             ["Plasticity2D", "no", "no", "The reported realization is JAX+PETSc only."],
             [
                 "Plasticity3D",

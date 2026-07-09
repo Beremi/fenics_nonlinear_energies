@@ -272,33 +272,37 @@ for this family are reported in \Cref{sec:num-gl}.
 \subsection{Hyperelasticity}
 \label{sec:bench-he}
 
-The literature model is a standard finite-strain hyperelastic equilibrium
-problem written in terms of a displacement $u$ and deformation
-$y_u(X) = X + u(X)$. We define $F(u) = I + \nabla u$,
-$J(u) = \det F(u)$, and the compressible Neo-Hookean-type density
+Hyperelasticity is the first benchmark where finite-strain mechanics and
+nonlinear globalization become central. The literature model is a standard
+finite-strain equilibrium problem written in terms of a displacement $u$ and
+deformation $y_u(X)=X+u(X)$. We define the deformation gradient
+$F(u)=I+\nabla u$, its determinant $J(u)=\det F(u)$, and the compressible
+Neo-Hookean-type density
 \[
   W(F) :=
   C_1 \left( \operatorname{tr}(F^\top F) - 3 - 2\ln\det F \right)
   + D_1(\det F - 1)^2.
 \]
 The first Piola stress is $P(F) = \partial W/\partial F$
-\citep[Chs.~4--6]{bonet2008nonlinear}. The
-benchmark considered here is a cantilever problem with the
-potential, defined on admissible displacements with $J(u)>0$ almost everywhere,
+\citep[Chs.~4--6]{bonet2008nonlinear}.
+
+The benchmark considered here is a cantilever on
+$\Omega=[0,0.4]\times[-0.005,0.005]^2$ with
+$C_1\approx\num{3.846e7}$ and $D_1\approx\num{8.333e7}$. On admissible
+displacements with $J(u)>0$ almost everywhere, the elastic potential is
 \begin{equation}
   \Pi(u)
   =
   \int_{\Omega} W(F(u))\,\mathrm{d}x,
   \label{eq:hyperelasticity-energy}
 \end{equation}
-on $\Omega = [0,0.4] \times [-0.005,0.005]^2$ with
-$C_1 \approx \num{3.846e7}$ and
-$D_1 \approx \num{8.333e7}$. The left face is clamped, while the right
-face carries the prescribed rotating Dirichlet displacement path used throughout
-this benchmark. Let $\Gamma_{\mathrm{L}}$ and $\Gamma_{\mathrm{R}}$ denote the left
-and right end faces, respectively. For a reference point $X=(X_1,X_2,X_3)$ on
-$\Gamma_{\mathrm{R}}$ and $N=24$ reported load steps, the prescribed position
-at step $k$ is
+which is the quantity compared in the benchmark summaries.
+
+The left face is clamped, while the right face carries a prescribed rotating
+Dirichlet displacement path. Let $\Gamma_{\mathrm{L}}$ and
+$\Gamma_{\mathrm{R}}$ denote the left and right end faces, respectively. For
+$X=(X_1,X_2,X_3)\in\Gamma_{\mathrm{R}}$ and $N=24$ load steps, the prescribed
+position at step $k$ is
 \[
   \bar y_k(X)
   =
@@ -309,6 +313,7 @@ at step $k$ is
 \]
 Thus admissible displacements satisfy $u=0$ on $\Gamma_{\mathrm{L}}$ and
 $X+u=\bar y_k(X)$ on $\Gamma_{\mathrm{R}}$.
+
 Let $V(\eta_k)$ denote the corresponding affine displacement space, let $V_0$
 denote the homogeneous test space, and let
 $\Gamma_N=\partial\Omega\setminus(\Gamma_{\mathrm{L}}\cup\Gamma_{\mathrm{R}})$.
@@ -323,8 +328,8 @@ The strong form is
   P(F(u)) n = 0 \quad \text{on }\Gamma_N,
   \label{eq:hyperelasticity-strong}
 \end{equation}
-where $P = \partial W / \partial F$ is the first Piola stress. The weak form is:
-find $u \in V(\eta_k)$ such that
+where $P = \partial W / \partial F$ is the first Piola stress. Equivalently,
+the weak form is to find $u \in V(\eta_k)$ such that
 \begin{equation}
   \int_{\Omega} P(F(u)) : \nabla v \,\mathrm{d}x = 0
   \qquad \forall v \in V_0.
@@ -334,7 +339,12 @@ Trial states with nonpositive determinant fall outside the logarithmic energy
 domain and are rejected by the nonlinear globalization; accepted line-search or
 trust-region steps are therefore evaluated only on states with positive
 $J(u)$.
-The discrete problem solved in the paper is the sequence of stationary points
+
+For the discrete problem, let $V_h(\eta_k)\subset V(\eta_k)$ be the
+first-order tetrahedral vector finite-element space, let $V_{h,0}\subset V_0$
+be its homogeneous subspace, and let $\Pi_h$ be the finite-element
+discretization of \eqref{eq:hyperelasticity-energy}. We solve the sequence of
+stationary points
 \begin{equation}
   u_h^{(k)} \in V_h(\eta_k):
   \qquad
@@ -344,9 +354,8 @@ The discrete problem solved in the paper is the sequence of stationary points
   k = 1,\dots,24,
   \label{eq:hyperelasticity-discrete}
 \end{equation}
-with first-order tetrahedral vector elements and the benchmark-specific boundary
-data described above. This is the first family in which globalization is more
-scientifically important than derivative parity alone.
+with the boundary data above. This sequence is the basis for the hyperelastic
+terminal-energy, scaling, and globalization comparisons reported below.
 
 \begin{figure}[!htbp]
   \centering
@@ -375,15 +384,15 @@ scientifically important than derivative parity alone.
 \end{table}
 
 The within-benchmark takeaway is therefore that all three implementations
-complete the same 24-step stationary sequence:
-\cref{fig:hyperelasticity-state,fig:hyperelasticity-energy-levels} show the
-terminal deformed state and terminal energies, while globalization and scaling
-evidence are deferred to \Cref{sec:num-hyperelasticity}. The separate validation
-section adds one serial JAX-FEM comparison on the same mesh and
-prescribed displacement schedule, with energy post-comparison under
-\eqref{eq:hyperelasticity-energy}; it is
-included as an agreement-focused hyperelastic companion comparison for this
-specific terminal-state contract.
+complete the same prescribed 24-step boundary schedule and produce comparable
+terminal energies. \Cref{fig:hyperelasticity-state,fig:hyperelasticity-energy-levels}
+show the terminal deformed state and energy trend, and
+\Cref{tab:hyperelasticity-benchmark} quantifies the terminal energies and work
+counts. This evidence does not assess trajectory-level agreement or produce a
+performance ranking. Globalization and scaling evidence are deferred to
+\Cref{sec:num-hyperelasticity}. The validation section separately compares a
+level-1 translation companion case against JAX-FEM under the common
+postprocessed energy; it is not part of the rotating-load-path evidence.
 
 \FloatBarrier
 
@@ -1066,15 +1075,29 @@ reported in \Cref{sec:num-plasticity3d}.
 \subsection{Topology Optimization}
 \label{sec:bench-topology}
 
-The literature model is the standard SIMP-style compliance topology-optimization
-setting on a cantilever domain, together with filtering and continuation ideas
-from the classical topology literature
+The topology benchmark tests the toolset on a coupled design--mechanics loop
+rather than on a single equilibrium minimization. The literature setting is the
+standard SIMP-style compliance topology-optimization problem on a cantilever
+domain, together with filtering and continuation ideas from the classical
+topology literature
 \citep{bendsoe2003topology,sigmund2001topology,ferrari2020top99,bourdin2001filters}.
-In the setting studied here, the topology benchmark is a reduced optimization
-problem rather than a single equilibrium minimization. Its first ingredient is
-the design map. Let $Z_h$ be the scalar continuous $P_1$ space on the structured
-triangular mesh. The design variable is a latent nodal field $z_h \in Z_h$,
-mapped to a physical density through the logistic transform
+In the setting studied here, each outer iteration solves a linear elasticity
+problem for the current density and then minimizes a frozen reduced design
+objective. The \purejax{} topology realization is only a compact serial design
+demonstration; the agreement evidence for this family is the \jaxpetsc{}
+rank-consistency check in \Cref{sec:num-topology}.
+
+The reported fine-grid run uses $\Omega=(0,2)\times(0,1)$ with a
+$768\times384$ structured triangular mesh, target volume fraction $0.4$,
+$\theta_{\min}=\num{1e-6}$, Young's modulus $E=\num{1}$, and Poisson ratio
+$0.3$. The left edge is clamped, and a downward unit traction acts on the load
+patch $\{2\}\times[0.4,0.6]$. With $h_x=2/768$ and $h_y=1/384$, fixed-solid
+design pads are imposed on $x\le 32h_x$ and on
+$x\ge 2-32h_x$, $y\in[0.4-32h_y,0.6+32h_y]$.
+
+The first ingredient is the design map. Let $Z_h$ be the scalar continuous
+$P_1$ space on the mesh. The design variable is a latent nodal field
+$z_h\in Z_h$, mapped to a physical density through the logistic transform
 \begin{equation}
   \theta_h(z_h)
   =
@@ -1085,27 +1108,17 @@ mapped to a physical density through the logistic transform
 \end{equation}
 On each triangular element $e$, we use the element averages
 $\theta_e := |e|^{-1}\int_e \theta_h\,\mathrm{d}x$ and
-$z_e := |e|^{-1}\int_e z_h\,\mathrm{d}x$; for the linear elements used here these are
-the vertex averages. The reported fine-grid run uses a $768\times384$ mesh,
-target volume fraction $0.4$, $\theta_{\min}=\num{1e-6}$, Young's modulus
-$E=\num{1}$, Poisson ratio $0.3$, and a downward unit traction over the centered
-$20\%$ patch of the right edge. The left edge is clamped, while fixed solid
-design pads are imposed near the clamp and around the load patch.
-For the domain $\Omega=(0,2)\times(0,1)$ this load patch is
-$\{2\}\times[0.4,0.6]$. With $h_x=2/768$ and $h_y=1/384$, the fixed-solid
-design pads are $x\le 32h_x$ and
-$x\ge 2-32h_x$, $y\in[0.4-32h_y,0.6+32h_y]$.
-On these pads the physical density is held at $\theta_e=1$ during design
-updates; outside the pads, the latent variable is unconstrained and
-\eqref{eq:topology-density-map} enforces
-$\theta_h\in[\theta_{\min},1]$. The target volume fraction is enforced through
-the iteration-dependent effective multiplier defined below.
+$z_e := |e|^{-1}\int_e z_h\,\mathrm{d}x$; for the linear elements used here
+these are vertex averages. On the fixed-solid pads the physical density is held
+at $\theta_e=1$ during design updates. Outside the pads, the latent variable is
+unconstrained and \eqref{eq:topology-density-map} enforces
+$\theta_h\in[\theta_{\min},1]$.
 
-The second ingredient is the mechanics solve for a fixed density field.
-Let $V_h$ be the continuous vector $P_1$ displacement space and let
+The second ingredient is the mechanics solve for a fixed density field. Let
+$V_h$ be the continuous vector $P_1$ displacement space and let
 $V_{h,0}\subset V_h$ impose the homogeneous left-edge clamp. Let $C$ denote the
 plane-stress elasticity tensor and let $p$ be the active SIMP exponent. For
-fixed density, define the bilinear form
+fixed density, define
 \begin{equation}
   a_{\theta_h}(w_h,v_h)
   :=
@@ -1115,8 +1128,7 @@ fixed density, define the bilinear form
     \left(\varepsilon(v_h)|_e\right).
   \label{eq:topology-mechanics}
 \end{equation}
-Here
-$\varepsilon(v)=(\partial_x v_x,\partial_y v_y,
+where $\varepsilon(v)=(\partial_x v_x,\partial_y v_y,
 \partial_y v_x+\partial_x v_y)^\top$, and
 \[
   C
@@ -1136,10 +1148,20 @@ The load functional is
 \]
 The mechanics step finds $u_h(\theta_h)$ in the affine displacement space such
 that $a_{\theta_h}(u_h,v_h)=\ell(v_h)$ for all $v_h\in V_{h,0}$.
+The scalar compliance observable reported below is
+\[
+  \mathcal{C}_h(\theta_h)
+  :=
+  \ell(u_h(\theta_h))
+  =
+  a_{\theta_h}(u_h(\theta_h),u_h(\theta_h)).
+\]
+It is an observable of the mechanics solve, whereas
+\eqref{eq:topology-reduced-objective} is the frozen design subproblem solved at
+one outer iteration.
 
-The third ingredient is the reduced design update. At outer design iteration
-$m$, after solving for $u_h^m=u_h(\theta_h^m)$, the design step freezes, on each
-element,
+The third ingredient is the reduced design update. At outer iteration $m$, after
+solving for $u_h^m=u_h(\theta_h^m)$, we freeze the elementwise quantity
 \[
   e_{e,m}^{\mathrm{frozen}}
   =
@@ -1155,8 +1177,7 @@ density field used in the phase-field term, and define the double-well density
 \[
   W_{\mathrm{dw}}(\theta):=\theta^2(1-\theta)^2.
 \]
-The reduced objective for the next
-design vector $z_h^{m+1}$ is
+The reduced objective for the next design vector $z_h^{m+1}$ is
 \begin{align}
   \mathcal{J}_h^m(z_h)
   &=
@@ -1177,9 +1198,9 @@ design vector $z_h^{m+1}$ is
 where $\theta_e$ and $z_e$ are computed from the trial $z_h$, while $z_e^m$ is
 the element average from the previous design iterate.
 
-The volume constraint and multiplier are evaluated before each design solve.
-The fixed-solid pads are included in the measured volume. We use the normalized
-volume
+The target volume fraction is imposed through an iteration-dependent effective
+multiplier. The fixed-solid pads are included in the measured volume, and the
+normalized volume is
 \[
   V(\theta_h)
   :=
@@ -1208,18 +1229,15 @@ $r_V^{m+1}=V(\theta_h^{m+1})-V_\star$, the carried correction is updated by
   + \beta_V \max(1,\lambda_{\mathrm{ref}}^m) r_V^{m+1},
   \qquad \beta_V=12.
 \]
-The SIMP-style
-continuation in $p$ and the regularization terms control mesh-scale design
-features, following the role of filters in \citet{bourdin2001filters}. Here
-$\lambda_V^m$ is the effective volume multiplier in the current design
-subproblem, while
-$\alpha_{\mathrm{reg}}=\num{5e-3}$,
-$\ell_{\mathrm{pf}}=\num{8e-2}$, and
+Here $\lambda_V^m$ is the effective volume multiplier in the current design
+subproblem. The SIMP-style continuation in $p$ and the regularization terms
+control mesh-scale design features, following the role of filters in
+\citet{bourdin2001filters}. The constants
+$\alpha_{\mathrm{reg}}=\num{5e-3}$, $\ell_{\mathrm{pf}}=\num{8e-2}$, and
 $\mu_{\mathrm{move}}=\num{1e-2}$ set the phase-field and latent-move terms.
-These are algorithmic design choices rather than standard SIMP notation. The
-outer loop alternates mechanics solves for
-\eqref{eq:topology-mechanics} with reduced design updates for
-\eqref{eq:topology-reduced-objective}.
+These are algorithmic choices of this benchmark, not standard SIMP notation. The
+outer loop alternates mechanics solves for \eqref{eq:topology-mechanics} with
+reduced design updates for \eqref{eq:topology-reduced-objective}.
 
 \begin{figure}[!htbp]
   \centering
@@ -1253,6 +1271,9 @@ outer loop alternates mechanics solves for
 topology timing study. The fine-grid run produces a connected load-bearing
 density field, reaches volume fraction \num{0.3749}, and stops after 66 outer
 iterations under the continuation logic shown in \Cref{fig:topology-history}.
+The target volume is imposed through the adaptive multiplier and stopping rule,
+so the endpoint volume is reported as an achieved value rather than as an exact
+equality-constraint satisfaction claim.
 For topology, the relevant notion of
 ``convergence'' is this reduced objective history rather than a single
 equilibrium energy. The reported continuation starts at SIMP exponent $p=1$,

@@ -4,7 +4,7 @@ Family & Tested scope & Solve policy & Comparison evidence & Main difficulty \\
 \midrule
 $p$-Laplace & $L_{5}$ serial agreement; $L_{9}$ distributed scaling & Newton + line search & FEniCS and JAX+PETSc on the distributed case; pure JAX in the serial agreement case & nonlinear elliptic solve with exact sparse Hessians \\
 Ginzburg--Landau & $L_{5}$ agreement; $L_{9}$ distributed scaling & Newton + line search & FEniCS and JAX+PETSc comparison & indefinite local curvature from the double well \\
-Hyperelasticity & $L_{1}$ serial agreement; $L_{4}$, 24-step distributed scaling & trust-region solve & FEniCS and JAX+PETSc on the distributed suite; pure JAX only as a serial reference & nonconvex large-deformation mechanics \\
+Hyperelasticity & $L_{1}$ serial agreement; $L_{4}$, 24-step distributed scaling & trust-region solve & FEniCS and JAX+PETSc on the distributed suite; pure JAX only as a serial formulation check & nonconvex large-deformation mechanics \\
 Plasticity2D & $P_{4}(L_{5})$--$P_{4}(L_{7})$ & endpoint solve and capped fixed work & JAX+PETSc endpoint and solver-policy evidence & same-mesh PMG and nonlinear tail behavior \\
 Plasticity3D & $P_{1}$/$P_{2}$/$P_{4}$ & endpoint, scaling, and PMG-policy studies & constitutive AD, closed-form tangent assembly, and PMG-policy evidence & heterogeneous 3D Mohr--Coulomb with constitutive AD \\
 Topology & $192\times96$ serial demonstration; $768\times384$ parallel benchmark & adaptive continuation & pure JAX on the serial demonstration; JAX+PETSc on the fine-grid rank-varied adaptive timing run and controlled rank-consistency check & distributed design-mechanics coupling \\
