@@ -1367,6 +1367,21 @@ MATLAB literature only when there is source-backed evidence.
   A4 article with the paper-facing CPU-scaling asset names.
   Deferred findings remain target-template issues: venue layout measurement,
   remaining hard floats, dense tables, and final license/archive/DOI decisions.
+- `Current results prose/evidence/layout audit`
+  (`Poincare the 2nd`/`Gauss the 2nd`/`Pasteur the 2nd`):
+  completed and integrated in the current results-prose chunk. Findings
+  addressed: globalization and derivative-route sections now ask the comparison
+  question before listing fixed-case settings; Plasticity2D and Plasticity3D
+  paragraphs separate endpoint evidence, fixed-work diagnostics, derivative-route
+  timing, and solver-profile scope; the p-Laplace distributed energy comparison
+  cites the matched derivative-route table; Ginzburg--Landau avoids exact
+  iteration-count claims that are not visible in the displayed evidence; the
+  Plasticity3D degree-energy paragraph cites the benchmark table for reported
+  endpoint numbers; and the synthesis states the local-differentiation plus
+  PETSc-owned sparse-solver message directly. A fresh submission build and
+  spot-check of the rebuilt Results pages found no current A4 blocker; the
+  Plasticity3D scaling page remains target-template sensitive because its
+  secondary-axis label is close to the margin.
 
 ## First Edit Backlog
 

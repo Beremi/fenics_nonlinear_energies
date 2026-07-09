@@ -111,12 +111,13 @@ stage or commit `paper/style_guide/`.
   consistent Plasticity3D `s_{\lambda}` notation, and topology notation that
   avoids stress/density and hyperelastic/double-well collisions.
 - Evidence/provenance audit: no missing numerical experiment is required for
-  the current scoped claims. The local submission-bundle manifest is refreshed
-  to paper-cleanup commit `3febc92239be9f0c9fc8f129459377cb5fb9340a`.
-  Remaining evidence risks are release-packaging risks: source data split
-  between the curated paper bundle and broader repo assets, derived rather than
-  full raw Plasticity3D figure data in the local bundle, and final DOI/archive
-  integration.
+  the current scoped claims. The local submission-bundle manifest records the
+  earlier paper-cleanup commit `3febc92239be9f0c9fc8f129459377cb5fb9340a`;
+  treat that as bundle provenance, not as a claim that the manifest reflects
+  the latest manuscript HEAD. Remaining evidence risks are release-packaging
+  risks: source data split between the curated paper bundle and broader repo
+  assets, derived rather than full raw Plasticity3D figure data in the local
+  bundle, and final DOI/archive integration.
 - Citation/comparator audit: recent fixes narrow JAX-FEM wording to a
   hyperelastic companion terminal-state comparison, keep the
   \v{C}ermak--Sysala--Valdman role to elastoplastic implementation context,
@@ -182,6 +183,13 @@ stage or commit `paper/style_guide/`.
   objective, states that achieved volumes come from the adaptive
   multiplier/stopping rule rather than exact equality solves, and keeps the
   pure JAX role to a compact serial design demonstration.
+- Current results-prose chunk: Results now places motivation before fixed-case
+  details in the globalization, derivative-route, Plasticity2D, Plasticity3D,
+  topology, and synthesis blocks. The p-Laplace distributed energy comparison
+  points to the matched derivative-route table, the Ginzburg--Landau text avoids
+  exact count claims not visible in the displayed evidence, and the Plasticity3D
+  degree-energy paragraph cites the benchmark table for the reported endpoint
+  numbers.
 
 ## Figure And Table Rules
 
