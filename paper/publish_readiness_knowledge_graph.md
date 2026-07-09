@@ -763,7 +763,10 @@ MATLAB literature only when there is source-backed evidence.
   bundle-hash-check chunk adds a submission-bundle verifier to the publish and
   submission gates; it checks recorded SHA-256 values for bundle files and
   locally available source/dependency files, while counting external-reference
-  source hashes separately.
+  source hashes separately. Current release-blocker chunk adds a machine-readable
+  final-release audit: local `publish-check` and `submission-check` can pass,
+  while `release-check` remains intentionally failing until the target template,
+  license, archival DOI, and durable archive integration are resolved.
 
 ## Evidence Nodes
 

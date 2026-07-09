@@ -2,7 +2,7 @@ PYTHON := ../.venv/bin/python
 LATEXMK := latexmk
 MAIN := main.tex
 
-.PHONY: all layout figures tables literature validate publish-check submission-check pdf clean \
+.PHONY: all layout figures tables literature validate publish-check submission-check release-check release-blockers pdf clean \
 	plasticity3d-validation-run plasticity3d-validation-assets \
 	plasticity3d-derivative-ablation-run plasticity3d-derivative-ablation-assets \
 	jax-fem-baseline-run jax-fem-baseline-assets reproducibility
@@ -57,6 +57,11 @@ submission-check:
 	$(PYTHON) scripts/check_manuscript_hygiene.py build/main.pdf
 	$(PYTHON) scripts/check_submission_bundle_manifest.py
 	$(PYTHON) scripts/validate_paper_assets.py --archive-neutral
+
+release-blockers:
+	$(PYTHON) scripts/check_release_blockers.py
+
+release-check: submission-check release-blockers
 
 pdf: validate
 	$(LATEXMK) -pdf $(MAIN)

@@ -231,6 +231,10 @@ scientific claims were introduced without supporting evidence.
   `make -C paper publish-check` and `make -C paper submission-check`, so local
   publish gates now verify recorded bundle-file and source-file SHA-256 values
   as well as archive-neutral manuscript references.
+- Added `paper/scripts/check_release_blockers.py` plus the `release-blockers`
+  and `release-check` Make targets, making the unresolved venue/template,
+  license, archival DOI, and durable-release blockers machine-readable instead
+  of only prose checklist items.
 - Rebuilt the paper PDF through the paper generation pipeline.
 
 ## Blocking Issues Before Submission
@@ -512,6 +516,17 @@ required support for the current scoped contribution.
 - `make -C paper submission-check`: passed with the new manifest-hash verifier,
   PDF-text hygiene gate, aux-order check, `qpdf`, and archive-neutral asset
   validation.
+- `./.venv/bin/python -m pytest tests/test_paper_release_blockers.py`: passed
+  2 tests for the final-release blocker audit.
+- `./.venv/bin/python paper/scripts/check_release_blockers.py --expect-blockers`:
+  passed by detecting the current four unresolved final-submission blockers:
+  target template/declarations, repository license, archival DOI, and durable
+  archive integration.
+- `make -C paper publish-check`: passed after adding the release-blocker audit
+  target; `publish-check` remains the local archive-neutral provenance gate.
+- `make -C paper submission-check`: passed after adding the release-blocker
+  audit target; `release-check` is intentionally stricter and should fail until
+  the final release blockers are resolved.
 - `./.venv/bin/python -m pytest tests/test_docs_publication.py`: passed
   13 tests.
 - `./.venv/bin/python -m pytest tests/test_final_report_figure_generators.py`:
