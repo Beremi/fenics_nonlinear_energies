@@ -4,9 +4,13 @@ We use a common finite-element notation across all benchmark families. The
 continuous domain is $\Omega \subset \mathbb{R}^d$, and
 $V_{h,0}=\operatorname{span}\{\varphi_i\}_{i=1}^{n}$ is the conforming space of
 free basis functions after homogeneous essential constraints have been
-applied. Nonhomogeneous essential data are represented by an affine lift
-$\bar u_h(\theta)$, with $\bar u_h=0$ in the homogeneous cases. A free
-coefficient vector $x\in\mathbb{R}^{n}$ defines the finite-element state
+applied. Let $\theta$ collect benchmark parameters such as load, material,
+continuation, strength-reduction, and lift data. Nonhomogeneous essential data
+are represented by an affine lift $\bar u_h(\theta)$, with $\bar u_h=0$ in the
+homogeneous cases. For vector-valued mechanics problems, $V_{h,0}$ denotes the
+constrained vector space, basis functions may be vector-valued, and $n$ counts
+free scalar degrees of freedom. A free coefficient vector
+$x\in\mathbb{R}^{n}$ defines the finite-element state
 \[
   u_h(x;\theta)=\bar u_h(\theta)+\sum_{i=1}^{n} x_i\varphi_i.
   \]
@@ -24,10 +28,12 @@ endpoint surrogate is written as
   - f_{\mathrm{ext}}^\top x,
   \label{eq:generic-potential}
 \end{equation}
-where $\theta$ collects load, material, lift, continuation, or
-strength-reduction parameters, $\theta_e$ is the element-local restriction of
-those data, and $f_{\mathrm{ext}}$ is the assembled load vector on the free
-degrees of freedom. A reduced optimization objective with design variable $z$ is
+where $\theta_e$ is the element-local restriction of those data and
+$f_{\mathrm{ext}}$ is the assembled load vector on the free degrees of freedom.
+The expression is the reduced algebraic potential in the free variables; additive
+constants depending only on the affine lift or prescribed loads are omitted
+because they do not affect the stationarity equations. A reduced optimization
+objective with design variable $z$ is
 written schematically as
 \begin{equation}
   \mathcal{J}_h(z)
@@ -53,10 +59,11 @@ In \cref{eq:generic-potential}, $\Phi_e$ is the integrated scalar contribution
 of element $e$. In quadrature-based mechanics examples,
 $\Phi_e(x_e;\theta_e)=\sum_q w_q\psi_q(\varepsilon_q;\theta_q)$, where
 $\varepsilon_q := B_q u_e(x;\theta)$ is the local strain or gradient argument,
-$q$ indexes quadrature points, $w_q$ are quadrature weights, $B_q$ is the
-corresponding element operator, $\theta_q$ is the quadrature-point restriction of
-the element data, and $\psi_q$ is the pointwise energy density or branch
-potential. For finite-element labels, $P_k(L_\ell)$ denotes
+$q$ indexes quadrature points, $w_q$ includes the quadrature weight and
+element-map Jacobian factor, $B_q$ is the corresponding element operator,
+$\theta_q$ is the quadrature-point restriction of the element data, and
+$\psi_q$ is the pointwise energy density or branch potential. For
+finite-element labels, $P_k(L_\ell)$ denotes
 degree-$k$ Lagrange elements on mesh level $L_\ell$; problem-specific sections
 define the mesh hierarchy behind those levels when it matters for
 interpretation.
@@ -64,13 +71,16 @@ interpretation.
 \subsection{Finite-element and derivative structure}
 
 The main design choice in the toolset is that problem definitions should remain
-energy-centered whenever possible. This gives three derivative routes:
+energy-centered whenever possible. For branch potentials, all second-order
+objects below are active-branch derivatives away from switching sets. We use
+three derivative routes:
 \begin{enumerate}
   \item \textbf{element AD:} differentiate the full scalar element contribution
         $\Phi_e(x_e;\theta_e)$ with respect to the element free-DOF vector;
   \item \textbf{constitutive AD:} differentiate a quadrature-point energy
         density $\psi_q(\varepsilon_q,m_q)$ with respect to $\varepsilon_q$,
-        holding branch and material data $m_q$ fixed, then assemble
+        holding branch, material, and history data
+        $m_q\subset\theta_q$ fixed, then assemble
         $r_e = \sum_q w_q B_q^\top \sigma_q$ and
         $K_e = \sum_q w_q B_q^\top C_q B_q$, where
         $\sigma_q := \partial_\varepsilon\psi_q(\varepsilon_q,m_q)$ and
@@ -86,8 +96,9 @@ the differentiation boundary from the full element vector to the local strain
 state. This is especially effective for high-order plasticity, where the full
 element Hessian is often much more expensive than the $6\times6$
 constitutive tangent. We use colored sparse recovery as the umbrella term for
-the colored-SFD configurations reported below: these configurations use AD-HVP
-probes, while finite-difference gradient probes are the classical variant.
+the reported graph-colored configurations. Tables and figures label this route
+as colored SFD; the reported configurations use AD-HVP probes, while
+finite-difference gradient probes are the classical variant.
 
 \subsection{Newton--Krylov globalization}
 
@@ -138,12 +149,16 @@ energy, gradient, Hessian assembly or application, and linear solves
 
 Here $\mathrm{ared}$ is the achieved decrease in the merit functional and
 $\mathrm{pred}$ is the decrease predicted by the local quadratic or reduced
-trust-region model. The line-search callback can be Armijo backtracking, a
+trust-region model. The line-search callback may use Armijo backtracking, a
 bounded merit search, or a residual-bisection safeguard, depending on the
 reported configuration. The accept/reject thresholds and radius-update factors
 are policy parameters; where they affect the interpretation of a result, the
 paper reports the corresponding configuration rather than treating
 \Cref{alg:hybrid-newton} as a complete algorithmic specification.
+Reported PETSc linear solves use the relative KSP residual tolerance stated with
+the corresponding run. Failed linear solves and non-descent directions are
+handled by the configured globalization safeguard or reported as capped solver
+behavior.
 
 For the converged bottom-clamped three-dimensional plasticity scaling
 configuration reported in this paper, the chosen policy is simpler: Newton with
@@ -165,6 +180,10 @@ tolerance.
 \State Given state $x$, direction $p$, initial step $\alpha_0$, backtracking
 parameters $\beta\in(0,1)$, $c_1\in(0,1)$, and maximum count $m_{\max}$
 \State Evaluate $\mathcal{F}(x)$ and $g = \nabla \mathcal{F}(x)$
+\If{$g^\top p \ge 0$}
+  \State report direction failure to the calling solver or use the configured fallback
+  \State \Return
+\EndIf
 \For{$m=0,1,\dots,m_{\max}$}
   \State $\alpha \gets \alpha_0 \beta^m$
   \State $x_{\mathrm{trial}} \gets x + \alpha p$
@@ -196,10 +215,11 @@ do not support the same type of claim.
 
 Sparse derivative recovery is built around the observation that if columns that
 do not interfere in the sparsity pattern are perturbed together, one gradient
-or HVP evaluation can recover multiple columns of the Jacobian or Hessian
+or HVP evaluation can recover multiple Hessian columns, equivalently multiple
+columns of the Jacobian of the gradient,
 \citep{curtis1974sparsejacobian,coleman1984sparsehessian}. The reported
-colored-SFD path uses distance-2 coloring on the Hessian sparsity graph and
-AD-HVP probes; the same recovery formula also describes the classical
+colored sparse-recovery path uses distance-2 coloring on the Hessian sparsity
+graph and AD-HVP probes; the same recovery formula also describes the classical
 finite-difference gradient-probe variant. This structure is especially effective
 when combined with overlap-domain assembly and owned-plus-ghost PETSc layouts.
 
@@ -223,9 +243,9 @@ In the finite-difference branch, $\delta>0$ is the chosen gradient-probe step
 size.
 The structural separation then recovers $H_{ij}=(y_c)_i$ for
 $j\in\mathcal{C}_c$ and $(i,j)\in\mathcal{P}(H)$. The reported \jaxpetsc{}
-colored-SFD cases use the AD Hessian-vector probe mode, so no finite-difference
-perturbation parameter is introduced in those runs; the finite-difference
-formula states the classical recovery variant. After recovery, each rank scatters
+colored sparse-recovery cases use the AD Hessian-vector probe mode, so no
+finite-difference perturbation parameter is introduced in those runs; the
+finite-difference formula states the classical recovery variant. After recovery, each rank scatters
 only owned sparse entries to the PETSc matrix, with overlap data used only for
 local probe evaluation.
 
@@ -254,7 +274,9 @@ local material parameters. We differentiate this scalar potential with respect
 to the six engineering-strain components and assemble the element tangent from
 the resulting stress and constitutive tangent. This keeps the scalar-energy
 definition intact while reducing the cost of branchwise second-order
-information on high-order tetrahedra.
+information on high-order tetrahedra. The operator $B_q$, stress vector
+$\sigma_q$, and tangent $C_q$ use the same Voigt engineering-shear convention,
+so $\sigma_q$ is dual to the chosen strain vector.
 
 \begin{algorithm}[H]
 \caption{Constitutive AD assembly for high-order plasticity}

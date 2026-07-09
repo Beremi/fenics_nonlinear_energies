@@ -48,9 +48,10 @@ than the 24-step rotating benchmark path. Both implementations use the same
 level-1 mesh and the same right-face $x$-translation schedule
 $d=(0.0025,0.005,0.0075,0.01)$, then post-compare both terminal states with
 the energy from
-\cref{eq:hyperelasticity-energy}. This supports a solution-level comparison
-for this hyperelastic problem only. The comparison is neither a plasticity
-validation nor a broad software ranking, and it does not assert constitutive-law
+\cref{eq:hyperelasticity-energy}. This supports terminal-state observable
+agreement for this hyperelastic companion problem only. The comparison is
+neither a plasticity validation nor a broad software ranking, and it does not
+assert constitutive-law
 identity between the two implementations: the JAX-FEM implementation uses a
 logarithmic-$J$ Piola form, whereas \cref{eq:hyperelasticity-energy} uses the
 $D_1(J-1)^2$ volumetric penalty.
@@ -106,11 +107,14 @@ reference-model and method context for this problem class
 \citep{sysala2017returnmapping,sysala2021optimization,sysala2025convexoptimization,sysala2025advancedcontinuation};
 they are not used here as verified numeric paper baselines.
 
-The endpoint-surrogate comparison therefore uses two diagnostics. The
+The endpoint-surrogate comparison therefore uses two diagnostics. Here the
+reference model means the matched endpoint reference formulation used for these
+observable comparisons, not the cited incremental-history studies. The
 endpoint-observable check tests a seven-step direct load branch,
 $\lambda_{\mathrm{sr}}=1.0,1.1,\ldots,1.6$, against the reference model on the
-$P_2(L_1)$ reference case. The work relative
-difference is \num{3.877e-5}, the displacement relative $L^2$ difference is
+$P_2(L_1)$ reference case. The work observable is the external work
+$\omega=f_{\mathrm{ext}}^\top u$ reported by the two endpoint formulations. Its
+relative difference is \num{3.877e-5}, the displacement relative $L^2$ difference is
 \num{3.517e-3}, and the deviatoric-strain relative $L^2$ difference is
 \num{8.720e-3}. The fixed-load reference comparison asks a narrower
 fixed-$\lambda_{\mathrm{sr}}$ question against a matched reference model;

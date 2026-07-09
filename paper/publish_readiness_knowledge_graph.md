@@ -48,7 +48,7 @@ MATLAB literature only when there is source-backed evidence.
 - SIOPT submission-shape cue checked on 2026-07-09: SIAM's author instructions
   ask for figures to be embedded inline and state that SIOPT has a 25-page
   policy, with longer papers published only in exceptional justified cases. The
-  current 41-page A4 article is therefore a journal-template/page-budget blocker
+  current 42-page A4 article is therefore a journal-template/page-budget blocker
   rather than a solved formatting issue.
 
 ## Manuscript Nodes
@@ -97,6 +97,10 @@ MATLAB literature only when there is source-backed evidence.
   reference-model/reference-observable context, and the
   \v{C}erm{\'a}k--Sysala--Valdman MATLAB work as implementation-lineage
   context.
+  Current evidence-scope chunk keeps that separation in both the abstract and
+  introduction, scopes the Plasticity3D timing sentence to the fixed high-order
+  derivative-route comparison, and names the contribution as a scientific
+  \jaxpetsc{} toolset rather than a broad framework.
 - `INTRO`: positioning and contributions.
   Status: now opens with the nonlinear FEM computational bottleneck and includes
   an explicit contribution block with solver, derivative/assembly, and
@@ -171,6 +175,14 @@ MATLAB literature only when there is source-backed evidence.
   correction targets are defined before the numerical tables use them. Current
   math/evidence chunk defines the finite-difference step size `\delta` in the
   colored sparse recovery formula.
+  Current precision chunk defines `\theta` before the affine lift, records that
+  the reduced algebraic potential omits additive constants independent of the
+  free variables, states that quadrature weights include the element-map
+  Jacobian factor, makes `m_q\subset\theta_q` the branch/material/history data,
+  and labels branchwise second-order quantities as active-branch derivatives
+  away from switching sets. It also defines colored SFD as the compact label for
+  colored sparse recovery; the reported graph-colored configurations use AD-HVP
+  probes, while finite-difference gradient probes are the classical variant.
 - `IMPLEMENTATION`: realization of the method.
   Current assets: pure JAX, FEniCS, and JAX+PETSc strata; autodiff modes;
   Krylov/preconditioner matrix; distributed assembly.
@@ -393,6 +405,13 @@ MATLAB literature only when there is source-backed evidence.
   than equal-accuracy timing, and makes the Plasticity3D
   `\lambda_{\mathrm{sr}}=1.55` scaling caption explicitly distinguish its
   stopping-gradient metric from the degree benchmark's final-gradient column.
+  Current evidence-scope chunk adds numerical body-text interpretation for
+  Plasticity2D endpoint versus 20-iteration capped diagnostics, the fixed
+  Plasticity3D derivative-route timings, matched-DOF Plasticity3D degree
+  contrasts, Hyperelasticity fixed-work memory/PMG energy caveats, and Topology
+  adaptive endpoint variation. The final synthesis now speaks about the largest
+  reported Hyperelasticity, Plasticity3D, and Topology cases rather than the
+  largest tested cases in general.
 - `DISCUSSION_CONCLUSION`: interpretation and scope.
   Current prose states the toolset lesson in paper-facing terms: automatic
   differentiation alone does not determine large nonlinear FEM behavior;
@@ -415,7 +434,7 @@ MATLAB literature only when there is source-backed evidence.
   keeps broad conclusions tied to documented solver construction and numerical
   evidence rather than a software-ranking or framework-ranking claim.
 - `FIGURES_TABLES`: visual and layout quality.
-  Current fact: `paper/build/main.pdf` is 41 pages, A4, 10 pt article,
+  Current fact: `paper/build/main.pdf` is 42 pages, A4, 10 pt article,
   text width about 7.09 in. Many floats use `[H]`, so placement is highly manual.
   Figure/layout subagent audit: assets are technically clean at current A4
   width, with embedded fonts and 600 ppi raster layers, but dense 3D
@@ -557,6 +576,15 @@ MATLAB literature only when there is source-backed evidence.
   `git diff --check` passed, and rendered pages 14--21 were visually inspected
   for the Plasticity2D/3D handoff, endpoint-surrogate caveats, figure/table
   placement, and Topology transition.
+  Current audit chunk found the current A4 layout clean but still
+  template-fragile: the 42-page generic article exceeds SIOPT's normal 25-page
+  policy, many `[H]` floats remain, and the SOTA, numerical-protocol,
+  globalization, Plasticity3D derivative-degree, and Plasticity3D CPU-scaling
+  tables should be revisited after a final venue class or main/supplement split
+  is chosen. The final audit-chunk rebuild passed `make -C paper
+  submission-check` on the 42-page A4 PDF, and rendered pages 2, 5, 8--9, 15,
+  17, 26--28, 30--31, 33--36, and 39 were visually checked for table overflow,
+  figure-label readability, algorithm fit, and appendix table width.
 - `REPRO`: reproducibility and submission readiness.
   Known blockers from `paper/todo.md`: target journal/template/declarations,
   repository license/archive DOI, and archive-neutral provenance for critical
@@ -1132,6 +1160,19 @@ MATLAB literature only when there is source-backed evidence.
   a forced `\clearpage`. Remaining layout risk: many later problem-specific
   `[H]` floats remain intentionally untouched until target-template conversion
   or a dedicated family-by-family float pass.
+- `Current publish-scope audit`
+  (`Banach the 2nd`/`Carver the 2nd`/`Kepler the 2nd`/`Epicurus the 2nd`/`Archimedes the 2nd`):
+  completed and integrated. Findings addressed in the current evidence-scope
+  chunk: front matter separates Sysala reference-model context from
+  \v{C}erm{\'a}k--Sysala--Valdman implementation lineage; the methods define
+  affine-lift parameters, reduced-potential constants, quadrature weights,
+  branch data, active-branch derivatives, and colored sparse recovery; validation
+  no longer overreads Ginzburg--Landau energy precision, Hyperelasticity
+  trajectory agreement, Plasticity3D reference-model scope, or Topology stopping
+  diagnostics; results prose ties timing and scaling claims to the reported
+  fixed-work, endpoint, or adaptive-stopping evidence; and the layout audit
+  classifies remaining figure/table work as target-template risk rather than a
+  current A4 build failure.
 
 ## First Edit Backlog
 

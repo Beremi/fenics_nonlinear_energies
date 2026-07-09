@@ -180,6 +180,12 @@ scientific claims were introduced without supporting evidence.
 - Addressed the benchmark-readability audit: split Plasticity2D and Plasticity3D
   setup prose into staged continuum-model, geometry/material, surrogate, and
   claim-scope paragraphs without changing formulas or numerical evidence.
+- Addressed the latest publish-scope audit: separated Sysala reference-model
+  context from \v{C}erm{\'a}k--Sysala--Valdman implementation lineage, made the
+  generic energy notation and colored sparse-recovery route more explicit,
+  scoped validation and fixed-work claims to reported observables, added
+  numerical interpretation for the Plasticity2D, Plasticity3D, Hyperelasticity,
+  and Topology result blocks, and recorded the remaining target-template risks.
 - Rebuilt the paper PDF through the paper generation pipeline.
 
 ## Blocking Issues Before Submission
@@ -313,7 +319,7 @@ required support for the current scoped contribution.
 - `./.venv/bin/python -m py_compile paper/scripts/generate_paper_tables.py`:
   passed on 2026-07-09 after the solver-protocol table edits.
 - `(cd paper && latexmk -pdf -interaction=nonstopmode -halt-on-error main.tex)`:
-  passed after the generated table and prose cleanup, refreshing a 41-page
+  passed after the generated table and prose cleanup, refreshing a 42-page
   `paper/build/main.pdf`.
 - `qpdf --check paper/build/main.pdf`: passed with no syntax or stream errors.
 - `./.venv/bin/python paper/scripts/check_pdf_aux_order.py paper/build/main.aux`:
@@ -381,6 +387,14 @@ required support for the current scoped contribution.
 - Rendered and visually inspected affected pages 5--6 and 24--25 after the
   latest rebuild; the solver vocabulary table and numerical-protocol summary
   are readable, unclipped, and within the current A4 text block.
+- `make -C paper submission-check`: passed again on 2026-07-09 after the
+  latest publish-scope audit edits; the rebuilt `paper/build/main.pdf` is a
+  42-page A4 article.
+- Rendered and visually inspected affected pages 2, 5, 8--9, 15, 17, 26--28,
+  30--31, 33--36, and 39 after the latest rebuild; the SOTA table, algorithms,
+  implementation diagrams, changed captions, derivative-route tables,
+  Hyperelasticity/Plasticity3D/Topology result tables, and appendix diagnostics
+  are readable and unclipped in the current A4 PDF.
 - `./.venv/bin/python -m pytest tests/test_docs_publication.py`: passed
   13 tests.
 - `./.venv/bin/python -m pytest tests/test_final_report_figure_generators.py`:

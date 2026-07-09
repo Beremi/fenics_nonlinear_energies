@@ -162,8 +162,8 @@ geometric complications.
 \end{table}
 
 The within-benchmark picture is therefore one of formulation agreement:
-\cref{fig:plaplace-energy-levels,tab:plaplace-benchmark} show that the
-implemented routes agree to the reported precision for the discrete energy in
+\cref{fig:plaplace-energy-levels,tab:plaplace-benchmark} report matching
+discrete energies to the displayed precision for the implemented routes in
 \cref{eq:plaplace-discrete}. Scaling and timing for this family are reported in
 \Cref{sec:num-plaplace}.
 
@@ -235,7 +235,7 @@ is part of the benchmark definition.
   \caption{Final discrete energies associated with the stationary problem
   \cref{eq:gl-discrete} across mesh
   levels. The element-AD and colored-SFD \jaxpetsc{} routes agree with the
-  \fenics{} reference to the displayed precision.}
+  \fenics{} reference within about $\num{1e-6}$ in final energy.}
   \label{fig:gl-energy-levels}
 \end{figure}
 
@@ -343,8 +343,8 @@ scientifically important than derivative parity alone.
   \includegraphics[width=\PaperFigureNarrow]{hyperelasticity_energy_levels.pdf}
   \caption{Final discrete energies along the stationary sequence
   \cref{eq:hyperelasticity-discrete} across the selected mesh hierarchy. The
-  comparison is less about
-  exact equality than about tracking the same 24-step trajectory consistently.}
+  comparison records completion of the same 24-step schedule and comparable
+  terminal energies; this figure does not assess trajectory-level agreement.}
   \label{fig:hyperelasticity-energy-levels}
 \end{figure}
 
@@ -356,8 +356,8 @@ scientifically important than derivative parity alone.
   \label{tab:hyperelasticity-benchmark}
 \end{table}
 
-The within-benchmark takeaway is therefore that the 24-step stationary sequence
-is followed consistently:
+The within-benchmark takeaway is therefore that all three implementations
+complete the same 24-step stationary sequence:
 \cref{fig:hyperelasticity-state,fig:hyperelasticity-energy-levels} show the
 terminal deformed state and terminal energies, while globalization and scaling
 evidence are deferred to \Cref{sec:num-hyperelasticity}. The separate validation
@@ -577,7 +577,7 @@ separate material parameter.
   \includegraphics[width=\PaperFigureNarrow]{plasticity2d_resolution_energy.pdf}
   \caption{Resolution trend for the Plasticity2D family. The plotted
   terminal energies are evaluations of \cref{eq:plasticity2d-discrete} on the
-  completed $P_4(L_5)$ endpoint case and on the larger fixed-iteration
+  completed $P_4(L_5)$ endpoint case and on the larger 20-iteration capped
   $P_4(L_6)$ and $P_4(L_7)$ diagnostics, which are not used as
   endpoint-convergence evidence.}
   \label{fig:plasticity2d-energy-levels}
@@ -593,7 +593,7 @@ separate material parameter.
 
 This family is where multigrid hierarchy design first becomes dominant in the
 paper. Only the completed $P_4(L_5)$ endpoint case is treated as an endpoint
-solve; the larger $P_4(L_6)$ and $P_4(L_7)$ cases are fixed-iteration
+solve; the larger $P_4(L_6)$ and $P_4(L_7)$ cases are 20-iteration capped
 diagnostics for solver behavior. Solver-engineering evidence for Plasticity2D
 is reported later in \Cref{sec:num-plasticity2d,sec:solver-evidence}.
 
@@ -747,7 +747,7 @@ only through the Davis-B reduction above and not as a separate argument of
 $\Phi_{\mathrm{MC},3\mathrm{D}}$.
 
 The local constitutive surrogate follows the piecewise branch structure of the
-reference model. At one quadrature point we suppress the index $q$ and write
+matched endpoint reference formulation. At one quadrature point we suppress the index $q$ and write
 $s_{\lambda}:=\sin\phi_{\lambda}$. Let
 $\varepsilon_1 \ge \varepsilon_2 \ge \varepsilon_3$ be the ordered principal
 strains obtained after converting engineering shear components to tensor shear.
@@ -975,10 +975,11 @@ surrogate is a full incremental elastoplastic solver.
 \end{figure}
 
 \Cref{fig:plasticity3d-state,fig:plasticity3d-convergence,tab:plasticity3d-benchmark,fig:plasticity3d-highest-slice}
-establish the benchmark object used later in the results section. The nine
+define the endpoint-surrogate benchmark object used later in the results
+section. The nine
 completed endpoint solves converge in the nonlinear stopping metric while the
 terminal values of \cref{eq:plasticity3d-discrete} decrease along both mesh and
-degree refinements. The shared-scale slice comparison shows that the larger
+degree refinements. The shared-scale slice comparison indicates that the larger
 values of $\|\varepsilon_{\mathrm{dev}}\|$ remain localized near the same upper
 slope region across $P_1$, $P_2$, and $P_4$, so the later degree and timing
 comparisons are interpreted as endpoint-solver comparisons rather than changes
@@ -1128,5 +1129,6 @@ For topology, the relevant notion of ``convergence'' is the reduced objective
 history rather than a single equilibrium energy. The reported continuation
 starts at SIMP exponent $p=1$, increases $p$ by $0.2$ on each outer iteration up
 to $p=10$, and treats the fine-grid run as stalled once $p\ge 4$ and both the
-design change and state change are at most $10^{-6}$. Parallel timing and
+reported design-change and state-change stopping diagnostics are at most
+$10^{-6}$. Parallel timing and
 scaling for the same family are reported in \Cref{sec:num-topology}.

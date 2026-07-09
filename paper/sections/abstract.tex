@@ -11,16 +11,18 @@ $p$-Laplace, Ginzburg--Landau, finite-strain hyperelasticity, two- and
 three-dimensional Mohr--Coulomb plasticity, and topology optimization.
 Where matched formulations are available, \purejax{} and \fenics{} provide
 internal reference comparisons. JAX-FEM provides the external hyperelastic
-comparison, while the Sysala-family slope-stability literature and the
-\v{C}erm{\'a}k--Sysala--Valdman MATLAB work provide reference context for the
-plasticity endpoint observables.
+comparison, while the Sysala-family slope-stability literature provides
+reference-model context for the plasticity endpoint observables. The
+\v{C}erm{\'a}k--Sysala--Valdman MATLAB work supplies implementation-lineage
+context for these plasticity models.
 
 Across these problems, we compare element automatic differentiation,
 constitutive automatic differentiation, and colored sparse recovery for
 constructing second-order information, and measure their interaction with PETSc
 assembly, nonlinear globalization, Krylov solvers, and preconditioners. In the
-tested three-dimensional plasticity case, constitutive AD has the lowest
-measured wall time while preserving the reported terminal observables. The
+fixed high-order three-dimensional plasticity derivative-route comparison,
+constitutive AD has the lowest measured wall time while preserving the reported
+terminal observables. The
 distributed mechanics and topology examples provide MPI timing,
 solver-behavior, and rank-consistency evidence under the stated protocols.
 \end{abstract}

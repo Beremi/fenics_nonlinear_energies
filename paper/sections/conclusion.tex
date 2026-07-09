@@ -4,8 +4,8 @@ We developed a \jaxpetsc{} toolset for nonlinear finite-element energy
 minimization in which local differentiable energy models are coupled to PETSc
 sparse distributed nonlinear solvers. The experiments connect scalar energy
 definitions, second-order derivative construction, MPI assembly, and reference
-comparisons in one solver setting. Across the tested problems, the main lesson
-is that local AD choices and distributed nonlinear solver design must be
+comparisons in a common benchmark setting. Across the tested problems, the main
+lesson is that local AD choices and distributed nonlinear solver design must be
 considered together.
 
 The numerical results support this pattern on a deliberately heterogeneous
@@ -17,13 +17,13 @@ coupled design-and-mechanics problem. In the fixed high-order three-dimensional
 plasticity derivative-route comparison, constitutive AD is the lowest measured
 wall-time route among the tested alternatives. In the reported $P_4(L_2)$,
 $\lambda_{\mathrm{sr}}=\num{1.55}$ three-dimensional plasticity scaling sweep,
-all rank counts converge with the same nonlinear and Krylov work. The topology
-runs provide distributed timing evidence for the coupled design-and-mechanics
-loop, with a separate controlled rank-consistency check.
+all tested rank counts converge with the same nonlinear and Krylov work. The
+topology runs provide distributed timing evidence for the coupled
+design-and-mechanics loop, with a separate controlled rank-consistency check.
 
 Natural extensions are path-dependent mechanics validation against
 incremental-history references, broader agreement-focused external comparisons
 under matched problem definitions, and reducing preconditioner-setup and
-multigrid costs in the largest sparse mechanics runs in this study. Together,
-these directions extend the validation discipline of the present study toward
-broader nonlinear multiphysics and design problems.
+multigrid costs in the reported sparse mechanics runs. Together, these
+directions would test whether the validation discipline of the present study
+carries over to broader nonlinear mechanics and design problems.

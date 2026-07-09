@@ -1,12 +1,12 @@
 \begin{tabular}{@{}l c c c >{\RaggedRight\arraybackslash}p{0.40\textwidth}@{}}
 \toprule
-Family & FEniCS & pure JAX & JAX+PETSc & Solver and derivative components \\
+Family & FEniCS & pure JAX & JAX+PETSc & Solver and derivative roles \\
 \midrule
 $p$-Laplace & yes & yes & yes & element AD and colored sparse recovery; Newton--CG with Hypre \\
 Ginzburg--Landau & yes & no & yes & element AD and colored sparse recovery; Armijo Newton with GMRES--Hypre \\
-Hyperelasticity & yes & yes & yes & element AD in the primary route, scoped colored-recovery comparison, and trust-region/GAMG or PMG diagnostics \\
-Plasticity2D & no & no & yes & endpoint potential and continuation diagnostics with same-mesh PMG smoother policy \\
-Plasticity3D & no & no & yes & constitutive AD, element AD, and colored-recovery diagnostics; FGMRES with same-mesh PMG and Hypre or LU/MUMPS coarse profiles \\
+Hyperelasticity & yes & yes & yes & element AD in the primary route, scoped colored sparse-recovery comparison, and trust-region/GAMG or PMG diagnostics \\
+Plasticity2D & no & no & yes & endpoint branch-potential derivatives and continuation diagnostics with same-mesh PMG smoother policy \\
+Plasticity3D & no & no & yes & constitutive AD, element AD, and colored sparse-recovery diagnostics; FGMRES with same-mesh PMG and Hypre or LU/MUMPS coarse profiles \\
 Topology optimization & no & yes & yes & distributed design updates with PETSc mechanics and GAMG-preconditioned FGMRES \\
 \bottomrule
 \end{tabular}

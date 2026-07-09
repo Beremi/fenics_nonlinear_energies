@@ -3,14 +3,13 @@
 The relevant literature falls into four groups: finite-element and
 PDE-optimization automation, differentiable FEM and JAX--solver bridges,
 mechanics and topology benchmark context, and sparse nonlinear solver
-infrastructure. We use this taxonomy to position the present toolset without
-ranking the surrounding software ecosystems.
+infrastructure. We use this taxonomy to identify the roles that the present
+toolset combines.
 
 \Cref{tab:sota-comparison} records the computational roles needed for this
 positioning: modeling layer, differentiation scope, second-order information,
 parallel execution model, and benchmark families closest to the present suite.
-The table is a role map rather than a package ranking; the paragraphs below give
-the source-specific discussion.
+The paragraphs below give the source-specific discussion.
 
 \begin{table}[!htbp]
   \centering
@@ -18,10 +17,14 @@ the source-specific discussion.
   \setlength{\tabcolsep}{3pt}
   \input{tables/generated/sota_framework_comparison.tex}
   \caption{Selected related computational roles for the software and literature
-  families most relevant to this paper. The entries record documented roles
-  rather than subjective scores.}
+  families most relevant to this paper.}
   \label{tab:sota-comparison}
 \end{table}
+
+The present \jaxpetsc{} toolset combines these roles by coupling local JAX
+energy and constitutive derivatives to PETSc sparse MPI assembly, nonlinear
+globalization, Krylov methods, and preconditioner policy on the benchmark suite
+defined in \Cref{sec:benchmarks}.
 
 \paragraph{Finite-element and PDE-optimization automation.}
 The original \fenics{} project established the high-level finite-element

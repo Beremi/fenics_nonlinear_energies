@@ -578,7 +578,7 @@ def plasticity3d_local_karolina_rows() -> list[dict[str, object]]:
             {
                 "source": "single-node CPU",
                 "ranks": int(row["ranks"]),
-                "nodes": None,
+                "nodes": 1,
                 "solver_total_s": float(row["solver_total_s"]),
                 "solve_time_s": float(row["nonlinear_solve_s"]),
                 "newton_iterations": int(row["newton_iterations"]),
@@ -915,7 +915,7 @@ def plasticity2d_resolution_rows() -> list[dict[str, object]]:
                 "energy": float(selected["energy"]),
                 "total_time_s": float(selected["total_time_sec"]),
                 "status": str(selected["status"]),
-                "note": f"fixed-iteration diagnostic at {ranks} ranks",
+                "note": f"20-iteration capped diagnostic at {ranks} ranks",
             }
         )
     return rows
@@ -1056,7 +1056,7 @@ def main() -> None:
             [
                 "Plasticity (2D)",
                 f"JAX+PETSc same-mesh PMG, {p2d_highlight['label']}, 16 ranks: {fmt_wall_time(float(p2d_highlight['total_time_s']))} s",
-                "This fixed-iteration diagnostic reports the largest listed 2D plasticity case.",
+                "This is the highest-resolution 2D plasticity diagnostic reported here.",
             ],
             [
                 "Plasticity3D",
@@ -1074,13 +1074,13 @@ def main() -> None:
     write_table(
         "implementation_capability_matrix.tex",
         "@{}l c c c " + pcol(r"0.40\textwidth") + "@{}",
-        ["Family", "FEniCS", "pure JAX", "JAX+PETSc", "Solver and derivative components"],
+        ["Family", "FEniCS", "pure JAX", "JAX+PETSc", "Solver and derivative roles"],
         [
             ["$p$-Laplace", "yes", "yes", "yes", "element AD and colored sparse recovery; Newton--CG with Hypre"],
             ["Ginzburg--Landau", "yes", "no", "yes", "element AD and colored sparse recovery; Armijo Newton with GMRES--Hypre"],
-            ["Hyperelasticity", "yes", "yes", "yes", "element AD in the primary route, scoped colored-recovery comparison, and trust-region/GAMG or PMG diagnostics"],
-            ["Plasticity2D", "no", "no", "yes", "endpoint potential and continuation diagnostics with same-mesh PMG smoother policy"],
-            ["Plasticity3D", "no", "no", "yes", "constitutive AD, element AD, and colored-recovery diagnostics; FGMRES with same-mesh PMG and Hypre or LU/MUMPS coarse profiles"],
+            ["Hyperelasticity", "yes", "yes", "yes", "element AD in the primary route, scoped colored sparse-recovery comparison, and trust-region/GAMG or PMG diagnostics"],
+            ["Plasticity2D", "no", "no", "yes", "endpoint branch-potential derivatives and continuation diagnostics with same-mesh PMG smoother policy"],
+            ["Plasticity3D", "no", "no", "yes", "constitutive AD, element AD, and colored sparse-recovery diagnostics; FGMRES with same-mesh PMG and Hypre or LU/MUMPS coarse profiles"],
             ["Topology optimization", "no", "yes", "yes", "distributed design updates with PETSc mechanics and GAMG-preconditioned FGMRES"],
         ],
     )
@@ -1101,7 +1101,7 @@ def main() -> None:
             ["Ginzburg--Landau", mesh_label("L9"), "Newton + line search", "FEniCS, JAX+PETSc", "indefinite local curvature from the double well"],
             ["Hyperelasticity", f"{mesh_label('L4')}, 24 steps", "trust-region solve", "FEniCS, pure JAX, JAX+PETSc", "nonconvex large-deformation mechanics"],
             ["Plasticity2D", f"{element_label('P4', 'L5')}--{element_label('P4', 'L7')}", "endpoint solve or fixed nonlinear work", "JAX+PETSc only", "same-mesh PMG and nonlinear tail behavior"],
-            ["Plasticity3D", f"{degree_label('P1')}/{degree_label('P2')}/{degree_label('P4')}", "endpoint, scaling, and diagnostic PMG policies", "constitutive and reference PMG variants", "heterogeneous 3D Mohr--Coulomb with constitutive AD"],
+            ["Plasticity3D", f"{degree_label('P1')}/{degree_label('P2')}/{degree_label('P4')}", "endpoint, scaling, and diagnostic PMG policies", "constitutive-AD, reference-formula, and frozen-operator PMG diagnostics", "heterogeneous 3D Mohr--Coulomb with constitutive AD"],
             ["Topology", "$768\\times384$", "adaptive continuation", "pure JAX, JAX+PETSc", "distributed design-mechanics coupling"],
         ],
     )
@@ -1265,11 +1265,6 @@ def main() -> None:
                 "\\citep{tschuchnigg2015nonassociated,sysala2017returnmapping,sysala2021optimization,sysala2025convexoptimization,sysala2025advancedcontinuation,cermak2019efficient,sigmund2001topology,bendsoe2003topology,ferrari2020top99,bourdin2001filters,jia2024fenitop}",
                 "Strength-reduction plasticity, elastoplastic implementation practice, SIMP topology optimization, filtering, and compact parallel topology software.",
                 "Defines the scientific problem classes and lineage; the numerical claims remain limited to the implemented endpoint surrogate and reported comparison observables.",
-            ],
-            [
-                "Present toolset",
-                "JAX local energies and constitutive laws with PETSc vectors, matrices, nonlinear solvers, Krylov methods, and multigrid.",
-                "Across the six-family suite, tests element AD, constitutive AD, colored SFD, nonlinear globalization, sparse assembly, and preconditioner policy in the benchmark subsets where each route is implemented.",
             ],
         ],
     )
@@ -1792,11 +1787,11 @@ def main() -> None:
         fill_spec("c c c c c c"),
         [
             "Ranks",
-            "AD branch wall [s]",
-            "Closed-form branch wall [s]",
-            "AD branch solve [s]",
-            "Closed-form branch solve [s]",
-            "Ratio",
+            "AD wall [s]",
+            "Closed-form wall [s]",
+            "AD solve [s]",
+            "Closed-form solve [s]",
+            "Wall ratio",
         ],
         [
             [

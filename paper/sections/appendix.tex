@@ -39,13 +39,14 @@ variant in which the multigrid operator is not rebuilt along the nonlinear path.
   \label{tab:plasticity3d-fixed-reference-pmg}
 \end{table}
 
-These diagnostics support two narrower statements. First, reference-formula assembly
-has lower reported wall time than rank-local assembly in the listed matched-rank
-comparisons, although the gap narrows at higher rank counts.
+These diagnostics support two narrower statements. First, closed-form branch
+tangent assembly has lower reported wall time than AD-branch tangent assembly in
+the listed matched-rank comparisons, although the gap narrows at higher rank
+counts.
 Second, the fixed-reference PMG profile is not the default used in the
 present study: it may appear favorable on completed low-rank configurations, but
-it reaches the maximum number of Newton iterations on more of the reported rank
-counts and therefore gives less consistent convergence evidence. The rank-local
+three of the eight fixed-reference rows reach the maximum number of Newton
+iterations and therefore give less consistent convergence evidence. The rank-local
 constitutive-AD path remains the primary Plasticity3D realization because it uses the
 same local differentiable formulation as the derivative-route and converged
 scaling studies; the reference-formula configurations are retained to expose
