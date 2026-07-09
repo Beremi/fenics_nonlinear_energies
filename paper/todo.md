@@ -221,6 +221,9 @@ scientific claims were introduced without supporting evidence.
 - Refreshed the SIOPT style anchors from SIAM article and author-instruction
   pages, and replaced the remaining defensive software-ranking phrases with
   positive terminal-state/evidence-scope statements.
+- Refreshed the local submission-bundle manifest from the current
+  publish-readiness branch commit, keeping archive-neutral provenance in sync
+  without rerunning MPI campaigns.
 - Rebuilt the paper PDF through the paper generation pipeline.
 
 ## Blocking Issues Before Submission
@@ -480,6 +483,11 @@ required support for the current scoped contribution.
 - `make -C paper submission-check`: passed after the SIOPT-style and
   evidence-scope wording polish; the rebuilt `paper/build/main.pdf` remains a
   43-page A4 article.
+- `./.venv/bin/python paper/scripts/build_submission_bundle.py`: passed after
+  the SIOPT-style polish and refreshed the local bundle manifest to commit
+  `561947fa6a39b22e455ead956153149f641c440f`.
+- `./.venv/bin/python paper/scripts/validate_paper_assets.py --archive-neutral`:
+  passed against the refreshed local submission-bundle manifest.
 - `./.venv/bin/python -m pytest tests/test_docs_publication.py`: passed
   13 tests.
 - `./.venv/bin/python -m pytest tests/test_final_report_figure_generators.py`:
