@@ -28,14 +28,11 @@ element assembly path and preconditioner family fixed within the problem and
 varies only the nonlinear policy. Timed-out rows are retained as capped solver
 behavior rather than convergence evidence.
 
-The rows use representative fixed cases rather than one common physical problem.
-The $p$-Laplace row is a separate unit-load stress test on the level-10
-hierarchy, the hyperelasticity row uses the first eight load steps of the
-level-4 rank-local assembly path, and the Plasticity3D row uses the
-$P_2(L_1)$ endpoint surrogate at $\lambda_{\mathrm{sr}}=\num{1.55}$. The
-$p$-Laplace, Ginzburg--Landau, hyperelasticity, and Plasticity3D rows use
-32, 16, 32, and 32 MPI ranks, respectively, with wall-time caps of 30, 120,
-270, and 180 s.
+The rows are representative fixed cases rather than one physical problem:
+$p$-Laplace uses a level-10 unit-load stress test, hyperelasticity the first
+eight level-4 rank-local load steps, and Plasticity3D the $P_2(L_1)$ endpoint
+surrogate at $\lambda_{\mathrm{sr}}=\num{1.55}$. The four rows use 32, 16, 32,
+and 32 MPI ranks with 30, 120, 270, and 180 s caps.
 
 \begin{table}[!htbp]
   \centering
@@ -115,20 +112,13 @@ colors across the 32 ranks; its comparable solve time is consistent with batched
 rank-local HVPs having nearly the same measured Hessian-evaluation cost as
 element AD on this $P_2(L_1)$ case.
 
-\Cref{tab:plasticity3d-derivative-degree} adds the degree sensitivity
-behind the Plasticity3D derivative-route claim. This single-linearization
-comparison uses one Newton linearization on bottom-clamped heterogeneous meshes at
-$\lambda_{\mathrm{sr}}=\num{1.55}$, 32 MPI ranks, and the degree-appropriate
-PMG hierarchy. The table therefore measures Hessian-evaluation cost at fixed
-linearization, not nonlinear convergence quality.
-The same-DOF comparison is the most informative same-DOF contrast: $P_1(L_2)$ and
-$P_2(L_1)$ both have \num{79024} free unknowns, but the $P_2$ element stencil
-is denser. Its colored sparse-recovery route therefore needs 240--420 colors instead of
-66--90, raises the Hessian evaluation from \num{0.332} to \num{1.412} s, and
-raises the rank-maximum resident set size (RSS) from about \num{0.65} to
-\num{1.10} GiB. The $P_4$
-colored sparse-recovery case is outside this single-linearization table; the $P_2$ same-DOF
-comparison already isolates the stencil-density effect.
+\Cref{tab:plasticity3d-derivative-degree} measures Plasticity3D
+Hessian-evaluation cost for one Newton linearization, not nonlinear convergence.
+The key same-DOF contrast is $P_1(L_2)$ versus $P_2(L_1)$: at \num{79024} free
+unknowns, the denser $P_2$ stencil raises colors from 66--90 to 240--420,
+Hessian time from \num{0.332} to \num{1.412} s, and rank-maximum resident set
+size (RSS) from about \num{0.65} to \num{1.10} GiB. The $P_4$ colored
+sparse-recovery case is outside this table.
 
 \begin{table}[!htbp]
   \centering
@@ -181,13 +171,15 @@ between element-Hessian and colored sparse-recovery routes, but that the same
 sparse infrastructure handles the reported nonconvex scalar-energy
 configurations.
 
-\begin{figure}[H]
+\begin{figure}[!htbp]
   \centering
   \includegraphics[width=\PaperFigureMedium]{ginzburg_landau_scaling.pdf}
   \caption{Ginzburg--Landau strong scaling for the tested fine-grid case
   governed by \eqref{eq:gl-discrete}.}
   \label{fig:gl-results}
 \end{figure}
+
+\FloatBarrier
 
 At 32 ranks, the element-AD and colored sparse-recovery \jaxpetsc{} configurations report
 \SI{2.10}{s} and \SI{2.72}{s}, respectively. The scaling figure shows the same
@@ -201,18 +193,14 @@ while the paragraph above isolates the \jaxpetsc{} derivative-route cost.
 \subsection{Hyperelasticity}
 \label{sec:num-hyperelasticity}
 
-The hyperelasticity problem definition and boundary data are given in
-\Cref{sec:bench-he}, with discrete stationarity problem
-\eqref{eq:hyperelasticity-discrete}. In the full load-path evidence, the main
-solver-policy questions are globalization and
-preconditioning; the derivative-route comparison is limited to the first-step
-replicated-element case. The distributed implementation completes the full load
-path and preserves the terminal energy trend from \Cref{sec:bench-he}. The
-external JAX-FEM comparison is reported separately in
-\Cref{sec:val-hyperelasticity}; \Cref{fig:hyperelasticity-results} reports only distributed
-scaling for the load path in \eqref{eq:hyperelasticity-discrete}.
+\Cref{sec:bench-he} defines the boundary data and
+\eqref{eq:hyperelasticity-discrete}. Here the full load path tests
+globalization and preconditioning; derivative-route evidence is limited to the
+first-step replicated-element case. The distributed implementation completes the
+load path, \Cref{fig:hyperelasticity-results} reports only its scaling, and the
+JAX-FEM comparison remains in \Cref{sec:val-hyperelasticity}.
 
-\begin{figure}[H]
+\begin{figure}[!htbp]
   \centering
   \includegraphics[width=\PaperFigureMedium]{hyperelasticity_scaling.pdf}
   \caption{Hyperelasticity strong scaling for the 24-step load path defined by
@@ -220,20 +208,21 @@ scaling for the load path in \eqref{eq:hyperelasticity-discrete}.
   \label{fig:hyperelasticity-results}
 \end{figure}
 
+\FloatBarrier
+
 The 24-step hyperelasticity scaling curve reduces \jaxpetsc{} element-AD wall
 time from \SI{1894}{s} at 8 ranks to \SI{529}{s} at 32 ranks. The speedup is
 substantial but not ideal, which motivates the more targeted fixed-work
 distribution and PMG diagnostics below.
 
-The larger multi-node experiment asks a fixed-work solver-policy question: how
-the rank-local hyperelasticity assembly behaves when the level-5 first load step
-uses the same nonlinear work but different rank counts and PMG coarse-solver
-layouts. The CPU configurations use one MPI rank per core on nodes with two AMD EPYC 7H12
-64-core processors and 256 GB RAM \citep{it4i-karolina-compute-nodes}, with
-contiguous CPU binding and memory binding local to each
-non-uniform-memory-access domain. The mesh is generated from the uniform beam
-hierarchy, and the element assembly uses rank-local elements with PETSc
-coordinate-format sparse preallocation and point-to-point overlap exchange.
+The fixed-work multi-node experiment asks how rank-local level-5 first-step
+assembly behaves under common nonlinear work while rank counts and PMG
+coarse-solver layouts vary. CPU configurations use one MPI rank per core on
+dual-socket AMD EPYC 7H12 nodes with 256 GB RAM
+\citep{it4i-karolina-compute-nodes}, contiguous CPU binding, and
+memory binding local to each non-uniform-memory-access domain. The uniform-beam
+hierarchy uses rank-local elements, PETSc coordinate-format preallocation, and
+point-to-point overlap exchange.
 
 The nonlinear solve is the same trust-region Newton path used for the
 benchmark in \cref{sec:bench-he}. The linear subproblems use
@@ -286,7 +275,7 @@ nonlinear work, so
 \Cref{tab:hyperelasticity-pmg-sensitivity} is a solver-policy comparison rather
 than an equal-accuracy timing comparison or endpoint-accuracy ranking.
 
-\begin{table}[H]
+\begin{table}[!htbp]
   \centering
   \footnotesize
   \caption{Rank-local hyperelasticity level-5 PMG and coarse-solver sensitivity at
@@ -296,6 +285,8 @@ than an equal-accuracy timing comparison or endpoint-accuracy ranking.
   \input{tables/generated/hyperelasticity_pmg_sensitivity.tex}
 \end{table}
 
+\FloatBarrier
+
 The fixed-work table reports that the MUMPS-coarse PMG variants reduce total
 Krylov iterations from 92 with Hypre coarse solves to 17, and reduce solver time
 from \SI{23.3}{s} to about \SI{16}{s}. This is preconditioner-policy evidence
@@ -303,7 +294,7 @@ for a fixed nonlinear workload, not a statement about final load-path accuracy.
 The energy differences in the table are fixed-work terminal-state differences
 after the same eight Newton linearizations.
 
-\begin{figure}[H]
+\begin{figure}[!htbp]
   \centering
   \includegraphics[width=\PaperFigureMedium]{hyperelasticity_cpu_pmg_scaling.pdf}
   \caption{Single- and multi-node CPU level-5 hyperelasticity first-step scaling
@@ -312,7 +303,9 @@ after the same eight Newton linearizations.
   \label{fig:hyperelasticity-cpu-pmg-scaling}
 \end{figure}
 
-\begin{table}[H]
+\FloatBarrier
+
+\begin{table}[!htbp]
   \centering
   \caption{Single- and multi-node CPU level-5 hyperelasticity first-step timings used in
   \cref{fig:hyperelasticity-cpu-pmg-scaling}. This is a fixed-work first-step
@@ -320,6 +313,8 @@ after the same eight Newton linearizations.
   \label{tab:hyperelasticity-cpu-pmg-scaling}
   \input{tables/generated/hyperelasticity_cpu_pmg_scaling.tex}
 \end{table}
+
+\FloatBarrier
 
 \Cref{fig:hyperelasticity-cpu-pmg-scaling,tab:hyperelasticity-cpu-pmg-scaling}
 show a fixed-work timing drop from \SI{419}{s} on 16 ranks to \SI{15.7}{s} on
@@ -501,21 +496,16 @@ reference-formula assembly and continuation evidence is reported later in
 \Cref{sec:solver-evidence}.
 
 The converged bottom-clamped $P_4(L_2)$,
-$\lambda_{\mathrm{sr}}=\num{1.55}$ scaling comparison fixes the nonlinear work:
-all plotted configurations converge in 29 Newton iterations and 1240 total
-Krylov iterations to the same energy and stopping-gradient norm to the precision
-shown in \Cref{tab:plasticity3d-cpu-scaling}. It uses the benchmark case and
-load level, with constitutive-AD rank-local assembly and the MUMPS-backed
-same-mesh $P_4 \rightarrow P_2 \rightarrow P_1$ PMG hierarchy.
-The nonlinear method is Armijo Newton, the PETSc relative KSP residual tolerance
-is \num{1e-2}, and the nonlinear stop requires both relative correction below
-\num{0.002} and a stopping-gradient norm below one percent of the first Newton
-gradient. The stopping contract is reported through both
-$\|g\|_{\mathrm{stop}}$ and
-$\|g\|_{\mathrm{stop}}/\|g\|_{\mathrm{target}}$; all listed ratios are below
-one. \Cref{fig:plasticity3d-cpu-scaling,tab:plasticity3d-cpu-scaling} therefore
-compare single-node and 16-ranks-per-node CPU timings without changing the
-nonlinear workload.
+$\lambda_{\mathrm{sr}}=\num{1.55}$ scaling comparison fixes nonlinear work: all
+configurations converge in 29 Newton iterations and 1240 Krylov iterations to
+the same displayed energy and stopping-gradient norm. It uses constitutive-AD
+rank-local assembly, MUMPS-backed $P_4 \rightarrow P_2 \rightarrow P_1$ PMG,
+Armijo Newton, KSP tolerance \num{1e-2}, and a stop requiring relative
+correction below \num{0.002} and stopping-gradient norm below one percent of the
+first Newton gradient. Since all reported
+$\|g\|_{\mathrm{stop}}/\|g\|_{\mathrm{target}}<1$,
+\Cref{fig:plasticity3d-cpu-scaling,tab:plasticity3d-cpu-scaling} compare CPU
+timings at fixed nonlinear workload.
 
 \begin{figure}[!htbp]
   \centering
@@ -599,15 +589,13 @@ rather than strong scaling at a fixed computational workload.
   \input{tables/generated/topology_summary.tex}
 \end{table}
 
-\Cref{fig:topology-results,tab:topology-summary} report that the fine-grid
-end-to-end wall time falls from \SI{208}{s} on one rank to \SI{25.1}{s} on
-32 ranks. The outer iteration counts and final continuation exponents vary
-across ranks, and the adaptive endpoints have compliance values from
-\num{8.9473} to \num{9.9074} and volume fractions from \num{0.3749} to
-\num{0.3932}. These are achieved volumes under the adaptive multiplier and
-stopping rule, not equality-satisfaction claims for the target volume. We
-therefore measure adaptive end-to-end behavior for the coupled design-mechanics
-computation, not fixed-work strong scaling or a rank-invariant endpoint.
+\Cref{fig:topology-results,tab:topology-summary} report fine-grid wall time
+decreasing from \SI{208}{s} on one rank to \SI{25.1}{s} on 32 ranks. Outer
+iterations, final continuation exponents, compliance
+(\num{8.9473}--\num{9.9074}), and achieved volume fractions
+(\num{0.3749}--\num{0.3932}) vary across ranks. Thus this is adaptive
+end-to-end behavior under the multiplier and stopping rule, not target-volume
+equality, fixed-work strong scaling, or a rank-invariant endpoint.
 
 \Cref{tab:topology-rank-consistency} complements the end-to-end timing
 table with a controlled 40-iteration rank-consistency test on a smaller
@@ -617,10 +605,10 @@ rank counts use the same initial design and smoother continuation schedule
 one-rank \jaxpetsc{} reference run after 40 outer iterations.
 All rank counts complete the same 40 outer iterations. The compliance
 difference stays below \num{0.2}\%, and the density relative $L^2$ difference
-remains below \num{0.04}. Thus, the observed rank-to-one-rank discrepancies
-remain below the reported thresholds for this controlled 40-iteration case.
+remains below \num{0.04}. These are the largest observed discrepancies for this
+controlled 40-iteration case, not general rank-invariance thresholds.
 
-\begin{table}[H]
+\begin{table}[!htbp]
   \centering
   \footnotesize
   \caption{Topology controlled 40-iteration rank-consistency check. Each rank count completes the
@@ -629,6 +617,8 @@ remain below the reported thresholds for this controlled 40-iteration case.
   \label{tab:topology-rank-consistency}
   \input{tables/generated/topology_rank_consistency.tex}
 \end{table}
+
+\FloatBarrier
 
 The topology case extends the evidence from state solves to coupled
 design--mechanics optimization. Here the primary distributed \jaxpetsc{}

@@ -42,12 +42,13 @@ software superiority claims.
 - Recent SIOPT-style cues checked on 2026-07-09 are method-first and
   evidence-scoped: application motivation, assumptions/problem class, numerical
   method, experiment parameters, numerical evidence, and discussion/conclusion.
-  The official SIAM article page remains Cloudflare-limited from this
-  environment; accessible anchors were the arXiv full text of Keith--Kim--
-  Lazarov--Surowiec, "Analysis of the SiMPL method for density-based topology
-  optimization" (current arXiv version dated 2025-02-23), and an open
-  Optimization Online PDF for a SIOPT-style derivative-free optimization
-  manuscript.
+  The SIAM DOI page for Sysala--Beres--Beresova--Haslinger--Kruzik--Luber
+  (2025) is accessible from this environment and confirms the open-access
+  SIOPT structure; secondary open anchors remain the arXiv full text of
+  Keith--Kim--Lazarov--Surowiec, "Analysis of the SiMPL method for
+  density-based topology optimization" (current arXiv version dated
+  2025-02-23), and an open Optimization Online PDF for a SIOPT-style
+  derivative-free optimization manuscript.
 
 The local style-guide snapshot is ignored through `.git/info/exclude`; do not
 stage or commit `paper/style_guide/`.
@@ -115,8 +116,11 @@ stage or commit `paper/style_guide/`.
   as bundle provenance, not as a claim that the manifest reflects the latest
   manuscript HEAD. Final archive/DOI integration remains unresolved.
 - Layout: the current A4 PDF has no known hard rendering blocker after the last
-  completed build. Remaining layout risks are target-template driven: dense
-  result pages, figure/table compression, and page budget after venue conversion.
+  completed build. Only the three method algorithms remain intentionally
+  hard-pinned with `[H]`; problem-specific Results, Validation, Benchmark, and
+  Appendix floats are now broadly flexible. Remaining layout risks are
+  target-template driven: dense result pages, figure/table compression, and page
+  budget after venue conversion.
 - Current page-budget/evidence pass: the roadmap and related-work transition
   are shorter, the standalone Armijo pseudocode was removed while preserving the
   solver-policy prose and citations, comparator-role citations were moved into
@@ -142,6 +146,14 @@ stage or commit `paper/style_guide/`.
   residual run-log wording with configuration/comparison language, and narrow the
   conclusion to the tested nonlinear energy families. The rebuilt PDF is now a
   45-page A4 article.
+- Current float-concision and notation pass: subagent audits reduced the hard
+  float allowlist from 12 problem/method floats to the three method algorithms,
+  shortened dense Results and Conclusion prose without changing evidence, added
+  the Plasticity2D deviatoric engineering-strain invariant, clarified frozen
+  design-state notation, cleaned generated figure/table wording, and narrowed
+  topology rank-consistency language to observed discrepancies in the controlled
+  40-iteration case. The rebuilt PDF remains a 45-page A4 article; rendered
+  pages 16--19 and 25--42 were visually checked.
 
 ## Figure And Table Rules
 
@@ -153,7 +165,8 @@ stage or commit `paper/style_guide/`.
   source note says otherwise. Preserve relative widths, numeric alignment,
   units in headers, and publication labels.
 - Avoid adding hard `[H]` floats. If one is unavoidable, update
-  `paper/scripts/check_float_placements.py` with a reason.
+  `paper/scripts/check_float_placements.py` with a reason. The current
+  allowlist contains only the three methodology algorithms.
 - After figure/table changes, run the narrow generator first and then
   `make -C paper submission-check`.
 
@@ -182,19 +195,14 @@ external release decisions:
 The current PDF is a 45-page A4 article. Page budget and float behavior must be
 rechecked after target-template conversion.
 
-Deferred layout risks from the 2026-07-09 audit: dense hyperelasticity and
-Plasticity3D result clusters, early schematic-heavy implementation pages, long
-result tables, and target-template sensitivity in the benchmark float groups.
-The latest Results audit specifically flags dense globalization/protocol tables,
-the derivative-route table cluster, the four-panel Plasticity3D degree figure,
-and the Plasticity3D CPU-scaling table as template-sensitive but readable on A4.
-Latest rendered-page review found no A4 clipping or illegible figures; these
-risks should be revisited only after a target template changes text width.
-The latest figure/table auditor again found the current A4 PDF acceptable, but
-flagged `[H]` floats, dense Results table clusters, the four-panel Plasticity3D
-degree figure, and the Plasticity3D CPU-scaling table as target-template risks.
-Stale non-manuscript generated figure/table outputs are now removed and guarded
-by `validate_paper_assets.py`; figure sizing now fails fast if the current A4
+Deferred layout risks from the 2026-07-09 audits are now target-template risks
+rather than current A4 blockers: dense hyperelasticity and Plasticity3D result
+clusters, long result tables, the four-panel Plasticity3D degree figure, and
+the Plasticity3D CPU-scaling table. Latest rendered-page review found no A4
+clipping or illegible figures; revisit these risks only after a target template
+changes text width or the paper is split into main/supplement material. Stale
+non-manuscript generated figure/table outputs are removed and guarded by
+`validate_paper_assets.py`; figure sizing now fails fast if the current A4
 article layout contract changes without updating the measurement policy.
 
 ## Standard Validation

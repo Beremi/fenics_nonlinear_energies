@@ -42,9 +42,10 @@ written schematically as
   \mathcal{R}_h(z) + \mathcal{S}_h(z,x(z);\theta(z)),
   \label{eq:generic-objective}
 \end{equation}
-where $z$ is a design variable, $x(z)$ is the associated state determined by the
-benchmark state equation or stationarity condition, and $\mathcal{R}_h$ contains
-regularization or design penalties. The term
+where $z$ is a design variable and $x(z)$ denotes either the associated state
+determined by the benchmark state equation or, for frozen design subproblems,
+the fixed state from the current outer iterate. The term
+$\mathcal{R}_h$ contains regularization or design penalties, and
 $\mathcal{S}_h$ denotes the state-dependent scalar part; in topology
 optimization it is the frozen compliance term defined in
 \cref{sec:bench-topology}, not the load-step potential

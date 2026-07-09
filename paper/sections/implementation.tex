@@ -87,10 +87,11 @@ across reference implementations.
 
 \Cref{fig:framework-overview,fig:derivative-pathways,fig:derivative-stack} summarize the
 computational construction used in the rest of the paper. The primary
-\jaxpetsc{} realization is the distributed nonlinear solve; the reference
-formulations provide matched comparisons; and the derivative modes differ only
-in where the second-order information is constructed before PETSc receives
-sparse algebraic objects.
+\jaxpetsc{} realization is the distributed nonlinear solve. Where matched
+definitions are available, reference formulations provide scoped comparisons;
+otherwise they serve as compact demonstrations. The derivative modes differ only
+in where second-order information is constructed before PETSc receives sparse
+algebraic objects.
 
 \subsection{Linear solvers and preconditioners}
 

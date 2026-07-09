@@ -1226,7 +1226,7 @@ def _generate_plasticity3d_convergence_figure(layout: dict[str, float]) -> str:
     axes[1].set_ylabel(r"$\|g\|$")
     axes[1].grid(True, which="both", alpha=0.25)
     axes[0].yaxis.set_major_formatter(matplotlib.ticker.FormatStrFormatter("%.4f"))
-    axes[0].set_title("All nine bottom-clamped study runs", pad=4)
+    axes[0].set_title("All nine bottom-clamped endpoint configurations", pad=4)
     fig.legend(
         legend_handles,
         legend_labels,

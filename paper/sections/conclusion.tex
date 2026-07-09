@@ -2,20 +2,13 @@
 
 We developed a \jaxpetsc{} toolset for nonlinear finite-element energy
 minimization that couples local differentiable energy models to PETSc sparse
-distributed nonlinear solvers. The methodology in
-\Cref{sec:methodology,sec:implementation} connects finite-element energy
-notation, second-order derivative construction, sparse MPI assembly, nonlinear
-globalization, Krylov solvers, and preconditioner policy. Across the tested
-problems, the main lesson is that local AD choices and distributed nonlinear
-solver design must be considered together.
-
-The validation and performance evidence in
-\Cref{sec:validation,sec:performance-solver-behavior} combines formulation
-checks, scoped external comparisons, fixed-work derivative-route studies, and
-distributed timing and scaling measurements. Across the tested cases, it
-supports the methodological point that derivative construction, sparse assembly,
-nonlinear globalization, Krylov algebra, and preconditioning should be evaluated
-as one solver design.
+distributed nonlinear solvers.
+\Cref{sec:methodology,sec:implementation,sec:validation,sec:performance-solver-behavior}
+connect finite-element notation, derivative construction, MPI sparse assembly,
+globalization, Krylov algebra, preconditioning, formulation checks, scoped
+comparisons, fixed-work route studies, and distributed timing/scaling evidence.
+Across the tested problems, that evidence supports evaluating these choices as
+one solver design.
 
 The resulting contribution is a toolset and evidence protocol for comparing
 derivative routes, sparse ownership, globalization, and preconditioning on the

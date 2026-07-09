@@ -23,15 +23,6 @@ ALLOWED_H_FLOATS: dict[tuple[str, str], str] = {
     ("algorithm", "alg:hybrid-newton"): "method pseudocode kept adjacent to solver-policy definition",
     ("algorithm", "alg:colored-hessian-recovery"): "method pseudocode kept adjacent to sparse-recovery definition",
     ("algorithm", "alg:constitutive-ad-assembly"): "method pseudocode kept adjacent to constitutive-AD definition",
-    ("figure", "fig:plasticity3d-validation"): "paired endpoint-surrogate validation panels must precede the summary table",
-    ("table", "tab:plasticity3d-validation"): "validation summary must stay attached to the paired validation panels",
-    ("figure", "fig:gl-results"): "single scaling figure interpreted immediately after the float",
-    ("figure", "fig:hyperelasticity-results"): "single scaling figure interpreted immediately after the float",
-    ("table", "tab:hyperelasticity-pmg-sensitivity"): "fixed-work PMG table interpreted immediately after the float",
-    ("figure", "fig:hyperelasticity-cpu-pmg-scaling"): "paired fixed-work scaling figure kept with its timing table",
-    ("table", "tab:hyperelasticity-cpu-pmg-scaling"): "paired fixed-work scaling table kept with its figure",
-    ("table", "tab:topology-rank-consistency"): "rank-consistency table kept with the controlled-test interpretation",
-    ("table", "tab:plasticity2d-reference-continuation"): "appendix support table kept with its brief interpretation",
 }
 
 

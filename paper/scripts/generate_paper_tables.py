@@ -1051,7 +1051,7 @@ def main() -> None:
             ["Ginzburg--Landau", f"{mesh_label('L5')} agreement; {mesh_label('L9')} distributed scaling", "Newton + line search", "FEniCS and JAX+PETSc comparison", "indefinite local curvature from the double well"],
             ["Hyperelasticity", f"{mesh_label('L1')} serial agreement; {mesh_label('L4')}, 24-step distributed scaling", "trust-region solve", "FEniCS and JAX+PETSc on the distributed suite; pure JAX only as a serial formulation check", "nonconvex large-deformation mechanics"],
             ["Plasticity2D", f"{element_label('P4', 'L5')}--{element_label('P4', 'L7')}", "endpoint solve and capped fixed work", "JAX+PETSc endpoint and solver-policy evidence", "same-mesh PMG and nonlinear tail behavior"],
-            ["Plasticity3D", f"{degree_label('P1')}/{degree_label('P2')}/{degree_label('P4')}", "endpoint, scaling, and PMG-policy studies", "constitutive AD, closed-form tangent assembly, and PMG-policy evidence", "heterogeneous 3D Mohr--Coulomb with constitutive AD"],
+            ["Plasticity3D", f"{degree_label('P1')}/{degree_label('P2')}/{degree_label('P4')}", "endpoint, scaling, and PMG-policy studies", "constitutive AD, reference-formula assembly diagnostic, and PMG-policy evidence", "heterogeneous 3D Mohr--Coulomb with constitutive AD"],
             ["Topology", "$192\\times96$ serial demonstration; $768\\times384$ parallel benchmark", "adaptive continuation", "pure JAX on the serial demonstration; JAX+PETSc on the fine-grid rank-varied adaptive timing run and controlled rank-consistency check", "distributed design-mechanics coupling"],
         ],
     )

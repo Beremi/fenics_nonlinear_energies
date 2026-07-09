@@ -488,8 +488,11 @@ MATLAB literature only when there is source-backed evidence.
   keeps broad conclusions tied to documented solver construction and numerical
   evidence rather than a software-ranking or framework-ranking claim.
 - `FIGURES_TABLES`: visual and layout quality.
-  Current fact: `paper/build/main.pdf` is 43 pages, A4, 10 pt article,
-  text width about 7.09 in. Many floats use `[H]`, so placement is highly manual.
+  Current fact: `paper/build/main.pdf` is 45 pages, A4, 10 pt article,
+  text width about 7.09 in. Only the three methodology algorithms remain
+  intentionally hard-pinned with `[H]`; problem-specific Results, Validation,
+  Benchmark, and Appendix floats have been relaxed to flexible placement with
+  local barriers where needed.
   Figure/layout subagent audit: assets are technically clean at current A4
   width, with embedded fonts and 600 ppi raster layers, but dense 3D
   multi-panel Plasticity3D figures and wide tables are not robust to a narrower
@@ -1461,6 +1464,28 @@ MATLAB literature only when there is source-backed evidence.
   remaining for hard `[H]` floats, dense Results table clusters, the four-panel
   Plasticity3D degree figure, and the Plasticity3D CPU-scaling table. The
   rebuilt A4 PDF is 45 pages after the integrated caption and notation fixes.
+- `Current float-concision and notation audit`
+  (`Heisenberg`/`Kierkegaard`/`Mill`): completed and integrated in the current
+  float-concision chunk. Findings addressed: safe Results, Validation, Appendix,
+  and remaining problem-specific result floats were relaxed from `[H]` to
+  `[!htbp]` with local `\FloatBarrier` guards, reducing the source-level hard
+  float allowlist from 12 problem/method floats to the three methodology
+  algorithms; dense Results, Benchmarks, and Conclusion prose was shortened
+  without changing the reported evidence; Plasticity2D now defines the displayed
+  two-dimensional deviatoric engineering-strain invariant before the
+  representative-state figure; the reduced-objective notation now covers frozen
+  design subproblems explicitly; reference-formulation wording is scoped to
+  compact demonstrations where matched definitions are unavailable; Plasticity3D
+  validation names only the satisfied criteria as agreement checks; topology
+  rank-consistency language is limited to observed discrepancies in the
+  controlled 40-iteration case; frozen-reference PMG wording is now
+  frozen-preconditioner PMG diagnostics; and generated table/figure text avoids
+  closed-form-tangent and study-run overstatements. Validation: table and figure
+  generators were rerun, `make -C paper submission-check` passed, the hard-float
+  checker reports only the three allowlisted algorithm floats, and rendered
+  pages 16--19 plus 25--42 were visually checked. Remaining risks are
+  target-template/page-budget issues and external release blockers, not current
+  A4 rendering failures.
 
 ## First Edit Backlog
 

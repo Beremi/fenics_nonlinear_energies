@@ -383,16 +383,14 @@ terminal-energy, scaling, and globalization comparisons reported below.
   \input{tables/generated/hyperelasticity_benchmark_summary.tex}
 \end{table}
 
-The within-benchmark takeaway is therefore that all three implementations
-complete the same prescribed 24-step boundary schedule and produce comparable
-terminal energies. \Cref{fig:hyperelasticity-state,fig:hyperelasticity-energy-levels}
-show the terminal deformed state and energy trend, and
-\Cref{tab:hyperelasticity-benchmark} quantifies the terminal energies and work
-counts. This evidence does not assess trajectory-level agreement or produce a
-performance ranking. Globalization and scaling evidence are deferred to
-\Cref{sec:num-hyperelasticity}. The validation section separately compares a
-level-1 translation companion case against JAX-FEM under the common
-postprocessed energy; it is not part of the rotating-load-path evidence.
+The within-benchmark takeaway is that all three implementations complete the
+24-step boundary schedule with comparable terminal energies.
+\Cref{fig:hyperelasticity-state,fig:hyperelasticity-energy-levels} show the
+terminal state and energy trend, and \Cref{tab:hyperelasticity-benchmark} gives
+terminal energies and work counts. This is not trajectory-level agreement or a
+performance ranking; scaling and globalization are in
+\Cref{sec:num-hyperelasticity}, and the separate level-1 JAX-FEM translation
+companion is in \Cref{sec:val-hyperelasticity}.
 
 \FloatBarrier
 
@@ -579,9 +577,12 @@ The branch potential is
   \sigma^\star\cdot\varepsilon^e
   -\frac{1}{2}\sigma^\star\cdot S_{2\mathrm{D}}\sigma^\star.
 \]
-The reported two-dimensional rows use this quantity as a solver-diagnostic
-endpoint surrogate. The small square-root regularization smooths the endpoint
-surrogate; it is not a separate material parameter.
+Thus
+$\Phi_{\mathrm{MC},2\mathrm{D}}
+(\varepsilon,\varepsilon^{p,\mathrm{old}};E,\nu,c_\lambda,\phi_\lambda)$ is the
+branch potential used as the two-dimensional solver-diagnostic endpoint
+surrogate. The small square-root regularization smooths the endpoint surrogate;
+it is not a separate material parameter.
 
 Using these local definitions, the benchmark uses the following scalarized
 discrete surrogate functional for differentiation and comparison. Let
@@ -610,6 +611,23 @@ right-hand side of \eqref{eq:plasticity2d-weak}; for the endpoint solves this is
 the gravity load with $b=(0,-\gamma)^\top$ and zero traction on the free
 boundary. The dilation angle enters this endpoint model only through the Davis-B
 reduction.
+
+The Plasticity2D visualization reports displacement magnitude and the
+plane-strain deviatoric engineering-strain magnitude
+\[
+  \|\varepsilon_{\mathrm{dev},2\mathrm{D}}\|
+  =
+  \sqrt{
+    \varepsilon^\top
+    \left(
+      \operatorname{diag}(1,1,\tfrac{1}{2})
+      - \frac{1}{2}m_{2\mathrm{D}}m_{2\mathrm{D}}^\top
+    \right)
+    \varepsilon
+  },
+  \qquad
+  m_{2\mathrm{D}}=(1,1,0)^\top.
+\]
 
 \begin{figure}[!htbp]
   \centering

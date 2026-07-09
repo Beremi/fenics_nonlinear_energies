@@ -62,7 +62,7 @@ method of the paper, but it is still useful as fixed-policy rank and timing
 evidence for a fixed same-mesh PMG policy under the same outer continuation
 logic.
 
-\begin{table}[H]
+\begin{table}[!htbp]
   \centering
   \caption{Reference continuation with the fixed PMG policy at 8 and 32 ranks.
   This is supporting solver evidence for a reference continuation
@@ -70,6 +70,8 @@ logic.
   \label{tab:plasticity2d-reference-continuation}
   \input{tables/generated/plasticity2d_reference_continuation.tex}
 \end{table}
+
+\FloatBarrier
 
 The two rows show fixed-policy timing evidence rather than a validation
 baseline: increasing from 8 to 32 ranks reduces the reported wall time from

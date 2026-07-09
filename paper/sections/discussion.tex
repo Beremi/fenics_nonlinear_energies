@@ -30,12 +30,13 @@ The hyperelastic JAX-FEM comparison in
 is useful because the mesh, displacement schedule, and terminal-energy
 post-comparison are explicitly matched. The three-dimensional plasticity
 comparison in \Cref{fig:plasticity3d-validation,tab:plasticity3d-validation}
-uses a different agreement contract: fixed-load endpoint observables satisfy
-the stated tolerances, while deviatoric-strain and boundary-profile comparisons
-serve as diagnostics. These two examples illustrate the same validation rule:
+uses a different agreement contract: the critical-load grid, the
+$u_{\max}(\lambda_{\mathrm{sr}})$ curve, and endpoint displacement satisfy the
+stated criteria, while deviatoric-strain and boundary-profile comparisons serve
+as diagnostics. These two examples illustrate the same validation rule:
 external or surrogate comparisons are informative when the problem definition
-and compared observables are named before agreement is interpreted. The
-Plasticity3D result is therefore endpoint-scoped mechanics evidence, not a
+and compared observables are named before agreement is interpreted.
+The Plasticity3D result is therefore endpoint-scoped mechanics evidence, not a
 path-consistent reproduction of incremental-history plasticity references.
 
 \paragraph{Scalability evidence reflects solver policy.}
@@ -46,8 +47,8 @@ timing-only evidence, whereas the bottom-clamped $\lambda_{\mathrm{sr}}=\num{1.5
 scaling sweep is the converged benchmark comparison. The topology study reports
 end-to-end timing under adaptive stopping, then adds a controlled
 rank-consistency check to separate distributed design-gradient exchange from
-adaptive termination effects. The fixed-reference PMG results should similarly
-be read as solver-sensitivity tests, not as external baselines.
+adaptive termination effects. The frozen-preconditioner PMG diagnostics should
+similarly be read as solver-sensitivity tests, not as external baselines.
 
 Together, these distinctions state the contribution. We present a nonlinear FEM
 toolset that couples JAX-based local differentiation with PETSc sparse
