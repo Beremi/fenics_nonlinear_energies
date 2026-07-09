@@ -137,14 +137,14 @@ cleanest benchmark in the paper for checking exact gradients, exact Hessians,
 and sparse-recovery alternatives against each other without constitutive or
 geometric complications.
 
-\begin{figure}[H]
+\begin{figure}[!htbp]
   \centering
   \includegraphics[width=\PaperFigureNarrow]{plaplace_state.pdf}
   \caption{Representative $p$-Laplace state on the selected hierarchy.}
   \label{fig:plaplace-state}
 \end{figure}
 
-\begin{figure}[H]
+\begin{figure}[!htbp]
   \centering
   \includegraphics[width=\PaperFigureNarrow]{plaplace_energy_levels.pdf}
   \caption{Final discrete energies from \cref{eq:plaplace-discrete} across the
@@ -154,7 +154,7 @@ geometric complications.
   \label{fig:plaplace-energy-levels}
 \end{figure}
 
-\begin{table}[H]
+\begin{table}[!htbp]
   \centering
   \input{tables/generated/plaplace_benchmark_summary.tex}
   \caption{Representative final discrete energies from
@@ -167,6 +167,8 @@ The within-benchmark picture is therefore one of formulation agreement:
 discrete energies within about $\num{1e-8}$ of the \fenics{} custom reference
 for \cref{eq:plaplace-discrete}. Scaling and timing for this family are reported in
 \Cref{sec:num-plaplace}.
+
+\FloatBarrier
 
 \subsection{Ginzburg--Landau}
 \label{sec:bench-gl}
@@ -223,14 +225,14 @@ indefinite local curvature from the double-well potential in
 restricted to the free degrees of freedom, so the nonconvex branch selection
 is part of the benchmark definition.
 
-\begin{figure}[H]
+\begin{figure}[!htbp]
   \centering
   \includegraphics[width=\PaperFigureNarrow]{ginzburg_landau_state.pdf}
   \caption{Representative Ginzburg--Landau state on the selected hierarchy.}
   \label{fig:gl-state}
 \end{figure}
 
-\begin{figure}[H]
+\begin{figure}[!htbp]
   \centering
   \includegraphics[width=\PaperFigureNarrow]{ginzburg_landau_energy_levels.pdf}
   \caption{Final discrete energies associated with the stationary problem
@@ -240,7 +242,7 @@ is part of the benchmark definition.
   \label{fig:gl-energy-levels}
 \end{figure}
 
-\begin{table}[H]
+\begin{table}[!htbp]
   \centering
   \input{tables/generated/ginzburg_landau_benchmark_summary.tex}
   \caption{Representative final discrete energies associated with
@@ -251,6 +253,8 @@ is part of the benchmark definition.
 The local picture is again one of formulation consistency, now for a more
 solver-sensitive nonconvex energy. Strong scaling and solver-time comparisons
 for this family are reported in \Cref{sec:num-gl}.
+
+\FloatBarrier
 
 \subsection{Hyperelasticity}
 \label{sec:bench-he}
@@ -331,7 +335,7 @@ with first-order tetrahedral vector elements and the benchmark-specific boundary
 data described above. This is the first family in which globalization is more
 scientifically important than derivative parity alone.
 
-\begin{figure}[H]
+\begin{figure}[!htbp]
   \centering
   \includegraphics[width=\PaperFigureMedium]{hyperelasticity_state.pdf}
   \caption{Representative finite-strain hyperelastic state, colored by the
@@ -339,7 +343,7 @@ scientifically important than derivative parity alone.
   \label{fig:hyperelasticity-state}
 \end{figure}
 
-\begin{figure}[H]
+\begin{figure}[!htbp]
   \centering
   \includegraphics[width=\PaperFigureNarrow]{hyperelasticity_energy_levels.pdf}
   \caption{Final discrete energies along the stationary sequence
@@ -349,7 +353,7 @@ scientifically important than derivative parity alone.
   \label{fig:hyperelasticity-energy-levels}
 \end{figure}
 
-\begin{table}[H]
+\begin{table}[!htbp]
   \centering
   \input{tables/generated/hyperelasticity_benchmark_summary.tex}
   \caption{Representative 24-step terminal energies along
@@ -367,6 +371,8 @@ prescribed displacement schedule, with energy post-comparison under
 \cref{eq:hyperelasticity-energy}; it is
 included as an agreement-focused hyperelastic companion comparison for this
 specific terminal-state contract.
+
+\FloatBarrier
 
 \subsection{Plasticity2D}
 \label{sec:bench-plasticity2d}
@@ -564,7 +570,7 @@ endpoint surrogate. The small square-root regularization parameter
 $\epsilon_{\mathrm{reg}}=\num{1e-12}$ smooths the endpoint surrogate; it is not a
 separate material parameter.
 
-\begin{figure}[H]
+\begin{figure}[!htbp]
   \centering
   \includegraphics[width=\PaperFigureMedium]{plasticity2d_state_pair.pdf}
   \caption{Representative Plasticity2D state: displacement magnitude and
@@ -573,7 +579,7 @@ separate material parameter.
   \label{fig:plasticity2d-state}
 \end{figure}
 
-\begin{figure}[H]
+\begin{figure}[!htbp]
   \centering
   \includegraphics[width=\PaperFigureNarrow]{plasticity2d_resolution_energy.pdf}
   \caption{Resolution trend for the Plasticity2D family. The plotted
@@ -584,7 +590,7 @@ separate material parameter.
   \label{fig:plasticity2d-energy-levels}
 \end{figure}
 
-\begin{table}[H]
+\begin{table}[!htbp]
   \centering
   \input{tables/generated/plasticity2d_benchmark_summary.tex}
   \caption{Representative Plasticity2D endpoint and fixed-work diagnostic
@@ -597,6 +603,8 @@ paper. Only the completed $P_4(L_5)$ endpoint case is treated as an endpoint
 solve; the larger $P_4(L_6)$ and $P_4(L_7)$ cases are 20-iteration capped
 diagnostics for solver behavior. Solver-engineering evidence for Plasticity2D
 is reported later in \Cref{sec:num-plasticity2d,sec:solver-evidence}.
+
+\FloatBarrier
 
 \subsection{Plasticity3D}
 \label{sec:bench-plasticity3d}
@@ -932,7 +940,7 @@ return-mapping, optimization, convex-optimization, and continuation literature
 is used as reference-model context, not as evidence that this endpoint
 surrogate is a full incremental elastoplastic solver.
 
-\begin{figure}[H]
+\begin{figure}[!htbp]
   \centering
   \includegraphics[width=\PaperFigureMedium]{plasticity3d_state_pair.pdf}
   \caption{Bottom-clamped Plasticity3D representative endpoint at
@@ -943,7 +951,7 @@ surrogate is a full incremental elastoplastic solver.
   \label{fig:plasticity3d-state}
 \end{figure}
 
-\begin{figure}[H]
+\begin{figure}[!htbp]
   \centering
   \includegraphics[width=\PaperFigureMedium]{plasticity3d_convergence.pdf}
   \caption{Newton-history convergence for all nine completed bottom-clamped
@@ -955,7 +963,7 @@ surrogate is a full incremental elastoplastic solver.
   \label{fig:plasticity3d-convergence}
 \end{figure}
 
-\begin{table}[H]
+\begin{table}[!htbp]
   \centering
   \input{tables/generated/plasticity3d_benchmark_summary.tex}
   \caption{All nine completed bottom-clamped Plasticity3D
@@ -970,7 +978,9 @@ section. The nine completed endpoint solves converge in the nonlinear stopping
 metric while the terminal values of \cref{eq:plasticity3d-discrete} decrease
 along both mesh and degree refinements.
 
-\begin{figure}[H]
+\FloatBarrier
+
+\begin{figure}[!htbp]
   \centering
   \includegraphics[width=\PaperFigureFull]{plasticity3d_highest_mesh_y_slice_comparison.pdf}
   \caption{Shared-scale upper $y$-slice comparison of
@@ -987,6 +997,8 @@ larger values of $\|\varepsilon_{\mathrm{dev}}\|$ remain localized near the same
 upper slope region across $P_1$, $P_2$, and $P_4$, so the later degree and
 timing comparisons are interpreted as endpoint-solver comparisons rather than
 changes of the physical problem.
+
+\FloatBarrier
 
 Plasticity3D is the benchmark where detailed constitutive definitions are most
 important: the paper later plots values of \cref{eq:plasticity3d-discrete} and
@@ -1103,7 +1115,7 @@ outer loop alternates mechanics solves for
 \cref{eq:topology-mechanics} with reduced design updates for
 \cref{eq:topology-reduced-objective}.
 
-\begin{figure}[H]
+\begin{figure}[!htbp]
   \centering
   \includegraphics[width=\PaperFigureMedium]{topology_density.pdf}
   \caption{Representative final density field for the parallel
@@ -1111,7 +1123,7 @@ outer loop alternates mechanics solves for
   \label{fig:topology-density}
 \end{figure}
 
-\begin{figure}[H]
+\begin{figure}[!htbp]
   \centering
   \includegraphics[width=\PaperFigureNarrow]{topology_history.pdf}
   \caption{Objective-history view for the reduced topology objective
@@ -1120,7 +1132,7 @@ outer loop alternates mechanics solves for
   \label{fig:topology-history}
 \end{figure}
 
-\begin{table}[H]
+\begin{table}[!htbp]
   \centering
   \input{tables/generated/topology_benchmark_summary.tex}
   \caption{Representative topology endpoint values from
@@ -1135,3 +1147,5 @@ to $p=10$, and treats the fine-grid run as stalled once $p\ge 4$ and both the
 reported design-change and state-change stopping diagnostics are at most
 $10^{-6}$. Parallel timing and
 scaling for the same family are reported in \Cref{sec:num-topology}.
+
+\FloatBarrier

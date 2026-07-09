@@ -238,6 +238,10 @@ scientific claims were introduced without supporting evidence.
 - Added `paper/README.md` as a maintainer-facing paper workflow runbook that
   documents the style-guide snapshot, build/provenance/release gates, current
   final-release blockers, and manuscript guardrails.
+- Relaxed benchmark-definition figure/table floats from hard `[H]` placement to
+  flexible `[!htbp]` placement with local `\FloatBarrier` guards after their
+  interpretation paragraphs, reducing target-template fragility while preserving
+  current evidence order.
 - Rebuilt the paper PDF through the paper generation pipeline.
 
 ## Blocking Issues Before Submission
@@ -532,6 +536,11 @@ required support for the current scoped contribution.
   the final release blockers are resolved.
 - `./.venv/bin/python -m pytest tests/test_paper_readme.py`: passed 2 tests for
   the paper workflow runbook and local-only style-guide note.
+- `make -C paper submission-check`: passed after relaxing benchmark-definition
+  floats; the rebuilt `paper/build/main.pdf` remains a 43-page A4 article.
+- `pdftotext -f 22 -l 24 paper/build/main.pdf -`: checked the
+  Topology-to-Validation boundary; topology figures and interpretation appear
+  before `Validation and External Comparisons`.
 - `./.venv/bin/python -m pytest tests/test_docs_publication.py`: passed
   13 tests.
 - `./.venv/bin/python -m pytest tests/test_final_report_figure_generators.py`:

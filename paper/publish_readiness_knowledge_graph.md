@@ -769,6 +769,10 @@ MATLAB literature only when there is source-backed evidence.
   license, archival DOI, and durable archive integration are resolved. Current
   paper-runbook chunk adds `paper/README.md` so future manuscript work has a
   compact command and blocker map without opening the longer readiness ledger.
+  Current benchmark-float chunk relaxes benchmark-definition figures and tables
+  from `[H]` to `[!htbp]`, with local barriers after interpretation paragraphs;
+  the A4 PDF remains 43 pages and the Topology-to-Validation boundary was
+  checked by PDF text extraction.
 
 ## Evidence Nodes
 
