@@ -115,10 +115,10 @@ probes are the classical sparse finite-difference variant.
 
 \subsection{Newton--Krylov globalization}
 
-The nonlinear solves are based on Newton or quasi-Newton updates, but they are
-not all globalized in the same way. Scalar benchmarks primarily use line-search
-Newton. Hyperelasticity uses a trust-region method with optional post-step line
-search. Some benchmark configurations use a hybrid
+The nonlinear solves are based on Newton-type updates, but they are not all
+globalized in the same way. Scalar benchmarks primarily use line-search Newton.
+Hyperelasticity uses a trust-region method with optional post-step line search.
+Some benchmark configurations use a hybrid
 trust-region/line-search algorithm in which a reduced trust-region model
 provides the direction, while a bounded line search chooses the accepted step.
 The line-search and trust-region ingredients follow standard globalization ideas
@@ -189,7 +189,7 @@ $\nabla\mathcal{F}(x_k+\alpha d_k)^\top d_k<0$, unless the line-search cap is
 reached. Benchmark tables instantiate the finite set of remaining policy
 parameters, including accept/reject thresholds, radius updates, caps, and
 fallback rules, wherever they affect interpretation. Here KSP denotes PETSc's
-Krylov-solver interface and residual tolerance, PMG denotes same-mesh polynomial
+Krylov-solver interface, KSP rtol denotes the relative residual tolerance, PMG denotes same-mesh polynomial
 multigrid, MUMPS denotes a multifrontal sparse direct solver used in coarse
 solves, and Hypre denotes the algebraic-multigrid/preconditioning backend used
 in the stated auxiliary configurations. Reported PETSc linear solves use the
@@ -199,7 +199,7 @@ the policy varies. Failed linear solves and non-descent directions are handled
 by the stated globalization safeguard or reported as capped solver behavior.
 
 Here $\lambda_{\mathrm{sr}}$ denotes the plasticity strength-reduction factor
-defined in \cref{sec:bench-plasticity3d}. For the converged bottom-clamped
+defined in \Cref{sec:bench-plasticity3d}. For the converged bottom-clamped
 three-dimensional plasticity scaling
 configuration reported in this paper, the chosen policy is simpler: Newton with
 Armijo backtracking and a same-mesh polynomial-multigrid
@@ -267,8 +267,9 @@ to the PETSc matrix, with overlap data used only for local probe evaluation.
 \caption{Distributed colored Hessian recovery}
 \label{alg:colored-hessian-recovery}
 \begin{algorithmic}[1]
-\State Construct the owned part of the Hessian sparsity pattern
-\State Compute a distance-2 coloring of the Hessian pattern
+\State Construct the communicator-consistent Hessian column-interference graph
+  from the owned-row sparsity pattern, including ghost-column adjacencies
+\State Compute a distance-2 coloring of that graph
 \For{each color group $c$}
   \State Build the combined probe vector $v_c$
   \State Evaluate one gradient difference or HVP for $v_c$

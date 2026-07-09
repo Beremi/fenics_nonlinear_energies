@@ -28,13 +28,13 @@ assembly path and preconditioner family fixed within the problem and varies only
 the nonlinear policy. Timed-out configurations are retained as capped solver
 behavior rather than convergence evidence.
 
-The entries are representative fixed cases rather than one physical problem:
-$p$-Laplace uses a level-10 diagnostic case with one nonlinear solve,
-Ginzburg--Landau uses a level-10 fixed-budget comparison, hyperelasticity uses
-the first eight level-4 rank-local load steps, and 3D plasticity uses the
-$P_2(L_1)$ endpoint surrogate at $\lambda_{\mathrm{sr}}=\num{1.55}$. The four
+The comparison combines four fixed benchmark instances, each with its own rank
+count and stopping budget: the $p$-Laplace level-10 single solve, the
+Ginzburg--Landau level-10 fixed-wall-time solve, the first eight hyperelasticity
+level-4 load steps with rank-local assembly, and the 3D plasticity $P_2(L_1)$
+endpoint surrogate at $\lambda_{\mathrm{sr}}=\num{1.55}$. The four
 configurations use 32, 16, 32, and 32 MPI ranks with 30, 120, 270, and 180 s
-caps.
+budgets.
 
 \begin{table}[!htbp]
   \centering
@@ -47,10 +47,10 @@ caps.
 \end{table}
 
 The scalar and mechanics cases show different preferences. Newton with Armijo
-line search has the lowest reported time on the smooth $p$-Laplace diagnostic
-case, but times out on Ginzburg--Landau; the hyperelasticity excerpt completes
-under all three policies, with the hybrid reducing nonlinear iterations and
-reported solve time relative to line-search-only Newton.
+line search has the lowest reported time on the smooth $p$-Laplace instance,
+but reaches the wall-time budget on Ginzburg--Landau; the hyperelasticity
+instance completes under all three policies, with the hybrid reducing nonlinear
+iterations and reported solve time relative to line-search-only Newton.
 
 The 3D plasticity endpoint is the most discriminating case in this suite for
 nonlinear-policy choice. Here and below, $g$ denotes the free-DOF gradient of
@@ -107,7 +107,7 @@ element AD on this $P_2(L_1)$ case.
 \Cref{tab:plasticity3d-derivative-degree} reports one-Newton Hessian-evaluation
 cost. At the same \num{79024} free DOFs, moving from $P_1(L_2)$ to $P_2(L_1)$
 raises colors from 66--90 to 240--420, Hessian time from \num{0.332} to
-\num{1.412} s, and rank-maximum resident set size (RSS) from about \num{0.6} to
+about \num{1.41} s, and rank-maximum resident set size (RSS) from about \num{0.6} to
 \num{1.1} GiB; the $P_4$ colored-recovery case is outside this table.
 
 \begin{table}[!htbp]
@@ -206,8 +206,9 @@ the JAX-FEM comparison remains in \Cref{sec:val-hyperelasticity}.
 The 24-step hyperelasticity completed-path timing curve reduces \jaxpetsc{}
 element-AD wall
 time from \SI{1894}{s} at 8 ranks to \SI{529}{s} at 32 ranks, a factor of
-\num{3.58} over a fourfold rank increase. This motivates the more targeted
-fixed-work distribution and PMG diagnostics below.
+\num{3.58} over a fourfold rank increase. These timings motivate the fixed-work
+first-step distribution and PMG studies in
+\Cref{tab:hyperelasticity-distribution-memory,tab:hyperelasticity-pmg-sensitivity,fig:hyperelasticity-cpu-pmg-scaling,tab:hyperelasticity-cpu-pmg-scaling}.
 
 The fixed-work multi-node experiment uses the same trust-region Newton path as
 \Cref{sec:bench-he} and asks how rank-local level-5 first-step assembly behaves
@@ -220,10 +221,10 @@ level $L_2$, and redundant-LU/MUMPS coarse solves.
 report solver-internal time; all listed configurations have 21 Newton and
 43 Krylov iterations.
 
-\Cref{tab:hyperelasticity-distribution-memory} reports the memory evidence that
-supports using the rank-local assembly variant in the larger CPU sweeps. The
-fixed-work agreement entries compare the replicated and rank-local level-4
-first-step solve at four MPI ranks; the one-linearization memory entries use one
+\Cref{tab:hyperelasticity-distribution-memory} quantifies the memory tradeoff
+between replicated and rank-local assembly. The fixed-work agreement entries
+compare the replicated and rank-local level-4 first-step solve at four MPI
+ranks; the one-linearization memory entries use one
 Newton linearization on the level-5 mesh at 8, 16, and 32 ranks. The table reports
 energy, operating-system peak resident set size (RSS), and the measured footprint of assembly
 arrays, making clear whether a configuration stores global mesh and adjacency
@@ -312,17 +313,16 @@ full load path.
 The 2D Mohr--Coulomb plasticity model is defined in \Cref{sec:bench-plasticity2d}, with
 Davis-B reduction \eqref{eq:plasticity2d-davis} and discrete surrogate
 \eqref{eq:plasticity2d-discrete}.
-For this family, the most informative computational evidence in the present
-paper is not a single strong-scaling curve. The benchmark section separates the
-completed endpoint case from the larger fixed-cost studies in
-\Cref{fig:plasticity2d-energy-levels,tab:plasticity2d-benchmark}, and the
-reference-continuation comparison is collected later in
-\Cref{sec:solver-evidence}.
+For this family, the evidence separates a completed endpoint calculation from
+larger fixed-work studies. \Cref{fig:plasticity2d-energy-levels,tab:plasticity2d-benchmark}
+give the endpoint and fixed-work results, and
+\Cref{tab:plasticity2d-reference-continuation} gives the fixed-policy
+continuation comparison.
 
 The $P_4(L_5)$ case is the endpoint evidence for this family. The completed
 endpoint has energy \num{-212.538} and wall time \SI{147}{s}. The larger
 $P_4(L_6)$ and $P_4(L_7)$ cases are fixed-work diagnostics for nonlinear-tail
-and PMG behavior; both report energy \num{-212.539} after 20-iteration caps,
+and PMG behavior; both report energy \num{-212.539} at the 20-iteration limit,
 with wall times \SI{147}{s} and \SI{253}{s}.
 
 The 8-rank and 32-rank reference-continuation entries in
@@ -361,10 +361,11 @@ The observed differences are timing differences under this fixed solver policy.
 Constitutive AD has the lowest reported wall time on this fixed case, with wall
 time \SI{222}{s} and solve time
 \SI{191}{s}, compared with \SI{288}{s}/\SI{255}{s} for element AD and
-\SI{372}{s}/\SI{253}{s} for colored sparse recovery. This residual-bisection Newton
-comparison uses the Hypre-backed rank-local linear-solver profile; it is
-therefore separate from the MUMPS-backed PMG configurations used by the later
-$\lambda_{\mathrm{sr}}=\num{1.55}$ convergence studies.
+\SI{372}{s}/\SI{253}{s} for colored sparse recovery. This residual-bisection
+Newton comparison uses a Hypre-backed rank-local linear-solver configuration, so
+it should be compared separately from the MUMPS-backed PMG configurations at
+$\lambda_{\mathrm{sr}}=\num{1.55}$ in
+\Cref{fig:plasticity3d-cpu-scaling,tab:plasticity3d-cpu-scaling}.
 
 \begin{figure}[!htbp]
   \centering
@@ -377,9 +378,9 @@ $\lambda_{\mathrm{sr}}=\num{1.55}$ convergence studies.
 \begin{table}[!htbp]
   \centering
   \caption{3D plasticity derivative-route comparison on the fixed
-  $P_4(L_1)$, $\lambda_{\mathrm{sr}}=\num{1.5}$, 8-rank case. These configurations use the
-  Hypre-backed rank-local profile and are separate from the MUMPS-backed PMG
-  configurations in the $\lambda_{\mathrm{sr}}=\num{1.55}$ studies.}
+  $P_4(L_1)$, $\lambda_{\mathrm{sr}}=\num{1.5}$, 8-rank case. These configurations use a
+  Hypre-backed rank-local linear-solver configuration and are separate from the
+  MUMPS-backed PMG configurations at $\lambda_{\mathrm{sr}}=\num{1.55}$.}
   \label{tab:plasticity3d-derivative-ablation}
   \input{tables/generated/plasticity3d_derivative_ablation.tex}
 \end{table}
@@ -475,7 +476,9 @@ $\|g\|_{\mathrm{stop}}/\|g\|_{\mathrm{target}}$ denoting the final stopping
 gradient divided by its one-percent-of-initial-gradient target,
 \Cref{fig:plasticity3d-cpu-scaling,tab:plasticity3d-cpu-scaling} report CPU
 timings together with the gradient-target ratio used for the stopping-gradient
-check.
+check. They show solver total decreasing from \SI{17890}{s} to \SI{1110}{s}
+across the single-node 1--32 rank series, and from \SI{2246}{s} to
+\SI{498}{s} across the multi-node 16--128 rank series.
 
 \begin{figure}[!htbp]
   \centering
@@ -505,8 +508,9 @@ check.
 \FloatBarrier
 
 The distributed layout measurements in
-\Cref{tab:plasticity3d-cpu-partitioning} identify one observed limit
-on ideal scaling. The maximum local overlap vector shrinks with rank count,
+\Cref{tab:plasticity3d-cpu-partitioning} indicate one observed contributor to
+nonideal scaling in this comparison. The maximum local overlap vector shrinks
+with rank count,
 but the sum of rank-local overlap DOFs increases from about the owned problem
 size on one rank to more than four times the owned size on 128 ranks. This
 overlap replication comes from subdomain boundaries and high-order element
@@ -566,10 +570,8 @@ iterations, final continuation exponents, compliance
 end-to-end behavior under the multiplier and stopping rule, not target-volume
 equality, fixed-work strong scaling, or a rank-invariant endpoint.
 
-\Cref{tab:topology-rank-consistency} adds a controlled 40-iteration check on a
-smaller $384\times192$ grid: fixed initial design, disabled early/stall
-stopping, and smoother continuation
-($p_{\mathrm{SIMP}} \leftarrow p_{\mathrm{SIMP}}+\num{0.1}$). Let
+\Cref{tab:topology-rank-consistency} adds a controlled fixed-schedule
+40-iteration check on a smaller $384\times192$ grid. Let
 $\Theta_r=(\theta_h^{(r)}(x_i))_{i\in\mathcal{D}_h}$ be the active design-node
 density vector on the common grid for the $r$-rank run. Relative to the one-rank
 reference, all ranks complete 40 iterations, with compliance difference below
@@ -589,12 +591,9 @@ discrepancies for this controlled case, not general rank-invariance thresholds.
 
 \FloatBarrier
 
-The topology case extends the evidence from state solves to coupled
-design--mechanics optimization. Here the primary distributed \jaxpetsc{}
-realization is less about exact Hessians than about stable distributed
-design-gradient exchange and mechanics coupling, while \purejax{} remains the
-compact serial design demonstration discussed earlier in
-\Cref{tab:reference-availability}.
+The topology case tests distributed design-gradient exchange and mechanics
+coupling under the reduced-design update, whereas \purejax{} provides the
+compact serial design demonstration in \Cref{tab:reference-availability}.
 
 \subsection{Synthesis of the Computational Evidence}
 \label{sec:num-synthesis}
@@ -604,9 +603,8 @@ The globalization tests separate problem-dependent nonlinear policies; the
 derivative-route comparisons isolate cost under fixed endpoint observables; the
 distribution, PMG, and partitioning studies expose solver-policy and
 sparse-ownership effects; and the topology study closes with an end-to-end
-design-and-mechanics loop plus a controlled rank-consistency check. Together,
-these measurements show which coupled choices are effective in the tested cases
-and where solver policy remains visible: local differentiable constitutive or
-energy evaluations can be coupled to PETSc-owned sparse nonlinear and linear
-solves across the tested scalar PDE, mechanics, plasticity, and topology cases,
-with comparator evidence scoped by problem family.
+design-and-mechanics loop plus a controlled rank-consistency check. Taken
+together, these measurements show that local differentiable constitutive or
+energy evaluations can feed PETSc-owned sparse nonlinear and linear solves
+across the tested scalar PDE, mechanics, plasticity, and topology cases, with
+the comparison scope stated separately for each problem family.

@@ -1362,8 +1362,11 @@ $\alpha_{\mathrm{reg}}=\num{5e-3}$, $\ell_{\mathrm{pf}}=\num{8e-2}$, and
 $\mu_{\mathrm{move}}=\num{1e-2}$ set the phase-field and latent-move terms.
 These are algorithmic choices of this benchmark, not standard SIMP notation.
 
-For topology, the relevant notion of ``convergence'' is this reduced objective
-history rather than a single equilibrium energy. Let
+For topology, the monitored history is the outer reduced-design process rather
+than directly comparable values of one fixed objective. Because
+$\mathcal{J}_h^m$ changes with the frozen state, multiplier, and continuation
+parameter, we report compliance, volume, continuation schedule, and
+state/design-change diagnostics. Let
 $\theta_{\mathcal{D}}^{m,-}$ and $\theta_{\mathcal{D}}^{m,+}$ denote the active
 design-node density vectors before and after the $m$th design solve. The
 reported design-change diagnostic is

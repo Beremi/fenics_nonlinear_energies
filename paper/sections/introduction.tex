@@ -13,17 +13,15 @@ We develop and evaluate such a scientific toolset for nonlinear finite-element
 energy minimization and optimization. In the primary \jaxpetsc{} realization, JAX
 defines local energies and constitutive laws, while PETSc provides sparse
 distributed algebra, nonlinear globalization, Krylov methods, and
-preconditioners. We use comparison evidence in scoped roles: internal
-formulation checks, a matched hyperelastic endpoint comparison, plasticity
-reference-model context, and legacy MATLAB implementation context. The
-\purejax{} and \fenics{} formulations provide internal checks where matched
-benchmark definitions exist. JAX-FEM \citep{xue2023jaxfem} supplies the
-hyperelastic endpoint-state comparison. The Sysala-family
+preconditioners. Pure JAX and FEniCS provide matched internal formulation
+checks where benchmark definitions coincide, and JAX-FEM
+\citep{xue2023jaxfem} supplies the hyperelastic endpoint-state comparison. The
+Sysala-family
 slope-stability literature
 \citep{sysala2017returnmapping,sysala2021optimization,sysala2025convexoptimization,sysala2025advancedcontinuation}
-provides reference-model context for the plasticity endpoint observables. The
-\v{C}erm{\'a}k--Sysala--Valdman MATLAB work \citep{cermak2019efficient} is used
-as elastoplastic implementation context rather than as a numerical baseline.
+provides reference-model context for the plasticity endpoint observables, while
+the \v{C}erm{\'a}k--Sysala--Valdman MATLAB work \citep{cermak2019efficient}
+documents a closely related elastoplastic finite-element implementation.
 
 \subsection{Contributions}
 \label{sec:intro-contributions}
@@ -33,10 +31,9 @@ treats derivative construction, MPI sparse assembly, nonlinear globalization,
 and preconditioning as coupled design choices for nonlinear FEM energy
 minimization. The central thesis is that derivative construction should be
 evaluated inside the sparse nonlinear solve that consumes it. The study also
-encodes solver expertise through controlled selection and reporting of
-derivative routes, assembly ownership, globalization, Krylov tolerances, and
-preconditioners under fixed benchmark definitions. We support this thesis
-through three technical components:
+fixes benchmark definitions while reporting the derivative route, assembly
+ownership, globalization strategy, Krylov tolerance, and preconditioner used in
+each comparison. We support this thesis through three technical components:
 \begin{enumerate}
   \item \textbf{An integrated derivative--assembly path.} We show how local
         JAX energy or constitutive evaluations can feed PETSc-owned sparse MPI

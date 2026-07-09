@@ -1220,24 +1220,24 @@ def main() -> None:
                 ]
             )
         ),
-        ["Technical family", "Documented role", "Relation to this work"],
+        ["Literature area", "Established capability", "Role in present comparison"],
         [
             [
                 "FEM and adjoint automation "
                 "\\citep{logg2012fenicsbook,baratta2025dolfinx,farrell2013dolfinadjoint,mitusch2019pyadjoint,blauth2023cashocsv2}",
                 "High-level variational forms, generated kernels, adjoint-based sensitivities, and PDE-optimization loops.",
-                "Provides the reference high-level FEM and optimization context; selected \\fenics{} formulations are scoped comparisons.",
+                "Provides the reference high-level FEM and optimization context; selected \\fenics{} formulations are matched formulation checks.",
             ],
             [
                 "JAX-native differentiable FEM and PDE solvers "
                 "\\citep{xue2023jaxfem,xue2026implicit,bode2025autopdex,hu2025jaxcpfem}",
-                "Source-specific roles: GPU-oriented differentiable mechanics (JAX-FEM/JAX-CPFEM), implicit differentiation and solver options (AutoPDEx), and Hessian-vector inverse-problem studies (Xue 2026).",
-                "Motivates local differentiable modeling; the present study instead couples local JAX derivatives to PETSc sparse MPI solves and compares derivative routes.",
+                "GPU-oriented differentiable mechanics (JAX-FEM/JAX-CPFEM), implicit differentiation and solver options (AutoPDEx), and Hessian-vector inverse-problem studies (Xue 2026).",
+                "Motivates local differentiable modeling; the present study couples local JAX derivatives to PETSc sparse MPI solves and compares derivative routes.",
             ],
             [
                 "FEM--JAX and JAX--PETSc bridge architectures "
                 "\\citep{yashchuk2023bringing,latyshev2025externaloperators,cattaneo2026jetsci}",
-                "Source-specific bridges: Firedrake--JAX variational coupling, FEniCSx external operators for constitutive models, and JetSCI-style JAX--PETSc differentiated local discretizations.",
+                "Firedrake--JAX variational coupling, FEniCSx external operators for constitutive models, and JetSCI-style JAX--PETSc differentiated local discretizations.",
                 "Architectural context for the \\jaxpetsc{} realization; this study evaluates derivative construction, globalization, and preconditioning on the stated benchmark suite.",
             ],
             [

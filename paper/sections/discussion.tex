@@ -11,18 +11,18 @@ distributed timing evidence support performance and solver-policy claims.
 
 \paragraph{Derivative information is realized through the nonlinear solve.}
 The high-order three-dimensional plasticity derivative-route ablation is the
-fixed-work example with the most complete derivative-route separation; see
+most complete derivative-route separation in the study; see
 \Cref{fig:plasticity3d-derivative-ablation,tab:plasticity3d-derivative-ablation}.
-On this fixed endpoint problem, the three derivative routes match the reported
-endpoint observables and iteration counts. The comparison therefore
-isolates derivative-route cost only after the residual, Jacobian,
-preconditioner, and nonlinear stopping policy have been fixed.
+In that ablation, all three derivative routes reach the same reported endpoint
+observables and iteration counts under identical residual, tangent,
+preconditioner, and nonlinear stopping definitions. The comparison therefore
+isolates derivative-route cost inside the assembled sparse nonlinear solve.
 
 In this setting, constitutive AD has the lowest measured wall time, while
-colored sparse recovery remains a useful comparison and fallback route on
-the tested fixed-size problems. The conclusion is therefore not that one
-derivative route is uniformly best, but that derivative placement should be
-assessed inside the assembled sparse nonlinear solve that will use it.
+colored sparse recovery remains a useful comparison route on the tested
+problems. The conclusion is therefore not that one derivative route is
+uniformly best, but that derivative placement should be assessed inside the
+assembled sparse nonlinear solve that will use it.
 
 \paragraph{Agreement evidence depends on matched definitions.}
 The hyperelastic JAX-FEM comparison in
@@ -45,8 +45,10 @@ or the \v{C}erm{\'a}k--Sysala--Valdman MATLAB implementation context
 \citep{cermak2019efficient}.
 
 \paragraph{Scalability evidence reflects solver policy.}
-The distribution and PMG studies show that sparse ownership, overlap size,
-coarse solves, and preconditioner choices enter the numerical method. The
+The scaling results show that performance conclusions depend on solver policy
+as much as on assembly ownership. Sparse overlap, coarse solves, and
+preconditioner choices change both timing and interpretation, so we separate
+timing studies from converged benchmark comparisons. The
 $\lambda_{\mathrm{sr}}=\num{1.0}$ three-dimensional plasticity strong-scaling study is
 timing-only evidence, whereas the bottom-clamped $\lambda_{\mathrm{sr}}=\num{1.55}$
 scaling sweep is the converged benchmark comparison. The topology study reports
@@ -57,10 +59,8 @@ similarly be read as solver-sensitivity tests, not as external baselines.
 
 Together, these distinctions delimit the contribution. We present a nonlinear
 FEM toolset that couples JAX-based local differentiation with PETSc sparse
-distributed solvers, and we evaluate that coupling with comparison designs that
-specify their own limits. The results support this toolset as an evaluation
-framework for the tested benchmark classes: derivative route, assembly,
-globalization, Krylov algebra, and preconditioning are reported as coupled
-numerical choices. They do not imply that a single backend, globalization
-policy, preconditioner, or derivative construction dominates nonlinear
-finite-element computations in general.
+distributed solvers, and we evaluate that coupling through comparisons with
+named problem definitions and observables. For the tested benchmark classes,
+the results support treating derivative route, assembly, globalization, Krylov
+algebra, and preconditioning as coupled numerical choices rather than as
+independent implementation details.

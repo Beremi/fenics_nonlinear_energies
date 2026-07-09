@@ -136,7 +136,13 @@ not resolve the final durable archive/DOI blocker.
   matching energy and Newton/Krylov work, Plasticity2D state wording is visual
   rather than externally validated, Plasticity3D remains endpoint-surrogate
   evidence, and topology keeps relying on the JAX+PETSc rank-consistency check.
-- Current layout state: the latest full build is a 46-page A4 article with a
+- Current prose state: the latest validation/results/appendix audit removed
+  process-style comparison language such as post-comparison, comparator-case,
+  run-excerpt, and underlying-summary wording. Hyperelasticity is now described
+  as a common-energy endpoint-state check, Plasticity3D validation as an
+  independent endpoint-formula assembly, and result/appendix interpretation is
+  tied directly to figure/table evidence.
+- Current layout state: the latest full build is a 45-page A4 article with a
   clean LaTeX warning scan, embedded Type 1 fonts, clean aux-order and hard-float
   checks, and `qpdf --check` passing. Polish/risk items remain target-template
   dependent: an under-filled page after the Plasticity3D state figure, dense
@@ -148,13 +154,14 @@ not resolve the final durable archive/DOI blocker.
   refreshed manifest is committed. Final archive/DOI/license/template decisions
   remain external blockers.
 - Current generator state: the Plasticity3D validation table summary is
-  data-driven rather than hard-coded. Regenerate generated tables after any
-  table-source or table-generator edit.
+  data-driven rather than hard-coded, and the SOTA role table uses paper-facing
+  role/comparison headings. Regenerate generated tables after any table-source
+  or table-generator edit.
 - Prior completed passes: older audits already removed process-local wording,
   tightened comparator scope, reduced hard floats to the three method
   algorithms, clarified validation norms and topology diagnostics, refreshed
   generated figures/tables, added literature and bundle freshness gates, and
-  rebuilt clean 44--45 page A4 PDFs. Use git history or the long audit log for
+  rebuilt clean 44--46 page A4 PDFs. Use git history or the long audit log for
   details; do not re-expand this compact section.
 
 ## Figure And Table Rules
@@ -195,7 +202,7 @@ external release decisions:
 - durable software/artifact archive;
 - archival DOI in the availability statement.
 
-The current PDF is a 46-page A4 article. Page budget and float behavior must be
+The current PDF is a 45-page A4 article. Page budget and float behavior must be
 rechecked after target-template conversion.
 
 Deferred layout risks from the 2026-07-09 audits are now target-template risks
