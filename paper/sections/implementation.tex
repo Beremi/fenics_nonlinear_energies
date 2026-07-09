@@ -29,8 +29,8 @@ assembly, nonlinear globalization, and linear algebra stay in PETSc.
 The \jaxpetsc{} realization exposes several second-order modes. The precise available
 choices depend on the benchmark family, but the common logic is:
 \begin{itemize}
-  \item \textbf{element AD}: exact local Hessians from differentiating the full
-        element energy;
+  \item \textbf{element AD}: local Hessians obtained by differentiating the full
+        element energy on the active smooth branch;
   \item \textbf{constitutive AD}: branchwise local constitutive tangents
         assembled from quadrature-point energy densities;
   \item \textbf{colored sparse recovery}: colored recovery from AD-HVP or
@@ -38,9 +38,10 @@ choices depend on the benchmark family, but the common logic is:
         appropriate cost tradeoff; tables label this route as colored SFD.
 \end{itemize}
 
-This split is scientifically important. It lets us compare exact second-order
-information against carefully structured sparse approximations without changing
-the nonlinear solver or sparse assembly path. In other words, the paper compares
+This split is scientifically important. It lets us compare AD-derived local
+second-order information against carefully structured sparse approximations
+without changing the nonlinear solver or sparse assembly path. In other words,
+the paper compares
 derivative strategies inside one common distributed solver construction, not only
 across reference implementations.
 

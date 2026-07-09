@@ -1093,6 +1093,19 @@ MATLAB literature only when there is source-backed evidence.
   encyclopedia material out of the first narrative path, organize results more
   directly by method question, relax forced floats, and possibly merge
   discussion/conclusion after target-template constraints are known.
+- `Current structural-flow/style/layout audit` (`Pascal`/`Hume`/`Zeno`):
+  completed and partly integrated. Findings addressed in the current
+  structural-flow chunk: the SOTA role-map table moved from the Introduction to
+  Related Work, the Introduction now keeps only compact positioning prose, and
+  `Solver-Policy Diagnostics` moved after the conclusion under `\appendix`.
+  The roadmap now points to Discussion, Conclusion, and Appendix A explicitly.
+  Claim-scope polish also replaced overbroad rank-dependent agreement wording
+  with rank-consistency/MPI timing evidence under stated protocols, changed the
+  conclusion's hyperelastic comparison to a narrow matched comparison, and
+  qualified implementation/diagram Hessian wording by active smooth branch and
+  AD-derived local second-order information. Remaining layout risk: broad
+  forced `[H]` float usage in benchmarks, results, and implementation remains
+  target-template fragile even though the current A4 PDF is readable.
 
 ## First Edit Backlog
 

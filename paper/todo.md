@@ -167,6 +167,12 @@ scientific claims were introduced without supporting evidence.
   Plasticity3D language from agreement to comparison where no acceptance
   threshold is predefined, softened fixed-work PMG timing causality, and aligned
   the PETSc literature audit key with the manuscript citation.
+- Addressed the structural-flow/style/layout audit: moved the SOTA role-map
+  table from the Introduction to Related Work, moved `Solver-Policy Diagnostics`
+  after the conclusion under `\appendix`, added the missing conclusion label for
+  the roadmap, and tightened claim-scope wording around rank-consistency
+  evidence, the narrow hyperelastic external comparison, and active-branch local
+  Hessian terminology.
 - Rebuilt the paper PDF through the paper generation pipeline.
 
 ## Blocking Issues Before Submission
@@ -344,6 +350,13 @@ required support for the current scoped contribution.
 - Rendered and visually inspected representative pages 1, 5, 9, 21, and
   30--32 after the latest rebuild; the current A4 PDF is readable and unclipped,
   with page 30 improved but dense floats/tables still template-fragile.
+- `make -C paper submission-check`: passed again on 2026-07-09 after the
+  structural-flow and claim-scope chunk; the check covers LaTeX warning scans,
+  `qpdf`, aux-order validation, and archive-neutral asset validation.
+- Rendered and visually inspected pages 1--3 and 36--38 after the
+  structural-flow rebuild; the introduction/related-work handoff, relocated
+  SOTA role-map table, conclusion, appendix boundary, and appendix tables are
+  readable and unclipped in the current A4 PDF.
 - Rendered and visually inspected pages 13, 21--22, and 30--32 after the
   latest rebuild; the hyperelastic figure font matches the manuscript, the
   JAX-FEM comparison figure/table order is fixed, and Table 20 now precedes

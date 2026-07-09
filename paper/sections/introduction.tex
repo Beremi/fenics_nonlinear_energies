@@ -58,36 +58,16 @@ finite-element strength-reduction and 3D slope-stability literature
 but the present plasticity study is limited to final-load endpoint observables
 rather than path-consistent incremental plastic-history validation.
 
-\subsection{State of the Art and Positioning}
-\label{sec:intro-sota}
-
-\Cref{tab:sota-comparison} records the computational roles needed for the
-argument: modeling layer, differentiation scope, second-order information,
-parallel execution model, and benchmark families closest to our suite. The table
-is a role map rather than a package ranking; \Cref{sec:related} gives the
-source-specific discussion.
-
-\begin{table}[H]
-  \centering
-  \scriptsize
-  \setlength{\tabcolsep}{3pt}
-  \input{tables/generated/sota_framework_comparison.tex}
-  \caption{Selected related computational roles for the software and literature
-  families most relevant to this paper. The entries record documented roles
-  rather than subjective scores.}
-  \label{tab:sota-comparison}
-\end{table}
-
-The present work combines these roles by treating local differentiation,
-PETSc-owned sparse MPI assembly, nonlinear globalization, and preconditioner
-policy in one heterogeneous benchmark suite. The detailed literature categories
-are discussed in \Cref{sec:related}; the \purejax{} and \fenics{} formulations
-serve as internal references, JAX-FEM supplies the matched external numerical
-comparison, and the slope-stability literature supplies endpoint-observable
-context for the plasticity checks.
+The surrounding literature covers expressive finite-element automation,
+differentiable FEM, JAX--solver bridges, mechanics and topology benchmark
+families, and sparse nonlinear solver infrastructure. The present work combines
+these roles by treating local differentiation, PETSc-owned sparse MPI assembly,
+nonlinear globalization, and preconditioner policy in one heterogeneous
+benchmark suite. \Cref{sec:related} gives the source-specific discussion and
+records the role map used to position the surrounding software and literature.
 
 The paper is organized as follows. \Cref{sec:related} deepens the literature
-context behind the summary above. \Cref{sec:methodology} describes the common
+context behind this positioning. \Cref{sec:methodology} describes the common
 finite-element energy notation, derivative routes, nonlinear globalization, and
 sparse derivative recovery. \Cref{sec:implementation} explains the primary
 \jaxpetsc{} implementation and the narrower \purejax{} and \fenics{} reference
@@ -98,6 +78,6 @@ then reports validation and external-comparison evidence, deliberately
 separating hyperelastic JAX-FEM agreement from the three-dimensional plasticity
 endpoint-surrogate comparison. \Cref{sec:numerical-examples}
 reports timing, scaling, derivative-route, and discretization-comparison
-evidence.
-\Cref{sec:solver-evidence} adds solver-policy diagnostics, followed by a
-discussion of limitations.
+evidence. \Cref{sec:discussion} and \Cref{sec:conclusion} synthesize the main
+scope and limitations. Supporting solver-policy diagnostics are collected in
+\Cref{sec:solver-evidence}.

@@ -6,6 +6,23 @@ mechanics and topology benchmark context, and sparse nonlinear solver
 infrastructure. We use this taxonomy to position the present toolset without
 ranking the surrounding software ecosystems.
 
+\Cref{tab:sota-comparison} records the computational roles needed for this
+positioning: modeling layer, differentiation scope, second-order information,
+parallel execution model, and benchmark families closest to the present suite.
+The table is a role map rather than a package ranking; the paragraphs below give
+the source-specific discussion.
+
+\begin{table}[!htbp]
+  \centering
+  \scriptsize
+  \setlength{\tabcolsep}{3pt}
+  \input{tables/generated/sota_framework_comparison.tex}
+  \caption{Selected related computational roles for the software and literature
+  families most relevant to this paper. The entries record documented roles
+  rather than subjective scores.}
+  \label{tab:sota-comparison}
+\end{table}
+
 \paragraph{Finite-element and PDE-optimization automation.}
 The original \fenics{} project established the high-level finite-element
 programming model in which weak forms are expressed symbolically and compiled
