@@ -390,6 +390,7 @@ geometry. At increment $n+1$, the continuum equilibrium equations are
 \end{equation}
 where $\sigma^{n+1}$ and the internal variables are obtained from the
 elastoplastic update driven by $\varepsilon(u^{n+1})$ and the previous state.
+
 The computational slope has the standard homogeneous benchmark geometry
 specified by lower bench width $15$, slope run $10$, upper bench width $15$,
 two vertical height segments of length $10$, and slope angle $45^\circ$. The
@@ -399,6 +400,7 @@ The material parameters are
 $E=\num{40000}$, $\nu=\num{0.30}$, $c_0=\num{6.0}$,
 $\phi=45^\circ$, $\psi=0^\circ$, and gravity magnitude $\gamma=\num{20}$,
 so $b=(0,-\gamma)^\top$ in the endpoint solves.
+
 The endpoint studies set the old plastic strain to zero at all quadrature
 points. Let $\Gamma_{\mathrm{bot}}$ denote the bottom edge and let
 $\Gamma_{\mathrm{side}}$ denote the constrained vertical side edges. We use
@@ -417,6 +419,7 @@ The corresponding weak form is
   \qquad \forall v \in V_0.
   \label{eq:plasticity2d-weak}
 \end{equation}
+
 The runs reported here are endpoint solves, not path-consistent incremental
 histories. Accordingly, the benchmark uses the following scalarized discrete
 surrogate functional for differentiation and comparison:
@@ -441,11 +444,14 @@ the two-dimensional Mohr--Coulomb endpoint surrogate. Here the subscript $eq$
 means element $e$ and quadrature point $q$, $w_{eq}$ is the corresponding
 quadrature weight including the element Jacobian, and $B_{eq}$ maps the element
 displacement vector to the two-dimensional engineering-strain vector used by the
-branch potential. The load vector $f_{\mathrm{ext}}$ is assembled from the
+branch potential.
+
+The load vector $f_{\mathrm{ext}}$ is assembled from the
 right-hand side of \cref{eq:plasticity2d-weak}; for the endpoint solves this is
 the gravity load with $b=(0,-\gamma)^\top$ and zero traction on the free
 boundary. The dilation angle enters this endpoint model only through the Davis-B
 reduction below.
+
 The reduced cohesion and friction angle appearing in
 \cref{eq:plasticity2d-discrete} are defined by the Davis-B reduction
 \cref{eq:plasticity2d-davis}.
@@ -498,7 +504,9 @@ angle, respectively, the benchmark uses
 The reported endpoint runs in this paper use $\lambda_{\mathrm{sr}} = 1$ and
 $\psi = 0^\circ$, hence $\psi_{\lambda}=0^\circ$; the reported states are
 algorithmic endpoint surrogates rather than path-consistent history updates.
-For a trial engineering strain
+
+The branch potential is then evaluated from the trial state. For a trial
+engineering strain
 $\varepsilon=(\varepsilon_{xx},\varepsilon_{yy},\gamma_{xy})^\top$ and old
 plastic strain $\varepsilon^{p,\mathrm{old}}$, set
 \[
@@ -615,6 +623,7 @@ equations are
 \end{equation}
 where $\sigma^{n+1}$ and the internal variables are obtained from the
 elastoplastic update driven by $\varepsilon(u^{n+1})$ and the previous state.
+
 The heterogeneous benchmark uses four material regions. Their
 $(c_0,\phi,\psi,E,\nu,\gamma)$ values, in the order cover layer, general
 foundation, weak foundation, and slope mass, are
@@ -629,7 +638,7 @@ The elastic constants used below are
   K = \frac{E}{3(1-2\nu)}, \qquad
   \lambda_{\mathrm{L}} = K-\frac{2\mu}{3}.
 \]
-The corresponding weak form is
+With these regionwise quantities, the weak form used by the endpoint solve is
 \begin{equation}
   \int_{\Omega} \sigma^{n+1} : \varepsilon(v) \, dx
   =
@@ -637,6 +646,7 @@ The corresponding weak form is
   \qquad \forall v \in V_0.
   \label{eq:plasticity3d-weak}
 \end{equation}
+
 The studied discrete model uses a heterogeneous tetrahedral mesh with four
 material physical groups, refined into the displayed mesh hierarchy and elevated
 locally to same-mesh $P_1/P_2/P_4$ spaces. Let
@@ -656,10 +666,12 @@ The bottom-clamped model additionally fixes all displacement components on
 $\Gamma_{\mathrm{bot}}=\{X\in\partial\Omega:\lvert X_2\rvert\le 10^{-12}\}$.
 We write $P_k(L_\ell)$ for polynomial degree $k$ on mesh level $\ell$ and use
 $L_1,\ldots,L_4$ for the four displayed mesh levels.
+
 The figures below use the bottom-clamped $P_4(L_2)$ representative endpoint at
 $\lambda_{\mathrm{sr}}=1.55$ and the finished nine-case study
 at the same load factor. The $\lambda_{\mathrm{sr}}=1.0$ strong-scaling
 study is kept later in the paper as separate auxiliary timing evidence.
+
 For those endpoint and continuation studies, we evaluate the
 following algorithmic scalar surrogate:
 \begin{equation}
@@ -909,7 +921,8 @@ fixed-$\lambda_{\mathrm{sr}}$ reference comparison. The latter checks
 matched geometry, materials, Davis-B reduction parameters, load schedule, and
 the active boundary conditions, but it is not a path-consistent
 incremental-history validation.
-The paper therefore keeps the Plasticity3D claims at the level of a
+
+For this reason, the paper keeps the Plasticity3D claims at the level of a
 problem-specific endpoint surrogate rather than a path-consistent
 replacement. The related
 return-mapping, optimization, convex-optimization, and continuation literature

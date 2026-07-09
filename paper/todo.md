@@ -177,6 +177,9 @@ scientific claims were introduced without supporting evidence.
   and benchmark opening floats from `[H]` to `[!htbp]` while preserving local
   `\FloatBarrier` guards, replaced the hard results-prelude `\clearpage` with a
   local barrier, and normalized one manual figure reference to `\Cref`.
+- Addressed the benchmark-readability audit: split Plasticity2D and Plasticity3D
+  setup prose into staged continuum-model, geometry/material, surrogate, and
+  claim-scope paragraphs without changing formulas or numerical evidence.
 - Rebuilt the paper PDF through the paper generation pipeline.
 
 ## Blocking Issues Before Submission

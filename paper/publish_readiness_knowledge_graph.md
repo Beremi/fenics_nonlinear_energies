@@ -261,6 +261,10 @@ MATLAB literature only when there is source-backed evidence.
   defines `e_y`, `\Gamma_{D,i}`, `\Gamma_N`, and `V_0` before the
   Plasticity3D strong form, and adds the topology plane-stress tensor and load
   functional before the mechanics solve.
+  Current benchmark-readability chunk splits Plasticity2D and Plasticity3D setup
+  prose into staged paragraphs for continuum model, geometry/material data,
+  endpoint-surrogate functional, and claim-scope caveats without changing
+  equations, numerical evidence, or validation claims.
 - `VALIDATION`: external and reference-model comparison.
   Evidence: narrow hyperelastic JAX-FEM comparison; Plasticity3D validation
   ladder with endpoint-surrogate scope.
@@ -548,6 +552,11 @@ MATLAB literature only when there is source-backed evidence.
   affected algorithms, Plasticity2D formulas, topology definitions, validation
   page, discussion opening, and appendix tables are readable and within the
   current A4 text block.
+  Current benchmark-readability chunk rebuilt the 41-page PDF after Plasticity2D
+  and Plasticity3D paragraph-flow edits; `make -C paper submission-check` and
+  `git diff --check` passed, and rendered pages 14--21 were visually inspected
+  for the Plasticity2D/3D handoff, endpoint-surrogate caveats, figure/table
+  placement, and Topology transition.
 - `REPRO`: reproducibility and submission readiness.
   Known blockers from `paper/todo.md`: target journal/template/declarations,
   repository license/archive DOI, and archive-neutral provenance for critical
@@ -938,6 +947,11 @@ MATLAB literature only when there is source-backed evidence.
   region has been reduced by moving interpretation before the Plasticity3D
   degree/resolution figure, but dense tables and forced floats remain
   template-fragile until a target class is chosen.
+- `Benchmark readability audit` (`Kepler`): completed. Findings addressed:
+  Plasticity2D and Plasticity3D setup paragraphs now separate model equations,
+  geometry/material data, endpoint-surrogate definitions, external-load
+  interpretation, and evidence-scope caveats; the 3D lambda=1.55 endpoint study
+  remains separated from the lambda=1.0 auxiliary timing evidence.
 - `Archive bundle input audit` (`Erdos-current`): completed. Findings
   addressed in the current submission-bundle chunk: the minimal paper-critical
   bundle includes Plasticity3D validation JSON plus source and maintained branch
