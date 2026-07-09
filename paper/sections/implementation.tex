@@ -45,7 +45,7 @@ the paper compares
 derivative strategies inside one common distributed solver construction, not only
 across reference implementations.
 
-\begin{figure}[H]
+\begin{figure}[!htbp]
   \centering
   \PaperFrameworkOverviewDiagram
   \caption{Computational structure used in the study. The \jaxpetsc{}
@@ -54,7 +54,7 @@ across reference implementations.
   \label{fig:framework-overview}
 \end{figure}
 
-\begin{figure}[H]
+\begin{figure}[!htbp]
   \centering
   \PaperDerivativePathDiagram
   \caption{Derivative pathways from scalar energies and quadrature-point
@@ -62,7 +62,7 @@ across reference implementations.
   \label{fig:derivative-pathways}
 \end{figure}
 
-\begin{figure}[H]
+\begin{figure}[!htbp]
   \centering
   \PaperAutodiffModesDiagram
   \caption{Second-order derivative modes exposed in the \jaxpetsc{} realization. The
@@ -71,6 +71,8 @@ across reference implementations.
   to constitutive AD or colored SFD.}
   \label{fig:derivative-stack}
 \end{figure}
+
+\FloatBarrier
 
 \Cref{fig:framework-overview,fig:derivative-pathways,fig:derivative-stack} summarize the
 computational construction used in the rest of the paper. The primary
@@ -133,7 +135,7 @@ SFD requires an additional graph-coloring step, but once the coloring is known
 the probe evaluations can still be carried out in a rank-local manner with only
 scalar reductions or owned sparse insertion in the dominant assembly loop.
 
-\begin{figure}[H]
+\begin{figure}[!htbp]
   \centering
   \PaperGlobalizationDiagram
   \caption{Globalization choices used across the benchmark suite, from pure line
@@ -141,7 +143,7 @@ scalar reductions or owned sparse insertion in the dominant assembly loop.
   \label{fig:globalization}
 \end{figure}
 
-\begin{figure}[H]
+\begin{figure}[!htbp]
   \centering
   \PaperColoringDiagram
   \caption{Schematic view of the colored sparse-recovery logic used by the
@@ -150,13 +152,15 @@ scalar reductions or owned sparse insertion in the dominant assembly loop.
   \label{fig:globalization-coloring}
 \end{figure}
 
-Figures~\ref{fig:globalization} and~\ref{fig:globalization-coloring} make two
+\FloatBarrier
+
+\Cref{fig:globalization,fig:globalization-coloring} make two
 solver-policy choices explicit. Globalization is varied independently of the
 element physics where the benchmark permits it, while colored SFD uses graph
 structure to batch directional Hessian probes without changing the nonlinear
 problem definition.
 
-\begin{table}[H]
+\begin{table}[!htbp]
   \centering
   \input{tables/generated/implementation_capability_matrix.tex}
   \caption{Solver and derivative components by benchmark family.
@@ -165,6 +169,8 @@ problem definition.
   relevant in each family.}
   \label{tab:capability-matrix}
 \end{table}
+
+\FloatBarrier
 
 \Cref{tab:capability-matrix} summarizes the solver components used in the
 benchmark suite. The most important structural point is that the \jaxpetsc{}

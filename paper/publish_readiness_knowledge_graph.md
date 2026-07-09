@@ -1106,6 +1106,18 @@ MATLAB literature only when there is source-backed evidence.
   AD-derived local second-order information. Remaining layout risk: broad
   forced `[H]` float usage in benchmarks, results, and implementation remains
   target-template fragile even though the current A4 PDF is readable.
+- `Current bounded float-placement audit` (`Euler`): completed and integrated.
+  Findings addressed in the current float-flow chunk: the Implementation
+  schematics and capability matrix, the opening Benchmark tables, and the
+  Results prelude now use flexible placement with local `\FloatBarrier`
+  guards instead of broad hard placement or a hard page break. Visual checks
+  confirmed that implementation diagrams/tables are interpreted after they
+  appear, benchmark scope tables precede the scope prose, the long
+  discretization-label table remains contained before the first model, and the
+  p-Laplace results section can begin at the bottom of the prelude page without
+  a forced `\clearpage`. Remaining layout risk: many later problem-specific
+  `[H]` floats remain intentionally untouched until target-template conversion
+  or a dedicated family-by-family float pass.
 
 ## First Edit Backlog
 

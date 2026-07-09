@@ -173,6 +173,10 @@ scientific claims were introduced without supporting evidence.
   the roadmap, and tightened claim-scope wording around rank-consistency
   evidence, the narrow hyperelastic external comparison, and active-branch local
   Hessian terminology.
+- Addressed the bounded float-placement audit: relaxed selected implementation
+  and benchmark opening floats from `[H]` to `[!htbp]` while preserving local
+  `\FloatBarrier` guards, replaced the hard results-prelude `\clearpage` with a
+  local barrier, and normalized one manual figure reference to `\Cref`.
 - Rebuilt the paper PDF through the paper generation pipeline.
 
 ## Blocking Issues Before Submission
@@ -357,6 +361,13 @@ required support for the current scoped contribution.
   structural-flow rebuild; the introduction/related-work handoff, relocated
   SOTA role-map table, conclusion, appendix boundary, and appendix tables are
   readable and unclipped in the current A4 PDF.
+- `make -C paper submission-check`: passed again on 2026-07-09 after the
+  bounded float-placement chunk; the check covers LaTeX warning scans, `qpdf`,
+  aux-order validation, and archive-neutral asset validation.
+- Rendered and visually inspected pages 7--11 and 24--28 after the
+  float-placement rebuild; implementation diagrams and Table 3, the benchmark
+  scope and discretization tables, and the results prelude-to-p-Laplace
+  transition are readable, unclipped, and in interpretable order.
 - Rendered and visually inspected pages 13, 21--22, and 30--32 after the
   latest rebuild; the hyperelastic figure font matches the manuscript, the
   JAX-FEM comparison figure/table order is fixed, and Table 20 now precedes

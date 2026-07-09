@@ -7,7 +7,7 @@ phase-field-type energies, finite-strain mechanics, elastoplastic slope
 stability, and reduced topology optimization without switching conceptual
 formulations.
 
-\begin{table}[H]
+\begin{table}[!htbp]
   \centering
   \input{tables/generated/benchmark_specification_matrix.tex}
   \caption{Benchmark families, solve policies, and principal comparison paths.
@@ -16,7 +16,7 @@ formulations.
   \label{tab:benchmark-spec}
 \end{table}
 
-\begin{table}[H]
+\begin{table}[!htbp]
   \centering
   \input{tables/generated/reference_availability.tex}
   \caption{Availability of \fenics{} and \purejax{} references. Reference
@@ -25,6 +25,8 @@ formulations.
   absent cells are left absent rather than filled with speculative baselines.}
   \label{tab:reference-availability}
 \end{table}
+
+\FloatBarrier
 
 \Cref{tab:benchmark-spec,tab:reference-availability} define the comparison
 scope before the individual models are introduced. The scalar problems and
@@ -42,7 +44,7 @@ definition.
 model definitions and numerical tables; the labels identify discrete problem
 size and mesh construction, not separate physical models.
 
-\begin{table}[H]
+\begin{table}[!htbp]
   \centering
   \footnotesize
   \begin{tabularx}{\textwidth}{@{}l l >{\RaggedRight\arraybackslash}X >{\RaggedRight\arraybackslash}X@{}}
@@ -87,6 +89,8 @@ size and mesh construction, not separate physical models.
   labels; they are not additional numerical results.}
   \label{tab:discretization-labels}
 \end{table}
+
+\FloatBarrier
 
 \subsection{\texorpdfstring{$p$-Laplace}{p-Laplace}}
 \label{sec:bench-plaplace}
