@@ -58,18 +58,21 @@ keeps the trust-region safeguard while reducing both nonlinear iterations and
 solver time relative to line-search-only Newton. The Plasticity3D endpoint gives
 the opposite conclusion from the easy scalar case: at the stricter
 $\|\nabla \mathcal{F}\|_2 < 10^{-4}$ criterion, line-search-only Newton reaches
-the iteration cap, whereas both trust-region policies converge. The hybrid
-variant is the fastest of the two trust-region configurations and also uses
-fewer Krylov iterations. Together, these comparisons support a problem-dependent
-policy choice rather than a universal preference for any single globalization
-strategy.
+the iteration cap, whereas both trust-region policies converge. The capped row
+matches the displayed energy but remains above the gradient target, as reported
+by the gradient-to-target column in
+\Cref{tab:globalization-method-compare}. The hybrid variant is the fastest of
+the two trust-region configurations and also uses fewer Krylov iterations.
+Together, these comparisons support a problem-dependent policy choice rather
+than a universal preference for any single globalization strategy.
 
 \begin{table}[!htbp]
   \centering
   \footnotesize
   \input{tables/generated/globalization_method_compare.tex}
   \caption{Fixed-case comparison of nonlinear globalization policies. LS denotes
-  Armijo line search and TR denotes Steihaug trust region.}
+  Armijo line search and TR denotes Steihaug trust region. The gradient-to-target
+  column is reported for the Plasticity3D endpoint gate.}
   \label{tab:globalization-method-compare}
 \end{table}
 
@@ -78,7 +81,8 @@ budget. \Cref{tab:gl-globalization-fixed-budget} reports this scalar-nonconvex
 comparison separately from the multi-family table above. Its purpose is
 narrower: it records that the trust-region variants complete with matching
 energy and Newton--Krylov work, while the line-search-only configuration still
-times out under the fixed wall-time cap.
+times out under the fixed wall-time cap. The timeout row reports elapsed wall
+time and the cap, whereas completed rows report solver time.
 
 \begin{table}[!htbp]
   \centering
@@ -86,7 +90,8 @@ times out under the fixed wall-time cap.
   \input{tables/generated/ginzburg_landau_globalization_fixed_budget.tex}
   \caption{Ginzburg--Landau level-10 fixed-budget globalization comparison on
   eight MPI ranks. The configurations use the same element assembly and Hypre
-  preconditioner; only the nonlinear globalization policy changes.}
+  preconditioner; only the nonlinear globalization policy changes. The timed-out
+  row reports elapsed wall time and the configured wall-time cap.}
   \label{tab:gl-globalization-fixed-budget}
 \end{table}
 
@@ -101,7 +106,9 @@ for both routes, because the rank-local hyperelasticity configuration does not u
 colored SFD. This makes the case a derivative-route comparison rather than a
 scaling claim. The Plasticity3D cases use the same
 $P_2(L_1)$, $\lambda_{\mathrm{sr}}=\num{1.55}$, MUMPS-backed PMG setting as the
-globalization comparison above.
+globalization comparison above. Because the source data mix solver timers,
+solver totals, and wall times, the timing-scope column states which quantity is
+used in each row.
 
 Across all three benchmark cases, colored SFD reaches the same reported
 energy and identical nonlinear/Krylov iteration counts as element AD. The
@@ -278,7 +285,7 @@ precision.
 \Cref{tab:hyperelasticity-pmg-sensitivity} isolates the first-step level-5 PMG
 choice on the same 32-rank level-5 problem with fixed nonlinear work. All
 configurations perform the same eight Newton linearizations, so differences in
-total time are attributable to the linear preconditioner and coarse-solver
+solver time are attributable to the linear preconditioner and coarse-solver
 policy rather than to nonlinear stopping. The energy column is the state after
 this fixed nonlinear work, so
 \Cref{tab:hyperelasticity-pmg-sensitivity} is a solver-policy comparison rather

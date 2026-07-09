@@ -27,8 +27,38 @@ P3D_SCALING_ROOT = (
     / "plasticity3d_p4_l1_2_mumps_pmg_step_grad_local_karolina_scaling"
 )
 GLOBALIZATION_REPORT = REPO_ROOT / "artifacts" / "reports" / "globalization_method_compare" / "full_summary.csv"
+GLOBALIZATION_RAW_ROOT = REPO_ROOT / "artifacts" / "raw_results" / "globalization_method_compare" / "full"
+P3D_GLOBALIZATION_OUTPUTS = (
+    (
+        GLOBALIZATION_RAW_ROOT / "plasticity3d_p2_l1_np32_lambda155_newton_linesearch" / "output.json",
+        INPUT_ROOT
+        / "globalization_method_compare"
+        / "plasticity3d_p2_l1_np32_lambda155_newton_linesearch"
+        / "output.json",
+    ),
+    (
+        GLOBALIZATION_RAW_ROOT / "plasticity3d_p2_l1_np32_lambda155_steihaug_trust" / "output.json",
+        INPUT_ROOT / "globalization_method_compare" / "plasticity3d_p2_l1_np32_lambda155_steihaug_trust" / "output.json",
+    ),
+    (
+        GLOBALIZATION_RAW_ROOT / "plasticity3d_p2_l1_np32_lambda155_hybrid_trust_linesearch" / "output.json",
+        INPUT_ROOT
+        / "globalization_method_compare"
+        / "plasticity3d_p2_l1_np32_lambda155_hybrid_trust_linesearch"
+        / "output.json",
+    ),
+)
 DERIVATIVE_ROUTE_REPORT = REPO_ROOT / "artifacts" / "reports" / "derivative_route_compare" / "full_summary.csv"
 SUPPLEMENTAL_REPORT_ROOT = REPO_ROOT / "artifacts" / "reports" / "paper_reviewer_gap_experiments"
+SUPPLEMENTAL_GL_TIMEOUT_ROOT = (
+    REPO_ROOT
+    / "artifacts"
+    / "raw_results"
+    / "paper_reviewer_gap_experiments"
+    / "full"
+    / "gl_globalization"
+    / "gl_l10_newton_linesearch_np8"
+)
 P2D_SHOWCASE_ROOT = REPO_ROOT / "artifacts" / "raw_results" / "docs_showcase" / "mc_plasticity_p4_l5"
 P2D_L6_SUMMARY = (
     REPO_ROOT / "artifacts" / "raw_results" / "slope_stability_l6_p4_deep_p1_tail_scaling_lambda1_maxit20" / "summary.json"
@@ -159,6 +189,12 @@ def _source_id(path: Path) -> str:
                 "artifacts/reports/supplemental_solver_evidence/",
                 1,
             )
+        if rel.startswith("artifacts/raw_results/paper_reviewer_gap_experiments/"):
+            return rel.replace(
+                "artifacts/raw_results/paper_reviewer_gap_experiments/",
+                "artifacts/raw_results/supplemental_solver_evidence/",
+                1,
+            )
         return rel
     return f"external_reference/slope_stability_octave_ref/compare_direct_branch_lambda1p6/{relative_to_source_branch.as_posix()}"
 
@@ -227,6 +263,8 @@ def _sanitize_string(value: str) -> str:
         "tmp_work/jax_fem_0_0_10_py312": "external_environment/jax_fem_0_0_10_py312",
     }
     for source, dest in P3D_RECOMMENDED_SCALING_OUTPUTS:
+        replacements[_repo_rel(source)] = _repo_rel(dest)
+    for source, dest in P3D_GLOBALIZATION_OUTPUTS:
         replacements[_repo_rel(source)] = _repo_rel(dest)
     for old, new in replacements.items():
         text = text.replace(old, new)
@@ -644,6 +682,8 @@ def main() -> None:
         copied,
     )
     _copy_csv(GLOBALIZATION_REPORT, INPUT_ROOT / "globalization_method_compare" / "full_summary.csv", copied)
+    for source, dest in P3D_GLOBALIZATION_OUTPUTS:
+        _copy_json(source, dest, copied)
     _copy_csv(DERIVATIVE_ROUTE_REPORT, INPUT_ROOT / "derivative_route_compare" / "full_summary.csv", copied)
     for name in (
         "full_he_distribution.csv",
@@ -653,6 +693,12 @@ def main() -> None:
         "full_p3d_derivative_degree.csv",
     ):
         _copy_csv(SUPPLEMENTAL_REPORT_ROOT / name, INPUT_ROOT / "supplemental_solver_evidence" / name, copied)
+    for name in ("run_info.json", "case_metadata.json"):
+        _copy_json(
+            SUPPLEMENTAL_GL_TIMEOUT_ROOT / name,
+            INPUT_ROOT / "supplemental_solver_evidence" / "gl_globalization" / "gl_l10_newton_linesearch_np8" / name,
+            copied,
+        )
     _copy_json(P2D_SHOWCASE_ROOT / "output.json", INPUT_ROOT / "plasticity2d_resolution" / "output.json", copied)
     _copy_binary(P2D_SHOWCASE_ROOT / "state.npz", INPUT_ROOT / "plasticity2d_resolution" / "state.npz", copied)
     _copy_json(P2D_L6_SUMMARY, INPUT_ROOT / "plasticity2d_resolution" / "slope_stability_l6_p4" / "summary.json", copied)

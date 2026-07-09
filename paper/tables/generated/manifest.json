@@ -51,12 +51,32 @@
       {
         "kind": "repository_path",
         "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/supplemental_solver_evidence/full_gl_globalization.csv"
+      },
+      {
+        "kind": "repository_path",
+        "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/supplemental_solver_evidence/gl_globalization/gl_l10_newton_linesearch_np8/run_info.json"
+      },
+      {
+        "kind": "repository_path",
+        "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/supplemental_solver_evidence/gl_globalization/gl_l10_newton_linesearch_np8/case_metadata.json"
       }
     ],
     "globalization_method_compare.tex": [
       {
         "kind": "repository_path",
         "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/globalization_method_compare/full_summary.csv"
+      },
+      {
+        "kind": "repository_path",
+        "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/globalization_method_compare/plasticity3d_p2_l1_np32_lambda155_newton_linesearch/output.json"
+      },
+      {
+        "kind": "repository_path",
+        "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/globalization_method_compare/plasticity3d_p2_l1_np32_lambda155_steihaug_trust/output.json"
+      },
+      {
+        "kind": "repository_path",
+        "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/globalization_method_compare/plasticity3d_p2_l1_np32_lambda155_hybrid_trust_linesearch/output.json"
       }
     ],
     "hyperelasticity_benchmark_summary.tex": [
@@ -313,6 +333,14 @@
         {
           "kind": "repository_path",
           "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/supplemental_solver_evidence/full_gl_globalization.csv"
+        },
+        {
+          "kind": "repository_path",
+          "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/supplemental_solver_evidence/gl_globalization/gl_l10_newton_linesearch_np8/run_info.json"
+        },
+        {
+          "kind": "repository_path",
+          "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/supplemental_solver_evidence/gl_globalization/gl_l10_newton_linesearch_np8/case_metadata.json"
         }
       ],
       "generator": {
@@ -327,6 +355,18 @@
         {
           "kind": "repository_path",
           "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/globalization_method_compare/full_summary.csv"
+        },
+        {
+          "kind": "repository_path",
+          "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/globalization_method_compare/plasticity3d_p2_l1_np32_lambda155_newton_linesearch/output.json"
+        },
+        {
+          "kind": "repository_path",
+          "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/globalization_method_compare/plasticity3d_p2_l1_np32_lambda155_steihaug_trust/output.json"
+        },
+        {
+          "kind": "repository_path",
+          "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/globalization_method_compare/plasticity3d_p2_l1_np32_lambda155_hybrid_trust_linesearch/output.json"
         }
       ],
       "generator": {

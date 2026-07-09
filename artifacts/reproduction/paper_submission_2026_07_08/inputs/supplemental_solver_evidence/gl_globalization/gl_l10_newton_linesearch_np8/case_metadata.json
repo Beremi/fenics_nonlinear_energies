@@ -1,0 +1,14 @@
+{
+  "command": "mpiexec -n 8 ./python -u experiments/runners/run_trust_region_case.py --problem gl --backend element --level 10 --steps 1 --profile reference --pc-type hypre --ksp-rtol 1e-3 --ksp-max-it 200 --tolf 1e-6 --tolg 1e-5 --tolg-rel 1e-3 --tolx-rel 1e-3 --tolx-abs 1e-10 --maxit 100 --linesearch-a -0.5 --linesearch-b 2.0 --linesearch-tol 1e-3 --element-reorder-mode block_xyz --local-hessian-mode element --local-coloring --save-history --save-linear-timing --quiet --ksp-type gmres --no-use-trust-region --line-search armijo --out archive_source/supplemental_solver_evidence/full/gl_globalization/gl_l10_newton_linesearch_np8/output.json",
+  "key": "gl_l10_newton_linesearch_np8",
+  "kind": "trust",
+  "label": "GL L10 newton_linesearch",
+  "metadata": {
+    "level": 10,
+    "method": "newton_linesearch"
+  },
+  "mode": "full",
+  "nprocs": 8,
+  "section": "gl_globalization",
+  "wall_cap_s": 300.0
+}

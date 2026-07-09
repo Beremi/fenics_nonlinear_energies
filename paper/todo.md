@@ -131,6 +131,11 @@ scientific claims were introduced without supporting evidence.
   summary for the results section, explicit mixed timing headers for
   globalization and derivative-route comparisons, and a Plasticity2D caption
   that distinguishes endpoint values from fixed-work diagnostics.
+- Addressed the latest evidence-gate audit: split comparator roles in the
+  abstract and introduction, named the \v{C}erm{\'a}k--Sysala--Valdman MATLAB
+  implementation lineage, added explicit timing-scope/cap/gradient-gate columns
+  to the affected generated results tables, and expanded the curated bundle with
+  the JSON inputs needed to audit those rows.
 - Rebuilt the paper PDF through the paper generation pipeline.
 
 ## Blocking Issues Before Submission
@@ -196,6 +201,10 @@ scientific claims were introduced without supporting evidence.
   and regenerate at the final physical size if needed.
 - Revisit the availability statement after the archive/license decision so it
   reads like final submission metadata rather than a repository-local note.
+- Add a compact mesh-hierarchy/marker table and Mohr--Coulomb convention
+  paragraph if the next self-containedness pass touches the benchmark section.
+- Consider a compact exact solver-policy table once the final target template is
+  known and the result-table width budget is clear.
 
 ## Claim And Citation Audit Summary
 
@@ -248,7 +257,7 @@ required support for the current scoped contribution.
   figure sources, all archive-neutral.
 - `./.venv/bin/python paper/scripts/build_submission_bundle.py`: passed and
   wrote `artifacts/reproduction/paper_submission_2026_07_08/manifest.json` with
-  source and bundle SHA256 hashes for 46 paper-critical inputs.
+  source and bundle SHA256 hashes for 51 paper-critical inputs.
 - `./.venv/bin/python paper/scripts/validate_paper_assets.py`: passed on
   2026-07-09 with 29 figures, 30 generated tables, figure source records, table
   source records, and 44 paper-facing provenance-scan files checked.
@@ -279,6 +288,22 @@ required support for the current scoped contribution.
 - `make -C paper submission-check`: passed again on 2026-07-09 after the
   solver-protocol table additions; the check covers LaTeX warning scans,
   `qpdf`, aux-order validation, and archive-neutral asset validation.
+- `./.venv/bin/python paper/scripts/build_submission_bundle.py`: passed again
+  on 2026-07-09 after adding Plasticity3D globalization JSONs and the
+  Ginzburg--Landau timeout metadata to the curated bundle; the regenerated
+  manifest records 51 source files.
+- `./.venv/bin/python paper/scripts/generate_paper_tables.py`: passed again on
+  2026-07-09 after adding timing-scope, wall-cap, and gradient-gate fields to
+  the affected generated tables.
+- `./.venv/bin/python -m py_compile paper/scripts/generate_paper_tables.py paper/scripts/build_submission_bundle.py`:
+  passed on 2026-07-09.
+- `make -C paper submission-check`: passed again on 2026-07-09 after the
+  evidence-gate table/prose edits; the check covers LaTeX warning scans,
+  `qpdf`, aux-order validation, and archive-neutral asset validation.
+- Rendered and visually inspected affected pages 1--2, 25--27, and 38--41
+  after the latest rebuild; the abstract/opening text, revised evidence tables,
+  conclusion, availability statement, and bibliography pages are readable and
+  unclipped in the current A4 PDF.
 - Rendered and visually inspected representative pages 1, 5, 9, 21, and
   30--32 after the latest rebuild; the current A4 PDF is readable and unclipped,
   with page 30 improved but dense floats/tables still template-fragile.

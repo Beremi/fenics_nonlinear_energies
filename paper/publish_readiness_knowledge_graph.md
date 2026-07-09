@@ -89,7 +89,14 @@ MATLAB literature only when there is source-backed evidence.
   separate rank-consistency check. Current front/back-matter chunk aligns the
   visible title and PDF metadata with energy minimization, removes the automatic
   date, moves code/data availability into unnumbered back matter, and replaces
-  draft future-archive wording with a current-version statement.
+  draft future-archive wording with a current-version statement. Current
+  evidence-gate chunk strengthens the abstract's final sentence around
+  PETSc-owned sparse assembly, Krylov and multigrid policy, and
+  rank-consistency diagnostics; it also separates JAX-FEM as a matched
+  hyperelastic comparison, Sysala-family slope-stability work as
+  reference-model/reference-observable context, and the
+  \v{C}erm{\'a}k--Sysala--Valdman MATLAB work as implementation-lineage
+  context.
 - `INTRO`: positioning and contributions.
   Status: now opens with the nonlinear FEM computational bottleneck and includes
   an explicit contribution block with solver, derivative/assembly, and
@@ -110,7 +117,9 @@ MATLAB literature only when there is source-backed evidence.
   reference implementations. Current evidence-scope chunk compresses the SOTA
   table into a three-column role taxonomy and softens external-comparison
   language so only reported external numerical comparisons are covered by the
-  matched-observable statement.
+  matched-observable statement. Current evidence-gate chunk splits the
+  \v{C}erm{\'a}k--Sysala--Valdman implementation lineage from the
+  Sysala-family reference-model and reference-observable context.
 - `RELATED`: literature framing.
   Status: consolidated defensive taxonomy into fewer scientific groups:
   FEM automation, differentiable FEM/AD, nonlinear solver infrastructure,
@@ -123,7 +132,9 @@ MATLAB literature only when there is source-backed evidence.
   Current SOTA/math polish chunk scopes Xue 2026 as a close second-order
   comparator and describes the Sysala continuation/iterative-solver work as a
   reference line rather than a source family. Current evidence-scope chunk
-  updates the PETSc web citation key to the current 2026 entry.
+  updates the PETSc web citation key to the current 2026 entry. Current
+  evidence-gate chunk names the \v{C}erm{\'a}k--Sysala--Valdman MATLAB
+  implementation line explicitly, avoiding a vague single-author lineage.
 - `METHOD`: mathematical and algorithmic core.
   Current assets: common finite-element energy notation, derivative routes,
   globalization algorithms, colored sparse finite differences, constitutive AD.
@@ -341,7 +352,13 @@ MATLAB literature only when there is source-backed evidence.
   Current solver-protocol chunk adds a numerical-protocol summary at the start
   of the results section, retitles mixed timing columns as `Solve/elapsed [s]`
   and `Solve/total/wall [s]`, and clarifies the Plasticity2D generated-table
-  caption as endpoint plus fixed-work diagnostic evidence.
+  caption as endpoint plus fixed-work diagnostic evidence. Current
+  evidence-gate chunk makes the mixed timing sources auditable in the generated
+  tables: the derivative-route comparison has an explicit timing-scope column,
+  the Ginzburg--Landau timeout row reports elapsed wall time and the wall-time
+  cap, and the Plasticity3D globalization table reports the final
+  gradient-to-target ratio so the failed line-search endpoint cannot be read as
+  convergence-equivalent to the trust-region rows.
 - `DISCUSSION_CONCLUSION`: interpretation and scope.
   Current prose states the toolset lesson in paper-facing terms: automatic
   differentiation alone does not determine large nonlinear FEM behavior;
@@ -481,7 +498,11 @@ MATLAB literature only when there is source-backed evidence.
   reporting-vocabulary and numerical-protocol tables. `make -C paper
   submission-check` passed after shortening one generated table cell that caused
   an underfull box. Rendered pages 5--6 and 24--25 were visually checked; the
-  new tables are readable, unclipped, and within the text block.
+  new tables are readable, unclipped, and within the text block. Current
+  evidence-gate chunk rebuilt and checked the same 41-page A4 PDF after
+  evidence-table edits; `make -C paper submission-check` passed, and rendered
+  pages 1--2, 25--27, and 38--41 were visually inspected. The new timeout,
+  timing-scope, and gradient-gate columns are readable in the current A4 build.
 - `REPRO`: reproducibility and submission readiness.
   Known blockers from `paper/todo.md`: target journal/template/declarations,
   repository license/archive DOI, and archive-neutral provenance for critical
@@ -547,6 +568,12 @@ MATLAB literature only when there is source-backed evidence.
   updates only paper source, generated tables, readiness notes, and the rebuilt
   PDF. It does not resolve the release-level blockers: target template,
   declarations, license, archival release/DOI, and final bundle integration.
+  Current evidence-gate chunk expands the curated bundle with the Plasticity3D
+  globalization output JSONs and the Ginzburg--Landau timeout run metadata used
+  by the generated tables. The bundle manifest now records 51 source files.
+  Archive-neutral validation remains green; release-level blockers are still
+  target template, declarations, license, archival release/DOI, and final bundle
+  integration.
 
 ## Evidence Nodes
 
@@ -977,6 +1004,17 @@ MATLAB literature only when there is source-backed evidence.
   policy and stopping contract; Plasticity3D validation and performance timing
   roles remain separated; and the Plasticity2D table caption now names
   endpoint plus fixed-work diagnostic evidence.
+- `Current message/math/evidence/PDF audit` (`Pauli`/`Locke`/`Parfit`/`Bacon`):
+  completed. Findings addressed in the current evidence-gate chunk: the
+  abstract and introduction now split comparator roles and name the
+  \v{C}erm{\'a}k--Sysala--Valdman MATLAB implementation lineage; the conclusion
+  avoids over-reading the PMG setup result; derivative-route timing scope,
+  Ginzburg--Landau timeout cap, and Plasticity3D gradient-gate evidence are
+  visible in generated tables and backed by the curated bundle. Deferred
+  findings for a later self-containedness/layout pass: mesh-hierarchy and
+  `P_k(L_\ell)` definitions, Plasticity3D marker geometry, Mohr--Coulomb sign
+  conventions before branch formulas, a compact exact solver-policy table, and
+  target-template cleanup for dense result tables and forced float regions.
 
 ## First Edit Backlog
 

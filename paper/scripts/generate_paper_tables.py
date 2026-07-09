@@ -22,12 +22,22 @@ P3D_DERIVATIVE_ABLATION_SUMMARY = PAPER_SUBMISSION_INPUT_ROOT / (
 )
 JAX_FEM_BASELINE_SUMMARY = PAPER_SUBMISSION_INPUT_ROOT / "jax_fem_hyperelastic_baseline/comparison_summary.json"
 GLOBALIZATION_METHOD_COMPARE = PAPER_SUBMISSION_INPUT_ROOT / "globalization_method_compare/full_summary.csv"
+P3D_GLOBALIZATION_OUTPUTS = (
+    PAPER_SUBMISSION_INPUT_ROOT
+    / "globalization_method_compare/plasticity3d_p2_l1_np32_lambda155_newton_linesearch/output.json",
+    PAPER_SUBMISSION_INPUT_ROOT / "globalization_method_compare/plasticity3d_p2_l1_np32_lambda155_steihaug_trust/output.json",
+    PAPER_SUBMISSION_INPUT_ROOT
+    / "globalization_method_compare/plasticity3d_p2_l1_np32_lambda155_hybrid_trust_linesearch/output.json",
+)
 DERIVATIVE_ROUTE_COMPARE = PAPER_SUBMISSION_INPUT_ROOT / "derivative_route_compare/full_summary.csv"
 SUPPLEMENTAL_REPORT_ROOT = PAPER_SUBMISSION_INPUT_ROOT / "supplemental_solver_evidence"
 SUPPLEMENTAL_HE_DISTRIBUTION = SUPPLEMENTAL_REPORT_ROOT / "full_he_distribution.csv"
 SUPPLEMENTAL_HE_PMG = SUPPLEMENTAL_REPORT_ROOT / "full_he_pmg.csv"
 SUPPLEMENTAL_TOPOLOGY_CONSISTENCY = SUPPLEMENTAL_REPORT_ROOT / "full_topology_consistency.csv"
 SUPPLEMENTAL_GL_GLOBALIZATION = SUPPLEMENTAL_REPORT_ROOT / "full_gl_globalization.csv"
+SUPPLEMENTAL_GL_TIMEOUT_ROOT = SUPPLEMENTAL_REPORT_ROOT / "gl_globalization/gl_l10_newton_linesearch_np8"
+SUPPLEMENTAL_GL_TIMEOUT_RUN_INFO = SUPPLEMENTAL_GL_TIMEOUT_ROOT / "run_info.json"
+SUPPLEMENTAL_GL_TIMEOUT_METADATA = SUPPLEMENTAL_GL_TIMEOUT_ROOT / "case_metadata.json"
 SUPPLEMENTAL_P3D_DERIVATIVE_DEGREE = SUPPLEMENTAL_REPORT_ROOT / "full_p3d_derivative_degree.csv"
 P3D_LOCAL_LAMBDA155_SCALING = PAPER_SUBMISSION_INPUT_ROOT / "plasticity3d_lambda155_scaling/local_solver_total_scaling.csv"
 P3D_KAROLINA_LAMBDA155_SCALING = (
@@ -83,11 +93,15 @@ TABLE_SOURCE_INPUTS = {
     "ginzburg_landau_benchmark_summary.tex": (GL_PARITY,),
     "hyperelasticity_benchmark_summary.tex": (HE_PARITY,),
     "hyperelasticity_karolina_pmg_scaling.tex": (HE_KAROLINA_PMG_SCALING,),
-    "globalization_method_compare.tex": (GLOBALIZATION_METHOD_COMPARE,),
+    "globalization_method_compare.tex": (GLOBALIZATION_METHOD_COMPARE, *P3D_GLOBALIZATION_OUTPUTS),
     "derivative_route_compare.tex": (DERIVATIVE_ROUTE_COMPARE,),
     "hyperelasticity_distribution_memory.tex": (SUPPLEMENTAL_HE_DISTRIBUTION,),
     "hyperelasticity_pmg_sensitivity.tex": (SUPPLEMENTAL_HE_PMG,),
-    "ginzburg_landau_globalization_fixed_budget.tex": (SUPPLEMENTAL_GL_GLOBALIZATION,),
+    "ginzburg_landau_globalization_fixed_budget.tex": (
+        SUPPLEMENTAL_GL_GLOBALIZATION,
+        SUPPLEMENTAL_GL_TIMEOUT_RUN_INFO,
+        SUPPLEMENTAL_GL_TIMEOUT_METADATA,
+    ),
     "topology_rank_consistency.tex": (SUPPLEMENTAL_TOPOLOGY_CONSISTENCY,),
     "plasticity3d_derivative_degree.tex": (SUPPLEMENTAL_P3D_DERIVATIVE_DEGREE,),
     "plasticity2d_benchmark_summary.tex": (P2D_SHOWCASE, P2D_L6_SUMMARY, P2D_L7_SUMMARY),
@@ -789,6 +803,17 @@ def _derivative_row_time(row: dict[str, str]) -> str:
     return "--"
 
 
+def _derivative_row_time_scope(row: dict[str, str]) -> str:
+    for key, label in (
+        ("solve_time_s", "solve"),
+        ("total_time_s", "solver total"),
+        ("wall_time_s", "wall"),
+    ):
+        if str(row.get(key, "")).strip():
+            return label
+    return "--"
+
+
 def _derivative_hessian_time(row: dict[str, str]) -> str:
     text = str(row.get("hessian_time_s", "")).strip()
     return "--" if not text else fmt_wall_time(float(text))
@@ -804,6 +829,64 @@ def _derivative_sfd_colors(row: dict[str, str]) -> str:
     lo_i = int(float(lo))
     hi_i = int(float(hi))
     return str(hi_i) if lo_i == hi_i else f"{lo_i}--{hi_i}"
+
+
+def _resolve_repo_path(value: object) -> Path | None:
+    text = str(value).strip()
+    if not text:
+        return None
+    path = Path(text)
+    if not path.is_absolute():
+        path = REPO_ROOT / path
+    return path if path.exists() else None
+
+
+def _globalization_grad_over_target(row: dict[str, str]) -> str:
+    if "plasticity3d" not in str(row.get("benchmark", "")):
+        return "--"
+    path = _resolve_repo_path(row.get("json_path", ""))
+    if path is None:
+        return "--"
+    payload = read_json(path)
+    grad = payload.get("final_grad_norm")
+    target = payload.get("grad_stop_tol")
+    if target in (None, ""):
+        history = payload.get("history") or []
+        if history:
+            target = history[-1].get("grad_target")
+    if grad in (None, "") or target in (None, ""):
+        return "--"
+    target_f = float(target)
+    if target_f == 0.0:
+        return "--"
+    return fmt_sig(float(grad) / target_f, sig=3)
+
+
+def _gl_timeout_run_info() -> dict[str, object]:
+    if not SUPPLEMENTAL_GL_TIMEOUT_RUN_INFO.exists():
+        return {}
+    return read_json(SUPPLEMENTAL_GL_TIMEOUT_RUN_INFO)
+
+
+def _gl_timeout_metadata() -> dict[str, object]:
+    if not SUPPLEMENTAL_GL_TIMEOUT_METADATA.exists():
+        return {}
+    return read_json(SUPPLEMENTAL_GL_TIMEOUT_METADATA)
+
+
+def _gl_solve_or_elapsed(row: dict[str, str]) -> str:
+    solve = str(row.get("solve_time_s", "")).strip()
+    if solve:
+        return fmt_wall_time(float(solve))
+    if row.get("case") == "gl_l10_newton_linesearch_np8" and row.get("result") == "timeout":
+        return _fmt_optional_wall(_gl_timeout_run_info().get("wall_time_s", ""))
+    return "--"
+
+
+def _gl_wall_cap(row: dict[str, str]) -> str:
+    if row.get("case") == "gl_l10_newton_linesearch_np8" and row.get("result") == "timeout":
+        return _fmt_optional_wall(_gl_timeout_metadata().get("wall_cap_s", ""))
+    return "--"
 
 
 def plasticity2d_resolution_rows() -> list[dict[str, object]]:
@@ -1274,8 +1357,8 @@ def main() -> None:
                 "Outcome and terminal value",
                 "@{}"
                 + xspec((1.20, "RaggedRight"), (0.90, "RaggedRight"))
-                + r"@{\hspace{0.45em}}c c c c c@{}",
-                ["Benchmark", "Method", "Ranks", "Outcome", "Steps", "Solve/elapsed [s]", "Energy"],
+                + r"@{\hspace{0.45em}}c c c c c c@{}",
+                ["Benchmark", "Method", "Ranks", "Outcome", "Steps", "Solve/elapsed [s]", "Grad/target", "Energy"],
                 [
                     [
                         GLOBALIZATION_BENCHMARK_LABELS.get(str(row["benchmark"]), str(row["benchmark_label"])),
@@ -1284,6 +1367,7 @@ def main() -> None:
                         GLOBALIZATION_OUTCOME_LABELS.get(str(row["result"]), _result_label(row["result"])),
                         f"{fmt_count(row['completed_steps'])}/{fmt_count(row['steps_requested'])}",
                         _fmt_optional_wall(row.get("solve_time_s") or row.get("wall_time_s")),
+                        _globalization_grad_over_target(row),
                         _fmt_optional_energy(row.get("final_energy")),
                     ]
                     for row in globalization_rows
@@ -1318,14 +1402,15 @@ def main() -> None:
                 "Outcome and timing",
                 "@{}"
                 + xspec((1.25, "RaggedRight"), (0.95, "RaggedRight"))
-                + r"@{\hspace{0.45em}}c c c@{}",
-                ["Benchmark", "Route", "Outcome", "Solve/total/wall [s]", "Energy"],
+                + r"@{\hspace{0.45em}}c c c c@{}",
+                ["Benchmark", "Route", "Outcome", "Time [s]", "Timing scope", "Energy"],
                 [
                     [
                         DERIVATIVE_BENCHMARK_LABELS.get(str(row["benchmark"]), str(row["benchmark_label"])),
                         DERIVATIVE_ROUTE_LABELS.get(str(row["route"]), str(row["route_label"])),
                         _result_label(row["result"]),
                         _derivative_row_time(row),
+                        _derivative_row_time_scope(row),
                         _fmt_optional_energy(row.get("final_energy")),
                     ]
                     for row in derivative_rows
@@ -1475,8 +1560,8 @@ def main() -> None:
             "Krylov",
             "LS evals",
             "TR rejects",
-            "Setup [s]",
-            "Solve [s]",
+            "Solve/elapsed [s]",
+            "Cap [s]",
             "Energy",
         ],
         [
@@ -1487,8 +1572,8 @@ def main() -> None:
                 _fmt_optional_count(row.get("krylov_iters", "")),
                 _fmt_optional_count(row.get("line_search_evals", "")),
                 _fmt_optional_count(row.get("trust_rejects", "")),
-                _fmt_optional_wall(row.get("setup_time_s", "")),
-                _fmt_optional_wall(row.get("solve_time_s", "")),
+                _gl_solve_or_elapsed(row),
+                _gl_wall_cap(row),
                 _fmt_optional_energy(row.get("energy", "")),
             ]
             for row in supplemental_gl
