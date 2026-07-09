@@ -19,11 +19,12 @@ distributed assembly, nonlinear globalization, and linear algebra stay in PETSc.
 
 \paragraph{Pure JAX reference implementations.}
 These are compact differentiable realizations of selected benchmark energies.
-They are useful for formulation checks, serial references, and AD diagnostics.
-They are not intended to be the primary distributed route for the largest
-distributed benchmarks. Their main scientific role in this paper is to show
-that the same energy formulations can also be expressed without sparse
-distributed infrastructure.
+They are useful for serial formulation checks and AD diagnostics where a matched
+serial formulation exists, and for compact design demonstrations where the
+benchmark role is narrower. They are not intended to be the primary distributed
+route for the largest distributed benchmarks. Their main scientific role in this
+paper is to show how selected energy formulations can also be expressed without
+sparse distributed infrastructure.
 
 \paragraph{FEniCS reference implementations.}
 The \fenics{} implementations remain valuable on families where they exist,
@@ -173,12 +174,12 @@ nonlinear problem definition.
 
 \begin{table}[!htbp]
   \centering
-  \input{tables/generated/implementation_capability_matrix.tex}
   \caption{Solver and derivative components by benchmark family.
   ``Solver and derivative components'' summarizes the derivative routes,
   nonlinear policies, or coupled solver features that are scientifically
   relevant in each family.}
   \label{tab:capability-matrix}
+  \input{tables/generated/implementation_capability_matrix.tex}
 \end{table}
 
 \FloatBarrier

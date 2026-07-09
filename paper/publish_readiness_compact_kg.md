@@ -16,7 +16,8 @@ solvers, and preconditioner policy.
 
 Comparisons are deliberately scoped:
 
-- pure JAX: serial reference and design/reference path where available;
+- pure JAX: serial formulation checks where matched compact formulations exist;
+  topology is a serial design demonstration, not a validation baseline;
 - FEniCS: reference implementation for scalar and hyperelastic families;
 - JAX-FEM: narrow hyperelastic external comparison on matched data;
 - Sysala-family literature: slope-stability, strength-reduction, and
@@ -38,9 +39,15 @@ software superiority claims.
 - Follow the 2025 accepted KL-paper style: motivation before construction,
   definitions before dense notation, authorial `we`, punctuated displays, and
   body-text interpretation of numerical evidence.
-- Current SIAM optimization style cues are method-first and evidence-scoped:
-  application motivation, assumptions/problem class, computational method,
-  numerical evidence, and discussion/conclusion.
+- Recent SIOPT-style cues checked on 2026-07-09 are method-first and
+  evidence-scoped: application motivation, assumptions/problem class, numerical
+  method, experiment parameters, numerical evidence, and discussion/conclusion.
+  The official SIAM article page remains Cloudflare-limited from this
+  environment; accessible anchors were the arXiv full text of Keith--Kim--
+  Lazarov--Surowiec, "Analysis of the SiMPL method for density-based topology
+  optimization" (current arXiv version dated 2025-02-23), and an open
+  Optimization Online PDF for a SIOPT-style derivative-free optimization
+  manuscript.
 
 The local style-guide snapshot is ignored through `.git/info/exclude`; do not
 stage or commit `paper/style_guide/`.
@@ -94,8 +101,8 @@ stage or commit `paper/style_guide/`.
 
 - Message/front matter audit: the scientific-toolset message is clear; unresolved
   blockers remain target template/declarations, final archive DOI/license,
-  durable evidence packaging, and page-budget strategy. SIAM/SIOPT pages were
-  not fetchable from this environment because of Cloudflare, so target-template
+  durable evidence packaging, and page-budget strategy. SIAM/SIOPT article pages
+  are still not reliably fetchable here because of Cloudflare, so target-template
   details require browser/manual verification.
 - Math audit: recent fixes include Plasticity3D elastic-first branch selection,
   return-test notation, generic energy-density notation, KSP target wording,
@@ -156,8 +163,17 @@ stage or commit `paper/style_guide/`.
   objective and volume multiplier reconstructible, renamed paper-facing CPU
   scaling assets to remove machine-local labels, and moved captions above long
   validation/results tables. Remaining layout work is target-template driven:
-  `measure_layout.py` still matches the current A4 article geometry, not an
-  external venue class.
+  the current figure policy is tied to the A4 article geometry until an external
+  venue class is selected.
+- Current layout/scope guard chunk: pure JAX topology wording is now kept to a
+  serial design demonstration; validation thresholds are described as
+  predeclared engineering agreement gates; the Plasticity3D endpoint comparator
+  is identified by shared endpoint functional, mesh, material table, Davis-B
+  reduction, load schedule, boundary conditions, and active free DOFs; and
+  `measure_layout.py` validates the current A4 article/geometry contract before
+  generating figure-size measurements. Generated-table captions now precede
+  their generated table bodies across the manuscript, including the supporting
+  Plasticity2D/3D solver-policy tables in the appendix.
 
 ## Figure And Table Rules
 
@@ -198,12 +214,12 @@ external release decisions:
 The current PDF is a 44-page A4 article. Page budget and float behavior must be
 rechecked after target-template conversion.
 
-Deferred layout risks from the 2026-07-09 audit: the hyperelasticity diagnostic
-cluster around PDF pages 31--33, the Plasticity3D degree/scaling block around
-PDF pages 34--38, dense Table 19, early schematic-heavy implementation pages,
-and target-template sensitivity in the benchmark float groups. Stale
-non-manuscript generated figure/table outputs are now removed and guarded by
-`validate_paper_assets.py`.
+Deferred layout risks from the 2026-07-09 audit: dense hyperelasticity and
+Plasticity3D result clusters, early schematic-heavy implementation pages, long
+result tables, and target-template sensitivity in the benchmark float groups.
+Stale non-manuscript generated figure/table outputs are now removed and guarded
+by `validate_paper_assets.py`; figure sizing now fails fast if the current A4
+article layout contract changes without updating the measurement policy.
 
 ## Standard Validation
 

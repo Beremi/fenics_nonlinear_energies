@@ -9,21 +9,21 @@ reduced-objective viewpoint.
 
 \begin{table}[!htbp]
   \centering
-  \input{tables/generated/benchmark_specification_matrix.tex}
   \caption{Benchmark families, tested scopes, solver policies, and principal
   comparison evidence. The later numerical section revisits the same families
   from the timing and scaling viewpoint.}
   \label{tab:benchmark-spec}
+  \input{tables/generated/benchmark_specification_matrix.tex}
 \end{table}
 
 \begin{table}[!htbp]
   \centering
-  \input{tables/generated/reference_availability.tex}
   \caption{Availability of \fenics{} and \purejax{} references. Reference
   implementations are used where documented implementations exist for the same
   benchmark family;
   absent cells are left absent rather than filled with speculative baselines.}
   \label{tab:reference-availability}
+  \input{tables/generated/reference_availability.tex}
 \end{table}
 
 \FloatBarrier
@@ -31,18 +31,20 @@ reduced-objective viewpoint.
 \Cref{tab:benchmark-spec,tab:reference-availability} define the comparison
 scope before the individual models are introduced. The scalar problems and
 hyperelasticity have \fenics{} reference formulations, while \purejax{} is used
-only where a compact serial formulation or demonstration is available. The two plasticity
-families are primarily \jaxpetsc{} studies: the two-dimensional case supplies
-supporting continuation diagnostics, and the three-dimensional case uses the
-\v{C}erm{\'a}k--Sysala--Valdman MATLAB elastoplastic implementation as
-implementation context, while the Sysala-family slope-stability literature
-supplies the reference-model setting. Neither is used as a path-history
-validation baseline.
+only where a compact serial formulation or demonstration is available.
+
+The two plasticity families are primarily \jaxpetsc{} studies. The
+two-dimensional case supplies supporting continuation diagnostics, and the
+three-dimensional case uses the \v{C}erm{\'a}k--Sysala--Valdman MATLAB
+elastoplastic implementation as implementation context. The Sysala-family
+slope-stability literature supplies the reference-model setting. Neither source
+class is used as a path-history validation baseline.
+
 Topology optimization uses a parallel \jaxpetsc{} realization and a compact
 serial \purejax{} design demonstration, but the agreement evidence for that
-family is the \jaxpetsc{} rank-consistency check. Thus some entries below are validation comparisons,
-whereas others are timing or solver-policy diagnostics under a stated benchmark
-definition.
+family is the \jaxpetsc{} rank-consistency check. Thus some entries below are
+validation comparisons, whereas others are timing or solver-policy diagnostics
+under a stated benchmark definition.
 \Cref{tab:discretization-labels} records the compact level notation used in the
 model definitions and numerical tables; the labels identify discrete problem
 size and mesh construction, not separate physical models.
@@ -163,10 +165,10 @@ which the derivative routes are compared in the energy plot and summary table.
 
 \begin{table}[!htbp]
   \centering
-  \input{tables/generated/plaplace_benchmark_summary.tex}
   \caption{Representative final discrete energies from
   \eqref{eq:plaplace-discrete} on the selected case.}
   \label{tab:plaplace-benchmark}
+  \input{tables/generated/plaplace_benchmark_summary.tex}
 \end{table}
 
 The within-benchmark picture is therefore one of formulation agreement:
@@ -251,10 +253,10 @@ is part of the benchmark definition.
 
 \begin{table}[!htbp]
   \centering
-  \input{tables/generated/ginzburg_landau_benchmark_summary.tex}
   \caption{Representative final discrete energies associated with
   \eqref{eq:gl-discrete} on the selected case.}
   \label{tab:gl-benchmark}
+  \input{tables/generated/ginzburg_landau_benchmark_summary.tex}
 \end{table}
 
 \Cref{fig:gl-state,fig:gl-energy-levels} and \Cref{tab:gl-benchmark} show
@@ -366,10 +368,10 @@ scientifically important than derivative parity alone.
 
 \begin{table}[!htbp]
   \centering
-  \input{tables/generated/hyperelasticity_benchmark_summary.tex}
   \caption{Representative 24-step terminal energies along
   \eqref{eq:hyperelasticity-discrete}.}
   \label{tab:hyperelasticity-benchmark}
+  \input{tables/generated/hyperelasticity_benchmark_summary.tex}
 \end{table}
 
 The within-benchmark takeaway is therefore that all three implementations
@@ -630,10 +632,10 @@ separately below.
 
 \begin{table}[!htbp]
   \centering
-  \input{tables/generated/plasticity2d_benchmark_summary.tex}
   \caption{Representative Plasticity2D endpoint and fixed-work diagnostic
   values from \eqref{eq:plasticity2d-discrete}.}
   \label{tab:plasticity2d-benchmark}
+  \input{tables/generated/plasticity2d_benchmark_summary.tex}
 \end{table}
 
 This family is where multigrid hierarchy design first becomes dominant in the
@@ -777,8 +779,10 @@ $\bar c_{\lambda}:=\bar c_{\lambda,q}$, $\mu:=\mu_q$,
 $K:=K_q$, and $\lambda_{\mathrm{L}}:=\lambda_{\mathrm{L},q}$. Let
 $\varepsilon_1 \ge \varepsilon_2 \ge \varepsilon_3$ be the ordered principal
 strains obtained after converting engineering shear components to tensor shear.
-The branch tests below use the convention that the elastic case satisfies
-$f_{\mathrm{tr}}\le0$. Let
+The branches represent the elastic case and the admissible plastic-return cases
+of the endpoint surrogate; away from branch interfaces the tests select one
+smooth branch for differentiation. The branch tests below use the convention
+that the elastic case satisfies $f_{\mathrm{tr}}\le0$. Let
 \begin{equation}
   I_1 = \varepsilon_{xx} + \varepsilon_{yy} + \varepsilon_{zz},
   \qquad
@@ -1017,11 +1021,11 @@ provides reference-model context for that boundary.
 
 \begin{table}[!htbp]
   \centering
-  \input{tables/generated/plasticity3d_benchmark_summary.tex}
   \caption{All nine completed bottom-clamped Plasticity3D
   study cases at $\lambda_{\mathrm{sr}} = 1.55$, reported as endpoint values of
   \eqref{eq:plasticity3d-discrete}.}
   \label{tab:plasticity3d-benchmark}
+  \input{tables/generated/plasticity3d_benchmark_summary.tex}
 \end{table}
 
 \FloatBarrier
@@ -1238,10 +1242,10 @@ outer loop alternates mechanics solves for
 
 \begin{table}[!htbp]
   \centering
-  \input{tables/generated/topology_benchmark_summary.tex}
   \caption{Representative topology endpoint values from
   \eqref{eq:topology-reduced-objective}.}
   \label{tab:topology-benchmark}
+  \input{tables/generated/topology_benchmark_summary.tex}
 \end{table}
 
 \Cref{fig:topology-density,fig:topology-history} and

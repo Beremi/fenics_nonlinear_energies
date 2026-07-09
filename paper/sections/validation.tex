@@ -39,6 +39,9 @@ $L^2$ difference for the $u_{\max}(\lambda_{\mathrm{sr}})$ curve, and at most $0
 relative $L^2$ difference for the endpoint displacement. The deviatoric-strain
 and boundary-profile differences in \Cref{tab:plasticity3d-validation} are
 diagnostics, not acceptance criteria.
+These thresholds are predeclared engineering agreement gates for companion and
+surrogate comparisons. They are not literature validation tolerances and do not
+replace path-history validation for elastoplastic evolution.
 
 \subsection{Hyperelasticity External Comparison}
 \label{sec:val-hyperelasticity}
@@ -120,7 +123,10 @@ used here as a verified numerical baseline.
 The endpoint-surrogate comparison therefore uses two diagnostics. Here the
 matched endpoint comparator means the endpoint formulation used for these
 observable comparisons, not the cited incremental-history studies. The
-endpoint-observable check tests a seven-step direct load branch,
+comparator uses the same endpoint functional, mesh, material table, Davis-B
+strength reduction, load schedule, boundary conditions, and active free degrees
+of freedom, but evaluates the endpoint observables through an alternate matched
+route. The endpoint-observable check tests a seven-step direct load branch,
 $\lambda_{\mathrm{sr}}=1.0,1.1,\ldots,1.6$, against the matched endpoint
 comparator on the $P_2(L_1)$ comparator case. The work observable is the external
 work $\omega=f_{\mathrm{ext}}^\top u$ reported by the two endpoint
@@ -143,9 +149,7 @@ $u_{\max}(\lambda_{\mathrm{sr}})$ relative $L^2$ difference is
 \num{8.299e-4}. The endpoint deviatoric-strain relative $L^2$ difference
 (\num{4.307e-3}) and boundary-profile relative $L^2$ difference
 (\num{5.229e-4}) are reported as diagnostics rather than acceptance criteria.
-The comparison uses a matched mesh, material table, Davis-B strength reduction,
-load schedule, boundary conditions, and active free degrees of freedom, but it
-remains an endpoint check rather than a path-consistent plastic-history
+This remains an endpoint check rather than a path-consistent plastic-history
 reference.
 
 \begin{figure}[H]

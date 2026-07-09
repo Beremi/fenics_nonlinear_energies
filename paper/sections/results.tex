@@ -28,27 +28,26 @@ status and timing terms used below follow the protocol in
 \subsection{Globalization Method Comparison}
 \label{sec:num-globalization}
 
-\Cref{tab:globalization-method-compare} isolates the nonlinear globalization
-choice on four benchmark configurations using the same element assembly path
-and fixed preconditioner family within each problem. The scalar cases use
-level-10 meshes obtained by one additional uniform refinement of the level-9
-inputs. The $p$-Laplace globalization row is a separate unit-load
-($f=-1$) stress test on the same L-shaped hierarchy, so its energies are not
-compared with the $f=-10$ benchmark and scaling rows in
-\Cref{sec:bench-plaplace,sec:num-plaplace}. For $p$-Laplace, the comparison
-uses 32 MPI ranks with a 30 s wall-time cap. For Ginzburg--Landau, the reported
-comparison uses 16 MPI ranks with a 120 s wall-time cap. For hyperelasticity,
-the comparison uses the first eight load steps of the level-4 rank-local
-assembly path on 32 MPI ranks with a 270 s cap. The Plasticity3D comparison
-uses the $P_2(L_1)$ endpoint surrogate at
-$\lambda_{\mathrm{sr}}=1.55$ on 32 MPI ranks with a 180 s cap. Timed-out
-configurations are retained in the comparison; the table uses solver-reported
-solve time for completed solves and elapsed wall time for timed-out cases.
-In the line-search configurations the trust-region machinery is disabled; in
-particular, the hyperelasticity line-search baseline uses GMRES rather than the
-STCG trust-region subproblem solver. For the Plasticity3D configuration, all
-methods are judged against the stricter
-$\|\nabla \mathcal{F}\|_2 < 10^{-4}$ endpoint criterion.
+\Cref{tab:globalization-method-compare} asks whether one nonlinear
+globalization policy is robust across the tested families. Each row holds the
+element assembly path and preconditioner family fixed within the problem and
+varies only the nonlinear policy. Timed-out rows are retained as capped solver
+behavior rather than convergence evidence.
+
+The scalar cases use level-10 meshes obtained by one additional uniform
+refinement of the level-9 inputs. The $p$-Laplace globalization row is a
+separate unit-load ($f=-1$) stress test on the same L-shaped hierarchy, so its
+energies are not compared with the $f=-10$ benchmark and scaling rows in
+\Cref{sec:bench-plaplace,sec:num-plaplace}. The $p$-Laplace, Ginzburg--Landau,
+hyperelasticity, and Plasticity3D rows use 32, 16, 32, and 32 MPI ranks,
+respectively, with wall-time caps of 30, 120, 270, and 180 s. The
+hyperelasticity row uses the first eight load steps of the level-4 rank-local
+assembly path, and the Plasticity3D row uses the $P_2(L_1)$ endpoint surrogate
+at $\lambda_{\mathrm{sr}}=1.55$. In the line-search configurations the
+trust-region machinery is disabled; in particular, the hyperelasticity
+line-search baseline uses GMRES rather than the STCG trust-region subproblem
+solver. For the Plasticity3D configuration, all methods are judged against the
+stricter $\|\nabla \mathcal{F}\|_2 < 10^{-4}$ endpoint criterion.
 
 In the clean $p$-Laplace unit-load row, Newton with Armijo line search completes
 with the lowest reported solve time. Ginzburg--Landau separates the policies
@@ -642,9 +641,8 @@ remain bounded under rank variation at this resolution.
 
 The topology benchmark completes the paper's computational picture. Here the
 primary distributed \jaxpetsc{} realization is less about exact Hessians than about
-stable distributed design-mechanics coupling, while \purejax{} remains the
-compact serial reference path discussed earlier in
-\Cref{tab:reference-availability}.
+stable distributed design-mechanics coupling, while \purejax{} is the compact
+serial design demonstration discussed earlier in \Cref{tab:reference-availability}.
 
 \subsection{Synthesis of the Computational Evidence}
 \label{sec:num-synthesis}

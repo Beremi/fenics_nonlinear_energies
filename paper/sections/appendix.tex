@@ -20,24 +20,24 @@ operator is not rebuilt along the nonlinear path.
 
 \begin{table}[!htbp]
   \centering
-  \input{tables/generated/plasticity3d_constitutive_vs_reference_formula.tex}
   \caption{Matched constitutive-assembly versus reference-formula assembly
   comparison for the same PMG solver configuration on
   $P_4(L_2)$ at $\lambda_{\mathrm{sr}}=\num{1.0}$. The table reports wall time,
   solve time, and their ratio for matched rank counts on
   \eqref{eq:plasticity3d-discrete}.}
   \label{tab:plasticity3d-constitutive-reference-formula}
+  \input{tables/generated/plasticity3d_constitutive_vs_reference_formula.tex}
 \end{table}
 
 \begin{table}[!htbp]
   \centering
-  \input{tables/generated/plasticity3d_fixed_reference_operator_pmg.tex}
   \caption{Fixed-reference PMG alternative on the same
   $P_4(L_2)$, $\lambda_{\mathrm{sr}}=\num{1.0}$ Plasticity3D problem. The status
   column distinguishes completed configurations from rank counts that reach the
   maximum number of Newton iterations before satisfying the target gradient
   tolerance.}
   \label{tab:plasticity3d-fixed-reference-pmg}
+  \input{tables/generated/plasticity3d_fixed_reference_operator_pmg.tex}
 \end{table}
 
 These diagnostics support two narrower statements. First, closed-form branch
@@ -64,11 +64,11 @@ logic.
 
 \begin{table}[H]
   \centering
-  \input{tables/generated/plasticity2d_reference_continuation.tex}
   \caption{Reference continuation with the fixed PMG policy at 8 and 32 ranks.
   This is supporting solver evidence for a reference continuation
   setting, not a primary solver comparison.}
   \label{tab:plasticity2d-reference-continuation}
+  \input{tables/generated/plasticity2d_reference_continuation.tex}
 \end{table}
 
 The two rows show fixed-policy timing evidence rather than a validation
