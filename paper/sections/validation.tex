@@ -107,8 +107,9 @@ reference-model and method context for this problem class
 they are not used here as verified numeric paper baselines.
 
 The endpoint-surrogate comparison therefore uses two diagnostics. The
-endpoint-observable check tests direct-branch agreement with the reference model
-on the $P_2(L_1)$ reference case. The work relative
+endpoint-observable check tests a seven-step direct load branch,
+$\lambda_{\mathrm{sr}}=1.0,1.1,\ldots,1.6$, against the reference model on the
+$P_2(L_1)$ reference case. The work relative
 difference is \num{3.877e-5}, the displacement relative $L^2$ difference is
 \num{3.517e-3}, and the deviatoric-strain relative $L^2$ difference is
 \num{8.720e-3}. The fixed-load reference comparison asks a narrower
@@ -148,25 +149,25 @@ path-consistent plastic-history reference.
     \caption{Fixed-$\lambda_{\mathrm{sr}}$ reference diagnostic.}
   \end{subfigure}
   \caption{Plasticity3D endpoint-surrogate comparison. The upper panel compares
-  direct-branch endpoint observables with the reference model for the endpoint
-  surrogate; the lower panel shows the fixed-$\lambda_{\mathrm{sr}}$
-  reference diagnostic after matching the boundary conditions and
-  active free degrees of freedom.}
+  the endpoint observables after the seven-step direct branch ending at
+  $\lambda_{\mathrm{sr}}=1.6$; the lower panel shows the
+  fixed-$\lambda_{\mathrm{sr}}$ reference diagnostic after matching the boundary
+  conditions and active free degrees of freedom.}
   \label{fig:plasticity3d-validation}
 \end{figure}
 
 \begin{table}[H]
   \centering
   \input{tables/generated/plasticity3d_validation_summary.tex}
-  \caption{Plasticity3D validation summary for direct-branch
-  endpoint-observable agreement with the reference model and the
+  \caption{Plasticity3D validation summary for the direct-branch
+  endpoint-observable comparison ending at $\lambda_{\mathrm{sr}}=1.6$ and the
   fixed-$\lambda_{\mathrm{sr}}$ reference diagnostic.}
   \label{tab:plasticity3d-validation}
 \end{table}
 
 The resulting interpretation is limited but useful. \plasticitythree{} is
-supported here by direct-branch endpoint-observable agreement with the reference
-model, while the fixed-load reference comparison supports matched endpoint
+supported here by endpoint-observable agreement on the seven-step direct load
+branch, while the fixed-load reference comparison supports matched endpoint
 observables for that surrogate under matched boundary conditions and active free
 degrees of freedom.
 Neither check is a path-consistent incremental-plasticity history validation.

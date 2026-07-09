@@ -11,7 +11,7 @@ import h5py
 import matplotlib
 import numpy as np
 import scipy.io
-from matplotlib.ticker import FormatStrFormatter
+from matplotlib.ticker import FormatStrFormatter, MaxNLocator
 from scipy.spatial import cKDTree
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
@@ -1365,7 +1365,7 @@ def generate_topology_density(layout: dict[str, float]) -> str:
     plt = configure_paper_matplotlib()
     data = _load_npz(TOPOLOGY_STATE)
     theta = np.asarray(data["theta_grid"], dtype=np.float64)
-    fig, ax = plt.subplots(figsize=paper_figure_size(layout, preset="medium", height_ratio=0.40))
+    fig, ax = plt.subplots(figsize=paper_figure_size(layout, preset="medium", height_ratio=0.46))
     artist = ax.imshow(
         theta.T,
         origin="lower",
@@ -1378,8 +1378,8 @@ def generate_topology_density(layout: dict[str, float]) -> str:
     artist.set_rasterized(True)
     ax.set_xlabel(r"$x$")
     ax.set_ylabel(r"$y$")
-    fig.subplots_adjust(left=0.08, right=0.86, bottom=0.12, top=0.96)
-    cax = fig.add_axes([0.88, 0.19, 0.024, 0.66])
+    fig.subplots_adjust(left=0.08, right=0.86, bottom=0.16, top=0.96)
+    cax = fig.add_axes([0.88, 0.22, 0.024, 0.60])
     cbar = fig.colorbar(artist, cax=cax, orientation="vertical")
     cbar.set_label(r"density $\theta_h$", labelpad=2.0)
     out = FIGURES_ROOT / "topology_density.pdf"
@@ -1686,6 +1686,11 @@ def _plot_plasticity3d_validation_surface_compare(
 
     cax_main = fig.add_subplot(gs[1, :2])
     cax_diff = fig.add_subplot(gs[1, 2])
+    main_pos = cax_main.get_position()
+    diff_pos = cax_diff.get_position()
+    cbar_gap = 0.022
+    cax_main.set_position([main_pos.x0, main_pos.y0, main_pos.width - cbar_gap, main_pos.height])
+    cax_diff.set_position([diff_pos.x0 + cbar_gap, diff_pos.y0, diff_pos.width - cbar_gap, diff_pos.height])
     sm_main = cm.ScalarMappable(norm=main_norm, cmap="viridis")
     sm_main.set_array(np.concatenate([values_source, values_candidate]))
     sm_diff = cm.ScalarMappable(norm=diff_norm, cmap="cividis")
@@ -1695,7 +1700,9 @@ def _plot_plasticity3d_validation_surface_compare(
     cbar_diff = fig.colorbar(sm_diff, cax=cax_diff, orientation="horizontal")
     cbar_diff.set_label(r"abs. diff.", labelpad=0.2)
     for cbar in (cbar_main, cbar_diff):
+        cbar.ax.xaxis.set_major_locator(MaxNLocator(nbins=4))
         cbar.ax.tick_params(labelsize=7.5, pad=1.0)
+        cbar.update_ticks()
 
     out = FIGURES_ROOT / out_name
     save_pdf_and_png(fig, out, png_dpi=260)

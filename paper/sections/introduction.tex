@@ -11,25 +11,22 @@ nonlinear solver policy, and preconditioner design.
 
 We develop and evaluate such a scientific toolset for nonlinear finite-element
 energy minimization and optimization. In the primary \jaxpetsc{} realization, JAX
-represents local energies and constitutive laws, while PETSc
-owns sparse vectors and matrices, nonlinear globalization, Krylov methods, and
-preconditioners. The \purejax{} and \fenics{} formulations serve as internal
-references where available. JAX-FEM supplies a matched hyperelastic numerical
-comparison, FEniCSx-family and JetSCI work provide architectural context, and
-the \v{C}erm{\'a}k--Sysala--Valdman MATLAB elastoplastic implementation lineage
-provides implementation context for the slope-stability benchmark family.
-Reference-model and reference-observable context for those endpoint checks comes
-from the Sysala-family slope-stability literature. Where we report external
-numerical comparisons, they are
-restricted to explicitly matched benchmark definitions and observables.
+defines local energies and constitutive laws, while PETSc provides sparse
+distributed algebra, nonlinear globalization, Krylov methods, and
+preconditioners. The \purejax{} and \fenics{} formulations provide internal
+checks where matched benchmark definitions exist. External comparisons are
+deliberately scoped: JAX-FEM is used for the hyperelastic benchmark, and the
+Sysala-family slope-stability literature, including the
+\v{C}erm{\'a}k--Sysala--Valdman MATLAB work, provides context for the plasticity
+endpoint observables.
 
 \subsection{Contributions}
 \label{sec:intro-contributions}
 
-We contribute a \jaxpetsc{} scientific toolset in which derivative
-construction, sparse ownership, nonlinear globalization, and preconditioning are
-treated as coupled design choices for nonlinear FEM energy minimization. The
-implemented toolset is organized around three solver components:
+Our contribution is a \jaxpetsc{} framework that treats derivative construction,
+MPI sparse assembly, nonlinear globalization, and preconditioning as coupled
+design choices for nonlinear FEM energy minimization. It is organized around
+three solver components:
 \begin{enumerate}
   \item \textbf{Globalized energy minimization.} We compare line-search,
         trust-region, and hybrid globalization choices on representative
@@ -52,14 +49,14 @@ We evaluate these components on six benchmark families: $p$-Laplace, scalar
 Ginzburg--Landau, hyperelasticity, two- and three-dimensional
 Mohr--Coulomb-type plasticity, and topology optimization. The scalar problems
 isolate formulation and derivative agreement. Hyperelasticity adds
-finite-strain mechanics and a narrow JAX-FEM external comparison. The
-plasticity benchmarks test nonsmooth constitutive structure,
-reference-observable agreement, and multigrid policy. Topology optimization
-tests a distributed design-and-mechanics loop. The geomechanics context follows
-the finite-element strength-reduction and 3D slope-stability literature
+finite-strain mechanics with a matched JAX-FEM comparison. The plasticity
+benchmarks test nonsmooth constitutive response, endpoint-observable agreement,
+and multigrid behavior. Topology optimization tests a distributed
+design-and-mechanics loop. The geomechanics context follows the
+finite-element strength-reduction and 3D slope-stability literature
 \citep{tschuchnigg2015nonassociated,sysala2017returnmapping,sysala2021optimization,sysala2025convexoptimization,sysala2025advancedcontinuation},
-but the plasticity object studied here is explicitly an algorithmic endpoint
-surrogate, not a claim of path-consistent incremental-history equivalence.
+but the present plasticity study is limited to final-load endpoint observables
+rather than path-consistent incremental plastic-history validation.
 
 \subsection{State of the Art and Positioning}
 \label{sec:intro-sota}

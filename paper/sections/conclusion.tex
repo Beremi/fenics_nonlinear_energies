@@ -1,11 +1,10 @@
-We developed a nonlinear finite-element energy-minimization toolset, realized
-primarily through local JAX kernels and PETSc sparse distributed solvers, for
-studying derivative construction and solver policy as coupled numerical choices.
-Across the tested benchmark suite, the construction links
-scalar energy definitions, derivative-route selection, sparse ownership, and
-validation comparisons within one distributed solver setting. The tested
-problems show that differentiable local modeling and distributed nonlinear
-solvers interact at the level of numerical-method design.
+We developed a \jaxpetsc{} toolset for nonlinear finite-element energy
+minimization in which local differentiable energy models are coupled to PETSc
+sparse distributed nonlinear solvers. The experiments connect scalar energy
+definitions, second-order derivative construction, MPI assembly, and reference
+comparisons in one solver setting. Across the tested problems, the main lesson
+is that local AD choices and distributed nonlinear solver design must be
+considered together.
 
 The numerical results support this pattern on a deliberately heterogeneous
 benchmark suite. Scalar problems check formulation and derivative agreement,

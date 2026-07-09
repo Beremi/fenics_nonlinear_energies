@@ -286,7 +286,11 @@ MATLAB literature only when there is source-backed evidence.
   count, and the JAX-FEM hyperelastic table reports checked differences as
   below the stated 5 percent threshold. Current provenance/layout chunk narrows
   the fixed-load Plasticity3D validation sentence to matched endpoint observables
-  for the endpoint surrogate, not identity of the surrogate itself.
+  for the endpoint surrogate, not identity of the surrogate itself. Current
+  style/evidence chunk states that the direct-branch endpoint-observable check
+  uses the seven-step load branch
+  `\lambda_{\mathrm{sr}}=1.0,1.1,\ldots,1.6` on `P_2(L_1)`, so the figure,
+  table, and interpretation no longer rely on an undefined direct-branch label.
 - `RESULTS`: performance and solver behavior.
   Evidence: globalization comparison, derivative-route comparison, scaling
   studies, hyperelastic and Plasticity3D solver diagnostics, topology scaling.
@@ -363,7 +367,12 @@ MATLAB literature only when there is source-backed evidence.
   the Ginzburg--Landau timeout row reports elapsed wall time and the wall-time
   cap, and the Plasticity3D globalization table reports the final
   gradient-to-target ratio so the failed line-search endpoint cannot be read as
-  convergence-equivalent to the trust-region rows.
+  convergence-equivalent to the trust-region rows. Current style/evidence chunk
+  distinguishes the Plasticity3D `P_4(L_2)`,
+  `\lambda_{\mathrm{sr}}=1.55` scaling table's stopping-gradient norm from the
+  benchmark table's final-gradient norm, adds energy to the hyperelastic
+  replicated/rank-local same-work rows, and changes the Ginzburg--Landau family
+  highlight from same displayed energy to agreement within about `\num{1e-6}`.
 - `DISCUSSION_CONCLUSION`: interpretation and scope.
   Current prose states the toolset lesson in paper-facing terms: automatic
   differentiation alone does not determine large nonlinear FEM behavior;
@@ -513,6 +522,11 @@ MATLAB literature only when there is source-backed evidence.
   paper submission-check` passed after ragged-right table columns removed an
   underfull-box warning. Rendered pages 11 and 17--18 were checked; the new
   table and benchmark convention text are readable in the current A4 build.
+  Current style/evidence/layout chunk regenerated the topology density figure
+  with more bottom margin and the Plasticity3D validation surface comparison
+  with separated horizontal colorbars; `make -C paper submission-check` passed,
+  and rendered pages 21 and 24 were checked for visible x-axis labeling,
+  separated colorbar tick labels, and unclipped captions/tables.
 - `REPRO`: reproducibility and submission readiness.
   Known blockers from `paper/todo.md`: target journal/template/declarations,
   repository license/archive DOI, and archive-neutral provenance for critical
@@ -583,7 +597,10 @@ MATLAB literature only when there is source-backed evidence.
   by the generated tables. The bundle manifest now records 51 source files.
   Archive-neutral validation remains green; release-level blockers are still
   target template, declarations, license, archival release/DOI, and final bundle
-  integration.
+  integration. Current style/evidence/layout chunk keeps source/generated
+  consistency for the edited generated tables and only intentionally refreshes
+  the topology-density and Plasticity3D-validation figure assets; unrelated
+  pre-existing generated-figure drift remains outside the staged scope.
 
 ## Evidence Nodes
 
@@ -1031,6 +1048,16 @@ MATLAB literature only when there is source-backed evidence.
   implementation prose now say where run-specific policy parameters are
   reported. Deferred findings for a later pass: target-template cleanup for
   dense result tables and forced float regions.
+- `Current style/evidence/layout audit` (`Ramanujan`/`McClintock`/`Carson`):
+  completed. Findings addressed in the current style/evidence/layout chunk:
+  front-facing prose is less provenance-like and more methods-centered; the
+  Plasticity3D direct branch, stopping-gradient metric, appendix solver policy,
+  Ginzburg--Landau energy agreement, and hyperelastic same-work evidence are
+  explicit; and the topology-density x label plus Plasticity3D validation
+  colorbars were regenerated and visually checked. Remaining blockers are
+  release-level or target-template issues: venue class/declarations, license,
+  archival DOI, and possible table/figure simplification after template
+  conversion.
 
 ## First Edit Backlog
 

@@ -9,19 +9,18 @@ constitutive kernels and PETSc for sparse assembly, Newton globalization,
 Krylov solvers, and preconditioners. The benchmark suite covers
 $p$-Laplace, Ginzburg--Landau, finite-strain hyperelasticity, two- and
 three-dimensional Mohr--Coulomb plasticity, and topology optimization.
-Where available, \purejax{} and \fenics{} runs serve as internal reference
-implementations. JAX-FEM supplies a matched hyperelastic external comparison,
-Sysala-family slope-stability papers supply reference-model context, and the
-\v{C}erm{\'a}k--Sysala--Valdman MATLAB work supplies implementation-lineage
-context for the endpoint plasticity checks.
+Where matched formulations are available, \purejax{} and \fenics{} provide
+internal reference comparisons. JAX-FEM provides the external hyperelastic
+comparison, while the Sysala-family slope-stability literature and the
+\v{C}erm{\'a}k--Sysala--Valdman MATLAB work provide reference context for the
+plasticity endpoint observables.
 
 Across these problems, we compare element automatic differentiation,
-constitutive automatic differentiation, and colored sparse recovery as routes to
-second-order information, and quantify how derivative routes, sparse ownership,
-nonlinear globalization, Krylov solvers, and preconditioner policy affect cost
-and robustness. In the tested three-dimensional plasticity derivative-route
-case, constitutive AD gives the lowest measured wall time while preserving
-terminal observables. The distributed mechanics and topology results report
-PETSc-owned sparse assembly, Krylov and multigrid policy, and rank-consistency
-diagnostics under explicit MPI protocols.
+constitutive automatic differentiation, and colored sparse recovery for
+constructing second-order information, and measure their interaction with PETSc
+assembly, nonlinear globalization, Krylov solvers, and preconditioners. In the
+tested three-dimensional plasticity case, constitutive AD has the lowest
+measured wall time while preserving the reported terminal observables. The
+distributed mechanics and topology examples provide MPI evidence for solver
+behavior and rank-dependent agreement.
 \end{abstract}

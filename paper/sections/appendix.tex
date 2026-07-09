@@ -7,18 +7,22 @@ methodologically useful but narrower than the main benchmark narratives.
 
 The primary Plasticity3D numerical story in \Cref{sec:num-plasticity3d} is the
 rank-local constitutive-AD path. The tables below add two solver-policy
-comparisons on the same discrete problem from \cref{eq:plasticity3d-discrete}:
-a matched reference-formula assembly comparator and a fixed-reference PMG
-variant. Here reference-formula assembly means closed-form constitutive
-assembly used as a comparator for the JAX constitutive-AD kernel, while
-fixed-reference PMG means a preconditioning variant in which the multigrid
-operator is not rebuilt along the nonlinear path.
+comparisons on the same $P_4(L_2)$ problem from
+\cref{eq:plasticity3d-discrete} at $\lambda_{\mathrm{sr}}=\num{1.0}$: a
+matched reference-formula assembly comparator and a fixed-reference PMG variant.
+Both use Armijo Newton, a gradient-only stopping target
+$\|\nabla\mathcal{F}\|<\num{0.01}$, at most 50 Newton iterations, and PETSc
+relative KSP tolerance \num{1e-1}. Here reference-formula assembly means
+closed-form constitutive assembly used as a comparator for the JAX
+constitutive-AD kernel, while fixed-reference PMG means a preconditioning
+variant in which the multigrid operator is not rebuilt along the nonlinear path.
 
 \begin{table}[!htbp]
   \centering
   \input{tables/generated/plasticity3d_constitutive_vs_reference_formula.tex}
   \caption{Matched constitutive-assembly versus reference-formula assembly
-  comparison for the same PMG solver configuration. The table reports wall time,
+  comparison for the same PMG solver configuration on
+  $P_4(L_2)$ at $\lambda_{\mathrm{sr}}=\num{1.0}$. The table reports wall time,
   solve time, and their ratio for matched rank counts on
   \cref{eq:plasticity3d-discrete}.}
   \label{tab:plasticity3d-constitutive-reference-formula}
@@ -27,10 +31,11 @@ operator is not rebuilt along the nonlinear path.
 \begin{table}[!htbp]
   \centering
   \input{tables/generated/plasticity3d_fixed_reference_operator_pmg.tex}
-  \caption{Fixed-reference PMG alternative on the same Plasticity3D
-  problem. The status column distinguishes completed configurations from rank
-  counts that reach the maximum number of Newton iterations before satisfying
-  the target gradient tolerance.}
+  \caption{Fixed-reference PMG alternative on the same
+  $P_4(L_2)$, $\lambda_{\mathrm{sr}}=\num{1.0}$ Plasticity3D problem. The status
+  column distinguishes completed configurations from rank counts that reach the
+  maximum number of Newton iterations before satisfying the target gradient
+  tolerance.}
   \label{tab:plasticity3d-fixed-reference-pmg}
 \end{table}
 

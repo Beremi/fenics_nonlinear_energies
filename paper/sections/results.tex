@@ -258,12 +258,12 @@ All configurations reach the same nonlinear and linear iteration counts shown in
 
 \Cref{tab:hyperelasticity-distribution-memory} reports the fixed-cost memory
 comparison that motivated the rank-local assembly path used in the multi-node
-runs. The correctness check compares the replicated and rank-local level-4
+runs. The same-work check compares the replicated and rank-local level-4
 first-step solve at four MPI ranks; the memory-scaling cases use one Newton
 linearization on the level-5 mesh at 8, 16, and 32 ranks. The table reports
-both operating-system peak RSS and the measured footprint of assembly arrays,
-making clear whether a configuration stores global mesh and adjacency data or
-only local elements plus overlap.
+energy, operating-system peak RSS, and the measured footprint of assembly
+arrays, making clear whether a configuration stores global mesh and adjacency
+data or only local elements plus overlap.
 
 \begin{table}[!htbp]
   \centering
@@ -276,11 +276,11 @@ only local elements plus overlap.
   \label{tab:hyperelasticity-distribution-memory}
 \end{table}
 
-The level-4 agreement row verifies that replicated and rank-local assembly give
-the same Newton and Krylov work. On the larger level-5 one-linearization memory
-rows, rank-local assembly reduces summed RSS from \SI{215.6}{GiB} to
-\SI{104.9}{GiB} at 32 ranks while leaving solve time at the same reported
-precision.
+The level-4 same-work rows show matching Newton and Krylov counts and matching
+energy to the displayed precision for replicated and rank-local assembly. On
+the larger level-5 one-linearization memory rows, rank-local assembly reduces
+summed RSS from \SI{215.6}{GiB} to \SI{104.9}{GiB} at 32 ranks while leaving
+solve time at the same reported precision.
 
 \Cref{tab:hyperelasticity-pmg-sensitivity} isolates the first-step level-5 PMG
 choice on the same 32-rank level-5 problem with fixed nonlinear work. All
@@ -483,20 +483,22 @@ reference-formula assembly and continuation evidence is reported later in
 \Cref{sec:solver-evidence}.
 
 The converged bottom-clamped $P_4(L_2)$,
-$\lambda_{\mathrm{sr}}=\num{1.55}$ scaling run repeats the benchmark with the
-constitutive-AD rank-local assembly and MUMPS-backed PMG profile. The PMG
-hierarchy is the same-mesh $P_4 \rightarrow P_2 \rightarrow P_1$ hierarchy,
-the nonlinear method is Armijo Newton, and the PETSc relative KSP residual
-tolerance is \num{1e-2}. The nonlinear stop requires both relative correction below
-\num{0.002} and gradient norm below one percent of the first Newton gradient.
+$\lambda_{\mathrm{sr}}=\num{1.55}$ scaling run uses the same case and load level
+as the benchmark table, with the constitutive-AD rank-local assembly and
+MUMPS-backed PMG profile. The PMG hierarchy is the same-mesh
+$P_4 \rightarrow P_2 \rightarrow P_1$ hierarchy, the nonlinear method is Armijo
+Newton, and the PETSc relative KSP residual tolerance is \num{1e-2}. The
+nonlinear stop requires both relative correction below \num{0.002} and a
+stopping-gradient norm below one percent of the first Newton gradient.
 \Cref{fig:plasticity3d-local-karolina-scaling,tab:plasticity3d-local-karolina-scaling}
 compare the single-node CPU sweep with the multi-node CPU sweep at 16 MPI ranks
 per node. All plotted configurations converge in 29 Newton iterations and
-1240 total Krylov iterations to the same energy and gradient norm to the
-precision shown in the table. The apparently large final gradient norm is below
-the relative gradient target; the table therefore reports both $\|g\|$ and the
-ratio $\|g\|/\|g\|_{\mathrm{target}}$. The timing comparison is not confounded
-by different nonlinear work.
+1240 total Krylov iterations to the same energy and stopping-gradient norm to
+the precision shown in the table. The apparently large absolute value is below
+the run-specific relative gradient target; the table therefore reports both
+$\|g\|_{\mathrm{stop}}$ and the ratio
+$\|g\|_{\mathrm{stop}}/\|g\|_{\mathrm{target}}$. The timing comparison is not
+confounded by different nonlinear work.
 
 \begin{figure}[H]
   \centering

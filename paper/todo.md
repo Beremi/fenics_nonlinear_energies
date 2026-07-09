@@ -150,6 +150,15 @@ scientific claims were introduced without supporting evidence.
   conversion: the implementation section already gives the component map, and
   the numerical protocol table plus local result captions carry run-specific
   tolerances, caps, timing scopes, and coarse-solver variants.
+- Addressed the latest style/evidence/layout audit: tightened the abstract,
+  introduction, related work, discussion, and conclusion around the \jaxpetsc{}
+  computational toolset; stated the Plasticity3D direct-branch schedule and
+  appendix solver-policy assumptions; distinguished stopping-gradient values
+  from benchmark final-gradient norms; added hyperelastic same-work energy
+  evidence to the distribution/memory table; corrected the Ginzburg--Landau
+  highlight to agreement within about `\num{1e-6}`; and regenerated the
+  affected topology and Plasticity3D validation figures with readable axis and
+  colorbar spacing.
 - Rebuilt the paper PDF through the paper generation pipeline.
 
 ## Blocking Issues Before Submission

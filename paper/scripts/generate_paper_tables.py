@@ -207,7 +207,7 @@ REVIEWER_HE_BUILD_LABELS = {
 }
 
 HE_DISTRIBUTION_PURPOSE_LABELS = {
-    "correctness": "agreement check",
+    "correctness": "same-work check",
     "memory": "memory comparison",
 }
 
@@ -1046,7 +1046,7 @@ def main() -> None:
             [
                 "Ginzburg--Landau",
                 f"JAX+PETSc element AD, {mesh_label('L9')}, 32 ranks: {fmt_wall_time(float(gl_highlight['total_time_s']))} s",
-                "The JAX+PETSc and FEniCS rows report the same displayed final energy on the fine-grid benchmark.",
+                "The JAX+PETSc and FEniCS rows agree within about $\\num{1e-6}$ in final energy on the fine-grid benchmark.",
             ],
             [
                 "Hyperelasticity",
@@ -1445,7 +1445,7 @@ def main() -> None:
                 "Solve work",
                 "@{}"
                 + xspec((0.90, "RaggedRight"), (0.95, "RaggedRight"), (1.00, "RaggedRight"))
-                + r"@{\hspace{0.45em}}c c c c c@{}",
+                + r"@{\hspace{0.45em}}c c c c c c@{}",
                 [
                     "Purpose",
                     "Assembly layout",
@@ -1455,6 +1455,7 @@ def main() -> None:
                     "Newton",
                     "Krylov",
                     "Solve [s]",
+                    "Energy",
                 ],
                 [
                     [
@@ -1472,6 +1473,7 @@ def main() -> None:
                         _fmt_optional_count(row.get("newton_iters", "")),
                         _fmt_optional_count(row.get("krylov_iters", "")),
                         _fmt_optional_wall(row.get("solve_time_s", "")),
+                        _fmt_optional_float(row.get("energy", ""), 6),
                     ]
                     for row in supplemental_he_distribution
                 ],
@@ -1743,8 +1745,8 @@ def main() -> None:
             "Newton iters",
             "Krylov iters",
             "Energy",
-            "$\\|g\\|$",
-            "$\\|g\\|$/target",
+            "$\\|g\\|_{\\mathrm{stop}}$",
+            "$\\|g\\|_{\\mathrm{stop}}$/target",
         ],
         [
             [
