@@ -23,7 +23,7 @@
 \usepackage[nameinlink,noabbrev]{cleveref}
 
 \hypersetup{
-  pdftitle={A JAX-PETSc Toolset for Nonlinear Finite-Element Energy Solves},
+  pdftitle={A JAX-PETSc Toolset for Nonlinear Finite-Element Energy Minimization: Local Automatic Differentiation, Sparse Assembly, and Solver Policy},
   pdfauthor={Michal Beres}
 }
 
@@ -56,7 +56,7 @@
 \newcommand{\purejax}{pure JAX}
 \newcommand{\fenics}{FEniCS}
 \newcommand{\plasticitythree}{Plasticity3D}
-\newcommand{\localpmg}{constitutive-AD local assembly with same-mesh PMG}
+\newcommand{\localpmg}{constitutive-AD rank-local assembly with same-mesh PMG}
 \newcolumntype{Y}{>{\RaggedRight\arraybackslash}X}
 \newcolumntype{L}[1]{>{\RaggedRight\arraybackslash\hsize=#1\hsize\linewidth=\hsize}X}
 \newcolumntype{C}[1]{>{\Centering\arraybackslash\hsize=#1\hsize\linewidth=\hsize}X}
@@ -70,7 +70,7 @@
 
 \input{sections/tikz_diagrams}
 
-\title{A JAX--PETSc Toolset for Nonlinear Finite-Element Energy Solves:\\
+\title{A JAX--PETSc Toolset for Nonlinear Finite-Element Energy Minimization:\\
 \large Local Automatic Differentiation, Sparse Assembly, and Solver Policy}
 
 \author{
@@ -81,7 +81,7 @@ Michal B{\'e}re{\v{s}}\\
 \small \texttt{michal.beres@ugn.cas.cz}
 }
 
-\date{\today}
+\date{}
 
 \begin{document}
 
@@ -118,6 +118,12 @@ Michal B{\'e}re{\v{s}}\\
 
 \section{Conclusion}
 \input{sections/conclusion}
+
+\section*{Code and Data Availability}
+The source code, input data, processed benchmark summaries, and figure and table
+generation scripts supporting this study are available at
+\url{https://github.com/Beremi/fenics_nonlinear_energies}. No separate archival
+DOI is cited for this version.
 
 \bibliographystyle{unsrtnat}
 \bibliography{references}

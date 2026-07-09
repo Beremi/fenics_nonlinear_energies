@@ -81,7 +81,10 @@ MATLAB literature only when there is source-backed evidence.
   phrasing in the introduction, makes the abstract's final distributed-scale
   sentence name PETSc-owned sparse assembly and solver policy, and sharpens the
   conclusion's topology statement as coupled design-and-mechanics timing with a
-  separate rank-consistency check.
+  separate rank-consistency check. Current front/back-matter chunk aligns the
+  visible title and PDF metadata with energy minimization, removes the automatic
+  date, moves code/data availability into unnumbered back matter, and replaces
+  draft future-archive wording with a current-version statement.
 - `INTRO`: positioning and contributions.
   Status: now opens with the nonlinear FEM computational bottleneck and includes
   an explicit contribution block with solver, derivative/assembly, and
@@ -216,11 +219,16 @@ MATLAB literature only when there is source-backed evidence.
   Neo-Hookean potential is defined on admissible displacements with positive
   Jacobian determinant and that globalization rejects nonpositive-J trial
   states. It also narrows the Plasticity2D endpoint surrogate by saying the full
-  two-dimensional branch-energy formulas are not reproduced in the paper.
+  two-dimensional branch-energy family is summarized rather than enumerated in
+  the paper.
   Current provenance/layout chunk removes an unused hyperelastic load parameter
   from `\Pi(u)`, names the right-face path as a prescribed rotating Dirichlet
   displacement path, and replaces the Plasticity3D body-force symbol
-  `\gamma^{n+1}` with material-region weight `\gamma(x)`.
+  `\gamma^{n+1}` with material-region weight `\gamma(x)`. Current leakage and
+  self-containedness chunk replaces the Plasticity2D draft branch-formula caveat
+  with a scoped branch-potential definition and rewrites Plasticity3D boundary
+  markers as the label sets `\Gamma_1,\ldots,\Gamma_5` with component-wise
+  Dirichlet sets.
 - `VALIDATION`: external and reference-model comparison.
   Evidence: narrow hyperelastic JAX-FEM comparison; Plasticity3D validation
   ladder with endpoint-surrogate scope.
@@ -316,7 +324,11 @@ MATLAB literature only when there is source-backed evidence.
   comparison under identical reported terminal observables. Current
   provenance/layout chunk removes the ambiguous "largest distributed mechanics"
   phrase from the auxiliary Plasticity3D timing discussion and describes it as a
-  high-DOF Plasticity3D timing result.
+  high-DOF Plasticity3D timing result. Current front/back/leakage chunk removes
+  setup-failure and omission phrasing from the Ginzburg--Landau and colored-SFD
+  summaries, replaces remaining process-local wording with level-specific
+  problem wording, and regenerates the hyperelastic PMG table with paper-facing
+  `Hypre` and `MUMPS, one redundant group` labels.
 - `DISCUSSION_CONCLUSION`: interpretation and scope.
   Current prose states the toolset lesson in paper-facing terms: automatic
   differentiation alone does not determine large nonlinear FEM behavior;
@@ -436,9 +448,12 @@ MATLAB literature only when there is source-backed evidence.
   by the PDF audit: the opening globalization tables, the hyperelastic
   validation figure, a representative early scaling figure/table, the
   Plasticity3D partitioning table, the topology figure/table block, and the
-  appendix fixed-reference tables now use `!htbp` rather than `[H]`. Rebuild and
-  page-render inspection are required before judging whether this improves the
-  visible blank regions.
+  appendix fixed-reference tables now use `!htbp` rather than `[H]`. Current
+  front/back/leakage chunk rebuilt a 39-page PDF;
+  `latexmk`, `qpdf --check`, the LaTeX log scan, `git diff --check`, the
+  archive-neutral asset validator, and `make -C paper publish-check` passed.
+  Rendered pages 1, 18--19, 23--24, 28--29, and 36--37 were checked for title,
+  benchmark-definition, results-table, and back-matter readability.
 - `REPRO`: reproducibility and submission readiness.
   Known blockers from `paper/todo.md`: target journal/template/declarations,
   repository license/archive DOI, and archive-neutral provenance for critical
@@ -491,7 +506,11 @@ MATLAB literature only when there is source-backed evidence.
   inputs, Plasticity2D endpoint and resolution inputs, and the Plasticity3D
   recommended-scaling per-rank outputs. A table-specific fixed-reference PMG
   summary replaces internal route identifiers with paper-facing aliases, so all
-  30 generated table sources are now archive-neutral.
+  30 generated table sources are now archive-neutral. Current front/back/leakage
+  chunk keeps the availability statement truthful for the current repository
+  snapshot by naming the source repository and stating that no separate archival
+  DOI is cited for this version; the DOI/license and target-venue declaration
+  work remains release-level.
 
 ## Evidence Nodes
 
@@ -889,6 +908,18 @@ MATLAB literature only when there is source-backed evidence.
   rendered pages 25--26 and 31. Remaining target-template risks are the same
   submission-level layout risks: dense tables and compound figures should be
   checked again after the final journal class is chosen.
+- `Front/back matter audit` (`Anscombe`): completed. Findings addressed in the
+  current front/back chunk: code/data availability moved out of the appendix,
+  the automatic date was removed, PDF metadata now matches the full title, the
+  abstract and introduction avoid audit/process phrasing, and the submission
+  checklist now states the remaining target-venue, declaration, license, and DOI
+  blockers without work-log wording.
+- `Leakage/self-containedness audit` (`Maxwell`): completed. Findings addressed
+  in the current front/back chunk: Plasticity3D marker numbers are defined as
+  boundary label sets before use, the Plasticity2D branch-potential role is
+  stated without draft apology, Ginzburg--Landau and colored-SFD result prose
+  no longer reports setup omissions, and the hyperelastic PMG table now uses
+  paper-facing coarse-solver labels.
 
 ## First Edit Backlog
 

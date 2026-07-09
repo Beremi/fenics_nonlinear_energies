@@ -429,10 +429,11 @@ predictor, the principal-stress Mohr--Coulomb test
   -(1-\sin\phi_\lambda)\sigma_2^{\mathrm{tr}}
   -2c_\lambda\cos\phi_\lambda \le 0,
 \]
-and either the elastic energy or the corresponding line/apex return energy. We
-do not reproduce the full set of 2D branch-energy formulas here; they are used
-as an implemented endpoint surrogate whose role is to test solver behavior under
-nonsmooth Mohr--Coulomb-type switching. The small square-root regularization
+and either the elastic energy or the corresponding line/apex return energy. Here
+$\Phi_{\mathrm{MC},2\mathrm{D}}$ denotes the plane-strain Mohr--Coulomb branch
+potential associated with the elastic, line-return, and apex-return cases of the
+test above. The reported two-dimensional rows use this quantity as a
+solver-diagnostic endpoint surrogate. The small square-root regularization
 used in the principal-stress calculation replaces the branch discriminant by
 its regularized value with parameter $\epsilon_{\mathrm{reg}}=\num{1e-12}$.
 This is a numerical smoothing of the endpoint surrogate, not a separate material
@@ -517,14 +518,19 @@ The corresponding weak form is
 \end{equation}
 The studied discrete model uses a heterogeneous tetrahedral mesh with four
 material physical groups, refined into the displayed mesh hierarchy and elevated
-locally to same-mesh $P_1/P_2/P_4$ spaces. The mesh boundary markers define the
-component-wise constraints: $u_x$ is constrained on markers $1$ and $2$, $u_y$
-is constrained on marker $5$, and $u_z$ is constrained on markers $3$ and $4$.
-The bottom-clamped model additionally fixes every node with
-$|y| \le 10^{-12}$ in all three displacement components. Here
-$\Gamma_{D,i}$ denotes the resulting Dirichlet set for displacement component
-$i$, $\Gamma_N$ is the remaining traction-free boundary, and $V_0$ is the
-homogeneous vector-valued test space after applying these component-wise
+locally to same-mesh $P_1/P_2/P_4$ spaces. Let
+$\Gamma_1,\ldots,\Gamma_5$ denote the boundary label sets of the reference mesh.
+We impose
+\[
+  \Gamma_{D,x}=\Gamma_1\cup\Gamma_2,\qquad
+  \Gamma_{D,y}=\Gamma_5,\qquad
+  \Gamma_{D,z}=\Gamma_3\cup\Gamma_4.
+\]
+The bottom-clamped model additionally fixes all displacement components on
+$\Gamma_{\mathrm{bot}}=\{X\in\partial\Omega:\lvert Y\rvert\le 10^{-12}\}$.
+Here $\Gamma_{D,i}$ denotes the resulting Dirichlet set for displacement
+component $i$, $\Gamma_N$ is the remaining traction-free boundary, and $V_0$ is
+the homogeneous vector-valued test space after applying these component-wise
 constraints.
 We write $P_k(L_\ell)$ for polynomial degree $k$ on mesh level $\ell$ and use
 $L_1,\ldots,L_4$ for the four displayed mesh levels.

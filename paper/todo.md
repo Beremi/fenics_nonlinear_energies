@@ -2,15 +2,12 @@
 
 ## Publishability Verdict
 
-Not yet publishable. The manuscript is scientifically close and now better
-aligned with its evidence: major claims are scoped to the implemented toolset,
-SOTA positioning has been refreshed, citations build cleanly, and the generated
-figure/table pipeline and archive-neutral provenance gate pass against a curated
-local submission bundle. Submission is still blocked by missing target-journal
-metadata, submission declarations, license/archive decisions, and a durable
-citable release that includes the paper-critical provenance bundle.
-Validation is adequate for the narrowed claims, but the paper must not be
-submitted until the external submission metadata and citable archive are fixed.
+Current status: not ready for submission until the target venue declarations,
+repository license, and citable archival record are finalized. Manuscript claims,
+citation checks, generated assets, and archive-neutral provenance validation are
+otherwise ready for final venue formatting. Validation is adequate for the
+narrowed claims, but the paper must not be submitted until the external
+submission metadata and citable archive are fixed.
 
 ## Review Pass Scope
 
@@ -22,7 +19,7 @@ live arXiv, DOI, and official project pages on 2026-04-30. No long MPI campaigns
 were rerun, no checked-in meshes or raw inputs were edited, and no new
 scientific claims were introduced without supporting evidence.
 
-## Changes Made In This Pass
+## Completed Readiness Work
 
 - Updated `paper/references.bib`, `paper/literature/manifest.json`,
   `paper/literature/sources.md`, and `paper/literature/claim_audit.md` for
@@ -102,6 +99,15 @@ scientific claims were introduced without supporting evidence.
   distributed-assembly prose, interpreted benchmark and appendix tables in body
   text, expanded capability and fixed-reference PMG table labels, and tuned
   float-page/table readability.
+- Addressed the front/back-matter and leakage audit: aligned the visible title
+  and PDF metadata around energy minimization, removed the automatic date, moved
+  code/data availability into unnumbered back matter, replaced draft archive
+  wording with a current-version statement, made Plasticity3D boundary labels
+  self-contained, and removed remaining process-local wording from selected
+  results prose.
+- Regenerated the hyperelastic PMG sensitivity table after polishing coarse
+  solver labels, so the generated output now reports `Hypre` and `MUMPS, one
+  redundant group` rather than implementation abbreviations.
 - Rebuilt the paper PDF through the paper generation pipeline.
 
 ## Blocking Issues Before Submission
@@ -111,9 +117,9 @@ scientific claims were introduced without supporting evidence.
   and cannot be submitted without journal-specific formatting, reference style,
   author metadata, funding, acknowledgements, and competing-interest
   declarations.
-  Evidence path or citation: `paper/main.tex` front matter and
-  `paper/sections/appendix.tex` availability note.
-  Exact next action: choose the target journal, apply its template, and fill in
+  Evidence path or citation: `paper/main.tex` front matter and availability
+  statement.
+  Required action: choose the target journal, apply its template, and fill in
   ORCID, corresponding-author, funding, acknowledgements, data/software
   availability, and COI fields.
 - Issue: Repository license and archival release/DOI are not decided.
@@ -121,9 +127,9 @@ scientific claims were introduced without supporting evidence.
   unambiguous license and a citable, durable version of the source/artifact
   snapshot.
   Evidence path or citation: no `LICENSE*` or `COPYING*` file is present at
-  repository depth two; `paper/sections/appendix.tex` currently says an archive
-  DOI should be supplied if required.
-  Exact next action: add the chosen repository license, include
+  repository depth two; `paper/main.tex` does not yet cite a separate archival
+  DOI.
+  Required action: add the chosen repository license, include
   `artifacts/reproduction/paper_submission_2026_07_08/` in the submission
   release or artifact archive, mint or record its DOI if applicable, and update
   the manuscript availability statement.
@@ -136,7 +142,7 @@ scientific claims were introduced without supporting evidence.
   `paper/tables/generated/manifest.json`,
   `paper/scripts/validate_paper_assets.py`, and
   `artifacts/reproduction/paper_submission_2026_07_08/manifest.json`.
-  Exact next action: include `artifacts/reproduction/paper_submission_2026_07_08/`
+  Required action: include `artifacts/reproduction/paper_submission_2026_07_08/`
   in the durable release/archive, mint or record the DOI if applicable, rerun
   the archive-neutral validator from the released snapshot, and update the
   availability statement.

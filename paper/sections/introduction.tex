@@ -10,16 +10,16 @@ only a modeling interface, but also the derivative route, assembly layout,
 nonlinear solver policy, and preconditioner design.
 
 We develop and evaluate such a scientific toolset for nonlinear finite-element
-energy solves and optimization. In the primary \jaxpetsc{} realization, JAX
+energy minimization and optimization. In the primary \jaxpetsc{} realization, JAX
 represents local energies and constitutive laws, while PETSc
 owns sparse vectors and matrices, nonlinear globalization, Krylov methods, and
-preconditioners. The \purejax{} and \fenics{} formulations serve as reference
-formulations where they are available; JAX-FEM, FEniCSx-family work, and the
+preconditioners. The \purejax{} and \fenics{} formulations serve as internal
+references where available; JAX-FEM, FEniCSx-family work, and the
 \v{C}erm{\'a}k--Sysala--Valdman MATLAB elastoplastic implementation lineage
-provide scoped external context and comparison surfaces for selected
-observables, not comprehensive package-level benchmarks. Where we report
-external numerical comparisons, they are restricted to explicitly matched
-benchmark definitions and observables.
+provide scoped external context for selected observables rather than
+comprehensive package-level benchmarks. Where we report external numerical
+comparisons, they are restricted to explicitly matched benchmark definitions and
+observables.
 
 \subsection{Contributions}
 \label{sec:intro-contributions}
@@ -31,8 +31,8 @@ implemented toolset is organized around three solver components:
 \begin{enumerate}
   \item \textbf{Globalized energy minimization.} We compare line-search,
         trust-region, and hybrid globalization choices on representative
-        nonlinear finite-element benchmarks, and we keep the reported
-        conclusions tied to the tested benchmark definitions.
+        nonlinear finite-element benchmarks, with conclusions restricted to the
+        tested benchmark definitions.
   \item \textbf{Derivative construction in sparse assembly.} We implement and compare
         element automatic differentiation, constitutive automatic
         differentiation, and colored sparse finite-difference recovery inside

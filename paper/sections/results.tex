@@ -16,11 +16,11 @@ treated as performance evidence rather than validation evidence.
 choice on four benchmark configurations using the same element assembly path
 and fixed preconditioner family within each problem. The scalar cases use
 level-10 meshes obtained by one additional uniform refinement of the level-9
-inputs. For $p$-Laplace, the comparison uses 32 MPI ranks with a 30 s wall-time cap.
-For Ginzburg--Landau, the comparison uses 16 MPI ranks with a 120 s cap, because the
-32-rank configuration did not reach the nonlinear solve within the fixed setup
-budget. For hyperelasticity, the comparison uses the first eight load steps of the level-4
-rank-local assembly path on 32 MPI ranks with a 270 s cap. The Plasticity3D
+inputs. For $p$-Laplace, the comparison uses 32 MPI ranks with a 30 s wall-time
+cap. For Ginzburg--Landau, the reported comparison uses 16 MPI ranks with a
+120 s wall-time cap. For hyperelasticity, the comparison uses the first eight
+load steps of the level-4 rank-local assembly path on 32 MPI ranks with a
+270 s cap. The Plasticity3D
 comparison uses the $P_2(L_1)$ endpoint surrogate at
 $\lambda_{\mathrm{sr}}=1.55$ on 32 MPI ranks with a 180 s cap. Timed-out
 configurations are retained in the comparison; the table uses solver-reported
@@ -76,7 +76,7 @@ times out under the fixed wall-time cap.
 \label{sec:num-derivative-route}
 
 \Cref{tab:derivative-route-compare} isolates the cost of the second-order
-route on three representative local cases. The $p$-Laplace cases reuse the
+route on three representative matched cases. The $p$-Laplace cases reuse the
 selected level-9, 32-rank timing data. The hyperelasticity cases run only
 the first level-4 load step and intentionally use the replicated element path
 for both routes, because the rank-local hyperelasticity configuration does not use
@@ -90,16 +90,17 @@ energy and identical nonlinear/Krylov iteration counts as element AD. The
 scalar and hyperelasticity cases still show the expected wall-time premium for
 colored SFD. On the Plasticity3D endpoint, constitutive AD is fastest, while
 element AD and colored SFD have matching iteration counts and comparable solve
-times. The colored-SFD Plasticity3D configuration records 240--420 colors across the 32
-ranks; its comparable solve time is therefore explained by batched local HVPs
-having nearly the same measured Hessian-callback cost as element AD on this
-$P_2(L_1)$ case, not by an under-colored finite-difference reconstruction.
+times. The colored-SFD Plasticity3D configuration records 240--420 colors across
+the 32 ranks; its comparable solve time is therefore explained by batched
+rank-local HVPs having nearly the same measured Hessian-callback cost as element
+AD on this $P_2(L_1)$ case, not by an under-colored finite-difference
+reconstruction.
 
 \begin{table}[!htbp]
   \centering
   \footnotesize
   \input{tables/generated/derivative_route_compare.tex}
-  \caption{Matched-case derivative-route comparison. Colored SFD denotes local
+  \caption{Matched-case derivative-route comparison. Colored SFD denotes rank-local
   colored sparse recovery; the reported rows use AD-HVP probes, while
   finite-difference gradient probes are the classical recovery variant. The
   SFD-color range is shown where per-rank color counts are available.}
@@ -116,10 +117,9 @@ The same-DOF comparison is the most informative same-DOF contrast: $P_1(L_2)$ an
 $P_2(L_1)$ both have \num{79024} free unknowns, but the $P_2$ element stencil
 is denser. Its colored-SFD route therefore needs 240--420 colors instead of
 66--90, raises the Hessian callback from \num{0.332} to \num{1.412} s, and
-raises the rank-maximum RSS from about \num{0.65} to \num{1.10} GiB. We omit
-the $P_4$ colored-SFD case from this local comparison; the $P_2$ same-DOF comparison
-already exposes the stencil density effect without forcing a large local-memory
-stress case.
+raises the rank-maximum RSS from about \num{0.65} to \num{1.10} GiB. The $P_4$
+colored-SFD case is outside this single-linearization table; the $P_2$ same-DOF
+comparison already isolates the stencil-density effect.
 
 \begin{table}[!htbp]
   \centering
@@ -201,14 +201,14 @@ scaling for the load path in \cref{eq:hyperelasticity-discrete}.
 \end{figure}
 
 The larger multi-node experiment fixes the nonlinear work to the first level-5
-load step after the rank-local hyperelasticity implementation. The CPU cluster nodes
+load step after the rank-local hyperelasticity implementation. The CPU nodes
 used here have two AMD EPYC 7H12 64-core processors and 256 GB RAM
-\citep{it4i-karolina-compute-nodes}; on the tested nodes Slurm exposes the
-128 cores as eight NUMA domains with 16 cores each. The runs use one MPI rank
-per core, contiguous CPU-ID binding, and local memory binding. The mesh is
-generated procedurally from the uniform beam hierarchy, and the element path
-assembles from rank-local elements with local PETSc COO preallocation and
-point-to-point overlap exchange.
+\citep{it4i-karolina-compute-nodes}; the 128 cores are arranged as eight NUMA
+domains with 16 cores each. The runs use one MPI rank per core with contiguous
+CPU binding and NUMA-local memory binding. The mesh is generated procedurally
+from the uniform beam hierarchy, and the element path assembles from rank-local
+elements with rank-local PETSc COO preallocation and point-to-point overlap
+exchange.
 
 The nonlinear solve is the same trust-region Newton path used for the
 benchmark in \cref{sec:bench-he}. The linear subproblems use STCG with a
@@ -217,7 +217,7 @@ level $L_2$. The coarse solve is PETSc redundant LU with MUMPS: the partial
 one-node configurations use one redundant group over the active ranks, while the
 multi-node configurations use one 128-rank redundant group per node.
 \Cref{fig:hyperelasticity-karolina-pmg-scaling,tab:hyperelasticity-karolina-pmg-scaling}
-report the application-reported solver total time, not Slurm elapsed time.
+report measured solver total time rather than scheduler elapsed time.
 All configurations reach the same nonlinear and linear iteration counts shown in
 \Cref{tab:hyperelasticity-karolina-pmg-scaling}: 21 Newton iterations and
 43 Krylov iterations.
@@ -249,10 +249,11 @@ rows, rank-local assembly reduces summed RSS from \SI{215.6}{GiB} to
 precision.
 
 \Cref{tab:hyperelasticity-pmg-sensitivity} isolates the first-step level-5 PMG
-choice on the same 32-rank local problem with fixed nonlinear work. All configurations perform the same
-eight Newton linearizations, so differences in total time are attributable to
-the linear preconditioner and coarse-solver policy rather than to nonlinear
-stopping. The energy column is the state after this fixed nonlinear work, so
+choice on the same 32-rank level-5 problem with fixed nonlinear work. All
+configurations perform the same eight Newton linearizations, so differences in
+total time are attributable to the linear preconditioner and coarse-solver
+policy rather than to nonlinear stopping. The energy column is the state after
+this fixed nonlinear work, so
 \Cref{tab:hyperelasticity-pmg-sensitivity} is a solver-policy comparison rather
 than an endpoint-accuracy ranking.
 
@@ -586,8 +587,8 @@ measurements, show that sparse ownership, overlap size, coarse solves, and
 preconditioner policy are part of the numerical method, not merely software
 detail. Finally, the hyperelasticity, Plasticity3D, and topology scaling runs
 show that the primary \jaxpetsc{} realization solves the largest tested cases in
-settings where serial reference formulations mainly serve validation, debugging,
-or comparison roles.
+settings where serial reference formulations mainly serve validation or scoped
+comparison roles.
 
 This synthesis is also the boundary of the paper's claim. The experiments
 support a nonlinear FEM toolset in which local differentiable models,

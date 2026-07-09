@@ -771,7 +771,11 @@ def _fmt_he_coarse(row: dict[str, str]) -> str:
     if coarse_pc == "redundant":
         factor = str(row.get("coarse_factor_solver", "")).strip() or "LU"
         groups = _fmt_optional_count(row.get("coarse_redundant_number", ""))
-        return f"{factor.replace('_', r'\_')}, {groups} grp."
+        if groups == "1":
+            return f"{factor.upper().replace('_', r'\_')}, one redundant group"
+        return f"{factor.upper().replace('_', r'\_')}, {groups} redundant groups"
+    if coarse_pc.lower() == "hypre":
+        return "Hypre"
     return coarse_pc.replace("_", r"\_")
 
 

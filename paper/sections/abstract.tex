@@ -15,15 +15,11 @@ slope-stability comparisons are restricted to matched benchmark definitions and
 observables.
 
 Across these problems, we compare element automatic differentiation,
-constitutive automatic differentiation, and colored sparse finite-difference
-recovery as routes to second-order information. The validation checks report
-matched hyperelastic energy and field agreement within the stated tolerances and
-final-load scalar and field agreement for the three-dimensional plasticity
-endpoint surrogate. The performance studies then quantify how derivative
-routes, sparse ownership, nonlinear globalization, Krylov linear algebra, and
-preconditioner policy affect cost and robustness under those definitions. In the
-tested three-dimensional plasticity derivative-route case, constitutive AD gives
-the lowest measured wall time while preserving terminal observables. The larger
-mechanics and topology runs then show that the same PETSc-owned sparse assembly
-and solver-policy framework carries to distributed runs.
+constitutive automatic differentiation, and colored sparse recovery as routes to
+second-order information, and quantify how derivative routes, sparse ownership,
+nonlinear globalization, Krylov solvers, and preconditioner policy affect cost
+and robustness. In the tested three-dimensional plasticity derivative-route
+case, constitutive AD gives the lowest measured wall time while preserving
+terminal observables. Distributed mechanics and topology runs show that the
+PETSc-owned sparse assembly and solver-policy framework extends to MPI settings.
 \end{abstract}
