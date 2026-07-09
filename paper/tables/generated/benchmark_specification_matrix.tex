@@ -1,6 +1,6 @@
 \begin{tabular}{@{}>{\RaggedRight\arraybackslash}p{0.135\textwidth} >{\RaggedRight\arraybackslash}p{0.185\textwidth} >{\RaggedRight\arraybackslash}p{0.140\textwidth} >{\RaggedRight\arraybackslash}p{0.275\textwidth} >{\RaggedRight\arraybackslash}p{0.170\textwidth}@{}}
 \toprule
-Family & Reported scope & Solve policy & Comparison evidence & Main difficulty \\
+Family & Reported scope & Primary policy / diagnostics & Comparison evidence & Main difficulty \\
 \midrule
 $p$-Laplace & $L_{5}$ serial agreement; $L_{9}$ distributed scaling; $L_{10}$ globalization diagnostic & Newton + line search & FEniCS and JAX+PETSc on the distributed case; pure JAX in the serial agreement case & nonlinear elliptic solve with exact sparse Hessians \\
 Ginzburg--Landau & $L_{5}$ agreement; $L_{9}$ distributed scaling; $L_{10}$ globalization diagnostic & Newton + line search & FEniCS and JAX+PETSc comparison & indefinite local curvature from the double well \\

@@ -29,10 +29,12 @@ the nonlinear policy. Timed-out configurations are retained as capped solver
 behavior rather than convergence evidence.
 
 The entries are representative fixed cases rather than one physical problem:
-$p$-Laplace uses a level-10 unit-load stress test, hyperelasticity the first
-eight level-4 rank-local load steps, and 3D plasticity the $P_2(L_1)$ endpoint
-surrogate at $\lambda_{\mathrm{sr}}=\num{1.55}$. The four configurations use 32,
-16, 32, and 32 MPI ranks with 30, 120, 270, and 180 s caps.
+$p$-Laplace uses a level-10 diagnostic case with one nonlinear solve,
+Ginzburg--Landau uses a level-10 fixed-budget comparison, hyperelasticity uses
+the first eight level-4 rank-local load steps, and 3D plasticity uses the
+$P_2(L_1)$ endpoint surrogate at $\lambda_{\mathrm{sr}}=\num{1.55}$. The four
+configurations use 32, 16, 32, and 32 MPI ranks with 30, 120, 270, and 180 s
+caps.
 
 \begin{table}[!htbp]
   \centering
@@ -45,7 +47,7 @@ surrogate at $\lambda_{\mathrm{sr}}=\num{1.55}$. The four configurations use 32,
 \end{table}
 
 The scalar and mechanics cases show different preferences. Newton with Armijo
-line search is fastest on the smooth $p$-Laplace unit-load case, but times out
+line search is fastest on the smooth $p$-Laplace diagnostic case, but times out
 on Ginzburg--Landau; the hyperelasticity excerpt completes under all three
 policies, with the hybrid reducing nonlinear iterations and reported solve time
 relative to line-search-only Newton.
@@ -81,7 +83,7 @@ available, constitutive AD under the same nonlinear problem definition. The
 timing-scope column states whether the reported time is wall time, solve time,
 or a solver-internal total for the specific configuration.
 
-\begin{table}[!htbp]
+\begin{table}[H]
   \centering
   \footnotesize
   \caption{Matched-case derivative-route comparison. Colored sparse recovery uses
@@ -104,8 +106,8 @@ element AD on this $P_2(L_1)$ case.
 \Cref{tab:plasticity3d-derivative-degree} reports one-Newton Hessian-evaluation
 cost. At the same \num{79024} free DOFs, moving from $P_1(L_2)$ to $P_2(L_1)$
 raises colors from 66--90 to 240--420, Hessian time from \num{0.332} to
-\num{1.412} s, and rank-maximum RSS from about \num{0.6} to \num{1.1} GiB; the
-$P_4$ colored-recovery case is outside this table.
+\num{1.412} s, and rank-maximum resident set size (RSS) from about \num{0.6} to
+\num{1.1} GiB; the $P_4$ colored-recovery case is outside this table.
 
 \begin{table}[!htbp]
   \centering
@@ -219,7 +221,7 @@ supports using the rank-local assembly variant in the larger CPU sweeps. The
 fixed-work agreement entries compare the replicated and rank-local level-4
 first-step solve at four MPI ranks; the one-linearization memory entries use one
 Newton linearization on the level-5 mesh at 8, 16, and 32 ranks. The table reports
-energy, operating-system peak RSS, and the measured footprint of assembly
+energy, operating-system peak resident set size (RSS), and the measured footprint of assembly
 arrays, making clear whether a configuration stores global mesh and adjacency
 data or only local elements plus overlap.
 
@@ -459,14 +461,13 @@ and continuation evidence is reported later in \Cref{sec:solver-evidence}.
 The converged bottom-clamped $P_4(L_2)$, $\lambda_{\mathrm{sr}}=\num{1.55}$
 comparison instead uses constitutive-AD rank-local assembly with MUMPS-backed
 $P_4 \rightarrow P_2 \rightarrow P_1$ PMG and the same observed
-nonlinear/Krylov work; all
-configurations converge in 29 Newton iterations and 1240 Krylov iterations to
-the same displayed energy. With
+nonlinear/Krylov work; all configurations are marked completed and report 29
+Newton iterations, 1240 Krylov iterations, and the same displayed energy. With
 $\|g\|_{\mathrm{stop}}/\|g\|_{\mathrm{target}}$ denoting the final stopping
 gradient divided by its one-percent-of-initial-gradient target,
 \Cref{fig:plasticity3d-cpu-scaling,tab:plasticity3d-cpu-scaling} report CPU
-timings once all runs satisfy the stated relative-correction and
-stopping-gradient criteria.
+timings together with the gradient-target ratio used for the stopping-gradient
+check.
 
 \begin{figure}[!htbp]
   \centering

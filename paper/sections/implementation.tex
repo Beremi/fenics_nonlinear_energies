@@ -142,7 +142,7 @@ this overlap state.
 Matrix entries are inserted only for rows in $I_r$, with values on $G_r$ used to
 evaluate local stencils but not to duplicate ownership. Scalar energy values in
 the numerical tables are global reductions for the corresponding solver
-configuration; the ownership contract here concerns derivative and matrix
+configuration; the ownership rule here concerns derivative and matrix
 assembly. Here $\mathcal{G}_i(u)$ and $\mathcal{A}_{ij}(u)$ are assembled residual and
 tangent entries, while $r_{K,i}$ and $a_{K,ij}$ are element contributions.
 Equivalently, if

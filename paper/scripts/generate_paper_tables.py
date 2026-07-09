@@ -578,6 +578,7 @@ def plasticity3d_cpu_scaling_rows() -> list[dict[str, object]]:
                 "newton_iterations": int(row["newton_iterations"]),
                 "linear_iterations_total": int(row["linear_iterations_total"]),
                 "energy": float(row["energy"]),
+                "status": str(row.get("status", "completed")),
                 "grad": grad,
                 "grad_over_target": (
                     float(stop_row["final_grad_over_target"])
@@ -607,6 +608,7 @@ def plasticity3d_cpu_scaling_rows() -> list[dict[str, object]]:
                 "newton_iterations": int(row["nit"]),
                 "linear_iterations_total": int(row["ksp_its"]),
                 "energy": float(row["energy"]),
+                "status": str(row.get("status", "completed")),
                 "grad": grad,
                 "grad_over_target": (
                     float(stop_row["final_grad_over_target"])
@@ -621,6 +623,21 @@ def plasticity3d_cpu_scaling_rows() -> list[dict[str, object]]:
         )
     rows.sort(key=lambda row: (str(row["source"]) != "single-node CPU", int(row["ranks"])))
     return rows
+
+
+def _grad_target_from_rows(rows: list[dict[str, object]]) -> float:
+    targets = []
+    for row in rows:
+        value = row.get("grad_stop_tol")
+        if value is None:
+            value = row.get("grad_target")
+        if value is None:
+            continue
+        text = str(value).strip()
+        if not text:
+            continue
+        targets.append(float(text))
+    return targets[0] if targets else math.nan
 
 
 def globalization_method_rows(path: Path = GLOBALIZATION_METHOD_COMPARE) -> list[dict[str, str]]:
@@ -979,7 +996,9 @@ def main() -> None:
     local_rows = load_rows(LOCAL_P3D_SUMMARY)
     mixed_rows = load_rows(MIXED_P3D_SUMMARY)
     sourcefixed_rows = load_rows(SOURCEFIXED_P3D_SUMMARY)
-    degree_energy_rows = load_rows(P3D_DEGREE_ENERGY_STUDY_SUMMARY)
+    degree_energy_summary = read_json(P3D_DEGREE_ENERGY_STUDY_SUMMARY)
+    degree_energy_rows = list(degree_energy_summary.get("rows", []))
+    degree_energy_grad_target = float(degree_energy_summary.get("grad_stop_tol", math.nan))
 
     pl_rows = read_csv_rows(PLAPLACE_SCALING)
     gl_rows = read_csv_rows(GL_SCALING)
@@ -1045,7 +1064,7 @@ def main() -> None:
         + " "
         + pcol(r"0.170\textwidth")
         + "@{}",
-        ["Family", "Reported scope", "Solve policy", "Comparison evidence", "Main difficulty"],
+        ["Family", "Reported scope", "Primary policy / diagnostics", "Comparison evidence", "Main difficulty"],
         [
             ["$p$-Laplace", f"{mesh_label('L5')} serial agreement; {mesh_label('L9')} distributed scaling; {mesh_label('L10')} globalization diagnostic", "Newton + line search", "FEniCS and JAX+PETSc on the distributed case; pure JAX in the serial agreement case", "nonlinear elliptic solve with exact sparse Hessians"],
             ["Ginzburg--Landau", f"{mesh_label('L5')} agreement; {mesh_label('L9')} distributed scaling; {mesh_label('L10')} globalization diagnostic", "Newton + line search", "FEniCS and JAX+PETSc comparison", "indefinite local curvature from the double well"],
@@ -1106,7 +1125,7 @@ def main() -> None:
             [
                 "wall time",
                 "Elapsed end-to-end time for the stated benchmark evaluation, including setup when that timing scope is specified.",
-                "Comparable only for configurations that share the same benchmark contract and timing scope.",
+                "Comparable only for configurations that share the same benchmark definition and timing scope.",
             ],
             [
                 "reported solve time",
@@ -1648,15 +1667,27 @@ def main() -> None:
 
     write_table_star(
         "plasticity3d_benchmark_summary.tex",
-        fill_spec("l c c c c"),
-        ["Element", "Free DOFs", "Energy", "$\\|g\\|_{\\mathrm{final}}$", "Wall time [s]"],
+        fill_spec("l c c c c c"),
+        [
+            "Element",
+            "Free DOFs",
+            "Energy",
+            "$\\|g\\|_{\\mathrm{final}}$/target",
+            "Wall time [s]",
+            "Status",
+        ],
         [
             [
                 element_label(row["degree_line"], row["mesh_alias"]),
                 fmt_dofs(row["free_dofs"]),
                 fmt_energy(float(row["energy"])),
-                fmt_sci(float(row["final_grad_norm"])),
+                (
+                    "--"
+                    if math.isnan(degree_energy_grad_target)
+                    else fmt_float(float(row["final_grad_norm"]) / degree_energy_grad_target, 3)
+                ),
                 fmt_wall_time(float(row["total_time_s"])),
+                _result_label(row.get("status", "")),
             ]
             for row in sorted(
                 degree_energy_rows,
@@ -1702,7 +1733,7 @@ def main() -> None:
 
     write_table_star(
         "plasticity3d_cpu_scaling.tex",
-        fill_spec("l c c c c c c c"),
+        fill_spec("l c c c c c c c c"),
         [
             "CPU setting",
             "Ranks",
@@ -1712,6 +1743,7 @@ def main() -> None:
             "Krylov iters",
             "Energy",
             "$\\|g\\|_{\\mathrm{stop}}$/target",
+            "Status",
         ],
         [
             [
@@ -1723,6 +1755,7 @@ def main() -> None:
                 fmt_count(row["linear_iterations_total"]),
                 fmt_energy(float(row["energy"])),
                 fmt_float(float(row["grad_over_target"]), 3),
+                _result_label(row.get("status", "")),
             ]
             for row in p3d_cpu_scaling_rows
         ],
@@ -1752,7 +1785,7 @@ def main() -> None:
 
     write_table_star(
         "plasticity3d_constitutive_vs_reference_formula.tex",
-        fill_spec("c c c c c c"),
+        fill_spec("c c c c c c c c"),
         [
             "Ranks",
             "AD wall [s]",
@@ -1760,6 +1793,8 @@ def main() -> None:
             "AD solve [s]",
             "Reference-formula solve [s]",
             "Wall ratio",
+            "Max $\\|g\\|$",
+            "Status",
         ],
         [
             [
@@ -1769,6 +1804,8 @@ def main() -> None:
                 fmt_wall_time(float(lrow["solve_time_s"])),
                 fmt_wall_time(float(srow["solve_time_s"])),
                 fmt_float(float(lrow["wall_time_s"]) / float(srow["wall_time_s"])),
+                fmt_sci(max(float(lrow["final_metric"]), float(srow["final_metric"]))),
+                "completed" if str(lrow.get("status")) == str(srow.get("status")) == "completed" else "mixed",
             ]
             for lrow, srow in zip(mixed_local_rows, mixed_source_rows, strict=True)
         ],

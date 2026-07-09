@@ -64,6 +64,10 @@ software superiority claims.
 The local style-guide snapshot is ignored through `.git/info/exclude`; do not
 stage or commit `paper/style_guide/`.
 
+Local `archive_neutral` figure/table manifest checks mean that submitted assets
+point to the curated local submission bundle rather than raw run paths. They do
+not resolve the final durable archive/DOI blocker.
+
 ## Section Roles
 
 - `abstract.tex`: state the nonlinear FEM bottleneck, the JAX+PETSc toolset,

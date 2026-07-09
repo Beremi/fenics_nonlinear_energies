@@ -3,7 +3,7 @@
 This appendix collects supporting solver-policy diagnostics that are
 methodologically useful but narrower than the main benchmark narratives.
 
-\subsection{3D Mohr--Coulomb Reference-Formula and Frozen-Preconditioner PMG Comparisons}
+\subsection{Reference-Formula and Frozen-PMG Diagnostics for 3D Mohr--Coulomb}
 
 The main 3D plasticity numerical evidence in \Cref{sec:num-plasticity3d} is the
 rank-local constitutive-AD path. The tables below add two solver-policy
@@ -44,7 +44,8 @@ These diagnostics support two narrower statements. First, reference-formula
 branch-tangent assembly has lower reported wall time than AD-branch tangent
 assembly in the listed matched-rank comparisons, although the gap narrows at
 higher rank counts. All rows in the matched reference-formula comparison
-completed under the stated gradient stopping target.
+are marked completed under the stated gradient stopping target in the
+run-artifact summaries.
 Second, the frozen-preconditioner PMG profile is not the default used in the
 present study: it may appear favorable on completed small MPI-rank-count configurations, but
 three of the eight frozen-preconditioner configurations reach the maximum number of Newton

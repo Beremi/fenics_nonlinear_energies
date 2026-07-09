@@ -982,14 +982,14 @@ def generate_plasticity2d_figures(layout: dict[str, float]) -> list[str]:
             ax.annotate(label, xytext=(4, 6), ha="left", va="bottom", **annotate_kwargs)
     ax.set_xscale("log")
     ax.set_xlabel("Free DOFs")
-    ax.set_ylabel(r"Residual [$10^{-4}$]")
+    ax.set_ylabel(r"Shifted endpoint energy [$10^{-4}$]")
     ax.yaxis.set_major_formatter(FormatStrFormatter("%.1f"))
     ax.margins(x=0.08, y=0.08)
     ax.grid(True, which="both", alpha=0.25)
     ax.text(
         0.0,
         1.02,
-        r"$-212.538 + 10^{-4}\times$ (axis)",
+        r"Energy = $-212.538 + 10^{-4}\times$ ordinate",
         transform=ax.transAxes,
         ha="left",
         va="bottom",

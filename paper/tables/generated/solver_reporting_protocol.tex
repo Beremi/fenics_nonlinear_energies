@@ -5,7 +5,7 @@ Reported term & Definition in this paper & Interpretation \\
 completed & All case-specific stopping tests are met before the nonlinear cap or wall-time cap. & Energy and observables are the values at the stated benchmark endpoint. \\
 timeout / iteration cap & The wall-time limit or maximum nonlinear-iteration count is reached before the stated stopping tests are met. & Retained as solver-behavior evidence, not as validation evidence. \\
 fixed work & A prescribed amount of work is performed, such as one Newton step, one linearization, or a fixed continuation schedule. & Used for cost, memory, or policy diagnostics rather than endpoint convergence claims. \\
-wall time & Elapsed end-to-end time for the stated benchmark evaluation, including setup when that timing scope is specified. & Comparable only for configurations that share the same benchmark contract and timing scope. \\
+wall time & Elapsed end-to-end time for the stated benchmark evaluation, including setup when that timing scope is specified. & Comparable only for configurations that share the same benchmark definition and timing scope. \\
 reported solve time & Timer internal to the nonlinear or PETSc solve; setup, state export, and postprocessing may be outside this timer. & Used for within-table solver comparisons, not as a universal replacement for wall time. \\
 relative correction & Norm of the accepted Newton correction relative to the current iterate scale; paired gradient checks use the absolute or relative target stated with the result. & Defines the stopping metric in 3D plasticity configurations that report correction or gradient targets. \\
 \bottomrule

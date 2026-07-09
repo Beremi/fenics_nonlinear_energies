@@ -1156,11 +1156,14 @@ $z_e := |e|^{-1}\int_e z_h\,\mathrm{d}x$; for the linear elements used here
 these are vertex averages. Let $\mathcal{P}_h$ be the fixed-pad design nodes and
 let $\mathcal{D}_h$ be the remaining design nodes. During design updates,
 $z_h$ is varied only on $\mathcal{D}_h$; on $\mathcal{P}_h$ the latent value is
-held at a large solid value, so the corresponding physical density is held near
-$\theta_h=1$. No element is removed from the objective. Elements touching a pad
-enter the element sums through their fixed nodal pad values and through any
-remaining free design nodes. Outside the pads, the latent variable is
-unconstrained and \eqref{eq:topology-density-map} enforces
+held at $z_{\mathrm{pad}}=10$, so the corresponding physical density is held
+near $\theta_h=1$. The initial field $z_h^0$ uses this same pad value on
+$\mathcal{P}_h$ and a constant value on $\mathcal{D}_h$ chosen so that
+$V(\theta_h(z_h^0))=0.4$ after the pad volume is included in the quadrature
+volume measure defined below. No element is removed from the objective.
+Elements touching a pad enter the element sums through their fixed nodal pad
+values and through any remaining free design nodes. Outside the pads, the latent
+variable is unconstrained and \eqref{eq:topology-density-map} enforces
 $\theta_h\in[\theta_{\min},1]$.
 
 The second ingredient is the mechanics solve for a fixed density field. Let
@@ -1301,9 +1304,17 @@ control mesh-scale design features, following the role of filters in
 \citet{bourdin2001filters}. The constants
 $\alpha_{\mathrm{reg}}=\num{5e-3}$, $\ell_{\mathrm{pf}}=\num{8e-2}$, and
 $\mu_{\mathrm{move}}=\num{1e-2}$ set the phase-field and latent-move terms.
-These are algorithmic choices of this benchmark, not standard SIMP notation. The
-outer loop alternates mechanics solves for \eqref{eq:topology-mechanics} with
-reduced design updates for \eqref{eq:topology-reduced-objective}.
+These are algorithmic choices of this benchmark, not standard SIMP notation.
+
+The reported topology runs use at most $2000$ outer iterations. Each mechanics
+step uses FGMRES with GAMG preconditioning, relative KSP tolerance $10^{-4}$,
+and a cap of $100$ Krylov iterations. Each design step applies gradient descent
+to \eqref{eq:topology-reduced-objective}, with at most $20$ design iterations,
+golden-section line search on a bounded step interval, function tolerance
+$10^{-6}$, gradient tolerance $10^{-3}$, and line-search interval tolerance
+$10^{-1}$. The outer stopping rule requires either the fixed-schedule cap or,
+after $p\ge 4$, both the state-change and design-change diagnostics defined
+below to be at most $10^{-6}$.
 
 \begin{figure}[!htbp]
   \centering
