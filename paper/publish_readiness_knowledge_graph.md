@@ -1025,9 +1025,12 @@ MATLAB literature only when there is source-backed evidence.
   `P_k(L_\ell)`, Plasticity3D marker, and Mohr--Coulomb convention findings.
   The follow-up display-equation audit checked all manuscript `equation`,
   `align`, and display-math blocks; each already carries sentence punctuation
-  once labels and trailing line breaks are ignored. Deferred findings for a
-  later pass: a compact exact solver-policy table and target-template cleanup
-  for dense result tables and forced float regions.
+  once labels and trailing line breaks are ignored. The solver-policy follow-up
+  keeps the existing component map and numerical protocol table rather than
+  adding another dense float before target-template conversion; methodology and
+  implementation prose now say where run-specific policy parameters are
+  reported. Deferred findings for a later pass: target-template cleanup for
+  dense result tables and forced float regions.
 
 ## First Edit Backlog
 

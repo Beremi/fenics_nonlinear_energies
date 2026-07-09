@@ -146,6 +146,10 @@ scientific claims were introduced without supporting evidence.
   sources: all `equation`, `align`, and display-math blocks already treat the
   displayed formulas as sentence parts after labels and trailing line breaks are
   ignored.
+- Decided against adding a compact solver-policy table before target-template
+  conversion: the implementation section already gives the component map, and
+  the numerical protocol table plus local result captions carry run-specific
+  tolerances, caps, timing scopes, and coarse-solver variants.
 - Rebuilt the paper PDF through the paper generation pipeline.
 
 ## Blocking Issues Before Submission
@@ -211,8 +215,9 @@ scientific claims were introduced without supporting evidence.
   and regenerate at the final physical size if needed.
 - Revisit the availability statement after the archive/license decision so it
   reads like final submission metadata rather than a repository-local note.
-- Consider a compact exact solver-policy table once the final target template is
-  known and the result-table width budget is clear.
+- Do not add a new solver-policy table before target-template conversion;
+  revisit only if reviewer feedback asks for a single lookup table for
+  run-specific solver policies.
 
 ## Claim And Citation Audit Summary
 
