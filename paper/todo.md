@@ -197,6 +197,10 @@ scientific claims were introduced without supporting evidence.
   JSON-backed figure inputs resolve relative paths from the repository root,
   and the generated figure set is byte-stable across repeated
   `make -C paper figures` runs.
+- Refreshed the local submission-bundle manifest for the stabilized-figure
+  source state, changed the manuscript availability statement to the canonical
+  GitHub repository URL, and removed stale `needs_final_archive` manifest notes
+  from figure/table manifests whose current inputs are archive-neutral.
 - Addressed the benchmark-readability audit: split Plasticity2D and Plasticity3D
   setup prose into staged continuum-model, geometry/material, surrogate, and
   claim-scope paragraphs without changing formulas or numerical evidence.
@@ -447,6 +451,14 @@ required support for the current scoped contribution.
   39--40 after the latest rebuild; implementation diagrams, hyperelastic and
   validation figures, dense derivative/scaling/topology tables, and appendix
   diagnostics are readable, unclipped, and in order.
+- `./.venv/bin/python paper/scripts/build_submission_bundle.py`: passed again
+  on 2026-07-09 and refreshed
+  `artifacts/reproduction/paper_submission_2026_07_08/manifest.json` for the
+  stabilized-figure source state.
+- `./.venv/bin/python paper/scripts/validate_paper_assets.py --archive-neutral`:
+  passed after the bundle-manifest and canonical-availability update.
+- `make -C paper submission-check`: passed after the canonical-availability
+  update and refreshed bundle manifest.
 - `./.venv/bin/python -m pytest tests/test_docs_publication.py`: passed
   13 tests.
 - `./.venv/bin/python -m pytest tests/test_final_report_figure_generators.py`:

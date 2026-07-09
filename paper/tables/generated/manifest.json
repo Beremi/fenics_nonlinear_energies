@@ -786,7 +786,6 @@
     "topology_summary.tex"
   ],
   "notes": [
-    "Tables with archive_status=needs_final_archive have explicit source provenance but still depend on raw or report inputs that must be covered by the final durable archive.",
     "Static comparison tables have empty data_inputs because their content is defined directly in paper/scripts/generate_paper_tables.py.",
     "implementation_capability_matrix.tex is a curated static summary of solver components, derivative routes, and reference availability; numeric evidence appears in the result-specific tables."
   ]

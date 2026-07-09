@@ -1,6 +1,6 @@
 {
-  "created_utc": "2026-07-09T06:07:36Z",
-  "git_commit": "e57ef668fa0f31e5fb1106090741e56bc324454e",
+  "created_utc": "2026-07-09T11:45:04Z",
+  "git_commit": "e4c2d183ad7e7887e341b2fa6ae8d6f18a79422b",
   "id": "paper_submission_2026_07_08",
   "known_limitations": [
     "This bundle normalizes existing paper-critical provenance without rerunning MPI campaigns.",

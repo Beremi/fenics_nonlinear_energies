@@ -612,11 +612,12 @@ MATLAB literature only when there is source-backed evidence.
   25, 28, 34, 36, and 39--40 are readable, unclipped, and in order.
 - `REPRO`: reproducibility and submission readiness.
   Known blockers from `paper/todo.md`: target journal/template/declarations,
-  repository license/archive DOI, and archive-neutral provenance for critical
+  repository license/archive DOI, and a durable release/archive for critical
   artifacts. The JAX-FEM baseline runner now writes strict JSON with `null`
   warmup timings and `allow_nan=False`; ignored local baseline metadata was
-  corrected in the workspace, but archive-neutral submission bundles remained
-  outstanding before the submission-bundle chunk. Current subagent audit
+  corrected in the workspace, and the later submission-bundle chunks created a
+  local archive-neutral bundle for the current manuscript surface. Current
+  subagent audit
   confirmed the same remaining process blockers: target venue/template and
   declarations, repository license plus archival DOI, and final release
   provenance for paper-critical artifacts. Current chunk
@@ -625,16 +626,16 @@ MATLAB literature only when there is source-backed evidence.
   regenerated the ignored reproducibility note without host, platform, or local
   interpreter-path details, renamed appendix table files from source-local names
   to reference-formula/reference-operator/continuation names, and left final
-  archive-neutral provenance manifests, venue declarations, DOI, and license
-  decisions as submission blockers. Current provenance-gate chunk makes the
+  durable release packaging, venue declarations, DOI, and license decisions as
+  submission blockers. Current provenance-gate chunk makes the
   figure manifest use structured repository-relative and explicit external
   inputs, adds a default paper-facing provenance scan to
   `validate_paper_assets.py`, and adds `--archive-neutral` plus
-  `make publish-check` for submission readiness. The default validator passes
-  on the manuscript-facing surface; `--archive-neutral` intentionally fails on
-  the remaining raw-results/report inputs, the external reference state,
-  `/home`, `.venv`, `tmp/source_compare`, `NaN`, and the ignored build
-  reproducibility note until a real submission bundle exists. Current
+  `make publish-check` for submission readiness. The default validator passed
+  on the manuscript-facing surface; before the bundle existed,
+  `--archive-neutral` exposed raw-results/report inputs, an external reference
+  state, local paths, non-finite JSON values, and the ignored build
+  reproducibility note as concrete provenance gaps. Current
   submission-bundle chunk creates the curated bundle at
   `artifacts/reproduction/paper_submission_2026_07_08/`, copies the
   paper-critical JSON, CSV, `.npz`, and `.mat` inputs, records source and bundle
@@ -691,10 +692,13 @@ MATLAB literature only when there is source-backed evidence.
   vocabulary, and focused tests for the body-text scan. Current
   figure-reproducibility chunk reconciles generated figure drift, makes current
   figure regeneration byte-stable, and fixes repo-relative JSON paths so
-  `make -C paper figures` works from the paper directory. Remaining provenance
-  risks are reduced but not gone: the curated submission-bundle manifest still
-  needs a final-state refresh for the eventual archived release, and the
-  license/archive DOI decisions remain blockers.
+  `make -C paper figures` works from the paper directory. Current
+  bundle-refresh chunk updates the local submission-bundle manifest to the
+  stabilized-figure source state, uses the canonical GitHub repository URL in
+  the manuscript availability statement, and keeps archive-neutral validation
+  green. Remaining provenance risks are release-level: the curated bundle must
+  be refreshed once more from the final released tree, included in a durable
+  licensed archive, and cited with its DOI or permanent record.
 
 ## Evidence Nodes
 
@@ -737,8 +741,9 @@ MATLAB literature only when there is source-backed evidence.
 - `Evidence/experiments/repro` (`Linnaeus`): completed. Key finding: strong
   evidence exists for scalar parity/scaling, the narrow hyperelastic JAX-FEM
   comparison, Plasticity3D endpoint-surrogate validation, derivative-route
-  comparisons, and topology consistency; archive-neutral provenance and true
-  path-history Plasticity3D validation remain blockers for stronger claims.
+  comparisons, and topology consistency; the local archive-neutral bundle is
+  now in place, while true path-history Plasticity3D validation remains a
+  blocker for stronger mechanics claims.
 - `Figures/layout/PDF` (`Archimedes`): completed. Key finding: current PDF is
   technically clean but not robust to template narrowing; dense tables and
   Plasticity3D multi-panel figures need a dedicated layout chunk.
@@ -772,8 +777,8 @@ MATLAB literature only when there is source-backed evidence.
   added a reference-formula/mainline scope sentence.
 - `Reproducibility/submission` (`Epicurus`): completed. Findings partly
   addressed: source-submission table names were made scientific. Remaining
-  blockers are process-level: archive-neutral provenance, venue/declarations,
-  license/archive DOI, and a provenance validator that rejects local paths.
+  blockers are process-level: venue/declarations, repository license, durable
+  archive/DOI, and final release packaging of the local archive-neutral bundle.
 - `Layout/narrow-template` (`Copernicus`): completed. Findings partly
   addressed: the current Plasticity3D convergence figure legend crowding was
   fixed by increasing figure height and legend clearance. Remaining risks:
@@ -782,9 +787,9 @@ MATLAB literature only when there is source-backed evidence.
 - `Evidence/provenance` (`Wegener`): completed. Key findings addressed:
   JAX-FEM comparison metadata no longer asserts constitutive-law identity,
   strict JSON output is enforced for the runner, and Layer 1A wording no longer
-  implies an exact glued-bottom free-mask match. Remaining blocker:
-  archive-neutral provenance bundles still contain local paths outside the
-  tracked manuscript.
+  implies an exact glued-bottom free-mask match. The later provenance chunks
+  replaced local-path bundle inputs with archive-neutral references; remaining
+  work is durable release packaging and DOI/license selection.
 - `Layout/PDF` (`Singer`): shutdown after timeout. Local visual inspection of
   rendered pages 1 and 19--22 found the abstract, validation pages, and
   globalization table readable after this chunk.
@@ -811,10 +816,10 @@ MATLAB literature only when there is source-backed evidence.
   punctuation.
 - `Repro/provenance` (`Plato`): completed. Current chunk restored
   source/generated consistency for the touched generated tables and target
-  scaling figure. Remaining blockers: archive-neutral provenance bundle,
-  repository license plus archival DOI, target venue/template/declarations,
-  strict JSON rejection of existing `NaN` provenance, stale reproducibility
-  notes, and limited-access citation verification.
+  scaling figure. Later chunks created the local archive-neutral provenance
+  bundle and strict JSON handling. Remaining blockers are repository license
+  plus archival DOI, target venue/template/declarations, final release
+  packaging, and limited-access citation verification.
 - `Math/self-contained benchmark audit` (`Schrodinger`): completed. Findings
   addressed in the current chunk: hyperelastic displacement/deformation
   notation is unified; Plasticity2D data and Davis-B scope are explicit;
@@ -961,7 +966,8 @@ MATLAB literature only when there is source-backed evidence.
   highlights; failed globalization rows render as iteration-cap evidence; and
   appendix fixed-reference comparisons are described as wall/solve/ratio
   evidence rather than equal-iteration claims. Deferred risk: final submission
-  still needs archive-neutral provenance and DOI/license decisions.
+  still needs durable release packaging, repository license, and archive DOI
+  decisions.
 - `PDF/layout audit` (`Boyle-current`): completed. Findings addressed:
   bibliography URL breaking now uses `xurl`; JAX-FEM comparison figure fonts
   were enlarged; Plasticity3D convergence wording was regenerated; dense pages
@@ -981,9 +987,9 @@ MATLAB literature only when there is source-backed evidence.
 - `Repro/provenance audit` (`Mencius-current`): completed. Findings partly
   addressed: the reproducibility note no longer emits host/platform/local-path
   details, appendix generated-table names are archive-neutral, and availability
-  prose asks for a final versioned archival artifact. Remaining blockers:
-  archive-neutral provenance bundle, DOI/license, venue declarations, and a
-  validator for local-path leakage.
+  prose asks for a final versioned archival artifact. Later chunks added the
+  local archive-neutral bundle and validator. Remaining blockers are
+  DOI/license, venue declarations, and final durable release packaging.
 - `Math/layout audit` (`Lagrange-current`): completed. Findings addressed:
   display punctuation, the positive-J hyperelastic admissible set, colored-SFD
   recovery notation, Plasticity2D formula-scope wording, `siunitx` integer

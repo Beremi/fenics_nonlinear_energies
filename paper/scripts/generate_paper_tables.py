@@ -535,17 +535,22 @@ def _write_table_manifest(out_dir: Path) -> None:
         generated_table_sources[name] = source
         if source["archive_status"] == "archive_neutral":
             generated_table_inputs[name] = source["data_inputs"]
+    notes = [
+        "Static comparison tables have empty data_inputs because their content is defined directly in paper/scripts/generate_paper_tables.py.",
+        "implementation_capability_matrix.tex is a curated static summary of solver components, derivative routes, and reference availability; numeric evidence appears in the result-specific tables.",
+    ]
+    if any(source["archive_status"] == "needs_final_archive" for source in generated_table_sources.values()):
+        notes.insert(
+            0,
+            "Tables with archive_status=needs_final_archive have explicit source provenance but still depend on raw or report inputs that must be covered by the final durable archive.",
+        )
     write_json(
         out_dir / "manifest.json",
         {
             "generated_tables": generated_tables,
             "generated_table_sources": generated_table_sources,
             "generated_table_inputs": generated_table_inputs,
-            "notes": [
-                "Tables with archive_status=needs_final_archive have explicit source provenance but still depend on raw or report inputs that must be covered by the final durable archive.",
-                "Static comparison tables have empty data_inputs because their content is defined directly in paper/scripts/generate_paper_tables.py.",
-                "implementation_capability_matrix.tex is a curated static summary of solver components, derivative routes, and reference availability; numeric evidence appears in the result-specific tables.",
-            ],
+            "notes": notes,
         },
     )
 
