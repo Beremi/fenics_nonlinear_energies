@@ -224,6 +224,49 @@ stage or commit `paper/style_guide/`.
   target-template risks now additionally include benchmark Tables 4 and 6, the
   compact validation page, the topology results page, and the previously noted
   dense Results/Hyperelasticity/Plasticity3D/appendix clusters.
+- Current thesis, evidence-scope, notation, and layout pass:
+  Pascal/Hume/Parfit/Dewey audits found no hard A4 blocker but identified
+  publish-readiness polish issues. Integrated fixes make the central thesis
+  consistent: derivative construction is evaluated inside the sparse nonlinear
+  solve that consumes it. The abstract now delays comparator caveats until after
+  the method/evidence arc, the introduction names the three comparison roles
+  (internal checks, endpoint companion comparisons, reference-model or
+  implementation context), related work states the missing combined comparison
+  contract, and the conclusion closes with evidence anchors rather than a
+  separate validation-discipline thesis. Evidence-scope fixes remove the
+  overbroad active-free-DOF claim from the direct Plasticity3D branch diagnostic,
+  keep exact active-DOF matching only for the fixed-`\lambda_{\mathrm{sr}}`
+  diagnostic, rename the validation "boundary profile" to an upper-slope
+  coordinate profile, broaden the benchmark reported-scope table to include
+  later L10/L5 diagnostics, and state that the topology rank-consistency check is
+  smaller and fixed-schedule. Mathematical-polish fixes define KSP/PMG/MUMPS/Hypre
+  before use in Methodology, change assembled residual notation to
+  `\mathcal{R}_i` to avoid collision with element restrictions, clarify the
+  2D plasticity in-plane deviatoric visualization norm, replace Ginzburg--Landau
+  "branch selection" with selected stationary basin, soften topology
+  connectedness to a displayed density pattern, and replace appendix "low-rank"
+  with small MPI-rank-count. Layout polish shortens the JAX-FEM subcaption that
+  hyphenated visibly. `paper/scripts/generate_paper_tables.py` is the source for
+  generated table edits; a full rerun requires the tracked submission-bundle
+  inputs, so do not delete those bundle files during table work.
+- Final local cleanup pass:
+  Planck/Nash/Boyle/Lorentz audits found no new experiment requirement but did
+  identify remaining publish-readiness polish. Integrated fixes replace visible
+  `Plasticity2D`/`Plasticity3D` manuscript labels with 2D/3D Mohr--Coulomb or
+  3D plasticity wording, shorten dense Results interpretation blocks, introduce
+  the constrained discrete plasticity spaces before the surrogate energies,
+  define topology `\nu`, make the topology mechanics trial space homogeneous,
+  define the stopping-gradient ratio before use, and align validation norm
+  wording with the actual unweighted Euclidean curve comparisons. Generated
+  table headers now use `Reported time [s]` consistently, the stale hard-float
+  unit test now matches the current allowlist of three method algorithms, and
+  `make -C paper submission-bundle` documents the bundle-refresh step. Figure
+  annotations for the hyperelastic centerline and 3D plasticity `u_{\max}` curve
+  now use `rel. Eucl.` to match the prose. The submission bundle was rebuilt and
+  the manifest verifies; it records the pre-commit source-control anchor
+  `8b8a6c9b8ce0dd06f9dd2099f18475dc88d284e8` plus current file hashes. Rendered
+  checks of pages 25 and 27 and the late-results pages 31--38 found no clipping
+  or unreadable updated labels.
 
 ## Figure And Table Rules
 
@@ -237,7 +280,8 @@ stage or commit `paper/style_guide/`.
 - Avoid adding hard `[H]` floats. If one is unavoidable, update
   `paper/scripts/check_float_placements.py` with a reason. The current
   allowlist contains only the three methodology algorithms.
-- After figure/table changes, run the narrow generator first and then
+- After figure/table changes, run the narrow generator first, refresh the local
+  bundle with `make -C paper submission-bundle`, and then run
   `make -C paper submission-check`.
 
 ## Claim Safety Rules
@@ -281,6 +325,8 @@ without updating the measurement policy.
 - `./.venv/bin/python -m py_compile paper/scripts/generate_paper_tables.py paper/scripts/generate_paper_figures.py`
 - `make -C paper tables` after table-generator edits
 - `make -C paper figures` after figure-generator edits
+- `make -C paper submission-bundle` after manuscript, generated-table,
+  generated-figure, or provenance-source changes
 - `make -C paper submission-check`
 - `./.venv/bin/python paper/scripts/check_release_blockers.py --expect-blockers`
 - `git check-ignore -v paper/style_guide/README.md`

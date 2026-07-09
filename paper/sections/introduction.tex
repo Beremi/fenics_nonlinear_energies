@@ -13,10 +13,10 @@ We develop and evaluate such a scientific toolset for nonlinear finite-element
 energy minimization and optimization. In the primary \jaxpetsc{} realization, JAX
 defines local energies and constitutive laws, while PETSc provides sparse
 distributed algebra, nonlinear globalization, Krylov methods, and
-preconditioners. The \purejax{} and \fenics{} formulations provide internal
-checks where matched benchmark definitions exist. External reference points are
-deliberately scoped: JAX-FEM \citep{xue2023jaxfem} is used for a narrow
-hyperelastic companion endpoint-state comparison, and the Sysala-family
+preconditioners. We use comparison evidence in three roles. The \purejax{} and
+\fenics{} formulations provide internal formulation checks where matched
+benchmark definitions exist. JAX-FEM \citep{xue2023jaxfem} supplies a narrow
+hyperelastic companion endpoint-state comparison. The Sysala-family
 slope-stability literature
 \citep{sysala2017returnmapping,sysala2021optimization,sysala2025convexoptimization,sysala2025advancedcontinuation}
 provides reference-model context for the plasticity endpoint observables. The

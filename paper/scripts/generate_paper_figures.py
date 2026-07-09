@@ -1793,7 +1793,7 @@ def generate_plasticity3d_validation_umax_curve(layout: dict[str, float]) -> str
     ax.text(
         0.98,
         0.05,
-        rf"rel. $L^2={_latex_scientific(rel_l2)}$",
+        rf"rel. Eucl. $={_latex_scientific(rel_l2)}$",
         transform=ax.transAxes,
         ha="right",
         va="bottom",
@@ -1878,7 +1878,7 @@ def generate_jax_fem_hyperelastic_baseline_centerline(layout: dict[str, float]) 
     ax.set_ylabel(r"Centerline $u_x$")
     ax.grid(True, alpha=0.25)
     ax.legend(frameon=False, loc="best", handlelength=1.7)
-    ax.text(0.03, 0.95, rf"rel. $L^2={_latex_scientific(rel_l2)}$", transform=ax.transAxes, ha="left", va="top", fontsize=8.0)
+    ax.text(0.03, 0.95, rf"rel. Eucl. $={_latex_scientific(rel_l2)}$", transform=ax.transAxes, ha="left", va="top", fontsize=8.0)
     fig.subplots_adjust(left=0.20, right=0.97, bottom=0.23, top=0.95)
     out = FIGURES_ROOT / "jax_fem_hyperelastic_baseline_centerline.pdf"
     save_pdf_and_png(fig, out, png_dpi=240)

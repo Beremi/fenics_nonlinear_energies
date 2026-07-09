@@ -9,7 +9,7 @@ reduced-objective viewpoint.
 
 \begin{table}[!htbp]
   \centering
-  \caption{Benchmark families, tested scopes, solver policies, and principal
+  \caption{Benchmark families, reported scopes, solver policies, and principal
   comparison evidence. The later numerical section revisits the same families
   from the timing and scaling viewpoint.}
   \label{tab:benchmark-spec}
@@ -78,13 +78,13 @@ size and mesh construction, not separate physical models.
       & $L_4$: \num{185249} nodes, \num{983040} tetrahedra, \num{554013}
         free displacement DOFs; $L_5$: \num{1395009} nodes, \num{7864320}
         tetrahedra, \num{4178493} free displacement DOFs. \\
-    Plasticity2D
+    2D Mohr--Coulomb
       & $P_4(L_\ell)$
       & Degree-four same-mesh Lagrange space on the homogeneous slope hierarchy.
       & $P_4(L_5)$--$P_4(L_7)$ have \num{332960}, \num{1331520}, and
         \num{5325440} free displacement DOFs on \num{20800}, \num{83200}, and
         \num{332800} triangles. \\
-    Plasticity3D
+    3D Mohr--Coulomb
       & $P_k(L_\ell)$
       & Degree-$k$ same-mesh Lagrange space on the base heterogeneous
         tetrahedral slope and one, two, or three uniform refinements.
@@ -231,8 +231,8 @@ indefinite local curvature from the double-well potential in
   \sin\!\left(\frac{\pi(x-1)}{2}\right)
   \sin\!\left(\frac{\pi(y-1)}{2}\right),
 \]
-restricted to the free degrees of freedom, so the nonconvex branch selection
-is part of the benchmark definition.
+restricted to the free degrees of freedom, so the selected stationary basin from
+this prescribed initial state is part of the benchmark definition.
 
 \begin{figure}[!htbp]
   \centering
@@ -392,7 +392,7 @@ companion is in \Cref{sec:val-hyperelasticity}.
 
 \FloatBarrier
 
-\subsection{Plasticity2D}
+\subsection{2D Mohr--Coulomb Slope Stability}
 \label{sec:bench-plasticity2d}
 
 The literature model is a quasi-static plane-strain Mohr--Coulomb slope
@@ -590,8 +590,10 @@ it is not a separate material parameter.
 
 Using these local definitions, the benchmark uses the following scalarized
 discrete surrogate functional for differentiation and comparison. Let
-$c_{\lambda,eq}$ and $\phi_{\lambda,eq}$ denote the quadrature-point
-Davis-B-reduced cohesion and friction angle:
+$V_{h,0}^{2\mathrm{D}}\subset V_0$ denote the constrained discrete displacement
+space, and take $u_h\in V_{h,0}^{2\mathrm{D}}$. Let $c_{\lambda,eq}$ and
+$\phi_{\lambda,eq}$ denote the quadrature-point Davis-B-reduced cohesion and
+friction angle:
 \begin{equation}
   \Pi_h^{2\mathrm{D}}(u_h;\lambda_{\mathrm{sr}})
   =
@@ -616,8 +618,8 @@ the gravity load with $b=(0,-\gamma)^\top$ and zero traction on the free
 boundary. The dilation angle enters this endpoint model only through the Davis-B
 reduction.
 
-The Plasticity2D visualization reports displacement magnitude and the
-plane-strain deviatoric engineering-strain magnitude
+The 2D plasticity endpoint visualization reports displacement magnitude and an
+in-plane deviatoric engineering-strain magnitude
 \[
   \|\varepsilon_{\mathrm{dev},2\mathrm{D}}\|
   =
@@ -636,8 +638,8 @@ plane-strain deviatoric engineering-strain magnitude
 \begin{figure}[!htbp]
   \centering
   \includegraphics[width=\PaperFigureMedium]{plasticity2d_state_pair.pdf}
-  \caption{Representative Plasticity2D state: displacement magnitude and
-  deviatoric strain derived from the scalar surrogate
+  \caption{Representative 2D plasticity endpoint state: displacement magnitude and
+  in-plane deviatoric strain derived from the scalar surrogate
   \eqref{eq:plasticity2d-discrete}.}
   \label{fig:plasticity2d-state}
 \end{figure}
@@ -652,7 +654,7 @@ separately below.
 \begin{figure}[!htbp]
   \centering
   \includegraphics[width=\PaperFigureNarrow]{plasticity2d_resolution_energy.pdf}
-  \caption{Resolution trend for the Plasticity2D family. The plotted
+  \caption{Resolution trend for the 2D slope-stability plasticity case. The plotted
   endpoint energies are evaluations of \eqref{eq:plasticity2d-discrete} on the
   completed $P_4(L_5)$ endpoint case and on the larger 20-iteration capped
   $P_4(L_6)$ and $P_4(L_7)$ diagnostics, which are not used as
@@ -664,7 +666,7 @@ separately below.
 
 \begin{table}[!htbp]
   \centering
-  \caption{Representative Plasticity2D endpoint and fixed-work diagnostic
+  \caption{Representative 2D plasticity endpoint and fixed-work diagnostic
   values from \eqref{eq:plasticity2d-discrete}.}
   \label{tab:plasticity2d-benchmark}
   \input{tables/generated/plasticity2d_benchmark_summary.tex}
@@ -674,12 +676,12 @@ This family is where multigrid hierarchy design first becomes dominant in the
 paper. Only the completed $P_4(L_5)$ endpoint case is treated as an endpoint
 solve; the larger $P_4(L_6)$ and $P_4(L_7)$ cases are 20-iteration capped
 diagnostics for solver behavior. Nonlinear and multigrid solver evidence for
-Plasticity2D is reported later in
+2D plasticity is reported later in
 \Cref{sec:num-plasticity2d,sec:solver-evidence}.
 
 \FloatBarrier
 
-\subsection{Plasticity3D}
+\subsection{3D Mohr--Coulomb Slope Stability}
 \label{sec:bench-plasticity3d}
 
 The literature model is again quasi-static Mohr--Coulomb equilibrium with
@@ -981,8 +983,10 @@ treated as part of the algorithmic constitutive surrogate rather than as a
 globally smooth continuum potential.
 
 For the endpoint and continuation studies, these local definitions are assembled
-into the following scalar surrogate. Let $\bar c_{\lambda,eq}$ and
-$s_{\lambda,eq}$ denote the quadrature-point Davis-B-reduced quantities, and set
+into the following scalar surrogate. Let $V_{h,0}^{3\mathrm{D}}\subset V_0$
+denote the constrained discrete displacement space, and take
+$u_h\in V_{h,0}^{3\mathrm{D}}$. Let $\bar c_{\lambda,eq}$ and $s_{\lambda,eq}$
+denote the quadrature-point Davis-B-reduced quantities, and set
 $\varepsilon_{eq}(u_e)=B_{eq}u_e$ for the six-component engineering strain at
 quadrature point $q$ of element $e$:
 \begin{equation}
@@ -1032,7 +1036,7 @@ which matches the engineering-shear convention of
 Equations \eqref{eq:plasticity3d-discrete} and
 \eqref{eq:plasticity3d-potential} define an algorithmic endpoint surrogate
 rather than a path-consistent incremental-history functional. The paper
-therefore keeps Plasticity3D claims at the endpoint-surrogate level and treats
+therefore keeps 3D plasticity claims at the endpoint-surrogate level and treats
 direct-branch endpoint observables separately from the fixed-$\lambda_{\mathrm{sr}}$
 matched-comparator diagnostic in \Cref{sec:val-plasticity3d}. The related return-mapping,
 optimization, convex-optimization, and continuation literature
@@ -1042,7 +1046,7 @@ provides reference-model context for that boundary.
 \begin{figure}[!htbp]
   \centering
   \includegraphics[width=\PaperFigureMedium]{plasticity3d_state_pair.pdf}
-  \caption{Bottom-clamped Plasticity3D representative endpoint at
+  \caption{Bottom-clamped 3D plasticity representative endpoint at
   $\lambda_{\mathrm{sr}}=\num{1.55}$: displacement magnitude and surface deviatoric
   strain for the $P_4(L_2)$ configuration, both derived from the
   scalar surrogate in
@@ -1054,7 +1058,7 @@ provides reference-model context for that boundary.
   \centering
   \includegraphics[width=\PaperFigureMedium]{plasticity3d_convergence.pdf}
   \caption{Newton-history convergence for all nine completed bottom-clamped
-  Plasticity3D endpoint configurations at
+  3D plasticity endpoint configurations at
   $\lambda_{\mathrm{sr}}=\num{1.55}$. The upper panel shows the value of the
   algorithmic surrogate from \eqref{eq:plasticity3d-discrete}; the lower panel
   shows the gradient norm used as the nonlinear stopping metric, with color
@@ -1066,7 +1070,7 @@ provides reference-model context for that boundary.
 
 \begin{table}[!htbp]
   \centering
-  \caption{All nine completed bottom-clamped Plasticity3D
+  \caption{All nine completed bottom-clamped 3D plasticity
   study cases at $\lambda_{\mathrm{sr}}=\num{1.55}$, reported as endpoint values of
   \eqref{eq:plasticity3d-discrete}.}
   \label{tab:plasticity3d-benchmark}
@@ -1099,7 +1103,7 @@ changes of the physical problem.
 
 \FloatBarrier
 
-Plasticity3D is the benchmark where detailed constitutive definitions are most
+The 3D plasticity case is the benchmark where detailed constitutive definitions are most
 important: the equations above define the endpoint-surrogate quantities reported
 in the results section, namely \eqref{eq:plasticity3d-discrete} and
 \eqref{eq:plasticity3d-devnorm}.
@@ -1124,7 +1128,7 @@ rank-consistency check in \Cref{sec:num-topology}.
 The fine-grid topology problem uses $\Omega=(0,2)\times(0,1)$ with a
 $768\times384$ structured triangular mesh, target volume fraction $0.4$,
 $\theta_{\min}=\num{1e-6}$, Young's modulus $E=\num{1}$, and Poisson ratio
-$0.3$. The left edge is clamped, and a downward unit traction acts on the load
+$\nu=\num{0.3}$. The left edge is clamped, and a downward unit traction acts on the load
 patch $\{2\}\times[0.4,0.6]$. With $h_x=2/768$ and $h_y=1/384$, fixed-solid
 design pads are imposed on $x\le 32h_x$ and on
 $x\ge 2-32h_x$, $y\in[0.4-32h_y,0.6+32h_y]$.
@@ -1187,8 +1191,8 @@ The load functional is
   =
   \int_{\{2\}\times[0.4,0.6]} (0,-1)\cdot v\,\mathrm{d}s.
 \]
-The mechanics step finds $u_h(\theta_h)$ in the affine displacement space such
-that $a_{\theta_h}(u_h,v_h)=\ell(v_h)$ for all $v_h\in V_{h,0}$.
+The mechanics step finds $u_h(\theta_h)\in V_{h,0}$ such that
+$a_{\theta_h}(u_h,v_h)=\ell(v_h)$ for all $v_h\in V_{h,0}$.
 The scalar compliance observable reported below is
 \[
   \mathcal{C}_h(\theta_h)
@@ -1324,8 +1328,8 @@ reduced design updates for \eqref{eq:topology-reduced-objective}.
 
 \Cref{fig:topology-density,fig:topology-history} and
 \Cref{tab:topology-benchmark} show the reduced-design endpoint used for the
-topology timing study. The fine-grid configuration produces a connected load-bearing
-density field, reaches volume fraction \num{0.3749}, and stops after 66 outer
+topology timing study. The fine-grid configuration produces the displayed
+load-bearing density pattern, reaches volume fraction \num{0.3749}, and stops after 66 outer
 iterations under the continuation logic shown in \Cref{fig:topology-history}.
 The target volume is imposed through the adaptive multiplier and stopping rule,
 so the endpoint volume is reported as an achieved value rather than as an exact

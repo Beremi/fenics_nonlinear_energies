@@ -1610,6 +1610,60 @@ MATLAB literature only when there is source-backed evidence.
   PMG/memory material, Plasticity3D degree/scaling material, the topology
   figure/table/prose page, appendix Table 30, and float behavior after venue
   conversion.
+- `Current thesis, evidence-scope, notation, and layout audit`
+  (`Pascal the 2nd`/`Hume the 2nd`/`Parfit the 2nd`/`Dewey the 2nd`):
+  completed and integrated in the current chunk. Pascal found that the thesis
+  shifted among derivative-route evaluation, coupled solver-design assessment,
+  and validation/reporting discipline; the integrated edits now make the thesis
+  derivative construction inside the sparse nonlinear solve that consumes it.
+  The abstract presents method and evidence before comparator caveats, the
+  introduction names the comparison taxonomy, related work states that no single
+  source class supplies the full matched derivative-route/PETSc-owned sparse MPI
+  Newton comparison contract, and the conclusion closes with evidence anchors
+  from Plasticity3D derivative routes, endpoint-scoped validation, distributed
+  mechanics solver policy, and topology rank consistency. Parfit found a real
+  evidence-scope issue: the direct Plasticity3D branch diagnostic did not have
+  exact active-free-DOF matching in the provenance. The text now reserves active
+  free-DOF matching for the fixed-`\lambda_{\mathrm{sr}}` diagnostic and treats
+  the direct branch as an endpoint-observable comparison under the same endpoint
+  functional, mesh, material table, Davis-B schedule, and boundary-condition
+  convention. Hume's self-containment findings are addressed by renaming the
+  Plasticity3D "boundary profile" diagnostic to an upper-slope coordinate
+  profile, clarifying the 2D plasticity in-plane deviatoric visualization norm,
+  replacing assembled residual `R_i` with `\mathcal{R}_i`, defining
+  KSP/PMG/MUMPS/Hypre before use in Methodology, changing Ginzburg--Landau
+  "branch selection" to selected stationary basin, softening topology
+  connectedness to a displayed density pattern, and replacing appendix
+  "low-rank" wording with small MPI-rank-count. Additional evidence-scope edits
+  broaden the benchmark reported-scope table to include the later L10 scalar
+  globalization diagnostics and the L5 hyperelastic PMG/memory diagnostics, and
+  discussion now states that the topology rank-consistency check is smaller and
+  fixed-schedule. Dewey found no hard A4 layout blocker; the JAX-FEM subcaption
+  that visibly hyphenated "schedule" was shortened. Generated table edits are
+  sourced in `paper/scripts/generate_paper_tables.py`; keep the tracked
+  submission-bundle input files present because the full table generator reads
+  them before writing any table.
+- `Final local cleanup audit`
+  (`Planck`/`Nash`/`Boyle`/`Lorentz`): completed and integrated. Planck found
+  page-budget fragility but no current A4 blocker; dense Results prose around
+  globalization, derivative-route degree cost, Hyperelasticity PMG scaling, 3D
+  plasticity degree/scaling, and topology rank consistency is now shorter and
+  tied to the displayed tables/figures. Nash found remaining visible internal
+  case labels and mixed timing terminology; visible manuscript labels now use
+  2D/3D Mohr--Coulomb or 3D plasticity wording, `\localpmg` expands to a shorter
+  constitutive-AD PMG configuration phrase, generated globalization tables use
+  `Reported time [s]`, and the protocol table uses `reported solve time`. Boyle
+  found small notation gaps: the plasticity surrogate energies now introduce
+  constrained discrete spaces, topology defines `\nu=\num{0.3}`, the topology
+  mechanics solve is stated in `V_{h,0}`, validation curves are named as
+  Euclidean sample norms, and the Plasticity3D stopping-gradient ratio is
+  defined before use. Lorentz found local provenance/test gaps: the hard-float
+  unit test now matches the current method-algorithm allowlist, `make -C paper
+  submission-bundle` documents the bundle-refresh command, and the submission
+  bundle was rebuilt and verified. Figure labels for the hyperelastic centerline
+  and 3D plasticity `u_{\max}` curve now say `rel. Eucl.` to match the prose.
+  Rendered checks of pages 25 and 27 plus a late-results contact sheet for pages
+  31--38 found no clipping or unreadable updated labels.
 
 ## First Edit Backlog
 

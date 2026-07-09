@@ -161,7 +161,7 @@ GLOBALIZATION_BENCHMARK_LABELS = {
     "plaplace_l10_np32": "$p$-Laplace $L_{10}$",
     "gl_l10_np16": "\\shortstack[l]{Ginzburg--Landau\\\\$L_{10}$}",
     "he_l4_np32_steps8": "Hyperelasticity $L_4$",
-    "plasticity3d_p2_l1_np32_lambda155": "\\shortstack[l]{Plasticity3D\\\\$P_2(L_1)$}",
+    "plasticity3d_p2_l1_np32_lambda155": "\\shortstack[l]{3D plasticity\\\\$P_2(L_1)$}",
 }
 
 DERIVATIVE_BENCHMARK_ORDER = {
@@ -180,7 +180,7 @@ DERIVATIVE_BENCHMARK_LABELS = {
     "plaplace_l9_np32": "$p$-Laplace $L_9$",
     "he_l4_step1_np32": "Hyperelasticity $L_4$ step 1",
     "plasticity3d_p2_l1_lambda155_np32": (
-        "\\shortstack[l]{Plasticity3D $P_2(L_1)$\\\\$\\lambda_{\\mathrm{sr}}=\\num{1.55}$}"
+        "\\shortstack[l]{3D plasticity $P_2(L_1)$\\\\$\\lambda_{\\mathrm{sr}}=\\num{1.55}$}"
     ),
 }
 
@@ -800,7 +800,7 @@ def _derivative_row_time(row: dict[str, str]) -> str:
 def _derivative_row_time_scope(row: dict[str, str]) -> str:
     for key, label in (
         ("solve_time_s", "solve"),
-        ("total_time_s", "solver total"),
+        ("total_time_s", "solver-internal"),
         ("wall_time_s", "wall"),
     ):
         if str(row.get(key, "")).strip():
@@ -1026,8 +1026,8 @@ def main() -> None:
             ["$p$-Laplace", "yes", "yes", "yes", "element AD and colored sparse recovery; Newton--CG with Hypre"],
             ["Ginzburg--Landau", "yes", "no", "yes", "element AD and colored sparse recovery; Armijo Newton with GMRES--Hypre"],
             ["Hyperelasticity", "yes", "yes", "yes", "element AD in the primary route, scoped colored sparse-recovery comparison, and trust-region/GAMG or PMG diagnostics"],
-            ["Plasticity2D", "no", "no", "yes", "endpoint branch-potential derivatives and continuation diagnostics with a same-mesh PMG hierarchy"],
-            ["Plasticity3D", "no", "no", "yes", "constitutive AD, element AD, and colored sparse-recovery diagnostics; FGMRES with same-mesh PMG and Hypre or LU/MUMPS coarse profiles"],
+            ["2D Mohr--Coulomb", "no", "no", "yes", "endpoint branch-potential derivatives and continuation diagnostics with a same-mesh PMG hierarchy"],
+            ["3D Mohr--Coulomb", "no", "no", "yes", "constitutive AD, element AD, and colored sparse-recovery diagnostics; FGMRES with same-mesh PMG and Hypre or LU/MUMPS coarse profiles"],
             ["Topology optimization", "no", "yes", "yes", "distributed design updates with PETSc mechanics and GAMG-preconditioned FGMRES"],
         ],
     )
@@ -1045,13 +1045,13 @@ def main() -> None:
         + " "
         + pcol(r"0.170\textwidth")
         + "@{}",
-        ["Family", "Tested scope", "Solve policy", "Comparison evidence", "Main difficulty"],
+        ["Family", "Reported scope", "Solve policy", "Comparison evidence", "Main difficulty"],
         [
-            ["$p$-Laplace", f"{mesh_label('L5')} serial agreement; {mesh_label('L9')} distributed scaling", "Newton + line search", "FEniCS and JAX+PETSc on the distributed case; pure JAX in the serial agreement case", "nonlinear elliptic solve with exact sparse Hessians"],
-            ["Ginzburg--Landau", f"{mesh_label('L5')} agreement; {mesh_label('L9')} distributed scaling", "Newton + line search", "FEniCS and JAX+PETSc comparison", "indefinite local curvature from the double well"],
-            ["Hyperelasticity", f"{mesh_label('L1')} serial agreement; {mesh_label('L4')}, 24-step distributed scaling", "trust-region solve", "FEniCS and JAX+PETSc on the distributed suite; pure JAX only as a serial formulation check", "nonconvex large-deformation mechanics"],
-            ["Plasticity2D", f"{element_label('P4', 'L5')}--{element_label('P4', 'L7')}", "endpoint solve and capped fixed work", "JAX+PETSc endpoint and solver-policy evidence", "same-mesh PMG and nonlinear tail behavior"],
-            ["Plasticity3D", f"{degree_label('P1')}/{degree_label('P2')}/{degree_label('P4')}", "endpoint, scaling, and PMG-policy studies", "constitutive AD, reference-formula assembly diagnostic, and PMG-policy evidence", "heterogeneous 3D Mohr--Coulomb with constitutive AD"],
+            ["$p$-Laplace", f"{mesh_label('L5')} serial agreement; {mesh_label('L9')} distributed scaling; {mesh_label('L10')} globalization diagnostic", "Newton + line search", "FEniCS and JAX+PETSc on the distributed case; pure JAX in the serial agreement case", "nonlinear elliptic solve with exact sparse Hessians"],
+            ["Ginzburg--Landau", f"{mesh_label('L5')} agreement; {mesh_label('L9')} distributed scaling; {mesh_label('L10')} globalization diagnostic", "Newton + line search", "FEniCS and JAX+PETSc comparison", "indefinite local curvature from the double well"],
+            ["Hyperelasticity", f"{mesh_label('L1')} serial agreement; {mesh_label('L4')}, 24-step distributed scaling; {mesh_label('L5')} PMG/memory diagnostics", "trust-region solve", "FEniCS and JAX+PETSc on the distributed suite; pure JAX only as a serial formulation check", "nonconvex large-deformation mechanics"],
+            ["2D Mohr--Coulomb", f"{element_label('P4', 'L5')}--{element_label('P4', 'L7')}", "endpoint solve and capped fixed work", "JAX+PETSc endpoint and solver-policy evidence", "same-mesh PMG and nonlinear tail behavior"],
+            ["3D Mohr--Coulomb", f"{degree_label('P1')}/{degree_label('P2')}/{degree_label('P4')}", "endpoint, scaling, and PMG-policy studies", "constitutive AD, reference-formula assembly diagnostic, and PMG-policy evidence", "heterogeneous 3D Mohr--Coulomb with constitutive AD"],
             ["Topology", "$192\\times96$ serial demonstration; $768\\times384$ parallel benchmark", "adaptive continuation", "pure JAX on the serial demonstration; JAX+PETSc on the fine-grid adaptive MPI timing study and controlled rank-consistency check", "distributed design-mechanics coupling"],
         ],
     )
@@ -1072,9 +1072,9 @@ def main() -> None:
             ["$p$-Laplace", "yes", "yes", "All three implementations exist; pure JAX is used in the serial parity case."],
             ["Ginzburg--Landau", "yes", "no", "FEniCS and JAX+PETSc form the reported comparison."],
             ["Hyperelasticity", "yes", "yes", "pure JAX is a serial formulation check only."],
-            ["Plasticity2D", "no", "no", "The reported realization is JAX+PETSc only."],
+            ["2D Mohr--Coulomb", "no", "no", "The reported realization is JAX+PETSc only."],
             [
-                "Plasticity3D",
+                "3D Mohr--Coulomb",
                 "no",
                 "no",
                 "Reference-formula constitutive assembly is used only as a supporting comparison route.",
@@ -1109,14 +1109,14 @@ def main() -> None:
                 "Comparable only for configurations that share the same benchmark contract and timing scope.",
             ],
             [
-                "solve time / solver total",
+                "reported solve time",
                 "Timer internal to the nonlinear or PETSc solve; setup, state export, and postprocessing may be outside this timer.",
                 "Used for within-table solver comparisons, not as a universal replacement for wall time.",
             ],
             [
                 "relative correction",
                 "Norm of the accepted Newton correction relative to the current iterate scale; paired gradient checks use the absolute or relative target stated with the result.",
-                "Defines the stopping metric in Plasticity3D configurations that report correction or gradient targets.",
+                "Defines the stopping metric in 3D plasticity configurations that report correction or gradient targets.",
             ],
         ],
     )
@@ -1149,10 +1149,10 @@ def main() -> None:
                 "trust-region or line-search Newton; GAMG or PMG as stated",
                 "GAMG entries: $10^{-1}$/30; PMG tolerances stated in diagnostic entries",
                 "per-load stationarity; fixed-step entries diagnostic",
-                "wall time; solver total for first-step scaling",
+                "wall time; reported solve time for first-step scaling",
             ],
             [
-                "Plasticity2D",
+                "2D Mohr--Coulomb",
                 "endpoint evidence and fixed-work diagnostics",
                 "Armijo continuation with same-mesh PMG",
                 "typically $10^{-2}$/15 unless a diagnostic states otherwise",
@@ -1160,7 +1160,7 @@ def main() -> None:
                 "wall time",
             ],
             [
-                "Plasticity3D validation",
+                "3D Mohr--Coulomb validation",
                 "endpoint-surrogate agreement, not path-history validation",
                 r"fixed-$\lambda_{\mathrm{sr}}$ comparator diagnostics with matched boundary data",
                 "not used for timing comparison",
@@ -1168,7 +1168,7 @@ def main() -> None:
                 "secondary to agreement metrics",
             ],
             [
-                "Plasticity3D performance",
+                "3D Mohr--Coulomb performance",
                 "second-order routes, globalization, parallel scaling",
                 "Armijo, residual-bisection, or trust-region Newton with FGMRES/PMG",
                 "$10^{-1}$ or $10^{-2}$ with max 100, as stated by configuration",
@@ -1322,7 +1322,7 @@ def main() -> None:
                     "Ranks",
                     "Outcome",
                     r"\shortstack{Completed/requested\\steps}",
-                    "Solve/elapsed [s]",
+                    "Reported time [s]",
                     "Grad/target",
                     "Energy",
                 ],
@@ -1529,7 +1529,7 @@ def main() -> None:
             "Krylov",
             "LS evals",
             "TR rejects",
-            "Solve/elapsed [s]",
+            "Reported time [s]",
             "Cap [s]",
             "Energy",
         ],
@@ -1863,10 +1863,10 @@ def main() -> None:
         ["Check", "Comparison", "Relative difference", "Status"],
         [
             ["endpoint observable", "work", fmt_sci(float(layer1a_metrics["work_relative_difference"])), "reported"],
-            ["endpoint observable", "displacement relative $L^2$", fmt_sci(float(layer1a_metrics["displacement_relative_l2"])), "reported"],
+            ["endpoint observable", "displacement relative discrete norm", fmt_sci(float(layer1a_metrics["displacement_relative_l2"])), "reported"],
             [
                 "endpoint observable",
-                "deviatoric-strain relative $L^2$",
+                "deviatoric-strain relative discrete norm",
                 fmt_sci(float(layer1a_metrics["deviatoric_strain_relative_l2"])),
                 "reported",
             ],
@@ -1878,25 +1878,25 @@ def main() -> None:
             ],
             [
                 r"fixed-$\lambda_{\mathrm{sr}}$ comparison",
-                "$u_{\\max}(\\lambda_{\\mathrm{sr}})$ relative $L^2$",
+                "$u_{\\max}(\\lambda_{\\mathrm{sr}})$ relative Euclidean curve norm",
                 fmt_sci(float(layer2_metrics["umax_curve_relative_l2"])),
                 _layer2_criterion_status(layer2_metrics, "umax_curve_pass"),
             ],
             [
                 r"fixed-$\lambda_{\mathrm{sr}}$ comparison",
-                "endpoint displacement relative $L^2$",
+                "endpoint displacement relative discrete norm",
                 fmt_sci(float(layer2_metrics["endpoint_displacement_relative_l2"])),
                 _layer2_criterion_status(layer2_metrics, "endpoint_disp_pass"),
             ],
             [
                 r"fixed-$\lambda_{\mathrm{sr}}$ comparison",
-                "endpoint deviatoric-strain relative $L^2$",
+                "endpoint deviatoric-strain relative discrete norm",
                 fmt_sci(float(endpoint_dev)) if endpoint_dev is not None else "--",
                 "diagnostic",
             ],
             [
                 r"fixed-$\lambda_{\mathrm{sr}}$ comparison",
-                "boundary profile relative $L^2$",
+                "upper-slope profile relative Euclidean curve norm",
                 fmt_sci(float(layer2_metrics["boundary_profile_relative_l2"])),
                 "diagnostic",
             ],
@@ -1968,8 +1968,8 @@ def main() -> None:
         [
             ["Agreement", "final energy", fmt_sci(float(final_metrics["energy_rel_diff"])), "below $5\\%$"],
             ["Agreement", "full-field displacement relative Euclidean", fmt_sci(float(final_metrics["field_relative_l2"])), "below $5\\%$"],
-            ["Agreement", "centerline relative $L^2$", fmt_sci(float(final_metrics["centerline_relative_l2"])), "below $5\\%$"],
-            ["Agreement", "$u_{\\max}$ curve relative $L^2$", fmt_sci(float(final_metrics["umax_curve_relative_l2"])), "below $5\\%$"],
+            ["Agreement", "centerline relative Euclidean curve norm", fmt_sci(float(final_metrics["centerline_relative_l2"])), "below $5\\%$"],
+            ["Agreement", "$u_{\\max}$ curve relative Euclidean norm", fmt_sci(float(final_metrics["umax_curve_relative_l2"])), "below $5\\%$"],
             r"\addlinespace",
             ["Condition", "common mesh", "--", criterion_status(fairness_checks["same_mesh_path"])],
             ["Condition", "common displacement schedule", "--", criterion_status(fairness_checks["same_schedule"])],

@@ -46,13 +46,13 @@ choices depend on the benchmark family, but the common logic is:
         appropriate cost tradeoff.
 \end{itemize}
 
-This split is scientifically important. It lets us compare AD-derived local
-second-order information against carefully structured sparse recovery routes
+This split is scientifically important. It permits comparison of AD-derived
+local second-order information with carefully structured sparse recovery routes
 without changing the nonlinear solver or sparse assembly path. Only the
 finite-difference probe variant is an approximation to the directional
-derivative. In other words, the paper compares
-derivative strategies inside one common distributed solver construction, not only
-across reference implementations.
+derivative. In other words, the paper compares derivative strategies inside one
+common distributed solver construction, not only across reference
+implementations.
 
 \begin{figure}[!htbp]
   \centering
@@ -143,16 +143,16 @@ Matrix entries are inserted only for rows in $I_r$, with values on $G_r$ used to
 evaluate local stencils but not to duplicate ownership. Scalar energy values in
 the numerical tables are global reductions for the corresponding solver
 configuration; the ownership contract here concerns derivative and matrix
-assembly. Here $R_i(u)$ and $A_{ij}(u)$ are assembled residual and tangent
-entries, while $r_{K,i}$ and $a_{K,ij}$ are element contributions.
+assembly. Here $\mathcal{R}_i(u)$ and $\mathcal{A}_{ij}(u)$ are assembled residual and
+tangent entries, while $r_{K,i}$ and $a_{K,ij}$ are element contributions.
 Equivalently, if
 $\mathcal{T}_r=\{K:\operatorname{dofs}(K)\cap I_r\ne\emptyset\}$ and
 $u_K=R_Ku_{\widetilde I_r}$ is the element restriction of the ghosted rank
 state, then rank $r$ inserts
 \[
-  R_i(u)=\sum_{K\in\mathcal{T}_r:\,i\in\operatorname{dofs}(K)}
+  \mathcal{R}_i(u)=\sum_{K\in\mathcal{T}_r:\,i\in\operatorname{dofs}(K)}
     r_{K,i}(u_K),\qquad
-  A_{ij}(u)=\sum_{K\in\mathcal{T}_r:\,i,j\in\operatorname{dofs}(K)}
+  \mathcal{A}_{ij}(u)=\sum_{K\in\mathcal{T}_r:\,i,j\in\operatorname{dofs}(K)}
     a_{K,ij}(u_K),
   \quad i\in I_r,\; j\in \widetilde I_r,
 \]

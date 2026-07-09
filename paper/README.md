@@ -29,6 +29,8 @@ Run commands from the repository root unless noted otherwise.
   plotting changes.
 - `make -C paper tables`: regenerate generated tables after table-source or
   table-generator changes.
+- `make -C paper submission-bundle`: refresh the local submission bundle after
+  manuscript, table, figure, or provenance-source changes.
 - `make -C paper publish-check`: verify archive-neutral paper provenance,
   including submission-bundle manifest SHA-256 records.
 - `make -C paper submission-check`: build the PDF and run the LaTeX-log scan,

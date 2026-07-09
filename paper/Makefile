@@ -2,7 +2,7 @@ PYTHON := ../.venv/bin/python
 LATEXMK := latexmk
 MAIN := main.tex
 
-.PHONY: all layout figures tables literature validate publish-check submission-check release-check release-blockers pdf clean \
+.PHONY: all layout figures tables literature validate publish-check submission-check release-check release-blockers submission-bundle pdf clean \
 	plasticity3d-validation-run plasticity3d-validation-assets \
 	plasticity3d-derivative-ablation-run plasticity3d-derivative-ablation-assets \
 	jax-fem-baseline-run jax-fem-baseline-assets reproducibility
@@ -41,6 +41,9 @@ jax-fem-baseline-assets:
 
 reproducibility:
 	$(PYTHON) scripts/generate_reproducibility_note.py
+
+submission-bundle:
+	$(PYTHON) scripts/build_submission_bundle.py
 
 validate: figures tables
 	$(PYTHON) scripts/validate_paper_assets.py

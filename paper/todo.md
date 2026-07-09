@@ -778,6 +778,22 @@ required support for the current scoped contribution.
   `git diff --check`, generated-table caption-order sweep, stale source-name
   sweeps, and ignored-style-guide checks passed for the thematic audit chunk.
   The release audit still reports only the expected external blockers.
+- Final thesis/evidence-scope chunk addressed four read-only audits: central
+  message, mathematical notation and metric definitions, evidence scoping, and
+  layout readability. Exact validation commands run for this chunk:
+  `make -C paper tables`;
+  targeted regeneration of `plasticity3d_validation_umax_curve` and
+  `jax_fem_hyperelastic_baseline_centerline`;
+  `make -C paper submission-check`;
+  `./.venv/bin/python -m py_compile paper/scripts/generate_paper_tables.py paper/scripts/generate_paper_figures.py`;
+  `./.venv/bin/python -m pytest tests/test_paper_float_placements.py`;
+  `./.venv/bin/python paper/scripts/check_release_blockers.py --expect-blockers`;
+  `./.venv/bin/python paper/scripts/check_submission_bundle_manifest.py`;
+  `git diff --check`;
+  PDF stale-term and metadata checks; and ignored-style-guide checks.
+  Rendered PDF checks used `pdftoppm -png -r 144` on pages 10--12, 25, 27--30,
+  and 39--40, followed by targeted page-25/page-27 reinspection after refreshing
+  the Euclidean curve labels.
 
 Exact remaining blockers are submission metadata and license/archive DOI. The
 archive-neutral validator now passes against the local curated bundle; final

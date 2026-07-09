@@ -4,7 +4,7 @@
 \par\vspace{0.2em}
 \begin{tabularx}{\textwidth}{@{}>{\hsize=1.143\hsize\linewidth=\hsize\RaggedRight\arraybackslash}X>{\hsize=0.857\hsize\linewidth=\hsize\RaggedRight\arraybackslash}X@{\hspace{0.45em}}c c c c c c@{}}
 \toprule
-Benchmark & Method & Ranks & Outcome & \shortstack{Completed/requested\\steps} & Solve/elapsed [s] & Grad/target & Energy \\
+Benchmark & Method & Ranks & Outcome & \shortstack{Completed/requested\\steps} & Reported time [s] & Grad/target & Energy \\
 \midrule
 $p$-Laplace $L_{10}$ & Newton + LS & 32 & completed & 1/1 & \num{6.95} & -- & \num{-0.2517224496} \\
 $p$-Laplace $L_{10}$ & Steihaug TR & 32 & completed & 1/1 & \num{11.7} & -- & \num{-0.2517227312} \\
@@ -15,9 +15,9 @@ $p$-Laplace $L_{10}$ & Hybrid TR+LS & 32 & completed & 1/1 & \num{12} & -- & \nu
 Hyperelasticity $L_4$ & Newton + LS & 32 & completed & 8/8 & \num{194} & -- & \num{9.733145} \\
 Hyperelasticity $L_4$ & Steihaug TR & 32 & completed & 8/8 & \num{178} & -- & \num{9.73101} \\
 Hyperelasticity $L_4$ & Hybrid TR+LS & 32 & completed & 8/8 & \num{149} & -- & \num{9.730978} \\
-\shortstack[l]{Plasticity3D\\$P_2(L_1)$} & Newton + LS & 32 & iteration cap & 0/1 & \num{70.2} & \num{1.18} & \num{-3012813} \\
-\shortstack[l]{Plasticity3D\\$P_2(L_1)$} & Steihaug TR & 32 & completed & 1/1 & \num{20.8} & \num{0.00967} & \num{-3012813} \\
-\shortstack[l]{Plasticity3D\\$P_2(L_1)$} & Hybrid TR+LS & 32 & completed & 1/1 & \num{16.4} & \num{0.579} & \num{-3012813} \\
+\shortstack[l]{3D plasticity\\$P_2(L_1)$} & Newton + LS & 32 & iteration cap & 0/1 & \num{70.2} & \num{1.18} & \num{-3012813} \\
+\shortstack[l]{3D plasticity\\$P_2(L_1)$} & Steihaug TR & 32 & completed & 1/1 & \num{20.8} & \num{0.00967} & \num{-3012813} \\
+\shortstack[l]{3D plasticity\\$P_2(L_1)$} & Hybrid TR+LS & 32 & completed & 1/1 & \num{16.4} & \num{0.579} & \num{-3012813} \\
 \bottomrule
 \end{tabularx}
 
@@ -38,9 +38,9 @@ $p$-Laplace $L_{10}$ & Hybrid TR+LS & 32 & 29 & 32 & 29 & 0 \\
 Hyperelasticity $L_4$ & Newton + LS & 32 & 420 & 6984 & 2758 & 0 \\
 Hyperelasticity $L_4$ & Steihaug TR & 32 & 314 & 7245 & 0 & 95 \\
 Hyperelasticity $L_4$ & Hybrid TR+LS & 32 & 295 & 6849 & 499 & 3 \\
-\shortstack[l]{Plasticity3D\\$P_2(L_1)$} & Newton + LS & 32 & 80 & 858 & 224 & 0 \\
-\shortstack[l]{Plasticity3D\\$P_2(L_1)$} & Steihaug TR & 32 & 13 & 96 & 0 & 1 \\
-\shortstack[l]{Plasticity3D\\$P_2(L_1)$} & Hybrid TR+LS & 32 & 11 & 73 & 12 & 0 \\
+\shortstack[l]{3D plasticity\\$P_2(L_1)$} & Newton + LS & 32 & 80 & 858 & 224 & 0 \\
+\shortstack[l]{3D plasticity\\$P_2(L_1)$} & Steihaug TR & 32 & 13 & 96 & 0 & 1 \\
+\shortstack[l]{3D plasticity\\$P_2(L_1)$} & Hybrid TR+LS & 32 & 11 & 73 & 12 & 0 \\
 \bottomrule
 \end{tabularx}
 \end{minipage}

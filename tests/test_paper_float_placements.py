@@ -20,16 +20,16 @@ def _load_module():
     return module
 
 
-def test_float_checker_accepts_allowlisted_h_float(tmp_path: Path) -> None:
+def test_float_checker_accepts_allowlisted_h_algorithm(tmp_path: Path) -> None:
     checker = _load_module()
     tex = tmp_path / "section.tex"
     tex.write_text(
         "\n".join(
             [
-                r"\begin{figure}[H]",
-                r"\caption{A controlled validation figure.}",
-                r"\label{fig:plasticity3d-validation}",
-                r"\end{figure}",
+                r"\begin{algorithm}[H]",
+                r"\caption{Hybrid Newton solver.}",
+                r"\label{alg:hybrid-newton}",
+                r"\end{algorithm}",
                 "",
             ]
         ),

@@ -8,14 +8,17 @@ construction, sparse ownership, nonlinear globalization, Krylov algebra, and
 preconditioning as one solver design rather than as separable implementation
 details.
 
-The resulting contribution is not only a JAX--PETSc coupling, but also a
-validation and reporting discipline for the tested nonlinear FEM energy
-benchmarks: derivative routes, sparse ownership, nonlinear globalization, and
-preconditioning are reported as coupled numerical choices on the tested energy
-families.
+The central lesson is that derivative construction should be evaluated inside
+the sparse nonlinear solve that consumes it. This point is visible in the
+high-order 3D plasticity derivative-route comparison, the endpoint-scoped
+hyperelasticity and plasticity validation checks, the distributed mechanics
+solver-policy studies, and the topology rank-consistency diagnostic. These
+evidence blocks support the \jaxpetsc{} toolset for the benchmark families tested
+here without implying a universal backend, preconditioner, globalization, or
+derivative-route ranking.
 Natural extensions are path-dependent mechanics validation against
 incremental-history references, broader agreement-focused external comparisons
 under matched problem definitions, and reduced preconditioner-setup and
 multigrid costs in sparse mechanics configurations. Those extensions would test
-whether the validation discipline of the present study carries over to broader
+whether the coupled solver-design discipline of the present study carries over to broader
 nonlinear mechanics and design problems.

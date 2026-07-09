@@ -3,9 +3,9 @@
 This appendix collects supporting solver-policy diagnostics that are
 methodologically useful but narrower than the main benchmark narratives.
 
-\subsection{Plasticity3D Reference-Formula and Frozen-Preconditioner PMG Comparisons}
+\subsection{3D Mohr--Coulomb Reference-Formula and Frozen-Preconditioner PMG Comparisons}
 
-The main Plasticity3D numerical evidence in \Cref{sec:num-plasticity3d} is the
+The main 3D plasticity numerical evidence in \Cref{sec:num-plasticity3d} is the
 rank-local constitutive-AD path. The tables below add two solver-policy
 comparisons on the same $P_4(L_2)$ problem from
 \eqref{eq:plasticity3d-discrete} at $\lambda_{\mathrm{sr}}=\num{1.0}$: a
@@ -32,7 +32,7 @@ is not rebuilt along the nonlinear path.
 \begin{table}[!htbp]
   \centering
   \caption{Frozen-preconditioner PMG alternative on the same
-  $P_4(L_2)$, $\lambda_{\mathrm{sr}}=\num{1.0}$ Plasticity3D problem. The status
+  $P_4(L_2)$, $\lambda_{\mathrm{sr}}=\num{1.0}$ 3D plasticity problem. The status
   column distinguishes completed configurations from rank counts that reach the
   maximum number of Newton iterations before satisfying the target gradient
   tolerance.}
@@ -43,21 +43,22 @@ is not rebuilt along the nonlinear path.
 These diagnostics support two narrower statements. First, reference-formula
 branch-tangent assembly has lower reported wall time than AD-branch tangent
 assembly in the listed matched-rank comparisons, although the gap narrows at
-higher rank counts.
+higher rank counts. All rows in the matched reference-formula comparison
+completed under the stated gradient stopping target.
 Second, the frozen-preconditioner PMG profile is not the default used in the
-present study: it may appear favorable on completed low-rank configurations, but
+present study: it may appear favorable on completed small MPI-rank-count configurations, but
 three of the eight frozen-preconditioner configurations reach the maximum number of Newton
 iterations and therefore give less consistent convergence evidence. The rank-local
-constitutive-AD path remains the primary Plasticity3D realization because it uses the
+constitutive-AD path remains the primary 3D plasticity realization because it uses the
 same local differentiable formulation as the derivative-route and converged
 scaling studies; the reference-formula configurations are retained to expose
 solver-policy sensitivity on matched discrete problems.
 
 \FloatBarrier
 
-\subsection{Plasticity2D Reference Continuation Evidence}
+\subsection{2D Mohr--Coulomb Reference Continuation Evidence}
 
-For Plasticity2D, the reference-continuation comparison is not the primary
+For 2D plasticity, the reference-continuation comparison is not the primary
 method of the paper, but it is still useful as fixed-policy rank and timing
 evidence for a fixed same-mesh PMG policy under the same outer continuation
 logic.

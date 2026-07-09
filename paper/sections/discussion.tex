@@ -33,7 +33,7 @@ comparison in \Cref{fig:plasticity3d-validation,tab:plasticity3d-validation}
 uses a different agreement contract: the highest-successful-load value on the
 tested grid, the
 $u_{\max}(\lambda_{\mathrm{sr}})$ curve, and endpoint displacement satisfy the
-stated criteria, while deviatoric-strain and boundary-profile comparisons serve
+stated criteria, while deviatoric-strain and upper-slope profile comparisons serve
 as diagnostics. These two examples illustrate the same validation rule:
 external or surrogate comparisons are informative when the problem definition
 and compared observables are named before agreement is interpreted.
@@ -50,7 +50,7 @@ coarse solves, and preconditioner choices enter the numerical method. The
 $\lambda_{\mathrm{sr}}=\num{1.0}$ three-dimensional plasticity strong-scaling study is
 timing-only evidence, whereas the bottom-clamped $\lambda_{\mathrm{sr}}=\num{1.55}$
 scaling sweep is the converged benchmark comparison. The topology study reports
-end-to-end timing under adaptive stopping, then adds a controlled
+end-to-end timing under adaptive stopping, then adds a smaller fixed-schedule
 rank-consistency check to separate distributed design-gradient exchange from
 adaptive termination effects. The frozen-preconditioner PMG diagnostics should
 similarly be read as solver-sensitivity tests, not as external baselines.
@@ -59,6 +59,6 @@ Together, these distinctions delimit the contribution. We present a nonlinear
 FEM toolset that couples JAX-based local differentiation with PETSc sparse
 distributed solvers, and we evaluate that coupling with comparison contracts
 that specify their own limits. The results support this toolset and its
-validation discipline for the tested benchmark classes. They do not imply that
+coupled solver-comparison discipline for the tested benchmark classes. They do not imply that
 a single backend, globalization policy, preconditioner, or derivative
 construction dominates nonlinear finite-element computations in general.

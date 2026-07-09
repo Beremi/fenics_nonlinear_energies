@@ -23,7 +23,7 @@ where $a$ is the reference observable, $b$ is the compared observable, and $M$
 denotes the discrete norm used for the comparison. For nodal displacement
 vectors, $M$ is the identity on the compared free degrees of freedom. More
 generally, $\|r\|_M=(r^\top M r)^{1/2}$, with diagonal quadrature weights for
-field samples and the stated sample/profile weights for curves. The reported
+field samples; curve metrics are specified separately below. The reported
 field and profile observables have nonzero reference norms. Scalar work and
 energy differences use the same
 reference-denominator convention; the hyperelastic energy post-comparison uses
@@ -37,20 +37,21 @@ $X_i=(x_i,y_i,z_i)$, ordered by $x_i$, and the compared observable is $u_x$ on
 that set. For \plasticitythree{}, let
 $y_{\mathrm{mid}}=(\min_i y_i+\max_i y_i)/2$, let
 $L_y=\max_i y_i-\min_i y_i$, and let $q_{0.6}(z)$ be the 0.6 quantile of the
-reference $z$ coordinates. The boundary-profile sample set is
+reference $z$ coordinates. The upper-slope profile sample set is
 $C_{\mathrm{P3D}}=\{i:\ |y_i-y_{\mathrm{mid}}|\le 0.04 L_y,\;
 z_i\ge q_{0.6}(z)\}$, ordered by $x_i$, and the compared observable is the
-displacement magnitude. The candidate boundary profile is linearly interpolated
+displacement magnitude. The candidate upper-slope profile is linearly interpolated
 to the reference $x_i$ coordinates before computing \eqref{eq:validation-relative-difference}.
 
 The hyperelastic JAX-FEM comparison uses a 5\% predefined threshold for the
 final energy, Euclidean nodal full-field displacement, centerline displacement, and
 $u_{\max}$-curve differences. The \plasticitythree{} fixed-$\lambda_{\mathrm{sr}}$
-matched-comparator diagnostic uses three predefined criteria: at most $0.03$ relative
-difference in the highest successful strength-reduction factor, at most $0.05$ relative
-$L^2$ difference for the $u_{\max}(\lambda_{\mathrm{sr}})$ curve, and at most $0.10$
-relative $L^2$ difference for the endpoint displacement. The deviatoric-strain
-and boundary-profile differences in \Cref{tab:plasticity3d-validation} are
+matched-comparator diagnostic uses three predefined criteria: at most $0.03$
+relative difference in the highest successful strength-reduction factor, at most
+$0.05$ relative Euclidean difference on the ordered
+$u_{\max}(\lambda_{\mathrm{sr}})$ samples, and at most $0.10$ relative
+discrete-norm difference for the endpoint displacement. The deviatoric-strain
+and upper-slope profile differences in \Cref{tab:plasticity3d-validation} are
 diagnostics, not acceptance criteria.
 These thresholds are predeclared engineering agreement gates for companion and
 surrogate comparisons. They are not literature validation tolerances and do not
@@ -77,7 +78,7 @@ $D_1(J-1)^2$ volumetric penalty.
   \begin{subfigure}[t]{0.46\PaperFigureFull}
     \centering
     \includegraphics[width=\linewidth]{jax_fem_hyperelastic_baseline_energy_history.pdf}
-    \caption{Endpoint energy over the matched displacement schedule.}
+    \caption{Endpoint energy over matched steps.}
   \end{subfigure}
   \hfill
   \begin{subfigure}[t]{0.46\PaperFigureFull}
@@ -109,13 +110,13 @@ post-comparison energy.
 The agreement criteria in \Cref{tab:hyperelasticity-jaxfem-baseline} are
 satisfied for all checked quantities. The final energy relative difference is
 \num{8.244e-6}, the full-field displacement relative Euclidean nodal difference is
-\num{2.011e-4}, the centerline relative $L^2$ difference is
-\num{5.473e-5}, and the $u_{\max}$-curve relative $L^2$ difference is
+\num{2.011e-4}, the centerline relative Euclidean difference is
+\num{5.473e-5}, and the $u_{\max}$-curve relative Euclidean difference is
 \num{8.85e-16}. The scientific role of this table is endpoint-state agreement
 under a matched mesh, displacement schedule, and common energy post-comparison
 for this companion hyperelastic case.
 
-\subsection{Plasticity3D Endpoint-Surrogate Comparison}
+\subsection{3D Mohr--Coulomb Endpoint-Surrogate Comparison}
 \label{sec:val-plasticity3d}
 
 The \plasticitythree{} benchmark is tied to Mohr--Coulomb slope-stability
@@ -137,16 +138,15 @@ The endpoint-surrogate comparison therefore uses two diagnostics. Here the
 matched endpoint comparator means the endpoint formulation used for these
 observable comparisons, not the cited incremental-history studies. The
 comparator uses the same endpoint functional, mesh, material table, Davis-B
-strength-reduction schedule, boundary conditions, and active free degrees
-of freedom, but evaluates the endpoint observables through an independent
-reference-formula assembly path. The endpoint-observable check tests a seven-step
-direct strength-reduction branch,
+strength-reduction schedule, and boundary-condition convention, but evaluates
+the endpoint observables through an independent reference-formula assembly path.
+The endpoint-observable check tests a seven-step direct strength-reduction branch,
 $\lambda_{\mathrm{sr}}=\num{1.0},\num{1.1},\ldots,\num{1.6}$, against the matched endpoint
 comparator on the $P_2(L_1)$ comparator case. The work observable is the external
 work $\omega=f_{\mathrm{ext}}^\top u$ reported by the two endpoint
 formulations. Its relative difference is \num{3.877e-5}, the displacement
-relative $L^2$ difference is \num{3.517e-3}, and the deviatoric-strain relative
-$L^2$ difference is \num{8.720e-3}.
+relative discrete-norm difference is \num{3.517e-3}, and the deviatoric-strain
+relative discrete-norm difference is \num{8.720e-3}.
 
 The fixed-$\lambda_{\mathrm{sr}}$ matched-comparator diagnostic asks a narrower
 fixed-$\lambda_{\mathrm{sr}}$ question against the matched endpoint comparator.
@@ -159,10 +159,10 @@ $\{\num{1.0},\num{1.2},\num{1.4},\num{1.5},\num{1.55}\}$ that satisfies the rela
 criterion. The comparison matches $\lambda_{\max}^{\mathrm{succ}}$ on that grid
 and satisfies the predefined criteria for the
 $u_{\max}(\lambda_{\mathrm{sr}})$ curve and endpoint displacement: the
-$u_{\max}(\lambda_{\mathrm{sr}})$ relative $L^2$ difference is
-\num{6.396e-6}, and the endpoint displacement relative $L^2$ difference is
-\num{8.299e-4}. The endpoint deviatoric-strain relative $L^2$ difference
-(\num{4.307e-3}) and boundary-profile relative $L^2$ difference
+$u_{\max}(\lambda_{\mathrm{sr}})$ relative Euclidean difference is
+\num{6.396e-6}, and the endpoint displacement relative discrete-norm difference
+is \num{8.299e-4}. The endpoint deviatoric-strain relative discrete-norm
+difference (\num{4.307e-3}) and upper-slope profile relative Euclidean difference
 (\num{5.229e-4}) are reported as diagnostics rather than acceptance criteria.
 This remains an endpoint check rather than a path-consistent plastic-history
 reference.
@@ -183,7 +183,7 @@ reference.
     \includegraphics[width=\linewidth]{plasticity3d_validation_umax_curve.pdf}
     \caption{Fixed-$\lambda_{\mathrm{sr}}$ matched-comparator diagnostic.}
   \end{subfigure}
-  \caption{Plasticity3D endpoint-surrogate comparison. The upper panel compares
+  \caption{3D plasticity endpoint-surrogate comparison. The upper panel compares
   the endpoint observables after the seven-step direct branch ending at
   $\lambda_{\mathrm{sr}}=\num{1.6}$; the lower panel shows the
   fixed-$\lambda_{\mathrm{sr}}$ matched-comparator diagnostic after matching the
@@ -195,7 +195,7 @@ reference.
 
 \begin{table}[!htbp]
   \centering
-  \caption{Plasticity3D endpoint-surrogate comparison summary for the
+  \caption{3D plasticity endpoint-surrogate comparison summary for the
   direct-branch endpoint-observable comparison ending at
   $\lambda_{\mathrm{sr}}=\num{1.6}$ and the fixed-$\lambda_{\mathrm{sr}}$
   matched-comparator diagnostic.}
