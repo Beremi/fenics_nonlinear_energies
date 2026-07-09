@@ -1,6 +1,7 @@
 \label{sec:related}
 
-Existing systems cover important parts of the nonlinear finite-element workflow:
+Existing systems cover important parts of the nonlinear finite-element
+calculation:
 high-level FEM automation, differentiable FEM, solver bridges, mechanics
 benchmarks, and scalable nonlinear algebra. The gap addressed here is the
 combined study of local derivative construction, sparse MPI assembly,
@@ -83,7 +84,8 @@ micromechanics \citep{cattaneo2026jetsci}. These works motivate the primary
 \jaxpetsc{} realization studied here. The distinction is that we compare
 element AD, constitutive AD, and colored sparse recovery from AD-based
 Hessian-vector-product (AD-HVP) or finite-difference gradient probes inside one
-nonlinear energy-minimization suite spanning the benchmark families below.
+nonlinear energy-minimization suite spanning the benchmark families in
+\Cref{sec:benchmarks}.
 
 \paragraph{Mechanics and topology benchmark context.}
 The plasticity benchmarks use Mohr--Coulomb-type slope-stability problems, so
@@ -129,4 +131,4 @@ preconditioner design are part of the numerical method.
 
 Against that background, the present toolset uses JAX for local element and
 constitutive differentiation, while PETSc owns sparse distributed algebra and
-nonlinear solver policy for the benchmark suite below.
+nonlinear solver policy for the benchmark suite in \Cref{sec:benchmarks}.

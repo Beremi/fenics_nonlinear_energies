@@ -131,21 +131,24 @@ globalization effects.
 \subsection{Distributed assembly and coloring}
 
 The \jaxpetsc{} implementation uses PETSc-owned ranges, local-plus-ghost
-layouts, and owned-row sparse assembly. Each MPI rank owns a contiguous subset of
-free degrees of freedom and stores overlap values for elements touching that
-owned set. Before energy, gradient, Hessian, or HVP work, owned coefficients are
-scattered into the local ghost layout; the JAX evaluations then compute element and
-quadrature contributions rank-locally on this filled overlap state. Matrix
-entries are inserted only for owned rows, with ghost data used to evaluate local
-stencils but not to duplicate ownership. Scalar energy values reported in the
-results are the solver-reported global reductions for the corresponding
-configuration; the ownership contract here concerns derivative and matrix
-assembly. This communication order matters for both direct second-order assembly
-and colored sparse recovery. Exact element or constitutive assembly can write
-directly into local sparse buffers. Colored sparse recovery requires an additional
-graph-coloring step, but once the coloring is known the AD-HVP or
-finite-difference probe evaluations use the same ghost fill for their probe
-vectors and still produce owned sparse insertions in the dominant assembly loop.
+layouts, and owned-row sparse assembly. Let $I_r$ be the free-DOF indices owned
+by MPI rank $r$, with the sets $\{I_r\}$ forming a disjoint partition of the
+global free indices. Let $G_r$ be the ghost indices needed by elements that touch
+$I_r$, and let $\widetilde I_r=I_r\cup G_r$. Before energy, gradient, Hessian, or
+HVP work, owned coefficients are scattered to $\widetilde I_r$; the JAX
+evaluations then compute element and quadrature contributions rank-locally on
+this overlap state.
+
+Matrix entries are inserted only for rows in $I_r$, with values on $G_r$ used to
+evaluate local stencils but not to duplicate ownership. Scalar energy values
+reported in the results are the solver-reported global reductions for the
+corresponding configuration; the ownership contract here concerns derivative and
+matrix assembly. This communication order matters for both direct second-order
+assembly and colored sparse recovery. Exact element or constitutive assembly can
+write directly into local sparse buffers. Colored sparse recovery requires an
+additional graph-coloring step, but once the coloring is known the AD-HVP or
+finite-difference probe evaluations use the same ghost fill on $\widetilde I_r$
+and still produce owned-row sparse insertions.
 
 \begin{figure}[!htbp]
   \centering

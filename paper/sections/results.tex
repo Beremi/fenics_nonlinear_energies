@@ -111,7 +111,8 @@ time, or wall time for the specific configuration.
 \end{table}
 
 Across all three benchmark cases, colored sparse recovery reaches the same
-reported energy and identical nonlinear/Krylov iteration counts as element AD.
+table-reported energy, up to displayed precision, and identical
+nonlinear/Krylov iteration counts as element AD.
 The scalar and hyperelasticity cases show a wall-time premium for colored sparse
 recovery. On the Plasticity3D endpoint, constitutive AD is fastest, while
 element AD and colored sparse recovery have matching iteration counts and
@@ -171,7 +172,9 @@ Newton and Krylov iteration counts. For the matched 32-rank case summarized in
 $\num{8e-9}$, so this block mainly measures the overhead of sparse recovery on a
 smooth scalar problem. Across the plotted ranks, element AD drops from
 \SI{10.13}{s} on one rank to \SI{1.14}{s} on 32 ranks; colored SFD follows the
-same trend with persistent recovery overhead.
+same trend with persistent recovery overhead. The FEniCS curve in the same
+figure provides reference-implementation context; the comparison above isolates
+the two \jaxpetsc{} derivative routes.
 
 \subsection{Ginzburg--Landau}
 \label{sec:num-gl}
@@ -197,7 +200,8 @@ final-energy trend for the two routes, so the main visible difference is the
 colored sparse-recovery wall-time premium on this nonconvex scalar energy.
 Across the plotted ranks, element AD falls from \SI{15.64}{s} on one rank to
 \SI{2.10}{s} on 32 ranks, with a nonideal plateau around 4--8 ranks before the
-32-rank point.
+32-rank point. The FEniCS curve is included as reference-implementation context,
+while the paragraph above isolates the \jaxpetsc{} derivative-route cost.
 
 \subsection{Hyperelasticity}
 \label{sec:num-hyperelasticity}
@@ -588,8 +592,8 @@ rather than strong scaling at a fixed computational workload.
 
 \begin{table}[!htbp]
   \centering
-  \caption{Parallel topology summary for the fine-grid study,
-  reported for the reduced objective in \eqref{eq:topology-reduced-objective}.}
+  \caption{Parallel topology endpoint observables and timing for the fine-grid
+  reduced-design study.}
   \label{tab:topology-summary}
   \input{tables/generated/topology_summary.tex}
 \end{table}

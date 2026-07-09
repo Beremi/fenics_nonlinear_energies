@@ -90,7 +90,7 @@ size and mesh construction, not separate physical models.
     \bottomrule
   \end{tabularx}
   \caption{Meaning of the mesh-level labels used in the benchmark and results
-  tables. The counts identify the discrete problem sizes behind the paper-facing
+  tables. The counts identify the discrete problem sizes behind the compact
   labels; they are not additional numerical results.}
   \label{tab:discretization-labels}
 \end{table}
@@ -303,13 +303,13 @@ Dirichlet displacement path. Let $\Gamma_{\mathrm{L}}$ and
 $\Gamma_{\mathrm{R}}$ denote the left and right end faces, respectively. For
 $X=(X_1,X_2,X_3)\in\Gamma_{\mathrm{R}}$ and $N=24$ load steps, the prescribed
 position at step $k$ is
-\[
-  \bar y_k(X)
-  =
-  \bigl(X_1,\cos\eta_k\,X_2+\sin\eta_k\,X_3,
-  -\sin\eta_k\,X_2+\cos\eta_k\,X_3\bigr),
-  \qquad
-  \eta_k = \frac{8\pi k}{N}.
+  \[
+    \bar y_k(X)
+    =
+    \bigl(X_1,\cos\eta_k\,X_2+\sin\eta_k\,X_3,
+    -\sin\eta_k\,X_2+\cos\eta_k\,X_3\bigr),
+    \qquad
+    \eta_k = \frac{8\pi k}{N}.
 \]
 Thus admissible displacements satisfy $u=0$ on $\Gamma_{\mathrm{L}}$ and
 $X+u=\bar y_k(X)$ on $\Gamma_{\mathrm{R}}$.
@@ -480,7 +480,9 @@ as historical lineage and the formula context taken from later strength-reductio
 descriptions
 \citep{davis1968plasticity,tschuchnigg2015nonassociated,sysala2021optimization},
 to map the unreduced
-cohesion and angles to reduced values under strength reduction; with
+cohesion and angles to reduced values under strength reduction. Let
+$\lambda_{\mathrm{sr}}>0$ denote the strength-reduction factor, distinct from the
+Lam{\'e} parameter used later in three dimensions. With
 $c_0,\phi,\psi$ denoting the unreduced cohesion, friction angle, and dilation
 angle, respectively, the benchmark uses
 \begin{align}
@@ -599,8 +601,7 @@ Davis-B-reduced cohesion and friction angle:
   - f_{\mathrm{ext}}^\top u_h,
   \label{eq:plasticity2d-discrete}
 \end{equation}
-where $\lambda_{\mathrm{sr}}$ denotes the strength-reduction factor, distinct
-from the Lam{\'e} parameter used later in three dimensions. Here the subscript
+Here the subscript
 $eq$ means element $e$ and quadrature point $q$, $w_{eq}$ is the corresponding
 quadrature weight including the element Jacobian, and $B_{eq}$ maps the element
 displacement vector to the two-dimensional engineering-strain vector used by the
@@ -726,6 +727,8 @@ $\Gamma_{\mathrm{bot}}=\{X\in\partial\Omega:\lvert X_2\rvert\le 10^{-12}\}$.
 We write $P_k(L_\ell)$ for polynomial degree $k$ on mesh level $\ell$ and use
 $L_1,\ldots,L_4$ for the four displayed mesh levels.
 
+Here and in the Davis-B reduction below,
+$\lambda_{\mathrm{sr}}>0$ denotes the strength-reduction factor.
 The figures below use the bottom-clamped $P_4(L_2)$ representative endpoint at
 $\lambda_{\mathrm{sr}}=1.55$ and the finished nine-case study
 at the same load factor. The $\lambda_{\mathrm{sr}}=1.0$ strong-scaling
@@ -769,10 +772,10 @@ with
 \begin{equation}
   \bar c_{\lambda,q} = 2 c_{\lambda,q}\cos\phi_{\lambda,q},
   \qquad
-  s_{\lambda,q} := \sin(\phi_{\lambda,q}),
+  s_{\lambda,q} := \sin(\phi_{\lambda,q}).
   \label{eq:plasticity3d-davis-bar}
 \end{equation}
-which are the scalar constitutive parameters used by the 3D assembly path
+These are the scalar constitutive parameters used by the 3D assembly path
 \citep{davis1968plasticity,tschuchnigg2015nonassociated,sysala2021optimization}.
 In this subsection, $\phi$ denotes friction angle and $\psi$ denotes dilation
 angle. All 3D material tuples used in the reported runs have
@@ -1125,7 +1128,7 @@ fixed density, define
   \sum_{e=1}^{n_{\mathrm{el}}}
     |e|\,\theta_e^{p}
     \left(\varepsilon(w_h)|_e\right)^\top C
-    \left(\varepsilon(v_h)|_e\right).
+    \left(\varepsilon(v_h)|_e\right),
   \label{eq:topology-mechanics}
 \end{equation}
 where $\varepsilon(v)=(\partial_x v_x,\partial_y v_y,
@@ -1177,7 +1180,11 @@ density field used in the phase-field term, and define the double-well density
 \[
   W_{\mathrm{dw}}(\theta):=\theta^2(1-\theta)^2.
 \]
-The reduced objective for the next design vector $z_h^{m+1}$ is
+The effective volume multiplier $\lambda_V^m$ is defined below, and
+$\alpha_{\mathrm{reg}}$, $\ell_{\mathrm{pf}}$, and $\mu_{\mathrm{move}}$ are,
+respectively, the phase-field weight, phase-field length scale, and move
+regularization parameter. The reduced objective for the next design vector
+$z_h^{m+1}$ is
 \begin{align}
   \mathcal{J}_h^m(z_h)
   &=
@@ -1260,8 +1267,8 @@ reduced design updates for \eqref{eq:topology-reduced-objective}.
 
 \begin{table}[!htbp]
   \centering
-  \caption{Representative topology endpoint values from
-  \eqref{eq:topology-reduced-objective}.}
+  \caption{Representative topology endpoint observables for the reduced-design
+  run.}
   \label{tab:topology-benchmark}
   \input{tables/generated/topology_benchmark_summary.tex}
 \end{table}

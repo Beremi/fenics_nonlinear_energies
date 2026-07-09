@@ -54,7 +54,7 @@ MATLAB literature only when there is source-backed evidence.
 - SIOPT submission-shape cue checked on 2026-07-09: SIAM's author instructions
   ask for figures to be embedded inline and state that SIOPT has a 25-page
   policy, with longer papers published only in exceptional justified cases. The
-  current 44-page A4 article is therefore a journal-template/page-budget blocker
+  current 45-page A4 article is therefore a journal-template/page-budget blocker
   rather than a solved formatting issue.
 
 ## Manuscript Nodes
@@ -1382,6 +1382,20 @@ MATLAB literature only when there is source-backed evidence.
   spot-check of the rebuilt Results pages found no current A4 blocker; the
   Plasticity3D scaling page remains target-template sensitive because its
   secondary-axis label is close to the margin.
+- `Current thematic methods/evidence/layout audit`
+  (`Godel the 2nd`/`Schrodinger the 2nd`/`Zeno the 2nd`/`Lagrange the 2nd`):
+  completed and integrated in the current methods-and-scope chunk. Findings
+  addressed: the abstract now closes on coupled solver-design choices; the
+  Discussion derivative-route reference no longer renders as a singular
+  multi-object `cleveref` subject; the compact KG has been pruned back to stable
+  navigation memory; the implementation section defines owned and ghost index
+  sets $I_r$, $G_r$, and $\widetilde I_r$; Plasticity2D and Plasticity3D define
+  $\lambda_{\mathrm{sr}}$ before first use; the topology objective introduces
+  multiplier and regularization parameters before the reduced objective; topology
+  captions distinguish endpoint observables from the reduced objective value; and
+  scalar Results text identifies FEniCS curves as reference-implementation
+  context. No new experiment is needed for the current scoped claims. The
+  rebuilt A4 PDF is 45 pages and remains target-template/page-budget sensitive.
 
 ## First Edit Backlog
 

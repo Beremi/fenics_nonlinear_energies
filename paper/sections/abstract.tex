@@ -10,10 +10,9 @@ Krylov solvers, and preconditioners. The benchmark suite covers
 $p$-Laplace, Ginzburg--Landau, finite-strain hyperelasticity, two- and
 three-dimensional Mohr--Coulomb plasticity, and topology optimization.
 Where matched formulations are available, \purejax{} and \fenics{} provide
-internal reference comparisons. JAX-FEM provides a narrow hyperelastic
-companion terminal-state comparison, while the Sysala-family slope-stability
-literature provides reference-model context for the plasticity endpoint
-observables. The
+internal consistency checks. JAX-FEM provides a narrow hyperelastic companion
+terminal-state comparison, while the Sysala-family slope-stability literature
+provides reference-model context for the plasticity endpoint observables. The
 \v{C}erm{\'a}k--Sysala--Valdman MATLAB work supplies elastoplastic
 finite-element implementation context.
 
@@ -25,5 +24,7 @@ fixed high-order three-dimensional plasticity derivative-route comparison,
 constitutive AD has the lowest measured wall time while preserving the reported
 terminal observables. The distributed mechanics examples report MPI timing and
 solver-policy behavior, and the topology example adds a controlled
-rank-consistency check under the stated protocol.
+rank-consistency check under the stated protocol. Together, the evidence shows
+that derivative construction, sparse assembly, nonlinear globalization, Krylov
+algebra, and preconditioning must be evaluated as coupled solver-design choices.
 \end{abstract}

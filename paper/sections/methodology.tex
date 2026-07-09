@@ -20,7 +20,8 @@ vector selected by the element restriction $R_e$, while $u_e(x;\theta)$ denotes
 the corresponding local element state including any contribution from the lift.
 
 The benchmark families use two scalar functional roles. A load-step potential or
-endpoint surrogate is written as
+endpoint surrogate is written on a mesh
+$\mathcal{T}_h=\{e\}_{e=1}^{n_{\mathrm{el}}}$ as
 \begin{equation}
   \Pi_h(x;\theta)
   =
@@ -102,7 +103,7 @@ state. This is especially effective for high-order plasticity, where the full
 element Hessian is often much more expensive than the $6\times6$
 constitutive tangent. We use \emph{colored sparse recovery} for the
 graph-colored second-order route and use \emph{colored SFD} as its compact
-paper-facing label. The reported colored-SFD configurations use AD-HVP probes;
+label. The reported colored-SFD configurations use AD-HVP probes;
 finite-difference gradient probes are the classical sparse finite-difference
 variant.
 
@@ -145,38 +146,36 @@ energy, gradient, Hessian assembly or application, and linear solves
   \Else
     \State Set $d_k=p_k^{\mathrm{N}}$
   \EndIf
-  \State Select a trial step $s_k=\alpha_k d_k$ with the configured one-dimensional line-search rule
-  \State Compute actual and predicted reductions, $\mathrm{ared}$ and
-    $\mathrm{pred}= -g_k^\top s_k-\frac12 s_k^\top H_k s_k$
+  \State Select a trial step $s_k=\alpha_k d_k$ with the stated line-search rule
+  \State Compute $\mathrm{ared}_k=\mathcal{F}(x_k)-\mathcal{F}(x_k+s_k)$ and
+    $\mathrm{pred}_k= -g_k^\top s_k-\frac12 s_k^\top H_k s_k$
   \If{trust region is enabled}
-    \State accept/reject using $\rho = \mathrm{ared}/\mathrm{pred}$ when
-      $\mathrm{pred}>0$, otherwise reject as model failure; update $\Delta_k$
+    \State accept/reject using $\rho_k = \mathrm{ared}_k/\mathrm{pred}_k$ when
+      $\mathrm{pred}_k>0$, otherwise reject as model failure; update $\Delta_k$
   \Else
-    \State accept according to the configured merit-decrease rule
+    \State accept according to the stated merit-decrease rule
   \EndIf
   \If{the trial step is accepted}
     \State Set $x_{k+1}=x_k+s_k$
   \Else
-    \State Retry with the updated globalization state or report a capped/failed solve according to the configured policy
+    \State Retry with the updated globalization state or report a capped/failed solve
   \EndIf
 \EndFor
 \end{algorithmic}
 \end{algorithm}
 
-Here $\mathrm{ared}$ is the achieved decrease in the merit functional and
-$\mathrm{pred}$ is the decrease predicted by the local quadratic or reduced
+Here $\mathrm{ared}_k$ is the achieved decrease in the merit functional and
+$\mathrm{pred}_k$ is the decrease predicted by the local quadratic or reduced
 trust-region model. A nonpositive predicted decrease is treated as model
-failure for the trust-region acceptance test. The line-search rule may use
-Armijo backtracking, a bounded merit search, or a residual-bisection safeguard,
-depending on the reported configuration. The accept/reject thresholds and
-radius-update factors are policy parameters; where they affect the
-interpretation of a result, the paper reports the corresponding configuration
-rather than treating \Cref{alg:hybrid-newton} as a complete algorithmic
-specification. Reported PETSc linear solves use the relative KSP residual
-tolerance summarized in \Cref{tab:numerical-protocol-summary} or stated with
-the corresponding run when the policy varies. Failed linear solves and
-non-descent directions are handled by the configured globalization safeguard or
-reported as capped solver behavior.
+failure for the trust-region acceptance test. The admissible line-search
+families are Armijo backtracking, bounded merit search, and residual-bisection
+safeguards. Benchmark tables instantiate the finite set of remaining policy
+parameters, including accept/reject thresholds, radius updates, caps, and
+fallback rules, wherever they affect interpretation. Reported PETSc linear
+solves use the relative KSP residual tolerance summarized in
+\Cref{tab:numerical-protocol-summary} or stated with the corresponding run when
+the policy varies. Failed linear solves and non-descent directions are handled
+by the stated globalization safeguard or reported as capped solver behavior.
 
 For the converged bottom-clamped three-dimensional plasticity scaling
 configuration reported in this paper, the chosen policy is simpler: Newton with
@@ -199,7 +198,7 @@ tolerance.
 parameters $\beta\in(0,1)$, $c_1\in(0,1)$, and maximum count $m_{\max}$
 \State Evaluate $\mathcal{F}(x)$ and $g = \nabla \mathcal{F}(x)$
 \If{$g^\top p \ge 0$}
-  \State report direction failure to the calling solver or use the configured fallback
+  \State report direction failure to the calling solver or use the stated fallback
   \State \Return
 \EndIf
 \For{$m=0,1,\dots,m_{\max}$}
@@ -272,14 +271,14 @@ to the PETSc matrix, with overlap data used only for local probe evaluation.
 \caption{Distributed colored Hessian recovery}
 \label{alg:colored-hessian-recovery}
 \begin{algorithmic}[1]
-\State Build or import local sparsity information for the free-DOF graph
+\State Construct the owned part of the Hessian sparsity pattern
 \State Compute a distance-2 coloring of the Hessian pattern
 \For{each color group $c$}
   \State Build the combined probe vector $v_c$
   \State Evaluate one gradient difference or HVP for $v_c$
   \State Scatter recovered entries into owned sparse storage
 \EndFor
-\State Assemble the global PETSc matrix from owned COO/CSR entries
+\State Assemble the owned rows of the distributed sparse matrix
 \end{algorithmic}
 \end{algorithm}
 
@@ -320,6 +319,6 @@ directly to the scalar branch potential defined by the benchmark. The
 constitutive tangent is therefore obtained from that same scalar potential rather
 than replaced by a separate hand-derived formula. Away from branch switching
 sets and repeated-principal-value degeneracies, this yields branchwise exact
-derivatives of the surrogate; on those nonsmooth sets the resulting tangents
-should be read as branchwise surrogate derivatives rather than globally smooth
-continuum derivatives.
+derivatives of the surrogate; on those nonsmooth sets the resulting tangents are
+branchwise surrogate derivatives rather than globally smooth continuum
+derivatives.

@@ -10,18 +10,21 @@ fixed-work route studies, and distributed scaling evidence in one computational
 evidence narrative.
 
 \paragraph{Derivative information is realized through the nonlinear solve.}
-\Cref{fig:plasticity3d-derivative-ablation,tab:plasticity3d-derivative-ablation}
-is the clearest fixed-work example. On the fixed $P_4(L_1)$,
+The Plasticity3D derivative-route ablation is the clearest fixed-work example;
+see
+\Cref{fig:plasticity3d-derivative-ablation,tab:plasticity3d-derivative-ablation}.
+On the fixed $P_4(L_1)$,
 $\lambda_{\mathrm{sr}}=1.5$, 8-rank case, the three routes report terminal
 observables with the same rounded energy, external-work observable, and maximum
 displacement, with 8 Newton iterations and 376 Krylov iterations. Thus the
 reported evidence isolates derivative-route cost only after the residual,
-Jacobian, preconditioner, and nonlinear stopping policy have been fixed. In
-this setting, constitutive AD has the lowest measured wall time, while colored
-SFD remains a useful sparse-recovery comparison and fallback route on the tested
-fixed-size problems. The conclusion is therefore not that one derivative route
-is uniformly best, but that derivative placement should be assessed inside the
-assembled sparse nonlinear solve that will use it.
+Jacobian, preconditioner, and nonlinear stopping policy have been fixed.
+
+In this setting, constitutive AD has the lowest measured wall time, while
+colored SFD remains a useful sparse-recovery comparison and fallback route on
+the tested fixed-size problems. The conclusion is therefore not that one
+derivative route is uniformly best, but that derivative placement should be
+assessed inside the assembled sparse nonlinear solve that will use it.
 
 \paragraph{Agreement evidence depends on matched definitions.}
 The hyperelastic JAX-FEM comparison in

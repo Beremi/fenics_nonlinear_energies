@@ -97,99 +97,26 @@ stage or commit `paper/style_guide/`.
 | Plasticity3D | high-order Mohr-Coulomb endpoint surrogate and solver-policy study | JAX+PETSc; Sysala-family reference-model context | endpoint observables, derivative-route cost, degree-energy, scaling |
 | Topology | coupled design-mechanics distributed workflow | pure JAX serial demonstration, JAX+PETSc parallel run | objective history, timing, rank-consistency check |
 
-## Current Subagent Findings
+## Recent Audit State
 
-- Message/front matter audit: the scientific-toolset message is clear; unresolved
-  blockers remain target template/declarations, final archive DOI/license,
-  durable evidence packaging, and page-budget strategy. SIAM/SIOPT article pages
-  are still not reliably fetchable here because of Cloudflare, so target-template
-  details require browser/manual verification.
-- Math audit: recent fixes include Plasticity3D elastic-first branch selection,
-  return-test notation, generic energy-density notation, KSP target wording,
-  Plasticity2D/Plasticity3D surrogate-definition order, `u_{\max}` definition
-  before validation thresholds, Plasticity2D trial-function definition order,
-  consistent Plasticity3D `s_{\lambda}` notation, and topology notation that
-  avoids stress/density and hyperelastic/double-well collisions.
-- Evidence/provenance audit: no missing numerical experiment is required for
-  the current scoped claims. The local submission-bundle manifest records the
-  earlier paper-cleanup commit `3febc92239be9f0c9fc8f129459377cb5fb9340a`;
-  treat that as bundle provenance, not as a claim that the manifest reflects
-  the latest manuscript HEAD. Remaining evidence risks are release-packaging
-  risks: source data split between the curated paper bundle and broader repo
-  assets, derived rather than full raw Plasticity3D figure data in the local
-  bundle, and final DOI/archive integration.
-- Citation/comparator audit: recent fixes narrow JAX-FEM wording to a
-  hyperelastic companion terminal-state comparison, keep the
-  \v{C}ermak--Sysala--Valdman role to elastoplastic implementation context,
-  add Plasticity3D endpoint-comparator provenance to the claim audit, add Conn
-  trust-region metadata, and narrow Sysala 2017 source-record claims to the
-  locally recorded DOI/CAS metadata.
-- Layout audit: no hard rendering failures. Current A4 risks are float-loop
-  breaks around Plasticity2D and Plasticity3D benchmark figures, dense
-  derivative-route and hyperelasticity result pages, early schematic-heavy
-  implementation pages, and final conclusion/appendix compression. Major layout
-  moves are best paired with a target-template/page-budget decision.
-- Final-section synthesis pass: Results now ends with a compact evidence-block
-  handoff, Discussion carries the cross-cutting interpretation of derivative
-  routes, matched agreement contracts, and solver-policy scope, and Conclusions
-  close on the scientific-computing contribution plus next research steps. This
-  reduces repeated endpoint-scope and coupled-solver language without changing
-  numerical evidence.
-- Current audit chunk: tightened Plasticity2D/3D notation and nonsmooth AD
-  scope, split long validation/topology prose, made benchmark and
-  hyperelastic-memory table labels paper-facing, narrowed Sysala 2017 claim-audit
-  evidence to source-record context, added a Karolina hardware audit row, and
-  made figure/table asset validators reject stale non-manuscript generated
-  outputs.
-- Current provenance-refresh chunk: rebuilt the local submission-bundle manifest
-  to commit `3febc92239be9f0c9fc8f129459377cb5fb9340a`; manifest-hash,
-  archive-neutral asset, submission, release-blocker, diff-whitespace, and
-  ignored-style-guide checks pass.
-- Current citation/comparator chunk: replaced the PETSc web citation with the
-  official PETSc/TAO Users Manual DOI record, narrowed Plasticity3D validation
-  wording and figure labels to matched-comparator diagnostics, and recast the
-  topology parallel evidence as rank-varied adaptive timing plus a controlled
-  rank-consistency check. The current A4 submission gate passes and produces a
-  44-page PDF.
-- Current message/math/layout chunk: removed draft availability prose that
-  called out the absent DOI, put the primary JAX+PETSc implementation path
-  before reference paths, defined AD/AD-HVP on first use, added the topology
-  volume-multiplier recurrence, normalized equation references/differentials,
-  and moved captions above the most fragile long result tables. Release checks
-  still flag the unresolved DOI/archive/license/template blockers.
-- Current thematic-audit chunk: rewrote the introduction contributions as
-  evidence-backed claims, added a self-contained \jaxpetsc{} implementation
-  pipeline, recast solver/preconditioner choices by problem structure, softened
-  Davis/Sysala claims to verified source scope, made the topology reduced
-  objective and volume multiplier reconstructible, renamed paper-facing CPU
-  scaling assets to remove machine-local labels, and moved captions above long
-  validation/results tables. Remaining layout work is target-template driven:
-  the current figure policy is tied to the A4 article geometry until an external
-  venue class is selected.
-- Current layout/scope guard chunk: pure JAX topology wording is now kept to a
-  serial design demonstration; validation thresholds are described as
-  predeclared engineering agreement gates; the Plasticity3D endpoint comparator
-  is identified by shared endpoint functional, mesh, material table, Davis-B
-  reduction, load schedule, boundary conditions, and active free DOFs; and
-  `measure_layout.py` validates the current A4 article/geometry contract before
-  generating figure-size measurements. Generated-table captions now precede
-  their generated table bodies across the manuscript, including the supporting
-  Plasticity2D/3D solver-policy tables in the appendix.
-- Current benchmark-prose chunk: hyperelasticity now separates the material
-  model, geometry, rotating boundary schedule, weak form, and discrete
-  stationary sequence; its evidence is scoped to completion of the prescribed
-  schedule and terminal energies, not trajectory agreement. Topology now defines
-  the scalar compliance observable separately from the frozen reduced design
-  objective, states that achieved volumes come from the adaptive
-  multiplier/stopping rule rather than exact equality solves, and keeps the
-  pure JAX role to a compact serial design demonstration.
-- Current results-prose chunk: Results now places motivation before fixed-case
-  details in the globalization, derivative-route, Plasticity2D, Plasticity3D,
-  topology, and synthesis blocks. The p-Laplace distributed energy comparison
-  points to the matched derivative-route table, the Ginzburg--Landau text avoids
-  exact count claims not visible in the displayed evidence, and the Plasticity3D
-  degree-energy paragraph cites the benchmark table for the reported endpoint
-  numbers.
+- Message and comparator scope: the scientific-toolset message is clear.
+  Comparators remain scoped to internal consistency checks, narrow external
+  companion comparisons, or literature context rather than universal baselines.
+- Mathematical exposition: recent fixes define Plasticity2D/3D surrogate
+  notation before use, keep topology notation separate from mechanics notation,
+  define AD/AD-HVP and distributed ownership explicitly, and treat displayed
+  equations as sentence parts.
+- Evidence scope: no small missing experiment is required for the current claims.
+  Plasticity3D remains endpoint-surrogate evidence; topology reports adaptive
+  end-to-end timing plus a controlled rank-consistency check; scalar FEniCS
+  curves are reference-implementation context for derivative-route results.
+- Provenance: the local submission-bundle manifest records the earlier
+  paper-cleanup commit `3febc92239be9f0c9fc8f129459377cb5fb9340a`; treat this
+  as bundle provenance, not as a claim that the manifest reflects the latest
+  manuscript HEAD. Final archive/DOI integration remains unresolved.
+- Layout: the current A4 PDF has no known hard rendering blocker after the last
+  completed build. Remaining layout risks are target-template driven: dense
+  result pages, figure/table compression, and page budget after venue conversion.
 
 ## Figure And Table Rules
 
@@ -199,7 +126,7 @@ stage or commit `paper/style_guide/`.
   editing final assets directly.
 - Tables are generated through `paper/scripts/generate_paper_tables.py` unless a
   source note says otherwise. Preserve relative widths, numeric alignment,
-  units in headers, and paper-facing labels.
+  units in headers, and publication labels.
 - Avoid adding hard `[H]` floats. If one is unavoidable, update
   `paper/scripts/check_float_placements.py` with a reason.
 - After figure/table changes, run the narrow generator first and then
@@ -227,7 +154,7 @@ external release decisions:
 - durable software/artifact archive;
 - archival DOI in the availability statement.
 
-The current PDF is a 44-page A4 article. Page budget and float behavior must be
+The current PDF is a 45-page A4 article. Page budget and float behavior must be
 rechecked after target-template conversion.
 
 Deferred layout risks from the 2026-07-09 audit: dense hyperelasticity and
