@@ -774,7 +774,9 @@ MATLAB literature only when there is source-backed evidence.
   the A4 PDF remains 43 pages and the Topology-to-Validation boundary was
   checked by PDF text extraction. Current float-guard chunk adds a source-level
   allowlist check for the 13 remaining intentional `[H]` floats and wires it
-  into `make -C paper submission-check`.
+  into `make -C paper submission-check`. Current release-audit polish makes the
+  final-release blocker output use repository-relative bundle evidence paths,
+  preserving portability of the readiness workflow output.
 
 ## Evidence Nodes
 

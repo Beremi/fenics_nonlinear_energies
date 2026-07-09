@@ -245,6 +245,8 @@ scientific claims were introduced without supporting evidence.
 - Added a hard-float placement checker to `make -C paper submission-check`,
   with an allowlist for the remaining intentional `[H]` algorithms and
   tightly coupled validation/results/support floats.
+- Made the final-release blocker audit report repository-relative bundle
+  evidence paths instead of absolute local checkout paths.
 - Rebuilt the paper PDF through the paper generation pipeline.
 
 ## Blocking Issues Before Submission
@@ -550,6 +552,11 @@ required support for the current scoped contribution.
   current paper source with 13 allowlisted `[H]` floats.
 - `make -C paper submission-check`: passed with the hard-float placement guard
   included in the normal PDF submission gate.
+- `./.venv/bin/python -m pytest tests/test_paper_release_blockers.py`: passed
+  after making bundle evidence paths repository-relative.
+- `./.venv/bin/python paper/scripts/check_release_blockers.py --expect-blockers`:
+  passed and now reports `artifacts/reproduction/paper_submission_2026_07_08/manifest.json`
+  rather than an absolute local checkout path for the durable-archive blocker.
 - `./.venv/bin/python -m pytest tests/test_docs_publication.py`: passed
   13 tests.
 - `./.venv/bin/python -m pytest tests/test_final_report_figure_generators.py`:

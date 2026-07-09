@@ -47,6 +47,13 @@ def _has_root_license(repo_root: Path) -> bool:
     return any(name == "license" or name.startswith("license.") or name.startswith("copying") for name in names)
 
 
+def _display_path(path: Path, repo_root: Path) -> str:
+    try:
+        return path.resolve().relative_to(repo_root.resolve()).as_posix()
+    except ValueError:
+        return path.as_posix()
+
+
 def _target_template_blocker(main_tex: str) -> ReleaseBlocker | None:
     if re.search(r"\\documentclass(?:\[[^\]]*\])?\{article\}", main_tex):
         return ReleaseBlocker(
@@ -87,12 +94,13 @@ def _doi_blocker(main_tex: str) -> ReleaseBlocker | None:
     )
 
 
-def _bundle_release_blocker(manifest_path: Path) -> ReleaseBlocker | None:
+def _bundle_release_blocker(manifest_path: Path, repo_root: Path) -> ReleaseBlocker | None:
+    evidence = _display_path(manifest_path, repo_root)
     if not manifest_path.is_file():
         return ReleaseBlocker(
             code="submission-bundle",
             message="The local submission-bundle manifest is missing.",
-            evidence=str(manifest_path),
+            evidence=evidence,
             required_action="Build the local provenance bundle before release packaging.",
         )
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
@@ -102,7 +110,7 @@ def _bundle_release_blocker(manifest_path: Path) -> ReleaseBlocker | None:
         return ReleaseBlocker(
             code="durable-archive",
             message="The bundle manifest still says the permanent archive DOI is outside the bundle.",
-            evidence=str(manifest_path),
+            evidence=evidence,
             required_action=(
                 "Include the bundle in the final licensed archive/release, rerun provenance validation from that "
                 "released snapshot, and update the manifest or manuscript availability statement accordingly."
@@ -123,7 +131,7 @@ def find_release_blockers(
         _target_template_blocker(main_tex),
         _license_blocker(repo_root),
         _doi_blocker(main_tex),
-        _bundle_release_blocker(bundle_manifest),
+        _bundle_release_blocker(bundle_manifest, repo_root),
     )
     return [blocker for blocker in candidates if blocker is not None]
 

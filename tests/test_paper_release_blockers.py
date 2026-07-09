@@ -67,6 +67,8 @@ def test_release_blockers_report_current_unresolved_classes(tmp_path: Path) -> N
         "archival-doi",
         "durable-archive",
     }
+    durable_archive = next(blocker for blocker in blockers if blocker.code == "durable-archive")
+    assert durable_archive.evidence == "artifacts/reproduction/paper_submission_2026_07_08/manifest.json"
 
 
 def test_release_blockers_pass_when_release_metadata_is_present(tmp_path: Path) -> None:
