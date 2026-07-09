@@ -140,6 +140,7 @@ def _manifest_repo_input(path: Path) -> dict[str, str]:
 
 
 PAPER_IMPLEMENTATION_LABELS = {
+    "fenics_custom": "FEniCS Newton reference",
     "jax_petsc_element": "JAX+PETSc element AD",
     "jax_petsc_local_sfd": "JAX+PETSc colored SFD",
 }

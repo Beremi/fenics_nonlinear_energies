@@ -220,6 +220,10 @@ MATLAB literature only when there is source-backed evidence.
   mislabeled as AD only. Paper-facing Plasticity3D PMG prose now uses
   reference-formula and reference-operator labels instead of source-assembly or
   source-operator labels, while preserving the scientific comparison contract.
+  Current terminology chunk defines the fixed-reference PMG variant at first
+  mention and keeps early implementation tables on plain solver/derivative
+  language, leaving reference-formula and fixed-reference labels for the appendix
+  where they are defined.
   Current narrative chunk changes the framework-overview caption from
   manuscript/software-structure wording to computational structure and
   distributed/reference formulation roles. Current label/notation chunk changes
@@ -317,7 +321,10 @@ MATLAB literature only when there is source-backed evidence.
   benchmark-interpretation chunk adds body-text readings of the
   Ginzburg--Landau state/energy/table block and the topology
   density/history/table block, so the reader is not left to infer those
-  representative results only from captions.
+  representative results only from captions. Current terminology chunk changes
+  the early reference-availability table to "closed-form constitutive assembly"
+  and removes the remaining "FEniCS custom reference" wording from the
+  $p$-Laplace benchmark prose and generated figure labels.
 - `VALIDATION`: external and reference-model comparison.
   Evidence: narrow hyperelastic JAX-FEM comparison; Plasticity3D validation
   ladder with endpoint-surrogate scope.

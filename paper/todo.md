@@ -259,6 +259,13 @@ scientific claims were introduced without supporting evidence.
   figure/table blocks, so the representative state, energy, density, and
   objective-history evidence is interpreted in prose rather than only in
   captions.
+- Simplified early solver-table terminology: Plasticity2D now uses same-mesh
+  PMG hierarchy/policy language, Plasticity3D early tables use
+  constitutive-assembly and PMG-sensitivity wording before the appendix defines
+  reference-formula/fixed-reference labels, and the $p$-Laplace prose now refers
+  to the \fenics{} Newton reference rather than a custom reference. Generated
+  energy/scaling figure labels now use the same \fenics{} Newton-reference
+  terminology.
 - Rebuilt the paper PDF through the paper generation pipeline.
 
 ## Blocking Issues Before Submission
@@ -599,6 +606,18 @@ required support for the current scoped contribution.
   `pdftotext -f 22 -l 22 paper/build/main.pdf -`: checked that the new
   Ginzburg--Landau and topology interpretation sentences render with explicit
   figure/table references.
+- `./.venv/bin/python -m py_compile paper/scripts/generate_paper_tables.py`
+  and `./.venv/bin/python -m py_compile paper/scripts/generate_paper_figures.py`:
+  passed after the terminology cleanup.
+- `make -C paper figures`: passed after updating generated figure labels.
+- `make -C paper submission-check`: passed after the terminology cleanup and
+  generated-figure refresh.
+- `pdftotext -f 8 -l 12 paper/build/main.pdf -`: checked that the early
+  implementation and benchmark table/figure block renders the new
+  same-mesh PMG, constitutive-assembly, PMG-sensitivity,
+  closed-form constitutive-assembly, fixed-reference PMG, and \fenics{} Newton
+  reference wording, with no remaining `FEniCS custom`/custom-reference text in
+  that rendered span.
 
 Exact remaining blockers are submission metadata and license/archive DOI. The
 archive-neutral validator now passes against the local curated bundle; final

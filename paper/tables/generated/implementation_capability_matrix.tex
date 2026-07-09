@@ -5,7 +5,7 @@ Family & FEniCS & pure JAX & JAX+PETSc & Solver and derivative roles \\
 $p$-Laplace & yes & yes & yes & element AD and colored sparse recovery; Newton--CG with Hypre \\
 Ginzburg--Landau & yes & no & yes & element AD and colored sparse recovery; Armijo Newton with GMRES--Hypre \\
 Hyperelasticity & yes & yes & yes & element AD in the primary route, scoped colored sparse-recovery comparison, and trust-region/GAMG or PMG diagnostics \\
-Plasticity2D & no & no & yes & endpoint branch-potential derivatives and continuation diagnostics with same-mesh PMG smoother policy \\
+Plasticity2D & no & no & yes & endpoint branch-potential derivatives and continuation diagnostics with a same-mesh PMG hierarchy \\
 Plasticity3D & no & no & yes & constitutive AD, element AD, and colored sparse-recovery diagnostics; FGMRES with same-mesh PMG and Hypre or LU/MUMPS coarse profiles \\
 Topology optimization & no & yes & yes & distributed design updates with PETSc mechanics and GAMG-preconditioned FGMRES \\
 \bottomrule

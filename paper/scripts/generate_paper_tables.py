@@ -1084,7 +1084,7 @@ def main() -> None:
             ["$p$-Laplace", "yes", "yes", "yes", "element AD and colored sparse recovery; Newton--CG with Hypre"],
             ["Ginzburg--Landau", "yes", "no", "yes", "element AD and colored sparse recovery; Armijo Newton with GMRES--Hypre"],
             ["Hyperelasticity", "yes", "yes", "yes", "element AD in the primary route, scoped colored sparse-recovery comparison, and trust-region/GAMG or PMG diagnostics"],
-            ["Plasticity2D", "no", "no", "yes", "endpoint branch-potential derivatives and continuation diagnostics with same-mesh PMG smoother policy"],
+            ["Plasticity2D", "no", "no", "yes", "endpoint branch-potential derivatives and continuation diagnostics with a same-mesh PMG hierarchy"],
             ["Plasticity3D", "no", "no", "yes", "constitutive AD, element AD, and colored sparse-recovery diagnostics; FGMRES with same-mesh PMG and Hypre or LU/MUMPS coarse profiles"],
             ["Topology optimization", "no", "yes", "yes", "distributed design updates with PETSc mechanics and GAMG-preconditioned FGMRES"],
         ],
@@ -1109,7 +1109,7 @@ def main() -> None:
             ["Ginzburg--Landau", f"{mesh_label('L5')} parity; {mesh_label('L9')} distributed scaling", "Newton + line search", "FEniCS and JAX+PETSc comparison", "indefinite local curvature from the double well"],
             ["Hyperelasticity", f"{mesh_label('L1')} serial parity; {mesh_label('L4')}, 24-step distributed scaling", "trust-region solve", "FEniCS and JAX+PETSc on the distributed suite; pure JAX only as a serial reference", "nonconvex large-deformation mechanics"],
             ["Plasticity2D", f"{element_label('P4', 'L5')}--{element_label('P4', 'L7')}", "endpoint solve or fixed nonlinear work", "JAX+PETSc only", "same-mesh PMG and nonlinear tail behavior"],
-            ["Plasticity3D", f"{degree_label('P1')}/{degree_label('P2')}/{degree_label('P4')}", "endpoint, scaling, and diagnostic PMG policies", "constitutive-AD, reference-formula, and frozen-operator PMG diagnostics", "heterogeneous 3D Mohr--Coulomb with constitutive AD"],
+            ["Plasticity3D", f"{degree_label('P1')}/{degree_label('P2')}/{degree_label('P4')}", "endpoint, scaling, and diagnostic PMG policies", "constitutive-AD, constitutive-assembly, and PMG sensitivity diagnostics", "heterogeneous 3D Mohr--Coulomb with constitutive AD"],
             ["Topology", "$192\\times96$ serial reference; $768\\times384$ parallel benchmark", "adaptive continuation", "pure JAX on the serial reference; JAX+PETSc on the fine-grid parallel run and scaling matrix", "distributed design-mechanics coupling"],
         ],
     )
@@ -1135,7 +1135,7 @@ def main() -> None:
                 "Plasticity3D",
                 "no",
                 "no",
-                "Reference-formula assembly exists as a supporting comparison route.",
+                "Closed-form constitutive assembly is used only as a supporting comparison route.",
             ],
             ["Topology", "no", "yes", "Parallel fine-grid realization is JAX+PETSc; pure JAX remains the serial design reference."],
         ],
@@ -1212,7 +1212,7 @@ def main() -> None:
             [
                 "Plasticity2D",
                 "endpoint evidence plus larger fixed-work diagnostics",
-                "Armijo continuation with same-mesh PMG smoother policy",
+                "Armijo continuation with a same-mesh PMG hierarchy",
                 "typically $10^{-2}$/15 unless a diagnostic states otherwise",
                 "$P_4(L_5)$ is the endpoint solve; $P_4(L_6)$--$P_4(L_7)$ are fixed-iteration diagnostics",
                 "wall time for the stated endpoint or fixed-work run",
@@ -1914,7 +1914,7 @@ def main() -> None:
         ],
         [
             [
-                "fixed PMG smoother policy",
+                "fixed PMG policy",
                 "8",
                 fmt_wall_time(float(source8["run_info"]["runtime_seconds"])),
                 fmt_count(source8["timings"]["linear"]["init_linear_iterations"]),
@@ -1922,7 +1922,7 @@ def main() -> None:
                 fmt_float(float(source8_progress["lambda_last"]), 6),
             ],
             [
-                "fixed PMG smoother policy",
+                "fixed PMG policy",
                 "32",
                 fmt_wall_time(float(source32["run_info"]["runtime_seconds"])),
                 fmt_count(source32["timings"]["linear"]["init_linear_iterations"]),

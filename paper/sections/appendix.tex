@@ -58,13 +58,14 @@ solver-policy sensitivity on matched discrete problems.
 
 For Plasticity2D, the reference-continuation comparison is not the primary
 method of the paper, but it is still useful as fixed-policy rank and timing
-evidence for the PMG smoother policy under the same outer continuation logic.
+evidence for a fixed same-mesh PMG policy under the same outer continuation
+logic.
 
 \begin{table}[H]
   \centering
   \input{tables/generated/plasticity2d_reference_continuation.tex}
-  \caption{Reference continuation with the fixed PMG smoother policy at 8
-  and 32 ranks. This is supporting solver evidence for a reference continuation
+  \caption{Reference continuation with the fixed PMG policy at 8 and 32 ranks.
+  This is supporting solver evidence for a reference continuation
   setting, not a primary solver comparison.}
   \label{tab:plasticity2d-reference-continuation}
 \end{table}

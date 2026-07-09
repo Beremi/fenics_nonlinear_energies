@@ -115,7 +115,8 @@ and PMG polynomial multigrid:
         to a separate distributed design update.
 \end{itemize}
 
-The result sections also include a fixed-reference PMG variant and alternative
+The result sections also include a fixed-reference PMG variant, in which the
+preconditioning operator is kept fixed along the nonlinear path, and alternative
 Krylov/preconditioner diagnostics. Those are not the primary defaults, but they
 are informative because they reveal how much of the final performance difference
 comes from derivative paths, preconditioners, or outer solver logic.
