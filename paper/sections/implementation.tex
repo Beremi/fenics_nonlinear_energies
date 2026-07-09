@@ -143,14 +143,14 @@ Matrix entries are inserted only for rows in $I_r$, with values on $G_r$ used to
 evaluate local stencils but not to duplicate ownership. Scalar energy values in
 the numerical tables are global reductions for the corresponding solver
 configuration; the ownership contract here concerns derivative and matrix
-assembly. Here $\mathcal{R}_i(u)$ and $\mathcal{A}_{ij}(u)$ are assembled residual and
+assembly. Here $\mathcal{G}_i(u)$ and $\mathcal{A}_{ij}(u)$ are assembled residual and
 tangent entries, while $r_{K,i}$ and $a_{K,ij}$ are element contributions.
 Equivalently, if
 $\mathcal{T}_r=\{K:\operatorname{dofs}(K)\cap I_r\ne\emptyset\}$ and
 $u_K=R_Ku_{\widetilde I_r}$ is the element restriction of the ghosted rank
 state, then rank $r$ inserts
 \[
-  \mathcal{R}_i(u)=\sum_{K\in\mathcal{T}_r:\,i\in\operatorname{dofs}(K)}
+  \mathcal{G}_i(u)=\sum_{K\in\mathcal{T}_r:\,i\in\operatorname{dofs}(K)}
     r_{K,i}(u_K),\qquad
   \mathcal{A}_{ij}(u)=\sum_{K\in\mathcal{T}_r:\,i,j\in\operatorname{dofs}(K)}
     a_{K,ij}(u_K),

@@ -30,7 +30,7 @@ The hyperelastic JAX-FEM comparison in
 is useful because the mesh, displacement schedule, and endpoint-energy
 post-comparison are explicitly matched. The three-dimensional plasticity
 comparison in \Cref{fig:plasticity3d-validation,tab:plasticity3d-validation}
-uses a different agreement contract: the highest-successful-load value on the
+uses a different agreement criterion: the highest-successful-load value on the
 tested grid, the
 $u_{\max}(\lambda_{\mathrm{sr}})$ curve, and endpoint displacement satisfy the
 stated criteria, while deviatoric-strain and upper-slope profile comparisons serve
@@ -57,8 +57,8 @@ similarly be read as solver-sensitivity tests, not as external baselines.
 
 Together, these distinctions delimit the contribution. We present a nonlinear
 FEM toolset that couples JAX-based local differentiation with PETSc sparse
-distributed solvers, and we evaluate that coupling with comparison contracts
-that specify their own limits. The results support this toolset and its
+distributed solvers, and we evaluate that coupling with comparison designs that
+specify their own limits. The results support this toolset and its
 coupled solver-comparison discipline for the tested benchmark classes. They do not imply that
 a single backend, globalization policy, preconditioner, or derivative
 construction dominates nonlinear finite-element computations in general.

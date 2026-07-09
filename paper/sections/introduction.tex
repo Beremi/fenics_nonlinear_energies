@@ -13,10 +13,11 @@ We develop and evaluate such a scientific toolset for nonlinear finite-element
 energy minimization and optimization. In the primary \jaxpetsc{} realization, JAX
 defines local energies and constitutive laws, while PETSc provides sparse
 distributed algebra, nonlinear globalization, Krylov methods, and
-preconditioners. We use comparison evidence in three roles. The \purejax{} and
-\fenics{} formulations provide internal formulation checks where matched
-benchmark definitions exist. JAX-FEM \citep{xue2023jaxfem} supplies a narrow
-hyperelastic companion endpoint-state comparison. The Sysala-family
+preconditioners. We use comparison evidence in scoped roles: internal
+formulation checks, a narrow endpoint companion comparison, and plasticity
+literature context. The \purejax{} and \fenics{} formulations provide internal
+checks where matched benchmark definitions exist. JAX-FEM \citep{xue2023jaxfem}
+supplies the hyperelastic endpoint-state comparison. The Sysala-family
 slope-stability literature
 \citep{sysala2017returnmapping,sysala2021optimization,sysala2025convexoptimization,sysala2025advancedcontinuation}
 provides reference-model context for the plasticity endpoint observables. The
@@ -39,9 +40,9 @@ thesis through three technical components:
         changing the benchmark functional being solved.
   \item \textbf{Controlled derivative-route comparisons.} We compare element
         automatic differentiation (AD), constitutive AD, and colored sparse
-        recovery inside the same solver realization, so the reported differences
-        reflect derivative construction rather than changes in the underlying
-        discrete model.
+        recovery inside the same solver realization, so the discrete model is
+        held fixed while derivative-route and associated assembly or recovery
+        costs are compared.
   \item \textbf{Solver-policy evidence across model classes.} We study
         line-search, trust-region, Krylov, algebraic-multigrid, direct-coarse,
         and polynomial-multigrid choices on scalar, mechanics, plasticity, and
@@ -49,10 +50,11 @@ thesis through three technical components:
         benchmark definitions.
 \end{enumerate}
 
-Relative to the cited JAX-native differentiable FEM, FEM-adjoint, and bridge
-architectures, our emphasis is the integrated evaluation of local AD routes
-inside PETSc-owned sparse MPI Newton solvers, with globalization and
-preconditioner policy varied on the heterogeneous benchmark suite studied here.
+Relative to the JAX-native differentiable FEM, FEM-adjoint, and bridge
+architectures discussed in \Cref{sec:related}, our emphasis is the integrated
+evaluation of local AD routes inside PETSc-owned sparse MPI Newton solvers, with
+globalization and preconditioner policy varied on the heterogeneous benchmark
+suite studied here.
 
 We evaluate these components on six benchmark families: $p$-Laplace, scalar
 Ginzburg--Landau, hyperelasticity, two- and three-dimensional

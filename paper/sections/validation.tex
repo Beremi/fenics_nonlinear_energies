@@ -65,9 +65,10 @@ replace path-history validation for elastoplastic evolution.
 \label{sec:val-hyperelasticity}
 
 The hyperelasticity energy is defined in \Cref{sec:bench-he}. The external
-comparison here is deliberately narrow and uses a serial companion case rather
-than the 24-step rotating benchmark path. Both implementations use the same
-level-1 mesh and the same right-face $x$-translation schedule
+comparison uses JAX-FEM \citep{xue2023jaxfem} in a deliberately narrow serial
+companion case rather than the 24-step rotating benchmark path. Both
+implementations use the same level-1 mesh and the same right-face
+$x$-translation schedule
 $d=(0.0025,0.005,0.0075,0.01)$, then post-compare both endpoint states with
 the energy in \eqref{eq:hyperelasticity-energy}. This supports endpoint-state
 observable agreement for this hyperelastic companion problem only. The comparison is

@@ -36,9 +36,11 @@ only where a compact serial formulation or demonstration is available.
 The two plasticity families are primarily \jaxpetsc{} studies. The
 two-dimensional case supplies supporting continuation diagnostics, and the
 three-dimensional case uses the \v{C}erm{\'a}k--Sysala--Valdman MATLAB
-elastoplastic implementation as implementation context. The Sysala-family
-slope-stability literature supplies the reference-model setting. Neither source
-class is used as a path-history validation baseline.
+elastoplastic implementation as implementation context
+\citep{cermak2019efficient}. The Sysala-family slope-stability literature
+supplies the reference-model setting
+\citep{sysala2017returnmapping,sysala2021optimization,sysala2025convexoptimization,sysala2025advancedcontinuation}.
+Neither source class is used as a path-history validation baseline.
 
 Topology optimization uses a parallel \jaxpetsc{} realization and a compact
 serial \purejax{} design demonstration, but the agreement evidence for that
@@ -213,8 +215,8 @@ and the weak problem is: find $u \in H_0^1(\Omega)$ such that
   \qquad \forall v \in H_0^1(\Omega).
   \label{eq:gl-weak}
 \end{equation}
-The discrete problem is a conforming $P_1$ stationary problem on its uniform
-triangular hierarchy:
+Let $V_h\subset H_0^1(\Omega)$ be the conforming $P_1$ space on the uniform
+triangular hierarchy. The discrete stationary problem is
 \begin{equation}
   u_h \in V_h:
   \qquad
@@ -416,11 +418,13 @@ geometry. At increment $n+1$, the continuum equilibrium equations are
 where $\sigma^{n+1}$ and the internal variables are obtained from the
 elastoplastic update driven by $\varepsilon(u^{n+1})$ and the previous state.
 
-The computational slope has the standard homogeneous benchmark geometry
-specified by lower bench width $15$, slope run $10$, upper bench width $15$,
-two vertical height segments of length $10$, and slope angle $45^\circ$. The
-bottom edge is fixed in both displacement components, the left and far-right
-vertical sides are fixed horizontally, and the sloping top is traction-free.
+The computational slope is the polygon with vertices
+$(0,0)$, $(40,0)$, $(40,10)$, $(25,10)$, $(15,20)$, and $(0,20)$, traversed
+counterclockwise. Equivalently, the lower bench width is $15$, the slope run is
+$10$, the upper bench width is $15$, the two vertical height segments have
+length $10$, and the slope angle is $45^\circ$. The bottom edge is fixed in both
+displacement components, the left and far-right vertical sides are fixed
+horizontally, and the sloping top is traction-free.
 The material parameters are
 $E=\num{40000}$, $\nu=\num{0.30}$, $c_0=\num{6.0}$,
 $\phi=45^\circ$, $\psi=0^\circ$, and gravity magnitude $\gamma=\num{20}$,

@@ -159,3 +159,59 @@ def test_submission_bundle_manifest_rejects_stale_git_commit(tmp_path: Path) -> 
 
     assert "bundle-refresh paths changed" in message
     assert "paper/main.tex" in message
+
+
+def test_submission_bundle_manifest_rejects_dirty_refresh_paths(tmp_path: Path) -> None:
+    checker = _load_module()
+    source = tmp_path / "source.json"
+    bundle = tmp_path / "bundle" / "source.json"
+    manifest = tmp_path / "bundle" / "manifest.json"
+    tracked = tmp_path / "paper" / "main.tex"
+    bundle.parent.mkdir()
+    tracked.parent.mkdir()
+    source.write_text('{"ok": true}\n', encoding="utf-8")
+    bundle.write_text('{"ok": true}\n', encoding="utf-8")
+
+    import subprocess
+
+    subprocess.run(["git", "-C", str(tmp_path), "init"], check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    subprocess.run(["git", "-C", str(tmp_path), "config", "user.email", "test@example.com"], check=True)
+    subprocess.run(["git", "-C", str(tmp_path), "config", "user.name", "Test User"], check=True)
+    tracked.write_text("committed\n", encoding="utf-8")
+    subprocess.run(["git", "-C", str(tmp_path), "add", "paper/main.tex"], check=True)
+    subprocess.run(
+        ["git", "-C", str(tmp_path), "commit", "-m", "baseline"],
+        check=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
+    commit = subprocess.check_output(["git", "-C", str(tmp_path), "rev-parse", "HEAD"], text=True).strip()
+    tracked.write_text("dirty\n", encoding="utf-8")
+
+    manifest.write_text(
+        json.dumps(
+            {
+                "git_commit": commit,
+                "source_files": [
+                    {
+                        "bundle_path": "bundle/source.json",
+                        "bundle_sha256": _digest(bundle),
+                        "source_path": "source.json",
+                        "source_sha256": _digest(source),
+                    }
+                ],
+            }
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    try:
+        checker.check_manifest(manifest, repo_root=tmp_path)
+    except SystemExit as exc:
+        message = str(exc)
+    else:
+        raise AssertionError("expected dirty bundle-refresh path to fail")
+
+    assert "bundle-refresh paths have uncommitted changes" in message
+    assert "paper/main.tex" in message

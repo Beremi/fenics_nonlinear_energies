@@ -6,17 +6,19 @@ distributed nonlinear solvers.
 Across the tested problems, the numerical evidence supports treating derivative
 construction, sparse ownership, nonlinear globalization, Krylov algebra, and
 preconditioning as one solver design rather than as separable implementation
-details.
+details. The concrete contribution is therefore not a single winning backend or
+preconditioner, but a paper-facing toolset and evaluation protocol: fixed-model
+derivative-route comparisons, PETSc-owned sparse MPI assembly, scoped
+validation checks, and timing studies whose solver-policy assumptions are
+reported explicitly.
 
-The central lesson is that derivative construction should be evaluated inside
-the sparse nonlinear solve that consumes it. This point is visible in the
-high-order 3D plasticity derivative-route comparison, the endpoint-scoped
-hyperelasticity and plasticity validation checks, the distributed mechanics
-solver-policy studies, and the topology rank-consistency diagnostic. These
-evidence blocks support the \jaxpetsc{} toolset for the benchmark families tested
-here without implying a universal backend, preconditioner, globalization, or
-derivative-route ranking.
-Natural extensions are path-dependent mechanics validation against
+The strongest evidence comes from the high-order 3D plasticity derivative-route
+comparison, the endpoint-scoped hyperelasticity and plasticity validation
+checks, the distributed mechanics solver-policy studies, and the topology
+rank-consistency diagnostic. These evidence blocks support the \jaxpetsc{}
+toolset for the benchmark families tested here without implying a universal
+backend, preconditioner, globalization, or derivative-route ranking. Natural
+extensions are path-dependent mechanics validation against
 incremental-history references, broader agreement-focused external comparisons
 under matched problem definitions, and reduced preconditioner-setup and
 multigrid costs in sparse mechanics configurations. Those extensions would test

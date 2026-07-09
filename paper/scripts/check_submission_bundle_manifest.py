@@ -146,6 +146,11 @@ def _changed_bundle_refresh_paths(repo_root: Path, git_commit: str) -> list[str]
     return [line.strip() for line in result.stdout.splitlines() if line.strip()]
 
 
+def _dirty_bundle_refresh_paths(repo_root: Path) -> list[str]:
+    result = _git(repo_root, ["status", "--porcelain", "--", *BUNDLE_REFRESH_PATHS])
+    return [line.strip() for line in result.stdout.splitlines() if line.strip()]
+
+
 def _check_git_commit_freshness(
     repo_root: Path,
     manifest: dict[str, Any],
@@ -178,6 +183,15 @@ def _check_git_commit_freshness(
             "git_commit: bundle-refresh paths changed after the recorded commit "
             f"{commit}: {preview}{suffix}. Run `make -C paper submission-bundle` "
             "after committing manuscript/generated paper changes."
+        )
+    dirty_paths = _dirty_bundle_refresh_paths(repo_root)
+    if dirty_paths:
+        preview = ", ".join(dirty_paths[:8])
+        suffix = "" if len(dirty_paths) <= 8 else f", ... ({len(dirty_paths)} paths)"
+        findings.append(
+            "git_commit: bundle-refresh paths have uncommitted changes "
+            f"relative to HEAD: {preview}{suffix}. Commit or discard these changes, "
+            "then run `make -C paper submission-bundle`."
         )
     return commit
 
