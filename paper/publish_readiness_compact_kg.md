@@ -295,6 +295,17 @@ or unreadable updated labels.
   is now a normal float followed by a `\FloatBarrier`, so the LaTeX warning scan
   is clean while table interpretation remains after the table. The current PDF is
   a 45-page A4 article.
+- Current thematic polish pass:
+  Arendt/Avicenna/Turing/Faraday audits found no immediate experiment to run,
+  but identified self-containment, evidence, and layout polish. Integrated fixes
+  define hyperelastic end faces, the 3D material-region partition, engineering
+  shear versus material unit weight, zero previous/history variables for the 3D
+  endpoint surrogate, and the 2D principal-basis compliance block. Evidence
+  tables now expose validation gates, the $\lambda_{\mathrm{sr}}=\num{1.0}$
+  scaling stop target/status, and topology adaptive schedule/status. A
+  `\FloatBarrier` after the 3D benchmark table keeps the interpretation in
+  reading order. The rebuilt 45-page A4 PDF has a clean warning scan; pages
+  21--23, 27--28, and 37--40 were rendered and checked.
 
 ## Figure And Table Rules
 
