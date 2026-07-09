@@ -104,10 +104,12 @@ stage or commit `paper/style_guide/`.
   consistent Plasticity3D `s_{\lambda}` notation, and topology notation that
   avoids stress/density and hyperelastic/double-well collisions.
 - Evidence/provenance audit: no missing numerical experiment is required for
-  the current scoped claims. Remaining evidence risks are release-packaging
-  risks: stale commit identifiers in generated provenance notes, source data
-  split between the curated paper bundle and broader repo assets, and derived
-  rather than full raw Plasticity3D figure data in the local bundle.
+  the current scoped claims. The local submission-bundle manifest is refreshed
+  to paper-cleanup commit `3febc92239be9f0c9fc8f129459377cb5fb9340a`.
+  Remaining evidence risks are release-packaging risks: source data split
+  between the curated paper bundle and broader repo assets, derived rather than
+  full raw Plasticity3D figure data in the local bundle, and final DOI/archive
+  integration.
 - Citation/comparator audit: recent fixes narrow JAX-FEM wording to a
   hyperelastic companion terminal-state comparison, keep the
   \v{C}ermak--Sysala--Valdman role to elastoplastic implementation context,
@@ -131,6 +133,10 @@ stage or commit `paper/style_guide/`.
   evidence to source-record context, added a Karolina hardware audit row, and
   made figure/table asset validators reject stale non-manuscript generated
   outputs.
+- Current provenance-refresh chunk: rebuilt the local submission-bundle manifest
+  to commit `3febc92239be9f0c9fc8f129459377cb5fb9340a`; manifest-hash,
+  archive-neutral asset, submission, release-blocker, diff-whitespace, and
+  ignored-style-guide checks pass.
 
 ## Figure And Table Rules
 

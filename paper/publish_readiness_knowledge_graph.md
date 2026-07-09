@@ -773,11 +773,13 @@ MATLAB literature only when there is source-backed evidence.
   GitHub repository `Beremi/jax_petsc_nonlinear_energies`; the manuscript
   availability URL therefore remains canonical. The final release still needs
   license, DOI/archive, target declarations, and a final bundle refresh from
-  the released tree. Current bundle-refresh chunk regenerated the local
+  the released tree. Earlier bundle-refresh work regenerated the local
   submission-bundle manifest from commit
-  `561947fa6a39b22e455ead956153149f641c440f`; archive-neutral validation still
-  passes. This reduces manifest staleness for the current working paper but
-  does not replace the final licensed archive/DOI step. Current hygiene-guard
+  `561947fa6a39b22e455ead956153149f641c440f`; the current provenance-refresh
+  chunk updates that manifest to commit
+  `3febc92239be9f0c9fc8f129459377cb5fb9340a`, and archive-neutral validation
+  still passes. This reduces manifest staleness for the current working paper
+  but does not replace the final licensed archive/DOI step. Current hygiene-guard
   chunk extends the PDF-text manuscript scan to reject codebase/repository-local
   wording and defensive software/framework-ranking phrases, making the recent
   evidence-scope prose polish enforceable in future edits. Current

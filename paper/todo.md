@@ -304,6 +304,10 @@ scientific claims were introduced without supporting evidence.
   validator reject generated figure/table files or manifest entries that are not
   part of the manuscript asset set.
 - Rebuilt the 43-page paper PDF through the paper generation pipeline.
+- Refreshed the local submission-bundle manifest after the asset-hygiene cleanup
+  so it records paper-cleanup commit
+  `3febc92239be9f0c9fc8f129459377cb5fb9340a`; no MPI campaigns or raw
+  benchmark results were rerun.
 
 ## Blocking Issues Before Submission
 
@@ -716,6 +720,28 @@ required support for the current scoped contribution.
   passed and still reports the four expected final-submission blockers:
   target template/declarations, repository license, archival DOI, and durable
   archive integration.
+- `./.venv/bin/python paper/scripts/build_submission_bundle.py`: passed on
+  2026-07-09 and refreshed
+  `artifacts/reproduction/paper_submission_2026_07_08/manifest.json` to commit
+  `3febc92239be9f0c9fc8f129459377cb5fb9340a`.
+- `./.venv/bin/python paper/scripts/check_submission_bundle_manifest.py`:
+  passed after the manifest refresh, verifying 51 bundle files, 59 local source
+  hashes, and 2 recorded external source hashes.
+- `./.venv/bin/python paper/scripts/validate_paper_assets.py --archive-neutral`:
+  passed after the manifest refresh, validating 29 figures, 30 tables, and 44
+  provenance records.
+- `make -C paper submission-check`: passed after the manifest refresh, rerunning
+  the LaTeX build gate, log scan, `qpdf`, aux-order check, hard-float placement
+  check, manuscript hygiene gate, submission-bundle manifest verifier, and
+  archive-neutral asset validation.
+- `git diff --check`: passed after the manifest refresh.
+- `git check-ignore -v paper/style_guide/README.md` and
+  `git status --short --ignored paper/style_guide`: confirmed the local
+  style-guide snapshot remains ignored.
+- `./.venv/bin/python paper/scripts/check_release_blockers.py --expect-blockers`:
+  passed after the manifest refresh and still reports the four expected
+  final-submission blockers: target template/declarations, repository license,
+  archival DOI, and durable archive integration.
 
 Exact remaining blockers are submission metadata and license/archive DOI. The
 archive-neutral validator now passes against the local curated bundle; final
