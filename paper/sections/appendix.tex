@@ -11,7 +11,7 @@ comparisons on the same $P_4(L_2)$ problem from
 \cref{eq:plasticity3d-discrete} at $\lambda_{\mathrm{sr}}=\num{1.0}$: a
 matched reference-formula assembly comparator and a fixed-reference PMG variant.
 Both use Armijo Newton, a gradient-only stopping target
-$\|\nabla\mathcal{F}\|<\num{0.01}$, at most 50 Newton iterations, and PETSc
+$\|\nabla\mathcal{F}\|_2<\num{0.01}$, at most 50 Newton iterations, and PETSc
 relative KSP tolerance \num{1e-1}. Here reference-formula assembly means
 closed-form constitutive assembly used as a comparator for the JAX
 constitutive-AD kernel, while fixed-reference PMG means a preconditioning

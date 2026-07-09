@@ -183,6 +183,14 @@ scientific claims were introduced without supporting evidence.
   CPU scaling, partitioning, Topology, and Discussion, and kept algorithms,
   Plasticity3D validation, appendix final tables, and broader benchmark-wide
   float changes deferred until target-template conversion.
+- Addressed the latest hygiene/message/math/evidence audit: added a PDF-text
+  manuscript hygiene gate to `make -C paper submission-check`, broadened
+  front-matter colored sparse recovery wording beyond finite-difference-only
+  language, aligned the performance-section label with the visible title,
+  tightened Discussion and Conclusions synthesis, scoped the benchmark overview
+  and Plasticity3D endpoint-surrogate caption, clarified 3D plasticity
+  punctuation and reduced-dilation wording, normalized the appendix gradient
+  norm, and made dense generated-table headers more self-contained.
 - Addressed the benchmark-readability audit: split Plasticity2D and Plasticity3D
   setup prose into staged continuum-model, geometry/material, surrogate, and
   claim-scope paragraphs without changing formulas or numerical evidence.
@@ -408,6 +416,18 @@ required support for the current scoped contribution.
   latest rebuild; the hyperelastic validation pair, Plasticity3D
   derivative-ablation/degree/scaling flow, partitioning-to-Topology transition,
   and Results-to-Discussion barrier are readable and unclipped.
+- `./.venv/bin/python -m pytest tests/test_paper_manuscript_hygiene.py`:
+  passed 2 tests after adding the visible-manuscript hygiene gate.
+- `./.venv/bin/python -m py_compile paper/scripts/check_manuscript_hygiene.py paper/scripts/generate_paper_tables.py`:
+  passed on 2026-07-09 after the hygiene and generated-table header edits.
+- `make -C paper submission-check`: passed again on 2026-07-09 after the
+  hygiene/message/math/evidence chunk; the check now includes the PDF-text
+  manuscript hygiene gate before archive-neutral asset validation.
+- Rendered and visually inspected affected pages 1--2, 10, 17, 24--28, and
+  36--39 after the latest rebuild; the front-matter/related-work wording,
+  benchmark overview and Plasticity3D equation punctuation, validation caption,
+  globalization/derivative/topology table headers, Discussion/Conclusions
+  boundary, and appendix gradient-norm notation are readable and unclipped.
 - `./.venv/bin/python -m pytest tests/test_docs_publication.py`: passed
   13 tests.
 - `./.venv/bin/python -m pytest tests/test_final_report_figure_generators.py`:

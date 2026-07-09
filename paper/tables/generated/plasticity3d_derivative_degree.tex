@@ -4,7 +4,7 @@
 \par\vspace{0.2em}
 \begin{tabularx}{\textwidth}{@{}c@{\hspace{0.45em}}>{\hsize=1.100\hsize\linewidth=\hsize\RaggedRight\arraybackslash}X>{\hsize=0.900\hsize\linewidth=\hsize\RaggedRight\arraybackslash}X@{\hspace{0.45em}}c c c c@{}}
 \toprule
-Element & Route & Work & Free DOFs & Elem. & Overlap & RSS [GiB] \\
+Element & Route & Work & Free DOFs & Elem. DOFs & Overlap DOFs & RSS [GiB] \\
 \midrule
 $P_{1}(L_{1})$ & Element AD & one Newton step & \num{10526} & 12 & 675 & \num{0.5} \\
 $P_{1}(L_{1})$ & Colored SFD & one Newton step & \num{10526} & 12 & 675 & \num{0.5} \\
@@ -26,7 +26,7 @@ $P_{4}(L_{1})$ & Constitutive AD & one Newton step & \num{610964} & 105 & 27177 
 \par\vspace{0.2em}
 \begin{tabularx}{\textwidth}{@{}c@{\hspace{0.45em}}>{\hsize=1.000\hsize\linewidth=\hsize\RaggedRight\arraybackslash}X@{\hspace{0.45em}}c c c c c@{}}
 \toprule
-Element & Route & Free DOFs & Krylov & Solve [s] & Hess. [s] & Colors \\
+Element & Route & Free DOFs & Krylov & Solve [s] & Hessian [s] & Colors \\
 \midrule
 $P_{1}(L_{1})$ & Element AD & \num{10526} & 11 & \num{0.0806} & \num{0.257} & -- \\
 $P_{1}(L_{1})$ & Colored SFD & \num{10526} & 11 & \num{0.0704} & \num{0.256} & 57--90 \\

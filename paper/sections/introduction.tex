@@ -35,8 +35,8 @@ organized around three solver components:
         tested benchmark definitions.
   \item \textbf{Derivative construction in sparse assembly.} We implement and compare
         element automatic differentiation, constitutive automatic
-        differentiation, and colored sparse finite-difference recovery inside
-        the same sparse assembly path.
+        differentiation, and colored sparse recovery inside the same sparse
+        assembly path.
   \item \textbf{Distributed PETSc realization.} We connect the nonlinear and
         derivative choices to PETSc Krylov methods and preconditioners,
         including Hypre, GAMG, and problem-specific polynomial multigrid
@@ -77,7 +77,7 @@ implementations used in selected checks.
 into literature model and implemented discrete problem. \Cref{sec:validation}
 then reports validation and external-comparison evidence, deliberately
 separating hyperelastic JAX-FEM agreement from the three-dimensional plasticity
-endpoint-surrogate comparison. \Cref{sec:numerical-examples}
+endpoint-surrogate comparison. \Cref{sec:performance-solver-behavior}
 reports timing, scaling, derivative-route, and discretization-comparison
 evidence. \Cref{sec:discussion} and \Cref{sec:conclusion} synthesize the main
 scope and limitations. Supporting solver-policy diagnostics are collected in

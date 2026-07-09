@@ -50,11 +50,11 @@ timing-only evidence, while the bottom-clamped $\lambda_{\mathrm{sr}}=1.55$
 scaling sweep is the converged comparison tied to the benchmark. The topology
 study reports end-to-end timing under adaptive stopping, with a separate
 controlled rank-consistency check. The fixed-reference PMG studies should be
-read as solver-sensitivity tests, not external baselines. Together, these
-distinctions state the contribution: a nonlinear FEM toolset that couples
-JAX-based local differentiation with PETSc sparse distributed solvers and
-reports matched comparison evidence, with explicit agreement limits where
-predefined.
-Automatic differentiation alone does not determine the behavior of large
-nonlinear FEM; nonlinear globalization, MPI assembly, coarse solvers, and
-preconditioning also enter the numerical method.
+read as solver-sensitivity tests, not external baselines.
+
+Together, these distinctions state the contribution: a nonlinear FEM toolset
+that couples JAX-based local differentiation with PETSc sparse distributed
+solvers and reports matched comparison evidence, with explicit agreement limits
+where predefined. Automatic differentiation alone does not determine the
+behavior of large nonlinear FEM; nonlinear globalization, MPI assembly, coarse
+solvers, and preconditioning also enter the numerical method.

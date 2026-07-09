@@ -4,8 +4,8 @@ The benchmark suite is intentionally heterogeneous. The central claim of the
 paper is not that one solver policy dominates every nonlinear PDE family, but
 that one differentiable sparse-solver toolset can cover scalar elliptic problems,
 phase-field-type energies, finite-strain mechanics, elastoplastic slope
-stability, and reduced topology optimization without switching conceptual
-formulations.
+stability, and reduced topology optimization through a common energy and
+reduced-objective viewpoint.
 
 \begin{table}[!htbp]
   \centering
@@ -618,7 +618,7 @@ equations are
   \qquad
   u_i^{n+1} = \bar u_i^{n+1} \quad \text{on }\Gamma_{D,i},
   \qquad
-  \sigma^{n+1}n = 0 \quad \text{on }\Gamma_N.
+  \sigma^{n+1}n = 0 \quad \text{on }\Gamma_N,
   \label{eq:plasticity3d-strong}
 \end{equation}
 where $\sigma^{n+1}$ and the internal variables are obtained from the
@@ -744,7 +744,8 @@ Here $\phi$ denotes friction angle and $\psi$ denotes dilation angle; the paper
 uses those symbols only in that geomechanics sense. All 3D material tuples used
 in the reported runs have $\psi=0^\circ$; the dilation angle therefore enters
 only through the Davis-B reduction above and not as a separate argument of
-$\Phi_{\mathrm{MC},3\mathrm{D}}$.
+$\Phi_{\mathrm{MC},3\mathrm{D}}$. No separate reduced dilation-angle argument is
+carried in the 3D branch expressions below.
 
 The local constitutive surrogate follows the piecewise branch structure of the
 matched endpoint reference formulation. At one quadrature point we suppress the index $q$ and write

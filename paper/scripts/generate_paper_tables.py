@@ -1353,7 +1353,16 @@ def main() -> None:
                 "@{}"
                 + xspec((1.20, "RaggedRight"), (0.90, "RaggedRight"))
                 + r"@{\hspace{0.45em}}c c c c c c@{}",
-                ["Benchmark", "Method", "Ranks", "Outcome", "Steps", "Solve/elapsed [s]", "Grad/target", "Energy"],
+                [
+                    "Benchmark",
+                    "Method",
+                    "Ranks",
+                    "Outcome",
+                    r"\shortstack{Completed/requested\\steps}",
+                    "Solve/elapsed [s]",
+                    "Grad/target",
+                    "Energy",
+                ],
                 [
                     [
                         GLOBALIZATION_BENCHMARK_LABELS.get(str(row["benchmark"]), str(row["benchmark_label"])),
@@ -1588,7 +1597,7 @@ def main() -> None:
             "Compliance",
             "Volume",
             "$p$",
-            "$\\Delta C/C_1$",
+            "Rel. compliance diff.",
             "Density rel. $L^2$",
         ],
         [
@@ -1615,7 +1624,7 @@ def main() -> None:
                 r"@{}c@{\hspace{0.45em}}"
                 + xspec((1.10, "RaggedRight"), (0.90, "RaggedRight"))
                 + r"@{\hspace{0.45em}}c c c c@{}",
-                ["Element", "Route", "Work", "Free DOFs", "Elem.", "Overlap", "RSS [GiB]"],
+                ["Element", "Route", "Work", "Free DOFs", "Elem. DOFs", "Overlap DOFs", "RSS [GiB]"],
                 [
                     [
                         _p3d_discretization_label(row),
@@ -1641,7 +1650,7 @@ def main() -> None:
                 r"@{}c@{\hspace{0.45em}}"
                 + xcol(1.0, "RaggedRight")
                 + r"@{\hspace{0.45em}}c c c c c@{}",
-                ["Element", "Route", "Free DOFs", "Krylov", "Solve [s]", "Hess. [s]", "Colors"],
+                ["Element", "Route", "Free DOFs", "Krylov", "Solve [s]", "Hessian [s]", "Colors"],
                 [
                     [
                         _p3d_discretization_label(row),

@@ -595,6 +595,13 @@ MATLAB literature only when there is source-backed evidence.
   submission-check` and `git diff --check` passed, and rendered pages 23--24
   and 33--37 were visually checked for validation/result ordering, table
   clipping, Topology transition, and the Discussion barrier.
+  Current hygiene/math chunk adds a PDF-text manuscript hygiene gate to
+  `make -C paper submission-check`, broadens front-matter colored-recovery
+  wording from a finite-difference-only route to the AD-HVP/finite-difference
+  umbrella, renames the performance section label to match the visible section
+  title, and sharpens generated table headers for globalization steps,
+  Plasticity3D derivative-degree DOFs/Hessian time, and topology relative
+  compliance difference.
 - `REPRO`: reproducibility and submission readiness.
   Known blockers from `paper/todo.md`: target journal/template/declarations,
   repository license/archive DOI, and archive-neutral provenance for critical
@@ -671,7 +678,13 @@ MATLAB literature only when there is source-backed evidence.
   pre-existing generated-figure drift remains outside the staged scope. Current
   math/evidence chunk aligns the PETSc audit/manifest key with the manuscript
   citation `petsc2026web`; the ignored local cached HTML filename was renamed
-  to match the audit key.
+  to match the audit key. Current hygiene/math chunk adds
+  `check_manuscript_hygiene.py`, a PDF-text gate for paper-facing local/process
+  vocabulary, and focused tests for the body-text scan. Remaining provenance
+  risks are unchanged: the curated submission-bundle manifest still needs a
+  final-state refresh for the eventual archived release, generated figure drift
+  must be reconciled before relying on a clean source-to-PDF rebuild, and the
+  license/archive DOI decisions remain blockers.
 
 ## Evidence Nodes
 
@@ -1193,6 +1206,22 @@ MATLAB literature only when there is source-backed evidence.
   until the target venue/template or main/supplement split is chosen. The
   broader benchmark-wide and supplement-structure recommendations remain
   deferred target-template work.
+- `Current hygiene/message/math/evidence/layout audit`
+  (`Chandrasekhar the 2nd`/`Turing the 2nd`/`Lorentz the 2nd`/`McClintock the 2nd`):
+  completed and partly integrated. Findings addressed in the current
+  hygiene/math chunk: front-matter colored sparse recovery now matches the
+  AD-HVP/finite-difference umbrella used in Methods and Results; the old
+  `sec:numerical-examples` label was replaced by a performance/solver-behavior
+  label; Discussion and Conclusions are more synthetic; the benchmark overview
+  no longer claims a single conceptual formulation across topology and
+  mechanics; Plasticity3D endpoint-surrogate table wording is scoped; displayed
+  3D plasticity punctuation and reduced-dilation wording are clarified; appendix
+  gradient norm notation uses the same 2-norm convention; and generated table
+  headers are more self-contained. Deferred findings: reconcile dirty generated
+  figure assets, refresh the submission-bundle manifest at final state, rerun
+  date-sensitive literature checks before submission, and revisit validation
+  float whitespace or dense-table structure after the target
+  template/main-supplement decision.
 
 ## First Edit Backlog
 

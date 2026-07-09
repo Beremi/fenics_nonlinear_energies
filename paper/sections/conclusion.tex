@@ -2,20 +2,23 @@
 
 We developed a \jaxpetsc{} toolset for nonlinear finite-element energy
 minimization in which local differentiable energy models are coupled to PETSc
-sparse distributed nonlinear solvers. The experiments connect scalar energy
-definitions, second-order derivative construction, MPI assembly, and reference
-comparisons in a common benchmark setting. Across the tested problems, the main
-lesson is that local AD choices and distributed nonlinear solver design must be
-considered together.
+sparse distributed nonlinear solvers. The methodology in
+\Cref{sec:methodology,sec:implementation} connects finite-element energy
+notation, second-order derivative construction, sparse MPI assembly, nonlinear
+globalization, Krylov solvers, and preconditioner policy. Across the tested
+problems, the main lesson is that local AD choices and distributed nonlinear
+solver design must be considered together.
 
-The numerical results support this pattern on a deliberately heterogeneous
-benchmark suite. Scalar problems check formulation and derivative agreement,
-hyperelasticity provides a narrow matched external comparison, three-dimensional
-plasticity tests nonsmooth constitutive structure and distributed sparse solves
-under an endpoint-surrogate interpretation, and topology optimization exercises a
-coupled design-and-mechanics problem. In the fixed high-order three-dimensional
-plasticity derivative-route comparison, constitutive AD is the lowest measured
-wall-time route among the tested alternatives. In the reported $P_4(L_2)$,
+The validation and performance evidence in
+\Cref{sec:validation,sec:performance-solver-behavior} support this pattern on a
+deliberately heterogeneous benchmark suite. Scalar problems check formulation
+and derivative agreement, hyperelasticity provides a narrow matched external
+comparison, three-dimensional plasticity tests nonsmooth constitutive structure
+and distributed sparse solves under an endpoint-surrogate interpretation, and
+topology optimization exercises a coupled design-and-mechanics problem. In the
+fixed high-order three-dimensional plasticity derivative-route comparison,
+constitutive AD is the lowest measured wall-time route among the tested
+alternatives. In the reported $P_4(L_2)$,
 $\lambda_{\mathrm{sr}}=\num{1.55}$ three-dimensional plasticity scaling sweep,
 all tested rank counts converge with the same nonlinear and Krylov work. The
 topology runs provide distributed timing evidence for the coupled

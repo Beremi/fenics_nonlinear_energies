@@ -53,6 +53,7 @@ submission-check:
 	! rg -n "(Overfull|Underfull|LaTeX Warning|Package .* Warning|undefined references|Rerun to get cross-references|multiply defined|pdfTeX warning)" build/main.log
 	qpdf --check build/main.pdf
 	$(PYTHON) scripts/check_pdf_aux_order.py build/main.aux
+	$(PYTHON) scripts/check_manuscript_hygiene.py build/main.pdf
 	$(PYTHON) scripts/validate_paper_assets.py --archive-neutral
 
 pdf: validate
