@@ -9,31 +9,21 @@ from pathlib import Path
 from common import REPO_ROOT, TABLES_ROOT, ensure_paper_dirs, read_csv_rows, read_json, write_json, write_text
 
 
-LOCAL_P3D_SUMMARY = (
-    REPO_ROOT
-    / "artifacts/raw_results/source_compare/plasticity3d_l1_2_lambda1_grad1e2_local_pmg_scaling/comparison_summary.json"
-)
-MIXED_P3D_SUMMARY = (
-    REPO_ROOT
-    / "artifacts/raw_results/source_compare/plasticity3d_l1_2_lambda1_grad1e2_scaling/comparison_summary.json"
-)
-SOURCEFIXED_P3D_SUMMARY = (
-    REPO_ROOT
-    / "artifacts/raw_results/source_compare/plasticity3d_l1_2_lambda1_grad1e2_scaling_all_pmg/comparison_summary.json"
-)
-P3D_DEGREE_ENERGY_STUDY_SUMMARY = (
-    REPO_ROOT
-    / "artifacts/raw_results/plasticity3d_lambda1p55_degree_mesh_energy_study/comparison_summary.json"
-)
 PAPER_SUBMISSION_INPUT_ROOT = REPO_ROOT / "artifacts/reproduction/paper_submission_2026_07_08/inputs"
+LOCAL_P3D_SUMMARY = PAPER_SUBMISSION_INPUT_ROOT / "plasticity3d_recommended_scaling/comparison_summary.json"
+MIXED_P3D_SUMMARY = PAPER_SUBMISSION_INPUT_ROOT / "plasticity3d_reference_formula/comparison_summary.json"
+SOURCEFIXED_P3D_SUMMARY = PAPER_SUBMISSION_INPUT_ROOT / "plasticity3d_fixed_reference_operator/comparison_summary.json"
+P3D_DEGREE_ENERGY_STUDY_SUMMARY = PAPER_SUBMISSION_INPUT_ROOT / (
+    "plasticity3d_degree_energy_study/comparison_summary.json"
+)
 P3D_VALIDATION_SUMMARY = PAPER_SUBMISSION_INPUT_ROOT / "plasticity3d_validation/comparison_summary.json"
 P3D_DERIVATIVE_ABLATION_SUMMARY = PAPER_SUBMISSION_INPUT_ROOT / (
     "plasticity3d_derivative_ablation/comparison_summary.json"
 )
 JAX_FEM_BASELINE_SUMMARY = PAPER_SUBMISSION_INPUT_ROOT / "jax_fem_hyperelastic_baseline/comparison_summary.json"
-GLOBALIZATION_METHOD_COMPARE = REPO_ROOT / "artifacts/reports/globalization_method_compare/full_summary.csv"
-DERIVATIVE_ROUTE_COMPARE = REPO_ROOT / "artifacts/reports/derivative_route_compare/full_summary.csv"
-SUPPLEMENTAL_REPORT_ROOT = REPO_ROOT / "artifacts/reports/paper_reviewer_gap_experiments"
+GLOBALIZATION_METHOD_COMPARE = PAPER_SUBMISSION_INPUT_ROOT / "globalization_method_compare/full_summary.csv"
+DERIVATIVE_ROUTE_COMPARE = PAPER_SUBMISSION_INPUT_ROOT / "derivative_route_compare/full_summary.csv"
+SUPPLEMENTAL_REPORT_ROOT = PAPER_SUBMISSION_INPUT_ROOT / "supplemental_solver_evidence"
 SUPPLEMENTAL_HE_DISTRIBUTION = SUPPLEMENTAL_REPORT_ROOT / "full_he_distribution.csv"
 SUPPLEMENTAL_HE_PMG = SUPPLEMENTAL_REPORT_ROOT / "full_he_pmg.csv"
 SUPPLEMENTAL_TOPOLOGY_CONSISTENCY = SUPPLEMENTAL_REPORT_ROOT / "full_topology_consistency.csv"
@@ -43,9 +33,8 @@ P3D_LOCAL_LAMBDA155_SCALING = PAPER_SUBMISSION_INPUT_ROOT / "plasticity3d_lambda
 P3D_KAROLINA_LAMBDA155_SCALING = (
     PAPER_SUBMISSION_INPUT_ROOT / "plasticity3d_lambda155_scaling/karolina_rpn16_solver_total_scaling.csv"
 )
-P3D_LAMBDA155_STOP_SUMMARY = (
-    REPO_ROOT
-    / "artifacts/raw_results/example_runs/plasticity3d_p4_l1_2_lambda1p55_mumps_pmg_step_grad_convergence_20260507_190225/step_grad_convergence_summary.csv"
+P3D_LAMBDA155_STOP_SUMMARY = PAPER_SUBMISSION_INPUT_ROOT / (
+    "plasticity3d_lambda155_scaling/step_grad_convergence_summary.csv"
 )
 
 PLAPLACE_PARITY = REPO_ROOT / "experiments/analysis/docs_assets/data/plaplace/parity_showcase.csv"
@@ -61,24 +50,16 @@ HE_KAROLINA_PMG_SCALING = (
 TOPO_SCALING = REPO_ROOT / "experiments/analysis/docs_assets/data/topology/strong_scaling.csv"
 TOPO_RESOLUTION = REPO_ROOT / "experiments/analysis/docs_assets/data/topology/resolution_objectives.csv"
 
-P2D_SHOWCASE = REPO_ROOT / "artifacts/raw_results/docs_showcase/mc_plasticity_p4_l5/output.json"
-P2D_L6_SUMMARY = REPO_ROOT / "artifacts/raw_results/slope_stability_l6_p4_deep_p1_tail_scaling_lambda1_maxit20/summary.json"
-P2D_L7_SUMMARY = REPO_ROOT / "artifacts/raw_results/slope_stability_l7_p4_deep_p1_tail_scaling_lambda1_maxit20/summary.json"
-SOURCE_CONT_NP8 = (
-    REPO_ROOT
-    / "artifacts/raw_results/source_compare/ssr_indirect_p4_l1_omega6p7e6_np8_shell_default_afterfix/data/run_info.json"
+P2D_SHOWCASE = PAPER_SUBMISSION_INPUT_ROOT / "plasticity2d_resolution/output.json"
+P2D_L6_SUMMARY = PAPER_SUBMISSION_INPUT_ROOT / "plasticity2d_resolution/slope_stability_l6_p4/summary.json"
+P2D_L7_SUMMARY = PAPER_SUBMISSION_INPUT_ROOT / "plasticity2d_resolution/slope_stability_l7_p4/summary.json"
+SOURCE_CONT_NP8 = PAPER_SUBMISSION_INPUT_ROOT / "plasticity2d_reference_continuation/np8/run_info.json"
+SOURCE_CONT_NP32 = PAPER_SUBMISSION_INPUT_ROOT / "plasticity2d_reference_continuation/np32/run_info.json"
+SOURCE_CONT_NP8_PROGRESS = PAPER_SUBMISSION_INPUT_ROOT / (
+    "plasticity2d_reference_continuation/np8/progress_latest.json"
 )
-SOURCE_CONT_NP32 = (
-    REPO_ROOT
-    / "artifacts/raw_results/source_compare/ssr_indirect_p4_l1_omega6p7e6_np32_shell_default_afterfix/data/run_info.json"
-)
-SOURCE_CONT_NP8_PROGRESS = (
-    REPO_ROOT
-    / "artifacts/raw_results/source_compare/ssr_indirect_p4_l1_omega6p7e6_np8_shell_default_afterfix/data/progress_latest.json"
-)
-SOURCE_CONT_NP32_PROGRESS = (
-    REPO_ROOT
-    / "artifacts/raw_results/source_compare/ssr_indirect_p4_l1_omega6p7e6_np32_shell_default_afterfix/data/progress_latest.json"
+SOURCE_CONT_NP32_PROGRESS = PAPER_SUBMISSION_INPUT_ROOT / (
+    "plasticity2d_reference_continuation/np32/progress_latest.json"
 )
 
 TABLE_SOURCE_INPUTS = {
@@ -134,6 +115,9 @@ TABLE_SOURCE_INPUTS = {
     "plasticity3d_validation_summary.tex": (P3D_VALIDATION_SUMMARY,),
     "plasticity3d_derivative_ablation.tex": (P3D_DERIVATIVE_ABLATION_SUMMARY,),
     "jax_fem_hyperelastic_baseline.tex": (JAX_FEM_BASELINE_SUMMARY,),
+}
+TABLE_ARCHIVE_STATUS_OVERRIDES = {
+    "plasticity3d_fixed_reference_operator_pmg.tex": "needs_final_archive",
 }
 
 LOCAL_IMPL = "local_constitutiveAD_local_pmg_armijo"
@@ -510,7 +494,9 @@ def _manifest_repo_input(path: Path) -> dict[str, str]:
     return {"kind": "repository_path", "path": _repo_rel(path)}
 
 
-def _archive_status(inputs: tuple[Path, ...]) -> str:
+def _archive_status(name: str, inputs: tuple[Path, ...]) -> str:
+    if name in TABLE_ARCHIVE_STATUS_OVERRIDES:
+        return TABLE_ARCHIVE_STATUS_OVERRIDES[name]
     raw_prefixes = ("artifacts/raw_results/", "artifacts/reports/")
     for path in inputs:
         if _repo_rel(path).startswith(raw_prefixes):
@@ -530,7 +516,7 @@ def _write_table_manifest(out_dir: Path) -> None:
                 "function": "main",
                 "output": name,
             },
-            "archive_status": _archive_status(inputs),
+            "archive_status": _archive_status(name, inputs),
             "data_inputs": [_manifest_repo_input(path) for path in inputs],
         }
         generated_table_sources[name] = source

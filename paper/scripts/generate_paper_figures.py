@@ -47,21 +47,17 @@ from src.problems.slope_stability_3d.support.simplex_lagrange import evaluate_te
 
 matplotlib.use("Agg")
 
-LOCAL_P3D_SUMMARY = (
-    REPO_ROOT
-    / "artifacts/raw_results/source_compare/plasticity3d_l1_2_lambda1_grad1e2_local_pmg_scaling/comparison_summary.json"
+PAPER_SUBMISSION_BUNDLE_ROOT = REPO_ROOT / "artifacts/reproduction/paper_submission_2026_07_08"
+PAPER_SUBMISSION_INPUT_ROOT = PAPER_SUBMISSION_BUNDLE_ROOT / "inputs"
+LOCAL_P3D_SUMMARY = PAPER_SUBMISSION_INPUT_ROOT / "plasticity3d_recommended_scaling/comparison_summary.json"
+MIXED_P3D_SUMMARY = PAPER_SUBMISSION_INPUT_ROOT / "plasticity3d_reference_formula/comparison_summary.json"
+SOURCEFIXED_P3D_SUMMARY = PAPER_SUBMISSION_INPUT_ROOT / "plasticity3d_fixed_reference_operator/comparison_summary.json"
+P3D_DEGREE_ENERGY_STUDY_SUMMARY = PAPER_SUBMISSION_INPUT_ROOT / (
+    "plasticity3d_degree_energy_study/comparison_summary.json"
 )
-MIXED_P3D_SUMMARY = (
-    REPO_ROOT
-    / "artifacts/raw_results/source_compare/plasticity3d_l1_2_lambda1_grad1e2_scaling/comparison_summary.json"
-)
-SOURCEFIXED_P3D_SUMMARY = (
-    REPO_ROOT
-    / "artifacts/raw_results/source_compare/plasticity3d_l1_2_lambda1_grad1e2_scaling_all_pmg/comparison_summary.json"
-)
-P3D_DEGREE_ENERGY_STUDY_SUMMARY = (
-    REPO_ROOT
-    / "artifacts/raw_results/plasticity3d_lambda1p55_degree_mesh_energy_study/comparison_summary.json"
+P3D_RECOMMENDED_SCALING_OUTPUTS = tuple(
+    PAPER_SUBMISSION_INPUT_ROOT / f"plasticity3d_recommended_scaling/runs/np{ranks}/output.json"
+    for ranks in (1, 2, 4, 8, 16, 32)
 )
 SOURCE_CONT_NP8 = (
     REPO_ROOT
@@ -83,15 +79,13 @@ HYPER_SCALING = REPO_ROOT / "experiments/analysis/docs_assets/data/hyperelastici
 HYPER_KAROLINA_PMG_SCALING = (
     REPO_ROOT / "experiments/analysis/docs_assets/data/hyperelasticity/karolina_l5_pmg_scaling.csv"
 )
-PLASTICITY2D_STATE = REPO_ROOT / "artifacts/raw_results/docs_showcase/mc_plasticity_p4_l5/state.npz"
-PLASTICITY2D_RESULT = REPO_ROOT / "artifacts/raw_results/docs_showcase/mc_plasticity_p4_l5/output.json"
-PLASTICITY2D_L6_SUMMARY = REPO_ROOT / "artifacts/raw_results/slope_stability_l6_p4_deep_p1_tail_scaling_lambda1_maxit20/summary.json"
-PLASTICITY2D_L7_SUMMARY = REPO_ROOT / "artifacts/raw_results/slope_stability_l7_p4_deep_p1_tail_scaling_lambda1_maxit20/summary.json"
+PLASTICITY2D_STATE = PAPER_SUBMISSION_INPUT_ROOT / "plasticity2d_resolution/state.npz"
+PLASTICITY2D_RESULT = PAPER_SUBMISSION_INPUT_ROOT / "plasticity2d_resolution/output.json"
+PLASTICITY2D_L6_SUMMARY = PAPER_SUBMISSION_INPUT_ROOT / "plasticity2d_resolution/slope_stability_l6_p4/summary.json"
+PLASTICITY2D_L7_SUMMARY = PAPER_SUBMISSION_INPUT_ROOT / "plasticity2d_resolution/slope_stability_l7_p4/summary.json"
 TOPOLOGY_STATE = REPO_ROOT / "experiments/analysis/docs_assets/data/topology/parallel_final_state.npz"
 TOPOLOGY_HISTORY = REPO_ROOT / "experiments/analysis/docs_assets/data/topology/objective_history.csv"
 TOPOLOGY_SCALING = REPO_ROOT / "experiments/analysis/docs_assets/data/topology/strong_scaling.csv"
-PAPER_SUBMISSION_BUNDLE_ROOT = REPO_ROOT / "artifacts/reproduction/paper_submission_2026_07_08"
-PAPER_SUBMISSION_INPUT_ROOT = PAPER_SUBMISSION_BUNDLE_ROOT / "inputs"
 P3D_VALIDATION_ROOT = PAPER_SUBMISSION_INPUT_ROOT / "plasticity3d_validation"
 P3D_DERIVATIVE_ABLATION_ROOT = PAPER_SUBMISSION_INPUT_ROOT / "plasticity3d_derivative_ablation"
 JAX_FEM_BASELINE_ROOT = PAPER_SUBMISSION_INPUT_ROOT / "jax_fem_hyperelastic_baseline"
@@ -2348,8 +2342,7 @@ def _figure_sources() -> dict[str, dict[str, object]]:
         "plasticity2d_state_pair.pdf": _figure_source(
             generator="generate_plasticity2d_figures",
             data_inputs=[_manifest_repo_input(PLASTICITY2D_STATE)],
-            archive_status=needs_archive,
-            note="Uses raw Plasticity2D endpoint state plus deterministic same-mesh case construction.",
+            note="Uses the bundled Plasticity2D endpoint state plus deterministic same-mesh case construction.",
         ),
         "plasticity2d_resolution_energy.pdf": _figure_source(
             generator="generate_plasticity2d_figures",
@@ -2358,7 +2351,6 @@ def _figure_sources() -> dict[str, dict[str, object]]:
                 _manifest_repo_input(PLASTICITY2D_L6_SUMMARY),
                 _manifest_repo_input(PLASTICITY2D_L7_SUMMARY),
             ],
-            archive_status=needs_archive,
         ),
         "plasticity3d_state_pair.pdf": _figure_source(
             generator="generate_plasticity3d_state_figures",
@@ -2447,9 +2439,12 @@ def _figure_sources() -> dict[str, dict[str, object]]:
         ),
         "plasticity3d_recommended_scaling.pdf": _figure_source(
             generator="_plot_plasticity_scaling",
-            data_inputs=[_manifest_repo_input(LOCAL_P3D_SUMMARY)],
-            archive_status=needs_archive,
-            note="The scaling summary references per-rank raw result JSON files used for local-element counts.",
+            data_inputs=[
+                _manifest_repo_input(LOCAL_P3D_SUMMARY),
+                *[_manifest_repo_input(path) for path in P3D_RECOMMENDED_SCALING_OUTPUTS],
+            ],
+            archive_status=tracked_or_bundle,
+            note="The bundled scaling summary references bundled per-rank result JSON files used for local-element counts.",
         ),
         "plasticity3d_local_vs_karolina_scaling.pdf": _figure_source(
             generator="generate_plasticity3d_local_vs_karolina_scaling",

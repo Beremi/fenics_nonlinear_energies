@@ -1,17 +1,22 @@
 {
-  "created_utc": "2026-07-09T03:38:46Z",
-  "git_commit": "30a31c6a170d8c4c2b2c7f8e4c7f24a8e4d77c5f",
+  "created_utc": "2026-07-09T04:03:14Z",
+  "git_commit": "4d1fdd0ebf879898c7d23f3960787e928285c936",
   "id": "paper_submission_2026_07_08",
   "known_limitations": [
     "This bundle normalizes existing paper-critical provenance without rerunning MPI campaigns.",
+    "Large Plasticity3D state arrays and same-mesh HDF5 files for degree/resolution figures still require final archive coverage or an explicit scope exception.",
+    "The fixed-reference operator summary is bundled but remains marked needs_final_archive in the table manifest until its implementation-label provenance is finalized for release.",
     "Target-journal metadata, repository license, and permanent archive DOI remain outside this bundle."
   ],
-  "purpose": "Archive-neutral provenance bundle for manuscript-critical paper figure inputs.",
+  "purpose": "Archive-neutral provenance bundle for manuscript-critical paper figure and table inputs.",
   "scope": [
     "Plasticity3D endpoint-surrogate validation inputs",
     "Plasticity3D derivative-route comparison summary",
     "Hyperelastic JAX-FEM comparison summary and terminal states",
-    "Plasticity3D lambda=1.55 local/multi-node scaling summaries"
+    "Plasticity3D lambda=1.55 local/multi-node scaling summaries",
+    "Small generated-table report summaries for globalization, derivative-route, and supplemental solver evidence",
+    "Plasticity2D endpoint, resolution, and reference-continuation inputs",
+    "Plasticity3D degree/energy, recommended-scaling, reference-formula, and fixed-reference summary inputs"
   ],
   "source_files": [
     {
@@ -111,6 +116,188 @@
       "sanitization": "local paths rewritten to archive-neutral references",
       "source_path": "artifacts/reports/plasticity3d_p4_l1_2_mumps_pmg_step_grad_local_karolina_scaling/karolina_rpn16_solver_total_scaling.csv",
       "source_sha256": "3ecf24ba71b9c08d96e6f9bf8acc5e00bee1b74d99919304051345346faef5d1"
+    },
+    {
+      "bundle_path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_lambda155_scaling/step_grad_convergence_summary.csv",
+      "bundle_sha256": "f2914b013c8ac4e3b884b19271d64dc9695ab21946415e7300ca1f7da9e128c7",
+      "sanitization": "local paths rewritten to archive-neutral references",
+      "source_path": "artifacts/raw_results/example_runs/plasticity3d_p4_l1_2_lambda1p55_mumps_pmg_step_grad_convergence_20260507_190225/step_grad_convergence_summary.csv",
+      "source_sha256": "03c557589f107b82836a228cb192368a149e11b83a93e8841f2535c36ce71776"
+    },
+    {
+      "bundle_path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/globalization_method_compare/full_summary.csv",
+      "bundle_sha256": "e1ccbda90826922d411543d079100ccc557854d566ccb8a2940aa4fed32d7067",
+      "sanitization": "local paths rewritten to archive-neutral references",
+      "source_path": "artifacts/reports/globalization_method_compare/full_summary.csv",
+      "source_sha256": "69732574c8a8da265cf0879aa6849b352a3596d267e22bb3828fcc895cbff5af"
+    },
+    {
+      "bundle_path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/derivative_route_compare/full_summary.csv",
+      "bundle_sha256": "b5f57522e20925a7c95de76969c65bee06e246f5f4475d5c31b6381317b834ee",
+      "sanitization": "local paths rewritten to archive-neutral references",
+      "source_path": "artifacts/reports/derivative_route_compare/full_summary.csv",
+      "source_sha256": "c898322b4e4f79e34a731fab9094dc1629cb179bb33df3d89dfe375a7c2216f3"
+    },
+    {
+      "bundle_path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/supplemental_solver_evidence/full_he_distribution.csv",
+      "bundle_sha256": "67b6918e97e21b8d83166035a53e60e9bda53f4641e6e9da37593f028164132f",
+      "sanitization": "local paths rewritten to archive-neutral references",
+      "source_path": "artifacts/reports/supplemental_solver_evidence/full_he_distribution.csv",
+      "source_sha256": "ab95668d464723378ea8f88699de7aab629ee7750c54cd63847fdde7bad12cd9"
+    },
+    {
+      "bundle_path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/supplemental_solver_evidence/full_he_pmg.csv",
+      "bundle_sha256": "a67ac7e699eda17a69e2e434d8216b4903c7d49a671abe1f1cf83b58094f172e",
+      "sanitization": "local paths rewritten to archive-neutral references",
+      "source_path": "artifacts/reports/supplemental_solver_evidence/full_he_pmg.csv",
+      "source_sha256": "f939674ff2b3c78da2c0396638159571ab5e542326b306189af383ddc51bbc15"
+    },
+    {
+      "bundle_path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/supplemental_solver_evidence/full_topology_consistency.csv",
+      "bundle_sha256": "be0c8082c1d82da4e3ec7e010e01a03cfdbc222630261781040201faf29e0d21",
+      "sanitization": "local paths rewritten to archive-neutral references",
+      "source_path": "artifacts/reports/supplemental_solver_evidence/full_topology_consistency.csv",
+      "source_sha256": "c8127b70c4ba80e0d82827aa581d067cf2ca5a367f51af827d441cf5a640cab7"
+    },
+    {
+      "bundle_path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/supplemental_solver_evidence/full_gl_globalization.csv",
+      "bundle_sha256": "16bb14e60559636980474dd3bbcbeac5d1c2543ed1fbb975cc0bfb4cf5649451",
+      "sanitization": "local paths rewritten to archive-neutral references",
+      "source_path": "artifacts/reports/supplemental_solver_evidence/full_gl_globalization.csv",
+      "source_sha256": "647618ffe6a5879974961e181b17db59dc89b9144b359ad83f593e6928b34857"
+    },
+    {
+      "bundle_path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/supplemental_solver_evidence/full_p3d_derivative_degree.csv",
+      "bundle_sha256": "f03b6be8659d64a6c24a5ffbdccc07678a7da07902bdf8808dfe8223a62a06f2",
+      "sanitization": "local paths rewritten to archive-neutral references",
+      "source_path": "artifacts/reports/supplemental_solver_evidence/full_p3d_derivative_degree.csv",
+      "source_sha256": "797ee63ace64a6e88f900857fd5b55fe20be0beee8560faf0ebc77ee14f80b02"
+    },
+    {
+      "bundle_path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity2d_resolution/output.json",
+      "bundle_sha256": "83cb6f3cf7006026ac62ea65cd0b332842720f94886e0cb2a90248473259ce75",
+      "sanitization": "local paths rewritten to archive-neutral references; non-finite JSON numbers written as null",
+      "source_path": "artifacts/raw_results/docs_showcase/mc_plasticity_p4_l5/output.json",
+      "source_sha256": "53fbf58e3c8e18927c60dfe4beeafc81b2191fcf67b4a2e077aac555dc66d0c5"
+    },
+    {
+      "bundle_path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity2d_resolution/state.npz",
+      "bundle_sha256": "3eac460f12d72f78c0fd5e8e88248ddb643b474832ff4a3721bb24fe8b2279a4",
+      "sanitization": "byte-for-byte copy",
+      "source_path": "artifacts/raw_results/docs_showcase/mc_plasticity_p4_l5/state.npz",
+      "source_sha256": "3eac460f12d72f78c0fd5e8e88248ddb643b474832ff4a3721bb24fe8b2279a4"
+    },
+    {
+      "bundle_path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity2d_resolution/slope_stability_l6_p4/summary.json",
+      "bundle_sha256": "4d5b0fa56afd90e4c6dfba3289ab6cc35653aece9fd69b7f87a5115b22ee89c9",
+      "sanitization": "local paths rewritten to archive-neutral references; non-finite JSON numbers written as null",
+      "source_path": "artifacts/raw_results/slope_stability_l6_p4_deep_p1_tail_scaling_lambda1_maxit20/summary.json",
+      "source_sha256": "4d365e21d372d9307f625ca31dc62828cd8f303a1af8f4bcccfb4b4e978962e1"
+    },
+    {
+      "bundle_path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity2d_resolution/slope_stability_l7_p4/summary.json",
+      "bundle_sha256": "e857be6cb5671c57799f4820b27e6224d9f49b64e78fda0f9538ba1c26912702",
+      "sanitization": "local paths rewritten to archive-neutral references; non-finite JSON numbers written as null",
+      "source_path": "artifacts/raw_results/slope_stability_l7_p4_deep_p1_tail_scaling_lambda1_maxit20/summary.json",
+      "source_sha256": "ffeb4bb923fc936a797eaa25cae3cdda312b1d6b85c37f4eb454da114b24a236"
+    },
+    {
+      "bundle_path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity2d_reference_continuation/np8/run_info.json",
+      "bundle_sha256": "bab38b16a85204a9b8fe82327d4cee3e32d1d64b9559e7927db2f09dde46d455",
+      "sanitization": "local paths rewritten to archive-neutral references; non-finite JSON numbers written as null",
+      "source_path": "artifacts/raw_results/source_compare/ssr_indirect_p4_l1_omega6p7e6_np8_shell_default_afterfix/data/run_info.json",
+      "source_sha256": "0ddf4be33ad575e5a3bbed68009cf30204e514650741b13798d93eee01db2e46"
+    },
+    {
+      "bundle_path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity2d_reference_continuation/np8/progress_latest.json",
+      "bundle_sha256": "1e430cec8acbee739436b935153eab59a1116ea86ea6a16753802ca47316806d",
+      "sanitization": "local paths rewritten to archive-neutral references; non-finite JSON numbers written as null",
+      "source_path": "artifacts/raw_results/source_compare/ssr_indirect_p4_l1_omega6p7e6_np8_shell_default_afterfix/data/progress_latest.json",
+      "source_sha256": "1219ccf4552a1d65671a3ddf1eeec0330399e9059e2a91fab6282c8acedbba76"
+    },
+    {
+      "bundle_path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity2d_reference_continuation/np32/run_info.json",
+      "bundle_sha256": "dd2a54423f181b2fe7acc6f3c772a6eb562f6d95be164cc440e6b3432906c65e",
+      "sanitization": "local paths rewritten to archive-neutral references; non-finite JSON numbers written as null",
+      "source_path": "artifacts/raw_results/source_compare/ssr_indirect_p4_l1_omega6p7e6_np32_shell_default_afterfix/data/run_info.json",
+      "source_sha256": "6946b600d58f33feb1599f6a7ada26300592fe607969f76825c8611f46684860"
+    },
+    {
+      "bundle_path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity2d_reference_continuation/np32/progress_latest.json",
+      "bundle_sha256": "1a11d733261c1c64680e875e59c2138d24f995640336c22114233829ab7ef82a",
+      "sanitization": "local paths rewritten to archive-neutral references; non-finite JSON numbers written as null",
+      "source_path": "artifacts/raw_results/source_compare/ssr_indirect_p4_l1_omega6p7e6_np32_shell_default_afterfix/data/progress_latest.json",
+      "source_sha256": "f630dc463c2ca35be6ef836df686c2c3a9180fad25a23ec11a64f35b5619ba9f"
+    },
+    {
+      "bundle_path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_degree_energy_study/comparison_summary.json",
+      "bundle_sha256": "668e071668d69011d3b594781a7358ad6f87745f6597ac6f14d7cf4856010e77",
+      "sanitization": "local paths rewritten to archive-neutral references; non-finite JSON numbers written as null",
+      "source_path": "artifacts/raw_results/plasticity3d_lambda1p55_degree_mesh_energy_study/comparison_summary.json",
+      "source_sha256": "59523f9297de1a3f5c407ab7f02e8da74e681c836fe5107714493af3341509c2"
+    },
+    {
+      "bundle_path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_recommended_scaling/comparison_summary.json",
+      "bundle_sha256": "44d47089fac6fb602eaf3c2453b70281fcb075e11e7111a01088fa31c6ca636f",
+      "sanitization": "local paths rewritten to archive-neutral references; non-finite JSON numbers written as null",
+      "source_path": "artifacts/raw_results/source_compare/plasticity3d_l1_2_lambda1_grad1e2_local_pmg_scaling/comparison_summary.json",
+      "source_sha256": "43e50f81efd7d078b3223ea5e370a3e38e187b69a08164d66840392cd2e94ec9"
+    },
+    {
+      "bundle_path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_recommended_scaling/runs/np1/output.json",
+      "bundle_sha256": "7114c3df4622a1e6fed799345aafb501449cd3cb35bd062ce8c58d5243c81055",
+      "sanitization": "local paths rewritten to archive-neutral references; non-finite JSON numbers written as null",
+      "source_path": "artifacts/raw_results/source_compare/plasticity3d_l1_2_lambda1_grad1e2_local_pmg_scaling/runs/np1/solver_local_pmg/assembly_local_constitutiveAD/output.json",
+      "source_sha256": "0609838f63831f0e3cc8bafe8f4422620cf6b3fb03ca20b300059fe152892fd6"
+    },
+    {
+      "bundle_path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_recommended_scaling/runs/np2/output.json",
+      "bundle_sha256": "ab8a0dda00e8ef3d8f7e60e1b97e5fc72fe75b8a32eb64a07322d82c98bf3cf4",
+      "sanitization": "local paths rewritten to archive-neutral references; non-finite JSON numbers written as null",
+      "source_path": "artifacts/raw_results/source_compare/plasticity3d_l1_2_lambda1_grad1e2_local_pmg_scaling/runs/np2/solver_local_pmg/assembly_local_constitutiveAD/output.json",
+      "source_sha256": "a6200bfd41f43728c0fd74a9f750143e1eda18757100f83fcae990d0c0f63dd2"
+    },
+    {
+      "bundle_path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_recommended_scaling/runs/np4/output.json",
+      "bundle_sha256": "d35dee78aa163d2a33caa8ff4fed5659c027b6f764e8c1aabd377103a594e2c6",
+      "sanitization": "local paths rewritten to archive-neutral references; non-finite JSON numbers written as null",
+      "source_path": "artifacts/raw_results/source_compare/plasticity3d_l1_2_lambda1_grad1e2_scaling/runs/np4/solver_local_pmg/assembly_local_constitutiveAD/output.json",
+      "source_sha256": "b1cc9e768d63428176bd97019cdf080ae1b272c0113d29f71ed2860097ba4ad6"
+    },
+    {
+      "bundle_path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_recommended_scaling/runs/np8/output.json",
+      "bundle_sha256": "2d6bbeaa173100986c3357e8141583dc64a9fcdd6d6ef98df893c2eb61a60df2",
+      "sanitization": "local paths rewritten to archive-neutral references; non-finite JSON numbers written as null",
+      "source_path": "artifacts/raw_results/source_compare/plasticity3d_l1_2_lambda1_grad1e2_scaling/runs/np8/solver_local_pmg/assembly_local_constitutiveAD/output.json",
+      "source_sha256": "693405d8ce1daedcf2d7f59f1598f036f574a2f82baac58c4ae28f4374a83dca"
+    },
+    {
+      "bundle_path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_recommended_scaling/runs/np16/output.json",
+      "bundle_sha256": "532e4816ee53b0c760d53bf765e41a749bc5d284e0eadcac4b0051b60057fef0",
+      "sanitization": "local paths rewritten to archive-neutral references; non-finite JSON numbers written as null",
+      "source_path": "artifacts/raw_results/source_compare/plasticity3d_l1_2_lambda1_grad1e2_scaling/runs/np16/solver_local_pmg/assembly_local_constitutiveAD/output.json",
+      "source_sha256": "91308498fe311e07a6666e32ffb12fedf2c6a6a47e60b5db09ed7c0644f9b91d"
+    },
+    {
+      "bundle_path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_recommended_scaling/runs/np32/output.json",
+      "bundle_sha256": "9b6469ca1ac9d87cad06788c7f20f2c03b1dfa104bd3f2752b843059166035ef",
+      "sanitization": "local paths rewritten to archive-neutral references; non-finite JSON numbers written as null",
+      "source_path": "artifacts/raw_results/source_compare/plasticity3d_l1_2_lambda1_grad1e2_scaling/runs/np32/solver_local_pmg/assembly_local_constitutiveAD/output.json",
+      "source_sha256": "bdef48e5b82ad703f59f9cd499f683e09ec68734c8f06b01155fd50e2b1887e1"
+    },
+    {
+      "bundle_path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_reference_formula/comparison_summary.json",
+      "bundle_sha256": "49f5e0b0f9da5172ecbaf5a6c695a1096e11a984f4429de1ba55856d8f79b313",
+      "sanitization": "local paths rewritten to archive-neutral references; non-finite JSON numbers written as null",
+      "source_path": "artifacts/raw_results/source_compare/plasticity3d_l1_2_lambda1_grad1e2_scaling/comparison_summary.json",
+      "source_sha256": "63a7a24e994b3e67ba21c55795c060c1dcf59ea138778738e61366bf436597e1"
+    },
+    {
+      "bundle_path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_fixed_reference_operator/comparison_summary.json",
+      "bundle_sha256": "1fcbade901ea7d37e976c7566a3925e1ccea947a4d8c51b0f500c0a3d8de4da5",
+      "sanitization": "local paths rewritten to archive-neutral references; non-finite JSON numbers written as null",
+      "source_path": "artifacts/raw_results/source_compare/plasticity3d_l1_2_lambda1_grad1e2_scaling_all_pmg/comparison_summary.json",
+      "source_sha256": "92ddac0a9525c3270fd525a981cf3a741bc9588584859ec714ce7f8f406b3c36"
     }
   ],
   "validation": {

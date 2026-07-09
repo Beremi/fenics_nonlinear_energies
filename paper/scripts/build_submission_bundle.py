@@ -26,6 +26,52 @@ P3D_SCALING_ROOT = (
     / "reports"
     / "plasticity3d_p4_l1_2_mumps_pmg_step_grad_local_karolina_scaling"
 )
+GLOBALIZATION_REPORT = REPO_ROOT / "artifacts" / "reports" / "globalization_method_compare" / "full_summary.csv"
+DERIVATIVE_ROUTE_REPORT = REPO_ROOT / "artifacts" / "reports" / "derivative_route_compare" / "full_summary.csv"
+SUPPLEMENTAL_REPORT_ROOT = REPO_ROOT / "artifacts" / "reports" / "paper_reviewer_gap_experiments"
+P2D_SHOWCASE_ROOT = REPO_ROOT / "artifacts" / "raw_results" / "docs_showcase" / "mc_plasticity_p4_l5"
+P2D_L6_SUMMARY = (
+    REPO_ROOT / "artifacts" / "raw_results" / "slope_stability_l6_p4_deep_p1_tail_scaling_lambda1_maxit20" / "summary.json"
+)
+P2D_L7_SUMMARY = (
+    REPO_ROOT / "artifacts" / "raw_results" / "slope_stability_l7_p4_deep_p1_tail_scaling_lambda1_maxit20" / "summary.json"
+)
+SOURCE_CONT_ROOT = REPO_ROOT / "artifacts" / "raw_results" / "source_compare"
+P3D_DEGREE_ENERGY_STUDY_SUMMARY = (
+    REPO_ROOT / "artifacts" / "raw_results" / "plasticity3d_lambda1p55_degree_mesh_energy_study" / "comparison_summary.json"
+)
+P3D_RECOMMENDED_SCALING_SUMMARY = (
+    REPO_ROOT
+    / "artifacts"
+    / "raw_results"
+    / "source_compare"
+    / "plasticity3d_l1_2_lambda1_grad1e2_local_pmg_scaling"
+    / "comparison_summary.json"
+)
+P3D_REFERENCE_FORMULA_SUMMARY = (
+    REPO_ROOT
+    / "artifacts"
+    / "raw_results"
+    / "source_compare"
+    / "plasticity3d_l1_2_lambda1_grad1e2_scaling"
+    / "comparison_summary.json"
+)
+P3D_FIXED_REFERENCE_OPERATOR_SUMMARY = (
+    REPO_ROOT
+    / "artifacts"
+    / "raw_results"
+    / "source_compare"
+    / "plasticity3d_l1_2_lambda1_grad1e2_scaling_all_pmg"
+    / "comparison_summary.json"
+)
+P3D_LAMBDA155_STOP_SUMMARY = (
+    REPO_ROOT
+    / "artifacts"
+    / "raw_results"
+    / "example_runs"
+    / "plasticity3d_p4_l1_2_lambda1p55_mumps_pmg_step_grad_convergence_20260507_190225"
+    / "step_grad_convergence_summary.csv"
+)
 P3D_DIRECT_BRANCH_ROOT = REPO_ROOT / "artifacts" / "raw_results" / "debug" / "p2_direct_branch_lambda1p6_merged"
 SOURCE_BRANCH_ROOT = (
     REPO_ROOT
@@ -35,6 +81,38 @@ SOURCE_BRANCH_ROOT = (
     / "slope_stability"
     / "artifacts"
     / "compare_direct_branch_lambda1p6"
+)
+P3D_RECOMMENDED_SCALING_OUTPUTS = (
+    (
+        REPO_ROOT
+        / "artifacts/raw_results/source_compare/plasticity3d_l1_2_lambda1_grad1e2_local_pmg_scaling/runs/np1/solver_local_pmg/assembly_local_constitutiveAD/output.json",
+        INPUT_ROOT / "plasticity3d_recommended_scaling/runs/np1/output.json",
+    ),
+    (
+        REPO_ROOT
+        / "artifacts/raw_results/source_compare/plasticity3d_l1_2_lambda1_grad1e2_local_pmg_scaling/runs/np2/solver_local_pmg/assembly_local_constitutiveAD/output.json",
+        INPUT_ROOT / "plasticity3d_recommended_scaling/runs/np2/output.json",
+    ),
+    (
+        REPO_ROOT
+        / "artifacts/raw_results/source_compare/plasticity3d_l1_2_lambda1_grad1e2_scaling/runs/np4/solver_local_pmg/assembly_local_constitutiveAD/output.json",
+        INPUT_ROOT / "plasticity3d_recommended_scaling/runs/np4/output.json",
+    ),
+    (
+        REPO_ROOT
+        / "artifacts/raw_results/source_compare/plasticity3d_l1_2_lambda1_grad1e2_scaling/runs/np8/solver_local_pmg/assembly_local_constitutiveAD/output.json",
+        INPUT_ROOT / "plasticity3d_recommended_scaling/runs/np8/output.json",
+    ),
+    (
+        REPO_ROOT
+        / "artifacts/raw_results/source_compare/plasticity3d_l1_2_lambda1_grad1e2_scaling/runs/np16/solver_local_pmg/assembly_local_constitutiveAD/output.json",
+        INPUT_ROOT / "plasticity3d_recommended_scaling/runs/np16/output.json",
+    ),
+    (
+        REPO_ROOT
+        / "artifacts/raw_results/source_compare/plasticity3d_l1_2_lambda1_grad1e2_scaling/runs/np32/solver_local_pmg/assembly_local_constitutiveAD/output.json",
+        INPUT_ROOT / "plasticity3d_recommended_scaling/runs/np32/output.json",
+    ),
 )
 
 
@@ -47,7 +125,14 @@ def _source_id(path: Path) -> str:
     try:
         relative_to_source_branch = resolved.relative_to(SOURCE_BRANCH_ROOT.resolve())
     except ValueError:
-        return _repo_rel(path)
+        rel = _repo_rel(path)
+        if rel.startswith("artifacts/reports/paper_reviewer_gap_experiments/"):
+            return rel.replace(
+                "artifacts/reports/paper_reviewer_gap_experiments/",
+                "artifacts/reports/supplemental_solver_evidence/",
+                1,
+            )
+        return rel
     return f"external_reference/slope_stability_octave_ref/compare_direct_branch_lambda1p6/{relative_to_source_branch.as_posix()}"
 
 
@@ -98,11 +183,17 @@ def _sanitize_string(value: str) -> str:
             f"{bundle_prefix}/inputs/plasticity3d_validation/maintained_branch"
         ),
         "tmp/source_compare/slope_stability_petsc4py": "external_reference/slope_stability_petsc4py",
+        "artifacts/raw_results/paper_reviewer_gap_experiments": "archive_source/supplemental_solver_evidence",
+        "artifacts/reports/paper_reviewer_gap_experiments": "archive_source/supplemental_solver_evidence",
         ".venv/bin/python": "python",
         ".venv/lib/python3.12/site-packages": "python-environment/site-packages",
+        "local_env/python/bin/python3.12": "python",
+        "local_env": "python-environment",
         "tmp_work/jax_fem_0_0_10_py312/bin/python": "python",
         "tmp_work/jax_fem_0_0_10_py312": "external_environment/jax_fem_0_0_10_py312",
     }
+    for source, dest in P3D_RECOMMENDED_SCALING_OUTPUTS:
+        replacements[_repo_rel(source)] = _repo_rel(dest)
     for old, new in replacements.items():
         text = text.replace(old, new)
     return text
@@ -235,21 +326,75 @@ def main() -> None:
             INPUT_ROOT / "plasticity3d_lambda155_scaling" / name,
             copied,
         )
+    _copy_csv(
+        P3D_LAMBDA155_STOP_SUMMARY,
+        INPUT_ROOT / "plasticity3d_lambda155_scaling" / "step_grad_convergence_summary.csv",
+        copied,
+    )
+    _copy_csv(GLOBALIZATION_REPORT, INPUT_ROOT / "globalization_method_compare" / "full_summary.csv", copied)
+    _copy_csv(DERIVATIVE_ROUTE_REPORT, INPUT_ROOT / "derivative_route_compare" / "full_summary.csv", copied)
+    for name in (
+        "full_he_distribution.csv",
+        "full_he_pmg.csv",
+        "full_topology_consistency.csv",
+        "full_gl_globalization.csv",
+        "full_p3d_derivative_degree.csv",
+    ):
+        _copy_csv(SUPPLEMENTAL_REPORT_ROOT / name, INPUT_ROOT / "supplemental_solver_evidence" / name, copied)
+    _copy_json(P2D_SHOWCASE_ROOT / "output.json", INPUT_ROOT / "plasticity2d_resolution" / "output.json", copied)
+    _copy_binary(P2D_SHOWCASE_ROOT / "state.npz", INPUT_ROOT / "plasticity2d_resolution" / "state.npz", copied)
+    _copy_json(P2D_L6_SUMMARY, INPUT_ROOT / "plasticity2d_resolution" / "slope_stability_l6_p4" / "summary.json", copied)
+    _copy_json(P2D_L7_SUMMARY, INPUT_ROOT / "plasticity2d_resolution" / "slope_stability_l7_p4" / "summary.json", copied)
+    for ranks, root_name in (
+        (8, "ssr_indirect_p4_l1_omega6p7e6_np8_shell_default_afterfix"),
+        (32, "ssr_indirect_p4_l1_omega6p7e6_np32_shell_default_afterfix"),
+    ):
+        source_dir = SOURCE_CONT_ROOT / root_name / "data"
+        dest_dir = INPUT_ROOT / "plasticity2d_reference_continuation" / f"np{ranks}"
+        _copy_json(source_dir / "run_info.json", dest_dir / "run_info.json", copied)
+        _copy_json(source_dir / "progress_latest.json", dest_dir / "progress_latest.json", copied)
+    _copy_json(
+        P3D_DEGREE_ENERGY_STUDY_SUMMARY,
+        INPUT_ROOT / "plasticity3d_degree_energy_study" / "comparison_summary.json",
+        copied,
+    )
+    _copy_json(
+        P3D_RECOMMENDED_SCALING_SUMMARY,
+        INPUT_ROOT / "plasticity3d_recommended_scaling" / "comparison_summary.json",
+        copied,
+    )
+    for source, dest in P3D_RECOMMENDED_SCALING_OUTPUTS:
+        _copy_json(source, dest, copied)
+    _copy_json(
+        P3D_REFERENCE_FORMULA_SUMMARY,
+        INPUT_ROOT / "plasticity3d_reference_formula" / "comparison_summary.json",
+        copied,
+    )
+    _copy_json(
+        P3D_FIXED_REFERENCE_OPERATOR_SUMMARY,
+        INPUT_ROOT / "plasticity3d_fixed_reference_operator" / "comparison_summary.json",
+        copied,
+    )
 
     manifest = {
         "id": "paper_submission_2026_07_08",
         "created_utc": datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z"),
         "git_commit": _git_head(),
-        "purpose": "Archive-neutral provenance bundle for manuscript-critical paper figure inputs.",
+        "purpose": "Archive-neutral provenance bundle for manuscript-critical paper figure and table inputs.",
         "scope": [
             "Plasticity3D endpoint-surrogate validation inputs",
             "Plasticity3D derivative-route comparison summary",
             "Hyperelastic JAX-FEM comparison summary and terminal states",
             "Plasticity3D lambda=1.55 local/multi-node scaling summaries",
+            "Small generated-table report summaries for globalization, derivative-route, and supplemental solver evidence",
+            "Plasticity2D endpoint, resolution, and reference-continuation inputs",
+            "Plasticity3D degree/energy, recommended-scaling, reference-formula, and fixed-reference summary inputs",
         ],
         "source_files": copied,
         "known_limitations": [
             "This bundle normalizes existing paper-critical provenance without rerunning MPI campaigns.",
+            "Large Plasticity3D state arrays and same-mesh HDF5 files for degree/resolution figures still require final archive coverage or an explicit scope exception.",
+            "The fixed-reference operator summary is bundled but remains marked needs_final_archive in the table manifest until its implementation-label provenance is finalized for release.",
             "Target-journal metadata, repository license, and permanent archive DOI remain outside this bundle.",
         ],
         "validation": {

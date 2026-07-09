@@ -8,7 +8,8 @@ SOTA positioning has been refreshed, citations build cleanly, and the generated
 figure/table pipeline and archive-neutral provenance gate pass against a curated
 local submission bundle. Submission is still blocked by missing target-journal
 metadata, submission declarations, license/archive decisions, and final archive
-coverage for raw/report-backed table inputs and large raw/state figure inputs.
+coverage for the remaining fixed-reference table input and large raw/state
+figure inputs.
 Validation is adequate for the narrowed claims, but the paper must not be
 submitted until the external submission metadata and citable archive are fixed.
 
@@ -78,6 +79,12 @@ scientific claims were introduced without supporting evidence.
   the asset validator so TeX-included generated tables must have source records,
   and marked raw/report-backed tables that still need final archive coverage as
   `needs_final_archive`.
+- Expanded the curated submission bundle with small raw/report-backed table
+  inputs, Plasticity2D endpoint and resolution inputs, and the Plasticity3D
+  recommended-scaling summary plus per-rank result JSONs. The generated
+  manifests now mark 27 of 34 figure sources and 29 of 30 table sources as
+  archive-neutral; seven large-state Plasticity3D figures and one
+  fixed-reference table remain `needs_final_archive`.
 - Rebuilt the curated submission bundle after fixing the JAX-FEM comparison
   summary paths to point at bundle-local terminal states.
 - Sharpened remaining prose and notation issues from the latest audits:
@@ -115,9 +122,10 @@ scientific claims were introduced without supporting evidence.
 - Issue: Final per-artifact provenance is not yet complete.
   Why it blocks publishability: the archive-neutral gate passes and all
   generated figures and TeX-included generated tables now have source records,
-  but the final submission still lacks archive coverage for the large raw/state
-  inputs behind figures marked `needs_final_archive` and for 15 TeX-included
-  generated tables with raw/report-backed inputs.
+  but the final submission still lacks durable archive coverage or an explicit
+  release-scope exception for the large Plasticity3D raw/state inputs behind
+  seven figures marked `needs_final_archive` and for the fixed-reference
+  operator table's implementation-label provenance.
   Evidence path or citation: `paper/figures/generated/manifest.json`,
   `paper/tables/generated/manifest.json`,
   `paper/scripts/validate_paper_assets.py`, and
@@ -199,13 +207,16 @@ required support for the current scoped contribution.
   entries, 9 non-public local entries, and 3 unavailable entries.
 - `./.venv/bin/python paper/scripts/generate_paper_tables.py`: passed.
   The current generated table manifest records 30 generated tables; all 28
-  TeX-included generated tables have source records, with 15 still marked
-  `needs_final_archive` because their direct inputs are raw/report-backed.
-- `./.venv/bin/python paper/scripts/generate_paper_figures.py`: passed and
-  rewrote the figure manifest.
+  TeX-included generated tables have source records, with one still marked
+  `needs_final_archive` because the fixed-reference summary retains internal
+  implementation-label provenance pending final release scoping.
+- `./.venv/bin/python paper/scripts/generate_paper_figures.py --manifest-only`:
+  passed and rewrote the figure manifest; the manifest records 34 generated
+  figure sources, 27 archive-neutral figure sources, and seven Plasticity3D
+  large-state figures still marked `needs_final_archive`.
 - `./.venv/bin/python paper/scripts/build_submission_bundle.py`: passed and
   wrote `artifacts/reproduction/paper_submission_2026_07_08/manifest.json` with
-  source and bundle SHA256 hashes for paper-critical inputs.
+  source and bundle SHA256 hashes for 40 paper-critical inputs.
 - `./.venv/bin/python paper/scripts/validate_paper_assets.py`: passed on
   2026-07-09 with 29 figures, 28 generated tables, figure source records, table
   source records, and 42 paper-facing provenance-scan files checked.

@@ -81,6 +81,26 @@
         "path": "experiments/analysis/docs_assets/data/plaplace/sample_state.npz"
       }
     ],
+    "plasticity2d_resolution_energy.pdf": [
+      {
+        "kind": "repository_path",
+        "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity2d_resolution/output.json"
+      },
+      {
+        "kind": "repository_path",
+        "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity2d_resolution/slope_stability_l6_p4/summary.json"
+      },
+      {
+        "kind": "repository_path",
+        "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity2d_resolution/slope_stability_l7_p4/summary.json"
+      }
+    ],
+    "plasticity2d_state_pair.pdf": [
+      {
+        "kind": "repository_path",
+        "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity2d_resolution/state.npz"
+      }
+    ],
     "plasticity3d_derivative_ablation_bars.pdf": [
       {
         "kind": "repository_path",
@@ -95,6 +115,36 @@
       {
         "kind": "repository_path",
         "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_lambda155_scaling/karolina_rpn16_solver_total_scaling.csv"
+      }
+    ],
+    "plasticity3d_recommended_scaling.pdf": [
+      {
+        "kind": "repository_path",
+        "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_recommended_scaling/comparison_summary.json"
+      },
+      {
+        "kind": "repository_path",
+        "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_recommended_scaling/runs/np1/output.json"
+      },
+      {
+        "kind": "repository_path",
+        "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_recommended_scaling/runs/np2/output.json"
+      },
+      {
+        "kind": "repository_path",
+        "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_recommended_scaling/runs/np4/output.json"
+      },
+      {
+        "kind": "repository_path",
+        "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_recommended_scaling/runs/np8/output.json"
+      },
+      {
+        "kind": "repository_path",
+        "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_recommended_scaling/runs/np16/output.json"
+      },
+      {
+        "kind": "repository_path",
+        "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_recommended_scaling/runs/np32/output.json"
       }
     ],
     "plasticity3d_validation_layer1a_boundary.pdf": [
@@ -362,19 +412,19 @@
       }
     },
     "plasticity2d_resolution_energy.pdf": {
-      "archive_status": "needs_final_archive",
+      "archive_status": "archive_neutral",
       "data_inputs": [
         {
           "kind": "repository_path",
-          "path": "artifacts/raw_results/docs_showcase/mc_plasticity_p4_l5/output.json"
+          "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity2d_resolution/output.json"
         },
         {
           "kind": "repository_path",
-          "path": "artifacts/raw_results/slope_stability_l6_p4_deep_p1_tail_scaling_lambda1_maxit20/summary.json"
+          "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity2d_resolution/slope_stability_l6_p4/summary.json"
         },
         {
           "kind": "repository_path",
-          "path": "artifacts/raw_results/slope_stability_l7_p4_deep_p1_tail_scaling_lambda1_maxit20/summary.json"
+          "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity2d_resolution/slope_stability_l7_p4/summary.json"
         }
       ],
       "generator": {
@@ -384,11 +434,11 @@
       }
     },
     "plasticity2d_state_pair.pdf": {
-      "archive_status": "needs_final_archive",
+      "archive_status": "archive_neutral",
       "data_inputs": [
         {
           "kind": "repository_path",
-          "path": "artifacts/raw_results/docs_showcase/mc_plasticity_p4_l5/state.npz"
+          "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity2d_resolution/state.npz"
         }
       ],
       "generator": {
@@ -396,14 +446,14 @@
         "kind": "repository_path",
         "path": "paper/scripts/generate_paper_figures.py"
       },
-      "note": "Uses raw Plasticity2D endpoint state plus deterministic same-mesh case construction."
+      "note": "Uses the bundled Plasticity2D endpoint state plus deterministic same-mesh case construction."
     },
     "plasticity3d_convergence.pdf": {
       "archive_status": "needs_final_archive",
       "data_inputs": [
         {
           "kind": "repository_path",
-          "path": "artifacts/raw_results/plasticity3d_lambda1p55_degree_mesh_energy_study/comparison_summary.json"
+          "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_degree_energy_study/comparison_summary.json"
         }
       ],
       "generator": {
@@ -418,7 +468,7 @@
       "data_inputs": [
         {
           "kind": "repository_path",
-          "path": "artifacts/raw_results/plasticity3d_lambda1p55_degree_mesh_energy_study/comparison_summary.json"
+          "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_degree_energy_study/comparison_summary.json"
         }
       ],
       "generator": {
@@ -432,7 +482,7 @@
       "data_inputs": [
         {
           "kind": "repository_path",
-          "path": "artifacts/raw_results/plasticity3d_lambda1p55_degree_mesh_energy_study/comparison_summary.json"
+          "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_degree_energy_study/comparison_summary.json"
         }
       ],
       "generator": {
@@ -446,7 +496,7 @@
       "data_inputs": [
         {
           "kind": "repository_path",
-          "path": "artifacts/raw_results/plasticity3d_lambda1p55_degree_mesh_energy_study/comparison_summary.json"
+          "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_degree_energy_study/comparison_summary.json"
         }
       ],
       "generator": {
@@ -460,7 +510,7 @@
       "data_inputs": [
         {
           "kind": "repository_path",
-          "path": "artifacts/raw_results/plasticity3d_lambda1p55_degree_mesh_energy_study/comparison_summary.json"
+          "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_degree_energy_study/comparison_summary.json"
         }
       ],
       "generator": {
@@ -488,7 +538,7 @@
       "data_inputs": [
         {
           "kind": "repository_path",
-          "path": "artifacts/raw_results/plasticity3d_lambda1p55_degree_mesh_energy_study/comparison_summary.json"
+          "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_degree_energy_study/comparison_summary.json"
         }
       ],
       "generator": {
@@ -517,11 +567,35 @@
       }
     },
     "plasticity3d_recommended_scaling.pdf": {
-      "archive_status": "needs_final_archive",
+      "archive_status": "archive_neutral",
       "data_inputs": [
         {
           "kind": "repository_path",
-          "path": "artifacts/raw_results/source_compare/plasticity3d_l1_2_lambda1_grad1e2_local_pmg_scaling/comparison_summary.json"
+          "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_recommended_scaling/comparison_summary.json"
+        },
+        {
+          "kind": "repository_path",
+          "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_recommended_scaling/runs/np1/output.json"
+        },
+        {
+          "kind": "repository_path",
+          "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_recommended_scaling/runs/np2/output.json"
+        },
+        {
+          "kind": "repository_path",
+          "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_recommended_scaling/runs/np4/output.json"
+        },
+        {
+          "kind": "repository_path",
+          "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_recommended_scaling/runs/np8/output.json"
+        },
+        {
+          "kind": "repository_path",
+          "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_recommended_scaling/runs/np16/output.json"
+        },
+        {
+          "kind": "repository_path",
+          "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_recommended_scaling/runs/np32/output.json"
         }
       ],
       "generator": {
@@ -529,14 +603,14 @@
         "kind": "repository_path",
         "path": "paper/scripts/generate_paper_figures.py"
       },
-      "note": "The scaling summary references per-rank raw result JSON files used for local-element counts."
+      "note": "The bundled scaling summary references bundled per-rank result JSON files used for local-element counts."
     },
     "plasticity3d_state_pair.pdf": {
       "archive_status": "needs_final_archive",
       "data_inputs": [
         {
           "kind": "repository_path",
-          "path": "artifacts/raw_results/plasticity3d_lambda1p55_degree_mesh_energy_study/comparison_summary.json"
+          "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_degree_energy_study/comparison_summary.json"
         }
       ],
       "generator": {

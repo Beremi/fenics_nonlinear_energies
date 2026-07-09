@@ -1,0 +1,11 @@
+{
+  "accepted_steps": 9,
+  "continuation_kind": "ssr_indirect",
+  "event": "finished",
+  "lambda_last": 1.5684034385670278,
+  "omega_last": 6700000.0,
+  "phase": "continuation",
+  "stop_reason": "omega_max_stop",
+  "timestamp": "2026-04-10T11:33:56.197474+00:00",
+  "total_wall_time": 489.45957235002425
+}

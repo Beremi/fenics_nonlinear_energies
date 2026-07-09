@@ -481,13 +481,18 @@ MATLAB literature only when there is source-backed evidence.
   schema: every generated figure now has a `generated_asset_sources` record with
   generator path/function and archive status. The validator now requires these
   records for TeX-included figures. The refreshed manifest records 34 generated
-  figure sources, 19 archive-neutral input maps, and 10 figures marked
-  `needs_final_archive` because they depend on large raw/state inputs. Current
+  figure sources, 27 archive-neutral figure sources, 22 archive-neutral input
+  maps, and seven figures marked `needs_final_archive` because they depend on
+  large Plasticity3D raw/state inputs. Current
   table-provenance chunk adds `paper/tables/generated/manifest.json` with source
   provenance for all 30 generated tables. The validator now requires table
-  source records for all 28 TeX-included generated tables. Of those included
-  tables, 15 are marked `needs_final_archive` because they depend on raw-results
-  or report inputs that still need durable archive coverage.
+  source records for all 28 TeX-included generated tables. Current
+  archive-coverage chunk expands the curated bundle with small raw/report table
+  inputs, Plasticity2D endpoint and resolution inputs, and the Plasticity3D
+  recommended-scaling per-rank outputs; 29 of 30 generated table sources are
+  now archive-neutral, leaving only the fixed-reference operator PMG table
+  marked `needs_final_archive` pending release-scope treatment of its internal
+  implementation-label provenance.
 
 ## Evidence Nodes
 
@@ -850,10 +855,11 @@ MATLAB literature only when there is source-backed evidence.
 - `Provenance audit` (`Aquinas-current`): completed. Findings partly addressed:
   validator now requires figure source provenance and the figure manifest records
   all generated figure sources with archive status. Current table-provenance
-  follow-up also requires generated-table source provenance. Remaining
-  provenance work: bundle or explicitly scope the raw/report inputs behind the
-  table entries marked `needs_final_archive` and the large raw state inputs
-  behind the `needs_final_archive` figure entries.
+  follow-up also requires generated-table source provenance. Current archive
+  bundle expansion covers the small raw/report-backed table inputs. Remaining
+  provenance work: explicitly scope the fixed-reference operator table labels
+  and the large raw state/HDF5 inputs behind the Plasticity3D
+  `needs_final_archive` figure entries.
 - `PDF/layout audit` (`Ptolemy-current`): completed. Findings partly addressed
   by relaxing selected `[H]` floats. Remaining risk: current A4 pages must be
   rendered after rebuild to confirm the page-20, page-23, page-33, and page-35
@@ -865,11 +871,11 @@ MATLAB literature only when there is source-backed evidence.
   table had unknown file inputs. This informed the table manifest and validator
   added in the current table-provenance chunk.
 - `Figure/archive gap audit` (`Einstein-current`): completed. Key finding:
-  10 figures remain `needs_final_archive`; the practical large item is exact
+  seven figures remain `needs_final_archive`; the practical large item is exact
   Plasticity3D state/HDF5 coverage for the degree/resolution figures, roughly
-  13 GiB if scoped to the submitted state/slice requirements. Smaller raw
-  Plasticity2D and Plasticity3D scaling inputs should also be bundled or
-  explicitly scoped in the final durable archive.
+  13 GiB if scoped to the submitted state/slice requirements. Smaller
+  Plasticity2D and Plasticity3D scaling inputs are now covered by the curated
+  submission bundle.
 
 ## First Edit Backlog
 
