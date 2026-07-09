@@ -1789,11 +1789,11 @@ def main() -> None:
         [
             "Ranks",
             "AD wall [s]",
-            "Reference-formula wall [s]",
+            "Ref. wall [s]",
             "AD solve [s]",
-            "Reference-formula solve [s]",
+            "Ref. solve [s]",
             "Wall ratio",
-            "Max $\\|g\\|$",
+            "$\\|g\\|_{\\max}$",
             "Status",
         ],
         [
