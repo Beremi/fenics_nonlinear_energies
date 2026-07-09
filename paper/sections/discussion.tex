@@ -2,10 +2,11 @@
 
 The numerical evidence supports a single methodological lesson for the tested
 benchmark classes: local differentiation and sparse solver policy are coupled
-numerical choices. Across the benchmark suite, derivative routes, globalization,
-ownership layout, and preconditioner policy affect cost and robustness even when
-terminal observables agree. The following paragraphs delimit that lesson by
-derivative route, validation scope, and external comparison evidence.
+numerical choices. In several fixed-case comparisons, derivative routes and
+ownership layouts preserve displayed terminal observables while changing cost;
+globalization and preconditioner policies also change robustness, work, and
+timing. The following paragraphs delimit that lesson by derivative route,
+validation scope, and external comparison evidence.
 
 \paragraph{Derivative routes interact with the sparse solver.}
 \Cref{fig:plasticity3d-derivative-ablation,tab:plasticity3d-derivative-ablation}
@@ -52,7 +53,8 @@ controlled rank-consistency check. The fixed-reference PMG studies should be
 read as solver-sensitivity tests, not external baselines. Together, these
 distinctions state the contribution: a nonlinear FEM toolset that couples
 JAX-based local differentiation with PETSc sparse distributed solvers and
-reports matched validation comparisons with explicit limits of agreement.
+reports matched comparison evidence, with explicit agreement limits where
+predefined.
 Automatic differentiation alone does not determine the behavior of large
 nonlinear FEM; nonlinear globalization, MPI assembly, coarse solvers, and
 preconditioning also enter the numerical method.

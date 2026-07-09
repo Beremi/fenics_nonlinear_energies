@@ -159,6 +159,14 @@ scientific claims were introduced without supporting evidence.
   highlight to agreement within about `\num{1e-6}`; and regenerated the
   affected topology and Plasticity3D validation figures with readable axis and
   colorbar spacing.
+- Addressed the latest math/evidence consistency audit: removed the
+  Plasticity2D Davis-B/branch-variable `\beta` collision, added missing
+  Plasticity3D test-space and topology elasticity/load definitions, defined
+  the colored-recovery finite-difference step, expanded linear-solver acronyms,
+  corrected the matched Plasticity3D degree set, narrowed direct-branch
+  Plasticity3D language from agreement to comparison where no acceptance
+  threshold is predefined, softened fixed-work PMG timing causality, and aligned
+  the PETSc literature audit key with the manuscript citation.
 - Rebuilt the paper PDF through the paper generation pipeline.
 
 ## Blocking Issues Before Submission

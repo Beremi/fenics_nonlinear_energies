@@ -81,7 +81,11 @@ sparse algebraic objects.
 \subsection{Linear solvers and preconditioners}
 
 The benchmark families use different Krylov and preconditioner combinations
-because the linear systems are qualitatively different:
+because the linear systems are qualitatively different. Here CG denotes
+conjugate gradients, GMRES generalized minimal residual, FGMRES flexible GMRES,
+GAMG PETSc's geometric-algebraic multigrid preconditioner, Hypre an algebraic
+multigrid/preconditioning backend, MUMPS a multifrontal sparse direct solver,
+and PMG polynomial multigrid:
 \begin{itemize}
   \item \textbf{$p$-Laplace:} mostly CG with Hypre, with exact element
         Hessians or colored-SFD Hessians in the \jaxpetsc{} path.

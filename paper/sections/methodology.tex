@@ -86,8 +86,8 @@ the differentiation boundary from the full element vector to the local strain
 state. This is especially effective for high-order plasticity, where the full
 element Hessian is often much more expensive than the $6\times6$
 constitutive tangent. We use colored sparse recovery as the umbrella term for
-the colored-SFD rows in the tables: the reported cases use AD-HVP probes, while
-finite-difference gradient probes are the classical variant.
+the colored-SFD configurations reported below: these configurations use AD-HVP
+probes, while finite-difference gradient probes are the classical variant.
 
 \subsection{Newton--Krylov globalization}
 
@@ -219,6 +219,8 @@ $v_c=\sum_{j\in\mathcal{C}_c} e_j$, one probe produces
   \end{cases}.
   \label{eq:colored-sfd-recovery}
 \end{equation}
+In the finite-difference branch, $\delta>0$ is the chosen gradient-probe step
+size.
 The structural separation then recovers $H_{ij}=(y_c)_i$ for
 $j\in\mathcal{C}_c$ and $(i,j)\in\mathcal{P}(H)$. The reported \jaxpetsc{}
 colored-SFD cases use the AD Hessian-vector probe mode, so no finite-difference

@@ -28,7 +28,7 @@ those are presented in the paper as implementation choices of `fenics_nonlinear_
 | Related Work, Topology benchmark | Filter regularization in topology optimization | `bourdin2001filters` | Abstract and formulation sections |
 | Related Work, Methodology | Sparse Jacobian recovery by directional probing | `curtis1974sparsejacobian` | Full note |
 | Related Work, Methodology | Sparse Jacobian / Hessian recovery via graph coloring | `coleman1983sparsejacobian`, `coleman1984sparsehessian` | Full articles |
-| Related Work, Methodology | PETSc as scalable vector/matrix/Krylov/nonlinear infrastructure | `balay1997petsc`, `petsc2024web` | PETSc chapter and official PETSc 3.25 documentation/citation block, accessed 2026-04-30 |
+| Related Work, Methodology | PETSc as scalable vector/matrix/Krylov/nonlinear infrastructure | `balay1997petsc`, `petsc2026web` | PETSc chapter and official PETSc 3.25 documentation/citation block, accessed 2026-04-30 |
 | Benchmarks: $p$-Laplace | Weak formulation in `W_0^{1,p}` and minimizer/weak-solution equivalence for the stationary problem | `lindqvist2019plaplace` | Chapter 2, “The Dirichlet Problem and Weak Solutions” |
 | Benchmarks: Ginzburg--Landau | Historical origin of the Ginzburg--Landau model class | `ginzburg1950theory` | Bibliographic metadata from the CERN record only; no public full text was located or used |
 | Benchmarks: Hyperelasticity | Finite-strain kinematics, deformation gradient notation, Piola stress, and hyperelastic background | `bonet2008nonlinear` | Chapters 4--6 |

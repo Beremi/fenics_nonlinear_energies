@@ -81,8 +81,9 @@ budget. \Cref{tab:gl-globalization-fixed-budget} reports this scalar-nonconvex
 comparison separately from the multi-family table above. Its purpose is
 narrower: it records that the trust-region variants complete with matching
 energy and Newton--Krylov work, while the line-search-only configuration still
-times out under the fixed wall-time cap. The timeout row reports elapsed wall
-time and the cap, whereas completed rows report solver time.
+times out under the fixed wall-time cap. For that timed-out configuration we
+report elapsed wall time and the cap, whereas completed configurations report
+solver time.
 
 \begin{table}[!htbp]
   \centering
@@ -91,7 +92,7 @@ time and the cap, whereas completed rows report solver time.
   \caption{Ginzburg--Landau level-10 fixed-budget globalization comparison on
   eight MPI ranks. The configurations use the same element assembly and Hypre
   preconditioner; only the nonlinear globalization policy changes. The timed-out
-  row reports elapsed wall time and the configured wall-time cap.}
+  configuration reports elapsed wall time and the configured wall-time cap.}
   \label{tab:gl-globalization-fixed-budget}
 \end{table}
 
@@ -106,9 +107,9 @@ for both routes, because the rank-local hyperelasticity configuration does not u
 colored SFD. This makes the case a derivative-route comparison rather than a
 scaling claim. The Plasticity3D cases use the same
 $P_2(L_1)$, $\lambda_{\mathrm{sr}}=\num{1.55}$, MUMPS-backed PMG setting as the
-globalization comparison above. Because the source data mix solver timers,
-solver totals, and wall times, the timing-scope column states which quantity is
-used in each row.
+globalization comparison above. Because the available timing records use solver
+timers, solver totals, and wall times in different cases, the timing-scope
+column states which quantity is used for each configuration.
 
 Across all three benchmark cases, colored SFD reaches the same reported
 energy and identical nonlinear/Krylov iteration counts as element AD. The
@@ -126,7 +127,7 @@ reconstruction.
   \footnotesize
   \input{tables/generated/derivative_route_compare.tex}
   \caption{Matched-case derivative-route comparison. Colored SFD denotes rank-local
-  colored sparse recovery; the reported rows use AD-HVP probes, while
+  colored sparse recovery; the reported configurations use AD-HVP probes, while
   finite-difference gradient probes are the classical recovery variant. The
   SFD-color range is shown where per-rank color counts are available.}
   \label{tab:derivative-route-compare}
@@ -284,12 +285,12 @@ solve time at the same reported precision.
 
 \Cref{tab:hyperelasticity-pmg-sensitivity} isolates the first-step level-5 PMG
 choice on the same 32-rank level-5 problem with fixed nonlinear work. All
-configurations perform the same eight Newton linearizations, so differences in
-solver time are attributable to the linear preconditioner and coarse-solver
-policy rather than to nonlinear stopping. The energy column is the state after
-this fixed nonlinear work, so
+configurations perform the same eight Newton linearizations, so the table
+compares the cost and terminal state reached under different preconditioner and
+coarse-solver policies. The energy column is the state after this fixed
+nonlinear work, so
 \Cref{tab:hyperelasticity-pmg-sensitivity} is a solver-policy comparison rather
-than an endpoint-accuracy ranking.
+than an equal-accuracy timing comparison or endpoint-accuracy ranking.
 
 \begin{table}[H]
   \centering
@@ -403,10 +404,10 @@ endpoint surrogate behaves across degree/resolution choices, and how the
 selected solver configurations scale on the separate $P_4(L_2)$ timing studies.
 The zoomed panels in \Cref{fig:plasticity3d-degree-energy} are included because
 the full figure is dominated by coarse $P_1$ variation. Under the bottom-clamped
-constraint, the first matched comparison is
-$P_4(L_1)$ versus $P_1(L_3)$ at \num{610964} free DOFs. The second
-matched comparison is $P_1(L_4)$, $P_2(L_3)$, and $P_4(L_2)$ at
-\num{4801816} free DOFs. The scientific message is
+constraint, the matched set at \num{610964} free DOFs is
+$P_1(L_3)$, $P_2(L_2)$, and $P_4(L_1)$. The matched set at
+\num{4801816} free DOFs is $P_1(L_4)$, $P_2(L_3)$, and $P_4(L_2)$. The
+scientific message is
 therefore that the solver reaches similar terminal energies along
 both $p$- and $h$-refined paths, while higher order on coarser meshes buys
 lower observed values of \cref{eq:plasticity3d-discrete} at matched DOFs only
@@ -519,7 +520,9 @@ confounded by different nonlinear work.
   \cref{fig:plasticity3d-local-karolina-scaling}. Single-node configurations use one CPU
   node; multi-node configurations use 16 ranks per CPU node. The nonlinear
   stop requires relative correction below \num{0.002} and final gradient below
-  one percent of the first Newton gradient.}
+  one percent of the first Newton gradient. The stopping-gradient norm in this
+  table is the relative-gradient stopping metric for this scaling run, not the
+  absolute final-gradient column in the degree benchmark table.}
   \label{tab:plasticity3d-local-karolina-scaling}
 \end{table}
 

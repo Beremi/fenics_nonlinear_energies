@@ -442,6 +442,9 @@ right-hand side of \cref{eq:plasticity2d-weak}; for the endpoint solves this is
 the gravity load with $b=(0,-\gamma)^\top$ and zero traction on the free
 boundary. The dilation angle enters this endpoint model only through the Davis-B
 reduction below.
+The reduced cohesion and friction angle appearing in
+\cref{eq:plasticity2d-discrete} are defined by the Davis-B reduction
+\cref{eq:plasticity2d-davis}.
 
 The two-dimensional branch formulas use engineering strain
 $\varepsilon=(\varepsilon_{xx},\varepsilon_{yy},\gamma_{xy})^\top$ and the
@@ -511,20 +514,20 @@ principal stresses use
   d=\frac{\sigma_{xx}-\sigma_{yy}}{2}.
 \]
 With
-$\alpha=1+\sin\phi_\lambda$, $\beta=1-\sin\phi_\lambda$, and
-$\kappa=2c_\lambda\cos\phi_\lambda$, the trial state is elastic when
+$a_\lambda=1+\sin\phi_\lambda$, $b_\lambda=1-\sin\phi_\lambda$, and
+$\kappa_\lambda=2c_\lambda\cos\phi_\lambda$, the trial state is elastic when
 \[
   f^{\mathrm{tr}}
   =
-  \alpha\sigma_1^{\mathrm{tr}}
-  -\beta\sigma_2^{\mathrm{tr}}
-  -\kappa
+  a_\lambda\sigma_1^{\mathrm{tr}}
+  -b_\lambda\sigma_2^{\mathrm{tr}}
+  -\kappa_\lambda
   \le 0.
 \]
 In that case $\sigma^\star=\sigma^{\mathrm{tr}}$. Otherwise let
 \[
-  z=\widehat S^{-1}(\alpha,-\beta)^\top,\qquad
-  \eta=\frac{f^{\mathrm{tr}}}{\alpha z_1-\beta z_2},\qquad
+  z=\widehat S^{-1}(a_\lambda,-b_\lambda)^\top,\qquad
+  \eta=\frac{f^{\mathrm{tr}}}{a_\lambda z_1-b_\lambda z_2},\qquad
   \widehat\sigma^\ell
   =
   (\sigma_1^{\mathrm{tr}},\sigma_2^{\mathrm{tr}})^\top-\eta z,
@@ -533,7 +536,8 @@ where $\widehat S$ is the principal-stress $2\times2$ normal block of
 $S_{2\mathrm{D}}$. If
 $\widehat\sigma^\ell_1\ge \widehat\sigma^\ell_2$, set
 $\widehat\sigma^\star=\widehat\sigma^\ell$; otherwise set
-$\widehat\sigma^\star_1=\widehat\sigma^\star_2=\kappa/(\alpha-\beta)$.
+$\widehat\sigma^\star_1=\widehat\sigma^\star_2=
+\kappa_\lambda/(a_\lambda-b_\lambda)$.
 After rotating $\widehat\sigma^\star$ back to Cartesian components, the branch
 potential is
 \[
@@ -590,8 +594,12 @@ geometry
 \citep{davis1968plasticity,simo1985consistent,simo1998compinel,tschuchnigg2015nonassociated,sysala2017returnmapping,sysala2021optimization,sysala2025convexoptimization,sysala2025advancedcontinuation}.
 The unknown is a displacement field
 $u = (u_x,u_y,u_z): \Omega \to \mathbb{R}^3$, and gravity acts in the vertical
-$y$-direction. With material-region weight $\gamma(x)$, the continuum
-equilibrium equations are
+$y$-direction. Let $e_y=(0,1,0)^\top$. Let $\Gamma_{D,i}$ denote the
+component-wise Dirichlet boundary for displacement component $i$, let
+$\Gamma_N$ be the remaining traction-free boundary, and let $V_0$ be the
+homogeneous vector-valued test space after applying these component-wise
+constraints. With material-region weight $\gamma(x)$, the continuum equilibrium
+equations are
 \begin{equation}
   -\nabla \cdot \sigma^{n+1} = -\gamma(x) e_y
   \quad \text{in }\Omega,
@@ -642,10 +650,6 @@ labels contain the sloped free surface and the top face. We impose
 \]
 The bottom-clamped model additionally fixes all displacement components on
 $\Gamma_{\mathrm{bot}}=\{X\in\partial\Omega:\lvert X_2\rvert\le 10^{-12}\}$.
-Here $\Gamma_{D,i}$ denotes the resulting Dirichlet set for displacement
-component $i$, $\Gamma_N$ is the remaining traction-free boundary, and $V_0$ is
-the homogeneous vector-valued test space after applying these component-wise
-constraints.
 We write $P_k(L_\ell)$ for polynomial degree $k$ on mesh level $\ell$ and use
 $L_1,\ldots,L_4$ for the four displayed mesh levels.
 The figures below use the bottom-clamped $P_4(L_2)$ representative endpoint at
@@ -895,8 +899,8 @@ which matches the engineering-shear convention of
 Because \cref{eq:plasticity3d-discrete,eq:plasticity3d-potential} define an
 algorithmic endpoint surrogate rather than a path-consistent incremental
 history functional, the results section reports this family with a separate
-endpoint-surrogate comparison. Direct-branch endpoint-observable agreement with the
-reference model for the endpoint surrogate is treated separately from a
+endpoint-surrogate comparison. Direct-branch endpoint-observable differences
+against the reference model are treated separately from a
 fixed-$\lambda_{\mathrm{sr}}$ reference comparison. The latter checks
 matched geometry, materials, Davis-B reduction parameters, load schedule, and
 the active boundary conditions, but it is not a path-consistent
@@ -1014,11 +1018,29 @@ fixed density, define the bilinear form
     \left(\varepsilon(v_h)|_e\right).
   \label{eq:topology-mechanics}
 \end{equation}
-The mechanics step finds $u_h(\theta_h)$ in the affine displacement space such that
-$a_{\theta_h}(u_h,v_h)=\ell(v_h)$ for all $v_h\in V_{h,0}$, where $\ell$ is the
-load functional defined by that right-edge traction. At outer design iteration
-$m$, after solving for $u_h^m=u_h(\theta_h^m)$, the design step freezes, on each
-element,
+Here
+$\varepsilon(v)=(\partial_x v_x,\partial_y v_y,
+\partial_y v_x+\partial_x v_y)^\top$, and
+\[
+  C
+  =
+  \frac{E}{1-\nu^2}
+  \begin{bmatrix}
+    1 & \nu & 0 \\
+    \nu & 1 & 0 \\
+    0 & 0 & (1-\nu)/2
+  \end{bmatrix}.
+\]
+The load functional is
+\[
+  \ell(v)
+  =
+  \int_{\{2\}\times[0.4,0.6]} (0,-1)\cdot v\,ds.
+\]
+The mechanics step finds $u_h(\theta_h)$ in the affine displacement space such
+that $a_{\theta_h}(u_h,v_h)=\ell(v_h)$ for all $v_h\in V_{h,0}$. At outer
+design iteration $m$, after solving for $u_h^m=u_h(\theta_h^m)$, the design
+step freezes, on each element,
 \[
   e_{e,m}^{\mathrm{frozen}}
   =

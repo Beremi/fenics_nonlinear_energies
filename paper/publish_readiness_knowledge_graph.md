@@ -168,7 +168,9 @@ MATLAB literature only when there is source-backed evidence.
   Current solver-protocol chunk adds a common solver-status and timing
   vocabulary after the globalization algorithms, so completed endpoint solves,
   fixed-work diagnostics, capped runs, wall times, solver timers, and relative
-  correction targets are defined before the numerical tables use them.
+  correction targets are defined before the numerical tables use them. Current
+  math/evidence chunk defines the finite-difference step size `\delta` in the
+  colored sparse recovery formula.
 - `IMPLEMENTATION`: realization of the method.
   Current assets: pure JAX, FEniCS, and JAX+PETSc strata; autodiff modes;
   Krylov/preconditioner matrix; distributed assembly.
@@ -254,6 +256,11 @@ MATLAB literature only when there is source-backed evidence.
   stress convention before the branch formulas, names the Plasticity3D material
   regions, maps the Plasticity3D boundary labels to geometric faces, and states
   the ordered-principal-strain convention used by the 3D branch tests.
+  Current math/evidence chunk removes the Plasticity2D Davis-B/branch-variable
+  `\beta` collision by using `a_\lambda`, `b_\lambda`, and `\kappa_\lambda`,
+  defines `e_y`, `\Gamma_{D,i}`, `\Gamma_N`, and `V_0` before the
+  Plasticity3D strong form, and adds the topology plane-stress tensor and load
+  functional before the mechanics solve.
 - `VALIDATION`: external and reference-model comparison.
   Evidence: narrow hyperelastic JAX-FEM comparison; Plasticity3D validation
   ladder with endpoint-surrogate scope.
@@ -291,6 +298,9 @@ MATLAB literature only when there is source-backed evidence.
   uses the seven-step load branch
   `\lambda_{\mathrm{sr}}=1.0,1.1,\ldots,1.6` on `P_2(L_1)`, so the figure,
   table, and interpretation no longer rely on an undefined direct-branch label.
+  Current math/evidence chunk changes direct-branch validation wording from
+  agreement to comparison where no predefined threshold exists; the fixed-load
+  comparison remains the thresholded part of the Plasticity3D validation table.
 - `RESULTS`: performance and solver behavior.
   Evidence: globalization comparison, derivative-route comparison, scaling
   studies, hyperelastic and Plasticity3D solver diagnostics, topology scaling.
@@ -373,6 +383,12 @@ MATLAB literature only when there is source-backed evidence.
   benchmark table's final-gradient norm, adds energy to the hyperelastic
   replicated/rank-local same-work rows, and changes the Ginzburg--Landau family
   highlight from same displayed energy to agreement within about `\num{1e-6}`.
+  Current math/evidence chunk adds the omitted `P_2(L_2)` member of the
+  `610964`-free-DOF Plasticity3D matched set, narrows fixed-work
+  Hyperelasticity PMG interpretation to cost-and-terminal-state evidence rather
+  than equal-accuracy timing, and makes the Plasticity3D
+  `\lambda_{\mathrm{sr}}=1.55` scaling caption explicitly distinguish its
+  stopping-gradient metric from the degree benchmark's final-gradient column.
 - `DISCUSSION_CONCLUSION`: interpretation and scope.
   Current prose states the toolset lesson in paper-facing terms: automatic
   differentiation alone does not determine large nonlinear FEM behavior;
@@ -527,6 +543,11 @@ MATLAB literature only when there is source-backed evidence.
   with separated horizontal colorbars; `make -C paper submission-check` passed,
   and rendered pages 21 and 24 were checked for visible x-axis labeling,
   separated colorbar tick labels, and unclipped captions/tables.
+  Current math/evidence chunk rebuilt the 41-page PDF and visually checked
+  pages 5, 16, 21, 24, 36, and 37 after math/evidence/table-label edits; the
+  affected algorithms, Plasticity2D formulas, topology definitions, validation
+  page, discussion opening, and appendix tables are readable and within the
+  current A4 text block.
 - `REPRO`: reproducibility and submission readiness.
   Known blockers from `paper/todo.md`: target journal/template/declarations,
   repository license/archive DOI, and archive-neutral provenance for critical
@@ -600,7 +621,10 @@ MATLAB literature only when there is source-backed evidence.
   integration. Current style/evidence/layout chunk keeps source/generated
   consistency for the edited generated tables and only intentionally refreshes
   the topology-density and Plasticity3D-validation figure assets; unrelated
-  pre-existing generated-figure drift remains outside the staged scope.
+  pre-existing generated-figure drift remains outside the staged scope. Current
+  math/evidence chunk aligns the PETSc audit/manifest key with the manuscript
+  citation `petsc2026web`; the ignored local cached HTML filename was renamed
+  to match the audit key.
 
 ## Evidence Nodes
 
@@ -1058,6 +1082,17 @@ MATLAB literature only when there is source-backed evidence.
   release-level or target-template issues: venue class/declarations, license,
   archival DOI, and possible table/figure simplification after template
   conversion.
+- `Current structure/math/evidence audit` (`Fermat`/`Dewey`/`Banach`):
+  completed or partly integrated. Findings addressed in the current
+  math/evidence chunk: Plasticity2D notation collision, missing Plasticity3D
+  and topology definitions, colored-recovery `\delta`, solver acronyms,
+  appendix route labels, Plasticity3D matched-degree set, validation comparison
+  wording, fixed-work PMG causal scope, SOTA subset wording, and PETSc
+  audit-key alignment. Larger structural recommendation remains for a dedicated
+  pass: decide a main/supplement split, move the SOTA table or benchmark
+  encyclopedia material out of the first narrative path, organize results more
+  directly by method question, relax forced floats, and possibly merge
+  discussion/conclusion after target-template constraints are known.
 
 ## First Edit Backlog
 

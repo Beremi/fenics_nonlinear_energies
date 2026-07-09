@@ -132,15 +132,15 @@
       "local_filename": "balay1997petsc.pdf",
       "notes": "A local non-public copy is available in the cache."
     },
-    "petsc2024web": {
+    "petsc2026web": {
       "canonical_source_label": "PETSc website",
       "canonical_source_url": "https://petsc.org/",
       "doi": null,
       "fulltext_label": "Open docs page",
       "fulltext_url": "https://petsc.org/release/",
       "isbns": [],
-      "local_filename": "petsc2024web.html",
-      "notes": "BibTeX key retained for compatibility; citation metadata updated from the official PETSc 3.25 documentation citation block, which lists year 2026."
+      "local_filename": "petsc2026web.html",
+      "notes": "Citation metadata updated from the official PETSc 3.25 documentation citation block, which lists year 2026."
     },
     "nocedal2006numerical": {
       "canonical_source_label": "Springer book page",

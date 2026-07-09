@@ -145,8 +145,8 @@ IMPLEMENTATION_LABELS = {
     "jax_serial": "pure-JAX serial reference",
     LOCAL_IMPL: "constitutive-AD PMG solver",
     SOURCE_IMPL: "fixed-reference PMG variant",
-    LOCAL_SOURCEFIXED_IMPL: "fixed-reference operator, constitutive AD",
-    SOURCE_SOURCEFIXED_IMPL: "fixed-reference operator, reference formula",
+    LOCAL_SOURCEFIXED_IMPL: "frozen PMG operator, AD branch tangent",
+    SOURCE_SOURCEFIXED_IMPL: "frozen PMG operator, closed-form branch tangent",
 }
 
 GLOBALIZATION_BENCHMARK_ORDER = {
@@ -337,11 +337,11 @@ def implementation_label(name: object) -> str:
     if key in IMPLEMENTATION_LABELS:
         return IMPLEMENTATION_LABELS[key]
     if "local_constitutiveAD" in key and "sourcefixed" in key:
-        return "fixed-reference operator, constitutive AD"
+        return "frozen PMG operator, AD branch tangent"
     if "local_constitutiveAD" in key and "local_pmg" in key:
         return "constitutive-AD PMG solver"
     if "sourcefixed" in key:
-        return "fixed-reference operator, reference formula"
+        return "frozen PMG operator, closed-form branch tangent"
     if key.startswith("source") or "_source" in key:
         return "fixed-reference PMG variant"
     return key.replace("_", r"\_")
@@ -1140,7 +1140,7 @@ def main() -> None:
         [
             [
                 "completed",
-                "All configured stopping tests for that row are met before the nonlinear cap or wall-time cap.",
+                "All configured stopping tests for the configuration are met before the nonlinear cap or wall-time cap.",
                 "Endpoint energy and observables are terminal values for the stated benchmark.",
             ],
             [
@@ -1156,7 +1156,7 @@ def main() -> None:
             [
                 "wall time",
                 "Elapsed end-to-end time for the stated run or run segment, including setup when the reporting path includes it.",
-                "Comparable only for rows that share the same benchmark contract and timing scope.",
+                "Comparable only for configurations that share the same benchmark contract and timing scope.",
             ],
             [
                 "solve time / solver total",
@@ -1269,7 +1269,7 @@ def main() -> None:
             [
                 "Present toolset",
                 "JAX local energies and constitutive laws with PETSc vectors, matrices, nonlinear solvers, Krylov methods, and multigrid.",
-                "Tests element AD, constitutive AD, colored SFD, nonlinear globalization, sparse assembly, and preconditioner policy across six nonlinear FEM benchmark families.",
+                "Across the six-family suite, tests element AD, constitutive AD, colored SFD, nonlinear globalization, sparse assembly, and preconditioner policy in the benchmark subsets where each route is implemented.",
             ],
         ],
     )
@@ -1792,10 +1792,10 @@ def main() -> None:
         fill_spec("c c c c c c"),
         [
             "Ranks",
-            "Constitutive wall [s]",
-            "Reference wall [s]",
-            "Constitutive solve [s]",
-            "Reference solve [s]",
+            "AD branch wall [s]",
+            "Closed-form branch wall [s]",
+            "AD branch solve [s]",
+            "Closed-form branch solve [s]",
             "Ratio",
         ],
         [
@@ -1820,7 +1820,7 @@ def main() -> None:
                 r"@{}c@{\hspace{0.7em}}"
                 + xcol(1.0, "RaggedRight")
                 + r"@{\hspace{0.45em}}c c@{}",
-                ["Ranks", "Route", "Status", "Wall time [s]"],
+                ["Ranks", "PMG operator and tangent", "Status", "Wall time [s]"],
                 [[row[0], row[1], row[6], row[2]] for row in sourcefixed_rows],
             ),
             (
@@ -1828,7 +1828,13 @@ def main() -> None:
                 r"@{}c@{\hspace{0.7em}}"
                 + xcol(1.0, "RaggedRight")
                 + r"@{\hspace{0.45em}}c c c@{}",
-                ["Ranks", "Route", "Newton iters", "Krylov iters", final_metric_header(sourcefixed_local_rows + sourcefixed_source_rows)],
+                [
+                    "Ranks",
+                    "PMG operator and tangent",
+                    "Newton iters",
+                    "Krylov iters",
+                    final_metric_header(sourcefixed_local_rows + sourcefixed_source_rows),
+                ],
                 [[row[0], row[1], row[3], row[4], row[5]] for row in sourcefixed_rows],
             ),
         ],
