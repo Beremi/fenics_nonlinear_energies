@@ -741,8 +741,8 @@ elastoplastic update driven by $\varepsilon^{\mathrm{ten}}(u^{n+1})$ and the
 previous state.
 
 The heterogeneous benchmark uses a material partition
-$\Omega=\bigcup_{m=0}^3\Omega_m$. The labels
-$m=0,1,2,3$ denote, respectively, the cover layer, general foundation, weak
+$\Omega=\bigcup_{r=0}^3\Omega_r$. The labels
+$r=0,1,2,3$ denote, respectively, the cover layer, general foundation, weak
 foundation, and slope mass. Each tetrahedron belongs to one of these regions,
 and all quadrature points in that tetrahedron use the corresponding tuple
 $(c_0,\phi,\psi,E,\nu,\gamma)$. The four tuples are, in label order,
@@ -1072,12 +1072,12 @@ For the strain visualizations in this paper we use the deviatoric norm
     \varepsilon^\top
     \left(
       \operatorname{diag}(1,1,1,\tfrac{1}{2},\tfrac{1}{2},\tfrac{1}{2})
-      - \frac{1}{3}mm^\top
+      - \frac{1}{3}m_{\mathrm{dev}}m_{\mathrm{dev}}^\top
     \right)
     \varepsilon
   },
   \qquad
-  m = (1,1,1,0,0,0)^\top,
+  m_{\mathrm{dev}} = (1,1,1,0,0,0)^\top.
   \label{eq:plasticity3d-devnorm}
 \end{equation}
 which matches the engineering-shear convention of

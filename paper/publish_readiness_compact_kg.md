@@ -212,15 +212,18 @@ the Plasticity3D CPU-scaling table. Latest rendered-page review found no A4
 clipping, isolated float page, or illegible figures after barrier relaxation;
 revisit these risks only after a target template changes text width or the paper
 is split into main/supplement material. Stale non-manuscript generated
-figure/table outputs are removed and guarded by `validate_paper_assets.py`;
-figure sizing now fails fast if the current A4 article layout contract changes
-without updating the measurement policy.
+figure/table outputs are removed and guarded by `validate_paper_assets.py`.
+Figure sizing is checked by the layout contract used during
+`make -C paper figures` and `make -C paper tables`; `submission-check` validates
+the built PDF but does not rerun that no-write layout measurement target.
 
 ## Standard Validation
 
 - `./.venv/bin/python -m py_compile paper/scripts/check_submission_bundle_manifest.py paper/scripts/generate_literature_sources.py paper/scripts/generate_paper_tables.py paper/scripts/generate_paper_figures.py paper/scripts/build_submission_bundle.py`
 - `make -C paper tables` after table-generator edits
 - `make -C paper figures` after figure-generator edits
+- `make -C paper layout` when checking the current A4 figure/table sizing
+  contract without regenerating assets
 - `make -C paper literature` after bibliography or literature-manifest edits
 - `make -C paper literature-check`
 - commit manuscript/generated-paper/provenance-checker changes
