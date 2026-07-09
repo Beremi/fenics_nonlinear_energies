@@ -71,6 +71,34 @@ def test_release_blockers_report_current_unresolved_classes(tmp_path: Path) -> N
     assert durable_archive.evidence == "artifacts/reproduction/paper_submission_2026_07_08/manifest.json"
 
 
+def test_release_blocker_cli_output_uses_relative_manifest_path(tmp_path: Path, capsys) -> None:
+    checker = _load_module()
+    manifest = _write_manifest(
+        tmp_path,
+        ["Target-journal metadata, repository license, and permanent archive DOI remain outside this bundle."],
+    )
+    _write_main(
+        tmp_path,
+        r"\documentclass{article}",
+        "The code is available on GitHub. No separate archival DOI is cited for this version.",
+    )
+
+    exit_code = checker.main(
+        [
+            "--repo-root",
+            str(tmp_path),
+            "--bundle-manifest",
+            str(manifest),
+            "--expect-blockers",
+        ]
+    )
+    output = capsys.readouterr().out
+
+    assert exit_code == 0
+    assert "artifacts/reproduction/paper_submission_2026_07_08/manifest.json" in output
+    assert str(tmp_path) not in output
+
+
 def test_release_blockers_pass_when_release_metadata_is_present(tmp_path: Path) -> None:
     checker = _load_module()
     manifest = _write_manifest(tmp_path, ["No release metadata limitations remain."])

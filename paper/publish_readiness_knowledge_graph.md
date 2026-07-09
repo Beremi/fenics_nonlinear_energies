@@ -776,7 +776,8 @@ MATLAB literature only when there is source-backed evidence.
   allowlist check for the 13 remaining intentional `[H]` floats and wires it
   into `make -C paper submission-check`. Current release-audit polish makes the
   final-release blocker output use repository-relative bundle evidence paths,
-  preserving portability of the readiness workflow output.
+  preserving portability of the readiness workflow output. Current
+  release-audit test chunk adds CLI-output coverage for that behavior.
 
 ## Evidence Nodes
 

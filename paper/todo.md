@@ -247,6 +247,8 @@ scientific claims were introduced without supporting evidence.
   tightly coupled validation/results/support floats.
 - Made the final-release blocker audit report repository-relative bundle
   evidence paths instead of absolute local checkout paths.
+- Added release-blocker CLI-output regression coverage so the command users run
+  keeps reporting repository-relative bundle evidence paths.
 - Rebuilt the paper PDF through the paper generation pipeline.
 
 ## Blocking Issues Before Submission
@@ -557,6 +559,9 @@ required support for the current scoped contribution.
 - `./.venv/bin/python paper/scripts/check_release_blockers.py --expect-blockers`:
   passed and now reports `artifacts/reproduction/paper_submission_2026_07_08/manifest.json`
   rather than an absolute local checkout path for the durable-archive blocker.
+- `./.venv/bin/python -m pytest tests/test_paper_release_blockers.py`: passed
+  3 tests after adding CLI-output coverage for repository-relative release
+  blocker evidence paths.
 - `./.venv/bin/python -m pytest tests/test_docs_publication.py`: passed
   13 tests.
 - `./.venv/bin/python -m pytest tests/test_final_report_figure_generators.py`:
