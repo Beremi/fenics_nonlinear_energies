@@ -3,11 +3,10 @@
 We developed a \jaxpetsc{} toolset for nonlinear finite-element energy
 minimization that couples local differentiable energy models to PETSc sparse
 distributed nonlinear solvers.
-The experiments connect finite-element notation, derivative construction, MPI
-sparse assembly, globalization, Krylov algebra, preconditioning, formulation
-checks, scoped comparisons, fixed-work route studies, and distributed
-timing/scaling evidence. Across the tested problems, that evidence supports
-evaluating these choices as one solver design.
+Across the tested problems, the numerical evidence supports treating derivative
+construction, sparse ownership, nonlinear globalization, Krylov algebra, and
+preconditioning as one solver design rather than as separable implementation
+details.
 
 The resulting contribution is not only a JAX--PETSc coupling, but also a
 validation and reporting discipline for nonlinear FEM computations: derivative

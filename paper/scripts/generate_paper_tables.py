@@ -1138,9 +1138,9 @@ def main() -> None:
             [
                 "Scalar benchmarks",
                 "formulation, derivative-route, globalization",
-                "Newton--Armijo or stated trust-region variant; PETSc rows use CG/GMRES with Hypre",
+                "Newton--Armijo or stated trust-region variant; PETSc entries use CG/GMRES with Hypre",
                 "$p$-Laplace: $10^{-1}$/30; Ginzburg--Landau: $10^{-3}$/200",
-                "row-specific nonlinear tolerances; capped rows diagnostic",
+                "case-specific nonlinear tolerances; capped configurations diagnostic",
                 "wall or solve/elapsed time",
             ],
             [
@@ -1162,9 +1162,9 @@ def main() -> None:
             [
                 "Plasticity3D validation",
                 "endpoint-surrogate agreement, not path-history validation",
-                "fixed-load comparator diagnostics with matched boundary data",
+                r"fixed-$\lambda_{\mathrm{sr}}$ comparator diagnostics with matched boundary data",
                 "not used for timing comparison",
-                "fixed-load observables; strain/profile rows diagnostic",
+                r"fixed-$\lambda_{\mathrm{sr}}$ observables; strain/profile entries diagnostic",
                 "secondary to agreement metrics",
             ],
             [
@@ -1208,7 +1208,7 @@ def main() -> None:
             [
                 "JAX-native differentiable FEM and PDE solvers "
                 "\\citep{xue2023jaxfem,xue2026implicit,bode2025autopdex,hu2025jaxcpfem}",
-                "Source-specific roles: GPU-oriented differentiable mechanics (JAX-FEM/JAX-CPFEM), implicit differentiation and solver options (AutoPDEx), and Hessian-vector inverse-problem workflows (Xue 2026).",
+                "Source-specific roles: GPU-oriented differentiable mechanics (JAX-FEM/JAX-CPFEM), implicit differentiation and solver options (AutoPDEx), and Hessian-vector inverse-problem studies (Xue 2026).",
                 "Motivates local differentiable modeling; the present study instead couples local JAX derivatives to PETSc sparse MPI solves and compares derivative routes.",
             ],
             [
@@ -1875,38 +1875,38 @@ def main() -> None:
                 "reported",
             ],
             [
-                "fixed-load comparison",
+                r"fixed-$\lambda_{\mathrm{sr}}$ comparison",
                 "relative difference in $\\lambda_{\\max}^{\\mathrm{succ}}$",
                 fmt_sci(float(layer2_metrics["critical_lambda_schedule_proxy"]["relative_difference"])),
                 _layer2_criterion_status(layer2_metrics, "critical_lambda_pass"),
             ],
             [
-                "fixed-load comparison",
+                r"fixed-$\lambda_{\mathrm{sr}}$ comparison",
                 "$u_{\\max}(\\lambda_{\\mathrm{sr}})$ relative $L^2$",
                 fmt_sci(float(layer2_metrics["umax_curve_relative_l2"])),
                 _layer2_criterion_status(layer2_metrics, "umax_curve_pass"),
             ],
             [
-                "fixed-load comparison",
+                r"fixed-$\lambda_{\mathrm{sr}}$ comparison",
                 "endpoint displacement relative $L^2$",
                 fmt_sci(float(layer2_metrics["endpoint_displacement_relative_l2"])),
                 _layer2_criterion_status(layer2_metrics, "endpoint_disp_pass"),
             ],
             [
-                "fixed-load comparison",
+                r"fixed-$\lambda_{\mathrm{sr}}$ comparison",
                 "endpoint deviatoric-strain relative $L^2$",
                 fmt_sci(float(endpoint_dev)) if endpoint_dev is not None else "--",
                 "diagnostic",
             ],
             [
-                "fixed-load comparison",
+                r"fixed-$\lambda_{\mathrm{sr}}$ comparison",
                 "boundary profile relative $L^2$",
                 fmt_sci(float(layer2_metrics["boundary_profile_relative_l2"])),
                 "diagnostic",
             ],
             [
-                "fixed-load comparison",
-                "fixed-load criteria, 3/3 satisfied",
+                r"fixed-$\lambda_{\mathrm{sr}}$ comparison",
+                r"fixed-$\lambda_{\mathrm{sr}}$ criteria, 3/3 satisfied",
                 "--",
                 criterion_status(layer2_metrics["acceptance"]["overall_pass"]),
             ],
@@ -1933,7 +1933,7 @@ def main() -> None:
                 ],
             ),
             (
-                "Terminal observables",
+                "Endpoint observables",
                 "@{}" + xcol(1.0, "RaggedRight") + r"@{\hspace{0.45em}}c c c@{}",
                 ["Route", "Energy", "$\\omega$", "$u_{\\max}$"],
                 [

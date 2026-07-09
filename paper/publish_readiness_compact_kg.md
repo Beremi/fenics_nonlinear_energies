@@ -191,6 +191,20 @@ stage or commit `paper/style_guide/`.
   target-template risks: dense Results table clusters, the Hyperelasticity
   PMG/memory block, Plasticity3D degree/scaling figures and tables, and
   FloatBarrier behavior after venue conversion.
+- Current reporting-terminology and notation pass: Euclid/Huygens/Bacon/Popper
+  audits found no must-fix message blocker, no small missing experiment, and no
+  current A4 layout blocker. Integrated fixes clarify comparator roles in the
+  abstract, include bridge architectures in the introduction positioning,
+  replace row/run phrasing with evidence-facing entries/configurations,
+  standardize Plasticity3D fixed-`\lambda_{\mathrm{sr}}` and strength-reduction
+  terminology, define the boundary normal and quadrature-count notation, make
+  the topology frozen local-compliance expression elementwise, define the
+  hyperelastic centerline and Plasticity3D boundary-profile samples used in
+  validation metrics, and correct p-Laplace, Ginzburg--Landau, and
+  Plasticity3D evidence attribution. The current A4 layout remains clean; dense
+  Results tables, the Hyperelasticity PMG/memory cluster, Plasticity3D
+  degree/scaling material, appendix Table 30, and FloatBarrier behavior remain
+  target-template risks only.
 
 ## Figure And Table Rules
 

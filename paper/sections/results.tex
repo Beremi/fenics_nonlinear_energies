@@ -2,19 +2,19 @@
 
 Having defined the benchmark models and validation evidence, we now report
 computational behavior: globalization, derivative-route cost, sparse-solver
-policy, memory, and scaling. Timing rows from validation studies are used only
+policy, memory, and scaling. Timing entries from validation studies are used only
 when they clarify solver behavior; validation and performance interpretations
-remain separate. \Cref{tab:numerical-protocol-summary} fixes the row-level terms
+remain separate. \Cref{tab:numerical-protocol-summary} fixes the reporting terms
 used across the result blocks and follows the protocol in
 \Cref{tab:solver-reporting-protocol}.
 
 \begin{table}[!htbp]
   \centering
   \scriptsize
-  \caption{Numerical evidence blocks and reporting protocol. Validation rows fix
+  \caption{Numerical evidence blocks and reporting protocol. Validation entries fix
   terminology only; performance claims use the stated timing, stopping, and
   solver-policy columns. The KSP column gives representative tolerance and
-  iteration policies, overridden by result-specific rows.}
+  iteration policies, overridden by result-specific entries.}
   \label{tab:numerical-protocol-summary}
   \input{tables/generated/numerical_protocol_summary.tex}
 \end{table}
@@ -23,16 +23,16 @@ used across the result blocks and follows the protocol in
 \label{sec:num-globalization}
 
 \Cref{tab:globalization-method-compare} asks whether one nonlinear
-globalization policy is robust across the tested families. Each row holds the
+globalization policy is robust across the tested families. Each comparison holds the
 element assembly path and preconditioner family fixed within the problem and
-varies only the nonlinear policy. Timed-out rows are retained as capped solver
+varies only the nonlinear policy. Timed-out configurations are retained as capped solver
 behavior rather than convergence evidence.
 
-The rows are representative fixed cases rather than one physical problem:
+The entries are representative fixed cases rather than one physical problem:
 $p$-Laplace uses a level-10 unit-load stress test, hyperelasticity the first
 eight level-4 rank-local load steps, and Plasticity3D the $P_2(L_1)$ endpoint
-surrogate at $\lambda_{\mathrm{sr}}=\num{1.55}$. The four rows use 32, 16, 32,
-and 32 MPI ranks with 30, 120, 270, and 180 s caps.
+surrogate at $\lambda_{\mathrm{sr}}=\num{1.55}$. The four configurations use 32,
+16, 32, and 32 MPI ranks with 30, 120, 270, and 180 s caps.
 
 \begin{table}[!htbp]
   \centering
@@ -44,8 +44,8 @@ and 32 MPI ranks with 30, 120, 270, and 180 s caps.
   \input{tables/generated/globalization_method_compare.tex}
 \end{table}
 
-The scalar and mechanics rows show different preferences. Newton with Armijo
-line search is fastest on the smooth $p$-Laplace unit-load row, but the same
+The scalar and mechanics cases show different preferences. Newton with Armijo
+line search is fastest on the smooth $p$-Laplace unit-load case, but the same
 line-search-only policy times out on Ginzburg--Landau. For the hyperelasticity
 excerpt all three policies complete; the hybrid policy reduces nonlinear
 iterations and solver time relative to line-search-only Newton, while the pure
@@ -54,7 +54,7 @@ Steihaug variant has more trust-region rejections.
 The Plasticity3D endpoint is the clearest case in this suite against a
 universal policy. At the stricter $\|\nabla \mathcal{F}\|_2 < 10^{-4}$ criterion,
 line-search-only Newton reaches the iteration cap, whereas both trust-region
-policies converge. The capped row matches the displayed energy but remains above
+policies converge. The capped configuration matches the displayed energy but remains above
 the gradient target, as reported by the gradient-to-target column. The hybrid
 variant is the faster trust-region configuration and also uses fewer Krylov
 iterations. These comparisons support a problem-dependent policy choice rather
@@ -154,9 +154,9 @@ recovery reaches nearly identical discrete energies at higher wall time.
 In the finest plotted case, the \jaxpetsc{} element-AD path reports
 \SI{1.14}{s} on 32 ranks, while colored sparse recovery reports \SI{1.45}{s} with the same
 Newton and Krylov iteration counts. For the matched 32-rank case summarized in
-\Cref{tab:derivative-route-compare}, the reported energies differ by about
-$\num{8e-9}$, so this block mainly measures the overhead of sparse recovery on a
-smooth scalar problem. Across the plotted ranks, element AD drops from
+\Cref{tab:derivative-route-compare}, the displayed energies match, so this
+block mainly measures the overhead of sparse recovery on a smooth scalar
+problem. Across the plotted ranks, element AD drops from
 \SI{10.13}{s} on one rank to \SI{1.14}{s} on 32 ranks; colored sparse recovery follows the
 same trend with persistent recovery overhead. The FEniCS curve in the same
 figure provides reference-implementation context; the comparison above isolates
@@ -184,10 +184,10 @@ configurations.
 
 At 32 ranks, the element-AD and colored sparse-recovery \jaxpetsc{}
 configurations report \SI{2.10}{s} and \SI{2.72}{s}, respectively.
-\Cref{fig:gl-energy-levels,tab:gl-benchmark} give the corresponding
-final-energy agreement, while \Cref{fig:gl-results} reports timing only. Thus
-the main visible difference in the scaling plot is the colored sparse-recovery
-wall-time premium on this nonconvex scalar energy.
+\Cref{fig:gl-energy-levels,tab:gl-benchmark} give the representative
+energy-agreement evidence for this family, while \Cref{fig:gl-results} reports
+timing only. Thus the main visible difference in the scaling plot is the
+colored sparse-recovery wall-time premium on this nonconvex scalar energy.
 Across the plotted ranks, element AD falls from \SI{15.64}{s} on one rank to
 \SI{2.10}{s} on 32 ranks, with a nonideal plateau around 4--8 ranks before the
 32-rank point. The FEniCS curve is included as reference-implementation context,
@@ -242,8 +242,8 @@ All configurations reach the same nonlinear and linear iteration counts shown in
 
 \Cref{tab:hyperelasticity-distribution-memory} reports the memory evidence that
 supports using the rank-local assembly variant in the larger CPU sweeps. The
-fixed-work agreement rows compare the replicated and rank-local level-4
-first-step solve at four MPI ranks; the one-linearization memory rows use one
+fixed-work agreement entries compare the replicated and rank-local level-4
+first-step solve at four MPI ranks; the one-linearization memory entries use one
 Newton linearization on the level-5 mesh at 8, 16, and 32 ranks. The table reports
 energy, operating-system peak RSS, and the measured footprint of assembly
 arrays, making clear whether a configuration stores global mesh and adjacency
@@ -261,12 +261,12 @@ data or only local elements plus overlap.
   \input{tables/generated/hyperelasticity_distribution_memory.tex}
 \end{table}
 
-The level-4 fixed-work rows show matching Newton and Krylov counts and the same
+The level-4 fixed-work entries show matching Newton and Krylov counts and the same
 rounded energy value for replicated and rank-local assembly. On the larger
-level-5 one-linearization rows, rank-local assembly reduces summed RSS
+level-5 one-linearization entries, rank-local assembly reduces summed RSS
 from \SI{215.6}{GiB} to \SI{104.9}{GiB} at 32 ranks, with solve times
 \SI{3.37}{s} and \SI{3.36}{s}. The level-5 energy values are fixed-work
-terminal states after one linearization, so these rows are memory/cost
+terminal states after one linearization, so these entries are memory/cost
 diagnostics rather than endpoint-agreement checks.
 
 \Cref{tab:hyperelasticity-pmg-sensitivity} isolates the first-step level-5 PMG
@@ -363,17 +363,17 @@ Davis-B reduction \eqref{eq:plasticity3d-davis}, scalar constitutive potential
 The validation limits for this endpoint surrogate are reported in
 \Cref{sec:val-plasticity3d}. With that interpretation fixed, this section asks
 two performance questions: which second-order route is fastest on the fixed
-high-order derivative-route case under matched terminal observables, and how
+high-order derivative-route case under matched endpoint observables, and how
 the endpoint surrogate behaves across degree, resolution, and rank count.
 
 \paragraph{Derivative-route comparison.}
-The first question is whether the second-order route changes the terminal
+The first question is whether the second-order route changes the endpoint
 observables or only the cost of derivative construction. On the fixed
 $P_4(L_1)$ case at $\lambda_{\mathrm{sr}}=\num{1.5}$ and 8 MPI ranks,
-\Cref{fig:plasticity3d-derivative-ablation,tab:plasticity3d-derivative-ablation}
-show the same Newton counts, total Krylov counts, and table-reported
-terminal observables to displayed precision across the three routes. In the
-table, $\omega$ denotes the external-work
+\Cref{fig:plasticity3d-derivative-ablation} shows timing and linear-iteration
+costs, while \Cref{tab:plasticity3d-derivative-ablation} reports the same Newton
+counts, total Krylov counts, and endpoint observables to displayed precision
+across the three routes. In the table, $\omega$ denotes the external-work
 observable and $u_{\max}$ denotes the maximum displacement magnitude.
 
 The differences are cost differences. Constitutive AD has the lowest reported
@@ -468,7 +468,7 @@ $P_2(L_2)$. At \num{4801816} DOFs, $P_4(L_2)$ reports \num{-3013348} and
   \centering
   \caption{Separate Plasticity3D timing-only strong-scaling study for \localpmg{} on
   $P_4(L_2)$ at $\lambda_{\mathrm{sr}}=\num{1.0}$. These timings provide
-  solver evidence for a separate load factor from the bottom-clamped
+  solver evidence for a separate strength-reduction factor from the bottom-clamped
   $\lambda_{\mathrm{sr}}=\num{1.55}$ benchmark figures.}
   \label{tab:plasticity3d-scaling}
   \input{tables/generated/plasticity3d_recommended_scaling.tex}
@@ -490,7 +490,7 @@ $P_2(L_2)$. At \num{4801816} DOFs, $P_4(L_2)$ reports \num{-3013348} and
 \Cref{fig:plasticity3d-scaling,tab:plasticity3d-scaling} give a high-DOF
 Plasticity3D distributed timing result for the Hypre-coarse PMG variant. This
 scaling evidence uses the selected $P_4(L_2)$ mesh family but a
-different load factor, $\lambda_{\mathrm{sr}}=\num{1.0}$, so it complements rather
+different strength-reduction factor, $\lambda_{\mathrm{sr}}=\num{1.0}$, so it complements rather
 than extends the bottom-clamped $\lambda_{\mathrm{sr}}=\num{1.55}$ benchmark figures
 above. Within that timing study, the reported nonlinear and linear iteration
 counts remain matched on 1/2/4/8/16/32 ranks, while the end-to-end time drops
@@ -635,7 +635,7 @@ compact serial design demonstration discussed earlier in
 
 The results above provide the evidence blocks used in \Cref{sec:discussion}.
 The globalization tests separate problem-dependent nonlinear policies; the
-derivative-route comparisons isolate cost under fixed terminal observables; the
+derivative-route comparisons isolate cost under fixed endpoint observables; the
 distribution, PMG, and partitioning studies expose solver-policy and
 sparse-ownership effects; and the topology study closes with an end-to-end
 design-and-mechanics loop plus a controlled rank-consistency check. Read

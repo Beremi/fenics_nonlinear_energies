@@ -9,10 +9,11 @@ constitutive evaluations and PETSc for sparse assembly, Newton globalization,
 Krylov solvers, and preconditioners. The benchmark suite covers
 $p$-Laplace, Ginzburg--Landau, finite-strain hyperelasticity, two- and
 three-dimensional Mohr--Coulomb plasticity, and topology optimization.
-Matched \purejax{} and \fenics{} formulations provide internal checks, while
-JAX-FEM, Sysala-family slope-stability studies, and
-\v{C}erm{\'a}k--Sysala--Valdman MATLAB work provide scoped external context
-rather than universal baselines.
+Matched \purejax{} and \fenics{} formulations provide internal checks where
+available. JAX-FEM provides a narrow hyperelastic terminal-state comparison,
+Sysala-family slope-stability studies provide plasticity reference-model
+context, and \v{C}erm{\'a}k--Sysala--Valdman MATLAB work provides elastoplastic
+implementation context rather than a universal baseline.
 
 Across these problems, we compare element automatic differentiation,
 constitutive automatic differentiation, and colored sparse recovery for

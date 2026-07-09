@@ -4,12 +4,13 @@ We use a common finite-element notation across all benchmark families. The
 continuous domain is $\Omega \subset \mathbb{R}^d$, and
 $V_{h,0}=\operatorname{span}\{\varphi_i\}_{i=1}^{n}$ is the conforming space of
 free basis functions after homogeneous essential constraints have been
-applied. Let $\theta$ collect benchmark parameters such as load, material,
-continuation, strength-reduction, and lift data. Nonhomogeneous essential data
-are represented by an affine lift $\bar u_h(\theta)$, with $\bar u_h=0$ in the
-homogeneous cases. For vector-valued mechanics problems, $V_{h,0}$ denotes the
-constrained vector space, basis functions may be vector-valued, and $n$ counts
-free scalar degrees of freedom. A free coefficient vector
+applied. We write $\mathbf n$ for the outward unit normal on boundary portions.
+Let $\theta$ collect benchmark parameters such as load, material, continuation,
+strength-reduction, and lift data. Nonhomogeneous essential data are represented
+by an affine lift $\bar u_h(\theta)$, with $\bar u_h=0$ in the homogeneous
+cases. For vector-valued mechanics problems, $V_{h,0}$ denotes the constrained
+vector space, basis functions may be vector-valued, and $n$ counts free scalar
+degrees of freedom. A free coefficient vector
 $x\in\mathbb{R}^{n}$ defines the finite-element state
 \[
   u_h(x;\theta)=\bar u_h(\theta)+\sum_{i=1}^{n} x_i\varphi_i.
@@ -67,8 +68,10 @@ In \eqref{eq:generic-potential}, $\Phi_e$ is the integrated scalar contribution
 of element $e$. In quadrature-based mechanics examples,
 $\Phi_e(x_e;\theta_e)=\sum_q w_q\mathcal{W}_q(\varepsilon_q;\theta_q)$, where
 $\varepsilon_q := B_q u_e(x;\theta)$ is the local strain or gradient argument,
-$q$ indexes quadrature points, $w_q$ includes the quadrature weight and
-element-map Jacobian factor, $B_q$ is the corresponding element operator,
+$q$ indexes quadrature points, $n_q$ denotes the number of quadrature points on
+an element when finite quadrature limits are displayed, $w_q$ includes the
+quadrature weight and element-map Jacobian factor, $B_q$ is the corresponding
+element operator,
 $\theta_q$ is the quadrature-point restriction of the element data, and
 $\mathcal{W}_q$ is the pointwise energy density or branch potential. Within
 each benchmark family, all derivative routes and solver-realization comparisons
@@ -200,7 +203,8 @@ $P_4\to P_2\to P_1$ hierarchy for the flexible-GMRES linear solve
 \citep[Sec.~3.1]{nocedal2006numerical}. The reported
 $\lambda_{\mathrm{sr}}=\num{1.55}$ scaling profile uses a redundant LU/MUMPS
 coarse solve and PETSc relative KSP tolerance \num{1e-2}; the auxiliary
-$\lambda_{\mathrm{sr}}=\num{1.0}$ timing configurations use the Hypre-coarse PMG profile.
+$\lambda_{\mathrm{sr}}=\num{1.0}$ timing configurations use the Hypre
+algebraic-multigrid coarse PMG profile.
 Here $\lambda_{\mathrm{sr}}$ is the plasticity strength-reduction factor
 defined in \cref{sec:bench-plasticity3d}, PMG denotes same-mesh polynomial
 multigrid, and KSP denotes PETSc's Krylov-solver interface and residual

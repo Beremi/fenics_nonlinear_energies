@@ -29,12 +29,19 @@ energy differences use the same
 reference-denominator convention; the hyperelastic energy post-comparison uses
 an absolute denominator floor of $10^{-12}$. We write
 $u_{\max}$ for the maximum displacement magnitude over the compared state.
+Curve metrics use Euclidean weights on ordered samples. The hyperelastic
+centerline samples $u_x$ at reference nodes with $y=z=0$, ordered by $x$. The
+\plasticitythree{} boundary profile samples displacement magnitudes on reference
+nodes within 4\% of the domain $y$-span about the mid-$y$ plane and above the
+0.6 reference-$z$ quantile, ordered by $x$; the candidate profile is linearly
+interpolated to the reference $x$ coordinates before computing the relative
+$L^2$ difference.
 
 The hyperelastic JAX-FEM comparison uses a 5\% predefined threshold for the
 final energy, Euclidean nodal full-field displacement, centerline displacement, and
-$u_{\max}$-curve differences. The \plasticitythree{} fixed-load
+$u_{\max}$-curve differences. The \plasticitythree{} fixed-$\lambda_{\mathrm{sr}}$
 matched-comparator diagnostic uses three predefined criteria: at most $0.03$ relative
-difference in the highest successful load factor, at most $0.05$ relative
+difference in the highest successful strength-reduction factor, at most $0.05$ relative
 $L^2$ difference for the $u_{\max}(\lambda_{\mathrm{sr}})$ curve, and at most $0.10$
 relative $L^2$ difference for the endpoint displacement. The deviatoric-strain
 and boundary-profile differences in \Cref{tab:plasticity3d-validation} are
@@ -124,20 +131,22 @@ The endpoint-surrogate comparison therefore uses two diagnostics. Here the
 matched endpoint comparator means the endpoint formulation used for these
 observable comparisons, not the cited incremental-history studies. The
 comparator uses the same endpoint functional, mesh, material table, Davis-B
-strength reduction, load schedule, boundary conditions, and active free degrees
+strength-reduction schedule, boundary conditions, and active free degrees
 of freedom, but evaluates the endpoint observables through an independent
 reference-formula assembly path. The endpoint-observable check tests a seven-step
-direct load branch, $\lambda_{\mathrm{sr}}=\num{1.0},\num{1.1},\ldots,\num{1.6}$, against the matched endpoint
+direct strength-reduction branch,
+$\lambda_{\mathrm{sr}}=\num{1.0},\num{1.1},\ldots,\num{1.6}$, against the matched endpoint
 comparator on the $P_2(L_1)$ comparator case. The work observable is the external
 work $\omega=f_{\mathrm{ext}}^\top u$ reported by the two endpoint
 formulations. Its relative difference is \num{3.877e-5}, the displacement
 relative $L^2$ difference is \num{3.517e-3}, and the deviatoric-strain relative
 $L^2$ difference is \num{8.720e-3}.
 
-The fixed-load matched-comparator diagnostic asks a narrower
+The fixed-$\lambda_{\mathrm{sr}}$ matched-comparator diagnostic asks a narrower
 fixed-$\lambda_{\mathrm{sr}}$ question against the matched endpoint comparator.
 After aligning the comparator boundary conditions with the active boundary
-condition set, the fixed-load grid is capped at the main-figure load level
+condition set, the fixed-$\lambda_{\mathrm{sr}}$ grid is capped at the
+main-figure strength-reduction value
 $\lambda_{\mathrm{sr}}=\num{1.55}$. Here
 $\lambda_{\max}^{\mathrm{succ}}$ denotes the largest value in the tested grid
 $\{\num{1.0},\num{1.2},\num{1.4},\num{1.5},\num{1.55}\}$ that satisfies the relative-correction stopping
@@ -194,7 +203,8 @@ reference.
 used for the comparison: the direct-branch observable check and the
 fixed-$\lambda_{\mathrm{sr}}$ curve after boundary-condition matching. The
 resulting interpretation is limited but useful. \plasticitythree{} is reported
-here through direct-branch endpoint-observable differences, while the fixed-load
-matched-comparator diagnostic supports matched endpoint observables for that surrogate
+here through direct-branch endpoint-observable differences, while the
+fixed-$\lambda_{\mathrm{sr}}$ matched-comparator diagnostic supports matched
+endpoint observables for that surrogate
 under matched boundary conditions and active free degrees of freedom. Neither
 check is a path-consistent incremental-plasticity history validation.

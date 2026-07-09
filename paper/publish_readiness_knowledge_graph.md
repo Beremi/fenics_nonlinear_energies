@@ -1546,6 +1546,35 @@ MATLAB literature only when there is source-backed evidence.
   degree/scaling material, and target-template float behavior. Euler found no
   genuinely small missing experiment for the current scoped claims; path-history
   Plasticity3D validation remains future work.
+- `Current reporting terminology, notation, evidence-attribution, and layout audit`
+  (`Euclid the 2nd`/`Huygens the 2nd`/`Bacon the 2nd`/`Popper the 2nd`):
+  completed and integrated in the current chunk. Findings addressed: the
+  abstract now mirrors the sharper comparator-role distinctions from the
+  introduction, separating internal checks from the narrow JAX-FEM
+  terminal-state comparison, Sysala-family reference-model context, and
+  \v{C}ermak--Sysala--Valdman implementation context; the introduction
+  positioning sentence includes bridge architectures; the conclusion closes on
+  derivative construction, sparse ownership, globalization, Krylov algebra, and
+  preconditioning as one solver design rather than listing manuscript sections;
+  Results and generated tables use evidence-facing entries, cases,
+  configurations, and endpoint observables instead of row/run/terminal
+  observables phrasing; Plasticity3D wording distinguishes the
+  strength-reduction factor from load-factor language and consistently names the
+  fixed-`\lambda_{\mathrm{sr}}` matched-comparator diagnostic; methodology
+  defines the boundary normal, the quadrature-count symbol `n_q`, and Hypre
+  algebraic multigrid at first use; benchmark equations use `\mathbf n`, and the
+  topology frozen local-compliance expression now restricts the strain to the
+  element; validation metrics define the hyperelastic centerline samples and the
+  Plasticity3D boundary-profile samples used in the reported relative
+  differences; p-Laplace energy prose now says displayed energies match, the
+  Ginzburg--Landau paragraph no longer attributes representative
+  energy-agreement evidence to the timing-only scaling figure, and the
+  Plasticity3D derivative-route paragraph attributes timing/linear-iteration
+  evidence to the figure and Newton/Krylov/endpoint observables to the table.
+  Popper found no current A4 layout blocker in the 43-page PDF; remaining risks
+  are target-template/page-budget risks for dense Results tables, the
+  Hyperelasticity PMG/memory block, Plasticity3D degree/scaling material,
+  appendix Table 30, and FloatBarrier behavior after venue conversion.
 
 ## First Edit Backlog
 
