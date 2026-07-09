@@ -53,7 +53,7 @@ to the reference $x_i$ coordinates before computing \eqref{eq:validation-relativ
 The hyperelastic JAX-FEM comparison uses a fixed 5\% engineering gate for the
 final energy, Euclidean nodal full-field displacement, centerline displacement, and
 $u_{\max}$-curve differences. The \plasticitythree{} fixed-$\lambda_{\mathrm{sr}}$
-reference-formula diagnostic uses three fixed criteria: at most $0.03$ relative
+endpoint-formula diagnostic uses three fixed criteria: at most $0.03$ relative
 difference in the highest successful strength-reduction factor, at most
 $0.05$ relative Euclidean difference on the ordered
 $u_{\max}(\lambda_{\mathrm{sr}})$ samples, and at most $0.10$ relative
@@ -159,8 +159,8 @@ reported by the two endpoint formulations. Its relative difference is
 \num{8.720e-3}.
 
 The fixed-$\lambda_{\mathrm{sr}}$ endpoint-formula diagnostic asks a narrower
-fixed-$\lambda_{\mathrm{sr}}$ question against the matched endpoint
-endpoint-formula comparator.
+fixed-$\lambda_{\mathrm{sr}}$ question against the matched endpoint-formula
+comparator.
 After aligning the comparator boundary conditions with the active boundary
 condition set, the fixed-$\lambda_{\mathrm{sr}}$ grid is capped at the
 main-figure strength-reduction value

@@ -121,28 +121,32 @@ not resolve the final durable archive/DOI blocker.
   JAX+PETSc realization; pure JAX, FEniCS, JAX-FEM, Sysala-family papers, and
   the \v{C}ermak--Sysala--Valdman MATLAB work are scoped comparators or
   context, not universal baselines.
-- Current mathematical state: recent passes define the p-Laplace discrete space
-  before use, separate plasticity source-model notation from endpoint
-  surrogates, align plasticity work with free coefficient-vector notation, use
-  element index `e` in distributed assembly to avoid conflict with bulk modulus
-  `K`, define topology diagnostics before the stopping rule, and reference the
-  effective-volume multiplier explicitly.
-- Current evidence state: subagent evidence audits found no unsupported
-  manuscript claim and no small missing experiment needed for the current
-  evidence surface. Plasticity3D remains endpoint-surrogate evidence; topology
-  has no positive pure-JAX/JAX+PETSc agreement claim and should keep relying on
-  the JAX+PETSc rank-consistency check.
-- Current layout state: the latest read-only A4 render audit found no hard
-  blocker: 45 pages, embedded Type 1 fonts, no Type 3 fonts, no overfull or
-  underfull warnings, and raster layers at 600 ppi or better. Polish/risk items
-  are target-template dependent: an under-filled page after the Plasticity3D
-  state figure, dense protocol and late-results tables, and full-width
-  multi-panel figures that should not be shrunk blindly.
+- Current mathematical state: recent passes define the p-Laplace assumptions and
+  discrete space before use, separate plasticity source-model notation from
+  endpoint surrogates, align plasticity work with free coefficient-vector
+  notation, state homogeneous endpoint displacement data, use element index `e`
+  in distributed assembly to avoid conflict with bulk modulus `K`, define
+  topology diagnostics before the stopping rule, reference the effective-volume
+  multiplier explicitly, and reserve `p_{\mathrm{SIMP}}` for the topology
+  continuation exponent.
+- Current evidence state: subagent evidence audits found no small missing
+  experiment needed for the current evidence surface. Wording is scoped so
+  p-Laplace energy agreement is plotted-scale across levels and about
+  `1e-8` only on the selected table case, Ginzburg--Landau globalization reports
+  matching energy and Newton/Krylov work, Plasticity2D state wording is visual
+  rather than externally validated, Plasticity3D remains endpoint-surrogate
+  evidence, and topology keeps relying on the JAX+PETSc rank-consistency check.
+- Current layout state: the latest full build is a 45-page A4 article with a
+  clean LaTeX warning scan, embedded Type 1 fonts, clean aux-order and hard-float
+  checks, and `qpdf --check` passing. Polish/risk items remain target-template
+  dependent: an under-filled page after the Plasticity3D state figure, dense
+  protocol and late-results tables, and full-width multi-panel figures that
+  should not be shrunk blindly.
 - Current provenance state: the submission-bundle manifest is intentionally
-  stale while manuscript/table-source edits are dirty. After the current source
-  edits are finalized, commit them, rerun `make -C paper submission-bundle`, and
-  commit the refreshed manifest. Final archive/DOI/license/template decisions
-  remain external blockers.
+  stale while manuscript/PDF edits are dirty. After the current source edits are
+  finalized, commit them, rerun `make -C paper submission-bundle`, and commit the
+  refreshed manifest. Final archive/DOI/license/template decisions remain
+  external blockers.
 - Current generator state: the Plasticity3D validation table summary is now
   data-driven rather than hard-coded. Regenerate generated tables before the next
   build/check cycle.

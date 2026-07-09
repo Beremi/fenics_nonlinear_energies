@@ -532,10 +532,10 @@ The frozen reduced design problem and objective history are defined in
 \Cref{sec:bench-topology}, with mechanics subproblem \eqref{eq:topology-mechanics}
 and frozen reduced objective \eqref{eq:topology-reduced-objective}.
 The numerical question here is distributed outer-loop stability: the mechanics
-solve and the design update must remain synchronized under continuation in $p$
-and move-regularized updates. Because the outer-loop work can vary with the
-continuation schedule, we report end-to-end timing under adaptive stopping
-rather than strong scaling at a fixed computational workload.
+solve and the design update must remain synchronized under continuation in
+$p_{\mathrm{SIMP}}$ and move-regularized updates. Because the outer-loop work can
+vary with the continuation schedule, we report end-to-end timing under adaptive
+stopping rather than strong scaling at a fixed computational workload.
 
 \begin{figure}[!htbp]
   \centering
