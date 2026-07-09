@@ -766,7 +766,9 @@ MATLAB literature only when there is source-backed evidence.
   source hashes separately. Current release-blocker chunk adds a machine-readable
   final-release audit: local `publish-check` and `submission-check` can pass,
   while `release-check` remains intentionally failing until the target template,
-  license, archival DOI, and durable archive integration are resolved.
+  license, archival DOI, and durable archive integration are resolved. Current
+  paper-runbook chunk adds `paper/README.md` so future manuscript work has a
+  compact command and blocker map without opening the longer readiness ledger.
 
 ## Evidence Nodes
 

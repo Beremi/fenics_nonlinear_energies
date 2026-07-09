@@ -235,6 +235,9 @@ scientific claims were introduced without supporting evidence.
   and `release-check` Make targets, making the unresolved venue/template,
   license, archival DOI, and durable-release blockers machine-readable instead
   of only prose checklist items.
+- Added `paper/README.md` as a maintainer-facing paper workflow runbook that
+  documents the style-guide snapshot, build/provenance/release gates, current
+  final-release blockers, and manuscript guardrails.
 - Rebuilt the paper PDF through the paper generation pipeline.
 
 ## Blocking Issues Before Submission
@@ -527,6 +530,8 @@ required support for the current scoped contribution.
 - `make -C paper submission-check`: passed after adding the release-blocker
   audit target; `release-check` is intentionally stricter and should fail until
   the final release blockers are resolved.
+- `./.venv/bin/python -m pytest tests/test_paper_readme.py`: passed 2 tests for
+  the paper workflow runbook and local-only style-guide note.
 - `./.venv/bin/python -m pytest tests/test_docs_publication.py`: passed
   13 tests.
 - `./.venv/bin/python -m pytest tests/test_final_report_figure_generators.py`:
