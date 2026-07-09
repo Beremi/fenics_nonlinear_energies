@@ -57,12 +57,12 @@ generic objectives elsewhere in the paper.
 
 In \cref{eq:generic-potential}, $\Phi_e$ is the integrated scalar contribution
 of element $e$. In quadrature-based mechanics examples,
-$\Phi_e(x_e;\theta_e)=\sum_q w_q\psi_q(\varepsilon_q;\theta_q)$, where
+$\Phi_e(x_e;\theta_e)=\sum_q w_q\mathcal{W}_q(\varepsilon_q;\theta_q)$, where
 $\varepsilon_q := B_q u_e(x;\theta)$ is the local strain or gradient argument,
 $q$ indexes quadrature points, $w_q$ includes the quadrature weight and
 element-map Jacobian factor, $B_q$ is the corresponding element operator,
 $\theta_q$ is the quadrature-point restriction of the element data, and
-$\psi_q$ is the pointwise energy density or branch potential. For
+$\mathcal{W}_q$ is the pointwise energy density or branch potential. For
 finite-element labels, $P_k(L_\ell)$ denotes
 degree-$k$ Lagrange elements on mesh level $L_\ell$; problem-specific sections
 define the mesh hierarchy behind those levels when it matters for
@@ -78,13 +78,13 @@ three derivative routes:
   \item \textbf{element AD:} differentiate the full scalar element contribution
         $\Phi_e(x_e;\theta_e)$ with respect to the element free-DOF vector;
   \item \textbf{constitutive AD:} differentiate a quadrature-point energy
-        density $\psi_q(\varepsilon_q,m_q)$ with respect to $\varepsilon_q$,
+        density $\mathcal{W}_q(\varepsilon_q,m_q)$ with respect to $\varepsilon_q$,
         holding the active branch together with local material and history data
         $m_q\subset\theta_q$ fixed, then assemble
         $r_e = \sum_q w_q B_q^\top \sigma_q$ and
         $K_e = \sum_q w_q B_q^\top C_q B_q$, where
-        $\sigma_q := \partial_\varepsilon\psi_q(\varepsilon_q,m_q)$ and
-        $C_q := \partial^2_{\varepsilon\varepsilon}\psi_q(\varepsilon_q,m_q)$;
+        $\sigma_q := \partial_\varepsilon\mathcal{W}_q(\varepsilon_q,m_q)$ and
+        $C_q := \partial^2_{\varepsilon\varepsilon}\mathcal{W}_q(\varepsilon_q,m_q)$;
   \item \textbf{colored sparse recovery:} recover sparse
         Hessian information through directionally probed gradients or
         Hessian-vector products (HVPs) and graph coloring.
@@ -146,6 +146,11 @@ energy, gradient, Hessian assembly or application, and linear solves
       $\mathrm{pred}>0$, otherwise reject as model failure; update $\Delta_k$
   \Else
     \State accept according to the configured merit-decrease rule
+  \EndIf
+  \If{the trial step is accepted}
+    \State Set $x_{k+1}=x_k+s_k$
+  \Else
+    \State Retry with the updated globalization state or report a capped/failed solve according to the configured policy
   \EndIf
 \EndFor
 \end{algorithmic}
@@ -276,7 +281,7 @@ to the PETSc matrix, with overlap data used only for local probe evaluation.
 The main \plasticitythree{} result in this paper uses constitutive AD.
 Rather than applying second-order AD to the full $P_4$ element vector, we define
 one scalar Mohr--Coulomb branch potential
-$\psi_q(\varepsilon_q,m_q)$ per quadrature point, where $m_q$ collects the
+$\mathcal{W}_q(\varepsilon_q,m_q)$ per quadrature point, where $m_q$ collects the
 active branch together with the local material and history data selected from
 $\theta_q$. We differentiate this scalar potential with respect to the six
 engineering-strain components and assemble the element tangent from
@@ -293,9 +298,9 @@ so $\sigma_q$ is dual to the chosen strain vector.
 \For{each local element $e$}
   \For{each quadrature point $q$}
     \State Evaluate strain $\varepsilon_q = B_q u_e(x;\theta)$
-    \State Evaluate scalar energy density $\psi_q(\varepsilon_q,m_q)$
-    \State Obtain stress $\sigma_q = \partial_\varepsilon \psi_q(\varepsilon_q,m_q)$
-    \State Obtain tangent $C_q = \partial^2_{\varepsilon\varepsilon}\psi_q(\varepsilon_q,m_q)$
+    \State Evaluate scalar energy density $\mathcal{W}_q(\varepsilon_q,m_q)$
+    \State Obtain stress $\sigma_q = \partial_\varepsilon \mathcal{W}_q(\varepsilon_q,m_q)$
+    \State Obtain tangent $C_q = \partial^2_{\varepsilon\varepsilon}\mathcal{W}_q(\varepsilon_q,m_q)$
   \EndFor
   \State Assemble $r_e = \sum_q w_q B_q^\top \sigma_q$
   \State Assemble $K_e = \sum_q w_q B_q^\top C_q B_q$

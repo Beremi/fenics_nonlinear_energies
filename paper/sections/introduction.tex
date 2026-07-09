@@ -18,8 +18,8 @@ checks where matched benchmark definitions exist. External comparisons are
 deliberately scoped: JAX-FEM is used for the hyperelastic benchmark, and the
 Sysala-family slope-stability literature provides reference-model context for
 the plasticity endpoint observables. The
-\v{C}erm{\'a}k--Sysala--Valdman MATLAB work is used as solver-lineage context
-rather than as a numerical baseline.
+\v{C}erm{\'a}k--Sysala--Valdman MATLAB work is used as elastoplastic
+implementation context rather than as a numerical baseline.
 
 \subsection{Contributions}
 \label{sec:intro-contributions}
@@ -78,8 +78,9 @@ finite-element energy notation, derivative routes, nonlinear globalization, and
 sparse derivative recovery. \Cref{sec:implementation} explains the primary
 \jaxpetsc{} implementation and the narrower \purejax{} and \fenics{} reference
 implementations used in selected checks.
+
 \Cref{sec:benchmarks} defines the benchmark suite, with each benchmark separated
-into literature model and implemented discrete problem. \Cref{sec:validation}
+into literature model and reported discrete problem. \Cref{sec:validation}
 then reports validation and external-comparison evidence, deliberately
 separating hyperelastic JAX-FEM agreement from the three-dimensional plasticity
 endpoint-surrogate comparison. \Cref{sec:performance-solver-behavior}

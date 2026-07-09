@@ -266,6 +266,17 @@ scientific claims were introduced without supporting evidence.
   to the \fenics{} Newton reference rather than a custom reference. Generated
   energy/scaling figure labels now use the same \fenics{} Newton-reference
   terminology.
+- Added `paper/publish_readiness_compact_kg.md` as the short working memory for
+  message, section roles, evidence surfaces, style anchors, current subagent
+  findings, and validation commands.
+- Addressed the current thematic audit chunk: added body-text interpretation
+  for the p-Laplace and Plasticity2D state figures and for the hyperelastic and
+  Plasticity3D validation figures; clarified Plasticity3D elastic-first branch
+  selection, return-test notation, generic energy-density notation, and the
+  hybrid Newton accepted-step update; made the numerical-protocol KSP target
+  header explicit; and narrowed the \v{C}ermak--Sysala--Valdman role to
+  elastoplastic implementation context while keeping Sysala-family papers as the
+  slope-stability/reference-model context.
 - Rebuilt the paper PDF through the paper generation pipeline.
 
 ## Blocking Issues Before Submission
@@ -618,6 +629,25 @@ required support for the current scoped contribution.
   closed-form constitutive-assembly, fixed-reference PMG, and \fenics{} Newton
   reference wording, with no remaining `FEniCS custom`/custom-reference text in
   that rendered span.
+- `./.venv/bin/python -m py_compile paper/scripts/generate_paper_tables.py paper/scripts/generate_paper_figures.py`:
+  passed after the thematic-audit chunk.
+- `make -C paper tables`: passed after clarifying SOTA role-map text and the
+  numerical-protocol KSP target column.
+- `make -C paper submission-check`: passed after the thematic-audit chunk,
+  rebuilding a 44-page A4 PDF and rerunning the LaTeX-log scan, `qpdf`,
+  aux-order check, hard-float placement check, manuscript hygiene gate,
+  submission-bundle manifest verifier, and archive-neutral asset validation.
+- `pdftotext -f 11 -l 26 paper/build/main.pdf -`: checked that the new
+  p-Laplace and Plasticity2D state-figure interpretation, Plasticity3D
+  return-test and elastic-first branch-selection text, and validation-figure
+  interpretations render in the PDF.
+- `pdftotext -f 3 -l 6 paper/build/main.pdf -`: checked that the generic
+  pointwise energy notation now renders as `W_q` and that the hybrid Newton
+  sketch includes the accepted update and retry/failure branch.
+- `./.venv/bin/python paper/scripts/check_release_blockers.py --expect-blockers`:
+  passed and still reports the four expected final-submission blockers:
+  target template/declarations, repository license, archival DOI, and durable
+  archive integration.
 
 Exact remaining blockers are submission metadata and license/archive DOI. The
 archive-neutral validator now passes against the local curated bundle; final
@@ -634,3 +664,7 @@ byte-stable generated figure set for the current asset surface.
   discussion if the paper expands from the current scoped positioning.
 - Add more fairness-first external baselines on tightly matched problem
   contracts.
+- Revisit dense float pages after target-template conversion: hyperelasticity
+  diagnostics, Plasticity3D degree/scaling, dense derivative-degree table, and
+  schematic-heavy implementation pages are readable in the current A4 PDF but
+  target-template fragile.

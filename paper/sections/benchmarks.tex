@@ -34,8 +34,10 @@ hyperelasticity have \fenics{} reference formulations, while \purejax{} is used
 only where a compact serial formulation is available. The two plasticity
 families are primarily \jaxpetsc{} studies: the two-dimensional case supplies
 supporting continuation diagnostics, and the three-dimensional case uses the
-\v{C}erm{\'a}k--Sysala--Valdman slope-stability MATLAB solver lineage as
-endpoint-surrogate context rather than as a path-history validation baseline.
+\v{C}erm{\'a}k--Sysala--Valdman MATLAB elastoplastic implementation as
+solver-lineage context, while the Sysala-family slope-stability literature
+supplies the reference-model setting. Neither is used as a path-history
+validation baseline.
 Topology optimization combines a parallel \jaxpetsc{} realization with a serial
 \purejax{} design reference. Thus some entries below are validation comparisons,
 whereas others are timing or solver-policy diagnostics under a stated benchmark
@@ -143,6 +145,10 @@ geometric complications.
   \caption{Representative $p$-Laplace state on the selected hierarchy.}
   \label{fig:plaplace-state}
 \end{figure}
+
+\Cref{fig:plaplace-state} shows the representative state on the L-shaped
+domain. The visible corner-driven variation is the geometric feature against
+which the derivative routes are compared in the energy plot and summary table.
 
 \begin{figure}[!htbp]
   \centering
@@ -343,7 +349,7 @@ scientifically important than derivative parity alone.
   \centering
   \includegraphics[width=\PaperFigureMedium]{hyperelasticity_state.pdf}
   \caption{Representative finite-strain hyperelastic state, colored by the
-  energy density in \cref{eq:hyperelasticity-energy}.}
+  density $W$ entering \eqref{eq:hyperelasticity-energy}.}
   \label{fig:hyperelasticity-state}
 \end{figure}
 
@@ -535,6 +541,7 @@ principal stresses use
   m=\frac{\sigma_{xx}+\sigma_{yy}}{2},\qquad
   d=\frac{\sigma_{xx}-\sigma_{yy}}{2}.
 \]
+
 With
 $a_\lambda=1+\sin\phi_\lambda$, $b_\lambda=1-\sin\phi_\lambda$, and
 $\kappa_\lambda=2c_\lambda\cos\phi_\lambda$, the trial state is elastic when
@@ -546,6 +553,7 @@ $\kappa_\lambda=2c_\lambda\cos\phi_\lambda$, the trial state is elastic when
   -\kappa_\lambda
   \le 0.
 \]
+
 In that case $\sigma^\star=\sigma^{\mathrm{tr}}$. Otherwise let
 \[
   z=\widehat S^{-1}(a_\lambda,-b_\lambda)^\top,\qquad
@@ -560,6 +568,7 @@ $\widehat\sigma^\ell_1\ge \widehat\sigma^\ell_2$, set
 $\widehat\sigma^\star=\widehat\sigma^\ell$; otherwise set
 $\widehat\sigma^\star_1=\widehat\sigma^\star_2=
 \kappa_\lambda/(a_\lambda-b_\lambda)$.
+
 After rotating $\widehat\sigma^\star$ back to Cartesian components, the branch
 potential is
 \[
@@ -581,6 +590,11 @@ separate material parameter.
   \cref{eq:plasticity2d-discrete}.}
   \label{fig:plasticity2d-state}
 \end{figure}
+
+\Cref{fig:plasticity2d-state} localizes the endpoint response in the expected
+slope mechanism region. The visualization supports the benchmark definition as
+an endpoint surrogate; convergence and fixed-work solver evidence are reported
+separately below.
 
 \begin{figure}[!htbp]
   \centering
@@ -757,9 +771,9 @@ with
 \end{equation}
 which are the scalar constitutive parameters used by the 3D assembly path
 \citep{davis1968plasticity,tschuchnigg2015nonassociated,sysala2021optimization}.
-Here $\phi$ denotes friction angle and $\psi$ denotes dilation angle; the paper
-uses those symbols only in that geomechanics sense. All 3D material tuples used
-in the reported runs have $\psi=0^\circ$; the dilation angle therefore enters
+In this subsection, $\phi$ denotes friction angle and $\psi$ denotes dilation
+angle. All 3D material tuples used in the reported runs have
+$\psi=0^\circ$; the dilation angle therefore enters
 only through the Davis-B reduction above and not as a separate argument of
 $\Phi_{\mathrm{MC},3\mathrm{D}}$. No separate reduced dilation-angle argument is
 carried in the 3D branch expressions below.
@@ -796,19 +810,24 @@ and the branch-selection variables are
   + 2\lambda_{\mathrm{L}}s_{\lambda} I_1
   - \bar c_{\lambda},
   \nonumber\\
-  \gamma_{\mathrm{sl}}
+  r_{\mathrm{sl}}
   &= \frac{\varepsilon_1-\varepsilon_2}{1+s_{\lambda}},
   &
-  \gamma_{\mathrm{sr}}
+  r_{\mathrm{sr}}
   &= \frac{\varepsilon_2-\varepsilon_3}{1-s_{\lambda}},
   \nonumber\\
-  \gamma_{\mathrm{la}}
+  r_{\mathrm{la}}
   &= \frac{\varepsilon_1+\varepsilon_2-2\varepsilon_3}{3-s_{\lambda}},
   &
-  \gamma_{\mathrm{ra}}
+  r_{\mathrm{ra}}
   &= \frac{2\varepsilon_1-\varepsilon_2-\varepsilon_3}{3+s_{\lambda}}.
   \label{eq:plasticity3d-return-tests}
 \end{align}
+The symbols $r_{\mathrm{sl}}$, $r_{\mathrm{sr}}$, $r_{\mathrm{la}}$, and
+$r_{\mathrm{ra}}$ denote return-test ratios; they are kept distinct from the
+material weight $\gamma(x)$ and the engineering shear components in
+\eqref{eq:plasticity3d-engineering-strain}.
+
 The return denominators are
 \begin{align}
   D_{\mathrm{s}}
@@ -882,7 +901,10 @@ The branch energies are
 \end{align}
 With these definitions, the scalar potential
 $\Phi_{\mathrm{MC},3\mathrm{D}}(\varepsilon;\bar c_\lambda,
-s_\lambda,\mu,K,\lambda_{\mathrm{L}})$ is the piecewise function
+s_\lambda,\mu,K,\lambda_{\mathrm{L}})$ is the following piecewise function.
+Branch selection is elastic-first: the plastic branches are evaluated only when
+$f_{\mathrm{tr}}>0$, and ties on branch interfaces are assigned by the first
+applicable row:
 \begin{equation}
   \Phi_{\mathrm{MC},3\mathrm{D}}(\varepsilon;\bar c_\lambda,
   s_\lambda,\mu,K,\lambda_{\mathrm{L}})
@@ -891,15 +913,21 @@ s_\lambda,\mu,K,\lambda_{\mathrm{L}})$ is the piecewise function
     \Phi_{\mathrm{el}},
       & f_{\mathrm{tr}} \le 0, \\
     \Phi_{\mathrm{s}},
-      & \Lambda_{\mathrm{s}} \le \min(\gamma_{\mathrm{sl}},\gamma_{\mathrm{sr}}), \\
+      & f_{\mathrm{tr}}>0
+        \text{ and }
+        \Lambda_{\mathrm{s}} \le \min(r_{\mathrm{sl}},r_{\mathrm{sr}}), \\
     \Phi_{\mathrm{l}},
-      & \gamma_{\mathrm{sl}} < \gamma_{\mathrm{sr}}
+      & f_{\mathrm{tr}}>0
         \text{ and }
-        \gamma_{\mathrm{sl}} \le \Lambda_{\mathrm{l}} \le \gamma_{\mathrm{la}}, \\
+        r_{\mathrm{sl}} < r_{\mathrm{sr}}
+        \text{ and }
+        r_{\mathrm{sl}} \le \Lambda_{\mathrm{l}} \le r_{\mathrm{la}}, \\
     \Phi_{\mathrm{r}},
-      & \gamma_{\mathrm{sr}} < \gamma_{\mathrm{sl}}
+      & f_{\mathrm{tr}}>0
         \text{ and }
-        \gamma_{\mathrm{sr}} \le \Lambda_{\mathrm{r}} \le \gamma_{\mathrm{ra}}, \\
+        r_{\mathrm{sr}} < r_{\mathrm{sl}}
+        \text{ and }
+        r_{\mathrm{sr}} \le \Lambda_{\mathrm{r}} \le r_{\mathrm{ra}}, \\
     \Phi_{\mathrm{a}},
       & \text{otherwise},
   \end{cases}.

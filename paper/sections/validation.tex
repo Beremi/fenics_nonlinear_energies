@@ -83,6 +83,11 @@ $D_1(J-1)^2$ volumetric penalty.
 
 \FloatBarrier
 
+\Cref{fig:hyperelasticity-jaxfem-baseline} shows that the terminal-energy
+history and centerline displacement profile remain close on the matched
+schedule. The table quantifies that visual agreement under the common
+post-comparison energy.
+
 The agreement criteria in \Cref{tab:hyperelasticity-jaxfem-baseline} are
 satisfied for all checked quantities. The final energy relative difference is
 \num{8.244e-6}, the full-field displacement relative $L^2$ difference is
@@ -105,7 +110,8 @@ class
 \citep{sysala2017returnmapping,sysala2021optimization,sysala2025convexoptimization,sysala2025advancedcontinuation}.
 The efficient \v{C}erm{\'a}k--Sysala--Valdman MATLAB elastoplastic
 implementation of \citet{cermak2019efficient} provides solver-lineage context
-for comparable finite-element slope-stability solvers. None of these sources is
+for practical two- and three-dimensional elastoplastic finite-element solvers.
+None of these sources is
 used here as a verified numerical baseline.
 
 The endpoint-surrogate comparison therefore uses two diagnostics. Here the
@@ -171,8 +177,11 @@ path-consistent plastic-history reference.
   \label{tab:plasticity3d-validation}
 \end{table}
 
-The resulting interpretation is limited but useful. \plasticitythree{} is
-reported here through direct-branch endpoint-observable differences, while the
-fixed-load reference comparison supports matched endpoint observables for that
-surrogate under matched boundary conditions and active free degrees of freedom.
-Neither check is a path-consistent incremental-plasticity history validation.
+\Cref{fig:plasticity3d-validation} shows the two endpoint-surrogate diagnostics
+used for the comparison: the direct-branch observable check and the
+fixed-$\lambda_{\mathrm{sr}}$ curve after boundary-condition matching. The
+resulting interpretation is limited but useful. \plasticitythree{} is reported
+here through direct-branch endpoint-observable differences, while the fixed-load
+reference comparison supports matched endpoint observables for that surrogate
+under matched boundary conditions and active free degrees of freedom. Neither
+check is a path-consistent incremental-plasticity history validation.

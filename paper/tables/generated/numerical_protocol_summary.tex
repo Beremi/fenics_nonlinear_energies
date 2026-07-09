@@ -1,6 +1,6 @@
 \begin{tabularx}{\textwidth}{@{}>{\hsize=0.840\hsize\linewidth=\hsize\RaggedRight\arraybackslash}X>{\hsize=0.900\hsize\linewidth=\hsize\RaggedRight\arraybackslash}X>{\hsize=1.260\hsize\linewidth=\hsize\RaggedRight\arraybackslash}X>{\hsize=0.984\hsize\linewidth=\hsize\RaggedRight\arraybackslash}X>{\hsize=1.200\hsize\linewidth=\hsize\RaggedRight\arraybackslash}X>{\hsize=0.816\hsize\linewidth=\hsize\RaggedRight\arraybackslash}X@{}}
 \toprule
-Evidence block & Role & Solver policy & Linear target & Stop or fixed work & Reported time \\
+Evidence block & Role & Solver policy & KSP rtol / max iters & Stop or fixed work & Reported time \\
 \midrule
 Scalar benchmarks & formulation, derivative-route, and globalization evidence & Newton with Armijo or the stated trust-region variant; CG or GMRES with Hypre in PETSc rows & $p$-Laplace: $10^{-1}$/30; Ginzburg--Landau: $10^{-3}$/200 & configured nonlinear tolerances; capped rows are diagnostic & wall or solve/elapsed time in globalization rows \\
 Hyperelasticity & finite-strain mechanics, JAX-FEM comparison, and scaling & trust-region or line-search Newton; GAMG or same-mesh PMG profiles as stated & GAMG rows: $10^{-1}$/30; PMG rows stated with diagnostics & per-load-step stationarity; fixed-step rows are solver diagnostics & wall time for benchmark rows; solver total for first-step scaling \\

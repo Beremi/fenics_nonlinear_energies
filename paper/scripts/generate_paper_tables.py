@@ -1191,7 +1191,7 @@ def main() -> None:
             (0.68, "RaggedRight"),
         )
         + "@{}",
-        ["Evidence block", "Role", "Solver policy", "Linear target", "Stop or fixed work", "Reported time"],
+        ["Evidence block", "Role", "Solver policy", "KSP rtol / max iters", "Stop or fixed work", "Reported time"],
         [
             [
                 "Scalar benchmarks",
@@ -1266,13 +1266,13 @@ def main() -> None:
             [
                 "JAX-native differentiable FEM and PDE solvers "
                 "\\citep{xue2023jaxfem,xue2026implicit,bode2025autopdex,hu2025jaxcpfem}",
-                "Program-level AD, implicit differentiation, Hessian-vector products, nonlinear mechanics, and GPU-oriented differentiable simulation.",
+                "Source-specific roles: GPU-oriented differentiable mechanics (JAX-FEM/JAX-CPFEM), implicit differentiation and solver options (AutoPDEx), and Hessian-vector inverse-problem workflows (Xue 2026).",
                 "Motivates local differentiable modeling; the present study instead couples local JAX derivatives to PETSc sparse MPI solves and compares derivative routes.",
             ],
             [
                 "FEM--JAX and JAX--PETSc bridge architectures "
                 "\\citep{yashchuk2023bringing,latyshev2025externaloperators,cattaneo2026jetsci}",
-                "AD-enabled local or variational representations combined with host FEM infrastructure or PETSc sparse solvers.",
+                "Source-specific bridges: Firedrake--JAX variational coupling, FEniCSx external operators for constitutive models, and JetSCI-style JAX--PETSc differentiated local discretizations.",
                 "Architectural context for the \\jaxpetsc{} realization; this study evaluates derivative construction, globalization, and preconditioning on the stated benchmark suite.",
             ],
             [

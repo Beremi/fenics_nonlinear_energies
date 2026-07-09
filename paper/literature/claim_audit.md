@@ -35,20 +35,21 @@ those are presented in the paper as implementation choices of `fenics_nonlinear_
 | Benchmarks: Hyperelasticity | Finite-strain kinematics, deformation gradient notation, Piola stress, and hyperelastic background | `bonet2008nonlinear` | Chapters 4--6 |
 | Benchmarks: Plasticity2D / Plasticity3D | Incremental elastoplasticity, return mapping, and constitutive linearization as the correct continuum reference frame | `simo1985consistent`, `simo1998compinel` | Simo--Taylor abstract and Computational Inelasticity Chapters 1, 3, and 5 |
 | Benchmarks: Plasticity2D / Plasticity3D | Davis strength-reduction background and Davis A/B/C discussion used by later slope-stability papers | `davis1968plasticity`, `tschuchnigg2015nonassociated` | Davis chapter metadata verified from the TRID record only; Davis-specific details are used only through later source-backed discussions such as Tschuchnigg Section 3.3.2 and reference list |
-| Related Work, Benchmarks: Plasticity2D / Plasticity3D | Mohr--Coulomb return mapping, nonsmooth constitutive operators, and consistent tangents as the incremental-history reference context | `sysala2017returnmapping` | Metadata/title verified only from the CAS ASEP record and reference metadata; no cached full text is present |
-| Related Work, Validation: Plasticity2D / Plasticity3D | Efficient MATLAB implementation lineage for 2D/3D elastoplastic finite-element problems, including the Valdman coauthored source-family implementation context | `cermak2019efficient` | Metadata verified from DOI/arXiv records and source-code context; used for lineage only, not as a verified numerical baseline |
+| Related Work, Benchmarks: Plasticity2D / Plasticity3D | Mohr--Coulomb return mapping, nonsmooth constitutive operators, consistent tangents, semismooth Newton, and slope-stability MATLAB examples as incremental-history reference context | `sysala2017returnmapping` | Source-record verified from the public arXiv abstract/PDF record `1508.07435` and CAS ASEP metadata; used for reference-model context, not as validation of the endpoint surrogate |
+| Related Work, Validation: Plasticity2D / Plasticity3D | Efficient MATLAB implementation lineage for 2D/3D elastoplastic finite-element problems, including Valdman-coauthored vectorized finite-element assembly context | `cermak2019efficient` | Metadata verified from DOI/arXiv records and source-code context; used for elastoplastic implementation lineage only, not as a verified numerical baseline |
 | Introduction, Related Work, Benchmarks: Plasticity2D / Plasticity3D | Modified shear-strength reduction and variational / optimization viewpoints for slope stability | `sysala2021optimization` | Source-verified from cached PDF: abstract, Davis-modification discussion, and OPT-MSSR formulation |
 | Introduction, Related Work, Benchmarks: Plasticity3D | Published 3D slope-stability source-family context with continuation and iterative-solver evidence | `sysala2025advancedcontinuation` | Source-verified from cached PDF: abstract, method sections, and reported 3D SSR source-family experiments |
 | Related Work, Benchmarks: Plasticity3D | Convex optimization problems motivated by geotechnical stability analysis | `sysala2025convexoptimization` | Source-verified from cached PDF: abstract and problem-formulation sections |
 | Methodology | Armijo backtracking, line-search Newton, and trust-region globalization terminology | `nocedal2006numerical` | Chapters 2--4, especially Section 3.1 |
 
 Sysala-family evidence level: the Sysala papers support literature context,
-source-family framing, and continuum/reference-method positioning. They do not
-directly validate the Plasticity3D endpoint surrogate unless a
-numeric artifact comparison for the same case is separately verified.
+source-family framing, slope-stability/strength-reduction context, and
+continuum/reference-method positioning. They do not directly validate the
+Plasticity3D endpoint surrogate unless a numeric artifact comparison for the
+same case is separately verified.
 
-Limited-access evidence note: `ginzburg1950theory`, `davis1968plasticity`, and
-`sysala2017returnmapping` are not treated as full-text-verified sources in this
-audit. Claims tied to those entries are limited to bibliographic existence,
-historical/source-lineage positioning, or statements corroborated by accessible
-secondary or later primary sources listed in the same row.
+Limited-access evidence note: `ginzburg1950theory` and `davis1968plasticity`
+are not treated as full-text-verified sources in this audit. Claims tied to
+those entries are limited to bibliographic existence, historical/source-lineage
+positioning, or statements corroborated by accessible secondary or later primary
+sources listed in the same row.
