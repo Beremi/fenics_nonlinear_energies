@@ -248,7 +248,12 @@ MATLAB literature only when there is source-backed evidence.
   self-containedness chunk replaces the Plasticity2D draft branch-formula caveat
   with a scoped branch-potential definition and rewrites Plasticity3D boundary
   markers as the label sets `\Gamma_1,\ldots,\Gamma_5` with component-wise
-  Dirichlet sets.
+  Dirichlet sets. Current benchmark-self-containment chunk adds a
+  discretization-label table with mesh construction and representative DOF
+  counts, defines the Plasticity2D plane-strain matrix and ordered principal
+  stress convention before the branch formulas, names the Plasticity3D material
+  regions, maps the Plasticity3D boundary labels to geometric faces, and states
+  the ordered-principal-strain convention used by the 3D branch tests.
 - `VALIDATION`: external and reference-model comparison.
   Evidence: narrow hyperelastic JAX-FEM comparison; Plasticity3D validation
   ladder with endpoint-surrogate scope.
@@ -503,6 +508,11 @@ MATLAB literature only when there is source-backed evidence.
   evidence-table edits; `make -C paper submission-check` passed, and rendered
   pages 1--2, 25--27, and 38--41 were visually inspected. The new timeout,
   timing-scope, and gradient-gate columns are readable in the current A4 build.
+  Current benchmark-self-containment chunk rebuilt the 41-page PDF after adding
+  the discretization-label table and Plasticity2D/3D convention prose. `make -C
+  paper submission-check` passed after ragged-right table columns removed an
+  underfull-box warning. Rendered pages 11 and 17--18 were checked; the new
+  table and benchmark convention text are readable in the current A4 build.
 - `REPRO`: reproducibility and submission readiness.
   Known blockers from `paper/todo.md`: target journal/template/declarations,
   repository license/archive DOI, and archive-neutral provenance for critical
@@ -1010,11 +1020,12 @@ MATLAB literature only when there is source-backed evidence.
   \v{C}erm{\'a}k--Sysala--Valdman MATLAB implementation lineage; the conclusion
   avoids over-reading the PMG setup result; derivative-route timing scope,
   Ginzburg--Landau timeout cap, and Plasticity3D gradient-gate evidence are
-  visible in generated tables and backed by the curated bundle. Deferred
-  findings for a later self-containedness/layout pass: mesh-hierarchy and
-  `P_k(L_\ell)` definitions, Plasticity3D marker geometry, Mohr--Coulomb sign
-  conventions before branch formulas, a compact exact solver-policy table, and
-  target-template cleanup for dense result tables and forced float regions.
+  visible in generated tables and backed by the curated bundle. The follow-up
+  benchmark-self-containment chunk addressed the mesh-hierarchy,
+  `P_k(L_\ell)`, Plasticity3D marker, and Mohr--Coulomb convention findings.
+  Deferred findings for a later pass: a compact exact solver-policy table,
+  display-equation punctuation outside the touched blocks, and target-template
+  cleanup for dense result tables and forced float regions.
 
 ## First Edit Backlog
 

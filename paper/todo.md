@@ -136,6 +136,12 @@ scientific claims were introduced without supporting evidence.
   implementation lineage, added explicit timing-scope/cap/gradient-gate columns
   to the affected generated results tables, and expanded the curated bundle with
   the JSON inputs needed to audit those rows.
+- Addressed the benchmark self-containedness audit: added a compact
+  discretization-label table with representative DOF counts, defined the
+  Plasticity2D plane-strain matrix and branch convention before the branch
+  formulas, named Plasticity3D material regions, mapped Plasticity3D boundary
+  labels to geometric faces, and stated the 3D ordered-principal-strain branch
+  convention.
 - Rebuilt the paper PDF through the paper generation pipeline.
 
 ## Blocking Issues Before Submission
@@ -201,10 +207,10 @@ scientific claims were introduced without supporting evidence.
   and regenerate at the final physical size if needed.
 - Revisit the availability statement after the archive/license decision so it
   reads like final submission metadata rather than a repository-local note.
-- Add a compact mesh-hierarchy/marker table and Mohr--Coulomb convention
-  paragraph if the next self-containedness pass touches the benchmark section.
 - Consider a compact exact solver-policy table once the final target template is
   known and the result-table width budget is clear.
+- Run a remaining display-equation punctuation pass outside the benchmark blocks
+  touched by the latest self-containedness edit.
 
 ## Claim And Citation Audit Summary
 
@@ -304,6 +310,13 @@ required support for the current scoped contribution.
   after the latest rebuild; the abstract/opening text, revised evidence tables,
   conclusion, availability statement, and bibliography pages are readable and
   unclipped in the current A4 PDF.
+- `make -C paper submission-check`: passed again on 2026-07-09 after adding the
+  benchmark discretization-label table and Plasticity2D/3D convention prose;
+  the check covers LaTeX warning scans, `qpdf`, aux-order validation, and
+  archive-neutral asset validation.
+- Rendered and visually inspected affected pages 11 and 17--18 after the latest
+  rebuild; the new discretization-label table and Plasticity2D/3D convention
+  text are readable and unclipped in the current A4 PDF.
 - Rendered and visually inspected representative pages 1, 5, 9, 21, and
   30--32 after the latest rebuild; the current A4 PDF is readable and unclipped,
   with page 30 improved but dense floats/tables still template-fragile.

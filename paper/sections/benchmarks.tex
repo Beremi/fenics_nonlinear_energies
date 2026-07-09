@@ -38,6 +38,55 @@ Topology optimization combines a parallel \jaxpetsc{} realization with a serial
 \purejax{} design reference. Thus some entries below are validation comparisons,
 whereas others are timing or solver-policy diagnostics under a stated benchmark
 definition.
+\Cref{tab:discretization-labels} records the compact level notation used in the
+model definitions and numerical tables; the labels identify discrete problem
+size and mesh construction, not separate physical models.
+
+\begin{table}[H]
+  \centering
+  \footnotesize
+  \begin{tabularx}{\textwidth}{@{}l l >{\RaggedRight\arraybackslash}X >{\RaggedRight\arraybackslash}X@{}}
+    \toprule
+    Family & Level label & Construction & Representative sizes used below \\
+    \midrule
+    $p$-Laplace
+      & $L_\ell$
+      & Uniform triangular hierarchy on the L-shaped domain.
+      & $L_9$: \num{788481} nodes, \num{1572864} triangles, \num{784385}
+        free scalar DOFs; $L_{10}$: \num{3149825} nodes, \num{6291456}
+        triangles, \num{3141633} free scalar DOFs. \\
+    Ginzburg--Landau
+      & $L_\ell$
+      & Uniform triangular hierarchy on the square domain.
+      & $L_9$: \num{1050625} nodes, \num{2097152} triangles, \num{1046529}
+        free scalar DOFs; $L_{10}$: \num{4198401} nodes, \num{8388608}
+        triangles, \num{4190209} free scalar DOFs. \\
+    Hyperelasticity
+      & $L_\ell$
+      & Tetrahedral cantilever hierarchy with vector displacement DOFs.
+      & $L_4$: \num{185249} nodes, \num{983040} tetrahedra, \num{554013}
+        free displacement DOFs; $L_5$: \num{1395009} nodes, \num{7864320}
+        tetrahedra, \num{4178493} free displacement DOFs. \\
+    Plasticity2D
+      & $P_4(L_\ell)$
+      & Degree-four same-mesh Lagrange space on the homogeneous slope hierarchy.
+      & $P_4(L_5)$--$P_4(L_7)$ have \num{332960}, \num{1331520}, and
+        \num{5325440} free displacement DOFs on \num{20800}, \num{83200}, and
+        \num{332800} triangles. \\
+    Plasticity3D
+      & $P_k(L_\ell)$
+      & Degree-$k$ same-mesh Lagrange space on the base heterogeneous
+        tetrahedral slope and one, two, or three uniform refinements.
+      & The $P_1$ levels $L_1$--$L_4$ have \num{10526}, \num{79024},
+        \num{610964}, and \num{4801816} free displacement DOFs; $P_2$ and
+        $P_4$ use the same macro tetrahedra with elevated element degree. \\
+    \bottomrule
+  \end{tabularx}
+  \caption{Meaning of the mesh-level labels used in the benchmark and results
+  tables. The counts identify the discrete problem sizes behind the paper-facing
+  labels; they are not additional numerical results.}
+  \label{tab:discretization-labels}
+\end{table}
 
 \subsection{\texorpdfstring{$p$-Laplace}{p-Laplace}}
 \label{sec:bench-plaplace}
@@ -394,6 +443,29 @@ the gravity load with $b=(0,-\gamma)^\top$ and zero traction on the free
 boundary. The dilation angle enters this endpoint model only through the Davis-B
 reduction below.
 
+The two-dimensional branch formulas use engineering strain
+$\varepsilon=(\varepsilon_{xx},\varepsilon_{yy},\gamma_{xy})^\top$ and the
+plane-strain elastic matrix
+\[
+  C_{2\mathrm{D}}
+  =
+  \begin{bmatrix}
+    \lambda_{\mathrm{ps}}+2\mu & \lambda_{\mathrm{ps}} & 0 \\
+    \lambda_{\mathrm{ps}} & \lambda_{\mathrm{ps}}+2\mu & 0 \\
+    0 & 0 & \mu
+  \end{bmatrix},
+  \qquad
+  \lambda_{\mathrm{ps}}
+  =
+  \frac{E\nu}{(1+\nu)(1-2\nu)},\qquad
+  \mu=\frac{E}{2(1+\nu)}.
+\]
+Its compliance is $S_{2\mathrm{D}}=C_{2\mathrm{D}}^{-1}$. Principal stresses
+are ordered as
+$\sigma_1^{\mathrm{tr}}\ge\sigma_2^{\mathrm{tr}}$, and the elastic branch is
+the branch for which the trial function in the ordered variables satisfies
+$f^{\mathrm{tr}}\le0$.
+
 The benchmark uses a Davis-B-style reduction path
 \citep{davis1968plasticity,tschuchnigg2015nonassociated,sysala2021optimization}
 to map the unreduced
@@ -532,7 +604,8 @@ equilibrium equations are
 where $\sigma^{n+1}$ and the internal variables are obtained from the
 elastoplastic update driven by $\varepsilon(u^{n+1})$ and the previous state.
 The heterogeneous benchmark uses four material regions. Their
-$(c_0,\phi,\psi,E,\nu,\gamma)$ values are
+$(c_0,\phi,\psi,E,\nu,\gamma)$ values, in the order cover layer, general
+foundation, weak foundation, and slope mass, are
 $(15,30^\circ,0^\circ,\num{10000},0.33,19)$,
 $(15,38^\circ,0^\circ,\num{50000},0.30,22)$,
 $(10,35^\circ,0^\circ,\num{50000},0.30,21)$, and
@@ -556,14 +629,17 @@ The studied discrete model uses a heterogeneous tetrahedral mesh with four
 material physical groups, refined into the displayed mesh hierarchy and elevated
 locally to same-mesh $P_1/P_2/P_4$ spaces. Let
 $\Gamma_1,\ldots,\Gamma_5$ denote the boundary label sets of the reference mesh.
-We impose
+In coordinates $X=(X_1,X_2,X_3)$, the mesh bounding box is
+$[-175,30]\times[0,60]\times[0,\num{86.6025}]$ and $X_2$ is vertical. The labels
+$\Gamma_1,\Gamma_2,\Gamma_3,\Gamma_4,\Gamma_5$ correspond, respectively, to
+the right face $X_1=30$, the left face $X_1=-175$, the front face $X_3=0$, the
+back face $X_3=86.6025$, and the bottom face $X_2=0$; the remaining exterior
+labels contain the sloped free surface and the top face. We impose
 \[
   \Gamma_{D,x}=\Gamma_1\cup\Gamma_2,\qquad
   \Gamma_{D,y}=\Gamma_5,\qquad
   \Gamma_{D,z}=\Gamma_3\cup\Gamma_4.
 \]
-Let $X=(X_1,X_2,X_3)$ denote a reference-coordinate point, with $X_2$ the
-vertical coordinate.
 The bottom-clamped model additionally fixes all displacement components on
 $\Gamma_{\mathrm{bot}}=\{X\in\partial\Omega:\lvert X_2\rvert\le 10^{-12}\}$.
 Here $\Gamma_{D,i}$ denotes the resulting Dirichlet set for displacement
@@ -653,8 +729,10 @@ $\Phi_{\mathrm{MC},3\mathrm{D}}$.
 The local constitutive surrogate follows the piecewise branch structure of the
 reference model. At one quadrature point we suppress the index $q$ and write
 $s_{\lambda}:=\sin\phi_{\lambda}$. Let
-$\varepsilon_1 \ge \varepsilon_2 \ge \varepsilon_3$ be the principal strains and
-let
+$\varepsilon_1 \ge \varepsilon_2 \ge \varepsilon_3$ be the ordered principal
+strains obtained after converting engineering shear components to tensor shear.
+The branch tests below use the convention that the elastic case satisfies
+$f_{\mathrm{tr}}\le0$. Let
 \begin{equation}
   I_1 = \varepsilon_{xx} + \varepsilon_{yy} + \varepsilon_{zz},
   \qquad
