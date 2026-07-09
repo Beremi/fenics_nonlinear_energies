@@ -277,6 +277,10 @@ scientific claims were introduced without supporting evidence.
   header explicit; and narrowed the \v{C}ermak--Sysala--Valdman role to
   elastoplastic implementation context while keeping Sysala-family papers as the
   slope-stability/reference-model context.
+- Reordered the Plasticity2D and Plasticity3D benchmark exposition so the local
+  Davis-B reductions and branch potentials are defined before the assembled
+  discrete surrogate functionals, removing forward-definition prose from the
+  math-heavy benchmark sections.
 - Rebuilt the paper PDF through the paper generation pipeline.
 
 ## Blocking Issues Before Submission
@@ -644,6 +648,25 @@ required support for the current scoped contribution.
 - `pdftotext -f 3 -l 6 paper/build/main.pdf -`: checked that the generic
   pointwise energy notation now renders as `W_q` and that the hybrid Newton
   sketch includes the accepted update and retry/failure branch.
+- `./.venv/bin/python paper/scripts/check_release_blockers.py --expect-blockers`:
+  passed and still reports the four expected final-submission blockers:
+  target template/declarations, repository license, archival DOI, and durable
+  archive integration.
+- `git diff --check`: passed after the Plasticity2D/3D definition-order
+  cleanup.
+- `rg -n -F "defined by \\eqref{eq:plasticity2d-davis}" paper/sections/benchmarks.tex`
+  and
+  `rg -n -F "defined by \\eqref{eq:plasticity3d-davis}" paper/sections/benchmarks.tex`:
+  returned no matches after removing the forward-definition prose.
+- `make -C paper submission-check`: passed after the Plasticity2D/3D
+  definition-order cleanup, rebuilding a 44-page A4 PDF and rerunning the
+  LaTeX-log scan, `qpdf`, aux-order check, hard-float placement check,
+  manuscript hygiene gate, submission-bundle manifest verifier, and
+  archive-neutral asset validation.
+- `pdftotext -f 15 -l 23 paper/build/main.pdf -`: checked that the rendered
+  Plasticity2D and Plasticity3D benchmark sections now define the local Davis-B
+  reductions and branch potentials before the assembled discrete surrogate
+  functionals.
 - `./.venv/bin/python paper/scripts/check_release_blockers.py --expect-blockers`:
   passed and still reports the four expected final-submission blockers:
   target template/declarations, repository license, archival DOI, and durable

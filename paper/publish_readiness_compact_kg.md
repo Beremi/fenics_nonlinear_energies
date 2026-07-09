@@ -98,7 +98,9 @@ stage or commit `paper/style_guide/`.
 - Math audit: fixed in current chunk by adding Plasticity3D elastic-first branch
   selection, separating return-test ratios from material weight and engineering
   shear, replacing generic `\psi_q` energy-density notation with
-  `\mathcal{W}_q`, and making the KSP target column explicit.
+  `\mathcal{W}_q`, making the KSP target column explicit, and moving the
+  Plasticity2D/Plasticity3D discrete surrogate definitions after their local
+  Davis-B and branch-potential definitions.
 - Evidence audit: fixed in current chunk by interpreting the p-Laplace,
   Plasticity2D, hyperelastic validation, and Plasticity3D validation figures in
   body text.

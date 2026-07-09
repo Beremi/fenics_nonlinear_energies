@@ -437,40 +437,10 @@ The corresponding weak form is
   \label{eq:plasticity2d-weak}
 \end{equation}
 
-The runs reported here are endpoint solves, not path-consistent incremental
-histories. Accordingly, the benchmark uses the following scalarized discrete
-surrogate functional for differentiation and comparison. Let
-$c_{\lambda,eq}$ and $\phi_{\lambda,eq}$ denote the quadrature-point
-Davis-B-reduced cohesion and friction angle defined by
-\eqref{eq:plasticity2d-davis}:
-\begin{equation}
-  \Pi_h^{2\mathrm{D}}(u_h;\lambda_{\mathrm{sr}})
-  =
-  \sum_{e=1}^{n_{\mathrm{el}}}
-  \sum_{q=1}^{n_q}
-    w_{eq}\,
-    \Phi_{\mathrm{MC},2\mathrm{D}}
-    \!\left(
-      B_{eq}u_e,\varepsilon^{p,\mathrm{old}}_{eq},
-      E,\nu,c_{\lambda,eq},\phi_{\lambda,eq}
-    \right)
-  - f_{\mathrm{ext}}^\top u_h,
-  \label{eq:plasticity2d-discrete}
-\end{equation}
-where $\lambda_{\mathrm{sr}}$ denotes the strength-reduction factor, distinct
-from the Lam{\'e} parameter used later in three dimensions, and
-$\Phi_{\mathrm{MC},2\mathrm{D}}$ denotes the scalar branch potential used for
-the two-dimensional Mohr--Coulomb endpoint surrogate. Here the subscript $eq$
-means element $e$ and quadrature point $q$, $w_{eq}$ is the corresponding
-quadrature weight including the element Jacobian, and $B_{eq}$ maps the element
-displacement vector to the two-dimensional engineering-strain vector used by the
-branch potential.
-
-The load vector $f_{\mathrm{ext}}$ is assembled from the
-right-hand side of \cref{eq:plasticity2d-weak}; for the endpoint solves this is
-the gravity load with $b=(0,-\gamma)^\top$ and zero traction on the free
-boundary. The dilation angle enters this endpoint model only through the Davis-B
-reduction.
+The computations reported here are endpoint solves, not path-consistent
+incremental histories. Accordingly, we first define the local Davis-B reduction
+and branch potential, and then assemble them into the scalarized discrete
+surrogate in \eqref{eq:plasticity2d-discrete}.
 
 The two-dimensional branch formulas use engineering strain
 $\varepsilon=(\varepsilon_{xx},\varepsilon_{yy},\gamma_{xy})^\top$ and the
@@ -581,6 +551,35 @@ The reported two-dimensional rows use this quantity as a solver-diagnostic
 endpoint surrogate. The small square-root regularization parameter
 $\epsilon_{\mathrm{reg}}=\num{1e-12}$ smooths the endpoint surrogate; it is not a
 separate material parameter.
+
+Using these local definitions, the benchmark uses the following scalarized
+discrete surrogate functional for differentiation and comparison. Let
+$c_{\lambda,eq}$ and $\phi_{\lambda,eq}$ denote the quadrature-point
+Davis-B-reduced cohesion and friction angle:
+\begin{equation}
+  \Pi_h^{2\mathrm{D}}(u_h;\lambda_{\mathrm{sr}})
+  =
+  \sum_{e=1}^{n_{\mathrm{el}}}
+  \sum_{q=1}^{n_q}
+    w_{eq}\,
+    \Phi_{\mathrm{MC},2\mathrm{D}}
+    \!\left(
+      B_{eq}u_e,\varepsilon^{p,\mathrm{old}}_{eq},
+      E,\nu,c_{\lambda,eq},\phi_{\lambda,eq}
+    \right)
+  - f_{\mathrm{ext}}^\top u_h,
+  \label{eq:plasticity2d-discrete}
+\end{equation}
+where $\lambda_{\mathrm{sr}}$ denotes the strength-reduction factor, distinct
+from the Lam{\'e} parameter used later in three dimensions. Here the subscript
+$eq$ means element $e$ and quadrature point $q$, $w_{eq}$ is the corresponding
+quadrature weight including the element Jacobian, and $B_{eq}$ maps the element
+displacement vector to the two-dimensional engineering-strain vector used by the
+branch potential. The load vector $f_{\mathrm{ext}}$ is assembled from the
+right-hand side of \cref{eq:plasticity2d-weak}; for the endpoint solves this is
+the gravity load with $b=(0,-\gamma)^\top$ and zero traction on the free
+boundary. The dilation angle enters this endpoint model only through the Davis-B
+reduction.
 
 \begin{figure}[!htbp]
   \centering
@@ -699,37 +698,6 @@ $\lambda_{\mathrm{sr}}=1.55$ and the finished nine-case study
 at the same load factor. The $\lambda_{\mathrm{sr}}=1.0$ strong-scaling
 study is reported separately in \Cref{sec:num-plasticity3d} as auxiliary timing
 evidence.
-
-For those endpoint and continuation studies, we evaluate the following
-algorithmic scalar surrogate. Let $\bar c_{\lambda,eq}$ and
-$\sin\phi_{\lambda,eq}$ denote the quadrature-point Davis-B-reduced quantities
-defined by \eqref{eq:plasticity3d-davis} and
-\eqref{eq:plasticity3d-davis-bar}:
-\begin{equation}
-  \Pi_h^{3\mathrm{D}}(u_h;\lambda_{\mathrm{sr}})
-  =
-  \sum_{e=1}^{n_{\mathrm{el}}}
-  \sum_{q=1}^{n_q}
-    w_{eq}\,
-    \Phi_{\mathrm{MC},3\mathrm{D}}
-    \!\left(
-      \varepsilon_{eq}(u_e),
-      \bar c_{\lambda,eq},
-      \sin \phi_{\lambda,eq},
-      \mu_{eq},
-      K_{eq},
-      \lambda_{\mathrm{L},eq}
-    \right)
-  - f_{\mathrm{ext}}^\top u_h,
-  \label{eq:plasticity3d-discrete}
-\end{equation}
-where $\lambda_{\mathrm{sr}}$ is again the strength-reduction factor and
-$\lambda_{\mathrm{L}}$ is the Lam{\'e} parameter of the elastic predictor.
-The subscript $eq$ means that each material parameter is evaluated at element
-$e$ and quadrature point $q$. The load vector $f_{\mathrm{ext}}$ is assembled
-from the body force $-\gamma_q e_y$ in
-\cref{eq:plasticity3d-weak}, with no Neumann traction contribution in the
-reported cases.
 
 We use the engineering-strain ordering
 \begin{equation}
@@ -938,6 +906,34 @@ The constitutive-AD path differentiates the smooth branches of
 hand-derived return-map tangent; the branch interfaces remain nonsmooth and are
 treated as part of the algorithmic constitutive surrogate rather than as a
 globally smooth continuum potential.
+
+For the endpoint and continuation studies, these local definitions are assembled
+into the following scalar surrogate. Let $\bar c_{\lambda,eq}$ and
+$\sin\phi_{\lambda,eq}$ denote the quadrature-point Davis-B-reduced quantities:
+\begin{equation}
+  \Pi_h^{3\mathrm{D}}(u_h;\lambda_{\mathrm{sr}})
+  =
+  \sum_{e=1}^{n_{\mathrm{el}}}
+  \sum_{q=1}^{n_q}
+    w_{eq}\,
+    \Phi_{\mathrm{MC},3\mathrm{D}}
+    \!\left(
+      \varepsilon_{eq}(u_e),
+      \bar c_{\lambda,eq},
+      \sin \phi_{\lambda,eq},
+      \mu_{eq},
+      K_{eq},
+      \lambda_{\mathrm{L},eq}
+    \right)
+  - f_{\mathrm{ext}}^\top u_h,
+  \label{eq:plasticity3d-discrete}
+\end{equation}
+where $\lambda_{\mathrm{sr}}$ is again the strength-reduction factor and
+$\lambda_{\mathrm{L}}$ is the Lam{\'e} parameter of the elastic predictor. The
+subscript $eq$ means that each material parameter is evaluated at element $e$
+and quadrature point $q$. The load vector $f_{\mathrm{ext}}$ is assembled from
+the body force $-\gamma_q e_y$ in \cref{eq:plasticity3d-weak}, with no Neumann
+traction contribution in the reported cases.
 
 For the strain visualizations in this paper we use the deviatoric norm
 \begin{equation}
