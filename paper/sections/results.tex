@@ -47,20 +47,21 @@ caps.
 \end{table}
 
 The scalar and mechanics cases show different preferences. Newton with Armijo
-line search is fastest on the smooth $p$-Laplace diagnostic case, but times out
-on Ginzburg--Landau; the hyperelasticity excerpt completes under all three
-policies, with the hybrid reducing nonlinear iterations and reported solve time
-relative to line-search-only Newton.
+line search has the lowest reported time on the smooth $p$-Laplace diagnostic
+case, but times out on Ginzburg--Landau; the hyperelasticity excerpt completes
+under all three policies, with the hybrid reducing nonlinear iterations and
+reported solve time relative to line-search-only Newton.
 
 The 3D plasticity endpoint is the most discriminating case in this suite for
-nonlinear-policy choice: at the stricter
-$\|\nabla \mathcal{F}\|_2 < 10^{-4}$ criterion, line-search-only Newton reaches
-the iteration cap while both trust-region policies converge, and the hybrid is
-the faster trust-region configuration. We therefore keep the Ginzburg--Landau
+nonlinear-policy choice. Here and below, $g$ denotes the free-DOF gradient of
+the merit functional used by the stated nonlinear solver. At the stricter
+$\|g\|_2 < 10^{-4}$ criterion, line-search-only Newton reaches the iteration cap
+while both trust-region policies converge, and the hybrid is the lower-time
+trust-region configuration. We therefore keep the Ginzburg--Landau
 level-10 fixed-budget check separate in
 \Cref{tab:gl-globalization-fixed-budget}: trust-region variants complete with
-matching energy and work, while the line-search-only run reports elapsed time
-and its cap.
+matching energy and Newton/Krylov work, while the line-search-only configuration
+reports elapsed time and its cap.
 
 \begin{table}[!htbp]
   \centering
@@ -92,15 +93,13 @@ or a solver-internal total for the specific configuration.
   \input{tables/generated/derivative_route_compare.tex}
 \end{table}
 
-\FloatBarrier
-
 Across all three benchmark cases, colored sparse recovery reaches the same
 table-reported energy, up to displayed precision, and identical
 nonlinear/Krylov iteration counts as element AD.
 The scalar and hyperelasticity cases show a wall-time premium for colored sparse
-recovery. On the 3D plasticity endpoint, constitutive AD is fastest, while
-element AD and colored sparse recovery have matching iteration counts and
-comparable solve times. The colored sparse-recovery route requires 240--420
+recovery. On the 3D plasticity endpoint, constitutive AD has the lowest reported
+time, while element AD and colored sparse recovery have matching iteration counts
+and comparable solve times. The colored sparse-recovery route requires 240--420
 colors across the 32 ranks; its comparable solve time is consistent with batched
 rank-local HVPs having nearly the same measured Hessian-evaluation cost as
 element AD on this $P_2(L_1)$ case.
@@ -149,7 +148,8 @@ problem. Across the plotted ranks, element AD drops from
 \SI{10.13}{s} on one rank to \SI{1.14}{s} on 32 ranks; colored sparse recovery follows the
 same trend with persistent recovery overhead. The FEniCS curve in the same
 figure provides reference-implementation context; the comparison above isolates
-the two \jaxpetsc{} derivative routes.
+the two \jaxpetsc{} derivative routes and is not interpreted as a backend
+performance ranking.
 
 \subsection{Ginzburg--Landau}
 \label{sec:num-gl}
@@ -180,7 +180,8 @@ colored sparse-recovery wall-time premium on this nonconvex scalar energy.
 Across the plotted ranks, element AD falls from \SI{15.64}{s} on one rank to
 \SI{2.10}{s} on 32 ranks, with a nonideal plateau around 4--8 ranks before the
 32-rank point. The FEniCS curve is included as reference-implementation context,
-while the paragraph above isolates the \jaxpetsc{} derivative-route cost.
+while the paragraph above isolates the \jaxpetsc{} derivative-route cost rather
+than a backend performance ranking.
 
 \subsection{Hyperelasticity}
 \label{sec:num-hyperelasticity}
@@ -189,20 +190,21 @@ while the paragraph above isolates the \jaxpetsc{} derivative-route cost.
 \eqref{eq:hyperelasticity-discrete}. Here the full load path tests
 globalization and preconditioning; derivative-route evidence is limited to the
 first-step replicated-element case. The distributed implementation completes the
-load path, \Cref{fig:hyperelasticity-results} reports only its scaling, and the
-JAX-FEM comparison remains in \Cref{sec:val-hyperelasticity}.
+load path, \Cref{fig:hyperelasticity-results} reports completed-path timing, and
+the JAX-FEM comparison remains in \Cref{sec:val-hyperelasticity}.
 
 \begin{figure}[!htbp]
   \centering
   \includegraphics[width=\PaperFigureMedium]{hyperelasticity_scaling.pdf}
-  \caption{Hyperelasticity strong scaling for the 24-step load path defined by
-  \eqref{eq:hyperelasticity-discrete}.}
+  \caption{Hyperelasticity completed-path timing for the 24-step load path
+  defined by \eqref{eq:hyperelasticity-discrete}.}
   \label{fig:hyperelasticity-results}
 \end{figure}
 
 \FloatBarrier
 
-The 24-step hyperelasticity scaling curve reduces \jaxpetsc{} element-AD wall
+The 24-step hyperelasticity completed-path timing curve reduces \jaxpetsc{}
+element-AD wall
 time from \SI{1894}{s} at 8 ranks to \SI{529}{s} at 32 ranks, a factor of
 \num{3.58} over a fourfold rank increase. This motivates the more targeted
 fixed-work distribution and PMG diagnostics below.
@@ -340,9 +342,10 @@ Davis-B reduction \eqref{eq:plasticity3d-davis}, scalar constitutive potential
 \eqref{eq:plasticity3d-devnorm}.
 The validation limits for this endpoint surrogate are reported in
 \Cref{sec:val-plasticity3d}. With that interpretation fixed, this section asks
-two performance questions: which second-order route is fastest on the fixed
-high-order derivative-route case under matched endpoint observables, and how
-the endpoint surrogate behaves across degree, resolution, and rank count.
+two performance questions: which second-order route has the lowest reported cost
+on the fixed high-order derivative-route case under matched endpoint
+observables, and how the endpoint surrogate behaves across degree, resolution,
+and rank count.
 
 \paragraph{Derivative-route comparison.}
 The first question is whether the second-order route changes the endpoint
@@ -354,8 +357,9 @@ counts, total Krylov counts, and endpoint observables to displayed precision
 across the three routes. In the table, $\omega$ denotes the external-work
 observable and $u_{\max}$ denotes the maximum displacement magnitude.
 
-The differences are cost differences. Constitutive AD has the lowest reported
-wall time on this fixed case, with wall time \SI{222}{s} and solve time
+The observed differences are timing differences under this fixed solver policy.
+Constitutive AD has the lowest reported wall time on this fixed case, with wall
+time \SI{222}{s} and solve time
 \SI{191}{s}, compared with \SI{288}{s}/\SI{255}{s} for element AD and
 \SI{372}{s}/\SI{253}{s} for colored sparse recovery. This residual-bisection Newton
 comparison uses the Hypre-backed rank-local linear-solver profile; it is
@@ -564,10 +568,13 @@ equality, fixed-work strong scaling, or a rank-invariant endpoint.
 
 \Cref{tab:topology-rank-consistency} adds a controlled 40-iteration check on a
 smaller $384\times192$ grid: fixed initial design, disabled early/stall
-stopping, and smoother continuation ($p \leftarrow p+\num{0.1}$). Relative to
-the one-rank reference, all ranks complete 40 iterations, with compliance
-difference below \num{0.2}\% and density relative grid $\ell_2$ difference
-$\|\theta_r-\theta_1\|_2/\|\theta_1\|_2$ below \num{0.04}; these are observed
+stopping, and smoother continuation
+($p_{\mathrm{SIMP}} \leftarrow p_{\mathrm{SIMP}}+\num{0.1}$). Let
+$\Theta_r=(\theta_h^{(r)}(x_i))_{i\in\mathcal{D}_h}$ be the active design-node
+density vector on the common grid for the $r$-rank run. Relative to the one-rank
+reference, all ranks complete 40 iterations, with compliance difference below
+\num{0.2}\% and density relative grid $\ell_2$ difference
+$\|\Theta_r-\Theta_1\|_2/\|\Theta_1\|_2$ below \num{0.04}; these are observed
 discrepancies for this controlled case, not general rank-invariance thresholds.
 
 \begin{table}[!htbp]
@@ -598,8 +605,8 @@ derivative-route comparisons isolate cost under fixed endpoint observables; the
 distribution, PMG, and partitioning studies expose solver-policy and
 sparse-ownership effects; and the topology study closes with an end-to-end
 design-and-mechanics loop plus a controlled rank-consistency check. Together,
-these measurements show where the coupled design succeeds and where solver
-policy remains visible: local differentiable constitutive or energy evaluations
-can be coupled to PETSc-owned sparse nonlinear and linear solves across the
-tested scalar PDE, mechanics, plasticity, and topology cases, with comparator
-evidence scoped by problem family.
+these measurements show which coupled choices are effective in the tested cases
+and where solver policy remains visible: local differentiable constitutive or
+energy evaluations can be coupled to PETSc-owned sparse nonlinear and linear
+solves across the tested scalar PDE, mechanics, plasticity, and topology cases,
+with comparator evidence scoped by problem family.

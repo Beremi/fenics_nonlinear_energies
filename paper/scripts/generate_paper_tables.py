@@ -131,7 +131,7 @@ IMPLEMENTATION_LABELS = {
     "fenics_custom": "FEniCS Newton reference",
     "jax_petsc_element": "JAX+PETSc element AD",
     "jax_petsc_local_sfd": "JAX+PETSc colored recovery",
-    "jax_serial": "pure JAX serial formulation check",
+    "jax_serial": "pure JAX serial check",
     LOCAL_IMPL: "constitutive-AD PMG solver",
     SOURCE_IMPL: "frozen-preconditioner PMG variant",
     LOCAL_SOURCEFIXED_IMPL: "frozen PMG operator, AD branch tangent",
@@ -1032,7 +1032,10 @@ def main() -> None:
     sourcefixed_source_rows = find_rows(sourcefixed_rows, SOURCE_SOURCEFIXED_IMPL)
     p3d_cpu_scaling_rows = plasticity3d_cpu_scaling_rows()
 
-    pl_showcase = select_csv_rows(PLAPLACE_PARITY, ("fenics_custom", "jax_petsc_element", "jax_petsc_local_sfd"))
+    pl_showcase = select_csv_rows(
+        PLAPLACE_PARITY,
+        ("fenics_custom", "jax_serial", "jax_petsc_element", "jax_petsc_local_sfd"),
+    )
     gl_showcase = select_csv_rows(GL_PARITY, ("fenics_custom", "jax_petsc_element", "jax_petsc_local_sfd"))
     he_showcase = select_csv_rows(HE_PARITY, ("fenics_custom", "jax_petsc_element", "jax_serial"))
     p2d_rows = plasticity2d_resolution_rows()
@@ -1579,7 +1582,7 @@ def main() -> None:
             "Solve [s]",
             "Compliance",
             "Volume",
-            "$p$",
+            "$p_{\\mathrm{SIMP}}$",
             "Rel. compliance diff.",
             "Density rel. grid $\\ell_2$",
         ],
@@ -1854,7 +1857,7 @@ def main() -> None:
     write_table_star(
         "topology_summary.tex",
         fill_spec("c c c c c c c c"),
-        ["Ranks", "Wall time [s]", "Outer iters", "$p$", "Compliance", "Volume", "Schedule", "Status"],
+        ["Ranks", "Wall time [s]", "Outer iters", "$p_{\\mathrm{SIMP}}$", "Compliance", "Volume", "Schedule", "Status"],
         [
             [
                 fmt_count(row["ranks"]),
@@ -1904,6 +1907,14 @@ def main() -> None:
     layer1a_metrics = p3d_validation["layer1a"]["final_metrics"]
     layer2_metrics = p3d_validation["layer2"]
     endpoint_dev = layer2_metrics.get("endpoint_deviatoric_strain_relative_l2")
+    layer2_acceptance = dict(layer2_metrics["acceptance"])
+    layer2_criterion_keys = (
+        "critical_lambda_pass",
+        "umax_curve_pass",
+        "endpoint_disp_pass",
+    )
+    layer2_criteria_passed = sum(bool(layer2_acceptance.get(key, False)) for key in layer2_criterion_keys)
+    layer2_criteria_total = len(layer2_criterion_keys)
     write_table_star(
         "plasticity3d_validation_summary.tex",
         (
@@ -1975,10 +1986,10 @@ def main() -> None:
             ],
             [
                 r"fixed-$\lambda_{\mathrm{sr}}$ comparison",
-                r"fixed-$\lambda_{\mathrm{sr}}$ criteria, 3/3 satisfied",
+                rf"fixed-$\lambda_{{\mathrm{{sr}}}}$ criteria, {layer2_criteria_passed}/{layer2_criteria_total} satisfied",
                 "--",
                 "summary",
-                criterion_status(layer2_metrics["acceptance"]["overall_pass"]),
+                criterion_status(layer2_acceptance["overall_pass"]),
             ],
         ],
     )

@@ -14,16 +14,17 @@ On representative fixed-work cases, we compare element automatic differentiation
 constitutive automatic differentiation, and colored sparse recovery for
 constructing second-order information, and measure their interaction with PETSc
 assembly, nonlinear globalization, Krylov solvers, and preconditioners. In the
-high-order three-dimensional plasticity benchmark, constitutive AD has the
-lowest measured wall time among the tested derivative routes while preserving
-endpoint energy, external-work, and maximum-displacement observables. The
+fixed high-order three-dimensional plasticity derivative-route case,
+constitutive AD has the lowest measured wall time among the tested routes while
+preserving endpoint energy, external-work, and maximum-displacement observables. The
 distributed mechanics examples give MPI timing and solver-policy evidence, and
 the topology example tests compliance and density consistency across MPI ranks
 under a controlled fixed-iteration protocol. Scoped comparators supply context:
 matched \purejax{} and \fenics{} formulations provide internal checks where
-available, JAX-FEM gives a narrow hyperelastic endpoint-state comparison, and the
-Sysala-family and \v{C}erm{\'a}k--Sysala--Valdman works provide plasticity
-reference-model and implementation context rather than universal baselines.
+available, JAX-FEM gives a narrow hyperelastic endpoint-state comparison, the
+Sysala-family works provide plasticity reference-model context, and the
+\v{C}erm{\'a}k--Sysala--Valdman MATLAB work provides implementation context
+rather than a numerical baseline.
 Together, the evidence indicates that, for the tested problem classes, derivative
 construction should be evaluated inside the sparse nonlinear solve that consumes
 it, together with assembly, globalization, Krylov algebra, and preconditioning.

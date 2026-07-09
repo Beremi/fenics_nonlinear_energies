@@ -101,7 +101,8 @@ size and mesh construction, not separate physical models.
 \label{sec:bench-plaplace}
 
 The literature model is the standard stationary $p$-Laplace Dirichlet problem
-and its associated energy formulation \citep[Ch.~2]{lindqvist2019plaplace}. The
+and its associated energy formulation \citep[Ch.~2]{lindqvist2019plaplace}. Let
+$p>1$, let $p'=p/(p-1)$, and let $f\in L^{p'}(\Omega)$ be the source term. The
 unknown is a scalar field $u:\Omega \to \mathbb{R}$ and the continuous energy is
 \begin{equation}
   \mathcal{E}(u)
@@ -130,17 +131,18 @@ The benchmark used in this paper takes the L-shaped domain
 $\Omega=(0,2)^2\setminus[1,2]^2$, exponent $p=3$, forcing $f=-10$, and a
 conforming $P_1$ triangular hierarchy. Here and below, $\mathcal{E}_h$ denotes
 the finite-element restriction of $\mathcal{E}$ evaluated with the quadrature
-used for the numerical comparisons. The discrete problem is
+used for the numerical comparisons. Let
+$V_h\subset W_0^{1,p}(\Omega)$ be the chosen conforming finite-element
+subspace. The discrete problem is
 \begin{equation}
-  u_h \in V_h \subset W_0^{1,p}(\Omega):
+  u_h \in V_h:
   \qquad
-  u_h = \arg\min_{v_h \in V_h} \mathcal{E}_h(v_h),
+  u_h = \arg\min_{v_h \in V_h} \mathcal{E}_h(v_h).
   \label{eq:plaplace-discrete}
 \end{equation}
-where $V_h$ is the chosen conforming finite-element subspace. This is the
-most direct benchmark in the paper for checking exact gradients, exact Hessians,
-and sparse-recovery alternatives against one another without constitutive or
-geometric complications.
+This is the most direct benchmark in the paper for checking exact gradients,
+exact Hessians, and sparse-recovery alternatives against one another without
+constitutive or geometric complications.
 
 \begin{figure}[!htbp]
   \centering
@@ -174,9 +176,12 @@ which the derivative routes are compared in the energy plot and summary table.
 \end{table}
 
 The within-benchmark picture is therefore one of formulation agreement:
-\Cref{fig:plaplace-energy-levels,tab:plaplace-benchmark} report JAX+PETSc
-discrete energies within about $\num{1e-8}$ of the \fenics{} Newton reference
-for \eqref{eq:plaplace-discrete}. Scaling and timing for this family are reported in
+\Cref{fig:plaplace-energy-levels} shows plotted-scale energy agreement across
+the hierarchy, and \Cref{tab:plaplace-benchmark} reports the selected case where
+the JAX+PETSc discrete energies are within about $\num{1e-8}$ of the \fenics{}
+Newton reference for \eqref{eq:plaplace-discrete}. The pure-JAX serial entry is a
+compact formulation check on the same case; it is not used as distributed
+performance evidence. Scaling and timing for this family are reported in
 \Cref{sec:num-plaplace}.
 
 \FloatBarrier
@@ -404,7 +409,32 @@ history variables
 \citep{davis1968plasticity,simo1985consistent,simo1998compinel,tschuchnigg2015nonassociated,sysala2017returnmapping,sysala2021optimization}.
 The unknown is the displacement field
 $u = (u_x,u_y):\Omega \to \mathbb{R}^2$ on a homogeneous slope
-geometry. With local load-increment index $n$, the continuum equilibrium
+geometry. The computational slope is the polygon with vertices
+$(0,0)$, $(40,0)$, $(40,10)$, $(25,10)$, $(15,20)$, and $(0,20)$, traversed
+counterclockwise. Equivalently, the lower bench width is $15$, the slope run is
+$10$, the upper bench width is $15$, the two vertical height segments have
+length $10$, and the slope angle is $45^\circ$. The bottom edge is fixed in both
+displacement components, the left and far-right vertical sides are fixed
+horizontally, and the sloping top is traction-free. Let
+$\Gamma_{\mathrm{bot}}$ denote the bottom edge and let
+$\Gamma_{\mathrm{side}}$ denote the constrained vertical side edges. We use
+$\Gamma_{D,x}=\Gamma_{\mathrm{bot}}\cup\Gamma_{\mathrm{side}}$,
+$\Gamma_{D,y}=\Gamma_{\mathrm{bot}}$, and
+$\Gamma_N=\partial\Omega\setminus
+(\Gamma_{\mathrm{bot}}\cup\Gamma_{\mathrm{side}})$. The material parameters are
+$E=\num{40000}$, $\nu=\num{0.30}$, $c_0=\num{6.0}$,
+$\phi=45^\circ$, $\psi=0^\circ$, and gravity magnitude $\gamma=\num{20}$,
+so $b=(0,-\gamma)^\top$ in the endpoint solves. These values use one consistent
+numerical unit convention, and angles are given in degrees.
+
+For tensor contractions in the continuum equations, write
+$\varepsilon^{\mathrm{ten}}(v)=\operatorname{sym}\nabla v$. The branch
+potentials below use engineering Voigt strain vectors. The incremental notation
+in the next equations states the source continuum model; the reported discrete
+computations use the endpoint surrogate with zero previous plastic strain
+defined below. In the reported endpoint solves, the prescribed displacement
+values are homogeneous, so $\bar u_x^{n+1}=\bar u_y^{n+1}=0$. With local
+load-increment index $n$, the continuum equilibrium
 equations at increment $n+1$ are
 \begin{equation}
   -\nabla \cdot \sigma^{n+1} = b^{n+1}
@@ -418,32 +448,15 @@ equations at increment $n+1$ are
   \label{eq:plasticity2d-strong}
 \end{equation}
 where $\sigma^{n+1}$ and the internal variables are obtained from the
-elastoplastic update driven by $\varepsilon(u^{n+1})$ and the previous state.
-
-The computational slope is the polygon with vertices
-$(0,0)$, $(40,0)$, $(40,10)$, $(25,10)$, $(15,20)$, and $(0,20)$, traversed
-counterclockwise. Equivalently, the lower bench width is $15$, the slope run is
-$10$, the upper bench width is $15$, the two vertical height segments have
-length $10$, and the slope angle is $45^\circ$. The bottom edge is fixed in both
-displacement components, the left and far-right vertical sides are fixed
-horizontally, and the sloping top is traction-free.
-The material parameters are
-$E=\num{40000}$, $\nu=\num{0.30}$, $c_0=\num{6.0}$,
-$\phi=45^\circ$, $\psi=0^\circ$, and gravity magnitude $\gamma=\num{20}$,
-so $b=(0,-\gamma)^\top$ in the endpoint solves.
+elastoplastic update driven by $\varepsilon^{\mathrm{ten}}(u^{n+1})$ and the
+previous state.
 
 The endpoint studies set the old plastic strain to zero at all quadrature
-points. Let $\Gamma_{\mathrm{bot}}$ denote the bottom edge and let
-$\Gamma_{\mathrm{side}}$ denote the constrained vertical side edges. We use
-$\Gamma_{D,x}=\Gamma_{\mathrm{bot}}\cup\Gamma_{\mathrm{side}}$ and
-$\Gamma_{D,y}=\Gamma_{\mathrm{bot}}$, so the homogeneous test space $V_0$
-contains functions with $v_x=0$ on $\Gamma_{D,x}$ and $v_y=0$ on
-$\Gamma_{D,y}$. The traction boundary is
-$\Gamma_N=\partial\Omega\setminus
-(\Gamma_{\mathrm{bot}}\cup\Gamma_{\mathrm{side}})$.
+points. The homogeneous test space $V_0$ contains functions with $v_x=0$ on
+$\Gamma_{D,x}$ and $v_y=0$ on $\Gamma_{D,y}$.
 The corresponding weak form is
 \begin{equation}
-  \int_{\Omega} \sigma^{n+1} : \varepsilon(v) \,\mathrm{d}x
+  \int_{\Omega} \sigma^{n+1} : \varepsilon^{\mathrm{ten}}(v) \,\mathrm{d}x
   =
   \int_{\Omega} b^{n+1} \cdot v \,\mathrm{d}x
   + \int_{\Gamma_N} t^{n+1} \cdot v \,\mathrm{d}s
@@ -456,9 +469,11 @@ incremental histories. Accordingly, we first define the local Davis-B reduction
 and branch potential, and then assemble them into the scalarized discrete
 surrogate in \eqref{eq:plasticity2d-discrete}.
 
-The two-dimensional branch formulas use engineering strain
-$\varepsilon=(\varepsilon_{xx},\varepsilon_{yy},\gamma_{xy})^\top$ and the
-plane-strain elastic matrix
+The two-dimensional branch formulas use the engineering Voigt strain
+$\varepsilon^{\mathrm{eng}}
+=(\varepsilon_{xx},\varepsilon_{yy},\gamma_{xy})^\top$. Within the local
+branch formulas, we write this vector as $\varepsilon$ to keep the notation
+compact. The plane-strain elastic matrix is
 \[
   C_{2\mathrm{D}}
   =
@@ -654,8 +669,8 @@ in-plane deviatoric engineering-strain magnitude
 
 \FloatBarrier
 
-\Cref{fig:plasticity2d-state} localizes the endpoint response in the expected
-slope mechanism region. The visualization supports the benchmark definition as
+\Cref{fig:plasticity2d-state} localizes the endpoint response in a slope
+mechanism region. The visualization supports the benchmark definition as
 an endpoint surrogate; convergence and fixed-work solver evidence are reported
 separately below.
 
@@ -702,8 +717,15 @@ $y$-direction. Let $e_y=(0,1,0)^\top$. Let $\Gamma_{D,i}$ denote the
 component-wise Dirichlet boundary for displacement component $i$, let
 $\Gamma_N$ be the remaining traction-free boundary, and let $V_0$ be the
 homogeneous vector-valued test space after applying these component-wise
-constraints. With local load-increment index $n$ and material-region weight
-$\gamma(x)$, the continuum equilibrium equations are
+constraints. For tensor contractions in the continuum equations, write
+$\varepsilon^{\mathrm{ten}}(v)=\operatorname{sym}\nabla v$; the branch
+potential later uses a six-component engineering Voigt strain. The incremental
+notation in the next equations defines the source elastoplastic model; the
+reported computations use the single endpoint surrogate with zero previous
+history variables introduced below. For the endpoint surrogate, all prescribed
+displacement values on $\Gamma_{D,i}$ and on the bottom clamp are zero, so
+$\bar u_i^{n+1}=0$. With local load-increment index $n$ and
+material-region weight $\gamma(x)$, the continuum equilibrium equations are
 \begin{equation}
   -\nabla \cdot \sigma^{n+1} = -\gamma(x) e_y
   \quad \text{in }\Omega,
@@ -714,7 +736,8 @@ $\gamma(x)$, the continuum equilibrium equations are
   \label{eq:plasticity3d-strong}
 \end{equation}
 where $\sigma^{n+1}$ and the internal variables are obtained from the
-elastoplastic update driven by $\varepsilon(u^{n+1})$ and the previous state.
+elastoplastic update driven by $\varepsilon^{\mathrm{ten}}(u^{n+1})$ and the
+previous state.
 
 The heterogeneous benchmark uses a mesh-labeled material partition
 $\Omega=\bigcup_{m=0}^3\Omega_m$. The labels
@@ -732,23 +755,14 @@ $(c_0,\phi,\psi,E,\nu,\gamma)$. The four tuples are, in label order,
 \]
 Thus, at quadrature point $q$, the body force is $-\gamma_q e_y$, where
 $\gamma_q$ is selected by the material region of the containing tetrahedron.
+These values use one consistent numerical unit convention, and angles are
+given in degrees.
 The elastic constants used below are
 \[
   \mu = \frac{E}{2(1+\nu)}, \qquad
   K = \frac{E}{3(1-2\nu)}, \qquad
   \lambda_{\mathrm{L}} = K-\frac{2\mu}{3}.
 \]
-For the reported bottom-clamped endpoint solves, let
-$V_0^{\mathrm{bc}}\subset V_0$ denote the homogeneous test space after adding the
-all-component bottom clamp specified below. With these regionwise quantities,
-the weak form used by the endpoint solve is
-\begin{equation}
-  \int_{\Omega} \sigma^{n+1} : \varepsilon(v) \,\mathrm{d}x
-  =
-  -\int_{\Omega} \gamma(x) e_y \cdot v \,\mathrm{d}x
-  \qquad \forall v \in V_0^{\mathrm{bc}}.
-  \label{eq:plasticity3d-weak}
-\end{equation}
 
 The studied discrete model uses a heterogeneous tetrahedral mesh with four
 material physical groups, refined into the displayed mesh hierarchy and elevated
@@ -767,12 +781,23 @@ labels contain the sloped free surface and the top face. We impose
 \]
 The bottom-clamped model additionally fixes all displacement components on
 $\Gamma_{\mathrm{bot}}=\{X\in\partial\Omega:\lvert X_2\rvert\le 10^{-12}\}$.
-Equivalently, the test space in \eqref{eq:plasticity3d-weak} is
+Equivalently, the bottom-clamped test space used below is
 \[
   V_0^{\mathrm{bc}}
   :=
   \{v\in V_0: v=0 \text{ on } \Gamma_{\mathrm{bot}}\}.
 \]
+For the reported bottom-clamped endpoint solves, let
+$V_0^{\mathrm{bc}}\subset V_0$ denote this homogeneous test space after adding
+the all-component bottom clamp. With these regionwise quantities, the weak form
+used by the endpoint solve is
+\begin{equation}
+  \int_{\Omega} \sigma^{n+1} : \varepsilon^{\mathrm{ten}}(v) \,\mathrm{d}x
+  =
+  -\int_{\Omega} \gamma(x) e_y \cdot v \,\mathrm{d}x
+  \qquad \forall v \in V_0^{\mathrm{bc}}.
+  \label{eq:plasticity3d-weak}
+\end{equation}
 We write $P_k(L_\ell)$ for polynomial degree $k$ on mesh level $\ell$ and use
 $L_1,\ldots,L_4$ for the four displayed mesh levels.
 
@@ -786,7 +811,7 @@ auxiliary timing evidence.
 
 We use the engineering-strain ordering
 \begin{equation}
-  \varepsilon
+  \varepsilon^{\mathrm{eng}}
   =
   \begin{bmatrix}
     \varepsilon_{xx} &
@@ -798,7 +823,9 @@ We use the engineering-strain ordering
   \end{bmatrix}^{\top},
   \label{eq:plasticity3d-engineering-strain}
 \end{equation}
-which is first mapped to tensor shear before principal values are formed. Here
+which is first mapped to tensor shear before principal values are formed. Within
+the branch-potential formulas, we write this engineering vector simply as
+$\varepsilon$. Here
 $\gamma$ without coordinate subscripts denotes the material-region unit weight,
 whereas $\gamma_{xy}$, $\gamma_{yz}$, and $\gamma_{xz}$ denote engineering shear
 components.
@@ -1059,8 +1086,9 @@ Equations \eqref{eq:plasticity3d-discrete} and
 \eqref{eq:plasticity3d-potential} define an algorithmic endpoint surrogate
 rather than a path-consistent incremental-history functional. The paper
 therefore keeps 3D plasticity claims at the endpoint-surrogate level and treats
-direct-branch endpoint observables separately from the fixed-$\lambda_{\mathrm{sr}}$
-matched-comparator diagnostic in \Cref{sec:val-plasticity3d}. The related return-mapping,
+seven-step strength-reduction endpoint observables separately from the
+fixed-$\lambda_{\mathrm{sr}}$ endpoint-formula diagnostic in
+\Cref{sec:val-plasticity3d}. The related return-mapping,
 optimization, convex-optimization, and continuation literature
 \citep{sysala2017returnmapping,sysala2021optimization,sysala2025convexoptimization,sysala2025advancedcontinuation}
 provides reference-model context for that boundary.
@@ -1197,13 +1225,14 @@ $\theta_h\in[\theta_{\min},1]$.
 The second ingredient is the mechanics solve for a fixed density field. Let
 $V_h$ be the continuous vector $P_1$ displacement space and let
 $V_{h,0}\subset V_h$ impose the homogeneous left-edge clamp. Let $C$ denote the
-plane-stress elasticity tensor and let $p$ be the active SIMP exponent. For
+plane-stress elasticity tensor and let $p_{\mathrm{SIMP}}$ be the active SIMP
+exponent. For
 fixed density, define
 \begin{equation}
   a_{\theta_h}(w_h,v_h)
   :=
   \sum_{e=1}^{n_{\mathrm{el}}}
-    |e|\,\theta_e^{p}
+    |e|\,\theta_e^{p_{\mathrm{SIMP}}}
     \left(\varepsilon(w_h)|_e\right)^\top C
     \left(\varepsilon(v_h)|_e\right),
   \label{eq:topology-mechanics}
@@ -1245,31 +1274,34 @@ solving for $u_h^m=u_h(\theta_h^m)$, we freeze the elementwise quantity
 \[
   e_{e,m}^{\mathrm{frozen}}
   =
-  (\theta_{e}^{m})^{2p}\,
+  (\theta_{e}^{m})^{2p_{\mathrm{SIMP}}}\,
   \left(\varepsilon(u_h^m)|_e\right)^\top C
   \left(\varepsilon(u_h^m)|_e\right).
 \]
 This is a reciprocal local compliance approximation. The mechanics stiffness in
-\eqref{eq:topology-mechanics} is proportional to $\theta_e^p$, so
-$e_{e,m}^{\mathrm{frozen}}\theta_e^{-p}$ matches the current local compliance
-scale at $\theta_e=\theta_e^m$ while penalizing lower trial densities.
+\eqref{eq:topology-mechanics} is proportional to
+$\theta_e^{p_{\mathrm{SIMP}}}$, so
+$e_{e,m}^{\mathrm{frozen}}\theta_e^{-p_{\mathrm{SIMP}}}$ matches the current
+local compliance scale at $\theta_e=\theta_e^m$ while penalizing lower trial
+densities.
 Let $(\nabla\theta_h)|_e$ denote the elementwise gradient of the interpolated
 density field used in the phase-field term, and define the double-well density
 \[
   W_{\mathrm{dw}}(\theta):=\theta^2(1-\theta)^2.
 \]
 The scalar $\lambda_V^m$ is the current effective volume multiplier, specified
-after the objective, and $\alpha_{\mathrm{reg}}$, $\ell_{\mathrm{pf}}$, and
-$\mu_{\mathrm{move}}$ are, respectively, the phase-field weight, phase-field
-length scale, and move regularization parameter. The frozen reduced objective
-for the next design vector $z_h^{m+1}$ is
+by \eqref{eq:topology-effective-volume-multiplier} below, and
+$\alpha_{\mathrm{reg}}$, $\ell_{\mathrm{pf}}$, and $\mu_{\mathrm{move}}$ are,
+respectively, the phase-field weight, phase-field length scale, and move
+regularization parameter. The frozen reduced objective for the next design
+vector $z_h^{m+1}$ is
 \begin{align}
   \mathcal{J}_h^m(z_h;u_h^m)
   &=
   \sum_{e=1}^{n_{\mathrm{el}}}
   |e|
   \Bigg[
-    e_{e,m}^{\mathrm{frozen}} \theta_e^{-p}
+    e_{e,m}^{\mathrm{frozen}} \theta_e^{-p_{\mathrm{SIMP}}}
     + \lambda_V^m \theta_e
     + \alpha_{\mathrm{reg}}
       \left(
@@ -1291,20 +1323,21 @@ constant during the design step.
 The target volume fraction is imposed through an iteration-dependent effective
 multiplier. Let $V_\star=0.4$ be the target value and initialize
 $\lambda_{\mathrm{corr}}^0=0$. Before the $m$th design solve we use
-\[
+\begin{equation}
   r_V^m = V(\theta_h^m)-V_\star,\qquad
   \lambda_V^m =
   \lambda_{\mathrm{ref}}^m
   + \lambda_{\mathrm{corr}}^m
   + \rho_V r_V^m,
-\]
+  \label{eq:topology-effective-volume-multiplier}
+\end{equation}
 where $\lambda_{\mathrm{ref}}^m$ is the unweighted empirical
 $(1-V_\star)$-quantile, with linear interpolation, of the element samples
 \[
   s_e^m
   =
-  p\,e_{e,m}^{\mathrm{frozen}}
-  /\max(\theta_e^m,\theta_{\min})^{p+1},
+  p_{\mathrm{SIMP}}\,e_{e,m}^{\mathrm{frozen}}
+  /\max(\theta_e^m,\theta_{\min})^{p_{\mathrm{SIMP}}+1},
 \]
 taken once over the elements of $\mathcal{T}_h$ and without duplicated ghost
 cells in parallel,
@@ -1319,12 +1352,22 @@ $r_V^{m+1}=V(\theta_h^{m+1})-V_\star$, the carried correction is updated by
   \qquad \beta_V=12.
 \]
 Here $\lambda_V^m$ is the effective volume multiplier in the current design
-subproblem. The SIMP-style continuation in $p$ and the regularization terms
-control mesh-scale design features, following the role of filters in
-\citet{bourdin2001filters}. The constants
+subproblem. The SIMP-style continuation in $p_{\mathrm{SIMP}}$ and the
+regularization terms control mesh-scale design features, following the role of
+filters in \citet{bourdin2001filters}. The constants
 $\alpha_{\mathrm{reg}}=\num{5e-3}$, $\ell_{\mathrm{pf}}=\num{8e-2}$, and
 $\mu_{\mathrm{move}}=\num{1e-2}$ set the phase-field and latent-move terms.
 These are algorithmic choices of this benchmark, not standard SIMP notation.
+
+For topology, the relevant notion of ``convergence'' is this reduced objective
+history rather than a single equilibrium energy. Let
+$\theta_{\mathcal{D}}^{m,-}$ and $\theta_{\mathcal{D}}^{m,+}$ denote the active
+design-node density vectors before and after the $m$th design solve. The
+reported design-change diagnostic is
+$\|\theta_{\mathcal{D}}^{m,+}-\theta_{\mathcal{D}}^{m,-}\|_2/
+\max(1,\|\theta_{\mathcal{D}}^{m,-}\|_2)$, and the state-change diagnostic is
+the same relative norm between consecutive pre-design density vectors
+$\theta_{\mathcal{D}}^{m,-}$ and $\theta_{\mathcal{D}}^{m-1,-}$.
 
 The reported topology runs use at most $2000$ outer iterations. Each mechanics
 step uses FGMRES with GAMG preconditioning, relative KSP tolerance $10^{-4}$,
@@ -1333,8 +1376,8 @@ to \eqref{eq:topology-reduced-objective}, with at most $20$ design iterations,
 golden-section line search on a bounded step interval, function tolerance
 $10^{-6}$, gradient tolerance $10^{-3}$, and line-search interval tolerance
 $10^{-1}$. The outer stopping rule requires either the fixed-schedule cap or,
-after $p\ge 4$, both the state-change and design-change diagnostics defined
-below to be at most $10^{-6}$.
+after $p_{\mathrm{SIMP}}\ge 4$, both the state-change and design-change
+diagnostics to be at most $10^{-6}$.
 
 \begin{figure}[!htbp]
   \centering
@@ -1349,7 +1392,8 @@ below to be at most $10^{-6}$.
   \includegraphics[width=\PaperFigureNarrow]{topology_history.pdf}
   \caption{Objective-history view for the frozen reduced topology objective
   \eqref{eq:topology-reduced-objective}, with compliance on the left axis and
-  volume fraction plus the continuation schedule in $p$ on the right axis.}
+  volume fraction plus the continuation schedule in $p_{\mathrm{SIMP}}$ on the
+  right axis.}
   \label{fig:topology-history}
 \end{figure}
 
@@ -1371,18 +1415,10 @@ iterations under the continuation logic shown in \Cref{fig:topology-history}.
 The target volume is imposed through the adaptive multiplier and stopping rule,
 so the endpoint volume is reported as an achieved value rather than as an exact
 equality-constraint satisfaction claim.
-For topology, the relevant notion of ``convergence'' is this reduced objective
-history rather than a single equilibrium energy. Let
-$\theta_{\mathcal{D}}^{m,-}$ and $\theta_{\mathcal{D}}^{m,+}$ denote the active
-design-node density vectors before and after the $m$th design solve. The
-reported design-change diagnostic is
-$\|\theta_{\mathcal{D}}^{m,+}-\theta_{\mathcal{D}}^{m,-}\|_2/
-\max(1,\|\theta_{\mathcal{D}}^{m,-}\|_2)$, and the state-change diagnostic is
-the same relative norm between consecutive pre-design density vectors
-$\theta_{\mathcal{D}}^{m,-}$ and $\theta_{\mathcal{D}}^{m-1,-}$. The reported
-continuation starts at SIMP exponent $p=1$, increases $p$ by $0.2$ on each
-outer iteration up to $p=10$, and treats the fine-grid configuration as stalled
-once $p\ge 4$ and both diagnostics are at most $10^{-6}$. Adaptive timing
+The reported continuation starts at SIMP exponent $p_{\mathrm{SIMP}}=1$,
+increases $p_{\mathrm{SIMP}}$ by $0.2$ on each outer iteration up to
+$p_{\mathrm{SIMP}}=10$, and treats the fine-grid configuration as stalled once
+$p_{\mathrm{SIMP}}\ge 4$ and both diagnostics are at most $10^{-6}$. Adaptive timing
 across MPI rank counts and a controlled rank-consistency check for the same
 family are reported in \Cref{sec:num-topology}.
 

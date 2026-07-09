@@ -58,7 +58,9 @@ similarly be read as solver-sensitivity tests, not as external baselines.
 Together, these distinctions delimit the contribution. We present a nonlinear
 FEM toolset that couples JAX-based local differentiation with PETSc sparse
 distributed solvers, and we evaluate that coupling with comparison designs that
-specify their own limits. The results support this toolset and its
-coupled solver-comparison discipline for the tested benchmark classes. They do not imply that
-a single backend, globalization policy, preconditioner, or derivative
-construction dominates nonlinear finite-element computations in general.
+specify their own limits. The results support the toolset as an evaluation
+framework for the tested benchmark classes: derivative route, assembly,
+globalization, Krylov algebra, and preconditioning are reported as coupled
+numerical choices. They do not imply that a single backend, globalization
+policy, preconditioner, or derivative construction dominates nonlinear
+finite-element computations in general.

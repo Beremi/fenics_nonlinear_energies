@@ -143,16 +143,16 @@ evaluate local stencils but not to duplicate ownership. Scalar energy values in
 the numerical tables are global reductions for the corresponding solver
 configuration; the ownership rule here concerns derivative and matrix
 assembly. Here $\mathcal{G}_i(u)$ and $\mathcal{A}_{ij}(u)$ are assembled residual and
-tangent entries, while $r_{K,i}$ and $a_{K,ij}$ are element contributions.
+tangent entries, while $r_{e,i}$ and $a_{e,ij}$ are element contributions.
 Equivalently, if
-$\mathcal{T}_r=\{K:\operatorname{dofs}(K)\cap I_r\ne\emptyset\}$ and
-$R_K$ is the element restriction from the ghosted rank state to element $K$,
-then $u_K=R_Ku_{\widetilde I_r}$ and rank $r$ inserts
+$\mathcal{T}_r^{\mathrm{loc}}=\{e:\operatorname{dofs}(e)\cap I_r\ne\emptyset\}$
+and $R_e$ is the element restriction from the ghosted rank state to element $e$,
+then $u_e=R_eu_{\widetilde I_r}$ and rank $r$ inserts
 \[
-  \mathcal{G}_i(u)=\sum_{K\in\mathcal{T}_r:\,i\in\operatorname{dofs}(K)}
-    r_{K,i}(u_K),\qquad
-  \mathcal{A}_{ij}(u)=\sum_{K\in\mathcal{T}_r:\,i,j\in\operatorname{dofs}(K)}
-    a_{K,ij}(u_K),
+  \mathcal{G}_i(u)=\sum_{e\in\mathcal{T}_r^{\mathrm{loc}}:\,i\in\operatorname{dofs}(e)}
+    r_{e,i}(u_e),\qquad
+  \mathcal{A}_{ij}(u)=\sum_{e\in\mathcal{T}_r^{\mathrm{loc}}:\,i,j\in\operatorname{dofs}(e)}
+    a_{e,ij}(u_e),
   \quad i\in I_r,\; j\in \widetilde I_r,
 \]
 and uses ghost columns only through the local stencil. This communication order

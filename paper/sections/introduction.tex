@@ -14,10 +14,11 @@ energy minimization and optimization. In the primary \jaxpetsc{} realization, JA
 defines local energies and constitutive laws, while PETSc provides sparse
 distributed algebra, nonlinear globalization, Krylov methods, and
 preconditioners. We use comparison evidence in scoped roles: internal
-formulation checks, a narrow endpoint companion comparison, and plasticity
-literature context. The \purejax{} and \fenics{} formulations provide internal
-checks where matched benchmark definitions exist. JAX-FEM \citep{xue2023jaxfem}
-supplies the hyperelastic endpoint-state comparison. The Sysala-family
+formulation checks, a narrow endpoint companion comparison, plasticity
+reference-model context, and legacy MATLAB implementation context. The
+\purejax{} and \fenics{} formulations provide internal checks where matched
+benchmark definitions exist. JAX-FEM \citep{xue2023jaxfem} supplies the
+hyperelastic endpoint-state comparison. The Sysala-family
 slope-stability literature
 \citep{sysala2017returnmapping,sysala2021optimization,sysala2025convexoptimization,sysala2025advancedcontinuation}
 provides reference-model context for the plasticity endpoint observables. The
@@ -31,8 +32,11 @@ Our contribution is a \jaxpetsc{} realization and numerical study that
 treats derivative construction, MPI sparse assembly, nonlinear globalization,
 and preconditioning as coupled design choices for nonlinear FEM energy
 minimization. The central thesis is that derivative construction should be
-evaluated inside the sparse nonlinear solve that consumes it. We support this
-thesis through three technical components:
+evaluated inside the sparse nonlinear solve that consumes it. The study also
+encodes solver expertise through controlled selection and reporting of
+derivative routes, assembly ownership, globalization, Krylov tolerances, and
+preconditioners under fixed benchmark definitions. We support this thesis
+through three technical components:
 \begin{enumerate}
   \item \textbf{An integrated derivative--assembly path.} We show how local
         JAX energy or constitutive evaluations can feed PETSc-owned sparse MPI
@@ -44,10 +48,10 @@ thesis through three technical components:
         held fixed while derivative-route and associated assembly or recovery
         costs are compared.
   \item \textbf{Solver-policy evidence across model classes.} We study
-        line-search, trust-region, Krylov, algebraic-multigrid, direct-coarse,
-        and polynomial-multigrid choices on scalar, mechanics, plasticity, and
-        topology benchmarks, with conclusions restricted to the tested
-        benchmark definitions.
+        nonlinear globalization choices, Krylov and preconditioner choices, and
+        multigrid or coarse-solver choices across selected scalar, mechanics,
+        plasticity, and topology cases, with conclusions restricted to the
+        tested benchmark definitions.
 \end{enumerate}
 
 Relative to the JAX-native differentiable FEM, FEM-adjoint, and bridge

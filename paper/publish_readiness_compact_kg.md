@@ -116,196 +116,42 @@ not resolve the final durable archive/DOI blocker.
 
 ## Recent Audit State
 
-- Message and comparator scope: the scientific-toolset message is clear.
-  Comparators remain scoped to internal consistency checks, narrow external
-  companion comparisons, or literature context rather than universal baselines.
-- Mathematical exposition: recent fixes define Plasticity2D/3D surrogate
-  notation before use, split true reduced objectives from frozen design
-  subproblems, define topology design/pad node sets, keep topology notation
-  separate from mechanics notation, define AD/AD-HVP and distributed ownership
-  explicitly, and treat displayed equations as sentence parts.
-- Evidence scope: no small missing experiment is required for the current claims.
-  Plasticity3D remains endpoint-surrogate evidence; topology reports adaptive
-  end-to-end timing plus a controlled rank-consistency check; scalar FEniCS
-  curves are reference-implementation context for derivative-route results.
-- Provenance: the local submission-bundle manifest is a committed paper-source
-  anchor. `paper/scripts/check_submission_bundle_manifest.py` now fails if
-  manuscript, generated-table, generated-figure, or bundle-generator paths have
-  changed after the manifest's recorded `git_commit`. Refresh the bundle after
-  committing such changes. Final archive/DOI integration remains unresolved.
-- Layout: the current A4 PDF has no known hard rendering blocker after the last
-  completed build. Only the three method algorithms remain intentionally
-  hard-pinned with `[H]`; problem-specific Results, Validation, Benchmark, and
-  Appendix floats are now broadly flexible. Remaining layout risks are
-  target-template driven: dense result pages, figure/table compression, and page
-  budget after venue conversion.
-- Earlier page-budget/evidence pass: the roadmap and related-work transition
-  are shorter, the standalone Armijo pseudocode was removed while preserving the
-  solver-policy prose and citations, comparator-role citations were moved into
-  the opening scope paragraph, and topology rank-consistency wording now uses a
-  one-rank reference solve. That pass rebuilt a 44-page A4 article.
-- Earlier thematic polish pass: Results now opens with a shorter protocol
-  transition, generated protocol-table cells use paper-facing wording, Methods
-  defines the Armijo, bounded-merit, and residual-bisection line-search
-  acceptance policies, Implementation includes an owned-row residual/matrix
-  assembly display, and Discussion/Conclusion synthesize rather than re-list
-  exact result numbers. No small missing experiment is required for current
-  claims; path-history plasticity validation remains future work.
-- Earlier last-mile pass: rendered/source scans found no high-priority
-  paper-facing leaks. Recent fixes expand hyperelasticity scaling acronyms,
-  sharpen residual-bisection and owned-row assembly notation, standardize nearby
-  `\lambda_{\mathrm{sr}}` numeric styling, and clarify Plasticity3D validation
-  table status text. That pass rebuilt a 44-page A4 article.
-- Earlier paper-facing tone/notation pass: subagent audits found no hard local
-  path or campaign-tag leaks. Integrated fixes define the owned-row assembly
-  residual/tangent symbols before use, define
-  `\varepsilon_{eq}(u_e)=B_{eq}u_e` in the Plasticity3D surrogate, name the
-  matched comparator as an independent reference-formula assembly path, replace
-  residual run-log wording with configuration/comparison language, and narrow the
-  conclusion to the tested nonlinear energy families. The rebuilt PDF is now a
-  45-page A4 article.
-- Earlier float-concision and notation pass: subagent audits reduced the hard
-  float allowlist from 12 problem/method floats to the three method algorithms,
-  shortened dense Results and Conclusion prose without changing evidence, added
-  the Plasticity2D deviatoric engineering-strain invariant, clarified frozen
-  design-state notation, cleaned generated figure/table wording, and narrowed
-  topology rank-consistency language to observed discrepancies in the controlled
-  40-iteration case. The rebuilt PDF remains a 45-page A4 article; rendered
-  pages 16--19 and 25--42 were visually checked.
-- Current message/math/evidence/layout pass: subagent audits tightened the
-  abstract and contribution thesis, added a motivation bridge before the
-  related-work role table, separated Sysala-family reference-model context from
-  \v{C}ermak--Sysala--Valdman implementation context, split reduced and frozen
-  objective notation, replaced visible colored-SFD wording with colored
-  sparse-recovery / AD-HVP wording, standardized reference-formula and
-  frozen-preconditioner PMG terminology, added a discrete-norm definition for
-  validation metrics, renamed the Plasticity2D local stress vector to
-  `d_\sigma`, narrowed Plasticity3D validation wording to the
-  highest-successful-load value on the tested grid, and relaxed layout barriers
-  that isolated benchmark floats. The rebuilt PDF is a 44-page A4 article;
-  rendered pages 8--23, 26--38, and page 34 were visually checked.
-- Current SIOPT-scope and self-containment pass: Bohr/Plato/Euler/Hypatia
-  audits found no current A4 layout blocker and no small missing experiment for
-  the present claims. Integrated fixes narrow the abstract and related-work
-  novelty language to the tested suite, make the conclusion synthesize rather
-  than inventory sections, define the Plasticity2D repeated-principal-stress
-  direction convention, specify the topology multiplier quantile and
-  correction initialization, define topology design/state-change diagnostics,
-  correct the Ginzburg--Landau energy-evidence attribution, and keep the
-  benchmark-specification table paper-facing. Remaining layout risks are
-  target-template risks: dense Results table clusters, the Hyperelasticity
-  PMG/memory block, Plasticity3D degree/scaling figures and tables, and
-  FloatBarrier behavior after venue conversion.
-- Current reporting-terminology and notation pass: Euclid/Huygens/Bacon/Popper
-  audits found no must-fix message blocker, no small missing experiment, and no
-  current A4 layout blocker. Integrated fixes clarify comparator roles in the
-  abstract, include bridge architectures in the introduction positioning,
-  replace row/run phrasing with evidence-facing entries/configurations,
-  standardize Plasticity3D fixed-`\lambda_{\mathrm{sr}}` and strength-reduction
-  terminology, define the boundary normal and quadrature-count notation, make
-  the topology frozen local-compliance expression elementwise, define the
-  hyperelastic centerline and Plasticity3D boundary-profile samples used in
-  validation metrics, and correct p-Laplace, Ginzburg--Landau, and
-  Plasticity3D evidence attribution. The current A4 layout remains clean; dense
-  Results tables, the Hyperelasticity PMG/memory cluster, Plasticity3D
-  degree/scaling material, appendix Table 30, and FloatBarrier behavior remain
-  target-template risks only.
-- Current self-containment and hygiene pass: Wegener/Galileo/Boole/Ptolemy
-  audits found no message/citation must-fix and no current A4 layout blocker.
-  Integrated fixes replace remaining reader-facing terminal-state and row/table
-  mechanics wording with endpoint-state, entry, case, or configuration wording,
-  including generated hyperelastic figure labels; make the validation
-  curve/profile sample sets reproducible in prose; rewrite the owned-row
-  assembly display with an element-restricted state; state the Plasticity2D
-  in-plane stress pair behind the branch return and the Plasticity3D
-  bottom-clamped test space; make the Plasticity3D CPU scaling table narrower
-  by dropping redundant solve-time and absolute stopping-gradient columns; tune
-  the Plasticity3D 3D tick labels and regenerate the hyperelastic state figure
-  near its final include width; cite the
-  Sysala-family and \v{C}ermak--Sysala--Valdman reference line at the
-  Plasticity3D path-history limitation; narrow the conclusion's validation
-  discipline to the tested nonlinear FEM energy benchmarks; and remove the
-  abstract's broad "best evaluated" phrasing. Current A4 layout remains clean;
-  target-template risks now additionally include benchmark Tables 4 and 6, the
-  compact validation page, the topology results page, and the previously noted
-  dense Results/Hyperelasticity/Plasticity3D/appendix clusters.
-- Current thesis, evidence-scope, notation, and layout pass:
-  Pascal/Hume/Parfit/Dewey audits found no hard A4 blocker but identified
-  publish-readiness polish issues. Integrated fixes make the central thesis
-  consistent: derivative construction is evaluated inside the sparse nonlinear
-  solve that consumes it. The abstract now delays comparator caveats until after
-  the method/evidence arc, the introduction names the three comparison roles
-  (internal checks, endpoint companion comparisons, reference-model or
-  implementation context), related work states the missing combined comparison
-  contract, and the conclusion closes with evidence anchors rather than a
-  separate validation-discipline thesis. Evidence-scope fixes remove the
-  overbroad active-free-DOF claim from the direct Plasticity3D branch diagnostic,
-  keep exact active-DOF matching only for the fixed-`\lambda_{\mathrm{sr}}`
-  diagnostic, rename the validation "boundary profile" to an upper-slope
-  coordinate profile, broaden the benchmark reported-scope table to include
-  later L10/L5 diagnostics, and state that the topology rank-consistency check is
-  smaller and fixed-schedule. Mathematical-polish fixes define KSP/PMG/MUMPS/Hypre
-  before use in Methodology, change assembled residual notation to
-  `\mathcal{R}_i` to avoid collision with element restrictions, clarify the
-  2D plasticity in-plane deviatoric visualization norm, replace Ginzburg--Landau
-  "branch selection" with selected stationary basin, soften topology
-  connectedness to a displayed density pattern, and replace appendix "low-rank"
-  with small MPI-rank-count. Layout polish shortens the JAX-FEM subcaption that
-  hyphenated visibly. `paper/scripts/generate_paper_tables.py` is the source for
-  generated table edits; a full rerun requires the tracked submission-bundle
-  inputs, so do not delete those bundle files during table work.
-- Final local cleanup pass:
-  Planck/Nash/Boyle/Lorentz audits found no new experiment requirement but did
-  identify remaining publish-readiness polish. Integrated fixes replace visible
-  `Plasticity2D`/`Plasticity3D` manuscript labels with 2D/3D Mohr--Coulomb or
-  3D plasticity wording, shorten dense Results interpretation blocks, introduce
-  the constrained discrete plasticity spaces before the surrogate energies,
-  define topology `\nu`, make the topology mechanics trial space homogeneous,
-  define the stopping-gradient ratio before use, and align validation norm
-  wording with the actual unweighted Euclidean curve comparisons. Generated
-  table headers now use `Reported time [s]` consistently, the stale hard-float
-  unit test now matches the current allowlist of three method algorithms, and
-  `make -C paper submission-bundle` documents the bundle-refresh step. Figure
-annotations for the hyperelastic centerline and 3D plasticity `u_{\max}` curve
-now use `rel. Eucl.` to match the prose. The submission bundle was rebuilt and
-the manifest verifies; it records a committed source-control anchor plus current
-file hashes for the curated bundle. Rendered
-checks of pages 25 and 27 and the late-results pages 31--38 found no clipping
-or unreadable updated labels.
-- Final provenance/math/layout gate pass:
-  Poincare found no message/comparator issue. Locke found local mathematical
-  polish items now fixed: validation defines the two `u_{\max}` curve sample
-  vectors, topology uses the frozen-objective notation
-  `\mathcal{J}_h^m(z_h;u_h^m)`, Results avoids calling a converged comparison
-  a fixed-work diagnostic, and the $p$-Laplace Results reference now points to
-  the discrete problem. Meitner found a fragile `0.0` tick on the 3D plasticity
-  validation colorbar; the figure generator adds left padding and the figure/PDF
-  were regenerated. Ampere found the stale bundle-manifest anchor; the manifest
-  checker now enforces freshness for paper bundle-refresh paths, with unit-test
-  coverage for stale commits.
-- Final style/literature gate pass:
-  Pauli/Helmholtz/Ptolemy/Beauvoir/Kierkegaard audits found no small missing
-  experiment and no remaining A4 clipping blocker. Integrated fixes replace
-  conclusion process wording with scientific contribution wording, define
-  topology volume and `\theta_h^m` before use, define `e_j` and `R_K`, make
-  plasticity load-increment indices local, report topology density consistency
-  as a grid `\ell_2` diagnostic, correct the DOLFINx Zenodo record DOI, add a
-  `literature-check` gate, and make the submission-bundle freshness checker
-  track bibliography and literature-source changes. The derivative-route table
-  is now a normal float followed by a `\FloatBarrier`, so the LaTeX warning scan
-  is clean while table interpretation remains after the table. The current PDF is
-  a 45-page A4 article.
-- Current thematic polish pass:
-  Arendt/Avicenna/Turing/Faraday audits found no immediate experiment to run,
-  but identified self-containment, evidence, and layout polish. Integrated fixes
-  define hyperelastic end faces, the 3D material-region partition, engineering
-  shear versus material unit weight, zero previous/history variables for the 3D
-  endpoint surrogate, and the 2D principal-basis compliance block. Evidence
-  tables now expose validation gates, the $\lambda_{\mathrm{sr}}=\num{1.0}$
-  scaling stop target/status, and topology adaptive schedule/status. A
-  `\FloatBarrier` after the 3D benchmark table keeps the interpretation in
-  reading order. The rebuilt 45-page A4 PDF has a clean warning scan; pages
-  21--23, 27--28, and 37--40 were rendered and checked.
+- Current message: the manuscript now presents a scientific nonlinear FEM
+  toolset plus numerical expertise, not a codebase report. The mainline is the
+  JAX+PETSc realization; pure JAX, FEniCS, JAX-FEM, Sysala-family papers, and
+  the \v{C}ermak--Sysala--Valdman MATLAB work are scoped comparators or
+  context, not universal baselines.
+- Current mathematical state: recent passes define the p-Laplace discrete space
+  before use, separate plasticity source-model notation from endpoint
+  surrogates, align plasticity work with free coefficient-vector notation, use
+  element index `e` in distributed assembly to avoid conflict with bulk modulus
+  `K`, define topology diagnostics before the stopping rule, and reference the
+  effective-volume multiplier explicitly.
+- Current evidence state: subagent evidence audits found no unsupported
+  manuscript claim and no small missing experiment needed for the current
+  evidence surface. Plasticity3D remains endpoint-surrogate evidence; topology
+  has no positive pure-JAX/JAX+PETSc agreement claim and should keep relying on
+  the JAX+PETSc rank-consistency check.
+- Current layout state: the latest read-only A4 render audit found no hard
+  blocker: 45 pages, embedded Type 1 fonts, no Type 3 fonts, no overfull or
+  underfull warnings, and raster layers at 600 ppi or better. Polish/risk items
+  are target-template dependent: an under-filled page after the Plasticity3D
+  state figure, dense protocol and late-results tables, and full-width
+  multi-panel figures that should not be shrunk blindly.
+- Current provenance state: the submission-bundle manifest is intentionally
+  stale while manuscript/table-source edits are dirty. After the current source
+  edits are finalized, commit them, rerun `make -C paper submission-bundle`, and
+  commit the refreshed manifest. Final archive/DOI/license/template decisions
+  remain external blockers.
+- Current generator state: the Plasticity3D validation table summary is now
+  data-driven rather than hard-coded. Regenerate generated tables before the next
+  build/check cycle.
+- Prior completed passes: older audits already removed process-local wording,
+  tightened comparator scope, reduced hard floats to the three method
+  algorithms, clarified validation norms and topology diagnostics, refreshed
+  generated figures/tables, added literature and bundle freshness gates, and
+  rebuilt clean 44--45 page A4 PDFs. Use git history or the long audit log for
+  details; do not re-expand this compact section.
 
 ## Figure And Table Rules
 
