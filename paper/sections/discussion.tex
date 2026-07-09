@@ -13,8 +13,8 @@ distributed timing evidence support performance and solver-policy claims.
 The high-order three-dimensional plasticity derivative-route ablation is the
 fixed-work example with the most complete derivative-route separation; see
 \Cref{fig:plasticity3d-derivative-ablation,tab:plasticity3d-derivative-ablation}.
-On this fixed endpoint problem, the three derivative routes preserve the
-reported endpoint observables and iteration counts. The comparison therefore
+On this fixed endpoint problem, the three derivative routes match the reported
+endpoint observables and iteration counts. The comparison therefore
 isolates derivative-route cost only after the residual, Jacobian,
 preconditioner, and nonlinear stopping policy have been fixed.
 
@@ -28,9 +28,9 @@ assessed inside the assembled sparse nonlinear solve that will use it.
 The hyperelastic JAX-FEM comparison in
 \Cref{fig:hyperelasticity-jaxfem-baseline,tab:hyperelasticity-jaxfem-baseline}
 is useful because the mesh, displacement schedule, and endpoint-energy
-post-comparison are explicitly matched. The three-dimensional plasticity
+comparison are explicitly matched. The three-dimensional plasticity
 comparison in \Cref{fig:plasticity3d-validation,tab:plasticity3d-validation}
-uses a different agreement criterion: the highest-successful-load value on the
+uses a different agreement criterion: the largest converged load value on the
 tested grid, the
 $u_{\max}(\lambda_{\mathrm{sr}})$ curve, and endpoint displacement satisfy the
 stated criteria, while deviatoric-strain and upper-slope profile comparisons serve
@@ -58,7 +58,7 @@ similarly be read as solver-sensitivity tests, not as external baselines.
 Together, these distinctions delimit the contribution. We present a nonlinear
 FEM toolset that couples JAX-based local differentiation with PETSc sparse
 distributed solvers, and we evaluate that coupling with comparison designs that
-specify their own limits. The results support the toolset as an evaluation
+specify their own limits. The results support this toolset as an evaluation
 framework for the tested benchmark classes: derivative route, assembly,
 globalization, Krylov algebra, and preconditioning are reported as coupled
 numerical choices. They do not imply that a single backend, globalization

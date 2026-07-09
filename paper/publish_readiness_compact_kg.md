@@ -136,20 +136,20 @@ not resolve the final durable archive/DOI blocker.
   matching energy and Newton/Krylov work, Plasticity2D state wording is visual
   rather than externally validated, Plasticity3D remains endpoint-surrogate
   evidence, and topology keeps relying on the JAX+PETSc rank-consistency check.
-- Current layout state: the latest full build is a 45-page A4 article with a
+- Current layout state: the latest full build is a 46-page A4 article with a
   clean LaTeX warning scan, embedded Type 1 fonts, clean aux-order and hard-float
   checks, and `qpdf --check` passing. Polish/risk items remain target-template
   dependent: an under-filled page after the Plasticity3D state figure, dense
   protocol and late-results tables, and full-width multi-panel figures that
   should not be shrunk blindly.
-- Current provenance state: the submission-bundle manifest is intentionally
-  stale while manuscript/PDF edits are dirty. After the current source edits are
-  finalized, commit them, rerun `make -C paper submission-bundle`, and commit the
-  refreshed manifest. Final archive/DOI/license/template decisions remain
-  external blockers.
-- Current generator state: the Plasticity3D validation table summary is now
-  data-driven rather than hard-coded. Regenerate generated tables before the next
-  build/check cycle.
+- Current provenance rule: manuscript, generated-table, generated-figure, or
+  bundle-generator edits make the submission-bundle manifest stale until those
+  edits are committed, `make -C paper submission-bundle` is rerun, and the
+  refreshed manifest is committed. Final archive/DOI/license/template decisions
+  remain external blockers.
+- Current generator state: the Plasticity3D validation table summary is
+  data-driven rather than hard-coded. Regenerate generated tables after any
+  table-source or table-generator edit.
 - Prior completed passes: older audits already removed process-local wording,
   tightened comparator scope, reduced hard floats to the three method
   algorithms, clarified validation norms and topology diagnostics, refreshed
@@ -195,7 +195,7 @@ external release decisions:
 - durable software/artifact archive;
 - archival DOI in the availability statement.
 
-The current PDF is a 45-page A4 article. Page budget and float behavior must be
+The current PDF is a 46-page A4 article. Page budget and float behavior must be
 rechecked after target-template conversion.
 
 Deferred layout risks from the 2026-07-09 audits are now target-template risks

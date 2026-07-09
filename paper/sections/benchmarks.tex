@@ -281,8 +281,8 @@ Hyperelasticity is the first benchmark where finite-strain mechanics and
 nonlinear globalization become central. The literature model is a standard
 finite-strain equilibrium problem written in terms of a displacement $u$ and
 deformation $y_u(X)=X+u(X)$. We define the deformation gradient
-$F(u)=I+\nabla u$, its determinant $J(u)=\det F(u)$, and the compressible
-Neo-Hookean-type density
+$F(u)=I+\nabla u$, its determinant $J(u)=\det F(u)$, and material constants
+$C_1,D_1>0$. The compressible Neo-Hookean-type density is
 \[
   W(F) :=
   C_1 \left( \operatorname{tr}(F^\top F) - 3 - 2\ln\det F \right)
@@ -450,7 +450,8 @@ equations at increment $n+1$ are
 \end{equation}
 where $\sigma^{n+1}$ and the internal variables are obtained from the
 elastoplastic update driven by $\varepsilon^{\mathrm{ten}}(u^{n+1})$ and the
-previous state.
+previous state, and $t^{n+1}$ is the prescribed Neumann traction. In the
+reported endpoint solves, $t^{n+1}=0$ on $\Gamma_N$.
 
 The endpoint studies set the old plastic strain to zero at all quadrature
 points. The homogeneous test space $V_0$ contains functions with $v_x=0$ on
@@ -466,9 +467,9 @@ The corresponding weak form is
 \end{equation}
 
 The computations reported here are endpoint solves, not path-consistent
-incremental histories. Accordingly, we first define the local Davis-B reduction
-and branch potential, and then assemble them into the scalarized discrete
-surrogate in \eqref{eq:plasticity2d-discrete}.
+incremental histories. Accordingly, we first define Davis's case-B (Davis-B)
+strength-reduction mapping and the branch potential, and then assemble them into
+the scalarized discrete surrogate in \eqref{eq:plasticity2d-discrete}.
 
 The two-dimensional branch formulas use the engineering Voigt strain
 $\varepsilon^{\mathrm{eng}}
@@ -495,12 +496,11 @@ $(\sigma_{xx},\sigma_{yy},\tau_{xy})$, so principal stresses below are the two
 ordered in-plane values
 $\sigma_1^{\mathrm{tr}}\ge\sigma_2^{\mathrm{tr}}$.
 
-The benchmark uses a Davis-B-style reduction path, with the Davis citation used
-as historical lineage and the formula context taken from later strength-reduction
-descriptions
+We use Davis's case-B strength-reduction mapping, following later
+strength-reduction descriptions
 \citep{davis1968plasticity,tschuchnigg2015nonassociated,sysala2021optimization},
-to map the unreduced
-cohesion and angles to reduced values under strength reduction. Let
+to map the unreduced cohesion and angles to reduced values under strength
+reduction. Let
 $\lambda_{\mathrm{sr}}>0$ denote the strength-reduction factor, distinct from the
 Lam{\'e} parameter used later in three dimensions. With
 $c_0,\phi,\psi$ denoting the unreduced cohesion, friction angle, and dilation
@@ -740,7 +740,7 @@ where $\sigma^{n+1}$ and the internal variables are obtained from the
 elastoplastic update driven by $\varepsilon^{\mathrm{ten}}(u^{n+1})$ and the
 previous state.
 
-The heterogeneous benchmark uses a mesh-labeled material partition
+The heterogeneous benchmark uses a material partition
 $\Omega=\bigcup_{m=0}^3\Omega_m$. The labels
 $m=0,1,2,3$ denote, respectively, the cover layer, general foundation, weak
 foundation, and slope mass. Each tetrahedron belongs to one of these regions,
@@ -766,7 +766,7 @@ The elastic constants used below are
 \]
 
 The studied discrete model uses a heterogeneous tetrahedral mesh with four
-material physical groups, refined into the displayed mesh hierarchy and elevated
+material subdomains, refined into the displayed mesh hierarchy and elevated
 locally to same-mesh $P_1/P_2/P_4$ spaces. Let
 $\Gamma_1,\ldots,\Gamma_5$ denote the boundary label sets of the reference mesh.
 In coordinates $X=(X_1,X_2,X_3)$, the mesh bounding box is
@@ -1123,7 +1123,8 @@ provides reference-model context for that boundary.
   \centering
   \caption{All nine completed bottom-clamped 3D plasticity
   study cases at $\lambda_{\mathrm{sr}}=\num{1.55}$, reported as endpoint values of
-  \eqref{eq:plasticity3d-discrete}.}
+  \eqref{eq:plasticity3d-discrete}. The gradient-ratio column reports the final
+  free-DOF gradient norm divided by the nonlinear stopping target.}
   \label{tab:plasticity3d-benchmark}
   \input{tables/generated/plasticity3d_benchmark_summary.tex}
 \end{table}
@@ -1148,11 +1149,12 @@ along both mesh and degree refinements.
   \label{fig:plasticity3d-highest-slice}
 \end{figure}
 
-\Cref{fig:plasticity3d-highest-slice} adds a shared-scale slice comparison. The
-larger values of $\|\varepsilon_{\mathrm{dev}}\|$ remain localized near the same
-upper slope region across $P_1$, $P_2$, and $P_4$, so the later degree and
-timing comparisons are interpreted as endpoint-solver comparisons rather than
-changes of the physical problem.
+\Cref{fig:plasticity3d-highest-slice} adds a shared-scale slice comparison.
+Together with the common endpoint-surrogate definition, the slice indicates that
+the largest values of $\|\varepsilon_{\mathrm{dev}}\|$ remain localized near the
+same upper slope region across $P_1$, $P_2$, and $P_4$. The later degree and
+timing comparisons are therefore interpreted as endpoint-solver comparisons
+rather than changes of the physical problem.
 
 \FloatBarrier
 

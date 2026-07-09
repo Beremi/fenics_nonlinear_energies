@@ -95,10 +95,10 @@ algebraic objects.
 The benchmark families use different Krylov and preconditioner combinations
 because the Hessian and tangent systems have different definiteness, block
 structure, and coarse-level behavior. Here CG denotes conjugate gradients, GMRES
-generalized minimal residual, FGMRES flexible GMRES, GAMG PETSc's
-geometric-algebraic multigrid preconditioner, Hypre an algebraic
-multigrid/preconditioning backend, MUMPS a multifrontal sparse direct solver,
-and PMG polynomial multigrid:
+denotes generalized minimal residual, FGMRES denotes flexible GMRES, GAMG
+denotes PETSc's geometric-algebraic multigrid preconditioner, Hypre denotes an
+algebraic-multigrid/preconditioning backend, MUMPS denotes a multifrontal sparse
+direct solver, and PMG denotes polynomial multigrid:
 \begin{itemize}
   \item \textbf{$p$-Laplace:} the scalar positive-definite structure makes
         Newton--CG with algebraic multigrid a natural reference point for comparing

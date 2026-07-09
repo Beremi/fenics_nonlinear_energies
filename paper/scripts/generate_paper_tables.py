@@ -1676,7 +1676,7 @@ def main() -> None:
             "Element",
             "Free DOFs",
             "Energy",
-            "$\\|g\\|_{\\mathrm{final}}$/target",
+            "Gradient / target",
             "Wall time [s]",
             "Status",
         ],

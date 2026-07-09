@@ -98,7 +98,7 @@ three derivative routes:
         $\varepsilon_q$, holding fixed the active branch and the local material
         and history data $m_q$ selected from $\theta_q$, then assemble
         $r_e = \sum_q w_q B_q^\top \sigma_q$ and
-        $K_e = \sum_q w_q B_q^\top C_q B_q$, where
+        $A_e = \sum_q w_q B_q^\top C_q B_q$, where
         $\sigma_q := \partial_\varepsilon\mathcal{W}_q(\varepsilon_q,m_q)$ and
         $C_q := \partial^2_{\varepsilon\varepsilon}\mathcal{W}_q(\varepsilon_q,m_q)$;
   \item \textbf{colored sparse recovery:} recover sparse Hessian information
@@ -106,14 +106,12 @@ three derivative routes:
         (HVPs) and graph coloring.
 \end{enumerate}
 
-Element AD is the most literal route and is often the cleanest mathematically.
-Constitutive AD preserves the same defining scalar-energy expression but changes
-the differentiation boundary from the full element vector to the local strain
-state. This is especially effective for high-order plasticity, where the full
-element Hessian is often much more expensive than the $6\times6$
-constitutive tangent. The reported colored sparse-recovery configurations use
-AD-HVP probes; finite-difference gradient probes are the classical sparse
-finite-difference variant.
+Element AD is the most literal route. In the reported high-order plasticity
+cases, constitutive AD preserves the same defining scalar-energy expression but
+changes the differentiation boundary from the full element vector to the local
+strain state and $6\times6$ constitutive tangent. The reported colored
+sparse-recovery configurations use AD-HVP probes; finite-difference gradient
+probes are the classical sparse finite-difference variant.
 
 \subsection{Newton--Krylov globalization}
 
@@ -200,7 +198,9 @@ relative KSP residual tolerance summarized in
 the policy varies. Failed linear solves and non-descent directions are handled
 by the stated globalization safeguard or reported as capped solver behavior.
 
-For the converged bottom-clamped three-dimensional plasticity scaling
+Here $\lambda_{\mathrm{sr}}$ denotes the plasticity strength-reduction factor
+defined in \cref{sec:bench-plasticity3d}. For the converged bottom-clamped
+three-dimensional plasticity scaling
 configuration reported in this paper, the chosen policy is simpler: Newton with
 Armijo backtracking and a same-mesh polynomial-multigrid
 $P_4\to P_2\to P_1$ hierarchy for the flexible-GMRES linear solve
@@ -209,8 +209,6 @@ $\lambda_{\mathrm{sr}}=\num{1.55}$ scaling profile uses a redundant LU/MUMPS
 coarse solve and PETSc relative KSP tolerance \num{1e-2}; the auxiliary
 $\lambda_{\mathrm{sr}}=\num{1.0}$ timing configurations use the Hypre
 algebraic-multigrid coarse PMG profile.
-Here $\lambda_{\mathrm{sr}}$ is the plasticity strength-reduction factor
-defined in \cref{sec:bench-plasticity3d}.
 
 The numerical tables use a small common reporting vocabulary, summarized in
 \Cref{tab:solver-reporting-protocol}. These terms are part of the experimental
@@ -307,7 +305,7 @@ so $\sigma_q$ is dual to the chosen strain vector.
     \State Obtain tangent $C_q = \partial^2_{\varepsilon\varepsilon}\mathcal{W}_q(\varepsilon_q,m_q)$
   \EndFor
   \State Assemble $r_e = \sum_q w_q B_q^\top \sigma_q$
-  \State Assemble $K_e = \sum_q w_q B_q^\top C_q B_q$
+  \State Assemble $A_e = \sum_q w_q B_q^\top C_q B_q$
 \EndFor
 \end{algorithmic}
 \end{algorithm}

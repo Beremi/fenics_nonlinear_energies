@@ -16,10 +16,11 @@ constructing second-order information, and measure their interaction with PETSc
 assembly, nonlinear globalization, Krylov solvers, and preconditioners. In the
 fixed high-order three-dimensional plasticity derivative-route case,
 constitutive AD has the lowest measured wall time among the tested routes while
-preserving endpoint energy, external-work, and maximum-displacement observables. The
-distributed mechanics examples give MPI timing and solver-policy evidence, and
-the topology example tests compliance and density consistency across MPI ranks
-under a controlled fixed-iteration protocol. Scoped comparators supply context:
+matching the reported endpoint energy, external-work, and maximum-displacement
+observables to displayed precision. The distributed mechanics examples report
+MPI timings and solver-policy sensitivities, and the topology example tests
+compliance and density consistency across MPI ranks under a controlled
+fixed-iteration protocol. Scoped comparators supply context:
 matched \purejax{} and \fenics{} formulations provide internal checks where
 available, JAX-FEM gives a narrow hyperelastic endpoint-state comparison, the
 Sysala-family works provide plasticity reference-model context, and the
