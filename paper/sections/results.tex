@@ -16,36 +16,41 @@ treated as performance evidence rather than validation evidence.
 choice on four benchmark configurations using the same element assembly path
 and fixed preconditioner family within each problem. The scalar cases use
 level-10 meshes obtained by one additional uniform refinement of the level-9
-inputs. For $p$-Laplace, the comparison uses 32 MPI ranks with a 30 s wall-time
-cap. For Ginzburg--Landau, the reported comparison uses 16 MPI ranks with a
-120 s wall-time cap. For hyperelasticity, the comparison uses the first eight
-load steps of the level-4 rank-local assembly path on 32 MPI ranks with a
-270 s cap. The Plasticity3D
-comparison uses the $P_2(L_1)$ endpoint surrogate at
+inputs. The $p$-Laplace globalization row is a separate unit-load
+($f=-1$) stress test on the same L-shaped hierarchy, so its energies are not
+compared with the $f=-10$ benchmark and scaling rows in
+\Cref{sec:bench-plaplace,sec:num-plaplace}. For $p$-Laplace, the comparison
+uses 32 MPI ranks with a 30 s wall-time cap. For Ginzburg--Landau, the reported
+comparison uses 16 MPI ranks with a 120 s wall-time cap. For hyperelasticity,
+the comparison uses the first eight load steps of the level-4 rank-local
+assembly path on 32 MPI ranks with a 270 s cap. The Plasticity3D comparison
+uses the $P_2(L_1)$ endpoint surrogate at
 $\lambda_{\mathrm{sr}}=1.55$ on 32 MPI ranks with a 180 s cap. Timed-out
 configurations are retained in the comparison; the table uses solver-reported
-solve time for completed solves and elapsed wall time for timed-out cases. In the
-line-search configurations the trust-region machinery is disabled; in particular, the
-hyperelasticity line-search baseline uses GMRES rather than the STCG
-trust-region subproblem solver. For the Plasticity3D configuration, all methods are
-judged against the stricter $\|\nabla \mathcal{F}\|_2 < 10^{-4}$ endpoint criterion.
+solve time for completed solves and elapsed wall time for timed-out cases.
+In the line-search configurations the trust-region machinery is disabled; in
+particular, the hyperelasticity line-search baseline uses GMRES rather than the
+STCG trust-region subproblem solver. For the Plasticity3D configuration, all
+methods are judged against the stricter
+$\|\nabla \mathcal{F}\|_2 < 10^{-4}$ endpoint criterion.
 
 The clean $p$-Laplace case is the expected easy case: Newton with Armijo line
-search is sufficient and gives the lowest solve time. Ginzburg--Landau separates the
-policies more sharply: the same line-search-only policy times out under the
+search is sufficient and gives the lowest solve time. Ginzburg--Landau separates
+the policies more sharply: the same line-search-only policy times out under the
 fixed cap, while both trust-region variants converge to the same reported
 energy. For the hyperelasticity excerpt all three policies complete, but
 Steihaug trust-region globalization without the line-search subproblem safeguard
 has the largest trust-region rejection count and a larger solve time than the
 hybrid policy, whereas line-search-only Newton is slowest. The hybrid policy
 keeps the trust-region safeguard while reducing both nonlinear iterations and
-solver time relative to line-search-only Newton. The Plasticity3D endpoint gives the
-opposite conclusion from the easy scalar case: at the stricter
-$\|\nabla \mathcal{F}\|_2 < 10^{-4}$ criterion, line-search-only Newton reaches the
-iteration cap, whereas both trust-region policies converge. The hybrid variant
-is the fastest of the two trust-region configurations and also uses fewer Krylov
-iterations. Together, these comparisons support a problem-dependent policy choice
-rather than a universal preference for any single globalization strategy.
+solver time relative to line-search-only Newton. The Plasticity3D endpoint gives
+the opposite conclusion from the easy scalar case: at the stricter
+$\|\nabla \mathcal{F}\|_2 < 10^{-4}$ criterion, line-search-only Newton reaches
+the iteration cap, whereas both trust-region policies converge. The hybrid
+variant is the fastest of the two trust-region configurations and also uses
+fewer Krylov iterations. Together, these comparisons support a problem-dependent
+policy choice rather than a universal preference for any single globalization
+strategy.
 
 \begin{table}[!htbp]
   \centering
@@ -371,6 +376,8 @@ reported terminal observables.
   \label{tab:plasticity3d-derivative-ablation}
 \end{table}
 
+\FloatBarrier
+
 \paragraph{Discretization and scaling.}
 The remaining figures in this subsection answer a different question: how the
 endpoint surrogate behaves across degree/resolution choices, and how the
@@ -386,7 +393,7 @@ both $p$- and $h$-refined paths, while higher order on coarser meshes buys
 lower observed values of \cref{eq:plasticity3d-discrete} at matched DOFs only
 by paying a clear wall-time premium in this nine-case endpoint study.
 
-\begin{figure}[!t]
+\begin{figure}[H]
   \centering
   \begin{subfigure}[t]{0.46\PaperFigureFull}
     \centering
@@ -586,19 +593,18 @@ collection of isolated benchmark timings. First, the globalization tables show
 that the nonlinear policy is problem-dependent: line-search Newton is adequate
 on the clean $p$-Laplace case, while trust-region safeguards are beneficial on
 the nonconvex Ginzburg--Landau tests and needed for convergence in the stricter
-$P_2(L_1)$ Plasticity3D globalization test reported here. Second, the derivative-route
-comparisons show that access to several second-order routes is useful in
-practice. Colored SFD is a comparison and fallback route on the
-tested fixed-size problems, while constitutive AD gives the lowest measured
-wall time on the fixed high-order Plasticity3D derivative-route case. Third, the
-hyperelasticity
+$P_2(L_1)$ Plasticity3D globalization test reported here. Second, the
+derivative-route comparisons show that access to several second-order routes is
+useful in practice. Colored SFD is a comparison and fallback route on the tested
+fixed-size problems, while constitutive AD gives the lowest measured wall time
+on the fixed high-order Plasticity3D derivative-route case. Third, the hyperelasticity
 distribution and PMG comparisons, together with the Plasticity3D partitioning
 measurements, show that sparse ownership, overlap size, coarse solves, and
 preconditioner policy are part of the numerical method, not merely software
 detail. Finally, the hyperelasticity, Plasticity3D, and topology scaling runs
 show that the primary \jaxpetsc{} realization solves the largest tested cases in
-settings where serial reference formulations mainly serve validation or scoped
-comparison roles.
+this study, while serial reference formulations mainly serve validation or
+scoped comparison roles.
 
 This synthesis is also the boundary of the paper's claim. The experiments
 support a nonlinear FEM toolset in which local differentiable models,

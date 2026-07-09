@@ -68,11 +68,11 @@ The weak problem is: find $u \in W_0^{1,p}(\Omega)$ such that
   \qquad \forall v \in W_0^{1,p}(\Omega).
   \label{eq:plaplace-weak}
 \end{equation}
-The implemented benchmark used in this paper takes
-$\Omega = (0,1)^2$, exponent $p=3$, forcing $f=-10$, and a conforming $P_1$
-triangular hierarchy. Here and below, $\mathcal{E}_h$ denotes the
-finite-element restriction of $\mathcal{E}$ evaluated with the quadrature used
-in the reported implementation. The discrete problem is
+The benchmark used in this paper takes the L-shaped domain
+$\Omega=(0,2)^2\setminus[1,2]^2$, exponent $p=3$, forcing $f=-10$, and a
+conforming $P_1$ triangular hierarchy. Here and below, $\mathcal{E}_h$ denotes
+the finite-element restriction of $\mathcal{E}$ evaluated with the quadrature
+used for the numerical comparisons. The discrete problem is
 \begin{equation}
   u_h \in V_h \subset W_0^{1,p}(\Omega):
   \qquad

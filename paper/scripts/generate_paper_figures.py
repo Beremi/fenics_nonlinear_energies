@@ -774,7 +774,6 @@ def generate_hyperelasticity_state(layout: dict[str, float]) -> str:
         "legend.fontsize": 12,
         "pdf.fonttype": 42,
         "ps.fonttype": 42,
-        "text.latex.preamble": r"\usepackage{newtxtext}\usepackage{newtxmath}",
     }
     with matplotlib.rc_context(fig_rc):
         fig = plt.figure(figsize=(16.9, 11.999))

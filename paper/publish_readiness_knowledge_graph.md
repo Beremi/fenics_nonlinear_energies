@@ -45,6 +45,11 @@ MATLAB literature only when there is source-backed evidence.
 - SIOPT journal scope cue: SIAM describes SIOPT as covering theory and practice
   of optimization; contributions may emphasize algorithms, software,
   computational practice, applications, or links between these subjects.
+- SIOPT submission-shape cue checked on 2026-07-09: SIAM's author instructions
+  ask for figures to be embedded inline and state that SIOPT has a 25-page
+  policy, with longer papers published only in exceptional justified cases. The
+  current 40-page A4 article is therefore a journal-template/page-budget blocker
+  rather than a solved formatting issue.
 
 ## Manuscript Nodes
 
@@ -454,6 +459,16 @@ MATLAB literature only when there is source-backed evidence.
   archive-neutral asset validator, and `make -C paper publish-check` passed.
   Rendered pages 1, 18--19, 23--24, 28--29, and 36--37 were checked for title,
   benchmark-definition, results-table, and back-matter readability.
+  Current float/font chunk rebuilt the 40-page PDF after comparator-scope,
+  p-Laplace geometry, globalization, and layout edits. `make -C paper
+  submission-check` passed; `pdffonts` on `hyperelasticity_state.pdf` now
+  reports Computer Modern fonts rather than the former NewTX/Termes outlier.
+  Rendered pages 13, 21--22, and 30--32 were checked. The JAX-FEM comparison
+  figure/table now appear before their interpretation, and the Plasticity3D
+  derivative-route Table 20 now precedes the discretization/scaling Figure 26.
+  Remaining current-A4 layout compromise: Section 6 leaves some blank space
+  before the forced hyperelasticity figure/table block, but the prior
+  figure/table inversion is gone.
 - `REPRO`: reproducibility and submission readiness.
   Known blockers from `paper/todo.md`: target journal/template/declarations,
   repository license/archive DOI, and archive-neutral provenance for critical
@@ -511,6 +526,10 @@ MATLAB literature only when there is source-backed evidence.
   snapshot by naming the source repository and stating that no separate archival
   DOI is cited for this version; the DOI/license and target-venue declaration
   work remains release-level.
+  Current float/font chunk leaves archive-neutral validation green and updates
+  only paper source, generated tables, the hyperelasticity state figure, and the
+  rebuilt PDF. It does not resolve release-level blockers: target template,
+  declarations, license, archival release/DOI, and final bundle integration.
 
 ## Evidence Nodes
 

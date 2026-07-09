@@ -120,6 +120,13 @@ scientific claims were introduced without supporting evidence.
   submission-check` target, which build the PDF, scan the log for warnings,
   run `qpdf`, check figure/table aux ordering, and rerun archive-neutral asset
   validation.
+- Addressed the latest comparator-scope and layout audit: corrected the
+  p-Laplace benchmark domain to the L-shaped mesh, documented the separate
+  unit-load p-Laplace globalization stress test, softened MATLAB and SOTA
+  comparator wording, renamed the colored-Hessian sparsity pattern, top-aligned
+  float pages, fixed the hyperelastic state figure font family, and forced the
+  Plasticity3D derivative-route table to precede the following
+  discretization/scaling figure.
 - Rebuilt the paper PDF through the paper generation pipeline.
 
 ## Blocking Issues Before Submission
@@ -254,9 +261,22 @@ required support for the current scoped contribution.
 - `./.venv/bin/python paper/scripts/check_pdf_aux_order.py paper/build/main.aux`:
   passed on 2026-07-09, including the appendix table-order check.
 - `make -C paper submission-check`: passed on 2026-07-09.
+- `./.venv/bin/python -m py_compile paper/scripts/generate_paper_tables.py
+  paper/scripts/generate_paper_figures.py paper/scripts/check_pdf_aux_order.py
+  paper/scripts/validate_paper_assets.py`: passed on 2026-07-09 after the
+  latest source edits.
+- `pdffonts paper/figures/generated/hyperelasticity_state.pdf`: after targeted
+  regeneration, the figure embeds Computer Modern fonts (`CMR`, `CMMI`,
+  `CMSY`) rather than the previous NewTX/Termes outlier.
+- `make -C paper submission-check`: passed again on 2026-07-09 after the
+  Plasticity3D Figure 26 float-placement fix.
 - Rendered and visually inspected representative pages 1, 5, 9, 21, and
   30--32 after the latest rebuild; the current A4 PDF is readable and unclipped,
   with page 30 improved but dense floats/tables still template-fragile.
+- Rendered and visually inspected pages 13, 21--22, and 30--32 after the
+  latest rebuild; the hyperelastic figure font matches the manuscript, the
+  JAX-FEM comparison figure/table order is fixed, and Table 20 now precedes
+  Figure 26 in the Plasticity3D results.
 - Rendered and visually inspected affected pages 1, 15--18, 27--29, and
   35--36 after the latest rebuild; the new Plasticity2D equations, scaling
   interpretations, and appendix table sequence are readable and unclipped.

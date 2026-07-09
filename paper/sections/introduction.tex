@@ -17,9 +17,9 @@ preconditioners. The \purejax{} and \fenics{} formulations serve as internal
 references where available. JAX-FEM supplies a matched hyperelastic numerical
 comparison, FEniCSx-family and JetSCI work provide architectural context, and
 the \v{C}erm{\'a}k--Sysala--Valdman MATLAB elastoplastic implementation lineage
-provides slope-stability reference-observable and implementation-lineage
-context. Where we report external numerical comparisons, they are restricted to
-explicitly matched benchmark definitions and observables.
+provides reference-observable and implementation context for slope-stability
+endpoint checks. Where we report external numerical comparisons, they are
+restricted to explicitly matched benchmark definitions and observables.
 
 \subsection{Contributions}
 \label{sec:intro-contributions}
@@ -82,9 +82,10 @@ source-specific discussion.
 The present work combines these roles by treating local differentiation,
 PETSc-owned sparse MPI assembly, nonlinear globalization, and preconditioner
 policy in one heterogeneous benchmark suite. The detailed literature categories
-are discussed in \Cref{sec:related}; the \purejax{}, \fenics{}, JAX-FEM, and
-slope-stability reference-line tests serve here as scoped checks for specific
-benchmark definitions and observables.
+are discussed in \Cref{sec:related}; the \purejax{} and \fenics{} formulations
+serve as internal references, JAX-FEM supplies the matched external numerical
+comparison, and the slope-stability literature supplies endpoint-observable
+context for the plasticity checks.
 
 The paper is organized as follows. \Cref{sec:related} deepens the literature
 context behind the summary above. \Cref{sec:methodology} describes the common

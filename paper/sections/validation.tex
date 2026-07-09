@@ -55,7 +55,7 @@ identity between the two implementations: the JAX-FEM implementation uses a
 logarithmic-$J$ Piola form, whereas \cref{eq:hyperelasticity-energy} uses the
 $D_1(J-1)^2$ volumetric penalty.
 
-\begin{figure}[!htbp]
+\begin{figure}[H]
   \centering
   \begin{subfigure}[t]{0.46\PaperFigureFull}
     \centering
@@ -80,6 +80,8 @@ $D_1(J-1)^2$ volumetric penalty.
   \caption{Thresholded hyperelastic agreement comparison against JAX-FEM.}
   \label{tab:hyperelasticity-jaxfem-baseline}
 \end{table}
+
+\FloatBarrier
 
 The agreement criteria in \Cref{tab:hyperelasticity-jaxfem-baseline} are
 satisfied for all checked quantities. The final energy relative difference is

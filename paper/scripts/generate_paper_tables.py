@@ -993,7 +993,7 @@ def main() -> None:
         [
             ["$p$-Laplace", "yes", "yes", "yes", "element AD and colored sparse recovery; Newton--CG with Hypre"],
             ["Ginzburg--Landau", "yes", "no", "yes", "element AD and colored sparse recovery; Armijo Newton with GMRES--Hypre"],
-            ["Hyperelasticity", "yes", "yes", "yes", "element AD in the main path, scoped colored-recovery comparison, and trust-region/GAMG or PMG diagnostics"],
+            ["Hyperelasticity", "yes", "yes", "yes", "element AD in the primary route, scoped colored-recovery comparison, and trust-region/GAMG or PMG diagnostics"],
             ["Plasticity2D", "no", "no", "yes", "endpoint potential and continuation diagnostics with same-mesh PMG smoother policy"],
             ["Plasticity3D", "no", "no", "yes", "constitutive AD, element AD, and colored-recovery diagnostics; FGMRES with same-mesh PMG and Hypre or LU/MUMPS coarse profiles"],
             ["Topology optimization", "no", "yes", "yes", "distributed design updates with PETSc mechanics and GAMG-preconditioned FGMRES"],
@@ -1077,7 +1077,7 @@ def main() -> None:
                 "FEM--JAX and JAX--PETSc bridge architectures "
                 "\\citep{yashchuk2023bringing,latyshev2025externaloperators,cattaneo2026jetsci}",
                 "AD-enabled local or variational representations combined with host FEM infrastructure or PETSc sparse solvers.",
-                "Closest architectural context for the \\jaxpetsc{} realization; this work adds a benchmark-wide comparison of derivative construction, globalization, and preconditioning.",
+                "Architectural context for the \\jaxpetsc{} realization; this study evaluates derivative construction, globalization, and preconditioning on the stated benchmark suite.",
             ],
             [
                 "Mechanics and topology benchmark lineage "

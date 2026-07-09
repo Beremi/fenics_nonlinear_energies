@@ -191,10 +191,10 @@ finite-difference gradient-probe variant. This structure is especially effective
 when combined with overlap-domain assembly and owned-plus-ghost PETSc layouts.
 
 Let $H := \nabla^2\mathcal{F}(x)$ denote the Hessian of the merit functional at
-the current state, and let $\mathcal{S}$ be its sparsity pattern. A
+the current state, and let $\mathcal{P}(H)$ be its sparsity pattern. A
 distance-2 coloring partitions the column indices into groups $\mathcal{C}_c$
 such that, for each row $i$, at most one column $j\in\mathcal{C}_c$ satisfies
-$(i,j)\in\mathcal{S}$. For the color seed
+$(i,j)\in\mathcal{P}(H)$. For the color seed
 $v_c=\sum_{j\in\mathcal{C}_c} e_j$, one probe produces
 \begin{equation}
   y_c =
@@ -207,7 +207,7 @@ $v_c=\sum_{j\in\mathcal{C}_c} e_j$, one probe produces
   \label{eq:colored-sfd-recovery}
 \end{equation}
 The structural separation then recovers $H_{ij}=(y_c)_i$ for
-$j\in\mathcal{C}_c$ and $(i,j)\in\mathcal{S}$. The reported \jaxpetsc{}
+$j\in\mathcal{C}_c$ and $(i,j)\in\mathcal{P}(H)$. The reported \jaxpetsc{}
 colored-SFD cases use the AD Hessian-vector probe mode, so no finite-difference
 perturbation parameter is introduced in those runs; the finite-difference
 formula states the classical recovery variant. After recovery, each rank scatters
@@ -259,9 +259,10 @@ information on high-order tetrahedra.
 \end{algorithm}
 
 The key methodological point is that automatic differentiation is applied
-directly to the implemented scalar branch potential. The implementation does
-not switch to a hand-derived constitutive tangent. Away from branch switching
-sets this yields branchwise exact derivatives of the implemented surrogate; at
-switching sets the model remains nonsmooth, so the resulting tangents should be
-read as branchwise surrogate derivatives rather than globally smooth continuum
+directly to the scalar branch potential defined by the benchmark. The
+constitutive tangent is therefore obtained from that same scalar potential rather
+than replaced by a separate hand-derived formula. Away from branch switching
+sets this yields branchwise exact derivatives of the surrogate; at switching
+sets the model remains nonsmooth, so the resulting tangents should be read as
+branchwise surrogate derivatives rather than globally smooth continuum
 derivatives.
