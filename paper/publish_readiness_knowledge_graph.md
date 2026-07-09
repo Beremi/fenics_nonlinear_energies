@@ -602,6 +602,14 @@ MATLAB literature only when there is source-backed evidence.
   title, and sharpens generated table headers for globalization steps,
   Plasticity3D derivative-degree DOFs/Hessian time, and topology relative
   compliance difference.
+  Current figure-reproducibility chunk reconciles the dirty generated figure
+  assets with the current generator and PDF: figure export now writes
+  deterministic PDF/PNG metadata, the cropped hyperelastic state figure
+  normalizes its trailer ID after `pdfcrop`, JSON-backed figure inputs resolve
+  relative paths from the repository root, and the full generated figure set is
+  byte-stable across repeated `make -C paper figures` runs. The rebuilt 42-page
+  PDF passed `make -C paper submission-check`; rendered pages 8--9, 14, 23,
+  25, 28, 34, 36, and 39--40 are readable, unclipped, and in order.
 - `REPRO`: reproducibility and submission readiness.
   Known blockers from `paper/todo.md`: target journal/template/declarations,
   repository license/archive DOI, and archive-neutral provenance for critical
@@ -680,10 +688,12 @@ MATLAB literature only when there is source-backed evidence.
   citation `petsc2026web`; the ignored local cached HTML filename was renamed
   to match the audit key. Current hygiene/math chunk adds
   `check_manuscript_hygiene.py`, a PDF-text gate for paper-facing local/process
-  vocabulary, and focused tests for the body-text scan. Remaining provenance
-  risks are unchanged: the curated submission-bundle manifest still needs a
-  final-state refresh for the eventual archived release, generated figure drift
-  must be reconciled before relying on a clean source-to-PDF rebuild, and the
+  vocabulary, and focused tests for the body-text scan. Current
+  figure-reproducibility chunk reconciles generated figure drift, makes current
+  figure regeneration byte-stable, and fixes repo-relative JSON paths so
+  `make -C paper figures` works from the paper directory. Remaining provenance
+  risks are reduced but not gone: the curated submission-bundle manifest still
+  needs a final-state refresh for the eventual archived release, and the
   license/archive DOI decisions remain blockers.
 
 ## Evidence Nodes
@@ -1217,11 +1227,19 @@ MATLAB literature only when there is source-backed evidence.
   mechanics; Plasticity3D endpoint-surrogate table wording is scoped; displayed
   3D plasticity punctuation and reduced-dilation wording are clarified; appendix
   gradient norm notation uses the same 2-norm convention; and generated table
-  headers are more self-contained. Deferred findings: reconcile dirty generated
-  figure assets, refresh the submission-bundle manifest at final state, rerun
-  date-sensitive literature checks before submission, and revisit validation
-  float whitespace or dense-table structure after the target
-  template/main-supplement decision.
+  headers are more self-contained. Deferred findings: refresh the
+  submission-bundle manifest at final state, rerun date-sensitive literature
+  checks before submission, and revisit validation float whitespace or
+  dense-table structure after the target template/main-supplement decision.
+- `Current figure reproducibility/layout audit`
+  (`Cicero the 2nd`/`Darwin the 2nd`): completed and integrated. Findings
+  addressed in the current figure-reproducibility chunk: dirty generated figure
+  assets were intentional stale-output drift, the checked-in assets now match
+  the generator and rebuilt PDF, deterministic figure metadata and cropped-PDF
+  trailer normalization prevent timestamp/ID churn, and `make -C paper figures`
+  works from the paper directory. Layout audit found the current 42-page A4 PDF
+  visually acceptable aside from target-template/page-budget sensitivity; dense
+  pages 25, 28, 34, 36, and 39 remain readable and unclipped.
 
 ## First Edit Backlog
 

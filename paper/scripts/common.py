@@ -4,6 +4,7 @@ import csv
 import json
 import shutil
 import subprocess
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -17,6 +18,13 @@ SCRIPTS_ROOT = PAPER_ROOT / "scripts"
 LITERATURE_ROOT = PAPER_ROOT / "literature"
 FULLTEXT_ROOT = LITERATURE_ROOT / "fulltext"
 LAYOUT_JSON = BUILD_ROOT / "layout.json"
+_DETERMINISTIC_DATE = datetime(2000, 1, 1, tzinfo=timezone.utc)
+PDF_METADATA = {
+    "Creator": "Matplotlib",
+    "CreationDate": _DETERMINISTIC_DATE,
+    "ModDate": _DETERMINISTIC_DATE,
+}
+PNG_METADATA = {"Software": "Matplotlib"}
 
 
 def ensure_paper_dirs() -> None:
@@ -136,8 +144,8 @@ def configure_paper_matplotlib(font_size: float = 10.0):
 
 def save_pdf_and_png(fig, pdf_path: Path, *, png_dpi: int = 240) -> None:
     pdf_path.parent.mkdir(parents=True, exist_ok=True)
-    fig.savefig(pdf_path, format="pdf", dpi=600)
-    fig.savefig(pdf_path.with_suffix(".png"), format="png", dpi=png_dpi)
+    fig.savefig(pdf_path, format="pdf", dpi=600, metadata=PDF_METADATA)
+    fig.savefig(pdf_path.with_suffix(".png"), format="png", dpi=png_dpi, metadata=PNG_METADATA)
 
 
 def copy_asset(src: Path, dest: Path) -> None:

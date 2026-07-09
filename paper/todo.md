@@ -191,6 +191,12 @@ scientific claims were introduced without supporting evidence.
   and Plasticity3D endpoint-surrogate caption, clarified 3D plasticity
   punctuation and reduced-dilation wording, normalized the appendix gradient
   norm, and made dense generated-table headers more self-contained.
+- Reconciled generated figure assets with the current figure generator and
+  rebuilt PDF: figure export now uses deterministic PDF/PNG metadata, the
+  cropped hyperelastic state figure normalizes its PDF trailer identifier,
+  JSON-backed figure inputs resolve relative paths from the repository root,
+  and the generated figure set is byte-stable across repeated
+  `make -C paper figures` runs.
 - Addressed the benchmark-readability audit: split Plasticity2D and Plasticity3D
   setup prose into staged continuum-model, geometry/material, surrogate, and
   claim-scope paragraphs without changing formulas or numerical evidence.
@@ -428,6 +434,19 @@ required support for the current scoped contribution.
   benchmark overview and Plasticity3D equation punctuation, validation caption,
   globalization/derivative/topology table headers, Discussion/Conclusions
   boundary, and appendix gradient-norm notation are readable and unclipped.
+- `./.venv/bin/python -m pytest tests/test_paper_figure_metadata.py`: passed
+  after adding the deterministic figure-metadata regression test.
+- `make -C paper figures`: passed on 2026-07-09 after fixing repo-relative
+  JSON path resolution for bundled figure inputs.
+- Repeated `make -C paper figures` with SHA256 checks before and after the
+  second run: all dirty generated figure assets were byte-stable.
+- `make -C paper submission-check`: passed again on 2026-07-09 after the
+  generated-figure reconciliation; the rebuilt `paper/build/main.pdf` remains
+  a 42-page A4 article.
+- Rendered and visually inspected pages 8--9, 14, 23, 25, 28, 34, 36, and
+  39--40 after the latest rebuild; implementation diagrams, hyperelastic and
+  validation figures, dense derivative/scaling/topology tables, and appendix
+  diagnostics are readable, unclipped, and in order.
 - `./.venv/bin/python -m pytest tests/test_docs_publication.py`: passed
   13 tests.
 - `./.venv/bin/python -m pytest tests/test_final_report_figure_generators.py`:
@@ -440,10 +459,9 @@ required support for the current scoped contribution.
 
 Exact remaining blockers are submission metadata and license/archive DOI. The
 archive-neutral validator now passes against the local curated bundle; final
-submission still must include that bundle in a durable release/archive. The only
-command instability observed in the final rerun was the intermittent TeX/font
-lookup or mesh-loading stall in the Makefile figure target; direct asset
-validation and direct LaTeX rebuild are clean.
+submission still must include that bundle in a durable release/archive. The
+Makefile figure target now runs from the `paper/` directory and produces a
+byte-stable generated figure set for the current asset surface.
 
 ## Optional Future Work
 

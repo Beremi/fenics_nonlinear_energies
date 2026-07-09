@@ -3,6 +3,8 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
+import re
 import subprocess
 import sys
 from pathlib import Path
@@ -18,6 +20,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from common import (
     FIGURES_ROOT,
+    PDF_METADATA,
+    PNG_METADATA,
     REPO_ROOT,
     configure_paper_matplotlib,
     ensure_paper_dirs,
@@ -188,6 +192,25 @@ def _read_json(path: Path) -> dict:
     return json.loads(path.read_text(encoding="utf-8"))
 
 
+def _normalize_pdf_trailer_id(path: Path) -> None:
+    # pdfcrop preserves a run-dependent first trailer ID even when dates are fixed.
+    stable_id = b"31415926535897932384626433832795"
+    data = path.read_bytes()
+    pattern = rb"/ID \[<[0-9A-Fa-f]{32}><[0-9A-Fa-f]{32}>\]"
+    replacement = b"/ID [<" + stable_id + b"><" + stable_id + b">]"
+    data, count = re.subn(pattern, replacement, data, count=1)
+    if count != 1:
+        raise RuntimeError(f"Could not normalize PDF trailer ID in {path}")
+    path.write_bytes(data)
+
+
+def _repo_path(value: object) -> Path:
+    path = Path(str(value))
+    if path.is_absolute():
+        return path
+    return REPO_ROOT / path
+
+
 def _plasticity3d_benchmark_row() -> dict[str, object]:
     summary = _read_json(P3D_DEGREE_ENERGY_STUDY_SUMMARY)
     for row in summary.get("rows", []):
@@ -218,10 +241,11 @@ def _plasticity3d_study_rows() -> list[dict[str, object]]:
 
 def _plasticity3d_benchmark_context() -> dict[str, object]:
     row = _plasticity3d_benchmark_row()
-    state_path = REPO_ROOT / str(row["state_npz"])
-    result_path = REPO_ROOT / str(row["result_json"])
-    case_path = Path(str(row.get("same_mesh_case_path", "")))
-    if not case_path.exists():
+    state_path = _repo_path(row["state_npz"])
+    result_path = _repo_path(row["result_json"])
+    case_path_value = str(row.get("same_mesh_case_path", ""))
+    case_path = _repo_path(case_path_value) if case_path_value else None
+    if case_path is None or not case_path.exists():
         case_path = same_mesh_case_hdf5_path(
             str(row["mesh_name"]),
             int(row["elem_degree"]),
@@ -835,11 +859,15 @@ def generate_hyperelasticity_state(layout: dict[str, float]) -> str:
 
         out = FIGURES_ROOT / "hyperelasticity_state.pdf"
         raw_out = out.with_name("hyperelasticity_state_raw.pdf")
-        fig.savefig(out.with_suffix(".png"), format="png", dpi=220)
-        fig.savefig(raw_out, format="pdf", dpi=660)
+        fig.savefig(out.with_suffix(".png"), format="png", dpi=220, metadata=PNG_METADATA)
+        fig.savefig(raw_out, format="pdf", dpi=660, metadata=PDF_METADATA)
         plt.close(fig)
 
-    subprocess.run(["pdfcrop", "--margins", "0", str(raw_out), str(out)], check=True)
+    crop_env = dict(os.environ)
+    crop_env.setdefault("SOURCE_DATE_EPOCH", "946684800")
+    subprocess.run(["pdfcrop", "--margins", "0", str(raw_out), str(out)], check=True, env=crop_env)
+    subprocess.run(["qpdf", "--deterministic-id", str(out), "--replace-input"], check=True)
+    _normalize_pdf_trailer_id(out)
     if raw_out.exists():
         raw_out.unlink()
     return out.name
@@ -1228,7 +1256,7 @@ def _highest_rows_by_degree(rows: list[dict[str, object]]) -> list[dict[str, obj
 
 
 def _build_highest_y_slice(row: dict[str, object]) -> dict[str, object]:
-    state_path = REPO_ROOT / str(row["state_npz"])
+    state_path = _repo_path(row["state_npz"])
     mesh_name = str(row["mesh_name"])
     degree = int(row["elem_degree"])
     constraint_variant = str(row.get("constraint_variant", "glued_bottom"))
@@ -1713,11 +1741,11 @@ def _plot_plasticity3d_validation_surface_compare(
 def generate_plasticity3d_validation_layer1a_boundary(layout: dict[str, float]) -> str:
     manifest = _read_json(P3D_VALIDATION_ROOT / "validation_manifest.json")
     layer_cfg = dict(manifest["layer1a"])
-    source_summary = _read_json(REPO_ROOT / str(layer_cfg["source_branch_dir"]) / "branch_summary.json")
-    jax_summary = _read_json(REPO_ROOT / str(layer_cfg["jax_branch_dir"]) / "branch_summary.json")
+    source_summary = _read_json(_repo_path(layer_cfg["source_branch_dir"]) / "branch_summary.json")
+    jax_summary = _read_json(_repo_path(layer_cfg["jax_branch_dir"]) / "branch_summary.json")
     final_jax_step = dict(jax_summary["steps"][-1])
-    jax_state = _load_npz(REPO_ROOT / str(final_jax_step["state_npz"]))
-    source_mat = scipy.io.loadmat(Path(str(source_summary["final_state_mat"])))
+    jax_state = _load_npz(_repo_path(final_jax_step["state_npz"]))
+    source_mat = scipy.io.loadmat(_repo_path(source_summary["final_state_mat"]))
     source_coords_ref = np.asarray(source_mat["coord"], dtype=np.float64).T
     coords_ref = np.asarray(jax_state["coords_ref"], dtype=np.float64)
     _, src_to_jax = cKDTree(coords_ref).query(source_coords_ref, k=1)
@@ -1824,8 +1852,8 @@ def generate_jax_fem_hyperelastic_baseline_centerline(layout: dict[str, float]) 
     plt = configure_paper_matplotlib(font_size=9.0)
     summary = _read_json(JAX_FEM_BASELINE_ROOT / "comparison_summary.json")
     impls = [dict(row) for row in summary["implementations"]]
-    repo_state = _load_npz(Path(str(impls[0]["state_npz"])))
-    jax_state = _load_npz(Path(str(impls[1]["state_npz"])))
+    repo_state = _load_npz(_repo_path(impls[0]["state_npz"]))
+    jax_state = _load_npz(_repo_path(impls[1]["state_npz"]))
     coords_ref = np.asarray(repo_state["coords_ref"], dtype=np.float64)
     repo_profile = centerline_profile(coords_ref, np.asarray(repo_state["displacement"], dtype=np.float64))
     jax_profile = centerline_profile(coords_ref, np.asarray(jax_state["displacement"], dtype=np.float64))
@@ -1946,7 +1974,7 @@ def _plot_plasticity_scaling(layout: dict[str, float], rows_by_impl: dict[str, l
     max_local_elements = np.asarray(
         [
             int(
-                _read_json(REPO_ROOT / str(row["result_json"]))["parallel_setup"]["local_elements_max"]
+                _read_json(_repo_path(row["result_json"]))["parallel_setup"]["local_elements_max"]
             )
             for row in rows
         ],
