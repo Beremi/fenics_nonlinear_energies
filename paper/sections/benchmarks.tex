@@ -1034,7 +1034,7 @@ provides reference-model context for that boundary.
 \begin{table}[!htbp]
   \centering
   \caption{All nine completed bottom-clamped Plasticity3D
-  study cases at $\lambda_{\mathrm{sr}} = 1.55$, reported as endpoint values of
+  study cases at $\lambda_{\mathrm{sr}}=\num{1.55}$, reported as endpoint values of
   \eqref{eq:plasticity3d-discrete}.}
   \label{tab:plasticity3d-benchmark}
   \input{tables/generated/plasticity3d_benchmark_summary.tex}
@@ -1055,8 +1055,8 @@ along both mesh and degree refinements.
   $\|\varepsilon_{\mathrm{dev}}\|$ from \eqref{eq:plasticity3d-devnorm} at the
   highest mesh level of each degree line:
   $P_1(L_4)$, $P_2(L_3)$, and $P_4(L_2)$. The three
-  runs use the bottom-clamped solver configuration at
-  $\lambda_{\mathrm{sr}} = 1.55$ and are compared on one common color scale.}
+  solutions use the bottom-clamped problem and solver policy at
+  $\lambda_{\mathrm{sr}}=\num{1.55}$ and are compared on one common color scale.}
   \label{fig:plasticity3d-highest-slice}
 \end{figure}
 
@@ -1090,7 +1090,7 @@ objective. The \purejax{} topology realization is only a compact serial design
 demonstration; the agreement evidence for this family is the \jaxpetsc{}
 rank-consistency check in \Cref{sec:num-topology}.
 
-The reported fine-grid run uses $\Omega=(0,2)\times(0,1)$ with a
+The fine-grid topology problem uses $\Omega=(0,2)\times(0,1)$ with a
 $768\times384$ structured triangular mesh, target volume fraction $0.4$,
 $\theta_{\min}=\num{1e-6}$, Young's modulus $E=\num{1}$, and Poisson ratio
 $0.3$. The left edge is clamped, and a downward unit traction acts on the load

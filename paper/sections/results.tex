@@ -78,7 +78,7 @@ solver time.
   \caption{Ginzburg--Landau level-10 fixed-budget globalization comparison on
   eight MPI ranks. The configurations use the same element assembly and Hypre
   preconditioner; only the nonlinear globalization policy changes. The timed-out
-  configuration reports elapsed wall time and the configured wall-time cap.}
+  configuration reports elapsed wall time and the stated wall-time cap.}
   \label{tab:gl-globalization-fixed-budget}
   \input{tables/generated/ginzburg_landau_globalization_fixed_budget.tex}
 \end{table}
@@ -125,7 +125,8 @@ The same-DOF comparison is the most informative same-DOF contrast: $P_1(L_2)$ an
 $P_2(L_1)$ both have \num{79024} free unknowns, but the $P_2$ element stencil
 is denser. Its colored sparse-recovery route therefore needs 240--420 colors instead of
 66--90, raises the Hessian evaluation from \num{0.332} to \num{1.412} s, and
-raises the rank-maximum RSS from about \num{0.65} to \num{1.10} GiB. The $P_4$
+raises the rank-maximum resident set size (RSS) from about \num{0.65} to
+\num{1.10} GiB. The $P_4$
 colored sparse-recovery case is outside this single-linearization table; the $P_2$ same-DOF
 comparison already isolates the stencil-density effect.
 
@@ -208,7 +209,7 @@ preconditioning; the derivative-route comparison is limited to the first-step
 replicated-element case. The distributed implementation completes the full load
 path and preserves the terminal energy trend from \Cref{sec:bench-he}. The
 external JAX-FEM comparison is reported separately in
-\Cref{sec:val-hyperelasticity}; the figure below reports only distributed
+\Cref{sec:val-hyperelasticity}; \Cref{fig:hyperelasticity-results} reports only distributed
 scaling for the load path in \eqref{eq:hyperelasticity-discrete}.
 
 \begin{figure}[H]
@@ -229,15 +230,17 @@ the rank-local hyperelasticity assembly behaves when the level-5 first load step
 uses the same nonlinear work but different rank counts and PMG coarse-solver
 layouts. The CPU runs use one MPI rank per core on nodes with two AMD EPYC 7H12
 64-core processors and 256 GB RAM \citep{it4i-karolina-compute-nodes}, with
-contiguous CPU binding and NUMA-local memory binding. The mesh is generated from
-the uniform beam hierarchy, and the element assembly uses rank-local elements
-with PETSc COO preallocation and point-to-point overlap exchange.
+contiguous CPU binding and memory binding local to each
+non-uniform-memory-access domain. The mesh is generated from the uniform beam
+hierarchy, and the element assembly uses rank-local elements with PETSc
+coordinate-format sparse preallocation and point-to-point overlap exchange.
 
 The nonlinear solve is the same trust-region Newton path used for the
-benchmark in \cref{sec:bench-he}. The linear subproblems use STCG with a
-same-hierarchy PMG preconditioner, Chebyshev/Jacobi smoothing, and coarsest
-level $L_2$. The coarse solve is PETSc redundant LU with MUMPS: the partial
-one-node configurations use one redundant group over the active ranks, while the
+benchmark in \cref{sec:bench-he}. The linear subproblems use
+Steihaug--Toint conjugate-gradient iteration with a same-hierarchy PMG
+preconditioner, Chebyshev/Jacobi smoothing, and coarsest level $L_2$. The coarse
+solve is PETSc redundant LU with MUMPS: the partial one-node configurations use
+one redundant group over the active ranks, while the
 multi-node configurations use one 128-rank redundant group per node.
 \Cref{fig:hyperelasticity-cpu-pmg-scaling,tab:hyperelasticity-cpu-pmg-scaling}
 report measured solver total time rather than scheduler elapsed time.
@@ -449,7 +452,7 @@ $P_2(L_2)$. At \num{4801816} DOFs, $P_4(L_2)$ reports \num{-3013348} and
     \caption{$P_2/P_4$ zoom: final energy versus total wall time.}
   \end{subfigure}
   \caption{Bottom-clamped Plasticity3D
-  degree-versus-resolution study at $\lambda_{\mathrm{sr}} = 1.55$. The top
+  degree-versus-resolution study at $\lambda_{\mathrm{sr}}=\num{1.55}$. The top
   panels show the full $P_1/P_2/P_4$ comparison, while the bottom panels zoom to
   $P_2/P_4$ so the near-overlap hidden by the coarse $P_1$ points becomes
   visible. The left column plots final values of
@@ -464,9 +467,9 @@ $P_2(L_2)$. At \num{4801816} DOFs, $P_4(L_2)$ reports \num{-3013348} and
 \begin{table}[!htbp]
   \centering
   \caption{Separate Plasticity3D strong-scaling study for \localpmg{} on
-  $P_4(L_2)$ at $\lambda_{\mathrm{sr}} = 1.0$. These timings provide
+  $P_4(L_2)$ at $\lambda_{\mathrm{sr}}=\num{1.0}$. These timings provide
   solver evidence for a separate load factor from the bottom-clamped
-  $\lambda_{\mathrm{sr}} = 1.55$ benchmark figures.}
+  $\lambda_{\mathrm{sr}}=\num{1.55}$ benchmark figures.}
   \label{tab:plasticity3d-scaling}
   \input{tables/generated/plasticity3d_recommended_scaling.tex}
 \end{table}
@@ -476,8 +479,8 @@ $P_2(L_2)$. At \num{4801816} DOFs, $P_4(L_2)$ reports \num{-3013348} and
   \includegraphics[width=\PaperFigureMedium]{plasticity3d_recommended_scaling.pdf}
   \caption{Separate strong-scaling study for the selected Plasticity3D solver
   configuration: \localpmg{} on $P_4(L_2)$ at
-  $\lambda_{\mathrm{sr}} = 1.0$. This is a separate timing study from the
-  bottom-clamped $\lambda_{\mathrm{sr}} = 1.55$ results shown in
+  $\lambda_{\mathrm{sr}}=\num{1.0}$. This is a separate timing study from the
+  bottom-clamped $\lambda_{\mathrm{sr}}=\num{1.55}$ results shown in
   \cref{fig:plasticity3d-state,fig:plasticity3d-convergence,fig:plasticity3d-degree-energy}.}
   \label{fig:plasticity3d-scaling}
 \end{figure}
@@ -487,8 +490,8 @@ $P_2(L_2)$. At \num{4801816} DOFs, $P_4(L_2)$ reports \num{-3013348} and
 \Cref{fig:plasticity3d-scaling,tab:plasticity3d-scaling} give a high-DOF
 Plasticity3D distributed timing result for the Hypre-coarse PMG variant. This
 scaling evidence uses the selected $P_4(L_2)$ mesh family but a
-different load factor, $\lambda_{\mathrm{sr}} = 1.0$, so it complements rather
-than extends the bottom-clamped $\lambda_{\mathrm{sr}} = 1.55$ benchmark figures
+different load factor, $\lambda_{\mathrm{sr}}=\num{1.0}$, so it complements rather
+than extends the bottom-clamped $\lambda_{\mathrm{sr}}=\num{1.55}$ benchmark figures
 above. Within that timing study, the reported nonlinear and linear iteration
 counts remain matched on 1/2/4/8/16/32 ranks, while the end-to-end time drops
 from \SI{5424}{s} on one rank to \SI{300}{s} on 32 ranks. Additional

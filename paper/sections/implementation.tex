@@ -103,7 +103,7 @@ multigrid/preconditioning backend, MUMPS a multifrontal sparse direct solver,
 and PMG polynomial multigrid:
 \begin{itemize}
   \item \textbf{$p$-Laplace:} the scalar positive-definite structure makes
-        Newton--CG with algebraic multigrid a natural baseline for comparing
+        Newton--CG with algebraic multigrid a natural reference point for comparing
         exact element Hessians and colored sparse-recovery Hessians.
   \item \textbf{Ginzburg--Landau:} the double-well energy produces more
         indefinite linearizations, so GMRES with algebraic multigrid is used to
@@ -119,7 +119,8 @@ and PMG polynomial multigrid:
         expose the cost of the active constitutive tangent.
   \item \textbf{Topology:} the mechanics subproblem is solved with flexible
         Krylov iteration and GAMG inside an outer distributed design update, so
-        the solver evidence reflects the coupled state-design workflow.
+        the solver evidence reflects the coupled state-design optimization
+        problem.
 \end{itemize}
 
 The result sections then instantiate these solver choices in concrete benchmark
@@ -147,8 +148,10 @@ matrix assembly. Equivalently, if
 $\mathcal{T}_r=\{K:\operatorname{dofs}(K)\cap I_r\ne\emptyset\}$, then rank $r$
 inserts
 \[
-  R_i(u)=\sum_{K\in\mathcal{T}_r} r_{K,i}(u_{\widetilde I_r}),\qquad
-  A_{ij}(u)=\sum_{K\in\mathcal{T}_r} a_{K,ij}(u_{\widetilde I_r}),
+  R_i(u)=\sum_{K\in\mathcal{T}_r:\,i\in\operatorname{dofs}(K)}
+    r_{K,i}(u_{\widetilde I_r}),\qquad
+  A_{ij}(u)=\sum_{K\in\mathcal{T}_r:\,i,j\in\operatorname{dofs}(K)}
+    a_{K,ij}(u_{\widetilde I_r}),
   \quad i\in I_r,\; j\in \widetilde I_r,
 \]
 and uses ghost columns only through the local stencil. This communication order

@@ -129,6 +129,11 @@ stage or commit `paper/style_guide/`.
   assembly display, and Discussion/Conclusion synthesize rather than re-list
   exact result numbers. No small missing experiment is required for current
   claims; path-history plasticity validation remains future work.
+- Current last-mile pass: rendered/source scans found no high-priority
+  paper-facing leaks. Recent fixes expand hyperelasticity scaling acronyms,
+  sharpen residual-bisection and owned-row assembly notation, standardize nearby
+  `\lambda_{\mathrm{sr}}` numeric styling, and clarify Plasticity3D validation
+  table status text. The rebuilt PDF remains a 44-page A4 article.
 
 ## Figure And Table Rules
 
@@ -175,6 +180,8 @@ result tables, and target-template sensitivity in the benchmark float groups.
 The latest Results audit specifically flags dense globalization/protocol tables,
 the derivative-route table cluster, the four-panel Plasticity3D degree figure,
 and the Plasticity3D CPU-scaling table as template-sensitive but readable on A4.
+Latest rendered-page review found no A4 clipping or illegible figures; these
+risks should be revisited only after a target template changes text width.
 Stale non-manuscript generated figure/table outputs are now removed and guarded
 by `validate_paper_assets.py`; figure sizing now fails fast if the current A4
 article layout contract changes without updating the measurement policy.

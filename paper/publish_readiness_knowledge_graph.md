@@ -1424,6 +1424,22 @@ MATLAB literature only when there is source-backed evidence.
   44 pages. Remaining layout risks are target-template sensitivity in dense
   Results table clusters, the four-panel Plasticity3D degree figure, and the
   Plasticity3D CPU-scaling table.
+- `Current last-mile source/notation/layout audit`
+  (`Hooke the 2nd`/`Maxwell the 2nd`/`Descartes the 2nd`): completed and
+  integrated in the current last-mile chunk. Findings addressed: hyperelasticity
+  scaling prose now expands non-uniform-memory-access, coordinate-format sparse
+  preallocation, and Steihaug--Toint conjugate-gradient terminology; the solver
+  reporting table no longer uses configured/run-log phrasing; resident set size
+  is expanded before RSS; state-design/topology/plasticity figure wording is
+  more paper-facing; the residual-bisection acceptance condition uses
+  `\nabla\mathcal{F}` explicitly; the owned-row PETSc assembly display restricts
+  local contributions to element stencils; nearby `\lambda_{\mathrm{sr}}`
+  numerical styling is standardized; and the Plasticity3D validation table
+  names the critical-load row as a relative-difference metric. Source and
+  rendered-PDF scans found no high-priority local-framing leak. Descartes found
+  no A4 hard layout blocker; dense Results tables, the four-panel Plasticity3D
+  degree figure, and the Plasticity3D CPU-scaling table remain target-template
+  risks only. The rebuilt A4 PDF is 44 pages.
 
 ## First Edit Backlog
 

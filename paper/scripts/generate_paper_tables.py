@@ -1090,7 +1090,7 @@ def main() -> None:
         [
             [
                 "completed",
-                "All configured stopping tests for the configuration are met before the nonlinear cap or wall-time cap.",
+                "All row-specific stopping tests are met before the nonlinear cap or wall-time cap.",
                 "Endpoint energy and observables are terminal values for the stated benchmark.",
             ],
             [
@@ -1105,7 +1105,7 @@ def main() -> None:
             ],
             [
                 "wall time",
-                "Elapsed end-to-end time for the stated run or run segment, including setup when the reporting path includes it.",
+                "Elapsed end-to-end time for the stated benchmark evaluation, including setup when that timing scope is specified.",
                 "Comparable only for configurations that share the same benchmark contract and timing scope.",
             ],
             [
@@ -1876,7 +1876,7 @@ def main() -> None:
             ],
             [
                 "fixed-load comparison",
-                "$\\lambda_{\\max}^{\\mathrm{succ}}$",
+                "relative difference in $\\lambda_{\\max}^{\\mathrm{succ}}$",
                 fmt_sci(float(layer2_metrics["critical_lambda_schedule_proxy"]["relative_difference"])),
                 _layer2_criterion_status(layer2_metrics, "critical_lambda_pass"),
             ],
