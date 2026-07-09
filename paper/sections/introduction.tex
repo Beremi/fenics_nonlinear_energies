@@ -18,8 +18,8 @@ checks where matched benchmark definitions exist. External comparisons are
 deliberately scoped: JAX-FEM is used for the hyperelastic benchmark, and the
 Sysala-family slope-stability literature provides reference-model context for
 the plasticity endpoint observables. The
-\v{C}erm{\'a}k--Sysala--Valdman MATLAB work is used as implementation-lineage
-context rather than as a numerical baseline.
+\v{C}erm{\'a}k--Sysala--Valdman MATLAB work is used as solver-lineage context
+rather than as a numerical baseline.
 
 \subsection{Contributions}
 \label{sec:intro-contributions}
@@ -69,8 +69,8 @@ differentiable FEM, JAX--solver bridges, mechanics and topology benchmark
 families, and sparse nonlinear solver infrastructure. The present work combines
 these roles by treating local differentiation, PETSc-owned sparse MPI assembly,
 nonlinear globalization, and preconditioner policy in one heterogeneous
-benchmark suite. \Cref{sec:related} gives the source-specific discussion and
-records the role map used to position the surrounding software and literature.
+benchmark suite. \Cref{sec:related} discusses these source classes by technical
+role.
 
 The paper is organized as follows. \Cref{sec:related} deepens the literature
 context behind this positioning. \Cref{sec:methodology} describes the common

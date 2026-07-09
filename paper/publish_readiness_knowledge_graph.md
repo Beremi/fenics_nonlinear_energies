@@ -101,8 +101,7 @@ MATLAB literature only when there is source-backed evidence.
   rank-consistency diagnostics; it also separates JAX-FEM as a matched
   hyperelastic comparison, Sysala-family slope-stability work as
   reference-model/reference-observable context, and the
-  \v{C}erm{\'a}k--Sysala--Valdman MATLAB work as implementation-lineage
-  context.
+  \v{C}erm{\'a}k--Sysala--Valdman MATLAB work as solver-lineage context.
   Current evidence-scope chunk keeps that separation in both the abstract and
   introduction, scopes the Plasticity3D timing sentence to the fixed high-order
   derivative-route comparison, and names the contribution as a scientific
@@ -116,7 +115,7 @@ MATLAB literature only when there is source-backed evidence.
   linear-solver pillars. Current narrative chunk names the implemented
   \jaxpetsc{} scientific toolset before the contribution list, condenses the
   first literature tour so the SOTA table and related-work section carry the
-  detailed taxonomy, and states that non-mainline comparisons are matched
+  detailed taxonomy, and states that non-primary comparisons are matched
   reference surfaces rather than framework rankings. Current
   notation-and-claims chunk replaces remaining comparison-surface and
   reference-family wording with scoped reference implementations, matched
@@ -143,7 +142,7 @@ MATLAB literature only when there is source-backed evidence.
   topology/plasticity source context, and scalable software comparators.
   FEniTop is now framed as topology-optimization literature context rather than
   a direct baseline, and the Cermak--Sysala--Valdman MATLAB citation is
-  implementation-lineage context only. Current notation-and-claims chunk makes
+  solver-lineage context only. Current notation-and-claims chunk makes
   the PETSc paragraph affirmative: ownership layout, Krylov policy,
   globalization, and preconditioner design are part of the numerical method.
   Current SOTA/math polish chunk scopes Xue 2026 as a close second-order
@@ -204,12 +203,14 @@ MATLAB literature only when there is source-backed evidence.
   model failure, points KSP tolerances to the numerical-protocol table or
   result-specific rows, makes finite-difference colored recovery first-order in
   `\delta`, and normalizes `m_q` as active branch plus local material/history
-  data.
+  data. Current subagent-audit chunk makes the hybrid Newton direction
+  unambiguous by distinguishing the approximate Newton direction
+  `p_k^{\mathrm{N}}` from the selected reduced-model trial direction `d_k`.
 - `IMPLEMENTATION`: realization of the method.
   Current assets: pure JAX, FEniCS, and JAX+PETSc strata; autodiff modes;
   Krylov/preconditioner matrix; distributed assembly.
   Status: revised as solver paths with scientific roles, not codebase strata;
-  implementation prose now uses mainline/scalable/distributed terminology
+  implementation prose now uses primary/scalable/distributed terminology
   instead of maintained or production-path wording. Plasticity3D PMG wording now
   separates Hypre-coarse auxiliary/endpoint probes from the MUMPS-backed
   redundant-LU profile used by the P2 globalization/derivative rows and the
@@ -223,7 +224,7 @@ MATLAB literature only when there is source-backed evidence.
   manuscript/software-structure wording to computational structure and
   distributed/reference formulation roles. Current label/notation chunk changes
   the visible implementation heading to `Primary \jaxpetsc{} path` and removes
-  the remaining Figure 1 `mainline` label. Current notation-and-claims chunk
+  the remaining Figure 1 primary-path label. Current notation-and-claims chunk
   removes remaining "hot loop" and "engineering choice" wording and aligns the
   capability matrix with the Hyperelasticity colored-SFD comparison evidence.
   Current SOTA/math polish chunk renames visible pure-JAX/FEniCS reference path
@@ -309,7 +310,10 @@ MATLAB literature only when there is source-backed evidence.
   serial reference from the fine-grid parallel benchmark. It also moves
   Plasticity3D endpoint interpretation immediately after the state/convergence
   figure and endpoint table, with the shared-scale slice interpretation after
-  the slice figure.
+  the slice figure. Current subagent-audit chunk introduces the Davis-B-reduced
+  Plasticity2D and Plasticity3D parameters before the scalar surrogate displays,
+  replaces draft "later in the paper" cross-references with explicit section
+  references, and normalizes MATLAB context as solver-lineage evidence.
 - `VALIDATION`: external and reference-model comparison.
   Evidence: narrow hyperelastic JAX-FEM comparison; Plasticity3D validation
   ladder with endpoint-surrogate scope.
@@ -350,6 +354,9 @@ MATLAB literature only when there is source-backed evidence.
   Current math/evidence chunk changes direct-branch validation wording from
   agreement to comparison where no predefined threshold exists; the fixed-load
   comparison remains the thresholded part of the Plasticity3D validation table.
+  Current subagent-audit chunk splits Sysala-family reference-model context from
+  \v{C}erm{\'a}k--Sysala--Valdman MATLAB solver-lineage context and states the
+  JAX-FEM constitutive-form caveat as a property of the specific companion case.
 - `RESULTS`: performance and solver behavior.
   Evidence: globalization comparison, derivative-route comparison, scaling
   studies, hyperelastic and Plasticity3D solver diagnostics, topology scaling.
@@ -421,6 +428,9 @@ MATLAB literature only when there is source-backed evidence.
   of the results section, retitles mixed timing columns as `Solve/elapsed [s]`
   and `Solve/total/wall [s]`, and clarifies the Plasticity2D generated-table
   caption as endpoint plus fixed-work diagnostic evidence. Current
+  subagent-audit chunk makes that protocol table explicitly cross-section: the
+  validation rows are recalled only for terminology, while performance
+  interpretations use the timing, stopping, and solver-policy columns. Current
   evidence-gate chunk makes the mixed timing sources auditable in the generated
   tables: the derivative-route comparison has an explicit timing-scope column,
   the Ginzburg--Landau timeout row reports elapsed wall time and the wall-time
@@ -831,8 +841,8 @@ MATLAB literature only when there is source-backed evidence.
   not fully enumerated, and replace implementation spellings with scientific
   notation.
 - `Legacy MATLAB/Valdman comparators` (`Halley`): completed. Key finding:
-  cite Cermak--Sysala--Valdman 2019 as implementation-lineage context only, not
-  as a verified numerical baseline.
+  cite Cermak--Sysala--Valdman 2019 as solver-lineage context only, not as a
+  verified numerical baseline.
 - `Narrative/message` (`Mendel`): completed. Key findings: remove internal
   campaign-review terms such as locked, promoted, and review-level scrutiny;
   keep FEniTop as context rather than a baseline; make the conclusion less
@@ -853,7 +863,7 @@ MATLAB literature only when there is source-backed evidence.
   GAMG and PMG/MUMPS profiles, defined Plasticity3D derivative-ablation
   observables, scoped Hyperelasticity PMG energy as fixed-work evidence, stated
   the Plasticity3D KSP tolerance as a PETSc relative residual tolerance, and
-  added a reference-formula/mainline scope sentence.
+  added a reference-formula/primary-solver scope sentence.
 - `Reproducibility/submission` (`Epicurus`): completed. Findings partly
   addressed: source-submission table names were made scientific. Remaining
   blockers are process-level: venue/declarations, repository license, durable
@@ -918,7 +928,7 @@ MATLAB literature only when there is source-backed evidence.
 - `Front-matter narrative` (`Huygens`): completed. Findings addressed in the
   current narrative chunk: title shortened, abstract compressed, comparison
   surface clarified, duplicated literature setup reduced, and organization text
-  updated for mainline/reference paths.
+  updated for primary/reference paths.
 - `Back-matter synthesis` (`Mill`): completed. Findings addressed in the
   current narrative chunk: conclusion opens synthetically, discussion leads with
   the methodological lesson, contract vocabulary is reduced, and future work is
@@ -1331,7 +1341,7 @@ MATLAB literature only when there is source-backed evidence.
 1. Rewrite title and abstract around the toolset and evidence pillars. Done in
    the first framing chunk.
 2. Add an explicit contributions subsection to the introduction. Done.
-3. Recast `Implementation` as "Reference and mainline solver paths." Done in
+3. Recast `Implementation` as "Reference and primary solver paths." Done in
    substance.
 4. Replace broad "repository" wording in benchmark definitions with
    self-contained terms such as "implemented benchmark," "discrete model," and

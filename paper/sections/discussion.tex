@@ -12,10 +12,10 @@ validation scope, and external comparison evidence.
 \Cref{fig:plasticity3d-derivative-ablation,tab:plasticity3d-derivative-ablation}
 show a consistent cost comparison on the fixed $P_4(L_1)$,
 $\lambda_{\mathrm{sr}}=1.5$, 8-rank case. The three routes report terminal
-observables that agree to the displayed precision, with 8 Newton iterations and
-376 Krylov iterations. Thus the reported evidence primarily isolates
-derivative-route cost under matching terminal observables. In this fixed test,
-constitutive AD preserves the
+observables with the same rounded energy, external-work observable, and maximum
+displacement, with 8 Newton iterations and 376 Krylov iterations. Thus the
+reported evidence primarily isolates derivative-route cost under matching
+terminal observables. In this fixed test, constitutive AD preserves the
 same scalar-energy definition and has the lowest measured wall time:
 \SI{222}{s}, compared with \SI{288}{s} for element AD and \SI{372}{s} for
 colored SFD.
@@ -36,10 +36,10 @@ The hyperelastic JAX-FEM comparison in
 \Cref{fig:hyperelasticity-jaxfem-baseline,tab:hyperelasticity-jaxfem-baseline}
 is informative because the mesh, prescribed displacement schedule, and
 terminal-state energy evaluation are explicitly matched. The terminal states
-are post-compared with the energy in
-\cref{eq:hyperelasticity-energy}; the final energy relative difference is
-\num{8.244e-6}, and the displacement and centerline relative differences are
-below the prescribed 5\% threshold. Its role is solver-consistency evidence for
+are post-compared with the energy in \eqref{eq:hyperelasticity-energy}; the
+final energy relative difference is \num{8.244e-6}, and the displacement and
+centerline relative differences are below the prescribed 5\% threshold. Its role
+is solver-consistency evidence for
 this hyperelastic benchmark: under a matched mesh, displacement schedule, and
 terminal-energy post-comparison, the \jaxpetsc{} and JAX-FEM terminal states
 agree closely.

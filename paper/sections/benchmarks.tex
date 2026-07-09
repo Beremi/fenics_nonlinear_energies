@@ -34,7 +34,7 @@ hyperelasticity have \fenics{} reference formulations, while \purejax{} is used
 only where a compact serial formulation is available. The two plasticity
 families are primarily \jaxpetsc{} studies: the two-dimensional case supplies
 supporting continuation diagnostics, and the three-dimensional case uses the
-\v{C}erm{\'a}k--Sysala--Valdman slope-stability implementation lineage as
+\v{C}erm{\'a}k--Sysala--Valdman slope-stability MATLAB solver lineage as
 endpoint-surrogate context rather than as a path-history validation baseline.
 Topology optimization combines a parallel \jaxpetsc{} realization with a serial
 \purejax{} design reference. Thus some entries below are validation comparisons,
@@ -270,7 +270,7 @@ $J(u) = \det F(u)$, and the compressible Neo-Hookean-type density
 \]
 The first Piola stress is $P(F) = \partial W/\partial F$
 \citep[Chs.~4--6]{bonet2008nonlinear}. The
-implemented benchmark used in this paper is a cantilever problem with the
+benchmark considered here is a cantilever problem with the
 potential, defined on admissible displacements with $J(u)>0$ almost everywhere,
 \begin{equation}
   \Pi(u)
@@ -429,7 +429,10 @@ The corresponding weak form is
 
 The runs reported here are endpoint solves, not path-consistent incremental
 histories. Accordingly, the benchmark uses the following scalarized discrete
-surrogate functional for differentiation and comparison:
+surrogate functional for differentiation and comparison. Let
+$c_{\lambda,eq}$ and $\phi_{\lambda,eq}$ denote the quadrature-point
+Davis-B-reduced cohesion and friction angle defined by
+\eqref{eq:plasticity2d-davis}:
 \begin{equation}
   \Pi_h^{2\mathrm{D}}(u_h;\lambda_{\mathrm{sr}})
   =
@@ -457,11 +460,7 @@ The load vector $f_{\mathrm{ext}}$ is assembled from the
 right-hand side of \cref{eq:plasticity2d-weak}; for the endpoint solves this is
 the gravity load with $b=(0,-\gamma)^\top$ and zero traction on the free
 boundary. The dilation angle enters this endpoint model only through the Davis-B
-reduction below.
-
-The reduced cohesion and friction angle appearing in
-\cref{eq:plasticity2d-discrete} are defined by the Davis-B reduction
-\cref{eq:plasticity2d-davis}.
+reduction.
 
 The two-dimensional branch formulas use engineering strain
 $\varepsilon=(\varepsilon_{xx},\varepsilon_{yy},\gamma_{xy})^\top$ and the
@@ -601,8 +600,9 @@ separate material parameter.
 This family is where multigrid hierarchy design first becomes dominant in the
 paper. Only the completed $P_4(L_5)$ endpoint case is treated as an endpoint
 solve; the larger $P_4(L_6)$ and $P_4(L_7)$ cases are 20-iteration capped
-diagnostics for solver behavior. Solver-engineering evidence for Plasticity2D
-is reported later in \Cref{sec:num-plasticity2d,sec:solver-evidence}.
+diagnostics for solver behavior. Nonlinear and multigrid solver evidence for
+Plasticity2D is reported later in
+\Cref{sec:num-plasticity2d,sec:solver-evidence}.
 
 \FloatBarrier
 
@@ -679,10 +679,14 @@ $L_1,\ldots,L_4$ for the four displayed mesh levels.
 The figures below use the bottom-clamped $P_4(L_2)$ representative endpoint at
 $\lambda_{\mathrm{sr}}=1.55$ and the finished nine-case study
 at the same load factor. The $\lambda_{\mathrm{sr}}=1.0$ strong-scaling
-study is kept later in the paper as separate auxiliary timing evidence.
+study is reported separately in \Cref{sec:num-plasticity3d} as auxiliary timing
+evidence.
 
-For those endpoint and continuation studies, we evaluate the
-following algorithmic scalar surrogate:
+For those endpoint and continuation studies, we evaluate the following
+algorithmic scalar surrogate. Let $\bar c_{\lambda,eq}$ and
+$\sin\phi_{\lambda,eq}$ denote the quadrature-point Davis-B-reduced quantities
+defined by \eqref{eq:plasticity3d-davis} and
+\eqref{eq:plasticity3d-davis-bar}:
 \begin{equation}
   \Pi_h^{3\mathrm{D}}(u_h;\lambda_{\mathrm{sr}})
   =
@@ -1001,8 +1005,9 @@ changes of the physical problem.
 \FloatBarrier
 
 Plasticity3D is the benchmark where detailed constitutive definitions are most
-important: the paper later plots values of \cref{eq:plasticity3d-discrete} and
-\cref{eq:plasticity3d-devnorm}, so both quantities are defined explicitly here.
+important: the results section reports values of
+\cref{eq:plasticity3d-discrete} and \cref{eq:plasticity3d-devnorm}, so both
+quantities are defined explicitly here.
 Timing, scaling, and degree-versus-resolution evidence for this family are
 reported in \Cref{sec:num-plasticity3d}.
 
@@ -1013,7 +1018,7 @@ The literature model is the standard SIMP-style compliance topology-optimization
 setting on a cantilever domain, together with filtering and continuation ideas
 from the classical topology literature
 \citep{bendsoe2003topology,sigmund2001topology,ferrari2020top99,bourdin2001filters}.
-In the implemented setting studied here, the topology benchmark is a
+In the setting studied here, the topology benchmark is a
 reduced optimization problem rather than a single equilibrium minimization. Let
 $Z_h$ be the scalar continuous $P_1$ space on the structured triangular mesh.
 The design variable is a latent nodal field $z_h \in Z_h$, mapped to a physical

@@ -249,6 +249,12 @@ scientific claims were introduced without supporting evidence.
   evidence paths instead of absolute local checkout paths.
 - Added release-blocker CLI-output regression coverage so the command users run
   keeps reporting repository-relative bundle evidence paths.
+- Addressed the current subagent audit chunk: clarified hybrid Newton trial
+  directions, introduced Davis-B-reduced plasticity parameters before their
+  surrogate displays, replaced draft precision and cross-reference wording with
+  table- and section-scoped evidence, split Sysala reference-model context from
+  Valdman MATLAB solver-lineage context, and marked validation rows in the
+  results protocol table as terminology-only recalls.
 - Rebuilt the paper PDF through the paper generation pipeline.
 
 ## Blocking Issues Before Submission
@@ -571,6 +577,18 @@ required support for the current scoped contribution.
 - `rg -n "LaTeX Warning|Package .* Warning|Overfull|Underfull|Undefined|undefined|Citation|Reference|Fatal|Emergency|Error|Warning" paper/build/main.log paper/build/main.blg`:
   no matches in the final build logs.
 - `git diff --check`: passed.
+- `./.venv/bin/python -m py_compile paper/scripts/generate_paper_tables.py`:
+  passed after renaming the generated Plasticity2D timing column to wall time.
+- `./.venv/bin/python paper/scripts/check_float_placements.py`: passed with 13
+  allowlisted `[H]` floats after the subagent audit prose/table chunk.
+- `make -C paper submission-check`: passed after the subagent audit chunk,
+  rebuilding a 43-page A4 PDF and rerunning the LaTeX-log scan, `qpdf`,
+  aux-order check, hard-float placement check, manuscript hygiene gate,
+  submission-bundle manifest verifier, and archive-neutral asset validation.
+- `./.venv/bin/python paper/scripts/check_release_blockers.py --expect-blockers`:
+  passed and still reports the four expected final-submission blockers:
+  target template/declarations, repository license, archival DOI, and durable
+  archive integration.
 
 Exact remaining blockers are submission metadata and license/archive DOI. The
 archive-neutral validator now passes against the local curated bundle; final

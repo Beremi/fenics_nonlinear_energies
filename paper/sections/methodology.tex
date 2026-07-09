@@ -127,16 +127,18 @@ energy, gradient, Hessian assembly or application, and linear solves
   \EndIf
   \State Form or define the Hessian operator
     $H_k=\nabla^2 \mathcal{F}(x_k)$
-  \State Approximately solve for a Newton-like direction from $H_k p_k = -g_k$
+  \State Approximately solve for a Newton-like direction
+    $p_k^{\mathrm{N}}$ from $H_k p_k^{\mathrm{N}} = -g_k$
   \If{trust region is enabled}
     \State Build a small reduced model in the span of Newton and gradient directions
     \State Solve the reduced trust subproblem with radius $\Delta_k$
     \State Optionally compare against a pure gradient trust step
+    \State Set $d_k$ to the selected reduced-model direction
     \State Restrict the line-search interval so the trial step stays in the trust ball
   \Else
-    \State Use the Newton direction directly
+    \State Set $d_k=p_k^{\mathrm{N}}$
   \EndIf
-  \State Select a trial step $s_k=\alpha_k p_k$ with the configured one-dimensional line-search rule
+  \State Select a trial step $s_k=\alpha_k d_k$ with the configured one-dimensional line-search rule
   \State Compute actual and predicted reductions, $\mathrm{ared}$ and
     $\mathrm{pred}= -g_k^\top s_k-\frac12 s_k^\top H_k s_k$
   \If{trust region is enabled}

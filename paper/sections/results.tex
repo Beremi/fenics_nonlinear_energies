@@ -7,17 +7,21 @@ equations, discrete energies, and representative states, and
 evidence. Here we focus on parallel timings, scaling trends, solver behavior,
 and the comparative cost of alternative derivative or discretization choices.
 Earlier timing evidence is retained when it clarifies scalability, but it is
-treated as performance evidence rather than validation evidence. The status and
-timing terms used below follow the protocol in
+treated as performance evidence rather than validation evidence. The
+cross-section protocol table below recalls validation rows only to fix the
+terminology used when those rows are discussed alongside timing evidence. The
+status and timing terms used below follow the protocol in
 \Cref{tab:solver-reporting-protocol}.
 
 \begin{table}[!htbp]
   \centering
   \scriptsize
   \input{tables/generated/numerical_protocol_summary.tex}
-  \caption{Numerical evidence blocks and reporting protocol used in this
-  section. The linear-solve column gives the representative KSP tolerance and
-  maximum-iteration policy; result-specific rows override it when stated.}
+  \caption{Numerical evidence blocks and reporting protocol. Validation rows are
+  recalled only for terminology; the performance interpretations below use the
+  timing, stopping, and solver-policy columns. The linear-solve column gives the
+  representative KSP tolerance and maximum-iteration policy; result-specific
+  rows override it when stated.}
   \label{tab:numerical-protocol-summary}
 \end{table}
 
@@ -180,9 +184,10 @@ identical discrete energies at higher wall time.
 
 In the finest plotted case, the \jaxpetsc{} element-AD path reports
 \SI{1.14}{s} on 32 ranks, while colored SFD reports \SI{1.45}{s} with the same
-Newton and Krylov iteration counts. The final energies agree to the displayed
-precision, so this block mainly measures the overhead of sparse recovery on a
-smooth scalar problem. Across the plotted ranks, element AD drops from
+Newton and Krylov iteration counts. The reported energies in
+\Cref{tab:plaplace-benchmark} differ by about $\num{8e-9}$, so this block
+mainly measures the overhead of sparse recovery on a smooth scalar problem.
+Across the plotted ranks, element AD drops from
 \SI{10.13}{s} on one rank to \SI{1.14}{s} on 32 ranks; colored SFD follows the
 same trend with persistent recovery overhead.
 
@@ -278,13 +283,13 @@ data or only local elements plus overlap.
   \label{tab:hyperelasticity-distribution-memory}
 \end{table}
 
-The level-4 same-work rows show matching Newton and Krylov counts and matching
-energy to the displayed precision for replicated and rank-local assembly. On
-the larger level-5 one-linearization memory rows, rank-local assembly reduces
-summed RSS from \SI{215.6}{GiB} to \SI{104.9}{GiB} at 32 ranks while leaving
-solve time at the same reported precision. The level-5 energy values are
-fixed-work terminal states after one linearization, so these rows are
-memory/cost diagnostics rather than endpoint-agreement checks.
+The level-4 same-work rows show matching Newton and Krylov counts and the same
+rounded energy value for replicated and rank-local assembly. On the larger
+level-5 one-linearization memory rows, rank-local assembly reduces summed RSS
+from \SI{215.6}{GiB} to \SI{104.9}{GiB} at 32 ranks, with solve times
+\SI{3.37}{s} and \SI{3.36}{s}. The level-5 energy values are fixed-work
+terminal states after one linearization, so these rows are memory/cost
+diagnostics rather than endpoint-agreement checks.
 
 \Cref{tab:hyperelasticity-pmg-sensitivity} isolates the first-step level-5 PMG
 choice on the same 32-rank level-5 problem with fixed nonlinear work. All

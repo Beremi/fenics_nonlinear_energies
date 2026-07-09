@@ -1907,7 +1907,7 @@ def main() -> None:
         [
             "Policy",
             "Ranks",
-            "Runtime [s]",
+            "Wall time [s]",
             "Init Krylov iters",
             "Continuation Krylov iters",
             "Final $\\lambda_{\\mathrm{sr}}$",

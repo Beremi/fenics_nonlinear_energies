@@ -47,14 +47,13 @@ comparison here is deliberately narrow and uses a serial companion case rather
 than the 24-step rotating benchmark path. Both implementations use the same
 level-1 mesh and the same right-face $x$-translation schedule
 $d=(0.0025,0.005,0.0075,0.01)$, then post-compare both terminal states with
-the energy from
-\cref{eq:hyperelasticity-energy}. This supports terminal-state observable
-agreement for this hyperelastic companion problem only. The comparison is
+the energy in \eqref{eq:hyperelasticity-energy}. This supports terminal-state
+observable agreement for this hyperelastic companion problem only. The comparison is
 therefore an energy-postprocessed terminal-state check for one hyperelastic
 case, and it does not assert constitutive-law identity between the two
-implementations: the JAX-FEM implementation uses a logarithmic-$J$ Piola form,
-whereas \cref{eq:hyperelasticity-energy} uses the $D_1(J-1)^2$ volumetric
-penalty.
+implementations: the specific JAX-FEM companion case used here uses a
+logarithmic-$J$ Piola form, whereas \eqref{eq:hyperelasticity-energy} uses the
+$D_1(J-1)^2$ volumetric penalty.
 
 \begin{figure}[!htbp]
   \centering
@@ -71,7 +70,7 @@ penalty.
   \end{subfigure}
   \caption{Serial hyperelastic comparison against JAX-FEM on the
   same mesh and prescribed displacement schedule, with energy post-comparison
-  of the terminal states under \cref{eq:hyperelasticity-energy}.}
+  of the terminal states under \eqref{eq:hyperelasticity-energy}.}
   \label{fig:hyperelasticity-jaxfem-baseline}
 \end{figure}
 
@@ -101,11 +100,13 @@ reference formulations, but the object studied here is the algorithmic
 endpoint surrogate defined in
 \Cref{sec:bench-plasticity3d,eq:plasticity3d-discrete,eq:plasticity3d-potential}.
 The Sysala return-mapping, optimization, convex-optimization, and advanced
-continuation papers, together with the efficient \v{C}erm{\'a}k--Sysala--Valdman
-MATLAB elastoplastic implementation of \citet{cermak2019efficient}, provide
-reference-model and method context for this problem class
-\citep{sysala2017returnmapping,sysala2021optimization,sysala2025convexoptimization,sysala2025advancedcontinuation};
-they are not used here as verified numeric paper baselines.
+continuation papers provide reference-model and method context for this problem
+class
+\citep{sysala2017returnmapping,sysala2021optimization,sysala2025convexoptimization,sysala2025advancedcontinuation}.
+The efficient \v{C}erm{\'a}k--Sysala--Valdman MATLAB elastoplastic
+implementation of \citet{cermak2019efficient} provides solver-lineage context
+for comparable finite-element slope-stability solvers. None of these sources is
+used here as a verified numerical baseline.
 
 The endpoint-surrogate comparison therefore uses two diagnostics. Here the
 reference model means the matched endpoint reference formulation used for these
