@@ -554,7 +554,11 @@ $\widehat\sigma^\star_1=\widehat\sigma^\star_2=
 \kappa_\lambda/(a_\lambda-b_\lambda)$.
 
 Let $\vartheta=\frac12\operatorname{atan2}(2\tau_{xy},\sigma_{xx}-\sigma_{yy})$
-be the trial principal direction. We reconstruct the Cartesian stress as
+be the trial principal direction, with the convention $\vartheta=0$ when the
+trial stress has repeated in-plane principal values. This convention only fixes
+a representative orientation at the repeated-principal-stress branch point; the
+active-branch derivatives used in the solver are interpreted away from that
+degeneracy. We reconstruct the Cartesian stress as
 \[
   \sigma^\star
   =
@@ -1238,7 +1242,8 @@ normalized volume is
   \frac{1}{|\Omega|}
   \sum_{e=1}^{n_{\mathrm{el}}} |e|\,\theta_e.
 \]
-Let $V_\star=0.4$ be the target value. Before the $m$th design solve we use
+Let $V_\star=0.4$ be the target value and initialize
+$\lambda_{\mathrm{corr}}^0=0$. Before the $m$th design solve we use
 \[
   r_V^m = V(\theta_h^m)-V_\star,\qquad
   \lambda_V^m =
@@ -1246,10 +1251,16 @@ Let $V_\star=0.4$ be the target value. Before the $m$th design solve we use
   + \lambda_{\mathrm{corr}}^m
   + \rho_V r_V^m,
 \]
-where $\lambda_{\mathrm{ref}}^m$ is the
-$(1-V_\star)$-quantile of
-$p\,e_{e,m}^{\mathrm{frozen}}/\max(\theta_e^m,\theta_{\min})^{p+1}$
-over the elementwise sensitivity scale,
+where $\lambda_{\mathrm{ref}}^m$ is the unweighted empirical
+$(1-V_\star)$-quantile, with linear interpolation, of the element samples
+\[
+  s_e^m
+  =
+  p\,e_{e,m}^{\mathrm{frozen}}
+  /\max(\theta_e^m,\theta_{\min})^{p+1},
+\]
+taken once over the elements of $\mathcal{T}_h$ and without duplicated ghost
+cells in parallel,
 $\lambda_{\mathrm{corr}}^m$ is the carried multiplier correction, and
 $\rho_V=10$. After the design update, with
 $r_V^{m+1}=V(\theta_h^{m+1})-V_\star$, the carried correction is updated by
@@ -1305,13 +1316,19 @@ iterations under the continuation logic shown in \Cref{fig:topology-history}.
 The target volume is imposed through the adaptive multiplier and stopping rule,
 so the endpoint volume is reported as an achieved value rather than as an exact
 equality-constraint satisfaction claim.
-For topology, the relevant notion of
-``convergence'' is this reduced objective history rather than a single
-equilibrium energy. The reported continuation starts at SIMP exponent $p=1$,
-increases $p$ by $0.2$ on each outer iteration up to $p=10$, and treats the
-fine-grid configuration as stalled once $p\ge 4$ and both the reported design-change and
-state-change stopping diagnostics are at most $10^{-6}$. Rank-varied adaptive
-timing and a controlled rank-consistency check for the same family are reported
-in \Cref{sec:num-topology}.
+For topology, the relevant notion of ``convergence'' is this reduced objective
+history rather than a single equilibrium energy. Let
+$\theta_{\mathcal{D}}^{m,-}$ and $\theta_{\mathcal{D}}^{m,+}$ denote the active
+design-node density vectors before and after the $m$th design solve. The
+reported design-change diagnostic is
+$\|\theta_{\mathcal{D}}^{m,+}-\theta_{\mathcal{D}}^{m,-}\|_2/
+\max(1,\|\theta_{\mathcal{D}}^{m,-}\|_2)$, and the state-change diagnostic is
+the same relative norm between consecutive pre-design density vectors
+$\theta_{\mathcal{D}}^{m,-}$ and $\theta_{\mathcal{D}}^{m-1,-}$. The reported
+continuation starts at SIMP exponent $p=1$, increases $p$ by $0.2$ on each
+outer iteration up to $p=10$, and treats the fine-grid configuration as stalled
+once $p\ge 4$ and both diagnostics are at most $10^{-6}$. Adaptive timing
+across MPI rank counts and a controlled rank-consistency check for the same
+family are reported in \Cref{sec:num-topology}.
 
 \FloatBarrier

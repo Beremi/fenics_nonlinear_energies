@@ -118,7 +118,7 @@ Hessian-evaluation cost for one Newton linearization, not nonlinear convergence.
 The key same-DOF contrast is $P_1(L_2)$ versus $P_2(L_1)$: at \num{79024} free
 unknowns, the denser $P_2$ stencil raises colors from 66--90 to 240--420,
 Hessian time from \num{0.332} to \num{1.412} s, and rank-maximum resident set
-size (RSS) from about \num{0.65} to \num{1.10} GiB. The $P_4$ colored
+size (RSS) from about \num{0.6} to \num{1.1} GiB. The $P_4$ colored
 sparse-recovery case is outside this table.
 
 \begin{table}[!htbp]
@@ -182,10 +182,12 @@ configurations.
 
 \FloatBarrier
 
-At 32 ranks, the element-AD and colored sparse-recovery \jaxpetsc{} configurations report
-\SI{2.10}{s} and \SI{2.72}{s}, respectively. The scaling figure shows the same
-final-energy trend for the two routes, so the main visible difference is the
-colored sparse-recovery wall-time premium on this nonconvex scalar energy.
+At 32 ranks, the element-AD and colored sparse-recovery \jaxpetsc{}
+configurations report \SI{2.10}{s} and \SI{2.72}{s}, respectively.
+\Cref{fig:gl-energy-levels,tab:gl-benchmark} give the corresponding
+final-energy agreement, while \Cref{fig:gl-results} reports timing only. Thus
+the main visible difference in the scaling plot is the colored sparse-recovery
+wall-time premium on this nonconvex scalar energy.
 Across the plotted ranks, element AD falls from \SI{15.64}{s} on one rank to
 \SI{2.10}{s} on 32 ranks, with a nonideal plateau around 4--8 ranks before the
 32-rank point. The FEniCS curve is included as reference-implementation context,

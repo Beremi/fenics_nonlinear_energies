@@ -49,6 +49,17 @@ software superiority claims.
   density-based topology optimization" (current arXiv version dated
   2025-02-23), and an open Optimization Online PDF for a SIOPT-style
   derivative-free optimization manuscript.
+- Additional 2025 SIOPT metadata and open arXiv mirrors checked on
+  2026-07-09 reinforce the same pattern: abstracts state the problem class and
+  method directly, qualify assumptions or stationarity notions, and name the
+  numerical or theoretical evidence. Concrete anchors: "Consistency of
+  sample-based stationary points for infinite-dimensional stochastic
+  optimization" (SIAM J. Optim. DOI `10.1137/23M1600608`, arXiv
+  `2306.17032`), "Splitting the Conditional Gradient Algorithm" (DOI
+  `10.1137/24M1638008`, arXiv `2311.05381`), "On Squared-Variable
+  Formulations" (DOI `10.1137/23M1608343`, arXiv `2310.01784`), and
+  "TS-RSR: A provably efficient approach for batch Bayesian Optimization" (DOI
+  `10.1137/24M1675102`, arXiv `2403.04764`).
 
 The local style-guide snapshot is ignored through `.git/info/exclude`; do not
 stage or commit `paper/style_guide/`.
@@ -168,6 +179,18 @@ stage or commit `paper/style_guide/`.
   highest-successful-load value on the tested grid, and relaxed layout barriers
   that isolated benchmark floats. The rebuilt PDF is a 43-page A4 article;
   rendered pages 8--23, 26--38, and page 34 were visually checked.
+- Current SIOPT-scope and self-containment pass: Bohr/Plato/Euler/Hypatia
+  audits found no current A4 layout blocker and no small missing experiment for
+  the present claims. Integrated fixes narrow the abstract and related-work
+  novelty language to the tested suite, make the conclusion synthesize rather
+  than inventory sections, define the Plasticity2D repeated-principal-stress
+  direction convention, specify the topology multiplier quantile and
+  correction initialization, define topology design/state-change diagnostics,
+  correct the Ginzburg--Landau energy-evidence attribution, and keep the
+  benchmark-specification table paper-facing. Remaining layout risks are
+  target-template risks: dense Results table clusters, the Hyperelasticity
+  PMG/memory block, Plasticity3D degree/scaling figures and tables, and
+  FloatBarrier behavior after venue conversion.
 
 ## Figure And Table Rules
 

@@ -1519,6 +1519,33 @@ MATLAB literature only when there is source-backed evidence.
   and rendered pages 8--23, 26--38, and page 34 were visually checked. The
   rebuilt A4 PDF is 43 pages. Remaining risks are target-template/page-budget
   decisions and external release blockers, not current A4 rendering failures.
+- `Current SIOPT-scope, self-containment, and claim-attribution audit`
+  (`Bohr the 2nd`/`Plato the 2nd`/`Euler the 2nd`/`Hypatia the 2nd`):
+  completed and integrated in the current chunk. Style/reference context was
+  refreshed from the local style guide and from recent 2025 SIOPT metadata with
+  open arXiv mirrors: sample-based stationary points for infinite-dimensional
+  stochastic optimization (`10.1137/23M1600608`, arXiv `2306.17032`),
+  conditional-gradient splitting (`10.1137/24M1638008`, arXiv `2311.05381`),
+  squared-variable formulations (`10.1137/23M1608343`, arXiv `2310.01784`), and
+  TS-RSR batch Bayesian optimization (`10.1137/24M1675102`, arXiv
+  `2403.04764`). Findings addressed: the abstract and related-work language now
+  says the evidence indicates coupled solver-design choices for the tested
+  problem classes rather than a broad field-wide necessity; the conclusion no
+  longer reads as a section inventory; the implementation opening is phrased as
+  a local-to-global finite-element construction rather than a pipeline report;
+  Plasticity2D states the repeated-principal-stress direction convention and
+  active-branch qualification; the topology benchmark defines the empirical
+  sensitivity quantile, initializes the carried volume correction, and defines
+  design/state-change stopping diagnostics; the Ginzburg--Landau scaling
+  paragraph attributes final-energy agreement to the benchmark table/energy
+  figure rather than to the timing-only scaling figure; and generated
+  benchmark-specification wording now says adaptive MPI timing rather than
+  rank-varied adaptive timing. Hypatia found no current A4 blocker after a full
+  visual render of the 43-page article, with remaining risks limited to dense
+  Results clusters, Hyperelasticity PMG/memory material, Plasticity3D
+  degree/scaling material, and target-template float behavior. Euler found no
+  genuinely small missing experiment for the current scoped claims; path-history
+  Plasticity3D validation remains future work.
 
 ## First Edit Backlog
 

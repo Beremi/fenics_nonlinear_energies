@@ -13,7 +13,7 @@ free scalar degrees of freedom. A free coefficient vector
 $x\in\mathbb{R}^{n}$ defines the finite-element state
 \[
   u_h(x;\theta)=\bar u_h(\theta)+\sum_{i=1}^{n} x_i\varphi_i.
-  \]
+\]
 When no confusion is possible, we identify $u_h$ with its coefficient vector in
 algebraic formulas. On element $e$, $x_e=R_e x$ denotes the local coefficient
 vector selected by the element restriction $R_e$, while $u_e(x;\theta)$ denotes
@@ -91,9 +91,9 @@ three derivative routes:
   \item \textbf{element AD:} differentiate the full scalar element contribution
         $\Phi_e(x_e;\theta_e)$ with respect to the element free-DOF vector;
   \item \textbf{constitutive AD:} differentiate a quadrature-point energy
-        density $\mathcal{W}_q(\varepsilon_q,m_q)$ with respect to $\varepsilon_q$,
-        holding the active branch together with local material and history data
-        $m_q\subset\theta_q$ fixed, then assemble
+        density $\mathcal{W}_q(\varepsilon_q,m_q)$ with respect to
+        $\varepsilon_q$, holding fixed the active branch and the local material
+        and history data $m_q$ selected from $\theta_q$, then assemble
         $r_e = \sum_q w_q B_q^\top \sigma_q$ and
         $K_e = \sum_q w_q B_q^\top C_q B_q$, where
         $\sigma_q := \partial_\varepsilon\mathcal{W}_q(\varepsilon_q,m_q)$ and

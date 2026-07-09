@@ -1,15 +1,14 @@
 \label{sec:implementation}
 
-The computational realization starts from a self-contained \jaxpetsc{} pipeline.
-A benchmark supplies a local energy density, branch potential, or constitutive
-law together with finite-element restrictions. JAX evaluates the local residual,
-tangent, or Hessian-vector-product contribution on each element or quadrature
-point. The distributed layer scatters owned coefficients to ghosted element
-states, accumulates owned-row sparse residuals and tangents, and gives PETSc the
+Given a discrete energy density, branch potential, or constitutive law together
+with finite-element restrictions, the \jaxpetsc{} realization evaluates local
+residual, tangent, or Hessian-vector-product contributions with JAX. The
+distributed layer scatters owned coefficients to ghosted element states,
+accumulates owned-row sparse residuals and tangents, and gives PETSc the
 resulting nonlinear residual, matrix, or matrix-free action. PETSc then controls
 globalization, Krylov iteration, preconditioning, and convergence reporting. The
-same pipeline is used before narrower reference formulations are introduced for
-selected benchmark checks.
+same local-to-global construction is used before narrower reference
+formulations are introduced for selected benchmark checks.
 
 \paragraph{Primary \jaxpetsc{} realization.}
 This is the central solver realization of the paper. It combines JAX-based local
@@ -124,10 +123,10 @@ and PMG polynomial multigrid:
 \end{itemize}
 
 The result sections then instantiate these solver choices in concrete benchmark
-rows. Some rows deliberately hold the preconditioning operator fixed along the
-nonlinear path or vary only the coarse solve. These diagnostics are included to
-separate derivative-route cost, preconditioner construction, and outer
-globalization effects.
+configurations. Some configurations deliberately hold the preconditioning
+operator fixed along the nonlinear path or vary only the coarse solve. These
+diagnostics are included to separate derivative-route cost, preconditioner
+construction, and outer globalization effects.
 
 \subsection{Distributed assembly and coloring}
 
@@ -141,11 +140,11 @@ evaluations then compute element and quadrature contributions rank-locally on
 this overlap state.
 
 Matrix entries are inserted only for rows in $I_r$, with values on $G_r$ used to
-evaluate local stencils but not to duplicate ownership. Scalar energy values
-reported in the results are the solver-reported global reductions for the
-corresponding configuration; the ownership contract here concerns derivative and
-matrix assembly. Here $R_i(u)$ and $A_{ij}(u)$ are assembled residual and
-tangent entries, while $r_{K,i}$ and $a_{K,ij}$ are element contributions.
+evaluate local stencils but not to duplicate ownership. Scalar energy values in
+the numerical tables are global reductions for the corresponding solver
+configuration; the ownership contract here concerns derivative and matrix
+assembly. Here $R_i(u)$ and $A_{ij}(u)$ are assembled residual and tangent
+entries, while $r_{K,i}$ and $a_{K,ij}$ are element contributions.
 Equivalently, if
 $\mathcal{T}_r=\{K:\operatorname{dofs}(K)\cap I_r\ne\emptyset\}$, then rank $r$
 inserts
