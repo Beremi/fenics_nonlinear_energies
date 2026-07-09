@@ -190,31 +190,6 @@ defined in \cref{sec:bench-plasticity3d}, PMG denotes same-mesh polynomial
 multigrid, and KSP denotes PETSc's Krylov-solver interface and residual
 tolerance.
 
-\begin{algorithm}[H]
-\caption{Armijo line search used in Newton solves}
-\label{alg:armijo-linesearch}
-\begin{algorithmic}[1]
-\State Given state $x$, direction $p$, initial step $\alpha_0$, backtracking
-parameters $\beta\in(0,1)$, $c_1\in(0,1)$, and maximum count $m_{\max}$
-\State Evaluate $\mathcal{F}(x)$ and $g = \nabla \mathcal{F}(x)$
-\If{$g^\top p \ge 0$}
-  \State report direction failure to the calling solver or use the stated fallback
-  \State \Return
-\EndIf
-\For{$m=0,1,\dots,m_{\max}$}
-  \State $\alpha \gets \alpha_0 \beta^m$
-  \State $x_{\mathrm{trial}} \gets x + \alpha p$
-  \If{$\mathcal{F}(x_{\mathrm{trial}}) \le
-    \mathcal{F}(x) + c_1 \alpha g^\top p$}
-    \State accept $\alpha$
-    \State \Return
-  \EndIf
-\EndFor
-\State declare line-search failure or use a problem-specific safeguarded
-steepest-descent fallback when that policy is enabled
-\end{algorithmic}
-\end{algorithm}
-
 The numerical tables use a small common reporting vocabulary, summarized in
 \Cref{tab:solver-reporting-protocol}. These terms are part of the experimental
 protocol: a completed endpoint solve, a fixed-work diagnostic, and a capped run

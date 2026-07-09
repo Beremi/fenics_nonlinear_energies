@@ -15,11 +15,13 @@ defines local energies and constitutive laws, while PETSc provides sparse
 distributed algebra, nonlinear globalization, Krylov methods, and
 preconditioners. The \purejax{} and \fenics{} formulations provide internal
 checks where matched benchmark definitions exist. External comparisons are
-deliberately scoped: JAX-FEM is used for a narrow hyperelastic companion
-terminal-state comparison, and the Sysala-family slope-stability literature
+deliberately scoped: JAX-FEM \citep{xue2023jaxfem} is used for a narrow
+hyperelastic companion terminal-state comparison, and the Sysala-family
+slope-stability literature
+\citep{sysala2017returnmapping,sysala2021optimization,sysala2025convexoptimization,sysala2025advancedcontinuation}
 provides reference-model context for the plasticity endpoint observables. The
-\v{C}erm{\'a}k--Sysala--Valdman MATLAB work is used as elastoplastic
-implementation context rather than as a numerical baseline.
+\v{C}erm{\'a}k--Sysala--Valdman MATLAB work \citep{cermak2019efficient} is used
+as elastoplastic implementation context rather than as a numerical baseline.
 
 \subsection{Contributions}
 \label{sec:intro-contributions}
@@ -72,19 +74,11 @@ nonlinear globalization, and preconditioner policy in one heterogeneous
 benchmark suite. \Cref{sec:related} discusses these source classes by technical
 role.
 
-The paper is organized as follows. \Cref{sec:related} deepens the literature
-context behind this positioning. \Cref{sec:methodology} describes the common
-finite-element energy notation, derivative routes, nonlinear globalization, and
-sparse derivative recovery. \Cref{sec:implementation} explains the primary
-\jaxpetsc{} implementation and the narrower \purejax{} and \fenics{} reference
-implementations used in selected checks.
-
-\Cref{sec:benchmarks} defines the benchmark suite, with each benchmark separated
-into literature model and reported discrete problem. \Cref{sec:validation}
-then reports validation and external-comparison evidence, deliberately
-separating hyperelastic JAX-FEM agreement from the three-dimensional plasticity
-endpoint-surrogate comparison. \Cref{sec:performance-solver-behavior}
-reports timing, scaling, derivative-route, and discretization-comparison
-evidence. \Cref{sec:discussion} and \Cref{sec:conclusion} synthesize the main
-scope and limitations. Supporting solver-policy diagnostics are collected in
-\Cref{sec:solver-evidence}.
+The paper is organized as follows. \Cref{sec:related,sec:methodology,sec:implementation}
+position the related work, define the common finite-element and derivative
+notation, and describe the primary \jaxpetsc{} realization. \Cref{sec:benchmarks}
+defines the benchmark suite, \Cref{sec:validation} separates validation and
+external-comparison evidence, and \Cref{sec:performance-solver-behavior} reports
+timing, scaling, derivative-route, and discretization evidence. \Cref{sec:discussion,sec:conclusion}
+synthesize the scope and limitations; supporting solver-policy diagnostics are
+collected in \Cref{sec:solver-evidence}.

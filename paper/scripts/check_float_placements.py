@@ -21,7 +21,6 @@ LABEL_RE = re.compile(r"\\label\{(?P<label>[^{}]+)\}")
 
 ALLOWED_H_FLOATS: dict[tuple[str, str], str] = {
     ("algorithm", "alg:hybrid-newton"): "method pseudocode kept adjacent to solver-policy definition",
-    ("algorithm", "alg:armijo-linesearch"): "method pseudocode kept adjacent to globalization definition",
     ("algorithm", "alg:colored-hessian-recovery"): "method pseudocode kept adjacent to sparse-recovery definition",
     ("algorithm", "alg:constitutive-ad-assembly"): "method pseudocode kept adjacent to constitutive-AD definition",
     ("figure", "fig:plasticity3d-validation"): "paired endpoint-surrogate validation panels must precede the summary table",

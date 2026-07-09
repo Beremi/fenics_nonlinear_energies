@@ -54,7 +54,7 @@ MATLAB literature only when there is source-backed evidence.
 - SIOPT submission-shape cue checked on 2026-07-09: SIAM's author instructions
   ask for figures to be embedded inline and state that SIOPT has a 25-page
   policy, with longer papers published only in exceptional justified cases. The
-  current 45-page A4 article is therefore a journal-template/page-budget blocker
+  current 44-page A4 article is therefore a journal-template/page-budget blocker
   rather than a solved formatting issue.
 
 ## Manuscript Nodes
@@ -1396,6 +1396,17 @@ MATLAB literature only when there is source-backed evidence.
   scalar Results text identifies FEniCS curves as reference-implementation
   context. No new experiment is needed for the current scoped claims. The
   rebuilt A4 PDF is 45 pages and remains target-template/page-budget sensitive.
+- `Current page-budget and comparator-citation audit`
+  (`Socrates the 2nd`/`Goodall the 2nd`): completed and integrated in the
+  current concision chunk. Findings addressed: the introduction roadmap and
+  related-work transition are compressed; the standard Armijo pseudocode is
+  removed from Methods while the globalization policy remains in prose and
+  citations; the opening comparator-scope paragraph now cites JAX-FEM,
+  Sysala-family slope-stability references, and \v{C}ermak--Sysala--Valdman
+  near the roles it assigns; DOLFINx is described as a project rather than a
+  preprint; and the topology rank-consistency paragraph uses a one-rank
+  reference run rather than baseline language. The rebuilt A4 PDF is 44 pages
+  and remains target-template/page-budget sensitive.
 
 ## First Edit Backlog
 

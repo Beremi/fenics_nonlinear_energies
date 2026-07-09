@@ -117,6 +117,11 @@ stage or commit `paper/style_guide/`.
 - Layout: the current A4 PDF has no known hard rendering blocker after the last
   completed build. Remaining layout risks are target-template driven: dense
   result pages, figure/table compression, and page budget after venue conversion.
+- Current page-budget/evidence pass: the roadmap and related-work transition
+  are shorter, the standalone Armijo pseudocode was removed while preserving the
+  solver-policy prose and citations, comparator-role citations were moved into
+  the opening scope paragraph, and topology rank-consistency wording now uses a
+  one-rank reference run. The rebuilt PDF is a 44-page A4 article.
 
 ## Figure And Table Rules
 
@@ -154,7 +159,7 @@ external release decisions:
 - durable software/artifact archive;
 - archival DOI in the availability statement.
 
-The current PDF is a 45-page A4 article. Page budget and float behavior must be
+The current PDF is a 44-page A4 article. Page budget and float behavior must be
 rechecked after target-template conversion.
 
 Deferred layout risks from the 2026-07-09 audit: dense hyperelasticity and
