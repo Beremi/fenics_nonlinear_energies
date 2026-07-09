@@ -110,7 +110,7 @@ geometric complications.
 
 The within-benchmark picture is therefore one of formulation agreement:
 \cref{fig:plaplace-energy-levels,tab:plaplace-benchmark} show that the
-implemented routes converge to the same discrete energy from
+implemented routes agree to the reported precision for the discrete energy in
 \cref{eq:plaplace-discrete}. Scaling and timing for this family are reported in
 \Cref{sec:num-plaplace}.
 
@@ -181,8 +181,8 @@ is part of the benchmark definition.
   \includegraphics[width=\PaperFigureNarrow]{ginzburg_landau_energy_levels.pdf}
   \caption{Final discrete energies associated with the stationary problem
   \cref{eq:gl-discrete} across mesh
-  levels. The element-AD and colored-SFD \jaxpetsc{} routes remain nearly
-  coincident with the \fenics{} reference.}
+  levels. The element-AD and colored-SFD \jaxpetsc{} routes agree with the
+  \fenics{} reference to the displayed precision.}
   \label{fig:gl-energy-levels}
 \end{figure}
 
@@ -421,23 +421,59 @@ $\psi = 0^\circ$, hence $\psi_{\lambda}=0^\circ$; the reported states are
 algorithmic endpoint surrogates rather than path-consistent history updates.
 For a trial engineering strain
 $\varepsilon=(\varepsilon_{xx},\varepsilon_{yy},\gamma_{xy})^\top$ and old
-plastic strain $\varepsilon^{p,\mathrm{old}}$, the potential
-$\Phi_{\mathrm{MC},2\mathrm{D}}$ is evaluated by a plane-strain elastic
-predictor, the principal-stress Mohr--Coulomb test
+plastic strain $\varepsilon^{p,\mathrm{old}}$, set
 \[
-  (1+\sin\phi_\lambda)\sigma_1^{\mathrm{tr}}
-  -(1-\sin\phi_\lambda)\sigma_2^{\mathrm{tr}}
-  -2c_\lambda\cos\phi_\lambda \le 0,
+  \varepsilon^e=\varepsilon-\varepsilon^{p,\mathrm{old}},\qquad
+  \sigma^{\mathrm{tr}}=C_{2\mathrm{D}}\varepsilon^e,\qquad
+  S_{2\mathrm{D}}=C_{2\mathrm{D}}^{-1}.
 \]
-and either the elastic energy or the corresponding line/apex return energy. Here
-$\Phi_{\mathrm{MC},2\mathrm{D}}$ denotes the plane-strain Mohr--Coulomb branch
-potential associated with the elastic, line-return, and apex-return cases of the
-test above. The reported two-dimensional rows use this quantity as a
-solver-diagnostic endpoint surrogate. The small square-root regularization
-used in the principal-stress calculation replaces the branch discriminant by
-its regularized value with parameter $\epsilon_{\mathrm{reg}}=\num{1e-12}$.
-This is a numerical smoothing of the endpoint surrogate, not a separate material
-parameter.
+Writing $\sigma^{\mathrm{tr}}=(\sigma_{xx},\sigma_{yy},\tau_{xy})^\top$, the
+principal stresses use
+\[
+  \sigma_{1,2}^{\mathrm{tr}}
+  =
+  m \pm
+  \sqrt{d^2+\tau_{xy}^2+\epsilon_{\mathrm{reg}}^2},
+  \qquad
+  m=\frac{\sigma_{xx}+\sigma_{yy}}{2},\qquad
+  d=\frac{\sigma_{xx}-\sigma_{yy}}{2}.
+\]
+With
+$\alpha=1+\sin\phi_\lambda$, $\beta=1-\sin\phi_\lambda$, and
+$\kappa=2c_\lambda\cos\phi_\lambda$, the trial state is elastic when
+\[
+  f^{\mathrm{tr}}
+  =
+  \alpha\sigma_1^{\mathrm{tr}}
+  -\beta\sigma_2^{\mathrm{tr}}
+  -\kappa
+  \le 0.
+\]
+In that case $\sigma^\star=\sigma^{\mathrm{tr}}$. Otherwise let
+\[
+  z=\widehat S^{-1}(\alpha,-\beta)^\top,\qquad
+  \eta=\frac{f^{\mathrm{tr}}}{\alpha z_1-\beta z_2},\qquad
+  \widehat\sigma^\ell
+  =
+  (\sigma_1^{\mathrm{tr}},\sigma_2^{\mathrm{tr}})^\top-\eta z,
+\]
+where $\widehat S$ is the principal-stress $2\times2$ normal block of
+$S_{2\mathrm{D}}$. If
+$\widehat\sigma^\ell_1\ge \widehat\sigma^\ell_2$, set
+$\widehat\sigma^\star=\widehat\sigma^\ell$; otherwise set
+$\widehat\sigma^\star_1=\widehat\sigma^\star_2=\kappa/(\alpha-\beta)$.
+After rotating $\widehat\sigma^\star$ back to Cartesian components, the branch
+potential is
+\[
+  \Phi_{\mathrm{MC},2\mathrm{D}}
+  =
+  \sigma^\star\cdot\varepsilon^e
+  -\frac{1}{2}\sigma^\star\cdot S_{2\mathrm{D}}\sigma^\star.
+\]
+The reported two-dimensional rows use this quantity as a solver-diagnostic
+endpoint surrogate. The small square-root regularization parameter
+$\epsilon_{\mathrm{reg}}=\num{1e-12}$ smooths the endpoint surrogate; it is not a
+separate material parameter.
 
 \begin{figure}[H]
   \centering
@@ -490,7 +526,7 @@ equilibrium equations are
   \qquad
   u_i^{n+1} = \bar u_i^{n+1} \quad \text{on }\Gamma_{D,i},
   \qquad
-  \sigma^{n+1}n = 0 \quad \text{on }\Gamma_N,
+  \sigma^{n+1}n = 0 \quad \text{on }\Gamma_N.
   \label{eq:plasticity3d-strong}
 \end{equation}
 where $\sigma^{n+1}$ and the internal variables are obtained from the
@@ -512,7 +548,7 @@ The corresponding weak form is
 \begin{equation}
   \int_{\Omega} \sigma^{n+1} : \varepsilon(v) \, dx
   =
-  -\int_{\Omega} \gamma^{n+1} e_y \cdot v \, dx
+  -\int_{\Omega} \gamma(x) e_y \cdot v \, dx
   \qquad \forall v \in V_0.
   \label{eq:plasticity3d-weak}
 \end{equation}
@@ -526,8 +562,10 @@ We impose
   \Gamma_{D,y}=\Gamma_5,\qquad
   \Gamma_{D,z}=\Gamma_3\cup\Gamma_4.
 \]
+Let $X=(X_1,X_2,X_3)$ denote a reference-coordinate point, with $X_2$ the
+vertical coordinate.
 The bottom-clamped model additionally fixes all displacement components on
-$\Gamma_{\mathrm{bot}}=\{X\in\partial\Omega:\lvert Y\rvert\le 10^{-12}\}$.
+$\Gamma_{\mathrm{bot}}=\{X\in\partial\Omega:\lvert X_2\rvert\le 10^{-12}\}$.
 Here $\Gamma_{D,i}$ denotes the resulting Dirichlet set for displacement
 component $i$, $\Gamma_N$ is the remaining traction-free boundary, and $V_0$ is
 the homogeneous vector-valued test space after applying these component-wise
@@ -887,7 +925,7 @@ design pads are $x\le 32h_x$ and
 $x\ge 2-32h_x$, $y\in[0.4-32h_y,0.6+32h_y]$.
 Let $V_h$ be the continuous vector $P_1$ displacement space and let
 $V_{h,0}\subset V_h$ impose the homogeneous left-edge clamp. Let $C$ denote the
-plane-stress elasticity tensor and let $p$ be the current SIMP exponent. For
+plane-stress elasticity tensor and let $p$ be the active SIMP exponent. For
 fixed density, define the bilinear form
 \begin{equation}
   a_{\theta_h}(w_h,v_h)

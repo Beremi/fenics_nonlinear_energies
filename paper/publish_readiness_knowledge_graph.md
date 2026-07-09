@@ -920,6 +920,19 @@ MATLAB literature only when there is source-backed evidence.
   stated without draft apology, Ginzburg--Landau and colored-SFD result prose
   no longer reports setup omissions, and the hyperelastic PMG table now uses
   paper-facing coarse-solver labels.
+- `Current style/math/evidence/layout audit`
+  (`Goodall`/`Hooke`/`Gauss`/`Chandrasekhar`): completed. Findings addressed in
+  the current submission-readiness chunk: comparator roles are split into
+  internal references, matched JAX-FEM comparison, and slope-stability
+  reference-observable context; the SOTA table is framed as a role map; the
+  related-work opening is a taxonomy; Plasticity2D now defines the elastic,
+  line-return, and apex-return branch potential rather than referring to hidden
+  code; Plasticity3D bottom-coordinate notation and
+  $\lambda_{\max}^{\mathrm{succ}}$ fixed-load validation semantics are defined;
+  hyperelastic globalization wording now matches the table; scalar and
+  hyperelastic scaling figures are interpreted in body text; generated benchmark
+  tables use solver-realization labels; and the appendix table sequence is
+  protected by a new aux-order check plus `make submission-check`.
 
 ## First Edit Backlog
 

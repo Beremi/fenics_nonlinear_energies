@@ -123,10 +123,10 @@ LOCAL_SOURCEFIXED_IMPL = "constitutive_ad_fixed_reference_pmg"
 SOURCE_SOURCEFIXED_IMPL = "reference_formula_fixed_reference_pmg"
 
 IMPLEMENTATION_LABELS = {
-    "fenics_custom": "FEniCS custom Newton",
+    "fenics_custom": "FEniCS Newton reference",
     "jax_petsc_element": "JAX+PETSc element AD",
     "jax_petsc_local_sfd": "JAX+PETSc colored SFD",
-    "jax_serial": "serial JAX",
+    "jax_serial": "pure-JAX serial reference",
     LOCAL_IMPL: "constitutive-AD PMG solver",
     SOURCE_IMPL: "fixed-reference PMG variant",
     LOCAL_SOURCEFIXED_IMPL: "fixed-reference operator, constitutive AD",
@@ -1096,7 +1096,7 @@ def main() -> None:
     write_table_star(
         "plaplace_benchmark_summary.tex",
         fill_spec("l c c c c"),
-        ["Path", "Energy", "Newton iters", "Krylov iters", "Wall time [s]"],
+        ["Solver realization", "Energy", "Newton iters", "Krylov iters", "Wall time [s]"],
         [
             [
                 implementation_label(row["implementation"]),
@@ -1112,7 +1112,7 @@ def main() -> None:
     write_table_star(
         "ginzburg_landau_benchmark_summary.tex",
         fill_spec("l c c c c"),
-        ["Path", "Energy", "Newton iters", "Krylov iters", "Wall time [s]"],
+        ["Solver realization", "Energy", "Newton iters", "Krylov iters", "Wall time [s]"],
         [
             [
                 implementation_label(row["implementation"]),
@@ -1128,7 +1128,7 @@ def main() -> None:
     write_table_star(
         "hyperelasticity_benchmark_summary.tex",
         fill_spec("l c c c c"),
-        ["Path", "Energy", "Steps", "Krylov iters", "Wall time [s]"],
+        ["Solver realization", "Energy", "Steps", "Krylov iters", "Wall time [s]"],
         [
             [
                 implementation_label(row["implementation"]),
@@ -1734,7 +1734,7 @@ def main() -> None:
             ],
             [
                 "fixed-load comparison",
-                "highest-successful $\\lambda_{\\mathrm{sr}}$",
+                "$\\lambda_{\\max}^{\\mathrm{succ}}$",
                 fmt_sci(float(layer2_metrics["critical_lambda_schedule_proxy"]["relative_difference"])),
                 _layer2_criterion_status(layer2_metrics, "critical_lambda_pass"),
             ],

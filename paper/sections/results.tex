@@ -36,9 +36,10 @@ policies more sharply: the same line-search-only policy times out under the
 fixed cap, while both trust-region variants converge to the same reported
 energy. For the hyperelasticity excerpt all three policies complete, but
 Steihaug trust-region globalization without the line-search subproblem safeguard
-has the largest rejection count and the largest solve time. The hybrid policy keeps
-the trust-region safeguard while reducing both nonlinear iterations and solver
-time relative to line-search-only Newton. The Plasticity3D endpoint gives the
+has the largest trust-region rejection count and a larger solve time than the
+hybrid policy, whereas line-search-only Newton is slowest. The hybrid policy
+keeps the trust-region safeguard while reducing both nonlinear iterations and
+solver time relative to line-search-only Newton. The Plasticity3D endpoint gives the
 opposite conclusion from the easy scalar case: at the stricter
 $\|\nabla \mathcal{F}\|_2 < 10^{-4}$ criterion, line-search-only Newton reaches the
 iteration cap, whereas both trust-region policies converge. The hybrid variant
@@ -155,7 +156,9 @@ In the finest plotted case, the \jaxpetsc{} element-AD path reports
 \SI{1.14}{s} on 32 ranks, while colored SFD reports \SI{1.45}{s} with the same
 Newton and Krylov iteration counts. The final energies agree to the displayed
 precision, so this block mainly measures the overhead of sparse recovery on a
-smooth scalar problem.
+smooth scalar problem. Across the plotted ranks, element AD drops from
+\SI{10.13}{s} on one rank to \SI{1.14}{s} on 32 ranks; colored SFD follows the
+same trend with persistent recovery overhead.
 
 \subsection{Ginzburg--Landau}
 \label{sec:num-gl}
@@ -178,7 +181,9 @@ At 32 ranks, the element-AD and colored-SFD \jaxpetsc{} runs report
 \SI{2.10}{s} and \SI{2.72}{s}, respectively, and both reach the same displayed
 energy with identical nonlinear and Krylov counts. This supports the same
 derivative-route interpretation as in the $p$-Laplace case, but on a
-nonconvex scalar energy.
+nonconvex scalar energy. Across the plotted ranks, element AD falls from
+\SI{15.64}{s} on one rank to \SI{2.10}{s} on 32 ranks, with a nonideal plateau
+around 4--8 ranks before the 32-rank point.
 
 \subsection{Hyperelasticity}
 \label{sec:num-hyperelasticity}
@@ -199,6 +204,11 @@ scaling for the load path in \cref{eq:hyperelasticity-discrete}.
   \cref{eq:hyperelasticity-discrete}.}
   \label{fig:hyperelasticity-results}
 \end{figure}
+
+The 24-step hyperelasticity scaling curve reduces \jaxpetsc{} element-AD wall
+time from \SI{1894}{s} at 8 ranks to \SI{529}{s} at 32 ranks. The speedup is
+substantial but not ideal, which motivates the more targeted fixed-work
+distribution and PMG diagnostics below.
 
 The larger multi-node experiment fixes the nonlinear work to the first level-5
 load step after the rank-local hyperelasticity implementation. The CPU nodes
@@ -486,8 +496,8 @@ by different nonlinear work.
 \end{table}
 
 The distributed layout measurements in
-\Cref{tab:plasticity3d-local-karolina-partitioning} identify one cost that
-limits ideal scaling. The maximum local overlap vector shrinks with rank count,
+\Cref{tab:plasticity3d-local-karolina-partitioning} identify one observed limit
+on ideal scaling. The maximum local overlap vector shrinks with rank count,
 but the sum of rank-local overlap DOFs increases from about the owned problem
 size on one rank to more than four times the owned size on 128 ranks. This
 overlap replication comes from subdomain boundaries and high-order element

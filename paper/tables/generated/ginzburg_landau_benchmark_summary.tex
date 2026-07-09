@@ -1,8 +1,8 @@
 \begin{tabular*}{\textwidth}{@{}l@{\extracolsep{\fill}} c c c c@{}}
 \toprule
-Path & Energy & Newton iters & Krylov iters & Wall time [s] \\
+Solver realization & Energy & Newton iters & Krylov iters & Wall time [s] \\
 \midrule
-FEniCS custom Newton & \num{0.3462323651} & 8 & 33 & \num{0.113} \\
+FEniCS Newton reference & \num{0.3462323651} & 8 & 33 & \num{0.113} \\
 JAX+PETSc element AD & \num{0.3462314438} & 8 & 33 & \num{0.0949} \\
 JAX+PETSc colored SFD & \num{0.3462314438} & 8 & 33 & \num{0.247} \\
 \bottomrule

@@ -113,10 +113,12 @@ difference is \num{3.877e-5}, the displacement relative $L^2$ difference is
 fixed-$\lambda_{\mathrm{sr}}$ question against a matched reference model;
 it is not proof of path-consistent incremental-history equivalence. After
 aligning the reference-model boundary conditions with the active boundary
-condition set, the comparison schedule is capped
-at the main-figure load level $\lambda_{\mathrm{sr}}=1.55$. It keeps the
-highest-successful-$\lambda_{\mathrm{sr}}$ schedule proxy aligned on the tested
-grid and satisfies the predefined criteria for the
+condition set, the fixed-load grid is capped at the main-figure load level
+$\lambda_{\mathrm{sr}}=1.55$. Here
+$\lambda_{\max}^{\mathrm{succ}}$ denotes the largest value in the tested grid
+$\{1.0,1.2,1.4,1.5,1.55\}$ that satisfies the relative-correction stopping
+criterion. The comparison matches $\lambda_{\max}^{\mathrm{succ}}$ on that grid
+and satisfies the predefined criteria for the
 $u_{\max}(\lambda_{\mathrm{sr}})$ curve and endpoint displacement: the
 $u_{\max}(\lambda_{\mathrm{sr}})$ relative $L^2$ difference is
 \num{6.396e-6}, and the endpoint displacement relative $L^2$ difference is

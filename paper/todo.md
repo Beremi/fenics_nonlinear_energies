@@ -108,6 +108,18 @@ scientific claims were introduced without supporting evidence.
 - Regenerated the hyperelastic PMG sensitivity table after polishing coarse
   solver labels, so the generated output now reports `Hypre` and `MUMPS, one
   redundant group` rather than implementation abbreviations.
+- Addressed the latest narrative/math/evidence/layout audit: split comparator
+  roles in the abstract and introduction, replaced the related-work rhetorical
+  opening with a taxonomy, made the Plasticity2D branch-potential definition
+  self-contained, defined $\lambda_{\max}^{\mathrm{succ}}$ on the fixed-load
+  Plasticity3D validation grid, corrected the hyperelastic globalization timing
+  interpretation, added body-text interpretations for scalar and hyperelastic
+  scaling figures, changed benchmark table labels to solver-realization roles,
+  and inserted an appendix float barrier so Tables 26--28 appear in order.
+- Added `paper/scripts/check_pdf_aux_order.py` and the `make -C paper
+  submission-check` target, which build the PDF, scan the log for warnings,
+  run `qpdf`, check figure/table aux ordering, and rerun archive-neutral asset
+  validation.
 - Rebuilt the paper PDF through the paper generation pipeline.
 
 ## Blocking Issues Before Submission
@@ -233,13 +245,21 @@ required support for the current scoped contribution.
   passed on 2026-07-09 against the curated submission bundle and
   archive-neutral table inputs.
 - `make -C paper publish-check`: passed on 2026-07-09.
+- `./.venv/bin/python -m py_compile paper/scripts/generate_paper_tables.py paper/scripts/check_pdf_aux_order.py`:
+  passed on 2026-07-09.
 - `(cd paper && latexmk -pdf -interaction=nonstopmode -halt-on-error main.tex)`:
   passed after the generated table and prose cleanup, refreshing a 40-page
   `paper/build/main.pdf`.
 - `qpdf --check paper/build/main.pdf`: passed with no syntax or stream errors.
+- `./.venv/bin/python paper/scripts/check_pdf_aux_order.py paper/build/main.aux`:
+  passed on 2026-07-09, including the appendix table-order check.
+- `make -C paper submission-check`: passed on 2026-07-09.
 - Rendered and visually inspected representative pages 1, 5, 9, 21, and
   30--32 after the latest rebuild; the current A4 PDF is readable and unclipped,
   with page 30 improved but dense floats/tables still template-fragile.
+- Rendered and visually inspected affected pages 1, 15--18, 27--29, and
+  35--36 after the latest rebuild; the new Plasticity2D equations, scaling
+  interpretations, and appendix table sequence are readable and unclipped.
 - `./.venv/bin/python -m pytest tests/test_docs_publication.py`: passed
   13 tests.
 - `./.venv/bin/python -m pytest tests/test_final_report_figure_generators.py`:

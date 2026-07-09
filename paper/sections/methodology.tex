@@ -153,6 +153,10 @@ $P_4\to P_2\to P_1$ hierarchy for the flexible-GMRES linear solve
 $\lambda_{\mathrm{sr}}=\num{1.55}$ scaling profile uses a redundant LU/MUMPS
 coarse solve and PETSc relative KSP tolerance \num{1e-2}; the auxiliary
 $\lambda_{\mathrm{sr}}=\num{1.0}$ timing runs use the Hypre-coarse PMG profile.
+Here $\lambda_{\mathrm{sr}}$ is the plasticity strength-reduction factor
+defined in \cref{sec:bench-plasticity3d}, PMG denotes same-mesh polynomial
+multigrid, and KSP denotes PETSc's Krylov-solver interface and residual
+tolerance.
 
 \begin{algorithm}[H]
 \caption{Armijo line search used in Newton solves}

@@ -2,7 +2,7 @@ PYTHON := ../.venv/bin/python
 LATEXMK := latexmk
 MAIN := main.tex
 
-.PHONY: all layout figures tables literature validate publish-check pdf clean \
+.PHONY: all layout figures tables literature validate publish-check submission-check pdf clean \
 	plasticity3d-validation-run plasticity3d-validation-assets \
 	plasticity3d-derivative-ablation-run plasticity3d-derivative-ablation-assets \
 	jax-fem-baseline-run jax-fem-baseline-assets reproducibility
@@ -46,6 +46,13 @@ validate: figures tables
 	$(PYTHON) scripts/validate_paper_assets.py
 
 publish-check:
+	$(PYTHON) scripts/validate_paper_assets.py --archive-neutral
+
+submission-check:
+	$(LATEXMK) -pdf -interaction=nonstopmode -halt-on-error $(MAIN)
+	! rg -n "(Overfull|Underfull|LaTeX Warning|Package .* Warning|undefined references|Rerun to get cross-references|multiply defined|pdfTeX warning)" build/main.log
+	qpdf --check build/main.pdf
+	$(PYTHON) scripts/check_pdf_aux_order.py build/main.aux
 	$(PYTHON) scripts/validate_paper_assets.py --archive-neutral
 
 pdf: validate
