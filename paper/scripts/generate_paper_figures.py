@@ -2274,13 +2274,285 @@ def _plot_source_continuation_compare(layout: dict[str, float]) -> str:
     return out.name
 
 
+def _figure_source(
+    *,
+    generator: str,
+    data_inputs: list[dict[str, str]] | None = None,
+    archive_status: str = "archive_neutral",
+    note: str = "",
+) -> dict[str, object]:
+    source: dict[str, object] = {
+        "generator": {
+            "kind": "repository_path",
+            "path": "paper/scripts/generate_paper_figures.py",
+            "function": generator,
+        },
+        "archive_status": archive_status,
+    }
+    if data_inputs:
+        source["data_inputs"] = data_inputs
+    if note:
+        source["note"] = note
+    return source
+
+
+def _figure_sources() -> dict[str, dict[str, object]]:
+    tracked_or_bundle = "archive_neutral"
+    needs_archive = "needs_final_archive"
+    return {
+        "framework_overview.pdf": _figure_source(generator="generate_framework_overview"),
+        "derivative_paths.pdf": _figure_source(generator="generate_derivative_path_diagram"),
+        "globalization_schematic.pdf": _figure_source(generator="generate_globalization_schematic"),
+        "coloring_schematic.pdf": _figure_source(generator="generate_coloring_schematic"),
+        "autodiff_modes.pdf": _figure_source(generator="generate_autodiff_modes"),
+        "plaplace_state.pdf": _figure_source(
+            generator="generate_scalar_state_figure",
+            data_inputs=[_manifest_repo_input(PLAPLACE_STATE)],
+        ),
+        "plaplace_energy_levels.pdf": _figure_source(
+            generator="generate_energy_levels_figure",
+            data_inputs=[_manifest_repo_input(PLAPLACE_ENERGY)],
+        ),
+        "plaplace_scaling.pdf": _figure_source(
+            generator="generate_family_scaling_figure",
+            data_inputs=[_manifest_repo_input(PLAPLACE_SCALING)],
+        ),
+        "ginzburg_landau_state.pdf": _figure_source(
+            generator="generate_scalar_state_figure",
+            data_inputs=[_manifest_repo_input(GL_STATE)],
+        ),
+        "ginzburg_landau_energy_levels.pdf": _figure_source(
+            generator="generate_energy_levels_figure",
+            data_inputs=[_manifest_repo_input(GL_ENERGY)],
+        ),
+        "ginzburg_landau_scaling.pdf": _figure_source(
+            generator="generate_family_scaling_figure",
+            data_inputs=[_manifest_repo_input(GL_SCALING)],
+        ),
+        "hyperelasticity_state.pdf": _figure_source(
+            generator="generate_hyperelasticity_state",
+            data_inputs=[_manifest_repo_input(HYPER_STATE)],
+        ),
+        "hyperelasticity_energy_levels.pdf": _figure_source(
+            generator="generate_energy_levels_figure",
+            data_inputs=[_manifest_repo_input(HYPER_ENERGY)],
+        ),
+        "hyperelasticity_scaling.pdf": _figure_source(
+            generator="generate_family_scaling_figure",
+            data_inputs=[_manifest_repo_input(HYPER_SCALING)],
+        ),
+        "hyperelasticity_karolina_pmg_scaling.pdf": _figure_source(
+            generator="generate_hyperelasticity_karolina_pmg_scaling",
+            data_inputs=[_manifest_repo_input(HYPER_KAROLINA_PMG_SCALING)],
+        ),
+        "plasticity2d_state_pair.pdf": _figure_source(
+            generator="generate_plasticity2d_figures",
+            data_inputs=[_manifest_repo_input(PLASTICITY2D_STATE)],
+            archive_status=needs_archive,
+            note="Uses raw Plasticity2D endpoint state plus deterministic same-mesh case construction.",
+        ),
+        "plasticity2d_resolution_energy.pdf": _figure_source(
+            generator="generate_plasticity2d_figures",
+            data_inputs=[
+                _manifest_repo_input(PLASTICITY2D_RESULT),
+                _manifest_repo_input(PLASTICITY2D_L6_SUMMARY),
+                _manifest_repo_input(PLASTICITY2D_L7_SUMMARY),
+            ],
+            archive_status=needs_archive,
+        ),
+        "plasticity3d_state_pair.pdf": _figure_source(
+            generator="generate_plasticity3d_state_figures",
+            data_inputs=[_manifest_repo_input(P3D_DEGREE_ENERGY_STUDY_SUMMARY)],
+            archive_status=needs_archive,
+            note="The summary references large state arrays and same-mesh HDF5 files that must be included or scoped in the final archive.",
+        ),
+        "plasticity3d_convergence.pdf": _figure_source(
+            generator="_generate_plasticity3d_convergence_figure",
+            data_inputs=[_manifest_repo_input(P3D_DEGREE_ENERGY_STUDY_SUMMARY)],
+            archive_status=needs_archive,
+            note="The summary references per-case output histories used by the convergence plot.",
+        ),
+        "plasticity3d_highest_mesh_y_slice_comparison.pdf": _figure_source(
+            generator="generate_plasticity3d_highest_y_slice_comparison",
+            data_inputs=[_manifest_repo_input(P3D_DEGREE_ENERGY_STUDY_SUMMARY)],
+            archive_status=needs_archive,
+            note="The generated slice also uses referenced state arrays and same-mesh HDF5 files.",
+        ),
+        "plasticity3d_degree_energy_all_dofs.pdf": _figure_source(
+            generator="_plot_plasticity3d_degree_energy_study",
+            data_inputs=[_manifest_repo_input(P3D_DEGREE_ENERGY_STUDY_SUMMARY)],
+            archive_status=needs_archive,
+        ),
+        "plasticity3d_degree_energy_all_time.pdf": _figure_source(
+            generator="_plot_plasticity3d_degree_energy_study",
+            data_inputs=[_manifest_repo_input(P3D_DEGREE_ENERGY_STUDY_SUMMARY)],
+            archive_status=needs_archive,
+        ),
+        "plasticity3d_degree_energy_zoom_dofs.pdf": _figure_source(
+            generator="_plot_plasticity3d_degree_energy_study",
+            data_inputs=[_manifest_repo_input(P3D_DEGREE_ENERGY_STUDY_SUMMARY)],
+            archive_status=needs_archive,
+        ),
+        "plasticity3d_degree_energy_zoom_time.pdf": _figure_source(
+            generator="_plot_plasticity3d_degree_energy_study",
+            data_inputs=[_manifest_repo_input(P3D_DEGREE_ENERGY_STUDY_SUMMARY)],
+            archive_status=needs_archive,
+        ),
+        "topology_density.pdf": _figure_source(
+            generator="generate_topology_density",
+            data_inputs=[_manifest_repo_input(TOPOLOGY_STATE)],
+        ),
+        "topology_history.pdf": _figure_source(
+            generator="generate_topology_history",
+            data_inputs=[_manifest_repo_input(TOPOLOGY_HISTORY)],
+        ),
+        "topology_scaling.pdf": _figure_source(
+            generator="generate_topology_scaling",
+            data_inputs=[_manifest_repo_input(TOPOLOGY_SCALING)],
+        ),
+        "plasticity3d_validation_layer1a_boundary.pdf": _figure_source(
+            generator="generate_plasticity3d_validation_layer1a_boundary",
+            data_inputs=[
+                _manifest_repo_input(P3D_VALIDATION_ROOT / "validation_manifest.json"),
+                _manifest_repo_input(P3D_VALIDATION_ROOT / "comparison_summary.json"),
+                _manifest_repo_input(P3D_VALIDATION_ROOT / "source_branch/final_source_state.mat"),
+                _manifest_repo_input(P3D_VALIDATION_ROOT / "source_branch/branch_summary.json"),
+                _manifest_repo_input(P3D_VALIDATION_ROOT / "maintained_branch/branch_summary.json"),
+            ],
+            archive_status=tracked_or_bundle,
+        ),
+        "plasticity3d_validation_umax_curve.pdf": _figure_source(
+            generator="generate_plasticity3d_validation_umax_curve",
+            data_inputs=[_manifest_repo_input(P3D_VALIDATION_ROOT / "comparison_summary.json")],
+            archive_status=tracked_or_bundle,
+        ),
+        "plasticity3d_derivative_ablation_bars.pdf": _figure_source(
+            generator="generate_plasticity3d_derivative_ablation_bars",
+            data_inputs=[_manifest_repo_input(P3D_DERIVATIVE_ABLATION_ROOT / "comparison_summary.json")],
+            archive_status=tracked_or_bundle,
+        ),
+        "jax_fem_hyperelastic_baseline_energy_history.pdf": _figure_source(
+            generator="generate_jax_fem_hyperelastic_baseline_energy_history",
+            data_inputs=[_manifest_repo_input(JAX_FEM_BASELINE_ROOT / "comparison_summary.json")],
+            archive_status=tracked_or_bundle,
+        ),
+        "jax_fem_hyperelastic_baseline_centerline.pdf": _figure_source(
+            generator="generate_jax_fem_hyperelastic_baseline_centerline",
+            data_inputs=[
+                _manifest_repo_input(JAX_FEM_BASELINE_ROOT / "comparison_summary.json"),
+                _manifest_repo_input(JAX_FEM_BASELINE_ROOT / "parity/repo_serial_direct_state.npz"),
+                _manifest_repo_input(JAX_FEM_BASELINE_ROOT / "parity/jax_fem_umfpack_serial_state.npz"),
+            ],
+            archive_status=tracked_or_bundle,
+        ),
+        "plasticity3d_recommended_scaling.pdf": _figure_source(
+            generator="_plot_plasticity_scaling",
+            data_inputs=[_manifest_repo_input(LOCAL_P3D_SUMMARY)],
+            archive_status=needs_archive,
+            note="The scaling summary references per-rank raw result JSON files used for local-element counts.",
+        ),
+        "plasticity3d_local_vs_karolina_scaling.pdf": _figure_source(
+            generator="generate_plasticity3d_local_vs_karolina_scaling",
+            data_inputs=[
+                _manifest_repo_input(P3D_LOCAL_LAMBDA155_SCALING),
+                _manifest_repo_input(P3D_KAROLINA_LAMBDA155_SCALING),
+            ],
+            archive_status=tracked_or_bundle,
+        ),
+    }
+
+
+def _archive_neutral_figure_inputs(sources: dict[str, dict[str, object]]) -> dict[str, list[dict[str, str]]]:
+    inputs: dict[str, list[dict[str, str]]] = {}
+    for name, source in sorted(sources.items()):
+        if source.get("archive_status") != "archive_neutral":
+            continue
+        data_inputs = source.get("data_inputs", [])
+        if isinstance(data_inputs, list) and data_inputs:
+            inputs[name] = data_inputs
+    return inputs
+
+
+def _write_figure_manifest(out_dir: Path, layout: dict[str, float], generated: list[str]) -> None:
+    sources = _figure_sources()
+    manifest = {
+        "copied_assets": [],
+        "generated_assets": generated,
+        "layout": {
+            "textwidth_in": layout["textwidth_in"],
+            "subfigure_width_in": 0.46 * layout["textwidth_in"],
+            "narrow_width_in": 0.72 * layout["textwidth_in"],
+            "medium_width_in": 0.84 * layout["textwidth_in"],
+            "full_width_in": layout["textwidth_in"],
+        },
+        "generated_asset_sources": {name: sources[name] for name in generated if name in sources},
+        "generated_asset_inputs": _archive_neutral_figure_inputs(sources),
+        "notes": (
+            "All manuscript-included PDFs in this manifest are generated by "
+            "paper/scripts/generate_paper_figures.py; no external PDFs are copied "
+            "into paper/figures/generated. Assets marked needs_final_archive require "
+            "additional raw/state inputs in the final durable archive or an explicit "
+            "submission-scope exception."
+        ),
+    }
+    write_json(out_dir / "manifest.json", manifest)
+
+
+def _expected_generated_assets() -> list[str]:
+    return [
+        "framework_overview.pdf",
+        "derivative_paths.pdf",
+        "globalization_schematic.pdf",
+        "coloring_schematic.pdf",
+        "autodiff_modes.pdf",
+        "plaplace_state.pdf",
+        "plaplace_energy_levels.pdf",
+        "plaplace_scaling.pdf",
+        "ginzburg_landau_state.pdf",
+        "ginzburg_landau_energy_levels.pdf",
+        "ginzburg_landau_scaling.pdf",
+        "hyperelasticity_state.pdf",
+        "hyperelasticity_energy_levels.pdf",
+        "hyperelasticity_scaling.pdf",
+        "hyperelasticity_karolina_pmg_scaling.pdf",
+        "plasticity2d_state_pair.pdf",
+        "plasticity2d_resolution_energy.pdf",
+        "plasticity3d_state_pair.pdf",
+        "plasticity3d_convergence.pdf",
+        "plasticity3d_highest_mesh_y_slice_comparison.pdf",
+        "plasticity3d_degree_energy_all_dofs.pdf",
+        "plasticity3d_degree_energy_all_time.pdf",
+        "plasticity3d_degree_energy_zoom_dofs.pdf",
+        "plasticity3d_degree_energy_zoom_time.pdf",
+        "topology_density.pdf",
+        "topology_history.pdf",
+        "topology_scaling.pdf",
+        "plasticity3d_validation_layer1a_boundary.pdf",
+        "plasticity3d_validation_umax_curve.pdf",
+        "plasticity3d_derivative_ablation_bars.pdf",
+        "jax_fem_hyperelastic_baseline_energy_history.pdf",
+        "jax_fem_hyperelastic_baseline_centerline.pdf",
+        "plasticity3d_recommended_scaling.pdf",
+        "plasticity3d_local_vs_karolina_scaling.pdf",
+    ]
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Generate paper figures from curated repo assets and raw summaries.")
     parser.add_argument("--out-dir", type=Path, default=FIGURES_ROOT)
+    parser.add_argument(
+        "--manifest-only",
+        action="store_true",
+        help="refresh the figure manifest without regenerating figure PDFs",
+    )
     args = parser.parse_args()
     ensure_paper_dirs()
     args.out_dir.mkdir(parents=True, exist_ok=True)
     layout = load_layout()
+    if args.manifest_only:
+        _write_figure_manifest(args.out_dir, layout, _expected_generated_assets())
+        print(f"Wrote figure manifest to {args.out_dir / 'manifest.json'}")
+        return
 
     generated: list[str] = []
     generated.append(generate_framework_overview(layout))
@@ -2376,77 +2648,7 @@ def main() -> None:
     generated.extend(_plot_plasticity_scaling(layout, local_rows_by_impl))
     generated.append(generate_plasticity3d_local_vs_karolina_scaling(layout))
 
-    manifest = {
-        "copied_assets": [],
-        "generated_assets": generated,
-        "layout": {
-            "textwidth_in": layout["textwidth_in"],
-            "subfigure_width_in": 0.46 * layout["textwidth_in"],
-            "narrow_width_in": 0.72 * layout["textwidth_in"],
-            "medium_width_in": 0.84 * layout["textwidth_in"],
-            "full_width_in": layout["textwidth_in"],
-        },
-        "generated_asset_inputs": {
-            "plasticity3d_validation_layer1a_boundary.pdf": [
-                _manifest_repo_input(
-                    PAPER_SUBMISSION_INPUT_ROOT / "plasticity3d_validation" / "validation_manifest.json"
-                ),
-                _manifest_repo_input(
-                    PAPER_SUBMISSION_INPUT_ROOT / "plasticity3d_validation" / "comparison_summary.json"
-                ),
-                _manifest_repo_input(
-                    PAPER_SUBMISSION_INPUT_ROOT / "plasticity3d_validation/source_branch/final_source_state.mat"
-                ),
-                _manifest_repo_input(
-                    PAPER_SUBMISSION_INPUT_ROOT / "plasticity3d_validation/source_branch/branch_summary.json"
-                ),
-                _manifest_repo_input(
-                    PAPER_SUBMISSION_INPUT_ROOT / "plasticity3d_validation/maintained_branch/branch_summary.json"
-                ),
-            ],
-            "plasticity3d_validation_umax_curve.pdf": [
-                _manifest_repo_input(
-                    PAPER_SUBMISSION_INPUT_ROOT / "plasticity3d_validation" / "comparison_summary.json"
-                ),
-            ],
-            "plasticity3d_derivative_ablation_bars.pdf": [
-                _manifest_repo_input(
-                    PAPER_SUBMISSION_INPUT_ROOT / "plasticity3d_derivative_ablation" / "comparison_summary.json"
-                ),
-            ],
-            "hyperelasticity_karolina_pmg_scaling.pdf": [
-                _manifest_repo_input(HYPER_KAROLINA_PMG_SCALING),
-            ],
-            "plasticity3d_local_vs_karolina_scaling.pdf": [
-                _manifest_repo_input(
-                    PAPER_SUBMISSION_INPUT_ROOT / "plasticity3d_lambda155_scaling/local_solver_total_scaling.csv"
-                ),
-                _manifest_repo_input(
-                    PAPER_SUBMISSION_INPUT_ROOT / "plasticity3d_lambda155_scaling/karolina_rpn16_solver_total_scaling.csv"
-                ),
-            ],
-            "jax_fem_hyperelastic_baseline_energy_history.pdf": [
-                _manifest_repo_input(
-                    PAPER_SUBMISSION_INPUT_ROOT / "jax_fem_hyperelastic_baseline" / "comparison_summary.json"
-                ),
-            ],
-            "jax_fem_hyperelastic_baseline_centerline.pdf": [
-                _manifest_repo_input(
-                    PAPER_SUBMISSION_INPUT_ROOT / "jax_fem_hyperelastic_baseline" / "comparison_summary.json"
-                ),
-                _manifest_repo_input(
-                    PAPER_SUBMISSION_INPUT_ROOT
-                    / "jax_fem_hyperelastic_baseline/parity/repo_serial_direct_state.npz"
-                ),
-                _manifest_repo_input(
-                    PAPER_SUBMISSION_INPUT_ROOT
-                    / "jax_fem_hyperelastic_baseline/parity/jax_fem_umfpack_serial_state.npz"
-                ),
-            ],
-        },
-        "notes": "All manuscript-included PDFs in this manifest are generated by paper/scripts/generate_paper_figures.py; no external PDFs are copied into paper/figures/generated.",
-    }
-    write_json(args.out_dir / "manifest.json", manifest)
+    _write_figure_manifest(args.out_dir, layout, generated)
     print(f"Wrote figure manifest to {args.out_dir / 'manifest.json'}")
 
 

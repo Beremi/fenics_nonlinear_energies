@@ -16,8 +16,9 @@ owns sparse vectors and matrices, nonlinear globalization, Krylov methods, and
 preconditioners. The \purejax{} and \fenics{} formulations serve as reference
 formulations where they are available; JAX-FEM, FEniCSx-family work, and the
 MATLAB elastoplastic implementation literature provide scoped external context
-rather than software rankings. Where we report external numerical comparisons,
-they are restricted to explicitly matched benchmark definitions and observables.
+and comparison surfaces for selected observables, not comprehensive
+package-level benchmarks. Where we report external numerical comparisons, they
+are restricted to explicitly matched benchmark definitions and observables.
 
 \subsection{Contributions}
 \label{sec:intro-contributions}
@@ -41,9 +42,8 @@ implemented toolset is organized around three solver components:
         policies used in the larger mechanics and topology runs.
 \end{enumerate}
 
-Together, these components make derivative construction, sparse assembly,
-globalization, and preconditioning part of one numerical-method choice rather
-than separate implementation details.
+This organization lets the numerical experiments vary derivative information and
+solver policy without changing the benchmark definition.
 
 We evaluate these components on six benchmark families: $p$-Laplace, scalar
 Ginzburg--Landau, hyperelasticity, two- and three-dimensional

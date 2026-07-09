@@ -46,7 +46,7 @@ is the fastest of the two trust-region configurations and also uses fewer Krylov
 iterations. Together, these comparisons support a problem-dependent policy choice
 rather than a universal preference for any single globalization strategy.
 
-\begin{table}[H]
+\begin{table}[!htbp]
   \centering
   \footnotesize
   \input{tables/generated/globalization_method_compare.tex}
@@ -62,7 +62,7 @@ narrower: it records that the trust-region variants complete with matching
 energy and Newton--Krylov work, while the line-search-only configuration still
 times out under the fixed wall-time cap.
 
-\begin{table}[H]
+\begin{table}[!htbp]
   \centering
   \footnotesize
   \input{tables/generated/ginzburg_landau_globalization_fixed_budget.tex}
@@ -95,7 +95,7 @@ ranks; its comparable solve time is therefore explained by batched local HVPs
 having nearly the same measured Hessian-callback cost as element AD on this
 $P_2(L_1)$ case, not by an under-colored finite-difference reconstruction.
 
-\begin{table}[H]
+\begin{table}[!htbp]
   \centering
   \footnotesize
   \input{tables/generated/derivative_route_compare.tex}
@@ -120,7 +120,7 @@ the $P_4$ colored-SFD case from this local comparison; the $P_2$ same-DOF compar
 already exposes the stencil density effect without forcing a large local-memory
 stress case.
 
-\begin{table}[H]
+\begin{table}[!htbp]
   \centering
   \scriptsize
   \input{tables/generated/plasticity3d_derivative_degree.tex}
@@ -131,6 +131,8 @@ stress case.
   \label{tab:plasticity3d-derivative-degree}
 \end{table}
 
+\clearpage
+
 \subsection{\texorpdfstring{$p$-Laplace}{p-Laplace}}
 \label{sec:num-plaplace}
 
@@ -140,7 +142,7 @@ the numerical story is easiest to interpret: exact element Hessians remain
 effective in the reported distributed runs, while colored SFD reaches nearly
 identical discrete energies at higher wall time.
 
-\begin{figure}[H]
+\begin{figure}[!htbp]
   \centering
   \includegraphics[width=\PaperFigureMedium]{plaplace_scaling.pdf}
   \caption{$p$-Laplace strong scaling on the finest tested grid. All curves
@@ -228,7 +230,7 @@ both operating-system peak RSS and the measured footprint of assembly arrays,
 making clear whether a configuration stores global mesh and adjacency data or
 only local elements plus overlap.
 
-\begin{table}[H]
+\begin{table}[!htbp]
   \centering
   \scriptsize
   \input{tables/generated/hyperelasticity_distribution_memory.tex}
@@ -431,8 +433,8 @@ by paying a clear wall-time premium in this nine-case endpoint study.
   \label{tab:plasticity3d-scaling}
 \end{table}
 
-\Cref{fig:plasticity3d-scaling,tab:plasticity3d-scaling} give the paper's
-largest distributed mechanics timing result for the Hypre-coarse auxiliary PMG
+\Cref{fig:plasticity3d-scaling,tab:plasticity3d-scaling} give a high-DOF
+Plasticity3D distributed timing result for the Hypre-coarse auxiliary PMG
 profile. This scaling evidence uses the selected $P_4(L_2)$ mesh family but a
 different load factor, $\lambda_{\mathrm{sr}} = 1.0$, so it complements rather
 than extends the bottom-clamped $\lambda_{\mathrm{sr}} = 1.55$ benchmark figures
@@ -490,7 +492,7 @@ the owned size on 128 ranks. This overlap replication comes from subdomain
 boundaries and high-order element support, so it is a decomposition cost rather
 than duplicated global mesh storage.
 
-\begin{table}[H]
+\begin{table}[!htbp]
   \centering
   \input{tables/generated/plasticity3d_local_karolina_partitioning.tex}
   \caption{Distributed layout measurements for the converged Plasticity3D
@@ -513,7 +515,7 @@ continuation schedule, the timing evidence here should be read as end-to-end
 timing under adaptive stopping rather than strong scaling at a fixed
 computational workload.
 
-\begin{figure}[H]
+\begin{figure}[!htbp]
   \centering
   \includegraphics[width=\PaperFigureMedium]{topology_scaling.pdf}
   \caption{Topology end-to-end parallel timing trend for the
@@ -523,7 +525,7 @@ computational workload.
   \label{fig:topology-results}
 \end{figure}
 
-\begin{table}[H]
+\begin{table}[!htbp]
   \centering
   \input{tables/generated/topology_summary.tex}
   \caption{Parallel topology summary for the fine-grid study,

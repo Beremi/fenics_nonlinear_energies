@@ -220,6 +220,6 @@
     "rel_tol": 1e-08,
     "tol": 1e-06
   },
-  "state_npz": "artifacts/raw_results/jax_fem_hyperelastic_baseline/parity/jax_fem_umfpack_serial_state.npz",
+  "state_npz": "artifacts/reproduction/paper_submission_2026_07_08/inputs/jax_fem_hyperelastic_baseline/parity/jax_fem_umfpack_serial_state.npz",
   "total_wall_time_s": 2.5443813420133665
 }

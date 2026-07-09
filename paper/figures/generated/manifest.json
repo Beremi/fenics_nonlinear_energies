@@ -1,10 +1,46 @@
 {
   "copied_assets": [],
   "generated_asset_inputs": {
+    "ginzburg_landau_energy_levels.pdf": [
+      {
+        "kind": "repository_path",
+        "path": "experiments/analysis/docs_assets/data/ginzburg_landau/energy_levels.csv"
+      }
+    ],
+    "ginzburg_landau_scaling.pdf": [
+      {
+        "kind": "repository_path",
+        "path": "experiments/analysis/docs_assets/data/ginzburg_landau/strong_scaling.csv"
+      }
+    ],
+    "ginzburg_landau_state.pdf": [
+      {
+        "kind": "repository_path",
+        "path": "experiments/analysis/docs_assets/data/ginzburg_landau/sample_state.npz"
+      }
+    ],
+    "hyperelasticity_energy_levels.pdf": [
+      {
+        "kind": "repository_path",
+        "path": "experiments/analysis/docs_assets/data/hyperelasticity/energy_levels.csv"
+      }
+    ],
     "hyperelasticity_karolina_pmg_scaling.pdf": [
       {
         "kind": "repository_path",
         "path": "experiments/analysis/docs_assets/data/hyperelasticity/karolina_l5_pmg_scaling.csv"
+      }
+    ],
+    "hyperelasticity_scaling.pdf": [
+      {
+        "kind": "repository_path",
+        "path": "experiments/analysis/docs_assets/data/hyperelasticity/strong_scaling.csv"
+      }
+    ],
+    "hyperelasticity_state.pdf": [
+      {
+        "kind": "repository_path",
+        "path": "experiments/analysis/docs_assets/data/hyperelasticity/sample_state.npz"
       }
     ],
     "jax_fem_hyperelastic_baseline_centerline.pdf": [
@@ -25,6 +61,24 @@
       {
         "kind": "repository_path",
         "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/jax_fem_hyperelastic_baseline/comparison_summary.json"
+      }
+    ],
+    "plaplace_energy_levels.pdf": [
+      {
+        "kind": "repository_path",
+        "path": "experiments/analysis/docs_assets/data/plaplace/energy_levels.csv"
+      }
+    ],
+    "plaplace_scaling.pdf": [
+      {
+        "kind": "repository_path",
+        "path": "experiments/analysis/docs_assets/data/plaplace/strong_scaling.csv"
+      }
+    ],
+    "plaplace_state.pdf": [
+      {
+        "kind": "repository_path",
+        "path": "experiments/analysis/docs_assets/data/plaplace/sample_state.npz"
       }
     ],
     "plasticity3d_derivative_ablation_bars.pdf": [
@@ -70,7 +124,514 @@
         "kind": "repository_path",
         "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_validation/comparison_summary.json"
       }
+    ],
+    "topology_density.pdf": [
+      {
+        "kind": "repository_path",
+        "path": "experiments/analysis/docs_assets/data/topology/parallel_final_state.npz"
+      }
+    ],
+    "topology_history.pdf": [
+      {
+        "kind": "repository_path",
+        "path": "experiments/analysis/docs_assets/data/topology/objective_history.csv"
+      }
+    ],
+    "topology_scaling.pdf": [
+      {
+        "kind": "repository_path",
+        "path": "experiments/analysis/docs_assets/data/topology/strong_scaling.csv"
+      }
     ]
+  },
+  "generated_asset_sources": {
+    "autodiff_modes.pdf": {
+      "archive_status": "archive_neutral",
+      "generator": {
+        "function": "generate_autodiff_modes",
+        "kind": "repository_path",
+        "path": "paper/scripts/generate_paper_figures.py"
+      }
+    },
+    "coloring_schematic.pdf": {
+      "archive_status": "archive_neutral",
+      "generator": {
+        "function": "generate_coloring_schematic",
+        "kind": "repository_path",
+        "path": "paper/scripts/generate_paper_figures.py"
+      }
+    },
+    "derivative_paths.pdf": {
+      "archive_status": "archive_neutral",
+      "generator": {
+        "function": "generate_derivative_path_diagram",
+        "kind": "repository_path",
+        "path": "paper/scripts/generate_paper_figures.py"
+      }
+    },
+    "framework_overview.pdf": {
+      "archive_status": "archive_neutral",
+      "generator": {
+        "function": "generate_framework_overview",
+        "kind": "repository_path",
+        "path": "paper/scripts/generate_paper_figures.py"
+      }
+    },
+    "ginzburg_landau_energy_levels.pdf": {
+      "archive_status": "archive_neutral",
+      "data_inputs": [
+        {
+          "kind": "repository_path",
+          "path": "experiments/analysis/docs_assets/data/ginzburg_landau/energy_levels.csv"
+        }
+      ],
+      "generator": {
+        "function": "generate_energy_levels_figure",
+        "kind": "repository_path",
+        "path": "paper/scripts/generate_paper_figures.py"
+      }
+    },
+    "ginzburg_landau_scaling.pdf": {
+      "archive_status": "archive_neutral",
+      "data_inputs": [
+        {
+          "kind": "repository_path",
+          "path": "experiments/analysis/docs_assets/data/ginzburg_landau/strong_scaling.csv"
+        }
+      ],
+      "generator": {
+        "function": "generate_family_scaling_figure",
+        "kind": "repository_path",
+        "path": "paper/scripts/generate_paper_figures.py"
+      }
+    },
+    "ginzburg_landau_state.pdf": {
+      "archive_status": "archive_neutral",
+      "data_inputs": [
+        {
+          "kind": "repository_path",
+          "path": "experiments/analysis/docs_assets/data/ginzburg_landau/sample_state.npz"
+        }
+      ],
+      "generator": {
+        "function": "generate_scalar_state_figure",
+        "kind": "repository_path",
+        "path": "paper/scripts/generate_paper_figures.py"
+      }
+    },
+    "globalization_schematic.pdf": {
+      "archive_status": "archive_neutral",
+      "generator": {
+        "function": "generate_globalization_schematic",
+        "kind": "repository_path",
+        "path": "paper/scripts/generate_paper_figures.py"
+      }
+    },
+    "hyperelasticity_energy_levels.pdf": {
+      "archive_status": "archive_neutral",
+      "data_inputs": [
+        {
+          "kind": "repository_path",
+          "path": "experiments/analysis/docs_assets/data/hyperelasticity/energy_levels.csv"
+        }
+      ],
+      "generator": {
+        "function": "generate_energy_levels_figure",
+        "kind": "repository_path",
+        "path": "paper/scripts/generate_paper_figures.py"
+      }
+    },
+    "hyperelasticity_karolina_pmg_scaling.pdf": {
+      "archive_status": "archive_neutral",
+      "data_inputs": [
+        {
+          "kind": "repository_path",
+          "path": "experiments/analysis/docs_assets/data/hyperelasticity/karolina_l5_pmg_scaling.csv"
+        }
+      ],
+      "generator": {
+        "function": "generate_hyperelasticity_karolina_pmg_scaling",
+        "kind": "repository_path",
+        "path": "paper/scripts/generate_paper_figures.py"
+      }
+    },
+    "hyperelasticity_scaling.pdf": {
+      "archive_status": "archive_neutral",
+      "data_inputs": [
+        {
+          "kind": "repository_path",
+          "path": "experiments/analysis/docs_assets/data/hyperelasticity/strong_scaling.csv"
+        }
+      ],
+      "generator": {
+        "function": "generate_family_scaling_figure",
+        "kind": "repository_path",
+        "path": "paper/scripts/generate_paper_figures.py"
+      }
+    },
+    "hyperelasticity_state.pdf": {
+      "archive_status": "archive_neutral",
+      "data_inputs": [
+        {
+          "kind": "repository_path",
+          "path": "experiments/analysis/docs_assets/data/hyperelasticity/sample_state.npz"
+        }
+      ],
+      "generator": {
+        "function": "generate_hyperelasticity_state",
+        "kind": "repository_path",
+        "path": "paper/scripts/generate_paper_figures.py"
+      }
+    },
+    "jax_fem_hyperelastic_baseline_centerline.pdf": {
+      "archive_status": "archive_neutral",
+      "data_inputs": [
+        {
+          "kind": "repository_path",
+          "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/jax_fem_hyperelastic_baseline/comparison_summary.json"
+        },
+        {
+          "kind": "repository_path",
+          "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/jax_fem_hyperelastic_baseline/parity/repo_serial_direct_state.npz"
+        },
+        {
+          "kind": "repository_path",
+          "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/jax_fem_hyperelastic_baseline/parity/jax_fem_umfpack_serial_state.npz"
+        }
+      ],
+      "generator": {
+        "function": "generate_jax_fem_hyperelastic_baseline_centerline",
+        "kind": "repository_path",
+        "path": "paper/scripts/generate_paper_figures.py"
+      }
+    },
+    "jax_fem_hyperelastic_baseline_energy_history.pdf": {
+      "archive_status": "archive_neutral",
+      "data_inputs": [
+        {
+          "kind": "repository_path",
+          "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/jax_fem_hyperelastic_baseline/comparison_summary.json"
+        }
+      ],
+      "generator": {
+        "function": "generate_jax_fem_hyperelastic_baseline_energy_history",
+        "kind": "repository_path",
+        "path": "paper/scripts/generate_paper_figures.py"
+      }
+    },
+    "plaplace_energy_levels.pdf": {
+      "archive_status": "archive_neutral",
+      "data_inputs": [
+        {
+          "kind": "repository_path",
+          "path": "experiments/analysis/docs_assets/data/plaplace/energy_levels.csv"
+        }
+      ],
+      "generator": {
+        "function": "generate_energy_levels_figure",
+        "kind": "repository_path",
+        "path": "paper/scripts/generate_paper_figures.py"
+      }
+    },
+    "plaplace_scaling.pdf": {
+      "archive_status": "archive_neutral",
+      "data_inputs": [
+        {
+          "kind": "repository_path",
+          "path": "experiments/analysis/docs_assets/data/plaplace/strong_scaling.csv"
+        }
+      ],
+      "generator": {
+        "function": "generate_family_scaling_figure",
+        "kind": "repository_path",
+        "path": "paper/scripts/generate_paper_figures.py"
+      }
+    },
+    "plaplace_state.pdf": {
+      "archive_status": "archive_neutral",
+      "data_inputs": [
+        {
+          "kind": "repository_path",
+          "path": "experiments/analysis/docs_assets/data/plaplace/sample_state.npz"
+        }
+      ],
+      "generator": {
+        "function": "generate_scalar_state_figure",
+        "kind": "repository_path",
+        "path": "paper/scripts/generate_paper_figures.py"
+      }
+    },
+    "plasticity2d_resolution_energy.pdf": {
+      "archive_status": "needs_final_archive",
+      "data_inputs": [
+        {
+          "kind": "repository_path",
+          "path": "artifacts/raw_results/docs_showcase/mc_plasticity_p4_l5/output.json"
+        },
+        {
+          "kind": "repository_path",
+          "path": "artifacts/raw_results/slope_stability_l6_p4_deep_p1_tail_scaling_lambda1_maxit20/summary.json"
+        },
+        {
+          "kind": "repository_path",
+          "path": "artifacts/raw_results/slope_stability_l7_p4_deep_p1_tail_scaling_lambda1_maxit20/summary.json"
+        }
+      ],
+      "generator": {
+        "function": "generate_plasticity2d_figures",
+        "kind": "repository_path",
+        "path": "paper/scripts/generate_paper_figures.py"
+      }
+    },
+    "plasticity2d_state_pair.pdf": {
+      "archive_status": "needs_final_archive",
+      "data_inputs": [
+        {
+          "kind": "repository_path",
+          "path": "artifacts/raw_results/docs_showcase/mc_plasticity_p4_l5/state.npz"
+        }
+      ],
+      "generator": {
+        "function": "generate_plasticity2d_figures",
+        "kind": "repository_path",
+        "path": "paper/scripts/generate_paper_figures.py"
+      },
+      "note": "Uses raw Plasticity2D endpoint state plus deterministic same-mesh case construction."
+    },
+    "plasticity3d_convergence.pdf": {
+      "archive_status": "needs_final_archive",
+      "data_inputs": [
+        {
+          "kind": "repository_path",
+          "path": "artifacts/raw_results/plasticity3d_lambda1p55_degree_mesh_energy_study/comparison_summary.json"
+        }
+      ],
+      "generator": {
+        "function": "_generate_plasticity3d_convergence_figure",
+        "kind": "repository_path",
+        "path": "paper/scripts/generate_paper_figures.py"
+      },
+      "note": "The summary references per-case output histories used by the convergence plot."
+    },
+    "plasticity3d_degree_energy_all_dofs.pdf": {
+      "archive_status": "needs_final_archive",
+      "data_inputs": [
+        {
+          "kind": "repository_path",
+          "path": "artifacts/raw_results/plasticity3d_lambda1p55_degree_mesh_energy_study/comparison_summary.json"
+        }
+      ],
+      "generator": {
+        "function": "_plot_plasticity3d_degree_energy_study",
+        "kind": "repository_path",
+        "path": "paper/scripts/generate_paper_figures.py"
+      }
+    },
+    "plasticity3d_degree_energy_all_time.pdf": {
+      "archive_status": "needs_final_archive",
+      "data_inputs": [
+        {
+          "kind": "repository_path",
+          "path": "artifacts/raw_results/plasticity3d_lambda1p55_degree_mesh_energy_study/comparison_summary.json"
+        }
+      ],
+      "generator": {
+        "function": "_plot_plasticity3d_degree_energy_study",
+        "kind": "repository_path",
+        "path": "paper/scripts/generate_paper_figures.py"
+      }
+    },
+    "plasticity3d_degree_energy_zoom_dofs.pdf": {
+      "archive_status": "needs_final_archive",
+      "data_inputs": [
+        {
+          "kind": "repository_path",
+          "path": "artifacts/raw_results/plasticity3d_lambda1p55_degree_mesh_energy_study/comparison_summary.json"
+        }
+      ],
+      "generator": {
+        "function": "_plot_plasticity3d_degree_energy_study",
+        "kind": "repository_path",
+        "path": "paper/scripts/generate_paper_figures.py"
+      }
+    },
+    "plasticity3d_degree_energy_zoom_time.pdf": {
+      "archive_status": "needs_final_archive",
+      "data_inputs": [
+        {
+          "kind": "repository_path",
+          "path": "artifacts/raw_results/plasticity3d_lambda1p55_degree_mesh_energy_study/comparison_summary.json"
+        }
+      ],
+      "generator": {
+        "function": "_plot_plasticity3d_degree_energy_study",
+        "kind": "repository_path",
+        "path": "paper/scripts/generate_paper_figures.py"
+      }
+    },
+    "plasticity3d_derivative_ablation_bars.pdf": {
+      "archive_status": "archive_neutral",
+      "data_inputs": [
+        {
+          "kind": "repository_path",
+          "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_derivative_ablation/comparison_summary.json"
+        }
+      ],
+      "generator": {
+        "function": "generate_plasticity3d_derivative_ablation_bars",
+        "kind": "repository_path",
+        "path": "paper/scripts/generate_paper_figures.py"
+      }
+    },
+    "plasticity3d_highest_mesh_y_slice_comparison.pdf": {
+      "archive_status": "needs_final_archive",
+      "data_inputs": [
+        {
+          "kind": "repository_path",
+          "path": "artifacts/raw_results/plasticity3d_lambda1p55_degree_mesh_energy_study/comparison_summary.json"
+        }
+      ],
+      "generator": {
+        "function": "generate_plasticity3d_highest_y_slice_comparison",
+        "kind": "repository_path",
+        "path": "paper/scripts/generate_paper_figures.py"
+      },
+      "note": "The generated slice also uses referenced state arrays and same-mesh HDF5 files."
+    },
+    "plasticity3d_local_vs_karolina_scaling.pdf": {
+      "archive_status": "archive_neutral",
+      "data_inputs": [
+        {
+          "kind": "repository_path",
+          "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_lambda155_scaling/local_solver_total_scaling.csv"
+        },
+        {
+          "kind": "repository_path",
+          "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_lambda155_scaling/karolina_rpn16_solver_total_scaling.csv"
+        }
+      ],
+      "generator": {
+        "function": "generate_plasticity3d_local_vs_karolina_scaling",
+        "kind": "repository_path",
+        "path": "paper/scripts/generate_paper_figures.py"
+      }
+    },
+    "plasticity3d_recommended_scaling.pdf": {
+      "archive_status": "needs_final_archive",
+      "data_inputs": [
+        {
+          "kind": "repository_path",
+          "path": "artifacts/raw_results/source_compare/plasticity3d_l1_2_lambda1_grad1e2_local_pmg_scaling/comparison_summary.json"
+        }
+      ],
+      "generator": {
+        "function": "_plot_plasticity_scaling",
+        "kind": "repository_path",
+        "path": "paper/scripts/generate_paper_figures.py"
+      },
+      "note": "The scaling summary references per-rank raw result JSON files used for local-element counts."
+    },
+    "plasticity3d_state_pair.pdf": {
+      "archive_status": "needs_final_archive",
+      "data_inputs": [
+        {
+          "kind": "repository_path",
+          "path": "artifacts/raw_results/plasticity3d_lambda1p55_degree_mesh_energy_study/comparison_summary.json"
+        }
+      ],
+      "generator": {
+        "function": "generate_plasticity3d_state_figures",
+        "kind": "repository_path",
+        "path": "paper/scripts/generate_paper_figures.py"
+      },
+      "note": "The summary references large state arrays and same-mesh HDF5 files that must be included or scoped in the final archive."
+    },
+    "plasticity3d_validation_layer1a_boundary.pdf": {
+      "archive_status": "archive_neutral",
+      "data_inputs": [
+        {
+          "kind": "repository_path",
+          "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_validation/validation_manifest.json"
+        },
+        {
+          "kind": "repository_path",
+          "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_validation/comparison_summary.json"
+        },
+        {
+          "kind": "repository_path",
+          "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_validation/source_branch/final_source_state.mat"
+        },
+        {
+          "kind": "repository_path",
+          "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_validation/source_branch/branch_summary.json"
+        },
+        {
+          "kind": "repository_path",
+          "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_validation/maintained_branch/branch_summary.json"
+        }
+      ],
+      "generator": {
+        "function": "generate_plasticity3d_validation_layer1a_boundary",
+        "kind": "repository_path",
+        "path": "paper/scripts/generate_paper_figures.py"
+      }
+    },
+    "plasticity3d_validation_umax_curve.pdf": {
+      "archive_status": "archive_neutral",
+      "data_inputs": [
+        {
+          "kind": "repository_path",
+          "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_validation/comparison_summary.json"
+        }
+      ],
+      "generator": {
+        "function": "generate_plasticity3d_validation_umax_curve",
+        "kind": "repository_path",
+        "path": "paper/scripts/generate_paper_figures.py"
+      }
+    },
+    "topology_density.pdf": {
+      "archive_status": "archive_neutral",
+      "data_inputs": [
+        {
+          "kind": "repository_path",
+          "path": "experiments/analysis/docs_assets/data/topology/parallel_final_state.npz"
+        }
+      ],
+      "generator": {
+        "function": "generate_topology_density",
+        "kind": "repository_path",
+        "path": "paper/scripts/generate_paper_figures.py"
+      }
+    },
+    "topology_history.pdf": {
+      "archive_status": "archive_neutral",
+      "data_inputs": [
+        {
+          "kind": "repository_path",
+          "path": "experiments/analysis/docs_assets/data/topology/objective_history.csv"
+        }
+      ],
+      "generator": {
+        "function": "generate_topology_history",
+        "kind": "repository_path",
+        "path": "paper/scripts/generate_paper_figures.py"
+      }
+    },
+    "topology_scaling.pdf": {
+      "archive_status": "archive_neutral",
+      "data_inputs": [
+        {
+          "kind": "repository_path",
+          "path": "experiments/analysis/docs_assets/data/topology/strong_scaling.csv"
+        }
+      ],
+      "generator": {
+        "function": "generate_topology_scaling",
+        "kind": "repository_path",
+        "path": "paper/scripts/generate_paper_figures.py"
+      }
+    }
   },
   "generated_assets": [
     "framework_overview.pdf",
@@ -115,5 +676,5 @@
     "subfigure_width_in": 3.259842670541027,
     "textwidth_in": 7.086614501176145
   },
-  "notes": "All manuscript-included PDFs in this manifest are generated by paper/scripts/generate_paper_figures.py; no external PDFs are copied into paper/figures/generated."
+  "notes": "All manuscript-included PDFs in this manifest are generated by paper/scripts/generate_paper_figures.py; no external PDFs are copied into paper/figures/generated. Assets marked needs_final_archive require additional raw/state inputs in the final durable archive or an explicit submission-scope exception."
 }

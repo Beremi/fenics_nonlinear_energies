@@ -7,10 +7,10 @@ aligned with its evidence: major claims are scoped to the implemented toolset,
 SOTA positioning has been refreshed, citations build cleanly, and the generated
 figure/table pipeline and archive-neutral provenance gate pass against a curated
 local submission bundle. Submission is still blocked by missing target-journal
-metadata, submission declarations, license/archive decisions, and final
-per-artifact provenance. Validation is adequate for the narrowed claims, but
-the paper must not be submitted until the external submission metadata and
-citable archive are fixed.
+metadata, submission declarations, license/archive decisions, complete table
+provenance, and final archive coverage for large raw/state figure inputs.
+Validation is adequate for the narrowed claims, but the paper must not be
+submitted until the external submission metadata and citable archive are fixed.
 
 ## Review Pass Scope
 
@@ -70,6 +70,19 @@ scientific claims were introduced without supporting evidence.
   diagnostics, the fixed Plasticity3D derivative-route comparison, and topology
   rank-variation evidence; reduced the page-30 Plasticity3D float gap in the
   current A4 PDF.
+- Added figure source provenance for every generated figure in the figure
+  manifest, tightened the asset validator so TeX-included figures must have
+  source records, and marked figures that still depend on large raw/state inputs
+  as `needs_final_archive`.
+- Rebuilt the curated submission bundle after fixing the JAX-FEM comparison
+  summary paths to point at bundle-local terminal states.
+- Sharpened remaining prose and notation issues from the latest audits:
+  PETSc-owned sparse assembly in the abstract, non-defensive comparison wording,
+  branchwise constitutive tangents, colored HVP/finite-difference recovery,
+  hyperelastic load notation, Plasticity3D body-force notation, and endpoint
+  validation scope.
+- Relaxed selected hard-pinned floats in the validation, results, and appendix
+  sections to reduce current blank-page regions and target-template fragility.
 - Rebuilt the paper PDF through the paper generation pipeline.
 
 ## Blocking Issues Before Submission
@@ -96,16 +109,16 @@ scientific claims were introduced without supporting evidence.
   release or artifact archive, mint or record its DOI if applicable, and update
   the manuscript availability statement.
 - Issue: Final per-artifact provenance is not yet complete.
-  Why it blocks publishability: the archive-neutral gate passes for the current
-  paper-facing validation surface, but a reproducibility-oriented submission
-  should include complete provenance for every submitted figure and generated
-  table, not only the critical validation and comparison inputs.
+  Why it blocks publishability: the archive-neutral gate passes and all
+  generated figures now have source records, but the final submission still
+  lacks complete generated-table provenance and archive coverage for the large
+  raw/state inputs behind the figures marked `needs_final_archive`.
   Evidence path or citation: `paper/figures/generated/manifest.json`,
   `paper/scripts/validate_paper_assets.py`, and
   `artifacts/reproduction/paper_submission_2026_07_08/manifest.json`.
-  Exact next action: complete or explicitly scope the final figure/table
-  manifest, include all final submitted visual/table inputs in the durable
-  archive, and rerun the archive-neutral validator.
+  Exact next action: add generated-table source/input provenance, include or
+  explicitly scope all large raw/state figure inputs in the durable archive, and
+  rerun the archive-neutral validator.
 
 ## Major Revisions Needed
 
@@ -113,8 +126,8 @@ scientific claims were introduced without supporting evidence.
   venue is chosen.
 - Fold the curated submission bundle into the final release/archive and make
   the manuscript availability statement cite that durable version.
-- Complete per-figure and per-table provenance coverage for the final submitted
-  visual and table artifacts.
+- Complete generated-table provenance and final archive coverage for the
+  `needs_final_archive` figure inputs.
 - After choosing the target journal template, revisit forced `[H]` floats and
   split or simplify the dense SOTA, Plasticity3D, and appendix tables if the
   venue class narrows the text block.

@@ -1,6 +1,6 @@
 {
-  "created_utc": "2026-07-08T21:57:00Z",
-  "git_commit": "a3dba0340436ff04dbc28c03b353d05788feacbb",
+  "created_utc": "2026-07-09T03:38:46Z",
+  "git_commit": "30a31c6a170d8c4c2b2c7f8e4c7f24a8e4d77c5f",
   "id": "paper_submission_2026_07_08",
   "known_limitations": [
     "This bundle normalizes existing paper-critical provenance without rerunning MPI campaigns.",
@@ -58,28 +58,28 @@
     },
     {
       "bundle_path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/jax_fem_hyperelastic_baseline/comparison_summary.json",
-      "bundle_sha256": "3cc8dd9c961f87a195c22227e9cebebdf0bea4cfa2b9a6a67116d9db84c1e93e",
+      "bundle_sha256": "6bd6d393fc6b2cb2d082e6e23c1c4a1cb266201e020a14abcd383f0a7656dd18",
       "sanitization": "local paths rewritten to archive-neutral references; non-finite JSON numbers written as null",
       "source_path": "artifacts/raw_results/jax_fem_hyperelastic_baseline/comparison_summary.json",
       "source_sha256": "37f5d72fe3f0b2865b641dd9da8484e8515aee37483343eaf63b5b23c9aa4fce"
     },
     {
       "bundle_path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/jax_fem_hyperelastic_baseline/run_manifest.json",
-      "bundle_sha256": "2a405b17047b922fe152d047f014aac828017df1815305b0a9d8ffd685864d8c",
+      "bundle_sha256": "fe1c5f13ffcb424e3cc4ed5789a2fd0344172a2fef232319e1f280a78865df00",
       "sanitization": "local paths rewritten to archive-neutral references; non-finite JSON numbers written as null",
       "source_path": "artifacts/raw_results/jax_fem_hyperelastic_baseline/run_manifest.json",
       "source_sha256": "090bf52daa52bf2944d393990f9981a6658db45fb9e034833498f99d6ca7dc00"
     },
     {
       "bundle_path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/jax_fem_hyperelastic_baseline/parity/repo_serial_direct.json",
-      "bundle_sha256": "f9b0dc1e13731e704fede8c6b5eb52c079911c36c3f57da3a81fc2704e8e0942",
+      "bundle_sha256": "784d771656e5d50abc4616f6b5c06f9c1ce0f9cda0987f3735f0c321f2876e79",
       "sanitization": "local paths rewritten to archive-neutral references; non-finite JSON numbers written as null",
       "source_path": "artifacts/raw_results/jax_fem_hyperelastic_baseline/parity/repo_serial_direct.json",
       "source_sha256": "d9554f13ceb6847b97af8207143400e2641a59ea9f452f47c0d824adf32cb0a2"
     },
     {
       "bundle_path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/jax_fem_hyperelastic_baseline/parity/jax_fem_umfpack_serial.json",
-      "bundle_sha256": "6c71ba6ef4efe9bd08ff03e0ebb923d17701520d7b916a6f81797028db3fd00c",
+      "bundle_sha256": "de2fd9b5c392ce6b1727e6136989f31751a0ea5f3ccff960dc957d79cb8e9ab2",
       "sanitization": "local paths rewritten to archive-neutral references; non-finite JSON numbers written as null",
       "source_path": "artifacts/raw_results/jax_fem_hyperelastic_baseline/parity/jax_fem_umfpack_serial.json",
       "source_sha256": "e84cc2bf7ef1e4d14045224bbefe00a61fa15acda896ac37f17667987967ad71"

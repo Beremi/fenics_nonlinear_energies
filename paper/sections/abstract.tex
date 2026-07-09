@@ -18,10 +18,11 @@ constitutive automatic differentiation, and colored sparse finite-difference
 recovery as routes to second-order information. The validation checks report
 matched hyperelastic energy and field agreement within the stated tolerances and
 final-load scalar and field agreement for the three-dimensional plasticity
-endpoint surrogate. The performance studies then quantify how derivative routes, sparse ownership,
-nonlinear globalization, Krylov linear algebra, and preconditioner policy affect
-cost and robustness under those definitions. On the tested Plasticity3D
+endpoint surrogate. The performance studies then quantify how derivative
+routes, sparse ownership, nonlinear globalization, Krylov linear algebra, and
+preconditioner policy affect cost and robustness under those definitions. On the tested Plasticity3D
 derivative-route case, constitutive AD gives the lowest measured wall time while
 preserving terminal observables, and the larger mechanics and topology runs
-exercise the same sparse-solver design at distributed scale.
+show that the same PETSc-owned sparse assembly and solver-policy framework
+carries to distributed runs.
 \end{abstract}

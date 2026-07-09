@@ -55,7 +55,7 @@ identity between the two implementations: the JAX-FEM implementation uses a
 logarithmic-$J$ Piola form, whereas \cref{eq:hyperelasticity-energy} uses the
 $D_1(J-1)^2$ volumetric penalty.
 
-\begin{figure}[H]
+\begin{figure}[!htbp]
   \centering
   \begin{subfigure}[t]{0.46\PaperFigureFull}
     \centering
@@ -162,6 +162,7 @@ path-consistent plastic-history reference.
 
 The resulting interpretation is limited but useful. \plasticitythree{} is
 supported here by direct-branch endpoint-observable agreement with the reference
-model, while the fixed-load reference comparison supports the same endpoint
-surrogate under matched boundary conditions and active free degrees of freedom.
+model, while the fixed-load reference comparison supports matched endpoint
+observables for that surrogate under matched boundary conditions and active free
+degrees of freedom.
 Neither check is a path-consistent incremental-plasticity history validation.

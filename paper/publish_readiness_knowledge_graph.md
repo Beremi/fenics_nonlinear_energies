@@ -77,6 +77,11 @@ MATLAB literature only when there is source-backed evidence.
   performance verbs from broad establishment claims to reported tolerances and
   measured costs, normalizes the \jaxpetsc{} object name, and shortens the
   conclusion so it ends as synthesis rather than repeated caveat management.
+  Current provenance/layout chunk removes the remaining defensive software-ranking
+  phrasing in the introduction, makes the abstract's final distributed-scale
+  sentence name PETSc-owned sparse assembly and solver policy, and sharpens the
+  conclusion's topology statement as coupled design-and-mechanics timing with a
+  separate rank-consistency check.
 - `INTRO`: positioning and contributions.
   Status: now opens with the nonlinear FEM computational bottleneck and includes
   an explicit contribution block with solver, derivative/assembly, and
@@ -137,6 +142,10 @@ MATLAB literature only when there is source-backed evidence.
   hybrid Newton solve line distinguish Hessian assembly/application from the
   linear solve, and rewrites colored SFD with a generic Hessian
   `H=\nabla^2\mathcal{F}(x)` rather than hyperelastic-specific notation.
+  Current provenance/layout chunk defines the quadrature-point data restriction
+  `\theta_q` in the generic element contribution and aligns implementation
+  wording with the methods caveat: constitutive AD gives branchwise tangents,
+  while colored sparse recovery may use HVP or finite-difference probes.
 - `IMPLEMENTATION`: realization of the method.
   Current assets: pure JAX, FEniCS, and JAX+PETSc strata; autodiff modes;
   Krylov/preconditioner matrix; distributed assembly.
@@ -208,6 +217,10 @@ MATLAB literature only when there is source-backed evidence.
   Jacobian determinant and that globalization rejects nonpositive-J trial
   states. It also narrows the Plasticity2D endpoint surrogate by saying the full
   two-dimensional branch-energy formulas are not reproduced in the paper.
+  Current provenance/layout chunk removes an unused hyperelastic load parameter
+  from `\Pi(u)`, names the right-face path as a prescribed rotating Dirichlet
+  displacement path, and replaces the Plasticity3D body-force symbol
+  `\gamma^{n+1}` with material-region weight `\gamma(x)`.
 - `VALIDATION`: external and reference-model comparison.
   Evidence: narrow hyperelastic JAX-FEM comparison; Plasticity3D validation
   ladder with endpoint-surrogate scope.
@@ -238,7 +251,9 @@ MATLAB literature only when there is source-backed evidence.
   style-scope chunk updates generated validation rows so endpoint observables
   are marked as comparisons, the fixed-load summary row is the only criteria
   count, and the JAX-FEM hyperelastic table reports checked differences as
-  below the stated 5 percent threshold.
+  below the stated 5 percent threshold. Current provenance/layout chunk narrows
+  the fixed-load Plasticity3D validation sentence to matched endpoint observables
+  for the endpoint surrogate, not identity of the surrogate itself.
 - `RESULTS`: performance and solver behavior.
   Evidence: globalization comparison, derivative-route comparison, scaling
   studies, hyperelastic and Plasticity3D solver diagnostics, topology scaling.
@@ -298,7 +313,10 @@ MATLAB literature only when there is source-backed evidence.
   completed endpoint case from fixed-work diagnostics, describes topology
   rank-consistency variation as bounded rather than rank-invariant, and
   rewrites the fixed Plasticity3D derivative-route result as a measured cost
-  comparison under identical reported terminal observables.
+  comparison under identical reported terminal observables. Current
+  provenance/layout chunk removes the ambiguous "largest distributed mechanics"
+  phrase from the auxiliary Plasticity3D timing discussion and describes it as a
+  high-DOF Plasticity3D timing result.
 - `DISCUSSION_CONCLUSION`: interpretation and scope.
   Current prose states the toolset lesson in paper-facing terms: automatic
   differentiation alone does not determine large nonlinear FEM behavior;
@@ -414,6 +432,13 @@ MATLAB literature only when there is source-backed evidence.
   failures: dense `[H]` float placement, Table 16 and related scriptsize result
   tables, appendix fixed-reference tables, the SOTA table, and compound
   Plasticity3D figures should be revisited after the venue class is chosen.
+  Current provenance/layout chunk relaxes the worst hard-pinned floats reported
+  by the PDF audit: the opening globalization tables, the hyperelastic
+  validation figure, a representative early scaling figure/table, the
+  Plasticity3D partitioning table, the topology figure/table block, and the
+  appendix fixed-reference tables now use `!htbp` rather than `[H]`. Rebuild and
+  page-render inspection are required before judging whether this improves the
+  visible blank regions.
 - `REPRO`: reproducibility and submission readiness.
   Known blockers from `paper/todo.md`: target journal/template/declarations,
   repository license/archive DOI, and archive-neutral provenance for critical
@@ -452,7 +477,13 @@ MATLAB literature only when there is source-backed evidence.
   records the remaining provenance audit risk: the curated bundle supports the
   current paper-facing validation gate, but the final release should still
   provide complete per-figure and per-table provenance for every submitted
-  visual artifact.
+  visual artifact. Current provenance/layout chunk adds a figure-provenance
+  schema: every generated figure now has a `generated_asset_sources` record with
+  generator path/function and archive status. The validator now requires these
+  records for TeX-included figures. The refreshed manifest records 34 generated
+  figure sources, 19 archive-neutral input maps, and 10 figures marked
+  `needs_final_archive` because they depend on large raw/state inputs. Table
+  provenance remains the next unrepaired per-artifact gap.
 
 ## Evidence Nodes
 
@@ -801,6 +832,26 @@ MATLAB literature only when there is source-backed evidence.
   by the page-30 flow fix. Remaining target-template risks: forced `[H]` floats,
   dense scriptsize result tables, appendix tables, the SOTA table, and compound
   Plasticity3D figures.
+- `Narrative/front-back audit` (`Descartes-current`): completed. No hard prose
+  blockers found. Findings addressed in the current provenance/layout chunk:
+  final abstract sentence, defensive introduction comparison wording,
+  duplicated contribution interpretation, related-work closing transition,
+  discussion agreement wording, and topology conclusion wording.
+- `Methods/solver precision audit` (`Ohm-current`): completed. Findings partly
+  addressed: branchwise constitutive tangent wording, colored recovery wording,
+  hyperelastic load notation, Plasticity3D body-force symbol, validation
+  sentence scope, `\theta_q` definition, and the ambiguous "largest" mechanics
+  timing phrase. Deferred item: a compact exact solver-policy table remains
+  useful but needs careful evidence collation.
+- `Provenance audit` (`Aquinas-current`): completed. Findings partly addressed:
+  validator now requires figure source provenance and the figure manifest records
+  all generated figure sources with archive status. Remaining provenance work:
+  complete table provenance and either bundle or explicitly scope the large raw
+  state inputs behind the `needs_final_archive` figure entries.
+- `PDF/layout audit` (`Ptolemy-current`): completed. Findings partly addressed
+  by relaxing selected `[H]` floats. Remaining risk: current A4 pages must be
+  rendered after rebuild to confirm the page-20, page-23, page-33, and page-35
+  blank-region behavior improved rather than merely moved.
 
 ## First Edit Backlog
 

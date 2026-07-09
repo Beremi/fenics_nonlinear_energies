@@ -10,8 +10,8 @@ supported by the present evidence.
 \paragraph{Derivative routes interact with the sparse solver.}
 \Cref{fig:plasticity3d-derivative-ablation,tab:plasticity3d-derivative-ablation}
 show a consistent cost comparison on the fixed $P_4(L_1)$,
-$\lambda_{\mathrm{sr}}=1.5$, 8-rank case. All three routes report the same
-terminal observables with 8 Newton iterations and 376 Krylov
+$\lambda_{\mathrm{sr}}=1.5$, 8-rank case. The three routes report terminal
+observables that agree to the displayed precision, with 8 Newton iterations and 376 Krylov
 iterations, so the comparison is about derivative cost rather than about
 different converged solutions. In this fixed test, constitutive AD preserves the
 same scalar-energy definition and has the lowest measured wall time:
@@ -51,7 +51,8 @@ as end-to-end timing under adaptive stopping, with a separate controlled
 rank-consistency check. The fixed-reference PMG studies are solver-policy
 diagnostics rather than symmetric external comparisons. These
 distinctions define the contribution: a nonlinear FEM toolset with explicit
-derivative-route choices, validation surfaces, and agreement limits. Automatic
+derivative-route choices, matched validation comparisons, and stated limits of
+agreement. Automatic
 differentiation alone does not determine the behavior of large nonlinear FEM;
 globalization, sparse ownership, overlap replication, coarse-level policy,
 preconditioning, and surrogate-model interpretation are part of the numerical

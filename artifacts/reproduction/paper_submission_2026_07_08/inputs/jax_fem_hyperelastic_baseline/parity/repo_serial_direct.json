@@ -236,6 +236,6 @@
     "tolx_abs": 1e-10,
     "tolx_rel": 1e-08
   },
-  "state_npz": "artifacts/raw_results/jax_fem_hyperelastic_baseline/parity/repo_serial_direct_state.npz",
+  "state_npz": "artifacts/reproduction/paper_submission_2026_07_08/inputs/jax_fem_hyperelastic_baseline/parity/repo_serial_direct_state.npz",
   "total_wall_time_s": 0.2237762559670955
 }

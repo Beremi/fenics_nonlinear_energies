@@ -102,9 +102,6 @@ distributed algorithms \citep{balay1997petsc,petsc2026web}. In the present
 toolset, PETSc ownership layout, Krylov policy, nonlinear globalization, and
 preconditioner design are part of the numerical method.
 
-Against that background, the present toolset documents a JAX-local,
-PETSc-sparse design point for distributed nonlinear FEM benchmarks. It combines
-JAX-based local differentiation, multiple second-order routes, PETSc sparse
-execution, nonlinear globalization, and problem-specific preconditioning on
-benchmark families ranging from scalar nonlinear diffusion to topology
-optimization and 3D Mohr--Coulomb-type mechanics.
+Against that background, the present toolset uses JAX for local element and
+constitutive differentiation, while PETSc owns sparse distributed algebra and
+nonlinear solver policy for the benchmark suite below.

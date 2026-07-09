@@ -52,8 +52,9 @@ In \cref{eq:generic-potential}, $\Phi_e$ is the integrated scalar contribution
 of element $e$. In quadrature-based mechanics examples,
 $\Phi_e(x_e;\theta_e)=\sum_q w_q\psi_q(B_q x_e;\theta_q)$, where $q$ indexes
 quadrature points, $w_q$ are quadrature weights, $B_q$ maps element coefficients
-to the local strain or gradient argument, and $\psi_q$ is the pointwise energy
-density or branch potential. For finite-element labels, $P_k(L_\ell)$ denotes
+to the local strain or gradient argument, $\theta_q$ is the quadrature-point
+restriction of the element data, and $\psi_q$ is the pointwise energy density or
+branch potential. For finite-element labels, $P_k(L_\ell)$ denotes
 degree-$k$ Lagrange elements on mesh level $L_\ell$; problem-specific sections
 define the mesh hierarchy behind those levels when it matters for
 interpretation.

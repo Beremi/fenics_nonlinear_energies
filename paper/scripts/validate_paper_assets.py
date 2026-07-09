@@ -134,6 +134,44 @@ def _manifest_assets(figures_dir: Path) -> set[str]:
     return assets
 
 
+def _manifest_asset_sources(figures_dir: Path) -> dict[str, object]:
+    manifest_path = figures_dir / "manifest.json"
+    if not manifest_path.exists():
+        return {}
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    sources = manifest.get("generated_asset_sources", {})
+    if not isinstance(sources, dict):
+        raise SystemExit("Figure manifest field `generated_asset_sources` must be an object.")
+    return {str(Path(name).name): value for name, value in sources.items()}
+
+
+def _validate_manifest_sources(required_figures: set[str], figures_dir: Path) -> None:
+    sources = _manifest_asset_sources(figures_dir)
+    missing = sorted(required_figures - set(sources))
+    if missing:
+        raise SystemExit("TeX-included figures missing source provenance:\n" + "\n".join(missing))
+    findings: list[str] = []
+    allowed_status = {"archive_neutral", "needs_final_archive"}
+    for name in sorted(required_figures):
+        source = sources[name]
+        if not isinstance(source, dict):
+            findings.append(f"{name}: generated_asset_sources entry must be an object.")
+            continue
+        generator = source.get("generator")
+        if not isinstance(generator, dict):
+            findings.append(f"{name}: source provenance is missing a generator object.")
+        status = source.get("archive_status")
+        if status not in allowed_status:
+            findings.append(
+                f"{name}: archive_status must be one of {sorted(allowed_status)}, got {status!r}."
+            )
+        data_inputs = source.get("data_inputs", [])
+        if data_inputs is not None and not isinstance(data_inputs, list):
+            findings.append(f"{name}: data_inputs must be a list when present.")
+    if findings:
+        raise SystemExit("Figure source provenance is malformed:\n" + "\n".join(findings))
+
+
 def _provenance_targets(
     tex_path: Path,
     seen_tex: set[Path],
@@ -294,6 +332,7 @@ def main() -> None:
         raise SystemExit("Missing paper assets:\n" + "\n".join(missing))
     if untracked_figures:
         raise SystemExit("TeX-included figures missing from figure manifest:\n" + "\n".join(untracked_figures))
+    _validate_manifest_sources(required_figures, args.figures_dir)
     provenance_targets = _provenance_targets(args.tex, seen_tex, required_tables, args.figures_dir, args.tables_dir)
     _validate_provenance_text(provenance_targets)
     if args.archive_neutral:

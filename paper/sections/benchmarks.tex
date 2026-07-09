@@ -202,7 +202,7 @@ The first Piola stress is $P(F) = \partial W/\partial F$
 implemented benchmark used in this paper is a cantilever problem with the
 potential, defined on admissible displacements with $J(u)>0$ almost everywhere,
 \begin{equation}
-  \Pi(u;\eta)
+  \Pi(u)
   =
   \int_{\Omega} W(F(u))\,dx,
   \label{eq:hyperelasticity-energy}
@@ -210,8 +210,8 @@ potential, defined on admissible displacements with $J(u)>0$ almost everywhere,
 on $\Omega = [0,0.4] \times [-0.005,0.005]^2$ with
 $C_1 \approx \num{3.846e7}$ and
 $D_1 \approx \num{8.333e7}$. The left face is clamped, while the right
-face carries the prescribed rotating Dirichlet load path used throughout this
-benchmark. Let $\Gamma_{\mathrm{L}}$ and $\Gamma_{\mathrm{R}}$ denote the left
+face carries the prescribed rotating Dirichlet displacement path used throughout
+this benchmark. Let $\Gamma_{\mathrm{L}}$ and $\Gamma_{\mathrm{R}}$ denote the left
 and right end faces, respectively. For a reference point $X=(X_1,X_2,X_3)$ on
 $\Gamma_{\mathrm{R}}$ and $N=24$ reported load steps, the prescribed position
 at step $k$ is
@@ -467,9 +467,10 @@ geometry
 \citep{davis1968plasticity,simo1985consistent,simo1998compinel,tschuchnigg2015nonassociated,sysala2017returnmapping,sysala2021optimization,sysala2025convexoptimization,sysala2025advancedcontinuation}.
 The unknown is a displacement field
 $u = (u_x,u_y,u_z): \Omega \to \mathbb{R}^3$, and gravity acts in the vertical
-$y$-direction. At increment $n+1$, the continuum equilibrium equations are
+$y$-direction. With material-region weight $\gamma(x)$, the continuum
+equilibrium equations are
 \begin{equation}
-  -\nabla \cdot \sigma^{n+1} = -\gamma^{n+1} e_y
+  -\nabla \cdot \sigma^{n+1} = -\gamma(x) e_y
   \quad \text{in }\Omega,
   \qquad
   u_i^{n+1} = \bar u_i^{n+1} \quad \text{on }\Gamma_{D,i},

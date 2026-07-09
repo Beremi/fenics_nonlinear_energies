@@ -73,6 +73,21 @@ def _sanitize_string(value: str) -> str:
     text = value.replace(repo_prefix, "")
     bundle_prefix = _repo_rel(BUNDLE_ROOT)
     replacements = {
+        "artifacts/raw_results/jax_fem_hyperelastic_baseline/comparison_summary.json": (
+            f"{bundle_prefix}/inputs/jax_fem_hyperelastic_baseline/comparison_summary.json"
+        ),
+        "artifacts/raw_results/jax_fem_hyperelastic_baseline/parity/repo_serial_direct_state.npz": (
+            f"{bundle_prefix}/inputs/jax_fem_hyperelastic_baseline/parity/repo_serial_direct_state.npz"
+        ),
+        "artifacts/raw_results/jax_fem_hyperelastic_baseline/parity/jax_fem_umfpack_serial_state.npz": (
+            f"{bundle_prefix}/inputs/jax_fem_hyperelastic_baseline/parity/jax_fem_umfpack_serial_state.npz"
+        ),
+        "artifacts/raw_results/jax_fem_hyperelastic_baseline/parity/repo_serial_direct.json": (
+            f"{bundle_prefix}/inputs/jax_fem_hyperelastic_baseline/parity/repo_serial_direct.json"
+        ),
+        "artifacts/raw_results/jax_fem_hyperelastic_baseline/parity/jax_fem_umfpack_serial.json": (
+            f"{bundle_prefix}/inputs/jax_fem_hyperelastic_baseline/parity/jax_fem_umfpack_serial.json"
+        ),
         "tmp/source_compare/slope_stability_octave_ref/slope_stability/artifacts/compare_direct_branch_lambda1p6/final_source_state.mat": (
             f"{bundle_prefix}/inputs/plasticity3d_validation/source_branch/final_source_state.mat"
         ),
