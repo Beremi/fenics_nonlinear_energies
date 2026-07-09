@@ -3,20 +3,20 @@
 This appendix collects supporting solver-policy diagnostics that are
 methodologically useful but narrower than the main benchmark narratives.
 
-\subsection{Plasticity3D Reference-Formula and Fixed-Reference PMG Comparisons}
+\subsection{Plasticity3D Reference-Formula and Frozen-Preconditioner PMG Comparisons}
 
 The main Plasticity3D numerical evidence in \Cref{sec:num-plasticity3d} is the
 rank-local constitutive-AD path. The tables below add two solver-policy
 comparisons on the same $P_4(L_2)$ problem from
 \eqref{eq:plasticity3d-discrete} at $\lambda_{\mathrm{sr}}=\num{1.0}$: a
-closed-form constitutive-tangent assembly comparator and a frozen-preconditioner
-PMG variant.
+reference-formula branch-tangent assembly comparator and a
+frozen-preconditioner PMG variant.
 Both use Armijo Newton, a gradient-only stopping target
 $\|\nabla\mathcal{F}\|_2<\num{0.01}$, at most 50 Newton iterations, and PETSc
-relative KSP tolerance \num{1e-1}. Here closed-form assembly means evaluating
-the active constitutive branch and tangent formulas without AD, while
-fixed-reference PMG means a frozen-preconditioner variant in which the multigrid
-operator is not rebuilt along the nonlinear path.
+relative KSP tolerance \num{1e-1}. Here reference-formula assembly means
+evaluating the active constitutive branch and tangent formulas without AD,
+while frozen-preconditioner PMG means a variant in which the multigrid operator
+is not rebuilt along the nonlinear path.
 
 \begin{table}[!htbp]
   \centering
@@ -31,22 +31,22 @@ operator is not rebuilt along the nonlinear path.
 
 \begin{table}[!htbp]
   \centering
-  \caption{Fixed-reference PMG alternative on the same
+  \caption{Frozen-preconditioner PMG alternative on the same
   $P_4(L_2)$, $\lambda_{\mathrm{sr}}=\num{1.0}$ Plasticity3D problem. The status
   column distinguishes completed configurations from rank counts that reach the
   maximum number of Newton iterations before satisfying the target gradient
   tolerance.}
-  \label{tab:plasticity3d-fixed-reference-pmg}
+  \label{tab:plasticity3d-frozen-preconditioner-pmg}
   \input{tables/generated/plasticity3d_fixed_reference_operator_pmg.tex}
 \end{table}
 
-These diagnostics support two narrower statements. First, closed-form branch
-tangent assembly has lower reported wall time than AD-branch tangent assembly in
-the listed matched-rank comparisons, although the gap narrows at higher rank
-counts.
-Second, the fixed-reference PMG profile is not the default used in the
+These diagnostics support two narrower statements. First, reference-formula
+branch-tangent assembly has lower reported wall time than AD-branch tangent
+assembly in the listed matched-rank comparisons, although the gap narrows at
+higher rank counts.
+Second, the frozen-preconditioner PMG profile is not the default used in the
 present study: it may appear favorable on completed low-rank configurations, but
-three of the eight fixed-reference rows reach the maximum number of Newton
+three of the eight frozen-preconditioner rows reach the maximum number of Newton
 iterations and therefore give less consistent convergence evidence. The rank-local
 constitutive-AD path remains the primary Plasticity3D realization because it uses the
 same local differentiable formulation as the derivative-route and converged

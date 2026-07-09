@@ -7,11 +7,11 @@
 Benchmark & Route & Outcome & Time [s] & Timing scope & Energy \\
 \midrule
 $p$-Laplace $L_9$ & Element AD & completed & \num{1.14} & solver total & \num{-7.960003} \\
-$p$-Laplace $L_9$ & Colored SFD & completed & \num{1.45} & solver total & \num{-7.960003} \\
+$p$-Laplace $L_9$ & Colored recovery (AD-HVP) & completed & \num{1.45} & solver total & \num{-7.960003} \\
 Hyperelasticity $L_4$ step 1 & Element AD & completed & \num{11.7} & solve & \num{0.1519923275} \\
-Hyperelasticity $L_4$ step 1 & Colored SFD & completed & \num{34.6} & solve & \num{0.1519923275} \\
+Hyperelasticity $L_4$ step 1 & Colored recovery (AD-HVP) & completed & \num{34.6} & solve & \num{0.1519923275} \\
 \shortstack[l]{Plasticity3D $P_2(L_1)$\\$\lambda_{\mathrm{sr}}=\num{1.55}$} & Element AD & completed & \num{16.3} & solve & \num{-3012813} \\
-\shortstack[l]{Plasticity3D $P_2(L_1)$\\$\lambda_{\mathrm{sr}}=\num{1.55}$} & Colored SFD & completed & \num{16.4} & solve & \num{-3012813} \\
+\shortstack[l]{Plasticity3D $P_2(L_1)$\\$\lambda_{\mathrm{sr}}=\num{1.55}$} & Colored recovery (AD-HVP) & completed & \num{16.4} & solve & \num{-3012813} \\
 \shortstack[l]{Plasticity3D $P_2(L_1)$\\$\lambda_{\mathrm{sr}}=\num{1.55}$} & Constitutive AD & completed & \num{4.81} & solve & \num{-3012813} \\
 \bottomrule
 \end{tabularx}
@@ -22,14 +22,14 @@ Hyperelasticity $L_4$ step 1 & Colored SFD & completed & \num{34.6} & solve & \n
 \par\vspace{0.2em}
 \begin{tabularx}{\textwidth}{@{}>{\hsize=1.136\hsize\linewidth=\hsize\RaggedRight\arraybackslash}X>{\hsize=0.864\hsize\linewidth=\hsize\RaggedRight\arraybackslash}X@{\hspace{0.45em}}c c c c c@{}}
 \toprule
-Benchmark & Route & Ranks & Newton & Krylov & Hessian [s] & SFD colors \\
+Benchmark & Route & Ranks & Newton & Krylov & Hessian [s] & Color groups \\
 \midrule
 $p$-Laplace $L_9$ & Element AD & 32 & 6 & 11 & -- & -- \\
-$p$-Laplace $L_9$ & Colored SFD & 32 & 6 & 11 & -- & -- \\
+$p$-Laplace $L_9$ & Colored recovery (AD-HVP) & 32 & 6 & 11 & -- & -- \\
 Hyperelasticity $L_4$ step 1 & Element AD & 32 & 22 & 492 & -- & -- \\
-Hyperelasticity $L_4$ step 1 & Colored SFD & 32 & 22 & 492 & -- & -- \\
+Hyperelasticity $L_4$ step 1 & Colored recovery (AD-HVP) & 32 & 22 & 492 & -- & -- \\
 \shortstack[l]{Plasticity3D $P_2(L_1)$\\$\lambda_{\mathrm{sr}}=\num{1.55}$} & Element AD & 32 & 11 & 73 & \num{6.57} & -- \\
-\shortstack[l]{Plasticity3D $P_2(L_1)$\\$\lambda_{\mathrm{sr}}=\num{1.55}$} & Colored SFD & 32 & 11 & 73 & \num{6.59} & 240--420 \\
+\shortstack[l]{Plasticity3D $P_2(L_1)$\\$\lambda_{\mathrm{sr}}=\num{1.55}$} & Colored recovery (AD-HVP) & 32 & 11 & 73 & \num{6.59} & 240--420 \\
 \shortstack[l]{Plasticity3D $P_2(L_1)$\\$\lambda_{\mathrm{sr}}=\num{1.55}$} & Constitutive AD & 32 & 11 & 73 & \num{1.6} & -- \\
 \bottomrule
 \end{tabularx}

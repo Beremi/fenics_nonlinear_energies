@@ -33,7 +33,7 @@
   \node[paper box, fill=paperdiaggreen, text width=3.85cm] (bench) at (11.4,0)
     {\textbf{Benchmark families}\\scalar PDEs, mechanics, topology};
   \node[paper box, fill=paperdiagviolet, text width=4.55cm] (deriv) at (3.0,-2.0)
-    {\textbf{Derivative modes}\\element AD, constitutive AD, colored SFD};
+    {\textbf{Derivative modes}\\element AD, constitutive AD, colored recovery};
   \node[paper box, fill=paperdiagrose, text width=4.15cm] (solver) at (8.7,-2.0)
     {\textbf{Solver modes}\\line search, trust region, multigrid};
 
@@ -58,7 +58,7 @@
   \node[paper box, fill=paperdiagrose, text width=3.2cm, align=center] (const) at (5.6,-1.85)
     {\textbf{Constitutive AD}};
   \node[paper box, fill=paperdiaggray, text width=3.0cm, align=center] (sfd) at (9.7,-1.85)
-    {\textbf{Colored SFD}};
+    {\textbf{Colored}\\\textbf{recovery}};
 
   \draw[paper arrow] (weak.east) -- (jax.west);
   \draw[paper arrow] (jax.east) -- (petsc.west);
@@ -75,7 +75,7 @@
   \node[paper box, fill=paperdiaggreen, text width=15.2cm, below=0.45cm of e] (c)
     {\textbf{Constitutive AD}\\$\mathcal{W}_q(\varepsilon_q,m_q)$; quadrature-point tangent assembly; branchwise AD constitutive tangents};
   \node[paper box, fill=paperdiagrose, text width=15.2cm, below=0.45cm of c] (s)
-    {\textbf{Colored SFD}\\rank-local AD-HVP probes in reported cases; parallel coloring / recovery; finite-difference gradient probes as the classical variant};
+    {\textbf{Colored recovery}\\rank-local AD-HVP probes in reported cases; parallel coloring / recovery; finite-difference gradient probes as the classical variant};
 \end{tikzpicture}%
 }
 

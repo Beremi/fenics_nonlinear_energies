@@ -52,6 +52,10 @@ size and mesh construction, not separate physical models.
 \begin{table}[!htbp]
   \centering
   \footnotesize
+  \caption{Meaning of the mesh-level labels used in the benchmark and results
+  tables. The counts identify the discrete problem sizes behind the compact
+  labels; they are not additional numerical results.}
+  \label{tab:discretization-labels}
   \begin{tabularx}{\textwidth}{@{}l l >{\RaggedRight\arraybackslash}X >{\RaggedRight\arraybackslash}X@{}}
     \toprule
     Family & Level label & Construction & Representative sizes used below \\
@@ -89,10 +93,6 @@ size and mesh construction, not separate physical models.
         $P_4$ use the same macro tetrahedra with elevated element degree. \\
     \bottomrule
   \end{tabularx}
-  \caption{Meaning of the mesh-level labels used in the benchmark and results
-  tables. The counts identify the discrete problem sizes behind the compact
-  labels; they are not additional numerical results.}
-  \label{tab:discretization-labels}
 \end{table}
 
 \subsection{\texorpdfstring{$p$-Laplace}{p-Laplace}}
@@ -266,8 +266,6 @@ solver-sensitive nonconvex energy: the \fenics{} reference, element AD, and colo
 recovery report matching Newton--Krylov counts and final energies within about
 $\num{1e-6}$. Strong scaling and solver-time comparisons for this family are
 reported in \Cref{sec:num-gl}.
-
-\FloatBarrier
 
 \subsection{Hyperelasticity}
 \label{sec:bench-he}
@@ -541,11 +539,11 @@ ordered variables satisfies $f^{\mathrm{tr}}\le0$.
 
 In that case $\sigma^\star=\sigma^{\mathrm{tr}}$. Otherwise let
 \[
-  z=\widehat S^{-1}(a_\lambda,-b_\lambda)^\top,\qquad
-  \eta=\frac{f^{\mathrm{tr}}}{a_\lambda z_1-b_\lambda z_2},\qquad
+  d_\sigma=\widehat S^{-1}(a_\lambda,-b_\lambda)^\top,\qquad
+  \eta=\frac{f^{\mathrm{tr}}}{a_\lambda d_{\sigma,1}-b_\lambda d_{\sigma,2}},\qquad
   \widehat\sigma^\ell
   =
-  (\sigma_1^{\mathrm{tr}},\sigma_2^{\mathrm{tr}})^\top-\eta z,
+  (\sigma_1^{\mathrm{tr}},\sigma_2^{\mathrm{tr}})^\top-\eta d_\sigma,
 \]
 where $\widehat S=\begin{bmatrix}S_{11}&S_{12}\\ S_{12}&S_{22}\end{bmatrix}$
 is the normal block of $S_{2\mathrm{D}}$ in the ordered principal-stress
@@ -1060,8 +1058,6 @@ provides reference-model context for that boundary.
   \input{tables/generated/plasticity3d_benchmark_summary.tex}
 \end{table}
 
-\FloatBarrier
-
 \Cref{fig:plasticity3d-state,fig:plasticity3d-convergence,tab:plasticity3d-benchmark}
 define the endpoint-surrogate benchmark object used later in the results
 section. The nine completed endpoint solves converge in the nonlinear stopping
@@ -1132,8 +1128,13 @@ $z_h\in Z_h$, mapped to a physical density through the logistic transform
 On each triangular element $e$, we use the element averages
 $\theta_e := |e|^{-1}\int_e \theta_h\,\mathrm{d}x$ and
 $z_e := |e|^{-1}\int_e z_h\,\mathrm{d}x$; for the linear elements used here
-these are vertex averages. On the fixed-solid pads the physical density is held
-at $\theta_e=1$ during design updates. Outside the pads, the latent variable is
+these are vertex averages. Let $\mathcal{P}_h$ be the fixed-pad design nodes and
+let $\mathcal{D}_h$ be the remaining design nodes. During design updates,
+$z_h$ is varied only on $\mathcal{D}_h$; on $\mathcal{P}_h$ the latent value is
+held at a large solid value, so the corresponding physical density is held near
+$\theta_h=1$. No element is removed from the objective. Elements touching a pad
+enter the element sums through their fixed nodal pad values and through any
+remaining free design nodes. Outside the pads, the latent variable is
 unconstrained and \eqref{eq:topology-density-map} enforces
 $\theta_h\in[\theta_{\min},1]$.
 
@@ -1223,7 +1224,10 @@ $z_h^{m+1}$ is
   \label{eq:topology-reduced-objective}
 \end{align}
 where $\theta_e$ and $z_e$ are computed from the trial $z_h$, while $z_e^m$ is
-the element average from the previous design iterate.
+the element average from the previous design iterate. The minimization of
+\eqref{eq:topology-reduced-objective} is with respect to the free latent nodal
+values on $\mathcal{D}_h$; the fixed-pad nodal values on $\mathcal{P}_h$ remain
+constant during the design step.
 
 The target volume fraction is imposed through an iteration-dependent effective
 multiplier. The fixed-solid pads are included in the measured volume, and the
@@ -1245,7 +1249,7 @@ Let $V_\star=0.4$ be the target value. Before the $m$th design solve we use
 where $\lambda_{\mathrm{ref}}^m$ is the
 $(1-V_\star)$-quantile of
 $p\,e_{e,m}^{\mathrm{frozen}}/\max(\theta_e^m,\theta_{\min})^{p+1}$
-over the design elements,
+over the elementwise sensitivity scale,
 $\lambda_{\mathrm{corr}}^m$ is the carried multiplier correction, and
 $\rho_V=10$. After the design update, with
 $r_V^{m+1}=V(\theta_h^{m+1})-V_\star$, the carried correction is updated by

@@ -84,8 +84,9 @@ stage or commit `paper/style_guide/`.
   limits.
 - `conclusion.tex`: close on the scientific toolset and next research steps,
   not on implementation housekeeping.
-- `appendix.tex`: keep supporting solver-policy diagnostics and reference-formula
-  or fixed-reference comparisons out of the main evidence line.
+- `appendix.tex`: keep supporting solver-policy diagnostics, reference-formula
+  branch-tangent comparisons, and frozen-preconditioner PMG diagnostics out of
+  the main evidence line.
 
 ## Evidence Surface
 
@@ -104,9 +105,10 @@ stage or commit `paper/style_guide/`.
   Comparators remain scoped to internal consistency checks, narrow external
   companion comparisons, or literature context rather than universal baselines.
 - Mathematical exposition: recent fixes define Plasticity2D/3D surrogate
-  notation before use, keep topology notation separate from mechanics notation,
-  define AD/AD-HVP and distributed ownership explicitly, and treat displayed
-  equations as sentence parts.
+  notation before use, split true reduced objectives from frozen design
+  subproblems, define topology design/pad node sets, keep topology notation
+  separate from mechanics notation, define AD/AD-HVP and distributed ownership
+  explicitly, and treat displayed equations as sentence parts.
 - Evidence scope: no small missing experiment is required for the current claims.
   Plasticity3D remains endpoint-surrogate evidence; topology reports adaptive
   end-to-end timing plus a controlled rank-consistency check; scalar FEniCS
@@ -121,24 +123,24 @@ stage or commit `paper/style_guide/`.
   Appendix floats are now broadly flexible. Remaining layout risks are
   target-template driven: dense result pages, figure/table compression, and page
   budget after venue conversion.
-- Current page-budget/evidence pass: the roadmap and related-work transition
+- Earlier page-budget/evidence pass: the roadmap and related-work transition
   are shorter, the standalone Armijo pseudocode was removed while preserving the
   solver-policy prose and citations, comparator-role citations were moved into
   the opening scope paragraph, and topology rank-consistency wording now uses a
-  one-rank reference run. The rebuilt PDF is a 44-page A4 article.
-- Current thematic polish pass: Results now opens with a shorter protocol
+  one-rank reference solve. That pass rebuilt a 44-page A4 article.
+- Earlier thematic polish pass: Results now opens with a shorter protocol
   transition, generated protocol-table cells use paper-facing wording, Methods
   defines the Armijo, bounded-merit, and residual-bisection line-search
   acceptance policies, Implementation includes an owned-row residual/matrix
   assembly display, and Discussion/Conclusion synthesize rather than re-list
   exact result numbers. No small missing experiment is required for current
   claims; path-history plasticity validation remains future work.
-- Current last-mile pass: rendered/source scans found no high-priority
+- Earlier last-mile pass: rendered/source scans found no high-priority
   paper-facing leaks. Recent fixes expand hyperelasticity scaling acronyms,
   sharpen residual-bisection and owned-row assembly notation, standardize nearby
   `\lambda_{\mathrm{sr}}` numeric styling, and clarify Plasticity3D validation
-  table status text. The rebuilt PDF remains a 44-page A4 article.
-- Current paper-facing tone/notation pass: subagent audits found no hard local
+  table status text. That pass rebuilt a 44-page A4 article.
+- Earlier paper-facing tone/notation pass: subagent audits found no hard local
   path or campaign-tag leaks. Integrated fixes define the owned-row assembly
   residual/tangent symbols before use, define
   `\varepsilon_{eq}(u_e)=B_{eq}u_e` in the Plasticity3D surrogate, name the
@@ -146,7 +148,7 @@ stage or commit `paper/style_guide/`.
   residual run-log wording with configuration/comparison language, and narrow the
   conclusion to the tested nonlinear energy families. The rebuilt PDF is now a
   45-page A4 article.
-- Current float-concision and notation pass: subagent audits reduced the hard
+- Earlier float-concision and notation pass: subagent audits reduced the hard
   float allowlist from 12 problem/method floats to the three method algorithms,
   shortened dense Results and Conclusion prose without changing evidence, added
   the Plasticity2D deviatoric engineering-strain invariant, clarified frozen
@@ -154,6 +156,18 @@ stage or commit `paper/style_guide/`.
   topology rank-consistency language to observed discrepancies in the controlled
   40-iteration case. The rebuilt PDF remains a 45-page A4 article; rendered
   pages 16--19 and 25--42 were visually checked.
+- Current message/math/evidence/layout pass: subagent audits tightened the
+  abstract and contribution thesis, added a motivation bridge before the
+  related-work role table, separated Sysala-family reference-model context from
+  \v{C}ermak--Sysala--Valdman implementation context, split reduced and frozen
+  objective notation, replaced visible colored-SFD wording with colored
+  sparse-recovery / AD-HVP wording, standardized reference-formula and
+  frozen-preconditioner PMG terminology, added a discrete-norm definition for
+  validation metrics, renamed the Plasticity2D local stress vector to
+  `d_\sigma`, narrowed Plasticity3D validation wording to the
+  highest-successful-load value on the tested grid, and relaxed layout barriers
+  that isolated benchmark floats. The rebuilt PDF is a 43-page A4 article;
+  rendered pages 8--23, 26--38, and page 34 were visually checked.
 
 ## Figure And Table Rules
 
@@ -192,18 +206,19 @@ external release decisions:
 - durable software/artifact archive;
 - archival DOI in the availability statement.
 
-The current PDF is a 45-page A4 article. Page budget and float behavior must be
+The current PDF is a 43-page A4 article. Page budget and float behavior must be
 rechecked after target-template conversion.
 
 Deferred layout risks from the 2026-07-09 audits are now target-template risks
 rather than current A4 blockers: dense hyperelasticity and Plasticity3D result
 clusters, long result tables, the four-panel Plasticity3D degree figure, and
 the Plasticity3D CPU-scaling table. Latest rendered-page review found no A4
-clipping or illegible figures; revisit these risks only after a target template
-changes text width or the paper is split into main/supplement material. Stale
-non-manuscript generated figure/table outputs are removed and guarded by
-`validate_paper_assets.py`; figure sizing now fails fast if the current A4
-article layout contract changes without updating the measurement policy.
+clipping, isolated float page, or illegible figures after barrier relaxation;
+revisit these risks only after a target template changes text width or the paper
+is split into main/supplement material. Stale non-manuscript generated
+figure/table outputs are removed and guarded by `validate_paper_assets.py`;
+figure sizing now fails fast if the current A4 article layout contract changes
+without updating the measurement policy.
 
 ## Standard Validation
 

@@ -21,11 +21,11 @@ relative differences of the form
 \end{equation}
 where $a$ is the reference observable, $b$ is the compared observable, and $M$
 denotes the discrete norm used for the comparison. For nodal displacement
-vectors, $M$ is the Euclidean norm on the
-compared free degrees of freedom. For sampled profiles and quadrature-derived
-fields, $M$ denotes the corresponding sampled or quadrature-weighted norm used
-by the comparison. The reported field and profile observables have nonzero
-reference norms. Scalar work and energy differences use the same
+vectors, $M$ is the identity on the compared free degrees of freedom. More
+generally, $\|r\|_M=(r^\top M r)^{1/2}$, with diagonal quadrature weights for
+field samples and the stated sample/profile weights for curves. The reported
+field and profile observables have nonzero reference norms. Scalar work and
+energy differences use the same
 reference-denominator convention; the hyperelastic energy post-comparison uses
 an absolute denominator floor of $10^{-12}$. We write
 $u_{\max}$ for the maximum displacement magnitude over the compared state.

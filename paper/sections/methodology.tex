@@ -33,29 +33,35 @@ where $\theta_e$ is the element-local restriction of those data and
 $f_{\mathrm{ext}}$ is the assembled load vector on the free degrees of freedom.
 The expression is the reduced algebraic potential in the free variables; additive
 constants depending only on the affine lift or prescribed loads are omitted
-because they do not affect the stationarity equations. A reduced optimization
-objective with design variable $z$ is
-written schematically as
+because they do not affect the stationarity equations. A true reduced
+optimization objective with design variable $z$ is written schematically as
 \begin{equation}
   \mathcal{J}_h(z)
   =
-  \mathcal{R}_h(z) + \mathcal{S}_h(z,x(z);\theta(z)),
+  \mathcal{R}_h(z) + \mathcal{S}_h(z,x_h(z);\theta(z)),
   \label{eq:generic-objective}
 \end{equation}
-where $z$ is a design variable and $x(z)$ denotes either the associated state
-determined by the benchmark state equation or, for frozen design subproblems,
-the fixed state from the current outer iterate. The term
-$\mathcal{R}_h$ contains regularization or design penalties, and
-$\mathcal{S}_h$ denotes the state-dependent scalar part; in topology
-optimization it is the frozen compliance term defined in
-\cref{sec:bench-topology}, not the load-step potential
-\eqref{eq:generic-potential}. Thus \eqref{eq:generic-potential} covers the scalar
-PDE, mechanics, and endpoint-surrogate solves, while
-\eqref{eq:generic-objective} records the reduced-objective role. When an
-algorithm is stated independently of a benchmark family, we denote its merit
-functional by $\mathcal{F}$. Hyperelasticity is the only family in which
-$J=\det F$ denotes the deformation Jacobian, so we avoid the bare symbol $J$ for
-generic objectives elsewhere in the paper.
+where $x_h(z)$ is the state determined by the benchmark state equation or
+stationarity condition, $\mathcal{R}_h$ contains regularization or design
+penalties, and $\mathcal{S}_h$ denotes the state-dependent scalar part. Some
+design updates instead solve frozen-state subproblems. For those steps we write
+\begin{equation}
+  \mathcal{J}_h^m(z;x_h^m)
+  =
+  \mathcal{R}_h^m(z) + \mathcal{S}_h^m(z,x_h^m;\theta^m),
+  \label{eq:generic-frozen-objective}
+\end{equation}
+where $x_h^m$ is fixed from the current outer iterate. The topology objective in
+\cref{sec:bench-topology} has this second form; its frozen compliance term is
+not the load-step potential \eqref{eq:generic-potential}. Thus
+\eqref{eq:generic-potential} covers scalar PDE, mechanics, and
+endpoint-surrogate solves, while
+\eqref{eq:generic-objective} and \eqref{eq:generic-frozen-objective} record the two
+reduced-objective roles. When an algorithm is stated independently of a
+benchmark family, we denote its merit functional by $\mathcal{F}$.
+Hyperelasticity is the only family in which $J=\det F$ denotes the deformation
+Jacobian, so we avoid the bare symbol $J$ for generic objectives elsewhere in
+the paper.
 
 In \eqref{eq:generic-potential}, $\Phi_e$ is the integrated scalar contribution
 of element $e$. In quadrature-based mechanics examples,
@@ -92,9 +98,9 @@ three derivative routes:
         $K_e = \sum_q w_q B_q^\top C_q B_q$, where
         $\sigma_q := \partial_\varepsilon\mathcal{W}_q(\varepsilon_q,m_q)$ and
         $C_q := \partial^2_{\varepsilon\varepsilon}\mathcal{W}_q(\varepsilon_q,m_q)$;
-  \item \textbf{colored sparse recovery:} recover sparse
-        Hessian information through directionally probed gradients or
-        Hessian-vector products (HVPs) and graph coloring.
+  \item \textbf{colored sparse recovery:} recover sparse Hessian information
+        through directionally probed gradients or Hessian-vector products
+        (HVPs) and graph coloring.
 \end{enumerate}
 
 Element AD is the most literal route and is often the cleanest mathematically.
@@ -102,11 +108,9 @@ Constitutive AD preserves the same defining scalar-energy expression but changes
 the differentiation boundary from the full element vector to the local strain
 state. This is especially effective for high-order plasticity, where the full
 element Hessian is often much more expensive than the $6\times6$
-constitutive tangent. We use \emph{colored sparse recovery} for the
-graph-colored second-order route and use \emph{colored SFD} as its compact
-label. The reported colored-SFD configurations use AD-HVP probes;
-finite-difference gradient probes are the classical sparse finite-difference
-variant.
+constitutive tangent. The reported colored sparse-recovery configurations use
+AD-HVP probes; finite-difference gradient probes are the classical sparse
+finite-difference variant.
 
 \subsection{Newton--Krylov globalization}
 
@@ -204,7 +208,7 @@ tolerance.
 
 The numerical tables use a small common reporting vocabulary, summarized in
 \Cref{tab:solver-reporting-protocol}. These terms are part of the experimental
-protocol: a completed endpoint solve, a fixed-work diagnostic, and a capped run
+protocol: a completed endpoint solve, a fixed-work diagnostic, and a capped solve
 do not support the same type of claim.
 
 \begin{table}[!htbp]
@@ -239,9 +243,9 @@ $v_c=\sum_{j\in\mathcal{C}_c} e_j$, one probe produces
     \bigl(\nabla \mathcal{F}(x+\delta v_c)-\nabla \mathcal{F}(x)\bigr)/\delta,
       & \text{finite-difference gradient probe},\\
     Hv_c,
-      & \text{AD Hessian-vector probe}.
+      & \text{AD Hessian-vector probe},
   \end{cases}.
-  \label{eq:colored-sfd-recovery}
+  \label{eq:colored-sparse-recovery}
 \end{equation}
 In the finite-difference branch, $\delta>0$ is the chosen gradient-probe step
 size.

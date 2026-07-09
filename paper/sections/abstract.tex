@@ -18,11 +18,12 @@ Across these problems, we compare element automatic differentiation,
 constitutive automatic differentiation, and colored sparse recovery for
 constructing second-order information, and measure their interaction with PETSc
 assembly, nonlinear globalization, Krylov solvers, and preconditioners. In the
-fixed high-order three-dimensional plasticity derivative-route comparison,
-constitutive AD has the lowest measured wall time while preserving the reported
-terminal observables. The distributed mechanics examples report MPI timing and
-solver-policy behavior, and the topology example adds a controlled
-rank-consistency check under the stated protocol. Together, the evidence shows
+high-order three-dimensional plasticity benchmark, constitutive AD has the
+lowest measured wall time among the tested derivative routes while preserving
+endpoint energy, multiplier, and maximum-displacement observables. The
+distributed mechanics examples report MPI timing and solver-policy behavior,
+and the topology example checks compliance and density consistency across MPI
+ranks under a controlled fixed-iteration protocol. Together, the evidence shows
 that derivative construction, sparse assembly, nonlinear globalization, Krylov
 algebra, and preconditioning must be evaluated as coupled solver-design choices.
 \end{abstract}

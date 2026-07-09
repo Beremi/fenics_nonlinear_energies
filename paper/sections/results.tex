@@ -93,10 +93,11 @@ time, or wall time for the specific configuration.
 \begin{table}[!htbp]
   \centering
   \footnotesize
-  \caption{Matched-case derivative-route comparison. Colored SFD denotes rank-local
-  colored sparse recovery; the reported configurations use AD-HVP probes, while
-  finite-difference gradient probes are the classical recovery variant. The
-  SFD-color range is shown where per-rank color counts are available.}
+  \caption{Matched-case derivative-route comparison. Colored sparse recovery
+  denotes rank-local recovery from graph-color groups; the reported
+  configurations use AD-HVP probes, while finite-difference gradient probes are
+  the classical recovery variant. The color-group range is shown where per-rank
+  color counts are available.}
   \label{tab:derivative-route-compare}
   \input{tables/generated/derivative_route_compare.tex}
 \end{table}
@@ -139,8 +140,8 @@ sparse-recovery case is outside this table.
 The $p$-Laplace problem definition is given in \Cref{sec:bench-plaplace}, with
 discrete energy \eqref{eq:plaplace-discrete}. In this scalar setting, the
 numerical evidence is clearest: exact element Hessians remain
-effective in the reported distributed configurations, while colored SFD reaches nearly
-identical discrete energies at higher wall time.
+effective in the reported distributed configurations, while colored sparse
+recovery reaches nearly identical discrete energies at higher wall time.
 
 \begin{figure}[!htbp]
   \centering
@@ -151,12 +152,12 @@ identical discrete energies at higher wall time.
 \end{figure}
 
 In the finest plotted case, the \jaxpetsc{} element-AD path reports
-\SI{1.14}{s} on 32 ranks, while colored SFD reports \SI{1.45}{s} with the same
+\SI{1.14}{s} on 32 ranks, while colored sparse recovery reports \SI{1.45}{s} with the same
 Newton and Krylov iteration counts. For the matched 32-rank case summarized in
 \Cref{tab:derivative-route-compare}, the reported energies differ by about
 $\num{8e-9}$, so this block mainly measures the overhead of sparse recovery on a
 smooth scalar problem. Across the plotted ranks, element AD drops from
-\SI{10.13}{s} on one rank to \SI{1.14}{s} on 32 ranks; colored SFD follows the
+\SI{10.13}{s} on one rank to \SI{1.14}{s} on 32 ranks; colored sparse recovery follows the
 same trend with persistent recovery overhead. The FEniCS curve in the same
 figure provides reference-implementation context; the comparison above isolates
 the two \jaxpetsc{} derivative routes.
@@ -376,7 +377,7 @@ observable and $u_{\max}$ denotes the maximum displacement magnitude.
 The differences are cost differences. Constitutive AD has the lowest reported
 wall time on this fixed case, with wall time \SI{222}{s} and solve time
 \SI{191}{s}, compared with \SI{288}{s}/\SI{255}{s} for element AD and
-\SI{372}{s}/\SI{253}{s} for colored SFD. This residual-bisection Newton
+\SI{372}{s}/\SI{253}{s} for colored sparse recovery. This residual-bisection Newton
 comparison uses the Hypre-backed rank-local linear-solver profile; it is
 therefore separate from the MUMPS-backed PMG configurations used by the later
 $\lambda_{\mathrm{sr}}=\num{1.55}$ convergence studies.
@@ -463,7 +464,7 @@ $P_2(L_2)$. At \num{4801816} DOFs, $P_4(L_2)$ reports \num{-3013348} and
 
 \begin{table}[!htbp]
   \centering
-  \caption{Separate Plasticity3D strong-scaling study for \localpmg{} on
+  \caption{Separate Plasticity3D timing-only strong-scaling study for \localpmg{} on
   $P_4(L_2)$ at $\lambda_{\mathrm{sr}}=\num{1.0}$. These timings provide
   solver evidence for a separate load factor from the bottom-clamped
   $\lambda_{\mathrm{sr}}=\num{1.55}$ benchmark figures.}
@@ -474,8 +475,8 @@ $P_2(L_2)$. At \num{4801816} DOFs, $P_4(L_2)$ reports \num{-3013348} and
 \begin{figure}[!htbp]
   \centering
   \includegraphics[width=\PaperFigureMedium]{plasticity3d_recommended_scaling.pdf}
-  \caption{Separate strong-scaling study for the selected Plasticity3D solver
-  configuration: \localpmg{} on $P_4(L_2)$ at
+  \caption{Separate timing-only strong-scaling study for the selected
+  Plasticity3D solver configuration: \localpmg{} on $P_4(L_2)$ at
   $\lambda_{\mathrm{sr}}=\num{1.0}$. This is a separate timing study from the
   bottom-clamped $\lambda_{\mathrm{sr}}=\num{1.55}$ results shown in
   \cref{fig:plasticity3d-state,fig:plasticity3d-convergence,fig:plasticity3d-degree-energy}.}
@@ -602,7 +603,7 @@ table with a controlled 40-iteration rank-consistency test on a smaller
 $384\times192$ grid. Early convergence and stall stopping are disabled, and all
 rank counts use the same initial design and smoother continuation schedule
 ($p \leftarrow p+\num{0.1}$). The final density field is compared with the
-one-rank \jaxpetsc{} reference run after 40 outer iterations.
+one-rank \jaxpetsc{} reference solve after 40 outer iterations.
 All rank counts complete the same 40 outer iterations. The compliance
 difference stays below \num{0.2}\%, and the density relative $L^2$ difference
 remains below \num{0.04}. These are the largest observed discrepancies for this

@@ -130,12 +130,12 @@ SOURCE_SOURCEFIXED_IMPL = "reference_formula_fixed_reference_pmg"
 IMPLEMENTATION_LABELS = {
     "fenics_custom": "FEniCS Newton reference",
     "jax_petsc_element": "JAX+PETSc element AD",
-    "jax_petsc_local_sfd": "JAX+PETSc colored SFD",
+    "jax_petsc_local_sfd": "JAX+PETSc colored recovery",
     "jax_serial": "pure JAX serial formulation check",
     LOCAL_IMPL: "constitutive-AD PMG solver",
-    SOURCE_IMPL: "fixed-reference PMG variant",
+    SOURCE_IMPL: "frozen-preconditioner PMG variant",
     LOCAL_SOURCEFIXED_IMPL: "frozen PMG operator, AD branch tangent",
-    SOURCE_SOURCEFIXED_IMPL: "frozen PMG operator, closed-form branch tangent",
+    SOURCE_SOURCEFIXED_IMPL: "frozen PMG operator, reference-formula branch tangent",
 }
 
 GLOBALIZATION_BENCHMARK_ORDER = {
@@ -186,7 +186,7 @@ DERIVATIVE_BENCHMARK_LABELS = {
 
 DERIVATIVE_ROUTE_LABELS = {
     "element_ad": "Element AD",
-    "colored_sfd": "Colored SFD",
+    "colored_sfd": "Colored recovery (AD-HVP)",
     "constitutive_ad": "Constitutive AD",
 }
 
@@ -236,7 +236,7 @@ REVIEWER_HE_PMG_LABELS = {
 
 REVIEWER_P3D_ROUTE_LABELS = {
     "element_ad": "Element AD",
-    "colored_sfd": "Colored SFD",
+    "colored_sfd": "Colored recovery (AD-HVP)",
     "constitutive_ad": "Constitutive AD",
 }
 
@@ -330,9 +330,9 @@ def implementation_label(name: object) -> str:
     if "local_constitutiveAD" in key and "local_pmg" in key:
         return "constitutive-AD PMG solver"
     if "sourcefixed" in key:
-        return "frozen PMG operator, closed-form branch tangent"
+        return "frozen PMG operator, reference-formula branch tangent"
     if key.startswith("source") or "_source" in key:
-        return "fixed-reference PMG variant"
+        return "frozen-preconditioner PMG variant"
     return key.replace("_", r"\_")
 
 
@@ -1052,7 +1052,7 @@ def main() -> None:
             ["Hyperelasticity", f"{mesh_label('L1')} serial agreement; {mesh_label('L4')}, 24-step distributed scaling", "trust-region solve", "FEniCS and JAX+PETSc on the distributed suite; pure JAX only as a serial formulation check", "nonconvex large-deformation mechanics"],
             ["Plasticity2D", f"{element_label('P4', 'L5')}--{element_label('P4', 'L7')}", "endpoint solve and capped fixed work", "JAX+PETSc endpoint and solver-policy evidence", "same-mesh PMG and nonlinear tail behavior"],
             ["Plasticity3D", f"{degree_label('P1')}/{degree_label('P2')}/{degree_label('P4')}", "endpoint, scaling, and PMG-policy studies", "constitutive AD, reference-formula assembly diagnostic, and PMG-policy evidence", "heterogeneous 3D Mohr--Coulomb with constitutive AD"],
-            ["Topology", "$192\\times96$ serial demonstration; $768\\times384$ parallel benchmark", "adaptive continuation", "pure JAX on the serial demonstration; JAX+PETSc on the fine-grid rank-varied adaptive timing run and controlled rank-consistency check", "distributed design-mechanics coupling"],
+            ["Topology", "$192\\times96$ serial demonstration; $768\\times384$ parallel benchmark", "adaptive continuation", "pure JAX on the serial demonstration; JAX+PETSc on the fine-grid rank-varied adaptive timing study and controlled rank-consistency check", "distributed design-mechanics coupling"],
         ],
     )
 
@@ -1077,7 +1077,7 @@ def main() -> None:
                 "Plasticity3D",
                 "no",
                 "no",
-                "Closed-form constitutive assembly is used only as a supporting comparison route.",
+                "Reference-formula constitutive assembly is used only as a supporting comparison route.",
             ],
             ["Topology", "no", "yes", "Parallel fine-grid realization is JAX+PETSc; pure JAX remains a compact serial design demonstration."],
         ],
@@ -1100,7 +1100,7 @@ def main() -> None:
             ],
             [
                 "fixed work",
-                "A prescribed amount of work is run, such as one Newton step, one linearization, or a fixed continuation schedule.",
+                "A prescribed amount of work is performed, such as one Newton step, one linearization, or a fixed continuation schedule.",
                 "Used for cost, memory, or policy diagnostics rather than endpoint convergence claims.",
             ],
             [
@@ -1203,7 +1203,7 @@ def main() -> None:
                 "FEM and adjoint automation "
                 "\\citep{logg2012fenicsbook,baratta2025dolfinx,farrell2013dolfinadjoint,mitusch2019pyadjoint,blauth2023cashocsv2}",
                 "High-level variational forms, generated kernels, adjoint-based sensitivities, and PDE-optimization loops.",
-                "Provides the reference high-level FEM and optimization context; selected \\fenics{} runs are scoped comparison formulations.",
+                "Provides the reference high-level FEM and optimization context; selected \\fenics{} formulations are scoped comparisons.",
             ],
             [
                 "JAX-native differentiable FEM and PDE solvers "
@@ -1218,10 +1218,10 @@ def main() -> None:
                 "Architectural context for the \\jaxpetsc{} realization; this study evaluates derivative construction, globalization, and preconditioning on the stated benchmark suite.",
             ],
             [
-                "Slope-stability and elastoplastic benchmark lineage "
+                "Slope-stability and elastoplastic implementation context "
                 "\\citep{tschuchnigg2015nonassociated,sysala2017returnmapping,sysala2021optimization,sysala2025convexoptimization,sysala2025advancedcontinuation,cermak2019efficient}",
                 "Strength-reduction plasticity, nonsmooth return mapping, continuation, and practical 2D/3D elastoplastic implementation.",
-                "Defines the plasticity problem class and lineage; the numerical claims remain limited to the implemented endpoint surrogate and reported comparison observables.",
+                "Sysala-family works provide slope-stability reference-model context; \\v{C}erm{\\'a}k--Sysala--Valdman provides practical elastoplastic implementation context. Numerical claims remain limited to the implemented endpoint surrogate and reported comparison observables.",
             ],
             [
                 "Topology-optimization benchmark lineage "
@@ -1388,7 +1388,7 @@ def main() -> None:
                 "@{}"
                 + xspec((1.25, "RaggedRight"), (0.95, "RaggedRight"))
                 + r"@{\hspace{0.45em}}c c c c c@{}",
-                ["Benchmark", "Route", "Ranks", "Newton", "Krylov", "Hessian [s]", "SFD colors"],
+                ["Benchmark", "Route", "Ranks", "Newton", "Krylov", "Hessian [s]", "Color groups"],
                 [
                     [
                         DERIVATIVE_BENCHMARK_LABELS.get(str(row["benchmark"]), str(row["benchmark_label"])),
@@ -1760,9 +1760,9 @@ def main() -> None:
         [
             "Ranks",
             "AD wall [s]",
-            "Closed-form wall [s]",
+            "Reference-formula wall [s]",
             "AD solve [s]",
-            "Closed-form solve [s]",
+            "Reference-formula solve [s]",
             "Wall ratio",
         ],
         [
@@ -1923,7 +1923,7 @@ def main() -> None:
                 ["Route", "Wall time [s]", "Solve time [s]", "Newton iters", "Krylov iters"],
                 [
                     [
-                        str(row["display_label"]),
+                        REVIEWER_P3D_ROUTE_LABELS.get(str(row.get("route", "")), str(row["display_label"])),
                         fmt_wall_time(float(row["median_wall_time_s"])),
                         fmt_wall_time(float(row["median_solve_time_s"])),
                         fmt_count(row["median_nit"]),
@@ -1938,7 +1938,7 @@ def main() -> None:
                 ["Route", "Energy", "$\\omega$", "$u_{\\max}$"],
                 [
                     [
-                        str(row["display_label"]),
+                        REVIEWER_P3D_ROUTE_LABELS.get(str(row.get("route", "")), str(row["display_label"])),
                         fmt_energy(float(row["median_energy"])),
                         fmt_energy(float(row["median_omega"])),
                         fmt_float(float(row["median_u_max"]), 6),

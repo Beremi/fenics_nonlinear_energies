@@ -29,7 +29,9 @@ as elastoplastic implementation context rather than as a numerical baseline.
 Our contribution is a \jaxpetsc{} realization and numerical study that
 treats derivative construction, MPI sparse assembly, nonlinear globalization,
 and preconditioning as coupled design choices for nonlinear FEM energy
-minimization. The paper contributes three connected pieces of evidence:
+minimization. The central thesis is that derivative construction should be
+evaluated inside the sparse nonlinear solve that consumes it. We support this
+thesis through three technical components:
 \begin{enumerate}
   \item \textbf{An integrated derivative--assembly path.} We show how local
         JAX energy or constitutive evaluations can feed PETSc-owned sparse MPI

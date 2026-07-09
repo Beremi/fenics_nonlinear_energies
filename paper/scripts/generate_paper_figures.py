@@ -142,7 +142,7 @@ def _manifest_repo_input(path: Path) -> dict[str, str]:
 PAPER_IMPLEMENTATION_LABELS = {
     "fenics_custom": "FEniCS Newton reference",
     "jax_petsc_element": "JAX+PETSc element AD",
-    "jax_petsc_local_sfd": "JAX+PETSc colored SFD",
+    "jax_petsc_local_sfd": "JAX+PETSc colored recovery",
 }
 
 
@@ -1592,7 +1592,7 @@ def generate_framework_overview(layout: dict[str, float]) -> str:
         title="",
         body=[
             "Derivative modes",
-            "exact AD, constitutive, colored SFD",
+            "element AD, constitutive, colored recovery",
         ],
         facecolor="#f7f4fb",
         title_size=8.5,
@@ -1804,7 +1804,12 @@ def generate_plasticity3d_derivative_ablation_bars(layout: dict[str, float]) -> 
     plt = configure_paper_matplotlib(font_size=9.0)
     summary = _read_json(P3D_DERIVATIVE_ABLATION_ROOT / "comparison_summary.json")
     rows = [dict(row) for row in summary["rows"]]
-    labels = [str(row["display_label"]) for row in rows]
+    label_by_route = {
+        "element_ad": "Element AD",
+        "constitutive_ad": "Constitutive AD",
+        "colored_sfd": "Colored recovery",
+    }
+    labels = [label_by_route.get(str(row.get("route", "")), str(row["display_label"])) for row in rows]
     x = np.arange(len(rows), dtype=np.float64)
     colors = ["#4c78a8", "#f58518", "#54a24b"]
 
@@ -1886,7 +1891,7 @@ def generate_derivative_path_diagram(layout: dict[str, float]) -> str:
     _draw_box(ax, (0.72, 0.58), (0.25, 0.13), title="", body=["PETSc solve", "distributed Newton"], facecolor="#eef5e7", title_size=8.3, body_size=7.1)
     _draw_box(ax, (0.09, 0.31), (0.20, 0.09), title="", body=["Element AD"], facecolor="#f7f4fb", title_size=8.1, body_size=7.0)
     _draw_box(ax, (0.40, 0.31), (0.20, 0.09), title="", body=["Constitutive AD"], facecolor="#fbf1eb", title_size=8.1, body_size=7.0)
-    _draw_box(ax, (0.71, 0.31), (0.20, 0.09), title="", body=["Colored SFD"], facecolor="#f2f2f2", title_size=8.1, body_size=7.0)
+    _draw_box(ax, (0.71, 0.31), (0.20, 0.09), title="", body=["Colored recovery"], facecolor="#f2f2f2", title_size=8.1, body_size=7.0)
     _draw_arrow(ax, (0.28, 0.645), (0.375, 0.645), shrink_a=4.0, shrink_b=4.0)
     _draw_arrow(ax, (0.625, 0.645), (0.72, 0.645), shrink_a=4.0, shrink_b=4.0)
     _draw_arrow(ax, (0.50, 0.58), (0.19, 0.40), shrink_a=6.0, shrink_b=8.0)
@@ -1952,7 +1957,7 @@ def generate_autodiff_modes(layout: dict[str, float]) -> str:
     panels = [
         ("Element AD", ["$\\Pi_e(u_e)$", "exact local gradient and Hessian", "higher-order elements can be costly"], "#e6f0fb"),
         ("Constitutive AD", ["$\\psi(\\varepsilon_q)$", "quadrature-point tangent assembly", "exact local constitutive derivatives"], "#eef5e7"),
-        ("Colored SFD", ["rank-local probe HVPs only where needed", "parallel coloring / recovery", "useful when exact Hessians are too expensive"], "#fbf1eb"),
+        ("Colored recovery", ["rank-local probe HVPs only where needed", "parallel coloring / recovery", "useful when exact Hessians are too expensive"], "#fbf1eb"),
     ]
     for ax, (title, lines, color) in zip(axes, panels, strict=True):
         ax.set_axis_off()
@@ -2112,8 +2117,8 @@ def _plot_sourcefixed(layout: dict[str, float], rows: list[dict[str, object]]) -
     series = (
         (LOCAL_IMPL, "local + local_pmg", "#1f77b4"),
         (SOURCE_IMPL, "source + local_pmg", "#d62728"),
-        (LOCAL_SOURCEFIXED_IMPL, "local + sourcefixed-like PMG", "#2ca02c"),
-        (SOURCE_SOURCEFIXED_IMPL, "source + sourcefixed-like PMG", "#ff7f0e"),
+        (LOCAL_SOURCEFIXED_IMPL, "AD tangent + frozen PMG", "#2ca02c"),
+        (SOURCE_SOURCEFIXED_IMPL, "reference tangent + frozen PMG", "#ff7f0e"),
     )
     for implementation, label, color in series:
         selected = _find_rows(rows, implementation)

@@ -44,8 +44,7 @@ choices depend on the benchmark family, but the common logic is:
         assembled from quadrature-point energy densities;
   \item \textbf{colored sparse recovery}: structured sparse recovery from AD-HVP or
         finite-difference gradient probes when full element Hessians are not the
-        appropriate cost tradeoff. We refer to this
-        sparse finite-difference-style recovery route as colored SFD.
+        appropriate cost tradeoff.
 \end{itemize}
 
 This split is scientifically important. It lets us compare AD-derived local
@@ -180,8 +179,6 @@ ghost fill on $\widetilde I_r$ and still produce owned-row sparse insertions.
   corresponding grouped probes used for recovery.}
   \label{fig:globalization-coloring}
 \end{figure}
-
-\FloatBarrier
 
 \Cref{fig:globalization,fig:globalization-coloring} make two
 solver-policy choices explicit. Globalization is varied independently of the

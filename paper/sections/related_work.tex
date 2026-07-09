@@ -1,10 +1,15 @@
 \label{sec:related}
 
-The relevant literature separates into high-level FEM automation,
-differentiable FEM and JAX--solver bridges, mechanics and topology benchmark
-context, and sparse nonlinear algebra. The gap addressed here is the combined
-study of local derivative construction, sparse MPI assembly, globalization, and
-preconditioning on one heterogeneous energy-minimization suite.
+High-level finite-element systems automate variational forms and adjoint
+workflows, JAX-native finite-element codes automate local differentiation, and
+PETSc supplies scalable sparse nonlinear algebra. For nonlinear energy
+minimization, these capabilities meet inside the assembled Newton solve: the
+derivative route, ownership layout, globalization, Krylov method, and
+preconditioner are coupled numerical choices. The relevant literature therefore
+separates into high-level FEM automation, differentiable FEM and JAX--solver
+bridges, mechanics and topology benchmark context, and sparse nonlinear algebra.
+The gap addressed here is their combined study on one heterogeneous
+energy-minimization suite.
 
 \Cref{tab:sota-comparison} summarizes the computational roles needed for this
 positioning: modeling layer, differentiation scope, second-order information,

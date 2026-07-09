@@ -54,7 +54,7 @@ MATLAB literature only when there is source-backed evidence.
 - SIOPT submission-shape cue checked on 2026-07-09: SIAM's author instructions
   ask for figures to be embedded inline and state that SIOPT has a 25-page
   policy, with longer papers published only in exceptional justified cases. The
-  current 45-page A4 article is therefore a journal-template/page-budget blocker
+  current 43-page A4 article is therefore a journal-template/page-budget blocker
   rather than a solved formatting issue.
 
 ## Manuscript Nodes
@@ -488,7 +488,7 @@ MATLAB literature only when there is source-backed evidence.
   keeps broad conclusions tied to documented solver construction and numerical
   evidence rather than a software-ranking or framework-ranking claim.
 - `FIGURES_TABLES`: visual and layout quality.
-  Current fact: `paper/build/main.pdf` is 45 pages, A4, 10 pt article,
+  Current fact: `paper/build/main.pdf` is 43 pages, A4, 10 pt article,
   text width about 7.09 in. Only the three methodology algorithms remain
   intentionally hard-pinned with `[H]`; problem-specific Results, Validation,
   Benchmark, and Appendix floats have been relaxed to flexible placement with
@@ -1486,6 +1486,39 @@ MATLAB literature only when there is source-backed evidence.
   pages 16--19 plus 25--42 were visually checked. Remaining risks are
   target-template/page-budget issues and external release blockers, not current
   A4 rendering failures.
+- `Current message, mathematics, evidence, and layout audit`
+  (`Faraday the 2nd`/`Leibniz the 2nd`/`Ramanujan the 2nd`/`Hegel the 2nd`):
+  completed and integrated in the current self-containment/layout chunk.
+  Findings addressed: the abstract now names endpoint energy, multiplier,
+  maximum displacement, and topology compliance/density consistency rather than
+  protocol-only language; the Introduction states the central thesis that
+  derivative construction should be evaluated inside the sparse nonlinear solve
+  that consumes it; Related Work opens from the roles of high-level FEM,
+  JAX-native differentiation, and PETSc sparse nonlinear algebra before the
+  role table; the SOTA table separates Sysala-family slope-stability
+  reference-model context from \v{C}ermak--Sysala--Valdman practical
+  implementation context; the generic objective notation now distinguishes true
+  reduced objectives from frozen-state design subproblems; topology defines
+  fixed-pad and free design-node sets and states that pad nodal values are fixed
+  while measured volume includes them; validation metrics define the discrete
+  $M$-norm; the local Plasticity2D stress-space vector no longer collides with
+  topology's design variable; visible colored-SFD wording is replaced by
+  colored sparse recovery / AD-HVP wording; reference-formula branch-tangent
+  assembly and frozen-preconditioner PMG terminology is consistent in the
+  appendix and generated tables; Plasticity3D validation wording now says
+  highest-successful-load value on the tested grid rather than critical-load
+  grid; and the \(\lambda_{\mathrm{sr}}=\num{1.0}\) Plasticity3D scaling
+  evidence is described as timing-only.
+  Hegel's current A4 layout findings were addressed by moving the
+  discretization-label caption above the table and relaxing local barriers that
+  isolated the implementation component table, the Ginzburg--Landau-to-
+  hyperelasticity handoff, and the Plasticity3D benchmark table. Validation:
+  `make -C paper tables`, `make -C paper figures`, and
+  `make -C paper submission-check` passed; stale terminology scans were clean;
+  the hard-float checker still reports only the three allowlisted algorithms;
+  and rendered pages 8--23, 26--38, and page 34 were visually checked. The
+  rebuilt A4 PDF is 43 pages. Remaining risks are target-template/page-budget
+  decisions and external release blockers, not current A4 rendering failures.
 
 ## First Edit Backlog
 
