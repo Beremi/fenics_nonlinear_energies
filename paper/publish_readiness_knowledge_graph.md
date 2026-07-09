@@ -313,7 +313,11 @@ MATLAB literature only when there is source-backed evidence.
   the slice figure. Current subagent-audit chunk introduces the Davis-B-reduced
   Plasticity2D and Plasticity3D parameters before the scalar surrogate displays,
   replaces draft "later in the paper" cross-references with explicit section
-  references, and normalizes MATLAB context as solver-lineage evidence.
+  references, and normalizes MATLAB context as solver-lineage evidence. Current
+  benchmark-interpretation chunk adds body-text readings of the
+  Ginzburg--Landau state/energy/table block and the topology
+  density/history/table block, so the reader is not left to infer those
+  representative results only from captions.
 - `VALIDATION`: external and reference-model comparison.
   Evidence: narrow hyperelastic JAX-FEM comparison; Plasticity3D validation
   ladder with endpoint-surrogate scope.

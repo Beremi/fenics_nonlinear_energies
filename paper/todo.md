@@ -255,6 +255,10 @@ scientific claims were introduced without supporting evidence.
   table- and section-scoped evidence, split Sysala reference-model context from
   Valdman MATLAB solver-lineage context, and marked validation rows in the
   results protocol table as terminology-only recalls.
+- Added body-text interpretation for the Ginzburg--Landau and topology benchmark
+  figure/table blocks, so the representative state, energy, density, and
+  objective-history evidence is interpreted in prose rather than only in
+  captions.
 - Rebuilt the paper PDF through the paper generation pipeline.
 
 ## Blocking Issues Before Submission
@@ -589,6 +593,12 @@ required support for the current scoped contribution.
   passed and still reports the four expected final-submission blockers:
   target template/declarations, repository license, archival DOI, and durable
   archive integration.
+- `make -C paper submission-check`: passed after adding body-text interpretation
+  for the Ginzburg--Landau and topology benchmark figure/table blocks.
+- `pdftotext -f 13 -l 13 paper/build/main.pdf -` and
+  `pdftotext -f 22 -l 22 paper/build/main.pdf -`: checked that the new
+  Ginzburg--Landau and topology interpretation sentences render with explicit
+  figure/table references.
 
 Exact remaining blockers are submission metadata and license/archive DOI. The
 archive-neutral validator now passes against the local curated bundle; final

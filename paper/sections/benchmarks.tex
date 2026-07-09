@@ -250,9 +250,13 @@ is part of the benchmark definition.
   \label{tab:gl-benchmark}
 \end{table}
 
-The local picture is again one of formulation consistency, now for a more
-solver-sensitive nonconvex energy. Strong scaling and solver-time comparisons
-for this family are reported in \Cref{sec:num-gl}.
+\Cref{fig:gl-state,fig:gl-energy-levels} and \Cref{tab:gl-benchmark} show that
+the tested routes reach the same nonconvex branch from the prescribed initial
+state. The local picture is again one of formulation consistency, now for a more
+solver-sensitive nonconvex energy: the \fenics{} reference, element AD, and
+colored sparse recovery all report 8 Newton iterations, 33 Krylov iterations,
+and final energies within about $\num{1e-6}$. Strong scaling and solver-time
+comparisons for this family are reported in \Cref{sec:num-gl}.
 
 \FloatBarrier
 
@@ -1145,12 +1149,17 @@ outer loop alternates mechanics solves for
   \label{tab:topology-benchmark}
 \end{table}
 
-For topology, the relevant notion of ``convergence'' is the reduced objective
-history rather than a single equilibrium energy. The reported continuation
-starts at SIMP exponent $p=1$, increases $p$ by $0.2$ on each outer iteration up
-to $p=10$, and treats the fine-grid run as stalled once $p\ge 4$ and both the
-reported design-change and state-change stopping diagnostics are at most
-$10^{-6}$. Parallel timing and
+\Cref{fig:topology-density,fig:topology-history} and
+\Cref{tab:topology-benchmark} show the reduced-design endpoint used for the
+topology timing study. The fine-grid run produces a connected load-bearing
+density field, reaches volume fraction \num{0.3749}, and stops after 66 outer
+iterations under the continuation logic shown in \Cref{fig:topology-history}.
+For topology, the relevant notion of
+``convergence'' is this reduced objective history rather than a single
+equilibrium energy. The reported continuation starts at SIMP exponent $p=1$,
+increases $p$ by $0.2$ on each outer iteration up to $p=10$, and treats the
+fine-grid run as stalled once $p\ge 4$ and both the reported design-change and
+state-change stopping diagnostics are at most $10^{-6}$. Parallel timing and
 scaling for the same family are reported in \Cref{sec:num-topology}.
 
 \FloatBarrier
