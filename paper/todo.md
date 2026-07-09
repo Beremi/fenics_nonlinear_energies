@@ -218,6 +218,9 @@ scientific claims were introduced without supporting evidence.
   scoped validation and fixed-work claims to reported observables, added
   numerical interpretation for the Plasticity2D, Plasticity3D, Hyperelasticity,
   and Topology result blocks, and recorded the remaining target-template risks.
+- Refreshed the SIOPT style anchors from SIAM article and author-instruction
+  pages, and replaced the remaining defensive software-ranking phrases with
+  positive terminal-state/evidence-scope statements.
 - Rebuilt the paper PDF through the paper generation pipeline.
 
 ## Blocking Issues Before Submission
@@ -474,6 +477,9 @@ required support for the current scoped contribution.
   audit rebuild; the coloring schematic has no in-node hyphenation, the
   Plasticity3D interpretation follows the relevant evidence, and the topology
   figure appears before its summary table.
+- `make -C paper submission-check`: passed after the SIOPT-style and
+  evidence-scope wording polish; the rebuilt `paper/build/main.pdf` remains a
+  43-page A4 article.
 - `./.venv/bin/python -m pytest tests/test_docs_publication.py`: passed
   13 tests.
 - `./.venv/bin/python -m pytest tests/test_final_report_figure_generators.py`:

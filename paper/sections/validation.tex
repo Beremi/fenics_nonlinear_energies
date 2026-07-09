@@ -50,11 +50,11 @@ $d=(0.0025,0.005,0.0075,0.01)$, then post-compare both terminal states with
 the energy from
 \cref{eq:hyperelasticity-energy}. This supports terminal-state observable
 agreement for this hyperelastic companion problem only. The comparison is
-neither a plasticity validation nor a broad software ranking, and it does not
-assert constitutive-law
-identity between the two implementations: the JAX-FEM implementation uses a
-logarithmic-$J$ Piola form, whereas \cref{eq:hyperelasticity-energy} uses the
-$D_1(J-1)^2$ volumetric penalty.
+therefore an energy-postprocessed terminal-state check for one hyperelastic
+case, and it does not assert constitutive-law identity between the two
+implementations: the JAX-FEM implementation uses a logarithmic-$J$ Piola form,
+whereas \cref{eq:hyperelasticity-energy} uses the $D_1(J-1)^2$ volumetric
+penalty.
 
 \begin{figure}[!htbp]
   \centering
@@ -91,7 +91,7 @@ satisfied for all checked quantities. The final energy relative difference is
 \num{5.473e-5}, and the $u_{\max}$-curve relative $L^2$ difference is
 effectively zero. The scientific role of this table is terminal-state agreement
 under a matched mesh, displacement schedule, and common energy post-comparison
-rather than a software ranking.
+for this companion hyperelastic case.
 
 \subsection{Plasticity3D Endpoint-Surrogate Comparison}
 \label{sec:val-plasticity3d}

@@ -29,19 +29,25 @@ MATLAB literature only when there is source-backed evidence.
   Doikov, Mishchenko, and Nesterov, "Super-Universal Regularized Newton
   Method," SIAM Journal on Optimization, 2024, DOI `10.1137/22M1519444`.
   Useful structure: motivation, notation/problem classes, method, theory,
-  numerical experiments, discussion. The article is open access under CC BY 4.0.
+  numerical experiments, discussion. Source-verified on 2026-07-09 from the
+  SIAM article page, which opens with a precise method-and-problem-class
+  abstract.
 - Recent applied SIOPT style cue:
   Sysala, Béreš, Bérešová, Haslinger, Kružík, and Luber, "Convex Optimization
   Problems Inspired by Geotechnical Stability Analysis," SIAM Journal on
   Optimization, 2025, DOI `10.1137/25M1723177`. Useful structure:
   application motivation, abstract assumptions, interpretation remarks, and a
   numerical 3D slope-stability example after the mathematical framework.
+  Source-verified on 2026-07-09 from the SIAM article page, which labels the
+  paper open access and exposes the section order.
 - Additional SIOPT style cue:
   Grapiglia and Nesterov, "Adaptive Third-Order Methods for Composite Convex
   Optimization," SIAM Journal on Optimization, 2023, DOI `10.1137/22M1480872`.
   Useful structure: problem statement, method variants, numerical experiments,
   discussion, and conclusion, with numerical evidence interpreted after the
-  algorithmic contract is clear.
+  algorithmic contract is clear. Source-verified on 2026-07-09 from the SIAM
+  article page, which labels the paper open access and exposes the section
+  order.
 - SIOPT journal scope cue: SIAM describes SIOPT as covering theory and practice
   of optimization; contributions may emphasize algorithms, software,
   computational practice, applications, or links between these subjects.
