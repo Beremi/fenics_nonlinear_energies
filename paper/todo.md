@@ -177,6 +177,12 @@ scientific claims were introduced without supporting evidence.
   and benchmark opening floats from `[H]` to `[!htbp]` while preserving local
   `\FloatBarrier` guards, replaced the hard results-prelude `\clearpage` with a
   local barrier, and normalized one manual figure reference to `\Cref`.
+- Addressed the follow-up float-flow audit: relaxed the guarded hyperelastic
+  validation pair and selected Plasticity3D results sub-blocks, added local
+  `\FloatBarrier` guards between degree evidence, auxiliary scaling, converged
+  CPU scaling, partitioning, Topology, and Discussion, and kept algorithms,
+  Plasticity3D validation, appendix final tables, and broader benchmark-wide
+  float changes deferred until target-template conversion.
 - Addressed the benchmark-readability audit: split Plasticity2D and Plasticity3D
   setup prose into staged continuum-model, geometry/material, surrogate, and
   claim-scope paragraphs without changing formulas or numerical evidence.
@@ -395,6 +401,13 @@ required support for the current scoped contribution.
   implementation diagrams, changed captions, derivative-route tables,
   Hyperelasticity/Plasticity3D/Topology result tables, and appendix diagnostics
   are readable and unclipped in the current A4 PDF.
+- `make -C paper submission-check`: passed again on 2026-07-09 after the
+  follow-up float-flow chunk; the rebuilt `paper/build/main.pdf` remains a
+  42-page A4 article.
+- Rendered and visually inspected affected pages 23--24 and 33--37 after the
+  latest rebuild; the hyperelastic validation pair, Plasticity3D
+  derivative-ablation/degree/scaling flow, partitioning-to-Topology transition,
+  and Results-to-Discussion barrier are readable and unclipped.
 - `./.venv/bin/python -m pytest tests/test_docs_publication.py`: passed
   13 tests.
 - `./.venv/bin/python -m pytest tests/test_final_report_figure_generators.py`:

@@ -389,7 +389,7 @@ external-work observable and $u_{\max}$ denotes the maximum displacement
 magnitude; these columns check that the derivative route does not change the
 reported terminal observables.
 
-\begin{figure}[H]
+\begin{figure}[!htbp]
   \centering
   \includegraphics[width=\PaperFigureMedium]{plasticity3d_derivative_ablation_bars.pdf}
   \caption{Fixed Plasticity3D derivative-route comparison on
@@ -397,7 +397,7 @@ reported terminal observables.
   \label{fig:plasticity3d-derivative-ablation}
 \end{figure}
 
-\begin{table}[H]
+\begin{table}[!htbp]
   \centering
   \input{tables/generated/plasticity3d_derivative_ablation.tex}
   \caption{Plasticity3D derivative-route comparison on the fixed
@@ -427,7 +427,7 @@ and wall time \SI{208}{s}, compared with \num{-3013032} and \SI{98.3}{s} for
 $P_2(L_2)$. At \num{4801816} DOFs, $P_4(L_2)$ reports \num{-3013348} and
 \SI{2298}{s}, compared with \num{-3013149} and \SI{1330}{s} for $P_2(L_3)$.
 
-\begin{figure}[H]
+\begin{figure}[!htbp]
   \centering
   \begin{subfigure}[t]{0.46\PaperFigureFull}
     \centering
@@ -465,7 +465,9 @@ $P_2(L_2)$. At \num{4801816} DOFs, $P_4(L_2)$ reports \num{-3013348} and
   \label{fig:plasticity3d-degree-energy}
 \end{figure}
 
-\begin{figure}[H]
+\FloatBarrier
+
+\begin{figure}[!htbp]
   \centering
   \includegraphics[width=\PaperFigureMedium]{plasticity3d_recommended_scaling.pdf}
   \caption{Auxiliary strong scaling for the selected Plasticity3D solver
@@ -476,7 +478,7 @@ $P_2(L_2)$. At \num{4801816} DOFs, $P_4(L_2)$ reports \num{-3013348} and
   \label{fig:plasticity3d-scaling}
 \end{figure}
 
-\begin{table}[H]
+\begin{table}[!htbp]
   \centering
   \input{tables/generated/plasticity3d_recommended_scaling.tex}
   \caption{Auxiliary Plasticity3D strong scaling for \localpmg{} on
@@ -485,6 +487,8 @@ $P_2(L_2)$. At \num{4801816} DOFs, $P_4(L_2)$ reports \num{-3013348} and
   $\lambda_{\mathrm{sr}} = 1.55$ benchmark figures.}
   \label{tab:plasticity3d-scaling}
 \end{table}
+
+\FloatBarrier
 
 \Cref{fig:plasticity3d-scaling,tab:plasticity3d-scaling} give a high-DOF
 Plasticity3D distributed timing result for the Hypre-coarse auxiliary PMG
@@ -515,7 +519,7 @@ $\|g\|_{\mathrm{stop}}$ and the ratio
 $\|g\|_{\mathrm{stop}}/\|g\|_{\mathrm{target}}$. The timing comparison is not
 confounded by different nonlinear work.
 
-\begin{figure}[H]
+\begin{figure}[!htbp]
   \centering
   \includegraphics[width=\PaperFigureMedium]{plasticity3d_local_vs_karolina_scaling.pdf}
   \caption{Single-node and multi-node CPU converged scaling for the bottom-clamped
@@ -525,7 +529,7 @@ confounded by different nonlinear work.
   \label{fig:plasticity3d-local-karolina-scaling}
 \end{figure}
 
-\begin{table}[H]
+\begin{table}[!htbp]
   \centering
   \scriptsize
   \input{tables/generated/plasticity3d_local_karolina_scaling.tex}
@@ -539,6 +543,8 @@ confounded by different nonlinear work.
   absolute final-gradient column in the degree benchmark table.}
   \label{tab:plasticity3d-local-karolina-scaling}
 \end{table}
+
+\FloatBarrier
 
 The distributed layout measurements in
 \Cref{tab:plasticity3d-local-karolina-partitioning} identify one observed limit
@@ -558,6 +564,8 @@ storage.
   divided by the global owned free-DOF count.}
   \label{tab:plasticity3d-local-karolina-partitioning}
 \end{table}
+
+\FloatBarrier
 
 \subsection{Topology Optimization}
 \label{sec:num-topology}

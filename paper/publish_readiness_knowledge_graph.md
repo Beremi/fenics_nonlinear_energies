@@ -585,6 +585,16 @@ MATLAB literature only when there is source-backed evidence.
   submission-check` on the 42-page A4 PDF, and rendered pages 2, 5, 8--9, 15,
   17, 26--28, 30--31, 33--36, and 39 were visually checked for table overflow,
   figure-label readability, algorithm fit, and appendix table width.
+  Current float-flow chunk relaxed the hyperelastic validation figure/table and
+  the Plasticity3D results sub-blocks for derivative-route ablation,
+  degree-versus-resolution, auxiliary scaling, and converged CPU scaling.
+  Local `\FloatBarrier` guards now separate degree evidence from auxiliary
+  scaling, auxiliary scaling from the converged-scaling discussion, converged
+  scaling from partitioning, partitioning from Topology, and Results from
+  Discussion. The rebuild kept the PDF at 42 A4 pages; `make -C paper
+  submission-check` and `git diff --check` passed, and rendered pages 23--24
+  and 33--37 were visually checked for validation/result ordering, table
+  clipping, Topology transition, and the Discussion barrier.
 - `REPRO`: reproducibility and submission readiness.
   Known blockers from `paper/todo.md`: target journal/template/declarations,
   repository license/archive DOI, and archive-neutral provenance for critical
@@ -1173,6 +1183,16 @@ MATLAB literature only when there is source-backed evidence.
   fixed-work, endpoint, or adaptive-stopping evidence; and the layout audit
   classifies remaining figure/table work as target-template risk rather than a
   current A4 build failure.
+- `Current float-flow audit`
+  (`Confucius the 2nd`/`Laplace the 2nd`/`Kuhn the 2nd`/`Aquinas the 2nd`):
+  completed and integrated. Findings addressed in the current float-flow chunk:
+  the safe hyperelastic validation pair and guarded Plasticity3D result
+  sub-blocks now use flexible float placement, while methodology algorithms,
+  Plasticity3D validation, broad benchmark-wide floats, the appendix final
+  table, and the remaining topology rank-consistency table stay hard-pinned
+  until the target venue/template or main/supplement split is chosen. The
+  broader benchmark-wide and supplement-structure recommendations remain
+  deferred target-template work.
 
 ## First Edit Backlog
 
