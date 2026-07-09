@@ -46,6 +46,7 @@ validate: figures tables
 	$(PYTHON) scripts/validate_paper_assets.py
 
 publish-check:
+	$(PYTHON) scripts/check_submission_bundle_manifest.py
 	$(PYTHON) scripts/validate_paper_assets.py --archive-neutral
 
 submission-check:
@@ -54,6 +55,7 @@ submission-check:
 	qpdf --check build/main.pdf
 	$(PYTHON) scripts/check_pdf_aux_order.py build/main.aux
 	$(PYTHON) scripts/check_manuscript_hygiene.py build/main.pdf
+	$(PYTHON) scripts/check_submission_bundle_manifest.py
 	$(PYTHON) scripts/validate_paper_assets.py --archive-neutral
 
 pdf: validate

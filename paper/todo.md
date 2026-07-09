@@ -227,6 +227,10 @@ scientific claims were introduced without supporting evidence.
 - Strengthened the PDF-text manuscript hygiene gate so future edits fail on
   process-local wording such as codebase/repository-local labels and defensive
   software/framework-ranking phrases.
+- Added a submission-bundle manifest-hash verifier and wired it into
+  `make -C paper publish-check` and `make -C paper submission-check`, so local
+  publish gates now verify recorded bundle-file and source-file SHA-256 values
+  as well as archive-neutral manuscript references.
 - Rebuilt the paper PDF through the paper generation pipeline.
 
 ## Blocking Issues Before Submission
@@ -498,6 +502,16 @@ required support for the current scoped contribution.
   passed against the current PDF with the stricter wording patterns.
 - `make -C paper submission-check`: passed with the stricter PDF-text
   manuscript hygiene gate.
+- `./.venv/bin/python -m pytest tests/test_submission_bundle_manifest.py`:
+  passed 2 tests for the new submission-bundle manifest verifier.
+- `./.venv/bin/python paper/scripts/check_submission_bundle_manifest.py`:
+  passed on the current local bundle, verifying 51 bundled files, 59 local
+  source hashes, and 2 recorded external source hashes.
+- `make -C paper publish-check`: passed with the new manifest-hash verifier and
+  the existing archive-neutral asset validation.
+- `make -C paper submission-check`: passed with the new manifest-hash verifier,
+  PDF-text hygiene gate, aux-order check, `qpdf`, and archive-neutral asset
+  validation.
 - `./.venv/bin/python -m pytest tests/test_docs_publication.py`: passed
   13 tests.
 - `./.venv/bin/python -m pytest tests/test_final_report_figure_generators.py`:

@@ -759,7 +759,11 @@ MATLAB literature only when there is source-backed evidence.
   does not replace the final licensed archive/DOI step. Current hygiene-guard
   chunk extends the PDF-text manuscript scan to reject codebase/repository-local
   wording and defensive software/framework-ranking phrases, making the recent
-  evidence-scope prose polish enforceable in future edits.
+  evidence-scope prose polish enforceable in future edits. Current
+  bundle-hash-check chunk adds a submission-bundle verifier to the publish and
+  submission gates; it checks recorded SHA-256 values for bundle files and
+  locally available source/dependency files, while counting external-reference
+  source hashes separately.
 
 ## Evidence Nodes
 
