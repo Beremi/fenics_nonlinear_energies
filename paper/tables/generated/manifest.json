@@ -158,6 +158,12 @@
         "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/supplemental_solver_evidence/full_p3d_derivative_degree.csv"
       }
     ],
+    "plasticity3d_fixed_reference_operator_pmg.tex": [
+      {
+        "kind": "repository_path",
+        "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_fixed_reference_operator/table_summary.json"
+      }
+    ],
     "plasticity3d_local_karolina_partitioning.tex": [
       {
         "kind": "repository_path",
@@ -539,11 +545,11 @@
       }
     },
     "plasticity3d_fixed_reference_operator_pmg.tex": {
-      "archive_status": "needs_final_archive",
+      "archive_status": "archive_neutral",
       "data_inputs": [
         {
           "kind": "repository_path",
-          "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_fixed_reference_operator/comparison_summary.json"
+          "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_fixed_reference_operator/table_summary.json"
         }
       ],
       "generator": {

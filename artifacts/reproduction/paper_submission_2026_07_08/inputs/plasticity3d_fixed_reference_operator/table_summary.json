@@ -1,0 +1,85 @@
+{
+  "description": "Table-specific release summary for the Plasticity3D fixed-reference operator PMG diagnostic. Route identifiers are paper-facing aliases of the two compared implementations; numerical values are copied from the full comparison summary.",
+  "rows": [
+    {
+      "final_metric": 0.006533997339190815,
+      "final_metric_name": "grad_norm",
+      "implementation": "constitutive_ad_fixed_reference_pmg",
+      "linear_iterations_total": 204,
+      "nit": 24,
+      "ranks": 4,
+      "status": "completed",
+      "wall_time_s": 2115.923775043979
+    },
+    {
+      "final_metric": 0.002491471793901027,
+      "final_metric_name": "grad_norm",
+      "implementation": "reference_formula_fixed_reference_pmg",
+      "linear_iterations_total": 210,
+      "nit": 21,
+      "ranks": 4,
+      "status": "completed",
+      "wall_time_s": 988.4289191449643
+    },
+    {
+      "final_metric": 0.0025334917956890864,
+      "final_metric_name": "grad_norm",
+      "implementation": "constitutive_ad_fixed_reference_pmg",
+      "linear_iterations_total": 238,
+      "nit": 33,
+      "ranks": 8,
+      "status": "completed",
+      "wall_time_s": 1873.5970779490308
+    },
+    {
+      "final_metric": 0.009531238491451457,
+      "final_metric_name": "grad_norm",
+      "implementation": "reference_formula_fixed_reference_pmg",
+      "linear_iterations_total": 246,
+      "nit": 27,
+      "ranks": 8,
+      "status": "completed",
+      "wall_time_s": 897.9541834560223
+    },
+    {
+      "final_metric": 220.85654806174796,
+      "final_metric_name": "grad_norm",
+      "implementation": "constitutive_ad_fixed_reference_pmg",
+      "linear_iterations_total": 196,
+      "nit": 50,
+      "ranks": 16,
+      "status": "failed",
+      "wall_time_s": 1303.6778303679894
+    },
+    {
+      "final_metric": 734.8488206471012,
+      "final_metric_name": "grad_norm",
+      "implementation": "reference_formula_fixed_reference_pmg",
+      "linear_iterations_total": 177,
+      "nit": 50,
+      "ranks": 16,
+      "status": "failed",
+      "wall_time_s": 601.3444365100004
+    },
+    {
+      "final_metric": 0.0022355792193401213,
+      "final_metric_name": "grad_norm",
+      "implementation": "constitutive_ad_fixed_reference_pmg",
+      "linear_iterations_total": 250,
+      "nit": 29,
+      "ranks": 32,
+      "status": "completed",
+      "wall_time_s": 347.90098794398364
+    },
+    {
+      "final_metric": 82.46440755395912,
+      "final_metric_name": "grad_norm",
+      "implementation": "reference_formula_fixed_reference_pmg",
+      "linear_iterations_total": 193,
+      "nit": 50,
+      "ranks": 32,
+      "status": "failed",
+      "wall_time_s": 397.7617581700324
+    }
+  ]
+}

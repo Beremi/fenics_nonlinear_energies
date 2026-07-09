@@ -7,9 +7,8 @@ aligned with its evidence: major claims are scoped to the implemented toolset,
 SOTA positioning has been refreshed, citations build cleanly, and the generated
 figure/table pipeline and archive-neutral provenance gate pass against a curated
 local submission bundle. Submission is still blocked by missing target-journal
-metadata, submission declarations, license/archive decisions, and final archive
-coverage for the remaining fixed-reference table input and large raw/state
-figure inputs.
+metadata, submission declarations, license/archive decisions, and a durable
+citable release that includes the paper-critical provenance bundle.
 Validation is adequate for the narrowed claims, but the paper must not be
 submitted until the external submission metadata and citable archive are fixed.
 
@@ -73,18 +72,19 @@ scientific claims were introduced without supporting evidence.
   current A4 PDF.
 - Added figure source provenance for every generated figure in the figure
   manifest, tightened the asset validator so TeX-included figures must have
-  source records, and marked figures that still depend on large raw/state inputs
-  as `needs_final_archive`.
+  source records, and classified direct figure inputs by archive status.
 - Added generated-table source provenance for every generated table, tightened
   the asset validator so TeX-included generated tables must have source records,
-  and marked raw/report-backed tables that still need final archive coverage as
-  `needs_final_archive`.
+  and classified direct table inputs by archive status.
 - Expanded the curated submission bundle with small raw/report-backed table
   inputs, Plasticity2D endpoint and resolution inputs, and the Plasticity3D
   recommended-scaling summary plus per-rank result JSONs. The generated
-  manifests now mark 27 of 34 figure sources and 29 of 30 table sources as
-  archive-neutral; seven large-state Plasticity3D figures and one
-  fixed-reference table remain `needs_final_archive`.
+  manifests initially moved most figure and table sources to archive-neutral.
+- Added derived Plasticity3D figure inputs for the degree-energy plots,
+  convergence histories, state-pair surface rendering, and highest-y-slice
+  panels, and added a table-specific fixed-reference PMG summary with
+  paper-facing route identifiers. The generated manifests now mark all 34
+  figure sources and all 30 table sources as archive-neutral.
 - Rebuilt the curated submission bundle after fixing the JAX-FEM comparison
   summary paths to point at bundle-local terminal states.
 - Sharpened remaining prose and notation issues from the latest audits:
@@ -119,20 +119,19 @@ scientific claims were introduced without supporting evidence.
   `artifacts/reproduction/paper_submission_2026_07_08/` in the submission
   release or artifact archive, mint or record its DOI if applicable, and update
   the manuscript availability statement.
-- Issue: Final per-artifact provenance is not yet complete.
+- Issue: Durable archive integration is not yet complete.
   Why it blocks publishability: the archive-neutral gate passes and all
-  generated figures and TeX-included generated tables now have source records,
-  but the final submission still lacks durable archive coverage or an explicit
-  release-scope exception for the large Plasticity3D raw/state inputs behind
-  seven figures marked `needs_final_archive` and for the fixed-reference
-  operator table's implementation-label provenance.
+  generated figures and TeX-included generated tables now have archive-neutral
+  source records, but the provenance bundle is still a repository artifact
+  rather than a citable, licensed release artifact named in the manuscript.
   Evidence path or citation: `paper/figures/generated/manifest.json`,
   `paper/tables/generated/manifest.json`,
   `paper/scripts/validate_paper_assets.py`, and
   `artifacts/reproduction/paper_submission_2026_07_08/manifest.json`.
-  Exact next action: include or explicitly scope all `needs_final_archive`
-  figure and table inputs in the durable archive, then rerun the archive-neutral
-  validator and update the availability statement.
+  Exact next action: include `artifacts/reproduction/paper_submission_2026_07_08/`
+  in the durable release/archive, mint or record the DOI if applicable, rerun
+  the archive-neutral validator from the released snapshot, and update the
+  availability statement.
 
 ## Major Revisions Needed
 
@@ -140,8 +139,6 @@ scientific claims were introduced without supporting evidence.
   venue is chosen.
 - Fold the curated submission bundle into the final release/archive and make
   the manuscript availability statement cite that durable version.
-- Complete final archive coverage for all figure and table entries marked
-  `needs_final_archive`.
 - After choosing the target journal template, revisit forced `[H]` floats and
   split or simplify the dense SOTA, Plasticity3D, and appendix tables if the
   venue class narrows the text block.
@@ -207,16 +204,14 @@ required support for the current scoped contribution.
   entries, 9 non-public local entries, and 3 unavailable entries.
 - `./.venv/bin/python paper/scripts/generate_paper_tables.py`: passed.
   The current generated table manifest records 30 generated tables; all 28
-  TeX-included generated tables have source records, with one still marked
-  `needs_final_archive` because the fixed-reference summary retains internal
-  implementation-label provenance pending final release scoping.
+  TeX-included generated tables have source records, and all 30 generated table
+  sources are archive-neutral.
 - `./.venv/bin/python paper/scripts/generate_paper_figures.py --manifest-only`:
   passed and rewrote the figure manifest; the manifest records 34 generated
-  figure sources, 27 archive-neutral figure sources, and seven Plasticity3D
-  large-state figures still marked `needs_final_archive`.
+  figure sources, all archive-neutral.
 - `./.venv/bin/python paper/scripts/build_submission_bundle.py`: passed and
   wrote `artifacts/reproduction/paper_submission_2026_07_08/manifest.json` with
-  source and bundle SHA256 hashes for 40 paper-critical inputs.
+  source and bundle SHA256 hashes for 46 paper-critical inputs.
 - `./.venv/bin/python paper/scripts/validate_paper_assets.py`: passed on
   2026-07-09 with 29 figures, 28 generated tables, figure source records, table
   source records, and 42 paper-facing provenance-scan files checked.
@@ -243,11 +238,10 @@ required support for the current scoped contribution.
 
 Exact remaining blockers are submission metadata and license/archive DOI. The
 archive-neutral validator now passes against the local curated bundle; final
-submission still must include that bundle plus all final-scoped
-`needs_final_archive` figure and table inputs in a durable release/archive. The
-only command instability observed in the final rerun was the intermittent
-TeX/font lookup or mesh-loading stall in the Makefile figure target; direct
-asset validation and direct LaTeX rebuild are clean.
+submission still must include that bundle in a durable release/archive. The only
+command instability observed in the final rerun was the intermittent TeX/font
+lookup or mesh-loading stall in the Makefile figure target; direct asset
+validation and direct LaTeX rebuild are clean.
 
 ## Optional Future Work
 

@@ -1,0 +1,89 @@
+{
+  "axis": 1,
+  "center_fraction": 0.62,
+  "description": "Derived interpolated y-slice panels for the Plasticity3D highest-mesh comparison figure. The arrays contain the final images and extents used for rendering.",
+  "global_vmax": 0.0480818058906887,
+  "half_thickness_fraction": 0.02,
+  "panels": [
+    {
+      "degree_line": "P1",
+      "energy": -3009657.6906860177,
+      "extent": [
+        -133.16971201912384,
+        29.819530744072413,
+        0.053498454480294014,
+        86.5558830988944
+      ],
+      "free_dofs": 4801816,
+      "image_key": "image_p1",
+      "mesh_alias": "L1_2_3_4"
+    },
+    {
+      "degree_line": "P2",
+      "energy": -3013148.7531303708,
+      "extent": [
+        -133.34336186507238,
+        29.896876998877826,
+        0.02925550425735673,
+        86.57593954847364
+      ],
+      "free_dofs": 4801816,
+      "image_key": "image_p2",
+      "mesh_alias": "L1_2_3"
+    },
+    {
+      "degree_line": "P4",
+      "energy": -3013348.094120956,
+      "extent": [
+        -133.14314870937818,
+        29.89689011943147,
+        0.026856430463758463,
+        86.57794468283012
+      ],
+      "free_dofs": 4801816,
+      "image_key": "image_p4",
+      "mesh_alias": "L1_2"
+    }
+  ],
+  "resolution": 900,
+  "schema": "paper_figure/plasticity3d_highest_y_slice_panels/v1",
+  "smooth_sigma": 1.0,
+  "source_dependencies": [
+    {
+      "source_path": "artifacts/raw_results/plasticity3d_lambda1p55_degree_mesh_energy_study/comparison_summary.json",
+      "source_sha256": "59523f9297de1a3f5c407ab7f02e8da74e681c836fe5107714493af3341509c2"
+    },
+    {
+      "source_path": "artifacts/raw_results/docs_showcase/plasticity3d_p1_l1_2_3_4_lambda1p55_np32_grad1e2/state.npz",
+      "source_sha256": "86124cbb436247bbb232c740d0e9b264d4f21893c2bbc3a85169e628ef98e89a"
+    },
+    {
+      "source_path": "data/meshes/SlopeStability3D/hetero_ssr/hetero_ssr_L1_2_3_4_p1_same_mesh_glued_bottom.h5",
+      "source_sha256": "773def68582ef1fc1e5ad847860f2dcd72b773ae6a797fe85aea77a623c71543"
+    },
+    {
+      "source_path": "artifacts/raw_results/docs_showcase/plasticity3d_p2_l1_2_3_lambda1p55_np32_grad1e2/state.npz",
+      "source_sha256": "f7bcab680194dae94b0f8a2fefbb6b88a30890230a0daab121ad645e709f8846"
+    },
+    {
+      "source_path": "data/meshes/SlopeStability3D/hetero_ssr/hetero_ssr_L1_2_3_p2_same_mesh_glued_bottom.h5",
+      "source_sha256": "131bcfae454e7a170041bc9d3199d785c11af5e18b696e3589a00663a46031f6"
+    },
+    {
+      "source_path": "artifacts/raw_results/docs_showcase/plasticity3d_p4_l1_2_lambda1p55_np32_grad1e2/state.npz",
+      "source_sha256": "dd45c12b33520ef6c355cbac518159f1c9bb19dbb41fda856f3f4924469dc0fc"
+    },
+    {
+      "source_path": "data/meshes/SlopeStability3D/hetero_ssr/hetero_ssr_L1_2_p4_same_mesh_glued_bottom.h5",
+      "source_sha256": "2af6d3333b7b9bcf0fb5fef85f91b1e1936219fd9d4e216380b67db619895400"
+    }
+  ],
+  "xlim": [
+    -150.0,
+    -50.0
+  ],
+  "zlim": [
+    0.026856430463758463,
+    86.57794468283012
+  ]
+}

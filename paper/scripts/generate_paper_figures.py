@@ -55,6 +55,21 @@ SOURCEFIXED_P3D_SUMMARY = PAPER_SUBMISSION_INPUT_ROOT / "plasticity3d_fixed_refe
 P3D_DEGREE_ENERGY_STUDY_SUMMARY = PAPER_SUBMISSION_INPUT_ROOT / (
     "plasticity3d_degree_energy_study/comparison_summary.json"
 )
+P3D_DEGREE_ENERGY_STUDY_PLOT_SUMMARY = PAPER_SUBMISSION_INPUT_ROOT / (
+    "plasticity3d_degree_energy_study/plot_summary.json"
+)
+P3D_STATE_PAIR_SURFACE_METADATA = PAPER_SUBMISSION_INPUT_ROOT / (
+    "plasticity3d_figure_derived/state_pair_surface.json"
+)
+P3D_STATE_PAIR_SURFACE_ARRAYS = PAPER_SUBMISSION_INPUT_ROOT / (
+    "plasticity3d_figure_derived/state_pair_surface.npz"
+)
+P3D_HIGHEST_Y_SLICE_METADATA = PAPER_SUBMISSION_INPUT_ROOT / (
+    "plasticity3d_figure_derived/highest_y_slice_panels.json"
+)
+P3D_HIGHEST_Y_SLICE_ARRAYS = PAPER_SUBMISSION_INPUT_ROOT / (
+    "plasticity3d_figure_derived/highest_y_slice_panels.npz"
+)
 P3D_RECOMMENDED_SCALING_OUTPUTS = tuple(
     PAPER_SUBMISSION_INPUT_ROOT / f"plasticity3d_recommended_scaling/runs/np{ranks}/output.json"
     for ranks in (1, 2, 4, 8, 16, 32)
@@ -190,7 +205,7 @@ def _plasticity3d_benchmark_row() -> dict[str, object]:
 
 
 def _plasticity3d_study_rows() -> list[dict[str, object]]:
-    summary = _read_json(P3D_DEGREE_ENERGY_STUDY_SUMMARY)
+    summary = _read_json(P3D_DEGREE_ENERGY_STUDY_PLOT_SUMMARY)
     rows = [dict(row) for row in summary.get("rows", []) if isinstance(row, dict)]
     rows.sort(
         key=lambda row: (
@@ -1055,51 +1070,63 @@ def _plot_plasticity3d_surface_panel(
     return tri_vals
 
 
+def _plot_plasticity3d_tri_panel(
+    ax,
+    *,
+    tri_xyz: np.ndarray,
+    tri_vals: np.ndarray,
+    cmap_name: str,
+    norm,
+) -> None:
+    from mpl_toolkits.mplot3d.art3d import Poly3DCollection
+
+    cmap = matplotlib.colormaps[cmap_name]
+    poly = Poly3DCollection(np.asarray(tri_xyz, dtype=np.float64), linewidths=0.0, antialiased=False)
+    poly.set_facecolor(cmap(norm(np.asarray(tri_vals, dtype=np.float64))))
+    poly.set_edgecolor("none")
+    poly.set_rasterized(True)
+    ax.add_collection3d(poly)
+    _apply_plasticity3d_camera(ax, np.asarray(tri_xyz, dtype=np.float64).reshape(-1, 3))
+    ax.set_xlabel("")
+    ax.set_ylabel("")
+    ax.set_zlabel("")
+
+
 def generate_plasticity3d_state_figures(layout: dict[str, float]) -> list[str]:
     plt = configure_paper_matplotlib()
     from matplotlib import cm
     from matplotlib.colors import Normalize
 
-    ctx = _plasticity3d_benchmark_context()
-    state = ctx["state"]
-    result_payload = ctx["result"]
-    case = ctx["case"]
-    degree = int(ctx["degree"])
-    displacement = np.asarray(state["displacement"], dtype=np.float64)
-    nodal_disp_mag = np.linalg.norm(displacement, axis=1)
-    nodal_dev, _, _ = _plasticity3d_dev_strain_data(
-        coords_final=np.asarray(state["coords_final"], dtype=np.float64),
-        displacement=displacement,
-        case=case,
-        degree=degree,
-        chunk_size=256,
-    )
-    disp_norm = Normalize(vmin=0.0, vmax=float(np.max(nodal_disp_mag)))
-    dev_vmax = float(np.quantile(np.asarray(nodal_dev, dtype=np.float64), 0.995))
-    dev_norm = Normalize(vmin=0.0, vmax=max(dev_vmax, 1.0e-12))
+    metadata = _read_json(P3D_STATE_PAIR_SURFACE_METADATA)
+    with np.load(P3D_STATE_PAIR_SURFACE_ARRAYS) as data:
+        tri_xyz = np.asarray(data["tri_xyz"], dtype=np.float64)
+        disp_tri_vals = np.asarray(data["disp_tri_vals"], dtype=np.float64)
+        dev_tri_vals = np.asarray(data["dev_tri_vals"], dtype=np.float64)
+    disp_norm = Normalize(vmin=0.0, vmax=float(metadata["disp_norm_vmax"]))
+    dev_norm = Normalize(vmin=0.0, vmax=float(metadata["dev_norm_vmax"]))
 
     fig = plt.figure(figsize=paper_figure_size(layout, preset="medium", height_ratio=0.60))
     gs = fig.add_gridspec(2, 2, height_ratios=[1.0, 0.08], left=0.03, right=0.96, bottom=0.13, top=0.96, wspace=0.08, hspace=0.04)
     ax_disp = fig.add_subplot(gs[0, 0], projection="3d")
     ax_dev = fig.add_subplot(gs[0, 1], projection="3d")
-    _plot_plasticity3d_surface_panel(
+    _plot_plasticity3d_tri_panel(
         ax_disp,
-        nodal_values=nodal_disp_mag,
+        tri_xyz=tri_xyz,
+        tri_vals=disp_tri_vals,
         cmap_name="viridis",
         norm=disp_norm,
-        view_azim=0.0,
     )
-    _plot_plasticity3d_surface_panel(
+    _plot_plasticity3d_tri_panel(
         ax_dev,
-        nodal_values=nodal_dev,
+        tri_xyz=tri_xyz,
+        tri_vals=dev_tri_vals,
         cmap_name="magma",
         norm=dev_norm,
-        view_azim=0.0,
     )
     disp_sm = cm.ScalarMappable(norm=disp_norm, cmap="viridis")
-    disp_sm.set_array(np.asarray(nodal_disp_mag, dtype=np.float64))
+    disp_sm.set_array(np.asarray(disp_tri_vals, dtype=np.float64))
     dev_sm = cm.ScalarMappable(norm=dev_norm, cmap="magma")
-    dev_sm.set_array(np.asarray(nodal_dev, dtype=np.float64))
+    dev_sm.set_array(np.asarray(dev_tri_vals, dtype=np.float64))
     cax1 = fig.add_subplot(gs[1, 0])
     cax2 = fig.add_subplot(gs[1, 1])
     cbar1 = fig.colorbar(disp_sm, cax=cax1, orientation="horizontal")
@@ -1133,18 +1160,14 @@ def _generate_plasticity3d_convergence_figure(layout: dict[str, float]) -> str:
     legend_handles: list[object] = []
     legend_labels: list[str] = []
     for row in study_rows:
-        result_path = REPO_ROOT / str(row["result_json"])
-        result = _read_json(result_path)
-        history = list(result.get("history", []))
+        history = list(row.get("history", []))
         if not history:
             continue
         its = np.asarray([int(item.get("it", idx + 1)) for idx, item in enumerate(history)], dtype=np.int64)
-        energy = np.asarray([float(item.get("energy", np.nan)) / 1.0e6 for item in history], dtype=np.float64)
+        energy = np.asarray([_safe_float(item.get("energy")) / 1.0e6 for item in history], dtype=np.float64)
         grad = []
         for item in history:
-            grad_post = _safe_float(item.get("grad_norm_post"))
-            grad_pre = _safe_float(item.get("grad_norm"))
-            grad.append(grad_post if np.isfinite(grad_post) else grad_pre)
+            grad.append(_safe_float(item.get("grad_norm")))
         grad_arr = np.maximum(np.asarray(grad, dtype=np.float64), 1.0e-16)
         degree_line = str(row.get("degree_line", ""))
         mesh_alias = str(row.get("mesh_alias", ""))
@@ -1280,23 +1303,13 @@ def _build_highest_y_slice(row: dict[str, object]) -> dict[str, object]:
 
 def generate_plasticity3d_highest_y_slice_comparison(layout: dict[str, float]) -> str:
     plt = configure_paper_matplotlib()
-    summary = _read_json(P3D_DEGREE_ENERGY_STUDY_SUMMARY)
-    rows = [dict(row) for row in summary.get("rows", []) if isinstance(row, dict)]
-    slices = [_build_highest_y_slice(row) for row in _highest_rows_by_degree(rows)]
-
-    finite_arrays: list[np.ndarray] = []
-    ymins: list[float] = []
-    ymaxs: list[float] = []
-    for item in slices:
-        image = np.asarray(item["image"], dtype=np.float64)
-        finite = np.isfinite(image)
-        if np.any(finite):
-            finite_arrays.append(image[finite])
-        _, _, ymin, ymax = (float(v) for v in item["extent"])
-        ymins.append(ymin)
-        ymaxs.append(ymax)
-    vmax = float(np.quantile(np.concatenate(finite_arrays), 0.995))
-    zlim = (float(min(ymins)), float(max(ymaxs)))
+    metadata = _read_json(P3D_HIGHEST_Y_SLICE_METADATA)
+    with np.load(P3D_HIGHEST_Y_SLICE_ARRAYS) as data:
+        extents = np.asarray(data["extents"], dtype=np.float64)
+        image_by_key = {key: np.asarray(data[key], dtype=np.float64) for key in data.files if key.startswith("image_")}
+    panels = [dict(panel) for panel in metadata["panels"]]
+    vmax = float(metadata["global_vmax"])
+    zlim = tuple(float(value) for value in metadata["zlim"])
 
     fig = plt.figure(figsize=paper_figure_size(layout, preset="full", height_ratio=0.41))
     gs = fig.add_gridspec(
@@ -1315,12 +1328,12 @@ def generate_plasticity3d_highest_y_slice_comparison(layout: dict[str, float]) -
     cmap = plt.get_cmap("magma").copy()
     cmap.set_bad(color="white")
     mappable = None
-    for idx, (ax, item) in enumerate(zip(axes, slices, strict=True)):
-        image = np.asarray(item["image"], dtype=np.float64)
+    for idx, (ax, panel) in enumerate(zip(axes, panels, strict=True)):
+        image = image_by_key[str(panel["image_key"])]
         mappable = ax.imshow(
             image,
             origin="lower",
-            extent=tuple(float(v) for v in item["extent"]),
+            extent=tuple(float(v) for v in extents[idx]),
             cmap=cmap,
             vmin=0.0,
             vmax=max(vmax, 1.0e-12),
@@ -1328,13 +1341,13 @@ def generate_plasticity3d_highest_y_slice_comparison(layout: dict[str, float]) -
             aspect="equal",
         )
         mappable.set_rasterized(True)
-        ax.set_title(_degree_math_label(item["degree_line"]), pad=6)
+        ax.set_title(_degree_math_label(panel["degree_line"]), pad=6)
         ax.set_xlabel("x")
         if idx == 0:
             ax.set_ylabel("z")
         else:
             ax.set_ylabel("")
-        ax.set_xlim(-150.0, -50.0)
+        ax.set_xlim(*(float(value) for value in metadata["xlim"]))
         ax.set_ylim(*zlim)
         ax.grid(False)
     if mappable is not None:
@@ -2112,7 +2125,7 @@ def _plot_sourcefixed(layout: dict[str, float], rows: list[dict[str, object]]) -
 
 def _plot_plasticity3d_degree_energy_study(layout: dict[str, float]) -> list[str]:
     plt = configure_paper_matplotlib()
-    summary = _read_json(P3D_DEGREE_ENERGY_STUDY_SUMMARY)
+    summary = _read_json(P3D_DEGREE_ENERGY_STUDY_PLOT_SUMMARY)
     rows = sorted(
         (dict(row) for row in summary.get("rows", []) if isinstance(row, dict)),
         key=lambda row: (int(str(row.get("degree_line", "P0")).replace("P", "")), int(row.get("free_dofs", 0))),
@@ -2354,41 +2367,39 @@ def _figure_sources() -> dict[str, dict[str, object]]:
         ),
         "plasticity3d_state_pair.pdf": _figure_source(
             generator="generate_plasticity3d_state_figures",
-            data_inputs=[_manifest_repo_input(P3D_DEGREE_ENERGY_STUDY_SUMMARY)],
-            archive_status=needs_archive,
-            note="The summary references large state arrays and same-mesh HDF5 files that must be included or scoped in the final archive.",
+            data_inputs=[
+                _manifest_repo_input(P3D_STATE_PAIR_SURFACE_METADATA),
+                _manifest_repo_input(P3D_STATE_PAIR_SURFACE_ARRAYS),
+            ],
+            note="Uses derived plotted surface arrays with source hashes recorded in the bundle metadata.",
         ),
         "plasticity3d_convergence.pdf": _figure_source(
             generator="_generate_plasticity3d_convergence_figure",
-            data_inputs=[_manifest_repo_input(P3D_DEGREE_ENERGY_STUDY_SUMMARY)],
-            archive_status=needs_archive,
-            note="The summary references per-case output histories used by the convergence plot.",
+            data_inputs=[_manifest_repo_input(P3D_DEGREE_ENERGY_STUDY_PLOT_SUMMARY)],
         ),
         "plasticity3d_highest_mesh_y_slice_comparison.pdf": _figure_source(
             generator="generate_plasticity3d_highest_y_slice_comparison",
-            data_inputs=[_manifest_repo_input(P3D_DEGREE_ENERGY_STUDY_SUMMARY)],
-            archive_status=needs_archive,
-            note="The generated slice also uses referenced state arrays and same-mesh HDF5 files.",
+            data_inputs=[
+                _manifest_repo_input(P3D_HIGHEST_Y_SLICE_METADATA),
+                _manifest_repo_input(P3D_HIGHEST_Y_SLICE_ARRAYS),
+            ],
+            note="Uses derived interpolated y-slice arrays with source hashes recorded in the bundle metadata.",
         ),
         "plasticity3d_degree_energy_all_dofs.pdf": _figure_source(
             generator="_plot_plasticity3d_degree_energy_study",
-            data_inputs=[_manifest_repo_input(P3D_DEGREE_ENERGY_STUDY_SUMMARY)],
-            archive_status=needs_archive,
+            data_inputs=[_manifest_repo_input(P3D_DEGREE_ENERGY_STUDY_PLOT_SUMMARY)],
         ),
         "plasticity3d_degree_energy_all_time.pdf": _figure_source(
             generator="_plot_plasticity3d_degree_energy_study",
-            data_inputs=[_manifest_repo_input(P3D_DEGREE_ENERGY_STUDY_SUMMARY)],
-            archive_status=needs_archive,
+            data_inputs=[_manifest_repo_input(P3D_DEGREE_ENERGY_STUDY_PLOT_SUMMARY)],
         ),
         "plasticity3d_degree_energy_zoom_dofs.pdf": _figure_source(
             generator="_plot_plasticity3d_degree_energy_study",
-            data_inputs=[_manifest_repo_input(P3D_DEGREE_ENERGY_STUDY_SUMMARY)],
-            archive_status=needs_archive,
+            data_inputs=[_manifest_repo_input(P3D_DEGREE_ENERGY_STUDY_PLOT_SUMMARY)],
         ),
         "plasticity3d_degree_energy_zoom_time.pdf": _figure_source(
             generator="_plot_plasticity3d_degree_energy_study",
-            data_inputs=[_manifest_repo_input(P3D_DEGREE_ENERGY_STUDY_SUMMARY)],
-            archive_status=needs_archive,
+            data_inputs=[_manifest_repo_input(P3D_DEGREE_ENERGY_STUDY_PLOT_SUMMARY)],
         ),
         "topology_density.pdf": _figure_source(
             generator="generate_topology_density",

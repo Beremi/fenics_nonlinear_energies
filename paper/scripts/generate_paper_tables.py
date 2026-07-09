@@ -12,7 +12,7 @@ from common import REPO_ROOT, TABLES_ROOT, ensure_paper_dirs, read_csv_rows, rea
 PAPER_SUBMISSION_INPUT_ROOT = REPO_ROOT / "artifacts/reproduction/paper_submission_2026_07_08/inputs"
 LOCAL_P3D_SUMMARY = PAPER_SUBMISSION_INPUT_ROOT / "plasticity3d_recommended_scaling/comparison_summary.json"
 MIXED_P3D_SUMMARY = PAPER_SUBMISSION_INPUT_ROOT / "plasticity3d_reference_formula/comparison_summary.json"
-SOURCEFIXED_P3D_SUMMARY = PAPER_SUBMISSION_INPUT_ROOT / "plasticity3d_fixed_reference_operator/comparison_summary.json"
+SOURCEFIXED_P3D_SUMMARY = PAPER_SUBMISSION_INPUT_ROOT / "plasticity3d_fixed_reference_operator/table_summary.json"
 P3D_DEGREE_ENERGY_STUDY_SUMMARY = PAPER_SUBMISSION_INPUT_ROOT / (
     "plasticity3d_degree_energy_study/comparison_summary.json"
 )
@@ -116,14 +116,11 @@ TABLE_SOURCE_INPUTS = {
     "plasticity3d_derivative_ablation.tex": (P3D_DERIVATIVE_ABLATION_SUMMARY,),
     "jax_fem_hyperelastic_baseline.tex": (JAX_FEM_BASELINE_SUMMARY,),
 }
-TABLE_ARCHIVE_STATUS_OVERRIDES = {
-    "plasticity3d_fixed_reference_operator_pmg.tex": "needs_final_archive",
-}
 
 LOCAL_IMPL = "local_constitutiveAD_local_pmg_armijo"
 SOURCE_IMPL = "source_local_pmg_armijo"
-LOCAL_SOURCEFIXED_IMPL = "local_constitutiveAD_local_pmg_sourcefixed_armijo"
-SOURCE_SOURCEFIXED_IMPL = "source_local_pmg_sourcefixed_armijo"
+LOCAL_SOURCEFIXED_IMPL = "constitutive_ad_fixed_reference_pmg"
+SOURCE_SOURCEFIXED_IMPL = "reference_formula_fixed_reference_pmg"
 
 IMPLEMENTATION_LABELS = {
     "fenics_custom": "FEniCS custom Newton",
@@ -495,8 +492,6 @@ def _manifest_repo_input(path: Path) -> dict[str, str]:
 
 
 def _archive_status(name: str, inputs: tuple[Path, ...]) -> str:
-    if name in TABLE_ARCHIVE_STATUS_OVERRIDES:
-        return TABLE_ARCHIVE_STATUS_OVERRIDES[name]
     raw_prefixes = ("artifacts/raw_results/", "artifacts/reports/")
     for path in inputs:
         if _repo_rel(path).startswith(raw_prefixes):

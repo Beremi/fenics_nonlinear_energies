@@ -1,0 +1,34 @@
+{
+  "camera_position": [
+    -200.0,
+    100.0,
+    -50.0
+  ],
+  "camera_target": [
+    -100.0,
+    0.0,
+    50.0
+  ],
+  "degree": 4,
+  "degree_line": "P4",
+  "description": "Derived plotted surface triangles for the Plasticity3D state-pair figure. The arrays contain the final triangulated geometry and per-triangle displacement/deviatoric-strain values used for rendering.",
+  "dev_norm_vmax": 0.1752192789675481,
+  "disp_norm_vmax": 0.7764874395344534,
+  "mesh_alias": "L1_2",
+  "schema": "paper_figure/plasticity3d_state_pair_surface/v1",
+  "source_dependencies": [
+    {
+      "source_path": "artifacts/raw_results/plasticity3d_lambda1p55_degree_mesh_energy_study/comparison_summary.json",
+      "source_sha256": "59523f9297de1a3f5c407ab7f02e8da74e681c836fe5107714493af3341509c2"
+    },
+    {
+      "source_path": "artifacts/raw_results/docs_showcase/plasticity3d_p4_l1_2_lambda1p55_np32_grad1e2/state.npz",
+      "source_sha256": "dd45c12b33520ef6c355cbac518159f1c9bb19dbb41fda856f3f4924469dc0fc"
+    },
+    {
+      "source_path": "data/meshes/SlopeStability3D/hetero_ssr/hetero_ssr_L1_2_p4_same_mesh_glued_bottom.h5",
+      "source_sha256": "2af6d3333b7b9bcf0fb5fef85f91b1e1936219fd9d4e216380b67db619895400"
+    }
+  ],
+  "subdivisions": 2
+}

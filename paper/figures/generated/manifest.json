@@ -101,10 +101,50 @@
         "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity2d_resolution/state.npz"
       }
     ],
+    "plasticity3d_convergence.pdf": [
+      {
+        "kind": "repository_path",
+        "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_degree_energy_study/plot_summary.json"
+      }
+    ],
+    "plasticity3d_degree_energy_all_dofs.pdf": [
+      {
+        "kind": "repository_path",
+        "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_degree_energy_study/plot_summary.json"
+      }
+    ],
+    "plasticity3d_degree_energy_all_time.pdf": [
+      {
+        "kind": "repository_path",
+        "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_degree_energy_study/plot_summary.json"
+      }
+    ],
+    "plasticity3d_degree_energy_zoom_dofs.pdf": [
+      {
+        "kind": "repository_path",
+        "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_degree_energy_study/plot_summary.json"
+      }
+    ],
+    "plasticity3d_degree_energy_zoom_time.pdf": [
+      {
+        "kind": "repository_path",
+        "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_degree_energy_study/plot_summary.json"
+      }
+    ],
     "plasticity3d_derivative_ablation_bars.pdf": [
       {
         "kind": "repository_path",
         "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_derivative_ablation/comparison_summary.json"
+      }
+    ],
+    "plasticity3d_highest_mesh_y_slice_comparison.pdf": [
+      {
+        "kind": "repository_path",
+        "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_figure_derived/highest_y_slice_panels.json"
+      },
+      {
+        "kind": "repository_path",
+        "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_figure_derived/highest_y_slice_panels.npz"
       }
     ],
     "plasticity3d_local_vs_karolina_scaling.pdf": [
@@ -145,6 +185,16 @@
       {
         "kind": "repository_path",
         "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_recommended_scaling/runs/np32/output.json"
+      }
+    ],
+    "plasticity3d_state_pair.pdf": [
+      {
+        "kind": "repository_path",
+        "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_figure_derived/state_pair_surface.json"
+      },
+      {
+        "kind": "repository_path",
+        "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_figure_derived/state_pair_surface.npz"
       }
     ],
     "plasticity3d_validation_layer1a_boundary.pdf": [
@@ -449,26 +499,25 @@
       "note": "Uses the bundled Plasticity2D endpoint state plus deterministic same-mesh case construction."
     },
     "plasticity3d_convergence.pdf": {
-      "archive_status": "needs_final_archive",
+      "archive_status": "archive_neutral",
       "data_inputs": [
         {
           "kind": "repository_path",
-          "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_degree_energy_study/comparison_summary.json"
+          "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_degree_energy_study/plot_summary.json"
         }
       ],
       "generator": {
         "function": "_generate_plasticity3d_convergence_figure",
         "kind": "repository_path",
         "path": "paper/scripts/generate_paper_figures.py"
-      },
-      "note": "The summary references per-case output histories used by the convergence plot."
+      }
     },
     "plasticity3d_degree_energy_all_dofs.pdf": {
-      "archive_status": "needs_final_archive",
+      "archive_status": "archive_neutral",
       "data_inputs": [
         {
           "kind": "repository_path",
-          "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_degree_energy_study/comparison_summary.json"
+          "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_degree_energy_study/plot_summary.json"
         }
       ],
       "generator": {
@@ -478,11 +527,11 @@
       }
     },
     "plasticity3d_degree_energy_all_time.pdf": {
-      "archive_status": "needs_final_archive",
+      "archive_status": "archive_neutral",
       "data_inputs": [
         {
           "kind": "repository_path",
-          "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_degree_energy_study/comparison_summary.json"
+          "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_degree_energy_study/plot_summary.json"
         }
       ],
       "generator": {
@@ -492,11 +541,11 @@
       }
     },
     "plasticity3d_degree_energy_zoom_dofs.pdf": {
-      "archive_status": "needs_final_archive",
+      "archive_status": "archive_neutral",
       "data_inputs": [
         {
           "kind": "repository_path",
-          "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_degree_energy_study/comparison_summary.json"
+          "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_degree_energy_study/plot_summary.json"
         }
       ],
       "generator": {
@@ -506,11 +555,11 @@
       }
     },
     "plasticity3d_degree_energy_zoom_time.pdf": {
-      "archive_status": "needs_final_archive",
+      "archive_status": "archive_neutral",
       "data_inputs": [
         {
           "kind": "repository_path",
-          "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_degree_energy_study/comparison_summary.json"
+          "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_degree_energy_study/plot_summary.json"
         }
       ],
       "generator": {
@@ -534,11 +583,15 @@
       }
     },
     "plasticity3d_highest_mesh_y_slice_comparison.pdf": {
-      "archive_status": "needs_final_archive",
+      "archive_status": "archive_neutral",
       "data_inputs": [
         {
           "kind": "repository_path",
-          "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_degree_energy_study/comparison_summary.json"
+          "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_figure_derived/highest_y_slice_panels.json"
+        },
+        {
+          "kind": "repository_path",
+          "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_figure_derived/highest_y_slice_panels.npz"
         }
       ],
       "generator": {
@@ -546,7 +599,7 @@
         "kind": "repository_path",
         "path": "paper/scripts/generate_paper_figures.py"
       },
-      "note": "The generated slice also uses referenced state arrays and same-mesh HDF5 files."
+      "note": "Uses derived interpolated y-slice arrays with source hashes recorded in the bundle metadata."
     },
     "plasticity3d_local_vs_karolina_scaling.pdf": {
       "archive_status": "archive_neutral",
@@ -606,11 +659,15 @@
       "note": "The bundled scaling summary references bundled per-rank result JSON files used for local-element counts."
     },
     "plasticity3d_state_pair.pdf": {
-      "archive_status": "needs_final_archive",
+      "archive_status": "archive_neutral",
       "data_inputs": [
         {
           "kind": "repository_path",
-          "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_degree_energy_study/comparison_summary.json"
+          "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_figure_derived/state_pair_surface.json"
+        },
+        {
+          "kind": "repository_path",
+          "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_figure_derived/state_pair_surface.npz"
         }
       ],
       "generator": {
@@ -618,7 +675,7 @@
         "kind": "repository_path",
         "path": "paper/scripts/generate_paper_figures.py"
       },
-      "note": "The summary references large state arrays and same-mesh HDF5 files that must be included or scoped in the final archive."
+      "note": "Uses derived plotted surface arrays with source hashes recorded in the bundle metadata."
     },
     "plasticity3d_validation_layer1a_boundary.pdf": {
       "archive_status": "archive_neutral",
