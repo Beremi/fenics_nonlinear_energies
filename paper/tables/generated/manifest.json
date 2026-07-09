@@ -90,6 +90,7 @@
         "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/jax_fem_hyperelastic_baseline/comparison_summary.json"
       }
     ],
+    "numerical_protocol_summary.tex": [],
     "plaplace_benchmark_summary.tex": [
       {
         "kind": "repository_path",
@@ -205,6 +206,7 @@
       }
     ],
     "reference_availability.tex": [],
+    "solver_reporting_protocol.tex": [],
     "sota_framework_comparison.tex": [],
     "topology_benchmark_summary.tex": [
       {
@@ -409,6 +411,15 @@
       "generator": {
         "function": "main",
         "output": "jax_fem_hyperelastic_baseline.tex",
+        "path": "paper/scripts/generate_paper_tables.py"
+      }
+    },
+    "numerical_protocol_summary.tex": {
+      "archive_status": "archive_neutral",
+      "data_inputs": [],
+      "generator": {
+        "function": "main",
+        "output": "numerical_protocol_summary.tex",
         "path": "paper/scripts/generate_paper_tables.py"
       }
     },
@@ -639,6 +650,15 @@
         "path": "paper/scripts/generate_paper_tables.py"
       }
     },
+    "solver_reporting_protocol.tex": {
+      "archive_status": "archive_neutral",
+      "data_inputs": [],
+      "generator": {
+        "function": "main",
+        "output": "solver_reporting_protocol.tex",
+        "path": "paper/scripts/generate_paper_tables.py"
+      }
+    },
     "sota_framework_comparison.tex": {
       "archive_status": "archive_neutral",
       "data_inputs": [],
@@ -704,6 +724,7 @@
     "hyperelasticity_pmg_sensitivity.tex",
     "implementation_capability_matrix.tex",
     "jax_fem_hyperelastic_baseline.tex",
+    "numerical_protocol_summary.tex",
     "plaplace_benchmark_summary.tex",
     "plasticity2d_benchmark_summary.tex",
     "plasticity2d_reference_continuation.tex",
@@ -718,6 +739,7 @@
     "plasticity3d_recommended_scaling.tex",
     "plasticity3d_validation_summary.tex",
     "reference_availability.tex",
+    "solver_reporting_protocol.tex",
     "sota_framework_comparison.tex",
     "topology_benchmark_summary.tex",
     "topology_rank_consistency.tex",

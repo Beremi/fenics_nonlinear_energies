@@ -76,6 +76,8 @@ TABLE_SOURCE_INPUTS = {
     "implementation_capability_matrix.tex": (),
     "benchmark_specification_matrix.tex": (),
     "reference_availability.tex": (),
+    "solver_reporting_protocol.tex": (),
+    "numerical_protocol_summary.tex": (),
     "sota_framework_comparison.tex": (),
     "plaplace_benchmark_summary.tex": (PLAPLACE_PARITY,),
     "ginzburg_landau_benchmark_summary.tex": (GL_PARITY,),
@@ -1048,6 +1050,102 @@ def main() -> None:
         ],
     )
 
+    write_tablex(
+        "solver_reporting_protocol.tex",
+        "@{}" + xspec((0.62, "RaggedRight"), (1.33, "RaggedRight"), (1.05, "RaggedRight")) + "@{}",
+        ["Reported term", "Definition in this paper", "Interpretation"],
+        [
+            [
+                "completed",
+                "All configured stopping tests for that row are met before the nonlinear cap or wall-time cap.",
+                "Endpoint energy and observables are terminal values for the stated benchmark.",
+            ],
+            [
+                "timeout / iteration cap",
+                "The wall-time limit or maximum nonlinear-iteration count is reached before the stated stopping tests are met.",
+                "Retained as solver-behavior evidence, not as validation evidence.",
+            ],
+            [
+                "fixed work",
+                "A prescribed amount of work is run, such as one Newton step, one linearization, or a fixed continuation schedule.",
+                "Used for cost, memory, or policy diagnostics rather than endpoint convergence claims.",
+            ],
+            [
+                "wall time",
+                "Elapsed end-to-end time for the stated run or run segment, including setup when the reporting path includes it.",
+                "Comparable only for rows that share the same benchmark contract and timing scope.",
+            ],
+            [
+                "solve time / solver total",
+                "Timer internal to the nonlinear or PETSc solve; setup, state export, and postprocessing may be outside this timer.",
+                "Used for within-table solver comparisons, not as a universal replacement for wall time.",
+            ],
+            [
+                "relative correction",
+                "Norm of the accepted Newton correction relative to the current iterate scale; paired gradient checks use the absolute or relative target stated with the result.",
+                "Defines the stopping metric in Plasticity3D rows that report correction or gradient targets.",
+            ],
+        ],
+    )
+
+    write_tablex(
+        "numerical_protocol_summary.tex",
+        "@{}"
+        + xspec(
+            (0.78, "RaggedRight"),
+            (0.82, "RaggedRight"),
+            (1.12, "RaggedRight"),
+            (1.05, "RaggedRight"),
+            (0.88, "RaggedRight"),
+        )
+        + "@{}",
+        ["Evidence block", "Role", "Solver policy", "Stop or fixed work", "Reported time"],
+        [
+            [
+                "Scalar benchmarks",
+                "formulation, derivative-route, and globalization evidence",
+                "Newton with Armijo or the stated trust-region variant; CG or GMRES with Hypre in PETSc rows",
+                "configured nonlinear tolerances; capped rows are diagnostic",
+                "wall or solve/elapsed time in globalization rows",
+            ],
+            [
+                "Hyperelasticity",
+                "finite-strain mechanics, JAX-FEM comparison, and scaling",
+                "trust-region or line-search Newton; GAMG or same-mesh PMG profiles as stated",
+                "per-load-step stationarity; fixed-step rows are solver diagnostics",
+                "wall time for benchmark rows; solver total for first-step scaling",
+            ],
+            [
+                "Plasticity2D",
+                "endpoint evidence plus larger fixed-work diagnostics",
+                "Armijo continuation with same-mesh PMG smoother policy",
+                "$P_4(L_5)$ is the endpoint solve; $P_4(L_6)$--$P_4(L_7)$ are fixed-iteration diagnostics",
+                "wall time for the stated endpoint or fixed-work run",
+            ],
+            [
+                "Plasticity3D validation",
+                "endpoint-surrogate agreement, not path-history validation",
+                "fixed-load reference-model comparisons under matched boundary conditions",
+                "validation criteria use fixed-load observables; strain/profile rows are diagnostic",
+                "timing is secondary to agreement metrics",
+            ],
+            [
+                "Plasticity3D performance",
+                "second-order routes, globalization, and parallel scaling",
+                "Armijo, residual-bisection, or trust-region Newton with FGMRES and same-mesh PMG",
+                "relative correction, gradient target, cap, or fixed work as stated",
+                "wall, solve, or solver-total time according to the table header",
+            ],
+            [
+                "Topology",
+                "distributed design-mechanics timing and rank consistency",
+                "adaptive reduced-objective continuation with PETSc mechanics and GAMG",
+                "design/state-change stall criterion or fixed schedule",
+                "end-to-end wall time",
+            ],
+        ],
+    )
+
     write_table_star(
         "sota_framework_comparison.tex",
         fill_spec(
@@ -1177,7 +1275,7 @@ def main() -> None:
                 "@{}"
                 + xspec((1.20, "RaggedRight"), (0.90, "RaggedRight"))
                 + r"@{\hspace{0.45em}}c c c c c@{}",
-                ["Benchmark", "Method", "Ranks", "Outcome", "Steps", "Time [s]", "Energy"],
+                ["Benchmark", "Method", "Ranks", "Outcome", "Steps", "Solve/elapsed [s]", "Energy"],
                 [
                     [
                         GLOBALIZATION_BENCHMARK_LABELS.get(str(row["benchmark"]), str(row["benchmark_label"])),
@@ -1221,7 +1319,7 @@ def main() -> None:
                 "@{}"
                 + xspec((1.25, "RaggedRight"), (0.95, "RaggedRight"))
                 + r"@{\hspace{0.45em}}c c c@{}",
-                ["Benchmark", "Route", "Outcome", "Time [s]", "Energy"],
+                ["Benchmark", "Route", "Outcome", "Solve/total/wall [s]", "Energy"],
                 [
                     [
                         DERIVATIVE_BENCHMARK_LABELS.get(str(row["benchmark"]), str(row["benchmark_label"])),

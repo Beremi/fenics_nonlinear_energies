@@ -48,7 +48,7 @@ MATLAB literature only when there is source-backed evidence.
 - SIOPT submission-shape cue checked on 2026-07-09: SIAM's author instructions
   ask for figures to be embedded inline and state that SIOPT has a 25-page
   policy, with longer papers published only in exceptional justified cases. The
-  current 40-page A4 article is therefore a journal-template/page-budget blocker
+  current 41-page A4 article is therefore a journal-template/page-budget blocker
   rather than a solved formatting issue.
 
 ## Manuscript Nodes
@@ -154,6 +154,10 @@ MATLAB literature only when there is source-backed evidence.
   `\theta_q` in the generic element contribution and aligns implementation
   wording with the methods caveat: constitutive AD gives branchwise tangents,
   while colored sparse recovery may use HVP or finite-difference probes.
+  Current solver-protocol chunk adds a common solver-status and timing
+  vocabulary after the globalization algorithms, so completed endpoint solves,
+  fixed-work diagnostics, capped runs, wall times, solver timers, and relative
+  correction targets are defined before the numerical tables use them.
 - `IMPLEMENTATION`: realization of the method.
   Current assets: pure JAX, FEniCS, and JAX+PETSc strata; autodiff modes;
   Krylov/preconditioner matrix; distributed assembly.
@@ -334,6 +338,10 @@ MATLAB literature only when there is source-backed evidence.
   summaries, replaces remaining process-local wording with level-specific
   problem wording, and regenerates the hyperelastic PMG table with paper-facing
   `Hypre` and `MUMPS, one redundant group` labels.
+  Current solver-protocol chunk adds a numerical-protocol summary at the start
+  of the results section, retitles mixed timing columns as `Solve/elapsed [s]`
+  and `Solve/total/wall [s]`, and clarifies the Plasticity2D generated-table
+  caption as endpoint plus fixed-work diagnostic evidence.
 - `DISCUSSION_CONCLUSION`: interpretation and scope.
   Current prose states the toolset lesson in paper-facing terms: automatic
   differentiation alone does not determine large nonlinear FEM behavior;
@@ -356,7 +364,7 @@ MATLAB literature only when there is source-backed evidence.
   keeps broad conclusions tied to documented solver construction and numerical
   evidence rather than a software-ranking or framework-ranking claim.
 - `FIGURES_TABLES`: visual and layout quality.
-  Current fact: `paper/build/main.pdf` is 40 pages, A4, 10 pt article,
+  Current fact: `paper/build/main.pdf` is 41 pages, A4, 10 pt article,
   text width about 7.09 in. Many floats use `[H]`, so placement is highly manual.
   Figure/layout subagent audit: assets are technically clean at current A4
   width, with embedded fonts and 600 ppi raster layers, but dense 3D
@@ -469,6 +477,11 @@ MATLAB literature only when there is source-backed evidence.
   Remaining current-A4 layout compromise: Section 6 leaves some blank space
   before the forced hyperelasticity figure/table block, but the prior
   figure/table inversion is gone.
+  Current solver-protocol chunk rebuilt the 41-page PDF after adding the
+  reporting-vocabulary and numerical-protocol tables. `make -C paper
+  submission-check` passed after shortening one generated table cell that caused
+  an underfull box. Rendered pages 5--6 and 24--25 were visually checked; the
+  new tables are readable, unclipped, and within the text block.
 - `REPRO`: reproducibility and submission readiness.
   Known blockers from `paper/todo.md`: target journal/template/declarations,
   repository license/archive DOI, and archive-neutral provenance for critical
@@ -515,13 +528,13 @@ MATLAB literature only when there is source-backed evidence.
   Plasticity3D surface, slice, degree-energy, and convergence inputs for the
   submitted figures, with raw source hashes recorded in metadata. Current
   table-provenance chunk adds `paper/tables/generated/manifest.json` with source
-  provenance for all 30 generated tables. The validator now requires table
-  source records for all 28 TeX-included generated tables. Current
+  provenance for all 32 generated tables. The validator now requires table
+  source records for all 30 TeX-included generated tables. Current
   archive-coverage chunk expands the curated bundle with small raw/report table
   inputs, Plasticity2D endpoint and resolution inputs, and the Plasticity3D
   recommended-scaling per-rank outputs. A table-specific fixed-reference PMG
   summary replaces internal route identifiers with paper-facing aliases, so all
-  30 generated table sources are now archive-neutral. Current front/back/leakage
+  32 generated table sources are now archive-neutral. Current front/back/leakage
   chunk keeps the availability statement truthful for the current repository
   snapshot by naming the source repository and stating that no separate archival
   DOI is cited for this version; the DOI/license and target-venue declaration
@@ -529,6 +542,10 @@ MATLAB literature only when there is source-backed evidence.
   Current float/font chunk leaves archive-neutral validation green and updates
   only paper source, generated tables, the hyperelasticity state figure, and the
   rebuilt PDF. It does not resolve release-level blockers: target template,
+  declarations, license, archival release/DOI, and final bundle integration.
+  Current solver-protocol chunk leaves archive-neutral validation green and
+  updates only paper source, generated tables, readiness notes, and the rebuilt
+  PDF. It does not resolve the release-level blockers: target template,
   declarations, license, archival release/DOI, and final bundle integration.
 
 ## Evidence Nodes
@@ -902,7 +919,7 @@ MATLAB literature only when there is source-backed evidence.
   rendered after rebuild to confirm the page-20, page-23, page-33, and page-35
   blank-region behavior improved rather than merely moved.
 - `Generated-table provenance audit` (`Confucius-current`): completed. Key
-  finding: 28 generated tables are included by TeX, while two generated table
+  finding: 30 generated tables are included by TeX, while two generated table
   files are currently unused. Included-table inputs are known: static constants,
   tracked docs assets, curated bundle inputs, or raw/report paths; no included
   table had unknown file inputs. This informed the table manifest and validator
@@ -952,6 +969,14 @@ MATLAB literature only when there is source-backed evidence.
   hyperelastic scaling figures are interpreted in body text; generated benchmark
   tables use solver-realization labels; and the appendix table sequence is
   protected by a new aux-order check plus `make submission-check`.
+- `Solver protocol/timing audit` (`Bernoulli-protocol`): completed. Findings
+  addressed in the current solver-protocol chunk: timing headers now distinguish
+  mixed solve, total, elapsed, and wall-time scopes; a solver-status vocabulary
+  table defines completed, capped, fixed-work, and correction-target semantics;
+  a results-section protocol summary maps each evidence block to its solver
+  policy and stopping contract; Plasticity3D validation and performance timing
+  roles remain separated; and the Plasticity2D table caption now names
+  endpoint plus fixed-work diagnostic evidence.
 
 ## First Edit Backlog
 

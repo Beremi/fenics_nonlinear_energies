@@ -7,7 +7,19 @@ equations, discrete energies, and representative states, and
 evidence. Here we focus on parallel timings, scaling trends, solver behavior,
 and the comparative cost of alternative derivative or discretization choices.
 Earlier timing evidence is retained when it clarifies scalability, but it is
-treated as performance evidence rather than validation evidence.
+treated as performance evidence rather than validation evidence. The status and
+timing terms used below follow the protocol in
+\Cref{tab:solver-reporting-protocol}.
+
+\begin{table}[!htbp]
+  \centering
+  \scriptsize
+  \input{tables/generated/numerical_protocol_summary.tex}
+  \caption{Numerical evidence blocks and reporting protocol used in this
+  section. Exact tolerances and caps are stated with the corresponding result
+  when they affect the interpretation.}
+  \label{tab:numerical-protocol-summary}
+\end{table}
 
 \subsection{Globalization Method Comparison}
 \label{sec:num-globalization}

@@ -1,0 +1,12 @@
+\begin{tabularx}{\textwidth}{@{}>{\hsize=0.839\hsize\linewidth=\hsize\RaggedRight\arraybackslash}X>{\hsize=0.882\hsize\linewidth=\hsize\RaggedRight\arraybackslash}X>{\hsize=1.204\hsize\linewidth=\hsize\RaggedRight\arraybackslash}X>{\hsize=1.129\hsize\linewidth=\hsize\RaggedRight\arraybackslash}X>{\hsize=0.946\hsize\linewidth=\hsize\RaggedRight\arraybackslash}X@{}}
+\toprule
+Evidence block & Role & Solver policy & Stop or fixed work & Reported time \\
+\midrule
+Scalar benchmarks & formulation, derivative-route, and globalization evidence & Newton with Armijo or the stated trust-region variant; CG or GMRES with Hypre in PETSc rows & configured nonlinear tolerances; capped rows are diagnostic & wall or solve/elapsed time in globalization rows \\
+Hyperelasticity & finite-strain mechanics, JAX-FEM comparison, and scaling & trust-region or line-search Newton; GAMG or same-mesh PMG profiles as stated & per-load-step stationarity; fixed-step rows are solver diagnostics & wall time for benchmark rows; solver total for first-step scaling \\
+Plasticity2D & endpoint evidence plus larger fixed-work diagnostics & Armijo continuation with same-mesh PMG smoother policy & $P_4(L_5)$ is the endpoint solve; $P_4(L_6)$--$P_4(L_7)$ are fixed-iteration diagnostics & wall time for the stated endpoint or fixed-work run \\
+Plasticity3D validation & endpoint-surrogate agreement, not path-history validation & fixed-load reference-model comparisons under matched boundary conditions & validation criteria use fixed-load observables; strain/profile rows are diagnostic & timing is secondary to agreement metrics \\
+Plasticity3D performance & second-order routes, globalization, and parallel scaling & Armijo, residual-bisection, or trust-region Newton with FGMRES and same-mesh PMG & relative correction, gradient target, cap, or fixed work as stated & wall, solve, or solver-total time according to the table header \\
+Topology & distributed design-mechanics timing and rank consistency & adaptive reduced-objective continuation with PETSc mechanics and GAMG & design/state-change stall criterion or fixed schedule & end-to-end wall time \\
+\bottomrule
+\end{tabularx}

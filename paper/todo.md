@@ -127,6 +127,10 @@ scientific claims were introduced without supporting evidence.
   float pages, fixed the hyperelastic state figure font family, and forced the
   Plasticity3D derivative-route table to precede the following
   discretization/scaling figure.
+- Added a solver-status and timing vocabulary table, a numerical-protocol
+  summary for the results section, explicit mixed timing headers for
+  globalization and derivative-route comparisons, and a Plasticity2D caption
+  that distinguishes endpoint values from fixed-work diagnostics.
 - Rebuilt the paper PDF through the paper generation pipeline.
 
 ## Blocking Issues Before Submission
@@ -236,8 +240,8 @@ required support for the current scoped contribution.
   command passed and generated `paper/literature/sources.md` with 24 public
   entries, 9 non-public local entries, and 3 unavailable entries.
 - `./.venv/bin/python paper/scripts/generate_paper_tables.py`: passed.
-  The current generated table manifest records 30 generated tables; all 28
-  TeX-included generated tables have source records, and all 30 generated table
+  The current generated table manifest records 32 generated tables; all 30
+  TeX-included generated tables have source records, and all 32 generated table
   sources are archive-neutral.
 - `./.venv/bin/python paper/scripts/generate_paper_figures.py --manifest-only`:
   passed and rewrote the figure manifest; the manifest records 34 generated
@@ -246,16 +250,18 @@ required support for the current scoped contribution.
   wrote `artifacts/reproduction/paper_submission_2026_07_08/manifest.json` with
   source and bundle SHA256 hashes for 46 paper-critical inputs.
 - `./.venv/bin/python paper/scripts/validate_paper_assets.py`: passed on
-  2026-07-09 with 29 figures, 28 generated tables, figure source records, table
-  source records, and 42 paper-facing provenance-scan files checked.
+  2026-07-09 with 29 figures, 30 generated tables, figure source records, table
+  source records, and 44 paper-facing provenance-scan files checked.
 - `./.venv/bin/python paper/scripts/validate_paper_assets.py --archive-neutral`:
   passed on 2026-07-09 against the curated submission bundle and
   archive-neutral table inputs.
 - `make -C paper publish-check`: passed on 2026-07-09.
 - `./.venv/bin/python -m py_compile paper/scripts/generate_paper_tables.py paper/scripts/check_pdf_aux_order.py`:
   passed on 2026-07-09.
+- `./.venv/bin/python -m py_compile paper/scripts/generate_paper_tables.py`:
+  passed on 2026-07-09 after the solver-protocol table edits.
 - `(cd paper && latexmk -pdf -interaction=nonstopmode -halt-on-error main.tex)`:
-  passed after the generated table and prose cleanup, refreshing a 40-page
+  passed after the generated table and prose cleanup, refreshing a 41-page
   `paper/build/main.pdf`.
 - `qpdf --check paper/build/main.pdf`: passed with no syntax or stream errors.
 - `./.venv/bin/python paper/scripts/check_pdf_aux_order.py paper/build/main.aux`:
@@ -270,6 +276,9 @@ required support for the current scoped contribution.
   `CMSY`) rather than the previous NewTX/Termes outlier.
 - `make -C paper submission-check`: passed again on 2026-07-09 after the
   Plasticity3D Figure 26 float-placement fix.
+- `make -C paper submission-check`: passed again on 2026-07-09 after the
+  solver-protocol table additions; the check covers LaTeX warning scans,
+  `qpdf`, aux-order validation, and archive-neutral asset validation.
 - Rendered and visually inspected representative pages 1, 5, 9, 21, and
   30--32 after the latest rebuild; the current A4 PDF is readable and unclipped,
   with page 30 improved but dense floats/tables still template-fragile.
@@ -280,6 +289,9 @@ required support for the current scoped contribution.
 - Rendered and visually inspected affected pages 1, 15--18, 27--29, and
   35--36 after the latest rebuild; the new Plasticity2D equations, scaling
   interpretations, and appendix table sequence are readable and unclipped.
+- Rendered and visually inspected affected pages 5--6 and 24--25 after the
+  latest rebuild; the solver vocabulary table and numerical-protocol summary
+  are readable, unclipped, and within the current A4 text block.
 - `./.venv/bin/python -m pytest tests/test_docs_publication.py`: passed
   13 tests.
 - `./.venv/bin/python -m pytest tests/test_final_report_figure_generators.py`:
