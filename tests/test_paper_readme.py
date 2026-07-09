@@ -19,6 +19,7 @@ def test_paper_readme_documents_readiness_gates() -> None:
         assert command in text
 
     assert "release-check` is expected to fail" in text
+    assert "hard-float placement allowlist" in text
     assert "Target venue/template" in text
     assert "Root repository license" in text
     assert "archival DOI" in text
@@ -30,3 +31,10 @@ def test_paper_readme_keeps_style_guide_local_only() -> None:
     assert "paper/style_guide/" in text
     assert ".git/info/exclude" in text
     assert "must not be staged" in text
+
+
+def test_paper_readme_documents_hard_float_guard() -> None:
+    text = PAPER_README.read_text(encoding="utf-8")
+
+    assert "hard `[H]` floats" in text
+    assert "paper/scripts/check_float_placements.py" in text

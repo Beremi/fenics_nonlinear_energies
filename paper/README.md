@@ -32,8 +32,9 @@ Run commands from the repository root unless noted otherwise.
 - `make -C paper publish-check`: verify archive-neutral paper provenance,
   including submission-bundle manifest SHA-256 records.
 - `make -C paper submission-check`: build the PDF and run the LaTeX-log scan,
-  `qpdf`, figure/table aux-order check, PDF-text manuscript hygiene check,
-  submission-bundle hash check, and archive-neutral asset validation.
+  `qpdf`, figure/table aux-order check, hard-float placement allowlist,
+  PDF-text manuscript hygiene check, submission-bundle hash check, and
+  archive-neutral asset validation.
 - `make -C paper release-blockers`: print final-release blockers that local
   build checks cannot resolve.
 - `make -C paper release-check`: run `submission-check` and then fail unless
@@ -64,6 +65,8 @@ is present in the current repository state.
 - Interpret figures and tables in body text, not only captions.
 - Avoid process-local wording such as local paths, run tags, repository-local
   labels, and defensive software-ranking phrasing.
+- Do not introduce new hard `[H]` floats without a reasoned allowlist entry in
+  `paper/scripts/check_float_placements.py`.
 - Keep validation and performance evidence conceptually separate.
 - Do not change final figure/table assets without finding or updating the
   generation path first.

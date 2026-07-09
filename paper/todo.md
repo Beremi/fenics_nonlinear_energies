@@ -242,6 +242,9 @@ scientific claims were introduced without supporting evidence.
   flexible `[!htbp]` placement with local `\FloatBarrier` guards after their
   interpretation paragraphs, reducing target-template fragility while preserving
   current evidence order.
+- Added a hard-float placement checker to `make -C paper submission-check`,
+  with an allowlist for the remaining intentional `[H]` algorithms and
+  tightly coupled validation/results/support floats.
 - Rebuilt the paper PDF through the paper generation pipeline.
 
 ## Blocking Issues Before Submission
@@ -541,6 +544,12 @@ required support for the current scoped contribution.
 - `pdftotext -f 22 -l 24 paper/build/main.pdf -`: checked the
   Topology-to-Validation boundary; topology figures and interpretation appear
   before `Validation and External Comparisons`.
+- `./.venv/bin/python -m pytest tests/test_paper_float_placements.py`: passed
+  3 tests for the hard-float placement guard.
+- `./.venv/bin/python paper/scripts/check_float_placements.py`: passed on the
+  current paper source with 13 allowlisted `[H]` floats.
+- `make -C paper submission-check`: passed with the hard-float placement guard
+  included in the normal PDF submission gate.
 - `./.venv/bin/python -m pytest tests/test_docs_publication.py`: passed
   13 tests.
 - `./.venv/bin/python -m pytest tests/test_final_report_figure_generators.py`:

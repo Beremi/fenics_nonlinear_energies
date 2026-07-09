@@ -772,7 +772,9 @@ MATLAB literature only when there is source-backed evidence.
   Current benchmark-float chunk relaxes benchmark-definition figures and tables
   from `[H]` to `[!htbp]`, with local barriers after interpretation paragraphs;
   the A4 PDF remains 43 pages and the Topology-to-Validation boundary was
-  checked by PDF text extraction.
+  checked by PDF text extraction. Current float-guard chunk adds a source-level
+  allowlist check for the 13 remaining intentional `[H]` floats and wires it
+  into `make -C paper submission-check`.
 
 ## Evidence Nodes
 
