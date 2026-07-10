@@ -9,23 +9,23 @@ Section~\ref{subsec:evidence-contract}.
 \subsection{Fixed-state quadrature sensitivity}
 \label{subsec:quadrature-sensitivity}
 
-Table~\ref{tab:revision-quadrature-sensitivity} evaluates each stored endpoint
-with its solve rule and with a common 125-point Duffy rule. The residuals are
-raw free-coefficient $\ell^2$ diagnostics because these historical endpoints
-predate the Riesz contract. Tangent actions use one deterministic unit
-direction shared by every rule.
+Table~\ref{tab:revision-quadrature-sensitivity} evaluates one prescribed fixed
+state for each degree with its degree-associated rule and with a common
+125-point Duffy rule. The residuals are raw free-coefficient $\ell^2$
+diagnostics and are not stopping metrics. Tangent actions use one deterministic
+unit direction shared by every rule.
 
 \begin{table}[!htbp]
   \centering
-  \caption{Fixed-state quadrature sensitivity. The solve-rule and reference-
-  rule residuals evaluate the same stored coefficient vector. Energy and
+  \caption{Fixed-state quadrature sensitivity. The degree-associated and
+  reference rules evaluate the same prescribed coefficient vector. Energy and
   tangent differences are relative to the 125-point rule.}
   \label{tab:revision-quadrature-sensitivity}
   \input{tables/generated/revision_quadrature_sensitivity.tex}
 \end{table}
 
 The P1 integrand is constant on each affine tetrahedron, and all reported
-objects agree to roundoff. The P2 endpoint is nearly unchanged in energy:
+objects agree to roundoff. The P2 fixed state is nearly unchanged in energy:
 the 11-point and 125-point values differ by $1.84\times10^{-8}$ relatively.
 However, its enriched-rule residual is $7.84\times10^2$, and the tangent
 action changes by $2.08\%$. For P4, the corresponding values are
@@ -34,11 +34,12 @@ One P2 reference-rule sample lies inside the $10^{-8}$ branch-margin exclusion
 band. Its action is therefore the derivative of the deterministically selected
 branch, not an ordinary Hessian at a smooth point.
 
-These results invalidate the historical energy-only degree trend. The stored
-P2 and P4 endpoints are stationary only for their solve-rule functionals to
-the displayed coefficient residuals. They cannot be interpreted as approximate
-solutions of the enriched functional. New 24- and 125-point solves are required
-before a mesh, degree, or quadrature-convergence statement can be restored.
+These results show that energy agreement alone is insufficient for a
+derivative comparison. Because every state is prescribed rather than obtained
+from a nonlinear solve, this experiment neither measures endpoint stationarity
+nor establishes a quadrature policy. The separate high-order solved-endpoint
+campaign remains necessary before we draw conclusions about mesh, degree, or
+quadrature convergence.
 
 \subsection{Mesh-aware stopping diagnostics}
 \label{subsec:stopping-results}
