@@ -43,6 +43,9 @@ Current implementation and reference material:
 - [HyperElasticity JAX+PETSc implementation](implementation/hyperelasticity_jax_petsc.md)
 - [Topology JAX+PETSc implementation](implementation/topology_jax_petsc.md)
 - [Problem formulation brief](reference/problem_formulation_brief.md)
+- [Publication run-record contract](reference/publication_run_records.md)
+- [Clean revision-publication campaign finalization](reference/revision_publication_campaign_finalization.md)
+- [Convergence metrics for publication runs](reference/convergence_metrics.md)
 - [GAMG setup for elastic-like systems](reference/he_gamg_elasticity_setup.md)
 
 ## Historical Material

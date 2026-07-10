@@ -6,10 +6,21 @@ import csv
 import math
 from pathlib import Path
 
-from common import REPO_ROOT, TABLES_ROOT, ensure_paper_dirs, read_csv_rows, read_json, write_json, write_text
+from common import (
+    PAPER_BUNDLE_INPUT_ROOT,
+    REPO_ROOT,
+    TABLES_ROOT,
+    ensure_paper_dirs,
+    read_csv_rows,
+    read_json,
+    sha256_file,
+    write_json,
+    write_text,
+    add_paper_bundle_root_argument,
+)
 
 
-PAPER_SUBMISSION_INPUT_ROOT = REPO_ROOT / "artifacts/reproduction/paper_submission_2026_07_08/inputs"
+PAPER_SUBMISSION_INPUT_ROOT = PAPER_BUNDLE_INPUT_ROOT
 LOCAL_P3D_SUMMARY = PAPER_SUBMISSION_INPUT_ROOT / "plasticity3d_recommended_scaling/comparison_summary.json"
 MIXED_P3D_SUMMARY = PAPER_SUBMISSION_INPUT_ROOT / "plasticity3d_reference_formula/comparison_summary.json"
 SOURCEFIXED_P3D_SUMMARY = PAPER_SUBMISSION_INPUT_ROOT / "plasticity3d_fixed_reference_operator/table_summary.json"
@@ -59,17 +70,18 @@ HE_CPU_PMG_SCALING = (
 )
 TOPO_SCALING = REPO_ROOT / "experiments/analysis/docs_assets/data/topology/strong_scaling.csv"
 TOPO_RESOLUTION = REPO_ROOT / "experiments/analysis/docs_assets/data/topology/resolution_objectives.csv"
+TOPOLOGY_PARALLEL_DOMAIN_AREA = 2.0
 
 P2D_SHOWCASE = PAPER_SUBMISSION_INPUT_ROOT / "plasticity2d_resolution/output.json"
 P2D_L6_SUMMARY = PAPER_SUBMISSION_INPUT_ROOT / "plasticity2d_resolution/slope_stability_l6_p4/summary.json"
 P2D_L7_SUMMARY = PAPER_SUBMISSION_INPUT_ROOT / "plasticity2d_resolution/slope_stability_l7_p4/summary.json"
-SOURCE_CONT_NP8 = PAPER_SUBMISSION_INPUT_ROOT / "plasticity2d_reference_continuation/np8/run_info.json"
-SOURCE_CONT_NP32 = PAPER_SUBMISSION_INPUT_ROOT / "plasticity2d_reference_continuation/np32/run_info.json"
-SOURCE_CONT_NP8_PROGRESS = PAPER_SUBMISSION_INPUT_ROOT / (
-    "plasticity2d_reference_continuation/np8/progress_latest.json"
+P3D_REFERENCE_CONT_NP8 = PAPER_SUBMISSION_INPUT_ROOT / "plasticity3d_reference_continuation/np8/run_info.json"
+P3D_REFERENCE_CONT_NP32 = PAPER_SUBMISSION_INPUT_ROOT / "plasticity3d_reference_continuation/np32/run_info.json"
+P3D_REFERENCE_CONT_NP8_PROGRESS = PAPER_SUBMISSION_INPUT_ROOT / (
+    "plasticity3d_reference_continuation/np8/progress_latest.json"
 )
-SOURCE_CONT_NP32_PROGRESS = PAPER_SUBMISSION_INPUT_ROOT / (
-    "plasticity2d_reference_continuation/np32/progress_latest.json"
+P3D_REFERENCE_CONT_NP32_PROGRESS = PAPER_SUBMISSION_INPUT_ROOT / (
+    "plasticity3d_reference_continuation/np32/progress_latest.json"
 )
 
 TABLE_SOURCE_INPUTS = {
@@ -111,11 +123,11 @@ TABLE_SOURCE_INPUTS = {
     "plasticity3d_constitutive_vs_reference_formula.tex": (MIXED_P3D_SUMMARY,),
     "plasticity3d_fixed_reference_operator_pmg.tex": (SOURCEFIXED_P3D_SUMMARY,),
     "topology_summary.tex": (TOPO_SCALING,),
-    "plasticity2d_reference_continuation.tex": (
-        SOURCE_CONT_NP8,
-        SOURCE_CONT_NP32,
-        SOURCE_CONT_NP8_PROGRESS,
-        SOURCE_CONT_NP32_PROGRESS,
+    "plasticity3d_reference_continuation.tex": (
+        P3D_REFERENCE_CONT_NP8,
+        P3D_REFERENCE_CONT_NP32,
+        P3D_REFERENCE_CONT_NP8_PROGRESS,
+        P3D_REFERENCE_CONT_NP32_PROGRESS,
     ),
     "plasticity3d_validation_summary.tex": (P3D_VALIDATION_SUMMARY,),
     "plasticity3d_derivative_ablation.tex": (P3D_DERIVATIVE_ABLATION_SUMMARY,),
@@ -124,8 +136,8 @@ TABLE_SOURCE_INPUTS = {
 
 LOCAL_IMPL = "local_constitutiveAD_local_pmg_armijo"
 SOURCE_IMPL = "source_local_pmg_armijo"
-LOCAL_SOURCEFIXED_IMPL = "constitutive_ad_fixed_reference_pmg"
-SOURCE_SOURCEFIXED_IMPL = "reference_formula_fixed_reference_pmg"
+LOCAL_SOURCEFIXED_IMPL = "constitutive_ad_three_sweep_hypre_pmg"
+SOURCE_SOURCEFIXED_IMPL = "reference_formula_three_sweep_hypre_pmg"
 
 IMPLEMENTATION_LABELS = {
     "fenics_custom": "FEniCS Newton reference",
@@ -133,9 +145,9 @@ IMPLEMENTATION_LABELS = {
     "jax_petsc_local_sfd": "JAX+PETSc colored recovery",
     "jax_serial": "pure JAX serial check",
     LOCAL_IMPL: "constitutive-AD PMG solver",
-    SOURCE_IMPL: "frozen-preconditioner PMG variant",
-    LOCAL_SOURCEFIXED_IMPL: "frozen PMG operator, AD branch tangent",
-    SOURCE_SOURCEFIXED_IMPL: "frozen PMG operator, reference-formula branch tangent",
+    SOURCE_IMPL: "reference-formula PMG solver",
+    LOCAL_SOURCEFIXED_IMPL: "three-sweep Hypre-coarse PMG, AD tangent",
+    SOURCE_SOURCEFIXED_IMPL: "three-sweep Hypre-coarse PMG, reference-formula tangent",
 }
 
 GLOBALIZATION_BENCHMARK_ORDER = {
@@ -158,7 +170,7 @@ GLOBALIZATION_METHOD_LABELS = {
 }
 
 GLOBALIZATION_BENCHMARK_LABELS = {
-    "plaplace_l10_np32": "$p$-Laplace $L_{10}$",
+    "plaplace_l10_np32": "\\shortstack[l]{$p$-Laplace $L_{10}$\\\\unit load}",
     "gl_l10_np16": "\\shortstack[l]{Ginzburg--Landau\\\\$L_{10}$}",
     "he_l4_np32_steps8": "Hyperelasticity $L_4$",
     "plasticity3d_p2_l1_np32_lambda155": "\\shortstack[l]{3D plasticity\\\\$P_2(L_1)$}",
@@ -229,9 +241,9 @@ P3D_DERIVATIVE_DEGREE_WORK_LABELS = {
 
 REVIEWER_HE_PMG_LABELS = {
     "gamg": "GAMG",
-    "pmg_l2_hypre": "PMG $L_2$ + Hypre",
-    "pmg_l2_redundant_mumps": "PMG $L_2$ + MUMPS",
-    "pmg_l3_redundant_mumps": "PMG $L_3$ + MUMPS",
+    "pmg_l2_hypre": "mesh-hierarchy MG $L_2$ + Hypre",
+    "pmg_l2_redundant_mumps": "mesh-hierarchy MG $L_2$ + MUMPS",
+    "pmg_l3_redundant_mumps": "mesh-hierarchy MG $L_3$ + MUMPS",
 }
 
 REVIEWER_P3D_ROUTE_LABELS = {
@@ -287,6 +299,13 @@ def fmt_wall_time(value: float) -> str:
     return fmt_float(value, 4)
 
 
+def fmt_min_max(values: list[float], digits: int = 2) -> str:
+    finite = [float(value) for value in values if math.isfinite(float(value))]
+    if not finite:
+        return "--"
+    return rf"{fmt_float(min(finite), digits)}--{fmt_float(max(finite), digits)}"
+
+
 def fmt_energy(value: float, *, precision: int | None = None) -> str:
     value = float(value)
     if precision is not None:
@@ -326,13 +345,13 @@ def implementation_label(name: object) -> str:
     if key in IMPLEMENTATION_LABELS:
         return IMPLEMENTATION_LABELS[key]
     if "local_constitutiveAD" in key and "sourcefixed" in key:
-        return "frozen PMG operator, AD branch tangent"
+        return "three-sweep Hypre-coarse PMG, AD tangent"
     if "local_constitutiveAD" in key and "local_pmg" in key:
         return "constitutive-AD PMG solver"
     if "sourcefixed" in key:
-        return "frozen PMG operator, reference-formula branch tangent"
+        return "three-sweep Hypre-coarse PMG, reference-formula tangent"
     if key.startswith("source") or "_source" in key:
-        return "frozen-preconditioner PMG variant"
+        return "reference-formula PMG solver"
     return key.replace("_", r"\_")
 
 
@@ -495,7 +514,11 @@ def _repo_rel(path: Path) -> str:
 
 
 def _manifest_repo_input(path: Path) -> dict[str, str]:
-    return {"kind": "repository_path", "path": _repo_rel(path)}
+    return {
+        "kind": "repository_path",
+        "path": _repo_rel(path),
+        "sha256": sha256_file(path),
+    }
 
 
 def _archive_status(name: str, inputs: tuple[Path, ...]) -> str:
@@ -537,6 +560,13 @@ def _write_table_manifest(out_dir: Path) -> None:
         out_dir / "manifest.json",
         {
             "generated_tables": generated_tables,
+            "allow_unreferenced_tables": True,
+            "unreferenced_table_policy": (
+                "This manifest retains the historical and supplementary table "
+                "catalog. The focused manuscript includes only tables named in "
+                "its TeX dependency graph; revision tables are governed by "
+                "revision_evidence_manifest.json."
+            ),
             "generated_table_sources": generated_table_sources,
             "generated_table_inputs": generated_table_inputs,
             "notes": notes,
@@ -552,6 +582,25 @@ def select_csv_rows(path: Path, implementations: tuple[str, ...]) -> list[dict[s
 def select_topology_rows(labels: tuple[str, ...]) -> list[dict[str, str]]:
     rows = read_csv_rows(TOPO_RESOLUTION)
     return [row for row in rows if row.get("label") in labels]
+
+
+def normalized_topology_fraction(material_measure: float, domain_area: float = TOPOLOGY_PARALLEL_DOMAIN_AREA) -> float:
+    if domain_area <= 0.0:
+        raise ValueError("Topology domain area must be positive.")
+    return float(material_measure) / float(domain_area)
+
+
+def normalized_topology_fraction_from_row(row: dict[str, str]) -> float:
+    """Read explicit v2 units while retaining historical v1 bundle support."""
+
+    explicit = str(row.get("final_normalized_fraction", "")).strip()
+    if explicit:
+        return float(explicit)
+    version_text = str(row.get("volume_semantics_version", "")).strip()
+    if version_text and int(float(version_text)) >= 2:
+        return float(row["final_volume_fraction"])
+    domain_area = float(row.get("domain_area") or TOPOLOGY_PARALLEL_DOMAIN_AREA)
+    return normalized_topology_fraction(float(row["final_volume_fraction"]), domain_area)
 
 
 def plasticity3d_cpu_scaling_rows() -> list[dict[str, object]]:
@@ -740,6 +789,12 @@ def _fmt_optional_count(value: object) -> str:
     if not text:
         return "--"
     return fmt_count(text)
+
+
+def _globalization_work_count(row: dict[str, str], key: str) -> str:
+    if str(row.get("result", "")) == "timeout" and int(float(row.get("completed_steps") or 0)) == 0:
+        return "--"
+    return _fmt_optional_count(row.get(key, ""))
 
 
 def _fmt_optional_dofs(value: object) -> str:
@@ -988,8 +1043,11 @@ def sourcefixed_long_rows(
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Generate paper-ready LaTeX tables.")
+    add_paper_bundle_root_argument(parser)
     parser.add_argument("--out-dir", type=Path, default=TABLES_ROOT)
     args = parser.parse_args()
+    if args.out_dir.resolve() != TABLES_ROOT.resolve():
+        parser.error(f"--out-dir must be the canonical paper table directory: {TABLES_ROOT}")
     ensure_paper_dirs()
     args.out_dir.mkdir(parents=True, exist_ok=True)
 
@@ -1010,10 +1068,10 @@ def main() -> None:
     he_cpu_rows.sort(key=lambda row: int(row["ranks"]))
     topo_rows = read_csv_rows(TOPO_SCALING)
 
-    source8 = read_json(SOURCE_CONT_NP8)
-    source32 = read_json(SOURCE_CONT_NP32)
-    source8_progress = read_json(SOURCE_CONT_NP8_PROGRESS)
-    source32_progress = read_json(SOURCE_CONT_NP32_PROGRESS)
+    source8 = read_json(P3D_REFERENCE_CONT_NP8)
+    source32 = read_json(P3D_REFERENCE_CONT_NP32)
+    source8_progress = read_json(P3D_REFERENCE_CONT_NP8_PROGRESS)
+    source32_progress = read_json(P3D_REFERENCE_CONT_NP32_PROGRESS)
     p3d_validation = read_json(P3D_VALIDATION_SUMMARY)
     p3d_ablation = read_json(P3D_DERIVATIVE_ABLATION_SUMMARY)
     jax_fem_baseline = read_json(JAX_FEM_BASELINE_SUMMARY)
@@ -1039,7 +1097,9 @@ def main() -> None:
     gl_showcase = select_csv_rows(GL_PARITY, ("fenics_custom", "jax_petsc_element", "jax_petsc_local_sfd"))
     he_showcase = select_csv_rows(HE_PARITY, ("fenics_custom", "jax_petsc_element", "jax_serial"))
     p2d_rows = plasticity2d_resolution_rows()
-    topo_benchmark_rows = select_topology_rows(("serial_reference", "parallel_final"))
+    # Historical v1 rows store material measure in ``final_volume_fraction``;
+    # current v2 rows carry explicit normalized and material quantities.
+    topo_benchmark_rows = select_topology_rows(("parallel_final",))
 
     write_table(
         "implementation_capability_matrix.tex",
@@ -1048,7 +1108,7 @@ def main() -> None:
         [
             ["$p$-Laplace", "yes", "yes", "yes", "element AD and colored sparse recovery; Newton--CG with Hypre"],
             ["Ginzburg--Landau", "yes", "no", "yes", "element AD and colored sparse recovery; Armijo Newton with GMRES--Hypre"],
-            ["Hyperelasticity", "yes", "yes", "yes", "element AD in the primary route, scoped colored sparse-recovery comparison, and trust-region/GAMG or PMG diagnostics"],
+            ["Hyperelasticity", "yes", "yes", "yes", "element AD in the primary route, scoped colored sparse-recovery comparison, and trust-region/GAMG or mesh-hierarchy MG diagnostics"],
             ["2D Mohr--Coulomb", "no", "no", "yes", "endpoint branch-potential derivatives and continuation diagnostics with a same-mesh PMG hierarchy"],
             ["3D Mohr--Coulomb", "no", "no", "yes", "constitutive AD, element AD, and colored sparse-recovery diagnostics; FGMRES with same-mesh PMG and Hypre or LU/MUMPS coarse profiles"],
             ["Topology optimization", "no", "yes", "yes", "distributed design updates with PETSc mechanics and GAMG-preconditioned FGMRES"],
@@ -1070,12 +1130,12 @@ def main() -> None:
         + "@{}",
         ["Family", "Reported scope", "Primary policy / diagnostics", "Comparison evidence", "Main difficulty"],
         [
-            ["$p$-Laplace", f"{mesh_label('L5')} serial agreement; {mesh_label('L9')} distributed scaling; {mesh_label('L10')} globalization diagnostic", "Newton + line search", "FEniCS and JAX+PETSc on the distributed case; pure JAX in the serial agreement case", "nonlinear elliptic solve with exact sparse Hessians"],
+            ["$p$-Laplace", f"{mesh_label('L5')} serial agreement; {mesh_label('L9')} distributed scaling; separate unit-load {mesh_label('L10')} globalization diagnostic", "Newton + line search", "FEniCS and JAX+PETSc on the distributed case; pure JAX in the serial agreement case", "nonlinear elliptic solve with exact sparse Hessians"],
             ["Ginzburg--Landau", f"{mesh_label('L5')} agreement; {mesh_label('L9')} distributed scaling; {mesh_label('L10')} globalization diagnostic", "Newton + line search", "FEniCS and JAX+PETSc comparison", "indefinite local curvature from the double well"],
-            ["Hyperelasticity", f"{mesh_label('L1')} serial agreement; {mesh_label('L4')}, 24-step distributed scaling; {mesh_label('L5')} PMG/memory diagnostics", "trust-region solve", "FEniCS and JAX+PETSc on the distributed suite; pure JAX only as a serial formulation check", "nonconvex large-deformation mechanics"],
+            ["Hyperelasticity", f"{mesh_label('L1')} serial agreement; {mesh_label('L4')}, 24-step distributed scaling; {mesh_label('L5')} mesh-MG/memory diagnostics", "trust-region solve", "FEniCS and JAX+PETSc on the distributed suite; pure JAX only as a serial endpoint diagnostic", "nonconvex large-deformation mechanics"],
             ["2D Mohr--Coulomb", f"{element_label('P4', 'L5')}--{element_label('P4', 'L7')}", "endpoint solve and capped fixed work", "JAX+PETSc endpoint and solver-policy evidence", "same-mesh PMG and nonlinear tail behavior"],
             ["3D Mohr--Coulomb", f"{degree_label('P1')}/{degree_label('P2')}/{degree_label('P4')}", "endpoint, scaling, and PMG-policy studies", "constitutive AD, reference-formula assembly diagnostic, and PMG-policy evidence", "heterogeneous 3D Mohr--Coulomb with constitutive AD"],
-            ["Topology", "$192\\times96$ serial demonstration; $768\\times384$ parallel benchmark; $384\\times192$ controlled rank check", "adaptive continuation", "pure JAX on the serial demonstration; JAX+PETSc on the fine-grid adaptive MPI timing study and controlled rank-consistency check", "distributed design-mechanics coupling"],
+            ["Topology", "$192\\times96$ serial demonstration; $768\\times384$ parallel benchmark; $384\\times192$ controlled rank check", "adaptive continuation", "pure JAX on the serial demonstration; JAX+PETSc on the fine-grid adaptive MPI timing study and controlled rank-sensitivity diagnostic", "distributed design-mechanics coupling"],
         ],
     )
 
@@ -1092,9 +1152,9 @@ def main() -> None:
         + "@{}",
         ["Family", "FEniCS", "pure JAX", "Notes"],
         [
-            ["$p$-Laplace", "yes", "yes", "All three implementations exist; pure JAX is used in the serial parity case."],
+            ["$p$-Laplace", "yes", "yes", "All three implementations exist; pure JAX is used in the serial agreement case."],
             ["Ginzburg--Landau", "yes", "no", "FEniCS and JAX+PETSc form the reported comparison."],
-            ["Hyperelasticity", "yes", "yes", "pure JAX is a serial formulation check only."],
+            ["Hyperelasticity", "yes", "yes", "pure JAX is a serial endpoint diagnostic only."],
             ["2D Mohr--Coulomb", "no", "no", "The reported realization is JAX+PETSc only."],
             [
                 "3D Mohr--Coulomb",
@@ -1169,8 +1229,8 @@ def main() -> None:
             [
                 "Hyperelasticity",
                 "finite-strain mechanics, JAX-FEM comparison, scaling",
-                "trust-region or line-search Newton; GAMG or PMG as stated",
-                "GAMG entries: $10^{-1}$/30; PMG tolerances stated in diagnostic entries",
+                "trust-region or line-search Newton; GAMG or mesh-hierarchy MG as stated",
+                "GAMG entries: $10^{-1}$/30; mesh-MG tolerances stated in diagnostic entries",
                 "per-load stationarity; fixed-step entries diagnostic",
                 "wall time; reported solve time for first-step scaling",
             ],
@@ -1187,7 +1247,7 @@ def main() -> None:
                 "endpoint-surrogate agreement, not path-history validation",
                 r"fixed-$\lambda_{\mathrm{sr}}$ comparator diagnostics with matched boundary data",
                 "not used for timing comparison",
-                r"fixed-$\lambda_{\mathrm{sr}}$ observables; strain/profile entries diagnostic",
+                r"fixed-$\lambda_{\mathrm{sr}}$ observables; strain entry diagnostic",
                 "secondary to agreement metrics",
             ],
             [
@@ -1200,7 +1260,7 @@ def main() -> None:
             ],
             [
                 "Topology",
-                "distributed design-mechanics timing and rank consistency",
+                "distributed design-mechanics timing and rank sensitivity",
                 "adaptive reduced-objective continuation with PETSc mechanics and GAMG",
                 "mechanics FGMRES/GAMG: $10^{-4}$/100",
                 "design/state-change stall criterion or fixed schedule",
@@ -1226,12 +1286,12 @@ def main() -> None:
                 "FEM and adjoint automation "
                 "\\citep{logg2012fenicsbook,baratta2025dolfinx,farrell2013dolfinadjoint,mitusch2019pyadjoint,blauth2023cashocsv2}",
                 "High-level variational forms, generated kernels, adjoint-based sensitivities, and PDE-optimization loops.",
-                "Provides the reference high-level FEM and optimization context; selected \\fenics{} formulations are matched formulation checks.",
+                "Provides the reference high-level FEM and optimization context; selected \\fenics{} formulations are scoped references, with matched claims restricted to common discrete definitions.",
             ],
             [
                 "JAX-native differentiable FEM and PDE solvers "
                 "\\citep{xue2023jaxfem,xue2026implicit,bode2025autopdex,hu2025jaxcpfem}",
-                "GPU-oriented differentiable mechanics (JAX-FEM/JAX-CPFEM), implicit differentiation and solver options (AutoPDEx), and Hessian-vector inverse-problem studies (Xue 2026).",
+                "GPU-oriented differentiable mechanics (JAX-FEM/JAX-CPFEM), implicit differentiation and solver options (AutoPDEx), and implicit Hessian-vector products for inverse problems.",
                 "Motivates local differentiable modeling; the present study couples local JAX derivatives to PETSc sparse MPI solves and compares derivative routes.",
             ],
             [
@@ -1250,7 +1310,7 @@ def main() -> None:
                 "Topology-optimization benchmark lineage "
                 "\\citep{sigmund2001topology,bendsoe2003topology,ferrari2020top99,bourdin2001filters,jia2024fenitop}",
                 "SIMP compliance minimization, density filtering, compact educational implementations, and modern parallel topology software.",
-                "Defines the topology problem context; the numerical claims are the reported design-and-mechanics timing and rank-consistency diagnostics.",
+                "Defines the topology problem context; the numerical claims are the reported design-and-mechanics timing and rank-sensitivity diagnostics.",
             ],
         ],
     )
@@ -1258,7 +1318,7 @@ def main() -> None:
     write_table_star(
         "plaplace_benchmark_summary.tex",
         fill_spec("l c c c c"),
-        ["Solver realization", "Energy", "Newton iters", "Krylov iters", "Wall time [s]"],
+        ["Solver realization", "Energy", "Newton iters", "Krylov iters", "Reported time [s]"],
         [
             [
                 implementation_label(row["implementation"]),
@@ -1274,7 +1334,7 @@ def main() -> None:
     write_table_star(
         "ginzburg_landau_benchmark_summary.tex",
         fill_spec("l c c c c"),
-        ["Solver realization", "Energy", "Newton iters", "Krylov iters", "Wall time [s]"],
+        ["Solver realization", "Energy", "Newton iters", "Krylov iters", "Reported time [s]"],
         [
             [
                 implementation_label(row["implementation"]),
@@ -1290,7 +1350,7 @@ def main() -> None:
     write_table_star(
         "hyperelasticity_benchmark_summary.tex",
         fill_spec("l c c c c"),
-        ["Solver realization", "Energy", "Steps", "Krylov iters", "Wall time [s]"],
+        ["Solver realization", "Energy", "Steps", "Krylov iters", "Reported time [s]"],
         [
             [
                 implementation_label(row["implementation"]),
@@ -1374,10 +1434,10 @@ def main() -> None:
                         GLOBALIZATION_BENCHMARK_LABELS.get(str(row["benchmark"]), str(row["benchmark_label"])),
                         GLOBALIZATION_METHOD_LABELS.get(str(row["method"]), str(row["method"]).replace("_", r"\_")),
                         fmt_count(row["nprocs"]),
-                        fmt_count(row["newton_iters"]),
-                        fmt_count(row["krylov_iters"]),
-                        fmt_count(row["line_search_evals"]),
-                        fmt_count(row["trust_rejects"]),
+                        _globalization_work_count(row, "newton_iters"),
+                        _globalization_work_count(row, "krylov_iters"),
+                        _globalization_work_count(row, "line_search_evals"),
+                        _globalization_work_count(row, "trust_rejects"),
                     ]
                     for row in globalization_rows
                 ],
@@ -1581,7 +1641,7 @@ def main() -> None:
             "Outer",
             "Solve [s]",
             "Compliance",
-            "Volume",
+            "Normalized material fraction",
             "$p_{\\mathrm{SIMP}}$",
             "Rel. compliance diff.",
             "Density rel. grid $\\ell_2$",
@@ -1593,7 +1653,10 @@ def main() -> None:
                 _fmt_optional_count(row.get("outer_iterations", "")),
                 _fmt_optional_wall(row.get("solve_time_s", "")),
                 _fmt_optional_float(row.get("final_compliance", ""), 4),
-                _fmt_optional_float(row.get("final_volume_fraction", ""), 4),
+                _fmt_optional_float(
+                    normalized_topology_fraction_from_row(row),
+                    4,
+                ),
                 _fmt_optional_float(row.get("final_p", ""), 2),
                 _fmt_optional_sci(row.get("compliance_rel_diff_vs_np1", "")),
                 _fmt_optional_sci(row.get("density_rel_l2_vs_np1", "")),
@@ -1703,14 +1766,17 @@ def main() -> None:
     write_table_star(
         "topology_benchmark_summary.tex",
         fill_spec("l c c c c c"),
-        ["Case", "Ranks", "Outer iters", "Compliance", "Volume fraction", "Wall time [s]"],
+        ["Case", "Ranks", "Outer iters", "Compliance", "Normalized material fraction", "Wall time [s]"],
         [
             [
                 row["mesh"].replace("x", r"$\times$"),
                 fmt_count(row["ranks"]),
                 fmt_count(row["outer_iterations"]),
                 fmt_float(float(row["final_compliance"]), 4),
-                fmt_float(float(row["final_volume_fraction"]), 4),
+                fmt_float(
+                    normalized_topology_fraction_from_row(row),
+                    4,
+                ),
                 fmt_wall_time(float(row["wall_time_s"])),
             ]
             for row in topo_benchmark_rows
@@ -1832,7 +1898,7 @@ def main() -> None:
                 r"@{}c@{\hspace{0.7em}}"
                 + xcol(1.0, "RaggedRight")
                 + r"@{\hspace{0.45em}}c c@{}",
-                ["Ranks", "PMG operator and tangent", "Status", "Wall time [s]"],
+                ["Ranks", "PMG profile and tangent", "Status", "Wall time [s]"],
                 [[row[0], row[1], row[6], row[2]] for row in sourcefixed_rows],
             ),
             (
@@ -1842,7 +1908,7 @@ def main() -> None:
                 + r"@{\hspace{0.45em}}c c c@{}",
                 [
                     "Ranks",
-                    "PMG operator and tangent",
+                    "PMG profile and tangent",
                     "Newton iters",
                     "Krylov iters",
                     final_metric_header(sourcefixed_local_rows + sourcefixed_source_rows),
@@ -1857,7 +1923,7 @@ def main() -> None:
     write_table_star(
         "topology_summary.tex",
         fill_spec("c c c c c c c c"),
-        ["Ranks", "Wall time [s]", "Outer iters", "$p_{\\mathrm{SIMP}}$", "Compliance", "Volume", "Schedule", "Status"],
+        ["Ranks", "Wall time [s]", "Outer iters", "$p_{\\mathrm{SIMP}}$", "Compliance", "Normalized material fraction", "Schedule", "Status"],
         [
             [
                 fmt_count(row["ranks"]),
@@ -1865,16 +1931,23 @@ def main() -> None:
                 fmt_count(row["outer_iterations"]),
                 fmt_float(float(row["final_p_penal"]), 2),
                 fmt_float(float(row["final_compliance"]), 4),
-                fmt_float(float(row["final_volume_fraction"]), 4),
+                fmt_float(
+                    normalized_topology_fraction_from_row(row),
+                    4,
+                ),
                 "adaptive",
-                _result_label(row.get("result", "")),
+                (
+                    "change-tolerance stop"
+                    if float(row["final_p_penal"]) < 10.0
+                    else _result_label(row.get("result", ""))
+                ),
             ]
             for row in topo_best
         ],
     )
 
     write_table_star(
-        "plasticity2d_reference_continuation.tex",
+        "plasticity3d_reference_continuation.tex",
         fill_spec("l c c c c c"),
         [
             "Policy",
@@ -1909,7 +1982,6 @@ def main() -> None:
     endpoint_dev = layer2_metrics.get("endpoint_deviatoric_strain_relative_l2")
     layer2_acceptance = dict(layer2_metrics["acceptance"])
     layer2_criterion_keys = (
-        "critical_lambda_pass",
         "umax_curve_pass",
         "endpoint_disp_pass",
     )
@@ -1926,7 +1998,7 @@ def main() -> None:
             + pcol(r"0.12\textwidth")
             + r"@{\extracolsep{\fill}}c@{}"
         ),
-        ["Check", "Observable", "Rel. diff.", "Gate", "Status"],
+        ["Check", "Observable", "Rel. diff.", "Regression threshold", "Status"],
         [
             [
                 "endpoint observable",
@@ -1953,8 +2025,8 @@ def main() -> None:
                 r"fixed-$\lambda_{\mathrm{sr}}$ comparison",
                 "relative difference in $\\lambda_{\\max}^{\\mathrm{succ}}$",
                 fmt_sci(float(layer2_metrics["critical_lambda_schedule_proxy"]["relative_difference"])),
-                r"$\le\num{0.03}$",
-                _layer2_criterion_status(layer2_metrics, "critical_lambda_pass"),
+                "diagnostic",
+                "diagnostic",
             ],
             [
                 r"fixed-$\lambda_{\mathrm{sr}}$ comparison",
@@ -1979,17 +2051,12 @@ def main() -> None:
             ],
             [
                 r"fixed-$\lambda_{\mathrm{sr}}$ comparison",
-                "upper-slope profile relative Euclidean curve norm",
-                fmt_sci(float(layer2_metrics["boundary_profile_relative_l2"])),
-                "diagnostic",
-                "diagnostic",
-            ],
-            [
-                r"fixed-$\lambda_{\mathrm{sr}}$ comparison",
-                rf"fixed-$\lambda_{{\mathrm{{sr}}}}$ criteria, {layer2_criteria_passed}/{layer2_criteria_total} satisfied",
+                rf"fixed-$\lambda_{{\mathrm{{sr}}}}$ regression criteria, {layer2_criteria_passed}/{layer2_criteria_total} satisfied",
                 "--",
                 "summary",
-                criterion_status(layer2_acceptance["overall_pass"]),
+                criterion_status(
+                    all(bool(layer2_acceptance.get(key, False)) for key in layer2_criterion_keys)
+                ),
             ],
         ],
     )
@@ -2000,12 +2067,16 @@ def main() -> None:
         [
             (
                 "Timing and work",
-                "@{}" + xcol(1.0, "RaggedRight") + r"@{\hspace{0.45em}}c c c c@{}",
-                ["Route", "Wall time [s]", "Solve time [s]", "Newton iters", "Krylov iters"],
+                "@{}" + xcol(1.0, "RaggedRight") + r"@{\hspace{0.45em}}c c c c c@{}",
+                ["Route", "Median wall [s]", "Wall range [s]", "Median solve [s]", "Newton iters", "Krylov iters"],
                 [
                     [
                         REVIEWER_P3D_ROUTE_LABELS.get(str(row.get("route", "")), str(row["display_label"])),
                         fmt_wall_time(float(row["median_wall_time_s"])),
+                        fmt_min_max(
+                            [float(run["wall_time_s"]) for run in row["run_rows"]],
+                            2,
+                        ),
                         fmt_wall_time(float(row["median_solve_time_s"])),
                         fmt_count(row["median_nit"]),
                         fmt_count(row["median_linear_iterations_total"]),

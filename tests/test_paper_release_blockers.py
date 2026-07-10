@@ -47,6 +47,28 @@ def _write_manifest(path: Path, limitations: list[str]) -> Path:
     return manifest
 
 
+def _write_revision_evidence_manifest(path: Path, *, publication: bool) -> Path:
+    manifest = path / "paper" / "tables" / "generated" / "revision_evidence_manifest.json"
+    manifest.parent.mkdir(parents=True, exist_ok=True)
+    manifest.write_text(
+        json.dumps(
+            {
+                "schema_version": 2,
+                "evidence_class": "publication" if publication else "diagnostic",
+                "publication_evidence": publication,
+                "status": (
+                    "clean_publication_tables"
+                    if publication
+                    else "diagnostic_tables_not_for_submission"
+                ),
+            }
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    return manifest
+
+
 def test_release_blockers_report_current_unresolved_classes(tmp_path: Path) -> None:
     checker = _load_module()
     manifest = _write_manifest(
@@ -58,6 +80,7 @@ def test_release_blockers_report_current_unresolved_classes(tmp_path: Path) -> N
         r"\documentclass{article}",
         "The code is available on GitHub. No separate archival DOI is cited for this version.",
     )
+    _write_revision_evidence_manifest(tmp_path, publication=False)
 
     blockers = checker.find_release_blockers(repo_root=tmp_path, bundle_manifest=manifest)
 
@@ -66,6 +89,7 @@ def test_release_blockers_report_current_unresolved_classes(tmp_path: Path) -> N
         "repository-license",
         "archival-doi",
         "durable-archive",
+        "revision-evidence",
     }
     durable_archive = next(blocker for blocker in blockers if blocker.code == "durable-archive")
     assert durable_archive.evidence == "artifacts/reproduction/paper_submission_2026_07_08/manifest.json"
@@ -82,6 +106,7 @@ def test_release_blocker_cli_output_uses_relative_manifest_path(tmp_path: Path, 
         r"\documentclass{article}",
         "The code is available on GitHub. No separate archival DOI is cited for this version.",
     )
+    _write_revision_evidence_manifest(tmp_path, publication=False)
 
     exit_code = checker.main(
         [
@@ -108,6 +133,7 @@ def test_release_blockers_pass_when_release_metadata_is_present(tmp_path: Path) 
         r"The archived source and artifact bundle are available at \url{https://doi.org/10.5281/zenodo.1234567}.",
     )
     (tmp_path / "LICENSE").write_text("Chosen license text.\n", encoding="utf-8")
+    _write_revision_evidence_manifest(tmp_path, publication=True)
 
     blockers = checker.find_release_blockers(repo_root=tmp_path, bundle_manifest=manifest)
 

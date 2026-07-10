@@ -9,10 +9,15 @@ import re
 from dataclasses import dataclass
 from pathlib import Path
 
-from common import PAPER_ROOT, REPO_ROOT
+from common import (
+    PAPER_BUNDLE_MANIFEST,
+    PAPER_ROOT,
+    REPO_ROOT,
+    add_paper_bundle_root_argument,
+)
 
 
-DEFAULT_BUNDLE_MANIFEST = REPO_ROOT / "artifacts" / "reproduction" / "paper_submission_2026_07_08" / "manifest.json"
+DEFAULT_BUNDLE_MANIFEST = PAPER_BUNDLE_MANIFEST
 DOI_RE = re.compile(r"\b10\.\d{4,9}/[-._;()/:A-Za-z0-9]+\b")
 
 
@@ -119,6 +124,47 @@ def _bundle_release_blocker(manifest_path: Path, repo_root: Path) -> ReleaseBloc
     return None
 
 
+def _revision_evidence_blocker(repo_root: Path) -> ReleaseBlocker | None:
+    path = repo_root / "paper" / "tables" / "generated" / "revision_evidence_manifest.json"
+    evidence = _display_path(path, repo_root)
+    if not path.is_file():
+        return ReleaseBlocker(
+            code="revision-evidence",
+            message="The revision-table evidence manifest is missing.",
+            evidence=evidence,
+            required_action=(
+                "Generate the final revision tables from an admitted clean evidence root and "
+                "verify the resulting manifest before release."
+            ),
+        )
+    try:
+        manifest = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        return ReleaseBlocker(
+            code="revision-evidence",
+            message=f"The revision-table evidence manifest is unreadable: {exc}",
+            evidence=evidence,
+            required_action="Regenerate and validate the revision evidence manifest.",
+        )
+    if (
+        int(manifest.get("schema_version", 0)) != 2
+        or manifest.get("evidence_class") != "publication"
+        or manifest.get("publication_evidence") is not True
+        or manifest.get("status") != "clean_publication_tables"
+    ):
+        return ReleaseBlocker(
+            code="revision-evidence",
+            message="The manuscript tables still use diagnostic rather than publication evidence.",
+            evidence=evidence,
+            required_action=(
+                "Rerun the retained experiments from the clean release commit, admit their "
+                "hashes in the publication source manifest, and regenerate the tables with "
+                "--evidence-class publication."
+            ),
+        )
+    return None
+
+
 def find_release_blockers(
     *,
     repo_root: Path = REPO_ROOT,
@@ -132,6 +178,7 @@ def find_release_blockers(
         _license_blocker(repo_root),
         _doi_blocker(main_tex),
         _bundle_release_blocker(bundle_manifest, repo_root),
+        _revision_evidence_blocker(repo_root),
     )
     return [blocker for blocker in candidates if blocker is not None]
 
@@ -149,6 +196,7 @@ def _print_blockers(blockers: list[ReleaseBlocker]) -> None:
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
+    add_paper_bundle_root_argument(parser)
     parser.add_argument("--repo-root", type=Path, default=REPO_ROOT)
     parser.add_argument("--bundle-manifest", type=Path, default=None)
     parser.add_argument(

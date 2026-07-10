@@ -6,12 +6,22 @@ import json
 import re
 from pathlib import Path
 
-from common import FIGURES_ROOT, PAPER_ROOT, REPO_ROOT, TABLES_ROOT, ensure_paper_dirs
+from common import (
+    FIGURES_ROOT,
+    PAPER_BUNDLE_MANIFEST,
+    PAPER_ROOT,
+    REPO_ROOT,
+    TABLES_ROOT,
+    ensure_paper_dirs,
+    sha256_file,
+    add_paper_bundle_root_argument,
+)
 
 
 INCLUDE_RE = re.compile(r"\\(?:input|include)\s*\{([^{}]+)\}")
 INPUT_IF_EXISTS_RE = re.compile(r"\\InputIfFileExists\s*\{([^{}]+)\}")
 GRAPHICS_RE = re.compile(r"\\includegraphics(?:\s*\[[^\]]*\])*\s*\{([^{}]+)\}")
+SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
 PROVENANCE_BANNED_SNIPPETS = (
     "/home/",
     "\\/home\\/",
@@ -35,7 +45,7 @@ ARCHIVE_NEUTRAL_BLOCKED_PREFIXES = (
     "artifacts/raw_results/",
     "artifacts/reports/",
 )
-SUBMISSION_BUNDLE_MANIFEST = PAPER_ROOT.parent / "artifacts" / "reproduction" / "paper_submission_2026_07_08" / "manifest.json"
+SUBMISSION_BUNDLE_MANIFEST = PAPER_BUNDLE_MANIFEST
 TEXT_SCAN_SUFFIXES = {
     ".csv",
     ".json",
@@ -184,6 +194,9 @@ def _validate_manifest_sources(required_figures: set[str], figures_dir: Path) ->
         data_inputs = source.get("data_inputs", [])
         if data_inputs is not None and not isinstance(data_inputs, list):
             findings.append(f"{name}: data_inputs must be a list when present.")
+            continue
+        for entry in data_inputs or []:
+            findings.extend(_validate_manifest_input_reference(name, entry))
     if findings:
         raise SystemExit("Figure source provenance is malformed:\n" + "\n".join(findings))
 
@@ -207,15 +220,37 @@ def _manifest_tables(tables_dir: Path) -> set[str]:
     return tables
 
 
+def _revision_table_manifest(tables_dir: Path) -> dict[str, object]:
+    manifest_path = tables_dir / "revision_evidence_manifest.json"
+    if not manifest_path.exists():
+        return {}
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    if not isinstance(manifest, dict):
+        raise SystemExit("Revision evidence table manifest must be a JSON object.")
+    return manifest
+
+
+def _revision_manifest_tables(tables_dir: Path) -> set[str]:
+    outputs = _revision_table_manifest(tables_dir).get("outputs", {})
+    if not isinstance(outputs, dict):
+        raise SystemExit("Revision evidence manifest field `outputs` must be an object.")
+    return {Path(str(name)).name for name in outputs}
+
+
 def _validate_no_unexpected_generated_tables(
     tables_dir: Path,
     *,
     required_tables: set[str],
     manifest_tables: set[str],
+    allow_unreferenced_tables: bool,
 ) -> None:
     actual = {path.name for path in tables_dir.iterdir() if path.is_file() and path.suffix == ".tex"}
     unexpected_files = sorted(actual - manifest_tables)
-    unused_manifest_tables = sorted(manifest_tables - required_tables)
+    unused_manifest_tables = (
+        []
+        if allow_unreferenced_tables
+        else sorted(manifest_tables - required_tables)
+    )
     findings: list[str] = []
     if unexpected_files:
         findings.append(
@@ -228,6 +263,67 @@ def _validate_no_unexpected_generated_tables(
         )
     if findings:
         raise SystemExit("\n".join(findings))
+
+
+def _validate_revision_table_manifest(
+    required_tables: set[str], tables_dir: Path
+) -> None:
+    if not required_tables:
+        return
+    manifest = _revision_table_manifest(tables_dir)
+    outputs = manifest.get("outputs", {})
+    if not isinstance(outputs, dict):
+        raise SystemExit("Revision evidence manifest field `outputs` must be an object.")
+    findings: list[str] = []
+    for name in sorted(required_tables):
+        expected = outputs.get(name)
+        path = tables_dir / name
+        if not isinstance(expected, str) or SHA256_RE.fullmatch(expected) is None:
+            findings.append(f"{name}: revision output is missing a valid SHA-256 hash")
+        elif not path.is_file() or sha256_file(path) != expected:
+            findings.append(f"{name}: revision output hash is stale")
+
+    generator = manifest.get("generator")
+    generator_sha = manifest.get("generator_sha256")
+    if not isinstance(generator, str) or Path(generator).is_absolute() or ".." in Path(generator).parts:
+        findings.append("revision table generator path is not safe and repository-relative")
+    else:
+        generator_path = (REPO_ROOT / generator).resolve()
+        try:
+            generator_path.relative_to(REPO_ROOT)
+        except ValueError:
+            findings.append("revision table generator resolves outside the repository")
+        else:
+            if not generator_path.is_file():
+                findings.append("revision table generator is missing")
+            elif not isinstance(generator_sha, str) or sha256_file(generator_path) != generator_sha:
+                findings.append("revision table generator hash is stale")
+
+    inputs = manifest.get("inputs", {})
+    if not isinstance(inputs, dict) or len(inputs) != 14:
+        findings.append("revision table manifest must bind exactly 14 inputs")
+    else:
+        for key, entry in sorted(inputs.items()):
+            if not isinstance(entry, dict):
+                findings.append(f"revision input {key}: entry must be an object")
+                continue
+            raw_path = entry.get("path")
+            expected = entry.get("sha256")
+            if not isinstance(raw_path, str) or Path(raw_path).is_absolute() or ".." in Path(raw_path).parts:
+                findings.append(f"revision input {key}: path is not safe and repository-relative")
+                continue
+            path = (REPO_ROOT / raw_path).resolve()
+            try:
+                path.relative_to(REPO_ROOT)
+            except ValueError:
+                findings.append(f"revision input {key}: path resolves outside the repository")
+                continue
+            if not path.is_file():
+                findings.append(f"revision input {key}: file is missing")
+            elif not isinstance(expected, str) or sha256_file(path) != expected:
+                findings.append(f"revision input {key}: SHA-256 hash is stale")
+    if findings:
+        raise SystemExit("Revision evidence table provenance is malformed:\n" + "\n".join(findings))
 
 
 def _table_manifest_sources(tables_dir: Path) -> dict[str, object]:
@@ -257,6 +353,12 @@ def _validate_manifest_input_reference(label: str, entry: object) -> list[str]:
         return [f"{label}: repository_path resolves outside the repository: {raw_path}"]
     if not candidate.exists():
         findings.append(f"{label}: repository_path input is missing: {raw_path}")
+        return findings
+    expected_hash = entry.get("sha256")
+    if not isinstance(expected_hash, str) or SHA256_RE.fullmatch(expected_hash) is None:
+        findings.append(f"{label}: repository_path input is missing a valid SHA-256 hash: {raw_path}")
+    elif sha256_file(candidate) != expected_hash:
+        findings.append(f"{label}: repository_path input hash is stale: {raw_path}")
     return findings
 
 
@@ -460,6 +562,7 @@ def _validate_archive_neutral_table_manifest(tables_dir: Path) -> None:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Validate that the paper asset generation produced the expected files.")
+    add_paper_bundle_root_argument(parser)
     parser.add_argument("--figures-dir", type=Path, default=FIGURES_ROOT)
     parser.add_argument("--tables-dir", type=Path, default=TABLES_ROOT)
     parser.add_argument("--tex", type=Path, default=PAPER_ROOT / "main.tex")
@@ -488,12 +591,30 @@ def main() -> None:
         raise SystemExit("TeX-included figures missing from figure manifest:\n" + "\n".join(untracked_figures))
     _validate_no_unexpected_generated_figures(args.figures_dir, manifest_assets)
     _validate_manifest_sources(required_figures, args.figures_dir)
+    base_table_manifest = _table_manifest(args.tables_dir)
+    base_manifest_tables = _manifest_tables(args.tables_dir)
+    revision_manifest_tables = _revision_manifest_tables(args.tables_dir)
+    all_manifest_tables = base_manifest_tables | revision_manifest_tables
     _validate_no_unexpected_generated_tables(
         args.tables_dir,
         required_tables=required_tables,
-        manifest_tables=_manifest_tables(args.tables_dir),
+        manifest_tables=all_manifest_tables,
+        allow_unreferenced_tables=bool(
+            base_table_manifest.get("allow_unreferenced_tables") is True
+        ),
     )
-    _validate_table_manifest_sources(required_tables, args.tables_dir)
+    missing_table_manifests = sorted(required_tables - all_manifest_tables)
+    if missing_table_manifests:
+        raise SystemExit(
+            "TeX-included generated tables missing from all table manifests:\n"
+            + "\n".join(missing_table_manifests)
+        )
+    _validate_table_manifest_sources(
+        required_tables & base_manifest_tables, args.tables_dir
+    )
+    _validate_revision_table_manifest(
+        required_tables & revision_manifest_tables, args.tables_dir
+    )
     provenance_targets = _provenance_targets(args.tex, seen_tex, required_tables, args.figures_dir, args.tables_dir)
     _validate_provenance_text(provenance_targets)
     if args.archive_neutral:

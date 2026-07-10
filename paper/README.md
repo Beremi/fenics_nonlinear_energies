@@ -1,12 +1,13 @@
 # Paper Workflow
 
 This directory contains the manuscript source, generated paper assets, and
-local checks for the nonlinear finite-element energy-minimization paper. The
-paper-facing story is the JAX+PETSc toolset for local automatic
-differentiation, sparse distributed assembly, nonlinear globalization, Krylov
-linear solvers, and preconditioner policy, with pure JAX, FEniCS, and selected
-external/reference-model comparisons used only within their stated evidence
-scope.
+local checks for the nonlinear finite-element energy problems paper. The
+paper-facing story is the conditional equivalence and verification of element,
+constitutive, and colored-recovery derivative placement in distributed
+nonlinear finite elements. JAX supplies local differentiated kernels and PETSc
+supplies owned sparse algebra. Performance, crossover, and scaling claims are
+excluded until the paired distributed experiment satisfies the admission
+contract.
 
 ## Writing Style
 
@@ -28,7 +29,9 @@ Run commands from the repository root unless noted otherwise.
 - `make -C paper figures`: regenerate generated figures after figure-source or
   plotting changes.
 - `make -C paper tables`: regenerate generated tables after table-source or
-  table-generator changes.
+  table-generator changes, including the revision evidence tables and their
+  diagnostic manifest. This default intentionally cannot create publication
+  evidence.
 - `make -C paper literature`: regenerate the literature source index after
   bibliography or literature-manifest changes.
 - `make -C paper literature-check`: validate bibliography metadata and require
@@ -40,22 +43,74 @@ Run commands from the repository root unless noted otherwise.
 - `make -C paper submission-check`: build the PDF and run the LaTeX-log scan,
   `qpdf`, figure/table aux-order check, hard-float placement allowlist,
   PDF-text manuscript hygiene check, literature-source check, submission-bundle
-  hash check, and archive-neutral asset validation.
+  hash check, revision-evidence admission check, and archive-neutral asset
+  validation.
 - `make -C paper release-blockers`: print final-release blockers that local
   build checks cannot resolve.
 - `make -C paper release-check`: run `submission-check` and then fail unless
   final-release blockers are resolved.
 
-`publish-check` and `submission-check` are expected to pass on the current
-paper-readiness branch. `release-check` is expected to fail until the final
-external submission decisions are made.
+Create clean table sources through the managed producer workflow; do not copy
+or relabel pilot outputs:
+
+```bash
+./.venv/bin/python experiments/analysis/finalize_revision_publication_campaign.py \
+  init-plan --output artifacts/reproduction/<clean-campaign>/execution_plan.json
+```
+
+The ordered dependency, execution, finalization, relocation-verification, and
+admission commands are documented in
+[`docs/reference/revision_publication_campaign_finalization.md`](../docs/reference/revision_publication_campaign_finalization.md).
+
+Audit a candidate evidence root before trying to generate final tables:
+
+```bash
+./.venv/bin/python paper/scripts/admit_revision_publication_evidence.py audit \
+  --evidence-root artifacts/reproduction/<clean-campaign>/publication \
+  --audit-json /tmp/revision-evidence-audit.json
+```
+
+The audit is read-only and reports blockers separately for all 14 configured
+inputs.  After the managed finalizer has verified every clean source from one
+immutable experiment commit, request the versioned source manifest explicitly:
+
+```bash
+./.venv/bin/python paper/scripts/admit_revision_publication_evidence.py admit \
+  --evidence-root artifacts/reproduction/<clean-campaign>/publication \
+  --manifest-out artifacts/reproduction/<clean-campaign>/publication/publication_evidence_manifest.json
+```
+
+`admit` writes nothing when any source is diagnostic, dirty, stale, missing a
+terminal gate, or missing command/environment/hash provenance.  Do not create
+or edit the source manifest manually.  With the emitted manifest, generate the
+final tables explicitly:
+
+```bash
+make -C paper tables \
+  REVISION_EVIDENCE_ROOT=../artifacts/reproduction/<clean-campaign>/publication \
+  REVISION_EVIDENCE_CLASS=publication \
+  REVISION_EVIDENCE_MANIFEST=../artifacts/reproduction/<clean-campaign>/publication/publication_evidence_manifest.json
+```
+
+Publication mode verifies the immutable experiment commit, a clean descendant
+release commit, and every admitted input hash.  Both the table generator and
+submission checker repeat the semantic source audit; an `admitted=true` flag
+alone is insufficient.  The full contract and source-specific gates are documented in
+`paper/protocols/REVISION-EVIDENCE-ADMISSION.md`. `submission-check` and
+`release-check` are expected to fail while the tables remain diagnostic, the
+bundle is stale, or final release metadata is absent.
 
 ## Current Release Blockers
 
-The manuscript and local provenance checks are currently green, but final
-submission still requires decisions and artifacts outside the local paper build:
+The working manuscript builds, but final submission still requires:
 
-- Target venue/template and required declarations.
+- Clean immutable reruns and a publication evidence-source manifest for every
+  displayed revision table.
+- The executed, admitted paired distributed route/crossover campaign, or a
+  further scope reduction that removes that central empirical claim.
+- A refreshed clean submission bundle.
+- Target venue/template and required declarations; template accommodation is
+  outside the current requested scope.
 - Root repository license.
 - Durable software/artifact archive and archival DOI.
 - Final integration of the local submission bundle into that licensed archive.
