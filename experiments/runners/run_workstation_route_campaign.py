@@ -165,10 +165,13 @@ def _resolve_python(raw: str | Path) -> Path:
     path = Path(raw).expanduser()
     if not path.is_absolute():
         path = REPO_ROOT / path
-    path = path.resolve()
+    # Keep the invoked venv path intact. Resolving a venv's ``python`` symlink
+    # to the base interpreter changes Python's prefix discovery and can silently
+    # drop the venv site-packages even though both paths name the same binary.
+    path = Path(os.path.abspath(path))
     if not path.is_file() or not os.access(path, os.X_OK):
         raise WorkstationCampaignError(f"Python executable is missing or not executable: {path}")
-    if path != Path(sys.executable).resolve():
+    if path.resolve() != Path(sys.executable).resolve():
         raise WorkstationCampaignError(
             "publication driver and worker must use the same Python executable"
         )
@@ -293,7 +296,7 @@ def _normalize_command(
     normalized: list[str] = []
     for index, raw in enumerate(command):
         token = str(raw)
-        if index == 0 and Path(token).resolve() == python_path:
+        if index == 0 and Path(token).resolve() == python_path.resolve():
             normalized.append("${PYTHON}")
             continue
         candidate = Path(token)

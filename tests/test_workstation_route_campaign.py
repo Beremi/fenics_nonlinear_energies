@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+import subprocess
 import sys
 from types import SimpleNamespace
 
@@ -73,6 +74,19 @@ def _lightweight_provenance(monkeypatch: pytest.MonkeyPatch) -> None:
         },
     )
     monkeypatch.setattr(campaign, "_verify_hash_inventory", lambda _inventory: [])
+
+
+def test_python_launcher_preserves_virtual_environment_symlink() -> None:
+    launcher = Path(sys.executable)
+    resolved = campaign._resolve_python(launcher)
+    assert resolved == Path(campaign.os.path.abspath(launcher))
+    completed = subprocess.run(
+        [str(resolved), "-c", "import numpy; print(numpy.__version__)"],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    assert completed.returncode == 0, completed.stderr
 
 
 @pytest.mark.parametrize(
