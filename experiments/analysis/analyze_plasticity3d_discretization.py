@@ -51,7 +51,7 @@ REVIEWED_DISC_ROWS_SHA256 = (
     "60a7cda2549c9e5515b0c2fd1de766402cf36dbd50c4bc5e59502dab8e850e5e"
 )
 REVIEWED_PROTOCOL_SHA256 = (
-    "27b504043e09b10208df36e6e3368afb2f4528dc8b803513eaa37993cba0470d"
+    "6759caaf6c9eb1c917f2be4b182d50f49fd52b725c0f73bbe111a518711f78bd"
 )
 RULES = ("tetra_24point", "tetra_duffy_125point")
 BRANCHES = ("elastic", "shear", "left_edge", "right_edge", "apex")
