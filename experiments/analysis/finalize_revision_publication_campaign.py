@@ -2005,6 +2005,7 @@ def build_execution_plan_template(*, experiment_commit: str) -> dict[str, Any]:
                     str(degree),
                     "--states",
                     "5",
+                    "--assembled-route-equivalence",
                     "--output",
                     f"{{staging_root}}/EXP-DERIV-001/p{degree}_l1_fixed_element_v2.json",
                 ],

@@ -70,11 +70,16 @@ XLA_FLAGS=--xla_cpu_multi_thread_eigen=false \
   --route-tolerance 1e-9 \
   --symmetry-tolerance 1e-10 \
   --fd-tolerance 1e-7 \
+  --assembled-route-equivalence \
   --output OUTPUT.json
 ```
 
-The current command is a local pilot because the implementation and worktree
-are not yet a clean immutable publication commit.
+The assembled-route flag adds a deterministic serial full-mesh comparison of
+the element-AD, exact local-SFD/JVP, and constitutive-AD matrices without
+calling a linear or nonlinear solver. It does not replace the prescribed
+distributed matrix/action checks. The current command is a local pilot because
+the implementation and worktree are not yet a clean immutable publication
+commit.
 
 ## Inputs
 

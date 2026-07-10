@@ -702,6 +702,347 @@ def _hyperelastic_nonaffine_errors(payload: Mapping[str, Any]) -> list[str]:
     return errors
 
 
+def _assembled_derivative_errors(
+    spec: EvidenceSpec, payload: Mapping[str, Any]
+) -> list[str]:
+    """Validate the managed serial assembled-route comparison fail-closed."""
+    errors: list[str] = []
+    expected_degree = {
+        "p1_derivatives": 1,
+        "p2_derivatives": 2,
+        "p4_derivatives": 4,
+    }[spec.key]
+    top_case = payload.get("case")
+    if not isinstance(top_case, Mapping):
+        errors.append("derivative case must be an object")
+    else:
+        if top_case.get("degree") != expected_degree:
+            errors.append(f"derivative case.degree must equal {expected_degree}")
+        if top_case.get("mesh_name") != "hetero_ssr_L1":
+            errors.append("derivative case.mesh_name must equal hetero_ssr_L1")
+
+    assembled = payload.get("assembled_route_equivalence")
+    if not isinstance(assembled, Mapping):
+        return errors + [
+            "assembled_route_equivalence must be an object for managed P1/P2/P4 evidence"
+        ]
+    if assembled.get("status") != "passed":
+        errors.append("assembled_route_equivalence.status must be passed")
+    if assembled.get("all_values_finite") is not True:
+        errors.append("assembled_route_equivalence.all_values_finite must be true")
+    if assembled.get("all_hessians_symmetric_within_tolerance") is not True:
+        errors.append(
+            "assembled_route_equivalence.all_hessians_symmetric_within_tolerance must be true"
+        )
+
+    case_keys = {
+        "constraint_variant",
+        "degree",
+        "elements",
+        "free_dofs",
+        "lambda_target",
+        "mesh_name",
+        "state_definition",
+        "state_norm",
+        "state_scale",
+    }
+    case = _exact_keys(
+        assembled.get("case"), case_keys, "assembled_route_equivalence.case", errors
+    ) or {}
+    if case.get("degree") != expected_degree:
+        errors.append(f"assembled route case.degree must equal {expected_degree}")
+    if case.get("mesh_name") != "hetero_ssr_L1":
+        errors.append("assembled route case.mesh_name must equal hetero_ssr_L1")
+    if case.get("constraint_variant") != "glued_bottom":
+        errors.append("assembled route constraint_variant must equal glued_bottom")
+    lambda_target = _number(
+        case.get("lambda_target"), "assembled route lambda_target", errors
+    )
+    if lambda_target is not None and lambda_target != 1.5:
+        errors.append("assembled route lambda_target must equal 1.5")
+    for field in ("free_dofs", "elements"):
+        _number(
+            case.get(field),
+            f"assembled route {field}",
+            errors,
+            minimum=1,
+            integer=True,
+        )
+    state_scale = _number(
+        case.get("state_scale"), "assembled route state_scale", errors, minimum=0.0
+    )
+    if state_scale is not None and state_scale != 1.0e-8:
+        errors.append("assembled route state_scale must equal frozen value 1e-08")
+    state_norm = _number(
+        case.get("state_norm"), "assembled route state_norm", errors, minimum=0.0
+    )
+    if state_norm is not None and state_norm <= 0.0:
+        errors.append("assembled route state_norm must be positive")
+    if not isinstance(case.get("state_definition"), str) or not case.get(
+        "state_definition"
+    ):
+        errors.append("assembled route state_definition must be nonempty")
+
+    expected_contract = {
+        "value_atol": 1.0e-12,
+        "value_rtol": 1.0e-12,
+        "gradient_norm_atol": 1.0e-10,
+        "gradient_norm_rtol": 1.0e-12,
+        "hessian_maximum_entry_atol": 1.0e-8,
+        "hessian_frobenius_rtol": 1.0e-12,
+        "hessian_symmetry_tolerance": 1.0e-12,
+    }
+    contract = _exact_keys(
+        assembled.get("contract"),
+        set(expected_contract) | {"branch_gate"},
+        "assembled_route_equivalence.contract",
+        errors,
+    ) or {}
+    for field, expected in expected_contract.items():
+        value = _number(
+            contract.get(field), f"assembled route contract.{field}", errors, minimum=0.0
+        )
+        if value is not None and value != expected:
+            errors.append(
+                f"assembled route contract.{field} must equal frozen value {expected}"
+            )
+    if contract.get("branch_gate") != "every quadrature point must satisfy trial_yield < 0":
+        errors.append("assembled route branch_gate differs from the frozen contract")
+
+    branch_keys = {
+        "all_quadrature_points_strictly_elastic",
+        "elastic_quadrature_points",
+        "interpretation",
+        "maximum_trial_yield",
+        "minimum_normalized_elastic_margin",
+        "minimum_trial_yield",
+        "plastic_quadrature_points",
+        "quadrature_points",
+    }
+    branch = _exact_keys(
+        assembled.get("branch_diagnostics"),
+        branch_keys,
+        "assembled_route_equivalence.branch_diagnostics",
+        errors,
+    ) or {}
+    quadrature_points = _number(
+        branch.get("quadrature_points"),
+        "assembled route quadrature_points",
+        errors,
+        minimum=1,
+        integer=True,
+    )
+    elastic_points = _number(
+        branch.get("elastic_quadrature_points"),
+        "assembled route elastic_quadrature_points",
+        errors,
+        minimum=1,
+        integer=True,
+    )
+    plastic_points = _number(
+        branch.get("plastic_quadrature_points"),
+        "assembled route plastic_quadrature_points",
+        errors,
+        minimum=0,
+        integer=True,
+    )
+    if branch.get("all_quadrature_points_strictly_elastic") is not True:
+        errors.append("assembled route must be strictly elastic at every quadrature point")
+    if plastic_points is not None and plastic_points != 0:
+        errors.append("assembled route plastic_quadrature_points must equal zero")
+    if (
+        quadrature_points is not None
+        and elastic_points is not None
+        and elastic_points != quadrature_points
+    ):
+        errors.append("assembled route elastic count must equal quadrature-point count")
+    maximum_trial = _number(
+        branch.get("maximum_trial_yield"), "assembled route maximum_trial_yield", errors
+    )
+    if maximum_trial is not None and maximum_trial >= 0.0:
+        errors.append("assembled route maximum_trial_yield must be negative")
+    margin = _number(
+        branch.get("minimum_normalized_elastic_margin"),
+        "assembled route minimum_normalized_elastic_margin",
+        errors,
+        minimum=0.0,
+    )
+    if margin is not None and margin <= 0.0:
+        errors.append("assembled route normalized elastic margin must be positive")
+    _number(branch.get("minimum_trial_yield"), "assembled route minimum_trial_yield", errors)
+
+    route_names = {"element_ad", "local_sfd", "constitutive_ad"}
+    routes = _exact_keys(
+        assembled.get("routes"),
+        route_names,
+        "assembled_route_equivalence.routes",
+        errors,
+    ) or {}
+    route_values: dict[str, dict[str, float]] = {}
+    route_keys = {
+        "assembly_mode",
+        "energy",
+        "gradient_norm",
+        "hessian_frobenius_norm",
+        "hessian_nonzeros",
+        "hessian_symmetry_defect",
+    }
+    for route_name in sorted(route_names):
+        route = _exact_keys(
+            routes.get(route_name),
+            route_keys,
+            f"assembled route {route_name}",
+            errors,
+        ) or {}
+        energy = _number(route.get("energy"), f"{route_name}.energy", errors)
+        gradient_norm = _number(
+            route.get("gradient_norm"),
+            f"{route_name}.gradient_norm",
+            errors,
+            minimum=0.0,
+        )
+        hessian_norm = _number(
+            route.get("hessian_frobenius_norm"),
+            f"{route_name}.hessian_frobenius_norm",
+            errors,
+            minimum=0.0,
+        )
+        _number(
+            route.get("hessian_symmetry_defect"),
+            f"{route_name}.hessian_symmetry_defect",
+            errors,
+            minimum=0.0,
+            maximum=expected_contract["hessian_symmetry_tolerance"],
+        )
+        _number(
+            route.get("hessian_nonzeros"),
+            f"{route_name}.hessian_nonzeros",
+            errors,
+            minimum=1,
+            integer=True,
+        )
+        if not isinstance(route.get("assembly_mode"), str) or not route.get(
+            "assembly_mode"
+        ):
+            errors.append(f"{route_name}.assembly_mode must be nonempty")
+        if energy is not None and gradient_norm is not None and hessian_norm is not None:
+            route_values[route_name] = {
+                "energy": energy,
+                "gradient_norm": gradient_norm,
+                "hessian_norm": hessian_norm,
+            }
+
+    comparisons = assembled.get("pairwise_comparisons")
+    if not isinstance(comparisons, list) or len(comparisons) != 3:
+        errors.append("assembled route comparison must contain exactly three route pairs")
+        comparisons = []
+    comparison_keys = {
+        "energy_absolute_error",
+        "energy_relative_error",
+        "gradient_absolute_error",
+        "gradient_relative_error",
+        "hessian_absolute_error",
+        "hessian_csr_structure_equal",
+        "hessian_maximum_entry_error",
+        "hessian_relative_error",
+        "left",
+        "passed",
+        "right",
+    }
+    observed_pairs: set[frozenset[str]] = set()
+    for index, raw_comparison in enumerate(comparisons):
+        comparison = _exact_keys(
+            raw_comparison,
+            comparison_keys,
+            f"assembled route pairwise_comparisons[{index}]",
+            errors,
+        ) or {}
+        left = comparison.get("left")
+        right = comparison.get("right")
+        if left not in route_names or right not in route_names or left == right:
+            errors.append(f"assembled route comparison {index} has invalid route names")
+        else:
+            observed_pairs.add(frozenset((str(left), str(right))))
+        if comparison.get("passed") is not True:
+            errors.append(f"assembled route comparison {index} must pass")
+        if comparison.get("hessian_csr_structure_equal") is not True:
+            errors.append(f"assembled route comparison {index} must have equal CSR structure")
+        values: dict[str, float | None] = {}
+        for field in (
+            "energy_absolute_error",
+            "energy_relative_error",
+            "gradient_absolute_error",
+            "gradient_relative_error",
+            "hessian_absolute_error",
+            "hessian_maximum_entry_error",
+            "hessian_relative_error",
+        ):
+            values[field] = _number(
+                comparison.get(field),
+                f"assembled route comparison {index}.{field}",
+                errors,
+                minimum=0.0,
+            )
+        hessian_relative = values["hessian_relative_error"]
+        if (
+            hessian_relative is not None
+            and hessian_relative > expected_contract["hessian_frobenius_rtol"]
+        ):
+            errors.append(f"assembled route comparison {index} fails Hessian relative gate")
+        hessian_maximum = values["hessian_maximum_entry_error"]
+        if (
+            hessian_maximum is not None
+            and hessian_maximum > expected_contract["hessian_maximum_entry_atol"]
+        ):
+            errors.append(f"assembled route comparison {index} fails Hessian entry gate")
+        if left in route_values and right in route_values:
+            energy_gate = expected_contract["value_atol"] + expected_contract[
+                "value_rtol"
+            ] * max(
+                abs(route_values[str(left)]["energy"]),
+                abs(route_values[str(right)]["energy"]),
+            )
+            energy_absolute = values["energy_absolute_error"]
+            if energy_absolute is not None and energy_absolute > energy_gate:
+                errors.append(f"assembled route comparison {index} fails energy gate")
+            gradient_gate = expected_contract["gradient_norm_atol"] + expected_contract[
+                "gradient_norm_rtol"
+            ] * max(
+                route_values[str(left)]["gradient_norm"],
+                route_values[str(right)]["gradient_norm"],
+            )
+            gradient_absolute = values["gradient_absolute_error"]
+            if gradient_absolute is not None and gradient_absolute > gradient_gate:
+                errors.append(f"assembled route comparison {index} fails gradient gate")
+    expected_pairs = {
+        frozenset(("element_ad", "local_sfd")),
+        frozenset(("element_ad", "constitutive_ad")),
+        frozenset(("local_sfd", "constitutive_ad")),
+    }
+    if observed_pairs != expected_pairs:
+        errors.append("assembled route comparison does not cover each route pair exactly once")
+
+    scope = _exact_keys(
+        assembled.get("algebraic_scope"),
+        {
+            "interpretation",
+            "ksp_tolerance_used_for_comparison",
+            "linear_solver_called",
+            "local_sfd_meaning",
+            "nonlinear_solver_called",
+        },
+        "assembled_route_equivalence.algebraic_scope",
+        errors,
+    ) or {}
+    if scope.get("linear_solver_called") is not False:
+        errors.append("assembled route comparison must not call a linear solver")
+    if scope.get("nonlinear_solver_called") is not False:
+        errors.append("assembled route comparison must not call a nonlinear solver")
+    if scope.get("ksp_tolerance_used_for_comparison") is not None:
+        errors.append("assembled route comparison must not depend on a KSP tolerance")
+    return errors
+
+
 def _derivative_errors(spec: EvidenceSpec, payload: Mapping[str, Any]) -> list[str]:
     errors: list[str] = []
     contract = payload.get("contract")
@@ -738,6 +1079,8 @@ def _derivative_errors(spec: EvidenceSpec, payload: Mapping[str, Any]) -> list[s
             "maximum_centered_fd_energy_error_at_gate",
             "maximum_centered_fd_hvp_error_at_gate",
             "all_states_branch_stable_at_fd_gate",
+            "fixed_element_status",
+            "assembled_route_equivalence_status",
         }
     )
     summary = _exact_keys(summary, required, "derivative summary", errors) or {}
@@ -762,9 +1105,15 @@ def _derivative_errors(spec: EvidenceSpec, payload: Mapping[str, Any]) -> list[s
         _number(summary.get(field), f"summary.{field}", errors, minimum=0.0, maximum=expected_contract["centered_fd_tolerance"])
     if not smooth and summary.get("all_states_branch_stable_at_fd_gate") is not True:
         errors.append("all_states_branch_stable_at_fd_gate must be true")
+    if not smooth and summary.get("fixed_element_status") != "passed":
+        errors.append("summary.fixed_element_status must be passed")
+    if not smooth and summary.get("assembled_route_equivalence_status") != "passed":
+        errors.append("summary.assembled_route_equivalence_status must be passed")
     records = payload.get("records")
     if not isinstance(records, list) or count is None or len(records) != int(count):
         errors.append("derivative record count must equal the declared case/state count")
+    if not smooth:
+        errors.extend(_assembled_derivative_errors(spec, payload))
     return errors
 
 

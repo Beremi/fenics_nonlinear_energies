@@ -77,7 +77,7 @@ def test_p3d_assembled_derivative_routes_agree_without_a_solver(tmp_path: Path) 
             "--degree",
             "1",
             "--states",
-            "1",
+            "5",
             "--assembled-route-equivalence",
             "--output",
             str(output),
@@ -116,3 +116,10 @@ def test_p3d_assembled_derivative_routes_agree_without_a_solver(tmp_path: Path) 
         assert comparison["hessian_csr_structure_equal"] is True
         assert comparison["hessian_relative_error"] <= 1.0e-12
         assert comparison["hessian_maximum_entry_error"] <= 1.0e-8
+
+    from paper.scripts import admit_revision_publication_evidence as admission
+
+    spec = next(
+        spec for spec in admission.EVIDENCE_SPECS if spec.key == "p1_derivatives"
+    )
+    assert admission._derivative_errors(spec, payload) == []
