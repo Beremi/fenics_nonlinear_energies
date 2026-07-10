@@ -1,10 +1,13 @@
 from __future__ import annotations
 
+import importlib.util
 import json
+import math
 from pathlib import Path
 import subprocess
 
 import numpy as np
+from scipy import sparse
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -12,13 +15,16 @@ PYTHON = REPO_ROOT / ".venv/bin/python"
 RUNNER = REPO_ROOT / "experiments/runners/run_manufactured_hyperelastic_verification.py"
 
 
-def test_analytic_body_force_matches_piola_divergence() -> None:
-    import importlib.util
-
+def _load_runner():
     spec = importlib.util.spec_from_file_location("manufactured_he", RUNNER)
     assert spec is not None and spec.loader is not None
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
+    return module
+
+
+def test_analytic_body_force_matches_piola_divergence() -> None:
+    module = _load_runner()
     points = np.array([[0.23, 0.37, 0.41], [0.61, 0.29, 0.73]], dtype=np.float64)
     step = 2.0e-6
     numerical_divergence = np.zeros_like(points)
@@ -38,6 +44,56 @@ def test_analytic_body_force_matches_piola_divergence() -> None:
         rtol=2.0e-8,
         atol=2.0e-9,
     )
+
+
+def test_newton_roundoff_acceptance_requires_full_convergence_contract(
+    monkeypatch,
+) -> None:
+    module = _load_runner()
+    trial_residual = [1.0e-14]
+
+    def state_data(values, *_args):
+        at_trial = float(values[0]) < 0.0
+        energy = 1.0 + (np.finfo(np.float64).eps if at_trial else 0.0)
+        residual = np.asarray([trial_residual[0] if at_trial else 1.0e-9])
+        tangent = sparse.csr_matrix([[1.0]])
+        deformation_gradient = np.eye(3, dtype=np.float64)[None, :, :]
+        return energy, residual, tangent, deformation_gradient, deformation_gradient
+
+    monkeypatch.setattr(module, "_state_data", state_data)
+    result = module._newton_solve(
+        np.asarray([0.0]),
+        np.asarray([0]),
+        np.empty((0, 4), dtype=np.int64),
+        np.empty(0),
+        np.empty((0, 4, 3)),
+        np.empty((0, 9, 12)),
+        np.asarray([0.0]),
+        relative_tolerance=1.0e-4,
+        max_iterations=2,
+    )
+
+    assert result["status"] == "converged"
+    assert result["history"][0]["used_roundoff_acceptance"] is True
+    assert result["history"][0]["accepted_trial_relative_residual"] <= 1.0e-4
+    assert result["history"][0]["accepted_relative_correction"] <= math.sqrt(
+        np.finfo(np.float64).eps
+    )
+
+    trial_residual[0] = 5.0e-10
+    rejected = module._newton_solve(
+        np.asarray([0.0]),
+        np.asarray([0]),
+        np.empty((0, 4), dtype=np.int64),
+        np.empty(0),
+        np.empty((0, 4, 3)),
+        np.empty((0, 9, 12)),
+        np.asarray([0.0]),
+        relative_tolerance=1.0e-4,
+        max_iterations=2,
+    )
+    assert rejected["status"] == "line_search_failure"
+    assert rejected["history"][0]["used_roundoff_acceptance"] is False
 
 
 def test_nonaffine_manufactured_hyperelasticity_converges(tmp_path: Path) -> None:

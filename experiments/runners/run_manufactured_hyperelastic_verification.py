@@ -402,21 +402,62 @@ def _newton_solve(
             break
         alpha = 1.0
         accepted = False
+        used_roundoff_acceptance = False
+        accepted_trial_relative_residual: float | None = None
+        accepted_relative_correction: float | None = None
+        accepted_energy_roundoff_tolerance: float | None = None
         for _ in range(40):
             trial = values.copy()
             trial[free] += alpha * step
             try:
-                trial_energy = _state_data(
+                trial_state = _state_data(
                     trial, elems, volumes, gradients, bmat, load
-                )[0]
+                )
+                trial_energy = float(trial_state[0])
+                trial_residual_norm = float(
+                    np.linalg.norm(np.asarray(trial_state[1])[free])
+                )
             except ValueError:
                 trial_energy = np.inf
-            if (
+                trial_residual_norm = np.inf
+            trial_relative_residual = trial_residual_norm / max(
+                float(initial_residual), np.finfo(np.float64).tiny
+            )
+            relative_correction = float(
+                np.linalg.norm(alpha * step)
+                / max(np.linalg.norm(values[free]), 1.0)
+            )
+            armijo_passed = bool(
                 np.isfinite(trial_energy)
                 and trial_energy <= energy + 1.0e-4 * alpha * directional
-            ):
+            )
+            energy_roundoff_tolerance = float(
+                64.0
+                * np.finfo(np.float64).eps
+                * max(1.0, abs(float(energy)), abs(float(trial_energy)))
+            )
+            roundoff_converged = bool(
+                np.isfinite(trial_energy)
+                and trial_energy <= energy + energy_roundoff_tolerance
+                and relative_correction <= math.sqrt(np.finfo(np.float64).eps)
+                and (
+                    trial_relative_residual <= float(relative_tolerance)
+                    or trial_residual_norm <= float(absolute_tolerance)
+                )
+            )
+            if armijo_passed or roundoff_converged:
                 values = trial
                 accepted = True
+                used_roundoff_acceptance = bool(
+                    roundoff_converged and not armijo_passed
+                )
+                accepted_trial_relative_residual = float(
+                    trial_relative_residual
+                )
+                accepted_relative_correction = float(relative_correction)
+                accepted_energy_roundoff_tolerance = float(
+                    energy_roundoff_tolerance
+                )
                 break
             alpha *= 0.5
         history.append(
@@ -428,6 +469,14 @@ def _newton_solve(
                 "alpha": float(alpha) if accepted else None,
                 "minimum_element_determinant": minimum_determinant,
                 "convergence_reason": None,
+                "used_roundoff_acceptance": bool(used_roundoff_acceptance),
+                "accepted_trial_relative_residual": (
+                    accepted_trial_relative_residual
+                ),
+                "accepted_relative_correction": accepted_relative_correction,
+                "energy_roundoff_tolerance": (
+                    accepted_energy_roundoff_tolerance
+                ),
             }
         )
         if not accepted:

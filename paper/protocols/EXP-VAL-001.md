@@ -128,6 +128,13 @@ PETSc, and mesh paths, assembles the first Piola stress and consistent tangent.
 The source formula was additionally checked against a centered finite-
 difference divergence of the analytic Piola field.
 
+The Newton line search uses the stated Armijo test. A nondecreasing trial at
+floating-point roundoff may be accepted only when its energy change is within
+a scale-aware FP64 bound, its relative correction is at most
+$\sqrt{\epsilon_{\mathrm{mach}}}$, and the independently reassembled trial
+residual already passes the frozen algebraic stopping test. Such an event is
+recorded explicitly as roundoff acceptance.
+
 The 4, 8, 16, and 24 subdivision meshes have 81, 1,029, 10,125, and 36,501
 free vector DOFs. All converge in four damped Newton steps. The last-pair rates
 are 1.887 for displacement $L^2$, 1.006 for the deformation-gradient error,
