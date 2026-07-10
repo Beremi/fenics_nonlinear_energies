@@ -600,6 +600,8 @@ def test_expand_argv_preserves_virtualenv_python_launcher(
 
     assert expanded == [str(venv_python.absolute())]
     assert expanded != [str(venv_python.resolve())]
+    snapshot = finalizer._environment_snapshot({})
+    assert snapshot["python_executable"] == str(venv_python.absolute())
 
 
 def test_plan_rejects_missing_or_escaping_quadrature_artifact_declarations() -> None:

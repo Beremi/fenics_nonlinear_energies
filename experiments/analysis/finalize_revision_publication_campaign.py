@@ -740,7 +740,7 @@ def _environment_snapshot(overrides: Mapping[str, str]) -> dict[str, Any]:
     variables.update({str(key): str(value) for key, value in overrides.items()})
     return {
         "python": platform.python_version(),
-        "python_executable": str(Path(sys.executable).resolve()),
+        "python_executable": str(Path(sys.executable).absolute()),
         "platform": platform.platform(),
         "machine": platform.machine(),
         "processor": platform.processor() or "unknown",
