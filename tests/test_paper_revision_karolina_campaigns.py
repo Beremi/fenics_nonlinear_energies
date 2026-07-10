@@ -184,12 +184,14 @@ def test_release_authorization_binds_context_and_reviewed_artifact(
         experiment=["EXP-ROUTE-001"],
         tier=["factorized_microbenchmark"],
         admission_gate=gate_path,
+        route_phase="training",
     )
     selected = module.select_rows(
         module.read_matrix(MATRIX),
         experiments={"EXP-ROUTE-001"},
         include_optional=False,
         tiers={"factorized_microbenchmark"},
+        route_phase="training",
     )
     result = module._require_staged_real_submission(
         args,
@@ -410,13 +412,17 @@ def test_dry_run_prepares_exact_test_only_commands_without_sbatch(tmp_path: Path
         assert "--mem-per-cpu" not in tokens
         batch_index = tokens.index(str(BATCH_RUNNER))
         batch_arguments = tokens[batch_index + 1 :]
-        assert len(batch_arguments) == 7
+        assert len(batch_arguments) == 11
         assert batch_arguments[0] == str(MATRIX)
         assert batch_arguments[2] == str(out_root.resolve())
         assert batch_arguments[3] == manifest["source_commit"]
         assert batch_arguments[4] == manifest["matrix_sha256"]
         assert batch_arguments[5] == str(freeze_path)
         assert batch_arguments[6] == freeze_metadata["sha256"]
+        assert batch_arguments[7] == "UNBOUND"
+        assert batch_arguments[8] == "0" * 64
+        assert batch_arguments[9] == "UNBOUND"
+        assert batch_arguments[10] == "0" * 64
 
 
 def test_execute_mode_hard_stops_without_current_revalidation(tmp_path: Path) -> None:
@@ -429,6 +435,11 @@ def test_execute_mode_hard_stops_without_current_revalidation(tmp_path: Path) ->
     ):
         env.pop(key, None)
     env.update({"DRY_RUN": "0", "OUT_ROOT": str(tmp_path / "blocked")})
+    env_setup = tmp_path / "env.sh"
+    env_lock = tmp_path / "env.lock"
+    env_setup.write_text("export TEST_ENV=1\n", encoding="utf-8")
+    env_lock.write_text("lock\n", encoding="utf-8")
+    env.update({"ENV_SETUP": str(env_setup), "ENV_LOCK": str(env_lock)})
     completed = subprocess.run(
         ["bash", str(SUBMITTER)],
         cwd=REPO_ROOT,
@@ -458,6 +469,10 @@ def test_batch_rejects_queued_commit_drift_before_creating_solver_output(
         }
     )
     out_root = tmp_path / "must_remain_empty"
+    env_setup = tmp_path / "env.sh"
+    env_lock = tmp_path / "env.lock"
+    env_setup.write_text("export TEST_ENV=1\n", encoding="utf-8")
+    env_lock.write_text("lock\n", encoding="utf-8")
     completed = subprocess.run(
         [
             "bash",
@@ -469,6 +484,10 @@ def test_batch_rejects_queued_commit_drift_before_creating_solver_output(
             hashlib.sha256(MATRIX.read_bytes()).hexdigest(),
             str(freeze),
             hashlib.sha256(freeze.read_bytes()).hexdigest(),
+            str(env_setup),
+            hashlib.sha256(env_setup.read_bytes()).hexdigest(),
+            str(env_lock),
+            hashlib.sha256(env_lock.read_bytes()).hexdigest(),
         ],
         cwd=REPO_ROOT,
         env=env,
@@ -482,6 +501,10 @@ def test_batch_rejects_queued_commit_drift_before_creating_solver_output(
 
 
 def _prepare_args(out_root: Path, *, execute: bool) -> SimpleNamespace:
+    env_setup = out_root.parent / "reviewed_env_setup.sh"
+    env_lock = out_root.parent / "reviewed_env.lock"
+    env_setup.write_text("export TEST_REVIEWED_ENV=1\n", encoding="utf-8")
+    env_lock.write_text("synthetic-lock-v1\n", encoding="utf-8")
     return SimpleNamespace(
         matrix=MATRIX,
         out_root=out_root,
@@ -493,6 +516,10 @@ def _prepare_args(out_root: Path, *, execute: bool) -> SimpleNamespace:
         test_only=False,
         execute=execute,
         admission_gate=None,
+        route_phase="training",
+        model_freeze_receipt=None,
+        env_setup=env_setup,
+        env_lock=env_lock,
     )
 
 
@@ -550,10 +577,11 @@ def test_partial_submission_is_persisted_fail_closed(tmp_path: Path, monkeypatch
     assert manifest["submission_progress"] == {
         "attempted": 2,
         "accepted": 1,
-        "total": 9,
+        "total": 6,
         "last_case_id": "route_factor_micro_np1_b02",
     }
-    assert len((out_root / "submitted_jobs.jsonl").read_text().splitlines()) == 2
+    assert len((out_root / "submitted_jobs.jsonl").read_text().splitlines()) == 1
+    assert len((out_root / "submission_journal.jsonl").read_text().splitlines()) == 4
 
 
 def test_preparation_freezes_commit_matrix_and_every_reviewed_source(
@@ -656,14 +684,16 @@ def test_real_submission_scope_rejects_mixed_scaling_and_partial_tier_b() -> Non
         include_optional=False,
         only_optional=True,
         tiers={"full_solve_confirmation"},
+        route_phase="training",
     )
-    with pytest.raises(RuntimeError, match="exact 30-row Tier-B"):
+    with pytest.raises(RuntimeError, match="exact prespecified Tier-B training phase"):
         preparer._validate_real_submission_scope(
             SimpleNamespace(
                 experiment=["EXP-ROUTE-001"],
                 tier=["full_solve_confirmation"],
                 include_optional=False,
                 only_optional=True,
+                route_phase="training",
             ),
             selected=partial_tier_b,
         )

@@ -1,4 +1,4 @@
-handoff_version: 3
+handoff_version: 4
 status: prepared_not_submitted
 software:
   repository: fenics_nonlinear_energies
@@ -9,6 +9,9 @@ software:
     required_api: petsc4py.PETSc.Mat.setPreallocationCOO
     required_external_packages: [hypre, mumps]
     compute_node_internet: unavailable
+    reviewed_setup_and_lock_required_for_scheduler_use: true
+    setup_and_lock_hashes_must_match_across_training_and_holdout: true
+    captured_identity: [c_compiler, cxx_compiler, mpicc, mpi_vendor, mpi4py, jax, jaxlib, backend, devices, xla_flags]
   clean_commit_required: true
 hpc:
   provider: IT4I
@@ -40,7 +43,13 @@ campaign:
   matrix: experiments/runners/paper_revision_karolina/campaign_matrix.csv
   matrix_sha256: 0010453084157f5ccf0ba307ed26b377c4aff80ad9f095fa359270e90ad5b1a5
   submitter: experiments/runners/paper_revision_karolina/submit_prepared_campaigns.sh
+  submitter_sha256: 7935dc18d1ddc5fcb93e5f64d9c901cb77c735b9a791eb42dd07d3934a3d0abb
+  preparer: experiments/runners/paper_revision_karolina/prepare_campaign.py
+  preparer_sha256: 848f121c46bb09f7defde28e0b5948ee10e341e608e18946f0bc0c859c959277
   batch_runner: experiments/runners/paper_revision_karolina/run_revision_case.sbatch
+  batch_runner_sha256: 2527ee1bc065e6b9678464c960b73c9b22caa9f3c6abcfeab1a15f7db1cbd355
+  partial_submission_resumer: experiments/runners/paper_revision_karolina/resume_partial_submission.py
+  partial_submission_resumer_sha256: b5e77fdbb27e155e55eaa38c086103f19dbcc4b91eb636b7c71e7c133a9e8e34
   required_node_hours: 99.95
   optional_node_hours: 62.50
   required_jobs: 115
@@ -52,7 +61,7 @@ campaign:
   route_endpoint_analyzer: experiments/analysis/analyze_plasticity3d_route_endpoints.py
   route_cost_analyzer: experiments/analysis/analyze_plasticity3d_route_cost_model.py
   route_cost_analyzer_sha256: abf34fed7715173e3d8c8c4b896c728a05b97d5bf12887f870eb1d4b1b240d38
-  route_endpoint_analyzer_sha256: 35d8b3527a3be5b4e7bcd1e237b32372efbbfb29f3e59214f2f05949eec59e4c
+  route_endpoint_analyzer_sha256: 7f97ff5cea6c39afa92807e50800766daa5f7fec8a78327642cd2ad7eddef1bf
   route_discretization_analyzer: experiments/analysis/analyze_plasticity3d_discretization.py
   route_discretization_analyzer_sha256: 71e5f57c88a9cd8449a6dec08fdcbc91416b259e2139a70cd6a752a64e94da8e
   route_scaling_analyzer: experiments/analysis/analyze_exp_scale_001.py
@@ -65,6 +74,26 @@ campaign:
   release_authorization_schema_sha256: 99aba3efa0f3158c3f8e5f0889a5d5137f8ba796cac259c87025cf92e9ea2064
   release_authorization_example: paper/protocols/human-release-authorization-v1.example.json
   release_authorization_example_sha256: 62f5a73619c5b5370ade23f67f750b03426b99f132eb3f835db3aa6ca7d55843
+  route_tranche_aggregator: experiments/analysis/aggregate_route_tranche_manifests.py
+  route_tranche_aggregator_sha256: c38c8e5ff6c779cee2d6aae974b3f8961b9f317af46518040f4fd7eb60e38731
+  route_tier_b_aggregator: experiments/analysis/aggregate_route_tier_b_manifests.py
+  route_tier_b_aggregator_sha256: ce46681c6788db0f6b20af5903a53c0a69d055d9a2074e72e991b5e83cbea8f0
+  route_training_freezer: experiments/analysis/freeze_route_training_model.py
+  route_training_freezer_sha256: 0396197b1f003a78cadb4e9e53f8a1780569ab850cda9fb700f6a65c863e13ad
+  campaign_archive_finalizer: experiments/analysis/finalize_karolina_campaign_archive.py
+  campaign_archive_finalizer_sha256: e813ff9797e1086fa03634dd46f7de2ffb8a337ffa8e2970aa929f3a010576ee
+  route_model_freeze_schema: paper/protocols/route-model-freeze-v1.schema.json
+  route_model_freeze_schema_sha256: 6d7aaf7afde2fe6d6c852c3348764cf90b31d70847cba65a894108decc1818ba
+  route_model_freeze_example: paper/protocols/route-model-freeze-v1.example.json
+  route_model_freeze_example_sha256: c7838a320f2c6a92fdc98455b068ddfe6701e70b9ab6a809f495347c8868e4ea
+  route_phase_contract:
+    training_ranks: [1, 8]
+    holdout_ranks: [32]
+    training_must_be_checksum_sealed_before_fit: true
+    training_model_rows: 74
+    tier_b_training_rows: 20
+    tier_b_holdout_rows: 10
+    holdout_requires_hash_bound_human_freeze_receipt: true
 correctness:
   route_screen:
     - identical state SHA-256 across derivative routes
@@ -76,6 +105,9 @@ correctness:
     - P4(L1) colored SFD is a prespecified non-attempt motivated by pilot memory risk; no threshold is claimed
     - strict analysis reconstructs states/actions before timing admission
     - no predictive model fit until the frozen minimum train/holdout gates pass
+    - training-only fit reads exactly the 76 planned rank-1/8 cases and zero rank-32 paths
+    - frozen fit has 74 equivalence-admitted rows, 13 prespecified features, and a full-rank condition gate
+    - optional Tier-B evidence is admitted only through the exact 20-row training plus 10-row holdout master manifest
   p3d_convergence:
     - all p3d_solve rows use reference_elastic_energy
     - MUMPS inertia numerically checks positive definiteness on the glued free space
@@ -101,6 +133,7 @@ correctness:
     - complete compute-node environment sections
     - raw settled parsable2 accounting reparsed by the endpoint analyzer
     - account, QoS, partition, node count, CPU count, state, and exit code match the matrix
+    - compiler, MPI, mpi4py, JAX, jaxlib, CPU backend, one-device policy, and XLA flags match the reviewed environment
 collection:
   output_root: artifacts/reproduction/paper_revision_karolina/<campaign-id>
   required_files:
@@ -111,6 +144,12 @@ collection:
     - per-case state.npz where defined
     - environment.txt and job_metadata.env
     - Slurm stdout/stderr and settled sacct_final.json
+    - submission_journal.jsonl with fsynced intent/result records
+    - environment_contract setup and lock plus per-job environment_identity.json
+    - campaign_archive_checksums.json and an external copy-back receipt
+    - route training analysis, frozen model, and human freeze receipt before rank-32
   copy_back_required: true
+  copy_back_checksum_verification_required: true
+  automatic_resume_requires_no_unmatched_scheduler_intent: true
   internal_manifest_paths: archive_relative
   offline_preflight_required_before_handoff: true

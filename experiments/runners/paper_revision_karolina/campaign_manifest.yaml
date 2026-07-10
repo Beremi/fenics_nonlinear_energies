@@ -1,4 +1,4 @@
-manifest_version: 4
+manifest_version: 5
 status: prepared_not_submitted
 prepared_for: paper publication revision
 prepared_date: "2026-07-10"
@@ -41,7 +41,12 @@ matrix:
     process_executions: 60
     node_hours: 45.00
     exact_tiers: [full_solve_confirmation, low_order_confirmation]
-    partial_preparation_forbidden: true
+    training_slurm_rows: 20
+    holdout_slurm_rows: 10
+    training_ranks: [1, 8]
+    holdout_ranks: [32]
+    phase_split_required_for_real_submission: true
+    incomplete_phase_preparation_forbidden: true
   discretization_required:
     slurm_rows: 6
     process_executions: 6
@@ -68,6 +73,8 @@ route_design:
   p4_colored_sfd_status: prespecified_not_attempted_memory_risk_no_threshold_claim
   factor_diagnostic_status: replicated_descriptive_non_route_faithful_not_a_selector_feature
   predictive_selector_status: production_13_feature_model_fail_closed_until_clean_holdout_gates_pass
+  route_phase_policy: rank_1_8_training_then_hash_frozen_model_then_rank_32_holdout
+  training_freeze_scope: exact_76_required_cases_and_74_equivalence_admitted_model_rows
   endpoint_state_metric: common_element_ad_reference_elastic_riesz
   endpoint_branch_gate: exact_canonical_pointwise_map_hash_and_margin
   endpoint_uncertainty: paired_bootstrap_10000_seed_20260710
@@ -79,25 +86,31 @@ source_sha256:
   scaling_protocol: f4217d94d7508eca612dce69c822623ed68edc4ef49f37c7fe4d879fe8da4190
   scaling_analysis_contract: 4f64f300d7f63dcd4c4329880bb7a22d2004934b1060806007e33a80540e8286
   cost_model_analyzer: abf34fed7715173e3d8c8c4b896c728a05b97d5bf12887f870eb1d4b1b240d38
-  endpoint_analyzer: 35d8b3527a3be5b4e7bcd1e237b32372efbbfb29f3e59214f2f05949eec59e4c
-  route_tranche_aggregator: ec7fcdf459fbdc2fa4fae5d53dc797802cc5de01a5b44ec84eb8e388756283be
+  endpoint_analyzer: 7f97ff5cea6c39afa92807e50800766daa5f7fec8a78327642cd2ad7eddef1bf
+  route_tranche_aggregator: c38c8e5ff6c779cee2d6aae974b3f8961b9f317af46518040f4fd7eb60e38731
+  route_tier_b_aggregator: ce46681c6788db0f6b20af5903a53c0a69d055d9a2074e72e991b5e83cbea8f0
+  route_training_freezer: 0396197b1f003a78cadb4e9e53f8a1780569ab850cda9fb700f6a65c863e13ad
   discretization_analyzer: 71e5f57c88a9cd8449a6dec08fdcbc91416b259e2139a70cd6a752a64e94da8e
   scaling_analyzer: b173b2a2373ee9c20c33ee2eb1a7c1be6999e29322567847bbb2a51fe7a52c02
   slurm_accounting_collector: 4099821584762f1d26fb736820c9fa4b7a409c27e6e04613eb1c2db7e9a96112
+  campaign_archive_finalizer: e813ff9797e1086fa03634dd46f7de2ffb8a337ffa8e2970aa929f3a010576ee
   fixed_state_runner: 6c72798927a2f675e788939aed5d53f626b06eafe5444196e1e1b0443b6924cf
   factor_runner: 61af95fde6a5f354595faf246a7193040e1fa42dbdd936503a451abcadfd508d
   backend_mix_runner: 7a5d9e5f7d948af509579ac1ae3d0f4c2828697347ed2c683d034943f9595ad4
   quadrature_runner: d33b791df8ec709d3f48f47a095abb63e947fdea43aae7e6483064ed280ad90b
   executor: 5ea3ee769b34177015478d1f48a35cc94afb5feab45f8639875d42e2f4418a4d
-  preparer: c9f1164c97b9cc9a335decd15e19e41ce4129ab3593950bb53908d9e902f1d05
+  preparer: 848f121c46bb09f7defde28e0b5948ee10e341e608e18946f0bc0c859c959277
   offline_preflight: 2b070eb2efee144372e7d6bb2281975f56a1c7a484766406cb2a6ace127dc850
-  batch_runner: b62ddb6ba2d5310ac2c9f4b4983b98a8f50c0d5dc8a1998d9ff1b6d31e3f06ee
-  submitter: f5522b1c40b6d14146790d87c02198e9008fd76220e3b8b003b32cd3093edb7a
+  partial_submission_resumer: b5e77fdbb27e155e55eaa38c086103f19dbcc4b91eb636b7c71e7c133a9e8e34
+  batch_runner: 2527ee1bc065e6b9678464c960b73c9b22caa9f3c6abcfeab1a15f7db1cbd355
+  submitter: 7935dc18d1ddc5fcb93e5f64d9c901cb77c735b9a791eb42dd07d3934a3d0abb
   state_export: 51713deaff1edddc0e6490f1c8245ded428946c6617f4cd9aac97bb99bfd59cd
   fixed_state_support: e5710e0ddebfba7d8dc3c6b5e9388d5651bed2fa0707413c2bf68c6c424f8991
   quadrature_support: 83272dcfa9bd5a730aedd070a5add61f7192cec4f0d170884e1181868989c206
   release_authorization_schema: 99aba3efa0f3158c3f8e5f0889a5d5137f8ba796cac259c87025cf92e9ea2064
   release_authorization_example: 62f5a73619c5b5370ade23f67f750b03426b99f132eb3f835db3aa6ca7d55843
+  model_freeze_schema: 6d7aaf7afde2fe6d6c852c3348764cf90b31d70847cba65a894108decc1818ba
+  model_freeze_example: c7838a320f2c6a92fdc98455b068ddfe6701e70b9ab6a809f495347c8868e4ea
 protocol_cards:
   EXP-ROUTE-001: paper/protocols/EXP-ROUTE-001.md
   EXP-DISC-001: paper/protocols/EXP-DISC-001.md
@@ -111,7 +124,10 @@ safety:
   downstream_tiers_require_human_release_authorization_v1: true
   archive_internal_paths_relocatable: true
   scheduler_free_offline_preflight_required: true
-  optional_tier_b_exact_30_row_scope_required: true
+  optional_tier_b_exact_20_training_plus_10_holdout_union_required: true
+  route_training_holdout_environment_hashes_must_match: true
+  fsynced_submission_journal_and_locked_resume_required: true
+  checksum_sealed_training_archive_required_before_model_freeze: true
   hyperelasticity_and_optional_p3d_scaling_submission_separation_required: true
   compute_node_account_qos_partition_shape_validation_required: true
   clean_commit_required: true

@@ -1,0 +1,51 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://fenics-nonlinear-energies.invalid/schemas/route-model-freeze-v1.json",
+  "title": "EXP-ROUTE-001 training model-freeze receipt",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_id",
+    "schema_version",
+    "status",
+    "decision",
+    "matrix_sha256",
+    "source_commit",
+    "training_case_ids_sha256",
+    "created_at_utc",
+    "reviewer",
+    "training_manifest",
+    "training_analysis",
+    "frozen_model"
+  ],
+  "properties": {
+    "schema_id": {
+      "const": "fenics-nonlinear-energies.route-model-freeze"
+    },
+    "schema_version": {"const": 1},
+    "status": {"const": "frozen_before_holdout"},
+    "decision": {"const": "training_fit_complete_holdout_unopened"},
+    "matrix_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "source_commit": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+    "training_case_ids_sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "created_at_utc": {"type": "string", "format": "date-time"},
+    "reviewer": {"type": "string", "minLength": 1},
+    "training_manifest": {"$ref": "#/$defs/artifact"},
+    "training_analysis": {"$ref": "#/$defs/artifact"},
+    "frozen_model": {"$ref": "#/$defs/artifact"}
+  },
+  "$defs": {
+    "artifact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "sha256"],
+      "properties": {
+        "path": {"type": "string", "minLength": 1},
+        "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+      }
+    }
+  }
+}

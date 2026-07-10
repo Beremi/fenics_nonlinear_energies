@@ -56,6 +56,7 @@ from experiments.analysis.collect_slurm_accounting import (
     SCHEMA_VERSION as SLURM_ACCOUNTING_SCHEMA_VERSION,
     parse_sacct,
 )
+from experiments.analysis import aggregate_route_tier_b_manifests
 
 
 SCHEMA_ID = "fenics-nonlinear-energies.exp-route-001.tier-b-endpoints"
@@ -346,6 +347,100 @@ def _validate_matrix_row(row: dict[str, str]) -> None:
         raise AdmissionError("matrix PMG strategy changed from the frozen tier policy")
 
 
+def _manifest_environment_contract(
+    manifest_path: Path, payload: dict[str, Any]
+) -> tuple[dict[str, str] | None, str | None]:
+    environment_contract = payload.get("environment_contract")
+    if not isinstance(environment_contract, dict) or environment_contract.get(
+        "status"
+    ) != "hash_bound":
+        return None, "manifest_environment_contract_missing"
+    for key, hash_key in (
+        ("archived_setup", "setup_sha256"),
+        ("archived_lock", "lock_sha256"),
+    ):
+        record = environment_contract.get(key)
+        if not isinstance(record, dict):
+            return None, "manifest_environment_contract_artifact_missing"
+        try:
+            artifact_path = _path_within(
+                manifest_path.parent,
+                record.get("path"),
+                manifest_path.parent / "missing-environment-artifact",
+            )
+        except AdmissionError:
+            return None, "manifest_environment_contract_path_escape"
+        if (
+            not artifact_path.is_file()
+            or record.get("sha256") != _sha256_file(artifact_path)
+            or record.get("sha256") != environment_contract.get(hash_key)
+        ):
+            return None, "manifest_environment_contract_hash_mismatch"
+    return (
+        {
+            "setup_sha256": str(environment_contract["setup_sha256"]),
+            "lock_sha256": str(environment_contract["lock_sha256"]),
+        },
+        None,
+    )
+
+
+def _validate_master_manifest(
+    manifest_path: Path,
+    matrix_path: Path,
+    payload: dict[str, Any],
+) -> dict[str, Any]:
+    result: dict[str, Any] = {
+        "path": str(manifest_path),
+        "sha256": _sha256_file(manifest_path),
+        "eligible": False,
+        "reason": "tier_b_master_manifest_invalid",
+    }
+    if _sha256_file(matrix_path) != REVIEWED_MATRIX_SHA256:
+        result["reason"] = "analysis_matrix_is_not_the_frozen_reviewed_matrix"
+        return result
+    phases = payload.get("phases")
+    if not isinstance(phases, dict):
+        result["reason"] = "tier_b_master_manifest_lacks_phase_records"
+        return result
+    try:
+        training = dict(phases["training"])
+        holdout = dict(phases["holdout"])
+        semantic = aggregate_route_tier_b_manifests.aggregate(
+            training_manifest=manifest_path.parent / str(training["manifest_path"]),
+            holdout_manifest=manifest_path.parent / str(holdout["manifest_path"]),
+            archive_root=manifest_path.parent,
+        )
+    except (
+        KeyError,
+        OSError,
+        TypeError,
+        ValueError,
+        json.JSONDecodeError,
+    ) as exc:
+        result["reason"] = f"tier_b_master_manifest_semantic_validation_failed: {exc}"
+        return result
+    if payload != semantic:
+        result["reason"] = "tier_b_master_manifest_semantic_content_mismatch"
+        return result
+    case_archive_roots: dict[str, str] = {}
+    for case_id, phase in dict(semantic["case_to_phase"]).items():
+        phase_record = dict(dict(semantic["phases"])[str(phase)])
+        case_archive_roots[str(case_id)] = str(phase_record["phase_archive_root"])
+    result.update(
+        {
+            "eligible": True,
+            "reason": "submitted_training_and_holdout_phase_archives_complete",
+            "matrix_sha256": str(semantic["matrix_sha256"]),
+            "source_commit": str(semantic["source_commit"]),
+            "environment_contract": dict(semantic["environment_contract"]),
+            "case_archive_roots": case_archive_roots,
+            "manifest_type": "tier_b_phase_master",
+        }
+    )
+    return result
+
+
 def _validate_manifest(manifest_path: Path, matrix_path: Path) -> dict[str, Any]:
     result: dict[str, Any] = {
         "path": str(manifest_path),
@@ -359,7 +454,20 @@ def _validate_manifest(manifest_path: Path, matrix_path: Path) -> dict[str, Any]
     except (OSError, ValueError, json.JSONDecodeError) as exc:
         result["reason"] = f"manifest_invalid: {exc}"
         return result
+    if (
+        payload.get("schema_id")
+        == aggregate_route_tier_b_manifests.MASTER_SCHEMA_ID
+    ):
+        return _validate_master_manifest(manifest_path, matrix_path, payload)
     result["sha256"] = _sha256_file(manifest_path)
+    environment_contract, environment_contract_reason = (
+        _manifest_environment_contract(manifest_path, payload)
+    )
+    if environment_contract is not None:
+        # Preserve independently valid compute provenance even when another
+        # campaign-level gate fails. This lets diagnostics fail for their own
+        # scientific reason while timing admission remains closed.
+        result["environment_contract"] = environment_contract
     source_commit = str(payload.get("source_commit", ""))
     if len(source_commit) == 40 and all(
         char in "0123456789abcdef" for char in source_commit.lower()
@@ -403,6 +511,9 @@ def _validate_manifest(manifest_path: Path, matrix_path: Path) -> dict[str, Any]
         return result
     if payload.get("source_dirty") is not False:
         result["reason"] = "manifest_source_worktree_not_clean"
+        return result
+    if environment_contract_reason is not None:
+        result["reason"] = environment_contract_reason
         return result
     release = payload.get("release_authorization")
     if not isinstance(release, dict):
@@ -1320,8 +1431,17 @@ def _validate_tier_b_batch_evidence(
     job_id: str,
     expected_commit: str,
     expected_matrix_sha256: str,
+    expected_environment_contract: dict[str, str],
 ) -> list[dict[str, str]]:
     """Require complete environment and settled accounting for a Tier-B block."""
+
+    setup_sha256 = str(expected_environment_contract.get("setup_sha256", ""))
+    lock_sha256 = str(expected_environment_contract.get("lock_sha256", ""))
+    if any(
+        len(value) != 64 or any(character not in "0123456789abcdef" for character in value)
+        for value in (setup_sha256, lock_sha256)
+    ):
+        raise AdmissionError("Tier-B manifest environment contract is unavailable")
 
     evidence = _cluster_batch_evidence(
         campaign_root=campaign_root,
@@ -1348,6 +1468,10 @@ def _validate_tier_b_batch_evidence(
         "allocation_revalidated": "YES",
         "account_qos_revalidated": "YES",
         "accounting_status": "pending_post_job_collection",
+        "env_setup_sha256": setup_sha256,
+        "expected_env_setup_sha256": setup_sha256,
+        "env_lock_sha256": lock_sha256,
+        "expected_env_lock_sha256": lock_sha256,
     }
     for key, expected in exact_metadata.items():
         if str(metadata.get(key, "")).lower() != str(expected).lower():
@@ -1388,6 +1512,54 @@ def _validate_tier_b_batch_evidence(
     ):
         if f"{name}={expected}" not in environment:
             raise AdmissionError(f"Tier-B environment capture lacks {name}={expected}")
+
+    identity_path = batch / "environment_identity.json"
+    identity = _read_json(identity_path)
+    if (
+        identity.get("schema_id")
+        != "fenics-nonlinear-energies.compute-environment-identity"
+        or identity.get("schema_version") != 1
+    ):
+        raise AdmissionError("Tier-B compute environment identity schema is invalid")
+    compiler = dict(identity.get("compiler") or {})
+    mpi = dict(identity.get("mpi") or {})
+    jax = dict(identity.get("jax") or {})
+    contract = dict(identity.get("environment_contract") or {})
+    compiler_records = [dict(compiler.get(name) or {}) for name in ("c", "cxx", "mpicc")]
+    devices = jax.get("devices")
+    if (
+        any(
+            record.get("returncode") != 0
+            or not str(record.get("executable", "")).strip()
+            or not str(record.get("version_first_line", "")).strip()
+            for record in compiler_records
+        )
+        or not str(mpi.get("mpi4py_version", "")).strip()
+        or not str(mpi.get("library_version", "")).strip()
+        or not isinstance(mpi.get("vendor"), list)
+        or not mpi.get("vendor")
+        or not isinstance(mpi.get("standard_version"), list)
+        or len(mpi.get("standard_version")) != 2
+        or not str(jax.get("jax_version", "")).strip()
+        or not str(jax.get("jaxlib_version", "")).strip()
+        or jax.get("default_backend") != "cpu"
+        or jax.get("jax_platforms") != "cpu"
+        or jax.get("xla_flags")
+        != "--xla_cpu_multi_thread_eigen=false --xla_force_host_platform_device_count=1"
+        or not isinstance(devices, list)
+        or len(devices) != 1
+        or "cpu" not in str(devices[0]).lower()
+        or contract.get("setup_sha256") != setup_sha256
+        or contract.get("lock_sha256") != lock_sha256
+    ):
+        raise AdmissionError("Tier-B compiler/MPI/JAX/XLA identity is incomplete or stale")
+    evidence.append(
+        {
+            "role": "compute_environment_identity",
+            "path": str(identity_path),
+            "sha256": _sha256_file(identity_path),
+        }
+    )
 
     accounting = _read_json(batch / "sacct_final.json")
     if (
@@ -1443,7 +1615,7 @@ def _job_directories(campaign_root: Path, case_id: str) -> list[Path]:
     root = campaign_root / "cases" / case_id
     if not root.is_dir():
         return []
-    return sorted(path for path in root.glob("job_*" ) if path.is_dir())
+    return sorted(path for path in root.glob("job_*") if path.is_dir())
 
 
 def _matrix_rows_equal(planned: dict[str, str], observed: dict[str, Any]) -> bool:
@@ -1457,6 +1629,7 @@ def _analyze_job(
     *,
     expected_commit: str,
     expected_matrix_sha256: str,
+    expected_environment_contract: dict[str, str],
 ) -> dict[str, float]:
     block["job_path"] = str(job)
     campaign_root = job.parents[2]
@@ -1467,6 +1640,7 @@ def _analyze_job(
         job_id=expected_job_id,
         expected_commit=expected_commit,
         expected_matrix_sha256=expected_matrix_sha256,
+        expected_environment_contract=expected_environment_contract,
     )
     matrix_path = job / "matrix_row.json"
     if not matrix_path.is_file() or not _matrix_rows_equal(row, _read_json(matrix_path)):
@@ -1849,6 +2023,7 @@ def analyze(matrix_path: Path, campaign_root: Path, manifest_path: Path) -> dict
     blocks: list[dict[str, Any]] = []
     timing_values: dict[str, dict[str, float]] = {}
     violations_by_case = {row["case_id"]: row["reason"] for row in matrix_violations}
+    case_archive_roots = dict(manifest.get("case_archive_roots") or {})
     for row in rows:
         block = _expected_block(row)
         case_id = block["case_id"]
@@ -1860,7 +2035,34 @@ def analyze(matrix_path: Path, campaign_root: Path, manifest_path: Path) -> dict
                 )
             blocks.append(block)
             continue
-        jobs = _job_directories(campaign_root, case_id)
+        case_campaign_root = campaign_root
+        if case_id in case_archive_roots:
+            relative_root = Path(str(case_archive_roots[case_id]))
+            if relative_root.is_absolute():
+                jobs = []
+                block.update(
+                    {"status": "invalid", "reason": "master_phase_root_is_not_relocatable"}
+                )
+                for route in ROUTES:
+                    block["routes"][route].update(
+                        {"status": "invalid", "reason": "master_phase_root_is_not_relocatable"}
+                    )
+                blocks.append(block)
+                continue
+            case_campaign_root = (manifest_path.resolve().parent / relative_root).resolve()
+            try:
+                case_campaign_root.relative_to(manifest_path.resolve().parent)
+            except ValueError:
+                block.update(
+                    {"status": "invalid", "reason": "master_phase_root_escapes_archive"}
+                )
+                for route in ROUTES:
+                    block["routes"][route].update(
+                        {"status": "invalid", "reason": "master_phase_root_escapes_archive"}
+                    )
+                blocks.append(block)
+                continue
+        jobs = _job_directories(case_campaign_root, case_id)
         if len(jobs) > 1:
             block.update({"status": "invalid", "reason": "duplicate_job_directories"})
             for route in ROUTES:
@@ -1875,6 +2077,9 @@ def analyze(matrix_path: Path, campaign_root: Path, manifest_path: Path) -> dict
                     block,
                     expected_commit=str(manifest.get("source_commit", "")),
                     expected_matrix_sha256=_sha256_file(matrix_path),
+                    expected_environment_contract=dict(
+                        manifest.get("environment_contract") or {}
+                    ),
                 )
             except (AdmissionError, OSError, ValueError, json.JSONDecodeError) as exc:
                 if block["status"] not in {"censored"}:

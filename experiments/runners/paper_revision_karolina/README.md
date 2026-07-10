@@ -47,10 +47,13 @@ CAMPAIGN_ID=paper_revision_karolina_prepared_v9 \
 bash experiments/runners/paper_revision_karolina/submit_prepared_campaigns.sh
 ```
 
-Optional rows are always prepared as a separate tranche. For the 45-node-hour
-route-confirmation tranche use `ONLY_OPTIONAL=1
-EXPERIMENTS=EXP-ROUTE-001`; this selects exactly both Tier-B tiers and all 30
-rows, and a partial Tier-B preparation is rejected. For the 17.5-node-hour
+Optional rows are always prepared as separate tranches. The 45-node-hour
+route-confirmation scope is split before any real submission: use
+`ONLY_OPTIONAL=1 EXPERIMENTS=EXP-ROUTE-001 ROUTE_PHASE=training` for the exact
+20-row rank-1/8 training phase, then use `ROUTE_PHASE=holdout` only after the
+training model has been frozen; the latter selects the exact 10-row rank-32
+holdout phase. A phase-incomplete or overlapping master archive is rejected.
+For the 17.5-node-hour
 optional scaling tranche use `ONLY_OPTIONAL=1 EXPERIMENTS=EXP-SCALE-001`; this
 selects exactly the three Plasticity3D rows. Hyperelasticity and Plasticity3D
 scaling can never share a real submission root. The default dry run can inventory
@@ -86,6 +89,70 @@ and command file. It can be repeated after copy-back without contacting Slurm:
   experiments/runners/paper_revision_karolina/preflight_prepared_campaign.py \
   --campaign-root artifacts/reproduction/paper_revision_karolina/<campaign-id>
 ```
+
+Real route submissions must additionally set `ROUTE_PHASE=training` for ranks
+1 and 8 or `ROUTE_PHASE=holdout` for rank 32. The holdout path is rejected
+unless `MODEL_FREEZE_RECEIPT` names a receipt conforming to
+`paper/protocols/route-model-freeze-v1.schema.json`; the receipt binds the
+complete 76-case training plan, clean commit, training analysis, and frozen
+model hashes before any holdout scheduler call. `ENV_SETUP` and `ENV_LOCK` are
+also mandatory for scheduler admission. Both files are copied into the tranche,
+hash-bound in every command, verified before the setup is sourced, and linked
+to the compute-node compiler, MPI/mpi4py, JAX/jaxlib, backend, and XLA identity
+record.
+
+After all training jobs finish, settle the complete tranche in one operation from an
+offline accounting index (default) or the explicitly opted-in live mode:
+
+```bash
+./.venv/bin/python experiments/analysis/finalize_karolina_campaign_archive.py \
+  --campaign-root <campaign-root> --offline-index <accounting-index.json> \
+  --receipt <detached-receipt.json>
+```
+
+The detached receipt contains the checksum-manifest digest. After copy-back,
+use `--verify-only --expected-checksum-manifest-sha256 <pre-copy-digest>`.
+Verification rejects missing, additional, changed, or symlinked archive files.
+
+Before preparing a real rank-32 route phase, freeze the prespecified model from
+the complete local workstation archive and the checksum-sealed Karolina
+training archive:
+
+```bash
+./.venv/bin/python experiments/analysis/freeze_route_training_model.py \
+  --workstation-root <workstation-root> \
+  --karolina-training-root <training-root> \
+  --output-dir <training-freeze-output>
+```
+
+The utility opens only the 76 planned rank-1/8 jobs, requires 74
+equivalence-admitted model rows, checks the full-rank 13-feature design, and
+writes `training_analysis.json` plus `frozen_model.json`, both explicitly
+recording that zero holdout rows were seen. A human then records those hashes,
+the checksum-sealed training manifest, and the review decision in a copy of
+`paper/protocols/route-model-freeze-v1.example.json`. The holdout preparer
+revalidates the complete training archive and both output schemas before its
+first scheduler call.
+
+After both optional phases have completed and been settled, create the only
+Tier-B manifest accepted by the endpoint analyzer:
+
+```bash
+./.venv/bin/python experiments/analysis/aggregate_route_tier_b_manifests.py \
+  --training-manifest <training-root>/prepared_manifest.json \
+  --holdout-manifest <holdout-root>/prepared_manifest.json \
+  --archive-root <common-copy-back-root> \
+  --output <common-copy-back-root>/route_tier_b_campaign_master_manifest.json
+```
+
+This step is scheduler-free. It recomputes exact 20/10 phase coverage, checks
+the common clean commit and environment, binds the holdout receipt back to the
+admitted training manifest, and emits only archive-relative paths.
+
+A real submission now journals and fsyncs an intent before every `sbatch`
+call and a result afterward. `resume_partial_submission.py` submits only case
+IDs without accepted job IDs. An unmatched intent is ambiguous external state
+and blocks automatic resume until a human reconciles it with the scheduler.
 
 `SBATCH_TEST_ONLY=1` can be combined with `DRY_RUN=1` to inspect the exact
 admission-test commands without contacting Slurm:

@@ -432,6 +432,12 @@ def _write_job(
     mutate_output=None,
     route_times: dict[str, float] | None = None,
 ) -> None:
+    setup_sha = hashlib.sha256(
+        (root / "environment_contract/environment_setup.sh").read_bytes()
+    ).hexdigest()
+    lock_sha = hashlib.sha256(
+        (root / "environment_contract/environment.lock").read_bytes()
+    ).hexdigest()
     job = root / "cases" / row["case_id"] / "job_123"
     measure = job / "measure_01"
     measure.mkdir(parents=True)
@@ -462,6 +468,10 @@ def _write_job(
                 "started_at=2026-07-10T10:00:00+00:00",
                 "finished_at=2026-07-10T10:05:00+00:00",
                 "accounting_status=pending_post_job_collection",
+                f"env_setup_sha256={setup_sha}",
+                f"expected_env_setup_sha256={setup_sha}",
+                f"env_lock_sha256={lock_sha}",
+                f"expected_env_lock_sha256={lock_sha}",
             )
         )
         + "\n",
@@ -495,6 +505,42 @@ def _write_job(
         encoding="utf-8",
     )
     (batch / "execute.log").write_text("completed\n", encoding="utf-8")
+    (batch / "environment_identity.json").write_text(
+        json.dumps(
+            {
+                "schema_id": "fenics-nonlinear-energies.compute-environment-identity",
+                "schema_version": 1,
+                "compiler": {
+                    name: {
+                        "executable": name,
+                        "version_first_line": f"{name} fixture",
+                        "returncode": 0,
+                    }
+                    for name in ("c", "cxx", "mpicc")
+                },
+                "mpi": {
+                    "mpi4py_version": "4.0",
+                    "vendor": ["fixture", [4, 1, 0]],
+                    "library_version": "MPI fixture",
+                    "standard_version": [4, 1],
+                },
+                "jax": {
+                    "jax_version": "0.4",
+                    "jaxlib_version": "0.4",
+                    "default_backend": "cpu",
+                    "devices": ["TFRT_CPU_0"],
+                    "jax_platforms": "cpu",
+                    "xla_flags": "--xla_cpu_multi_thread_eigen=false --xla_force_host_platform_device_count=1",
+                },
+                "environment_contract": {
+                    "setup_sha256": setup_sha,
+                    "lock_sha256": lock_sha,
+                },
+            }
+        )
+        + "\n",
+        encoding="utf-8",
+    )
     (slurm / f"{row['case_id']}-123.out").write_text("stdout\n", encoding="utf-8")
     (slurm / f"{row['case_id']}-123.err").write_text("", encoding="utf-8")
     values = {
@@ -623,6 +669,13 @@ def _campaign(
 ):
     matrix = tmp_path / "matrix.csv"
     root = tmp_path / "campaign"
+    root.mkdir()
+    environment_contract = root / "environment_contract"
+    environment_contract.mkdir()
+    setup = environment_contract / "environment_setup.sh"
+    lock = environment_contract / "environment.lock"
+    setup.write_text("export TEST_ENV=1\n", encoding="utf-8")
+    lock.write_text("test-lock\n", encoding="utf-8")
     rows = _matrix_rows()
     _write_matrix(matrix, rows)
     analysis.REVIEWED_MATRIX_SHA256 = hashlib.sha256(matrix.read_bytes()).hexdigest()
@@ -638,7 +691,6 @@ def _campaign(
             route_times=route_times,
             **kwargs,
         )
-    root.mkdir(exist_ok=True)
     reviewed_dir = root / "reviewed_artifacts"
     reviewed_dir.mkdir()
     reviewed = reviewed_dir / "tier_b_review.json"
@@ -680,6 +732,19 @@ def _campaign(
         "case_count": 30,
         "source_commit": "0123456789abcdef0123456789abcdef01234567",
         "source_dirty": False,
+        "environment_contract": {
+            "status": "hash_bound",
+            "setup_sha256": hashlib.sha256(setup.read_bytes()).hexdigest(),
+            "lock_sha256": hashlib.sha256(lock.read_bytes()).hexdigest(),
+            "archived_setup": {
+                "path": "environment_contract/environment_setup.sh",
+                "sha256": hashlib.sha256(setup.read_bytes()).hexdigest(),
+            },
+            "archived_lock": {
+                "path": "environment_contract/environment.lock",
+                "sha256": hashlib.sha256(lock.read_bytes()).hexdigest(),
+            },
+        },
         "release_authorization": {
             "schema_id": "fenics-nonlinear-energies.human-release-authorization",
             "path": "release_authorization.json",

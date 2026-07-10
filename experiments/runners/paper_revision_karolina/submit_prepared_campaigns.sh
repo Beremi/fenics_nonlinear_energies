@@ -18,6 +18,10 @@ ONLY_OPTIONAL="${ONLY_OPTIONAL:-0}"
 EXPERIMENTS="${EXPERIMENTS:-}"
 TIERS="${TIERS:-}"
 ADMISSION_GATE="${ADMISSION_GATE:-}"
+ROUTE_PHASE="${ROUTE_PHASE:-}"
+MODEL_FREEZE_RECEIPT="${MODEL_FREEZE_RECEIPT:-}"
+ENV_SETUP="${ENV_SETUP:-}"
+ENV_LOCK="${ENV_LOCK:-}"
 MAX_NODE_HOURS="${MAX_NODE_HOURS:-100}"
 CAMPAIGN_ID="${CAMPAIGN_ID:-paper_revision_karolina_prepared_$(date -u +%Y%m%dT%H%M%SZ)_$$}"
 OUT_ROOT="${OUT_ROOT:-artifacts/reproduction/paper_revision_karolina/${CAMPAIGN_ID}}"
@@ -62,6 +66,19 @@ if [[ -n "$TIERS" ]]; then
 fi
 if [[ -n "$ADMISSION_GATE" ]]; then
   args+=(--admission-gate "$ADMISSION_GATE")
+fi
+if [[ -n "$ROUTE_PHASE" ]]; then
+  args+=(--route-phase "$ROUTE_PHASE")
+fi
+if [[ -n "$MODEL_FREEZE_RECEIPT" ]]; then
+  args+=(--model-freeze-receipt "$MODEL_FREEZE_RECEIPT")
+fi
+if [[ -n "$ENV_SETUP" || -n "$ENV_LOCK" ]]; then
+  if [[ -z "$ENV_SETUP" || -z "$ENV_LOCK" ]]; then
+    echo "ENV_SETUP and ENV_LOCK must be supplied together" >&2
+    exit 2
+  fi
+  args+=(--env-setup "$ENV_SETUP" --env-lock "$ENV_LOCK")
 fi
 if [[ "$SBATCH_TEST_ONLY" == "1" ]]; then
   args+=(--test-only)

@@ -79,6 +79,21 @@ def _canonical_case_ids(matrix_sha256: str) -> dict[str, set[str]]:
     return by_tier
 
 
+def _canonical_route_phase_by_case(matrix_sha256: str) -> dict[str, str]:
+    if _sha256(MATRIX) != matrix_sha256:
+        raise ValueError("canonical route matrix hash disagrees with the analysis contract")
+    with MATRIX.open(newline="", encoding="utf-8") as handle:
+        rows = list(csv.DictReader(handle))
+    return {
+        str(row["case_id"]): (
+            "holdout" if int(row["total_ranks"]) == 32 else "training"
+        )
+        for row in rows
+        if row.get("experiment_id") == "EXP-ROUTE-001"
+        and row.get("optional") == "0"
+    }
+
+
 def aggregate(
     manifest_paths: list[Path], *, archive_root: Path
 ) -> dict[str, Any]:
@@ -88,7 +103,10 @@ def aggregate(
         contract["publication_model_input_gates"]["karolina_matrix_sha256"]
     )
     canonical_by_tier = _canonical_case_ids(matrix_sha256)
+    phase_by_case = _canonical_route_phase_by_case(matrix_sha256)
     tiers_seen: set[str] = set()
+    tier_phases_seen: set[tuple[str, str]] = set()
+    phases_seen: set[str] = set()
     commits: set[str] = set()
     cases_seen: set[str] = set()
     tranches: list[dict[str, Any]] = []
@@ -104,9 +122,23 @@ def aggregate(
         selected_tiers = {str(value) for value in manifest.get("selected_tiers") or []}
         if not selected_tiers or not selected_tiers.issubset(EXPECTED_TIER_COUNTS):
             raise ValueError(f"{path} has unknown or missing route tiers")
-        if tiers_seen & selected_tiers:
-            raise ValueError("route tranche tiers overlap")
-        expected_count = sum(EXPECTED_TIER_COUNTS[tier] for tier in selected_tiers)
+        route_phase = manifest.get("route_phase")
+        normalized_phase = "combined" if route_phase is None else str(route_phase)
+        if normalized_phase not in {"combined", "training", "holdout"}:
+            raise ValueError(f"{path} has an unknown route phase")
+        phase_keys = {(tier, normalized_phase) for tier in selected_tiers}
+        if tier_phases_seen & phase_keys:
+            raise ValueError("route tranche tier/phase scopes overlap")
+        expected_case_ids = set().union(
+            *(canonical_by_tier[tier] for tier in selected_tiers)
+        )
+        if normalized_phase != "combined":
+            expected_case_ids = {
+                case_id
+                for case_id in expected_case_ids
+                if phase_by_case[case_id] == normalized_phase
+            }
+        expected_count = len(expected_case_ids)
         if int(manifest.get("case_count", -1)) != expected_count:
             raise ValueError(f"{path} case count disagrees with its selected tiers")
         if manifest.get("test_only_commands") is not False:
@@ -186,9 +218,6 @@ def aggregate(
                     raise ValueError("submission ledger contains a non-object")
                 ledger_rows.append(row)
         case_ids = [str(row.get("case_id", "")) for row in ledger_rows]
-        expected_case_ids = set().union(
-            *(canonical_by_tier[tier] for tier in selected_tiers)
-        )
         if (
             len(case_ids) != expected_count
             or len(set(case_ids)) != expected_count
@@ -209,6 +238,8 @@ def aggregate(
             raise ValueError("submission ledgers contain duplicate case IDs")
         cases_seen.update(case_ids)
         tiers_seen.update(selected_tiers)
+        tier_phases_seen.update(phase_keys)
+        phases_seen.add(normalized_phase)
         commits.add(commit)
         tranches.append(
             {
@@ -223,11 +254,15 @@ def aggregate(
                 ),
                 "release_authorization_sha256": _sha256(release_path),
                 "selected_tiers": sorted(selected_tiers),
+                "route_phase": route_phase,
                 "case_count": expected_count,
             }
         )
     if tiers_seen != set(EXPECTED_TIER_COUNTS):
         raise ValueError(f"route tranche union is incomplete: {sorted(tiers_seen)}")
+    expected_all_cases = set().union(*canonical_by_tier.values())
+    if cases_seen != expected_all_cases:
+        raise ValueError("route tranche phases do not cover every required matrix row")
     if len(commits) != 1:
         raise ValueError("route tranches do not share one source commit")
     return {
@@ -239,11 +274,15 @@ def aggregate(
         "source_commit": next(iter(commits)),
         "source_dirty": False,
         "selected_tiers": sorted(tiers_seen),
+        "route_phases": sorted(phases_seen),
         "case_count": len(cases_seen),
         "case_ids": sorted(cases_seen),
         "contract_path": str(CONTRACT.relative_to(REPO_ROOT)),
         "contract_sha256": _sha256(CONTRACT),
-        "tranches": sorted(tranches, key=lambda row: row["selected_tiers"]),
+        "tranches": sorted(
+            tranches,
+            key=lambda row: (str(row.get("route_phase")), row["selected_tiers"]),
+        ),
     }
 
 

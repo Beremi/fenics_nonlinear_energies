@@ -1,0 +1,23 @@
+{
+  "schema_id": "fenics-nonlinear-energies.route-model-freeze",
+  "schema_version": 1,
+  "status": "frozen_before_holdout",
+  "decision": "training_fit_complete_holdout_unopened",
+  "matrix_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+  "source_commit": "0000000000000000000000000000000000000000",
+  "training_case_ids_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+  "created_at_utc": "2099-01-01T00:00:00+00:00",
+  "reviewer": "EXAMPLE_ONLY_REPLACE_WITH_HUMAN_REVIEWER",
+  "training_manifest": {
+    "path": "training/prepared_manifest.json",
+    "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+  },
+  "training_analysis": {
+    "path": "training/route_training_analysis.json",
+    "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+  },
+  "frozen_model": {
+    "path": "training/frozen_route_model.json",
+    "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+  }
+}

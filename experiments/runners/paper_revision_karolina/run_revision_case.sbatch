@@ -9,8 +9,8 @@
 
 set -euo pipefail
 
-if [[ $# -ne 7 ]]; then
-  echo "usage: $0 MATRIX CASE_ID OUT_ROOT EXPECTED_SOURCE_COMMIT EXPECTED_MATRIX_SHA256 SOURCE_FREEZE SOURCE_FREEZE_SHA256" >&2
+if [[ $# -ne 11 ]]; then
+  echo "usage: $0 MATRIX CASE_ID OUT_ROOT EXPECTED_SOURCE_COMMIT EXPECTED_MATRIX_SHA256 SOURCE_FREEZE SOURCE_FREEZE_SHA256 ENV_SETUP ENV_SETUP_SHA256 ENV_LOCK ENV_LOCK_SHA256" >&2
   exit 2
 fi
 MATRIX="$1"
@@ -20,6 +20,12 @@ EXPECTED_SOURCE_COMMIT="$4"
 EXPECTED_MATRIX_SHA256="$5"
 SOURCE_FREEZE="$6"
 SOURCE_FREEZE_SHA256="$7"
+ENV_SETUP="$8"
+EXPECTED_ENV_SETUP_SHA256="$9"
+ENV_LOCK="${10}"
+EXPECTED_ENV_LOCK_SHA256="${11}"
+export ENV_SETUP ENV_LOCK
+export EXPECTED_ENV_SETUP_SHA256 EXPECTED_ENV_LOCK_SHA256
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 if [[ "${ALLOCATION_REVALIDATED:-}" != "YES" || "${ACCOUNT_QOS_REVALIDATED:-}" != "YES" ]]; then
@@ -43,12 +49,12 @@ if [[ ! "$EXPECTED_SOURCE_COMMIT" =~ ^[0-9a-f]{40}$ ]]; then
   echo "Refusing compute execution: expected source commit is malformed." >&2
   exit 2
 fi
-if [[ ! "$EXPECTED_MATRIX_SHA256" =~ ^[0-9a-f]{64}$ || ! "$SOURCE_FREEZE_SHA256" =~ ^[0-9a-f]{64}$ ]]; then
-  echo "Refusing compute execution: expected matrix/source-freeze SHA-256 is malformed." >&2
+if [[ ! "$EXPECTED_MATRIX_SHA256" =~ ^[0-9a-f]{64}$ || ! "$SOURCE_FREEZE_SHA256" =~ ^[0-9a-f]{64}$ || ! "$EXPECTED_ENV_SETUP_SHA256" =~ ^[0-9a-f]{64}$ || ! "$EXPECTED_ENV_LOCK_SHA256" =~ ^[0-9a-f]{64}$ ]]; then
+  echo "Refusing compute execution: expected matrix/source/environment SHA-256 is malformed." >&2
   exit 2
 fi
-if [[ ! -f "$MATRIX" || ! -f "$SOURCE_FREEZE" ]]; then
-  echo "Refusing compute execution: matrix or reviewed source freeze is missing." >&2
+if [[ ! -f "$MATRIX" || ! -f "$SOURCE_FREEZE" || ! -f "$ENV_SETUP" || ! -f "$ENV_LOCK" ]]; then
+  echo "Refusing compute execution: matrix, source freeze, or reviewed environment files are missing." >&2
   exit 2
 fi
 RUNTIME_SOURCE_COMMIT="$(git rev-parse HEAD)"
@@ -71,13 +77,19 @@ if [[ "$RUNTIME_SOURCE_FREEZE_SHA256" != "$SOURCE_FREEZE_SHA256" ]]; then
   exit 2
 fi
 
-if [[ -n "${ENV_SETUP:-}" ]]; then
-  if [[ ! -f "$ENV_SETUP" ]]; then
-    echo "ENV_SETUP='$ENV_SETUP' does not exist." >&2
-    exit 2
-  fi
-  # shellcheck source=/dev/null
-  source "$ENV_SETUP"
+RUNTIME_ENV_SETUP_SHA256="$(sha256sum "$ENV_SETUP" | awk '{print $1}')"
+RUNTIME_ENV_LOCK_SHA256="$(sha256sum "$ENV_LOCK" | awk '{print $1}')"
+if [[ "$RUNTIME_ENV_SETUP_SHA256" != "$EXPECTED_ENV_SETUP_SHA256" || "$RUNTIME_ENV_LOCK_SHA256" != "$EXPECTED_ENV_LOCK_SHA256" ]]; then
+  echo "Refusing compute execution: reviewed environment setup or lock changed after preparation." >&2
+  exit 2
+fi
+# shellcheck source=/dev/null
+source "$ENV_SETUP"
+POST_SETUP_SOURCE_COMMIT="$(git rev-parse HEAD)"
+POST_SETUP_DIRTY="$(git status --porcelain)"
+if [[ "$POST_SETUP_SOURCE_COMMIT" != "$EXPECTED_SOURCE_COMMIT" || -n "$POST_SETUP_DIRTY" ]]; then
+  echo "Refusing compute execution: environment setup changed the source commit or worktree." >&2
+  exit 2
 fi
 PYTHON="${PYTHON:-./.venv/bin/python}"
 if [[ ! -x "$PYTHON" ]]; then
@@ -271,11 +283,13 @@ trap cleanup EXIT
   echo "source_freeze_sha256=$RUNTIME_SOURCE_FREEZE_SHA256"
   echo "expected_source_freeze_sha256=$SOURCE_FREEZE_SHA256"
   echo "env_setup=${ENV_SETUP:-}"
-  if [[ -n "${ENV_SETUP:-}" ]]; then
-    echo "env_setup_sha256=$(sha256sum "$ENV_SETUP" | awk '{print $1}')"
-  else
-    echo "env_setup_sha256=not_applicable"
-  fi
+  echo "env_setup_sha256=$RUNTIME_ENV_SETUP_SHA256"
+  echo "expected_env_setup_sha256=$EXPECTED_ENV_SETUP_SHA256"
+  echo "env_lock=$ENV_LOCK"
+  echo "env_lock_sha256=$RUNTIME_ENV_LOCK_SHA256"
+  echo "expected_env_lock_sha256=$EXPECTED_ENV_LOCK_SHA256"
+  echo "post_setup_source_commit=$POST_SETUP_SOURCE_COMMIT"
+  echo "post_setup_source_dirty=$([[ -n "$POST_SETUP_DIRTY" ]] && echo true || echo false)"
   echo "allocation_revalidated=${ALLOCATION_REVALIDATED}"
   echo "account_qos_revalidated=${ACCOUNT_QOS_REVALIDATED}"
   echo "allocation_valid_until=${ALLOCATION_VALID_UNTIL}"
@@ -317,10 +331,78 @@ PY
     MIX_LOCAL_P4_CHUNK_SCATTER_CACHE MIX_LOCAL_P4_CHUNK_SCATTER_CACHE_MAX_GIB \
     SLURM_JOB_ID SLURM_JOB_ACCOUNT SLURM_JOB_QOS SLURM_JOB_PARTITION \
     SLURM_JOB_NUM_NODES SLURM_NTASKS SLURM_TASKS_PER_NODE \
-    SLURM_CPUS_PER_TASK SLURM_JOB_NODELIST; do
+    SLURM_CPUS_PER_TASK SLURM_JOB_NODELIST ENV_SETUP ENV_LOCK; do
     printf '%s=%q\n' "$name" "${!name:-}"
   done
 } > "$JOB_ROOT/environment.txt" 2>&1
+
+"$PYTHON" - "$JOB_ROOT/environment_identity.json" <<'PY'
+import json
+import os
+import platform
+import shutil
+import subprocess
+import sys
+
+import jax
+import jaxlib
+from mpi4py import MPI
+import mpi4py
+
+
+def command_identity(name, fallback):
+    executable = os.environ.get(name) or shutil.which(fallback)
+    if not executable:
+        return {"executable": None, "version_first_line": None}
+    completed = subprocess.run(
+        [executable, "--version"], check=False, capture_output=True, text=True
+    )
+    text = (completed.stdout or completed.stderr).splitlines()
+    return {
+        "executable": executable,
+        "version_first_line": text[0] if text else "",
+        "returncode": int(completed.returncode),
+    }
+
+
+payload = {
+    "schema_id": "fenics-nonlinear-energies.compute-environment-identity",
+    "schema_version": 1,
+    "python": {
+        "version": platform.python_version(),
+        "executable": sys.executable,
+        "implementation": platform.python_implementation(),
+    },
+    "compiler": {
+        "c": command_identity("CC", "cc"),
+        "cxx": command_identity("CXX", "c++"),
+        "mpicc": command_identity("MPICC", "mpicc"),
+    },
+    "mpi": {
+        "mpi4py_version": mpi4py.__version__,
+        "vendor": list(MPI.get_vendor()),
+        "library_version": MPI.Get_library_version().strip(),
+        "standard_version": list(MPI.Get_version()),
+    },
+    "jax": {
+        "jax_version": jax.__version__,
+        "jaxlib_version": jaxlib.__version__,
+        "default_backend": jax.default_backend(),
+        "devices": [str(device) for device in jax.devices()],
+        "jax_platforms": os.environ.get("JAX_PLATFORMS", ""),
+        "xla_flags": os.environ.get("XLA_FLAGS", ""),
+    },
+    "environment_contract": {
+        "setup_path": os.environ["ENV_SETUP"],
+        "setup_sha256": os.environ["EXPECTED_ENV_SETUP_SHA256"],
+        "lock_path": os.environ["ENV_LOCK"],
+        "lock_sha256": os.environ["EXPECTED_ENV_LOCK_SHA256"],
+    },
+}
+with open(sys.argv[1], "w", encoding="utf-8") as handle:
+    json.dump(payload, handle, indent=2)
+    handle.write("\n")
+PY
 
 "$PYTHON" -u "$SCRIPT_DIR/execute_case.py" \
   --matrix "$MATRIX" \
