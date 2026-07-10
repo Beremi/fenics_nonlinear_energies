@@ -237,7 +237,7 @@ def _derivative_table(data: dict[str, dict[str, Any]]) -> str:
     )
     return rf"""\begin{{tabularx}}{{\textwidth}}{{@{{}}>{{\RaggedRight\arraybackslash}}X >{{\Centering\arraybackslash}}p{{0.07\textwidth}} *{{3}}{{>{{\Centering\arraybackslash}}p{{0.13\textwidth}}}} >{{\RaggedRight\arraybackslash}}p{{0.22\textwidth}}@{{}}}}
   \toprule
-  Block & Element states & Element route/symmetry defect & FD/action defect & Assembled CSR defect & Scope \\
+  Block & Element states & Element route/\allowbreak symmetry defect & FD/action defect & Assembled CSR defect & Scope \\
   \midrule
 {body}
   \bottomrule

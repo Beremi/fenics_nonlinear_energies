@@ -34,6 +34,7 @@ def test_revision_evidence_tables_are_generated_from_pilot_artifacts(tmp_path: P
     assert "1.006" in verification
     assert "Hyperelastic nonaffine" in verification
     assert "Hyperelasticity, one/two ranks & 2" in derivatives
+    assert r"route/\allowbreak symmetry defect" in derivatives
     assert "Hyperelasticity, one/two/four ranks" not in derivatives
     assert "Assembled CSR defect" in derivatives
     assert "P_2(L_1)" in quadrature
