@@ -621,7 +621,10 @@ def _expand_argv(
         "{repo_root}": str(repo_root.resolve()),
         "{evidence_root}": str(evidence_root.resolve()),
         "{staging_root}": str(staging_root.resolve()),
-        "{python}": str(Path(sys.executable).resolve()),
+        # Preserve the invoked virtual-environment launcher. Resolving this
+        # symlink can bypass its pyvenv.cfg and silently lose installed
+        # scientific packages in child processes.
+        "{python}": str(Path(sys.executable).absolute()),
     }
     expanded: list[str] = []
     for raw in argv:

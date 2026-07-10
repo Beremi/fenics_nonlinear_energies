@@ -571,6 +571,28 @@ def test_canonical_template_covers_every_source_and_clean_dependency() -> None:
     assert len(route["input_files"]) == 3
 
 
+def test_expand_argv_preserves_virtualenv_python_launcher(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    base_python = tmp_path / "base/bin/python3"
+    base_python.parent.mkdir(parents=True)
+    base_python.write_text("#!/bin/sh\n", encoding="utf-8")
+    venv_python = tmp_path / "venv/bin/python"
+    venv_python.parent.mkdir(parents=True)
+    venv_python.symlink_to(base_python)
+    monkeypatch.setattr(finalizer.sys, "executable", str(venv_python))
+
+    expanded = finalizer._expand_argv(
+        ["{python}"],
+        repo_root=tmp_path,
+        evidence_root=tmp_path / "evidence",
+        staging_root=tmp_path / "evidence/staging",
+    )
+
+    assert expanded == [str(venv_python.absolute())]
+    assert expanded != [str(venv_python.resolve())]
+
+
 def test_plan_rejects_missing_or_escaping_quadrature_artifact_declarations() -> None:
     plan = finalizer.build_execution_plan_template(experiment_commit=COMMIT)
     command = next(row for row in plan["commands"] if row["id"] == "disc_p1")
