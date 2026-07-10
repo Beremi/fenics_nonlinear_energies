@@ -1,14 +1,14 @@
 {
   "schema_version": 2,
   "generator": "paper/scripts/generate_revision_evidence_tables.py",
-  "generator_sha256": "d085739d633127a3c04538971203bd8f5847f9d82b82b7deee629beefc0ef81f",
+  "generator_sha256": "727a96a7d9751968ec23e1538d5ad1098a5e99eab3b4c3078ca252210e8910b5",
   "evidence_class": "diagnostic",
   "evidence_root": "artifacts/reproduction/paper_revision_2026_07_10/pilots",
   "publication_evidence": false,
   "status": "diagnostic_tables_not_for_submission",
   "git": {
-    "commit": "ceddd89b08d5454a3df724dcd4b4fa142a4028fd",
-    "worktree_clean": false
+    "commit": "ca3da0a909af63b333f9807d7b3d7bbfce51166d",
+    "worktree_clean": true
   },
   "source_evidence_manifest": null,
   "inputs": {
@@ -84,9 +84,9 @@
     }
   },
   "outputs": {
-    "revision_derivative_checks.tex": "13b8602e6937d2721be0d973930b50f7f245203d5cd3c625d022464ee71a6e0f",
+    "revision_derivative_checks.tex": "29b09cbaed5e205eac5ce30f226fba6ce8d4281621073a7001e1d77481e610d2",
     "revision_evidence_status.tex": "99eca0dacf9ba49c381cb704327d34eaa27c59e7871c88a192aa08475f35efda",
-    "revision_quadrature_sensitivity.tex": "6dc7eb7d319d22a8107c320e34ac21bfbec0c39cde3dee4e21c539f40988b7d0",
+    "revision_quadrature_sensitivity.tex": "9b0bd4111d3334d09f21f1800a122f04b3c9507c9f8bbd3115bc2ddd24f02d29",
     "revision_verification_summary.tex": "e0770eaefea0dc5c095829ca33be62038527116361ef894f7bb526857dded340"
   },
   "interpretation": "The generated numbers are diagnostic and must not enter a submission bundle."
