@@ -1,13 +1,13 @@
 {
   "schema_version": 2,
   "generator": "paper/scripts/generate_revision_evidence_tables.py",
-  "generator_sha256": "727a96a7d9751968ec23e1538d5ad1098a5e99eab3b4c3078ca252210e8910b5",
+  "generator_sha256": "23ad1c70099d7be619c73e3a508b586015af10057125131619b3cd107d3dda79",
   "evidence_class": "diagnostic",
   "evidence_root": "artifacts/reproduction/paper_revision_2026_07_10/pilots",
   "publication_evidence": false,
   "status": "diagnostic_tables_not_for_submission",
   "git": {
-    "commit": "ca3da0a909af63b333f9807d7b3d7bbfce51166d",
+    "commit": "8b3f8fd4bba3152d10ff8342c04c16086425eec5",
     "worktree_clean": true
   },
   "source_evidence_manifest": null,
@@ -84,7 +84,7 @@
     }
   },
   "outputs": {
-    "revision_derivative_checks.tex": "29b09cbaed5e205eac5ce30f226fba6ce8d4281621073a7001e1d77481e610d2",
+    "revision_derivative_checks.tex": "972001e7bf42779dab3c838faa05a62f5086b812cd1a914b42ff4c351e896fff",
     "revision_evidence_status.tex": "99eca0dacf9ba49c381cb704327d34eaa27c59e7871c88a192aa08475f35efda",
     "revision_quadrature_sensitivity.tex": "9b0bd4111d3334d09f21f1800a122f04b3c9507c9f8bbd3115bc2ddd24f02d29",
     "revision_verification_summary.tex": "e0770eaefea0dc5c095829ca33be62038527116361ef894f7bb526857dded340"
