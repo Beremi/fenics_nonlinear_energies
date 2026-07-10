@@ -200,6 +200,61 @@ def test_failed_frozen_command_is_an_explicit_unclassified_runtime_censor(
     assert any("not as convergence evidence" in error for error in errors)
 
 
+def test_required_policy_grid_blocks_false_local_completion(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(campaign, "_git_metadata", _clean_git)
+    plan = campaign.build_plan(
+        tmp_path / "campaign",
+        run_kind="publication",
+        allow_dirty=False,
+        p4_policy="local",
+        confirm_p4_local_feasible=True,
+    )
+    local_rows = [
+        row for row in plan["rows"] if row["execution_class"] == "required_local"
+    ]
+    selected: dict[str, dict[str, object]] = {}
+    for group in campaign.COMPLETE_REQUIRED_LOCAL_GROUPS:
+        reference = next(
+            row
+            for row in local_rows
+            if row["group_id"] == group and row["reference_row"]
+        )
+        parameter = {
+            "ginzburg_landau": "relative_dual_residual_target",
+            "hyperelasticity_reference_riesz": "riesz_ksp_rtol",
+            "hyperelasticity_nonlinear_stopping": "relative_dual_residual_target",
+            "plasticity3d_fixed_state_linear": "ksp_rtol",
+            "plasticity3d_nonlinear_stopping": "relative_dual_residual_target",
+        }[reference["family"]]
+        selected[group] = {
+            "status": campaign.ACCEPTED_POLICY_STATUS,
+            "row_id": reference["row_id"],
+            "parameter": parameter,
+            "tolerance": reference["parameters"][parameter],
+        }
+
+    passing = campaign._required_local_policy_grid(local_rows, selected)
+    assert passing["complete"] is True
+
+    selected["p3d_p4"] = {
+        "status": "no_acceptable_policy",
+        "row_id": None,
+        "tolerance": None,
+    }
+    failed = campaign._required_local_policy_grid(local_rows, selected)
+    assert failed["complete"] is False
+    assert failed["rejected_policy_groups"] == ["p3d_p4"]
+    assert campaign._local_terminal_decision(
+        missing=[],
+        invalid=[],
+        runtime_censored=[],
+        reference_failures=[],
+        policy_grid=failed,
+    ) == "local_calibration_policy_gate_failed"
+
+
 def test_p3d_worker_parser_rejects_unmatched_degree_rule() -> None:
     args = campaign._build_parser().parse_args(
         [

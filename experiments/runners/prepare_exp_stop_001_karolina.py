@@ -49,6 +49,42 @@ def _read(path: Path) -> dict[str, Any]:
     return value
 
 
+def _require_complete_local_policy_grid(
+    analysis: Mapping[str, Any], plan: Mapping[str, Any]
+) -> dict[str, Any]:
+    rows = plan.get("rows")
+    selected = analysis.get("selected_local_policies")
+    if not isinstance(rows, list) or not isinstance(selected, Mapping):
+        raise reviewed.CampaignContractError(
+            "local stopping analysis lacks its required policy grid"
+        )
+    local_rows = [
+        row
+        for row in rows
+        if isinstance(row, Mapping) and row.get("execution_class") == "required_local"
+    ]
+    grid = local._required_local_policy_grid(local_rows, selected)
+    if analysis.get("required_local_policy_grid") != grid:
+        raise reviewed.CampaignContractError(
+            "local stopping policy grid differs from independent recomputation"
+        )
+    if grid.get("complete") is not True:
+        failures = sorted(
+            {
+                *grid.get("missing_groups", []),
+                *grid.get("unexpected_groups", []),
+                *grid.get("missing_policy_records", []),
+                *grid.get("unexpected_policy_records", []),
+                *grid.get("rejected_policy_groups", []),
+                *grid.get("invalid_selected_rows", []),
+            }
+        )
+        raise reviewed.CampaignContractError(
+            f"local stopping groups lack accepted policies: {failures}"
+        )
+    return grid
+
+
 def _local_inputs(analysis_path: Path) -> tuple[dict[str, Any], Path, dict[str, Any]]:
     analysis_path = Path(analysis_path).resolve()
     analysis = _read(analysis_path)
@@ -67,7 +103,11 @@ def _local_inputs(analysis_path: Path) -> tuple[dict[str, Any], Path, dict[str, 
     if not isinstance(counts, dict) or any(
         int(counts.get(key, -1)) != 0
         for key in (
-            "missing_local", "invalid_local", "runtime_censored_local", "reference_failures"
+            "missing_local",
+            "invalid_local",
+            "runtime_censored_local",
+            "reference_failures",
+            "policy_gate_failures",
         )
     ):
         raise reviewed.CampaignContractError("local stopping analysis contains missing or invalid rows")
@@ -93,13 +133,7 @@ def _local_inputs(analysis_path: Path) -> tuple[dict[str, Any], Path, dict[str, 
         or int(plan.get("row_counts", {}).get("deferred_cluster_computation", -1)) != 7
     ):
         raise reviewed.CampaignContractError("local plan is not the clean 45+7 publication matrix")
-    selected = analysis.get("selected_local_policies")
-    if not isinstance(selected, dict):
-        raise reviewed.CampaignContractError("local analysis has no selected policies")
-    for group in (value[0] for value in MPI_GROUPS.values()):
-        record = selected.get(group)
-        if not isinstance(record, dict) or record.get("status") != "selected_loosest_accepted_same_discretization_policy":
-            raise reviewed.CampaignContractError(f"local group {group} has no accepted policy")
+    _require_complete_local_policy_grid(analysis, plan)
     return analysis, plan_path, plan
 
 
@@ -485,6 +519,7 @@ def adjudicate(root: Path, *, expected_checksum: str) -> dict[str, Any]:
     local_plan = _read(local_plan_path)
     if local_plan["source"]["commit"] != cluster_plan["source_commit"]:
         raise reviewed.CampaignContractError("local and cluster evidence use different commits")
+    _require_complete_local_policy_grid(local_analysis, local_plan)
     templates = {row["row_id"]: row for row in local_plan["rows"]}
     roots = _job_roots(root, cluster_plan)
     rows: dict[str, dict[str, Any]] = {}
@@ -543,15 +578,20 @@ def adjudicate(root: Path, *, expected_checksum: str) -> dict[str, Any]:
     if rejected:
         terminal = "CENSORED"
     elif len(nonlinear_targets) == 1:
-        terminal = "PASS"
+        terminal = "CALIBRATION_PASS_PENDING_DISCRETIZATION_GATE"
     else:
-        terminal = "SCOPED_PASS"
+        terminal = "CALIBRATION_SCOPED_PASS_PENDING_DISCRETIZATION_GATE"
+    calibration_scope_passed = terminal in {
+        "CALIBRATION_PASS_PENDING_DISCRETIZATION_GATE",
+        "CALIBRATION_SCOPED_PASS_PENDING_DISCRETIZATION_GATE",
+    }
     return {
         "schema_id": "fenics-nonlinear-energies.exp-stop-001.final-adjudication",
-        "schema_version": 1,
+        "schema_version": 2,
         "experiment_id": "EXP-STOP-001",
         "terminal_decision": terminal,
-        "complete_exp_stop_pass": terminal in {"PASS", "SCOPED_PASS"},
+        "complete_exp_stop_pass": False,
+        "calibration_scope_passed": calibration_scope_passed,
         "source_commit": cluster_plan["source_commit"],
         "local_analysis_sha256": reviewed.sha256_file(analysis_path),
         "cluster_archive_checksum_sha256": expected_checksum,
@@ -560,9 +600,21 @@ def adjudicate(root: Path, *, expected_checksum: str) -> dict[str, Any]:
         "comparisons": comparisons,
         "rejected_or_censored_cases": rejected,
         "selected_policies": selected,
+        "discretization_gate": {
+            "status": "not_bound",
+            "required_experiment": "EXP-DISC-001",
+            "required_decision": (
+                "Accepted algebraic state and observable errors must be materially "
+                "smaller than a hash-bound discretization-error estimate before a "
+                "complete EXP-STOP-001 PASS or SCOPED PASS can be emitted."
+            ),
+        },
+        "remaining_completion_gates": [
+            "hash-bound EXP-DISC-001 discretization-error adjudication"
+        ],
         "policy_scope": (
             "One common nonlinear target across retained families"
-            if terminal == "PASS"
+            if terminal == "CALIBRATION_PASS_PENDING_DISCRETIZATION_GATE"
             else "Family/degree-specific policies; cross-policy timing comparisons are prohibited"
         ),
     }

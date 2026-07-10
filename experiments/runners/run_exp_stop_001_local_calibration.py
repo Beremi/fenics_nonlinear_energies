@@ -4,9 +4,9 @@
 The campaign is deliberately staged.  ``prepare`` freezes commands and input
 hashes into a fresh output root, ``execute`` runs either one frozen local row
 or the complete local tranche, and ``analyze`` compares every endpoint with
-the tightest successful same-discretization reference.  Full nonlinear
-HyperElasticity and Plasticity3D rows, and all MPI consistency rows, remain
-explicit cluster-deferred censors in this local campaign.
+the tightest successful same-discretization reference.  Full nonlinear P4
+Plasticity3D rows and all MPI-consistency rows remain explicit
+cluster-deferred censors in this local campaign.
 """
 
 from __future__ import annotations
@@ -42,7 +42,7 @@ PLAN_SCHEMA_VERSION = 1
 RECEIPT_SCHEMA_ID = "fenics-nonlinear-energies.exp-stop-001.local-receipt"
 RECEIPT_SCHEMA_VERSION = 1
 ANALYSIS_SCHEMA_ID = "fenics-nonlinear-energies.exp-stop-001.local-analysis"
-ANALYSIS_SCHEMA_VERSION = 1
+ANALYSIS_SCHEMA_VERSION = 2
 P3D_RESULT_SCHEMA_ID = "fenics-nonlinear-energies.exp-stop-001.p3d-fixed-state"
 P3D_RESULT_SCHEMA_VERSION = 1
 
@@ -57,6 +57,16 @@ P3D_QUADRATURE = {
     4: "tetra_24point",
 }
 DEFERRED_NONLINEAR_TARGETS = (1.0e-2, 1.0e-4, 1.0e-6, 1.0e-8)
+ACCEPTED_POLICY_STATUS = "selected_loosest_accepted_same_discretization_policy"
+COMPLETE_REQUIRED_LOCAL_GROUPS = frozenset(
+    {
+        *(f"gl_l{level}" for level in GL_LEVELS),
+        *(f"he_l{level}" for level in HE_LEVELS),
+        *(f"he_l{level}_nonlinear" for level in HE_LEVELS),
+        *(f"p3d_p{degree}" for degree in (1, 2, 4)),
+        *(f"p3d_p{degree}_nonlinear" for degree in (1, 2)),
+    }
+)
 
 SAFE_ROW_CHARS = frozenset(
     "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_-"
@@ -1898,11 +1908,84 @@ def _selected_group_policy(
     }[family]
     selected = max(accepted, key=lambda row: float(row["parameters"][parameter]))
     return {
-        "status": "selected_loosest_accepted_same_discretization_policy",
+        "status": ACCEPTED_POLICY_STATUS,
         "row_id": selected["row_id"],
         "parameter": parameter,
         "tolerance": float(selected["parameters"][parameter]),
     }
+
+
+def _required_local_policy_grid(
+    local_rows: Sequence[Mapping[str, Any]],
+    selected_policies: Mapping[str, Mapping[str, Any]],
+) -> dict[str, Any]:
+    """Audit the exact local group grid needed before cluster completion.
+
+    A completed process inventory is not a successful calibration.  Every
+    required same-discretization group must also expose one policy selected
+    from an accepted comparison, and that row must belong to the named group.
+    """
+
+    rows_by_id = {str(row.get("row_id")): row for row in local_rows}
+    observed_groups = {str(row.get("group_id")) for row in local_rows}
+    selected_groups = {str(group) for group in selected_policies}
+    missing_groups = sorted(COMPLETE_REQUIRED_LOCAL_GROUPS - observed_groups)
+    unexpected_groups = sorted(observed_groups - COMPLETE_REQUIRED_LOCAL_GROUPS)
+    missing_policy_records = sorted(COMPLETE_REQUIRED_LOCAL_GROUPS - selected_groups)
+    unexpected_policy_records = sorted(selected_groups - COMPLETE_REQUIRED_LOCAL_GROUPS)
+    rejected_policy_groups: list[str] = []
+    invalid_selected_rows: list[str] = []
+    for group in sorted(COMPLETE_REQUIRED_LOCAL_GROUPS & selected_groups):
+        record = selected_policies.get(group)
+        if not isinstance(record, Mapping) or record.get("status") != ACCEPTED_POLICY_STATUS:
+            rejected_policy_groups.append(group)
+            continue
+        row_id = str(record.get("row_id", ""))
+        row = rows_by_id.get(row_id)
+        if row is None or str(row.get("group_id")) != group:
+            invalid_selected_rows.append(group)
+    complete = not any(
+        (
+            missing_groups,
+            unexpected_groups,
+            missing_policy_records,
+            unexpected_policy_records,
+            rejected_policy_groups,
+            invalid_selected_rows,
+        )
+    )
+    return {
+        "expected_groups": sorted(COMPLETE_REQUIRED_LOCAL_GROUPS),
+        "observed_groups": sorted(observed_groups),
+        "missing_groups": missing_groups,
+        "unexpected_groups": unexpected_groups,
+        "missing_policy_records": missing_policy_records,
+        "unexpected_policy_records": unexpected_policy_records,
+        "rejected_policy_groups": rejected_policy_groups,
+        "invalid_selected_rows": invalid_selected_rows,
+        "complete": complete,
+    }
+
+
+def _local_terminal_decision(
+    *,
+    missing: Sequence[str],
+    invalid: Sequence[str],
+    runtime_censored: Sequence[str],
+    reference_failures: Sequence[str],
+    policy_grid: Mapping[str, Any],
+) -> str:
+    if missing:
+        return "incomplete_local_execution"
+    if invalid or reference_failures:
+        return "invalid_local_evidence"
+    if runtime_censored:
+        return "censored_local_execution"
+    if policy_grid.get("missing_groups") or policy_grid.get("unexpected_groups"):
+        return "incomplete_local_group_scope"
+    if policy_grid.get("complete") is not True:
+        return "local_calibration_policy_gate_failed"
+    return "local_calibration_complete_cluster_computations_deferred"
 
 
 def analyze_plan(plan_path: Path) -> dict[str, Any]:
@@ -2007,12 +2090,14 @@ def analyze_plan(plan_path: Path) -> dict[str, Any]:
             comparisons[str(row["row_id"])] = comparison
         selected_policies[group_id] = _selected_group_policy(group_rows, comparisons)
 
-    if missing:
-        terminal = "incomplete_local_execution"
-    elif invalid or reference_failures:
-        terminal = "invalid_local_evidence"
-    else:
-        terminal = "local_calibration_complete_cluster_computations_deferred"
+    policy_grid = _required_local_policy_grid(local_rows, selected_policies)
+    terminal = _local_terminal_decision(
+        missing=missing,
+        invalid=invalid,
+        runtime_censored=runtime_censored,
+        reference_failures=reference_failures,
+        policy_grid=policy_grid,
+    )
     return {
         "schema_id": ANALYSIS_SCHEMA_ID,
         "schema_version": ANALYSIS_SCHEMA_VERSION,
@@ -2043,6 +2128,9 @@ def analyze_plan(plan_path: Path) -> dict[str, Any]:
             "invalid_local": len(set(invalid)),
             "runtime_censored_local": len(set(runtime_censored)),
             "reference_failures": len(set(reference_failures)),
+            "policy_gate_failures": len(policy_grid["rejected_policy_groups"])
+            + len(policy_grid["missing_policy_records"])
+            + len(policy_grid["invalid_selected_rows"]),
             "deferred_cluster_computations": len(deferred_rows),
         },
         "missing_local_rows": sorted(set(missing)),
@@ -2053,6 +2141,7 @@ def analyze_plan(plan_path: Path) -> dict[str, Any]:
         "endpoints": endpoints,
         "same_discretization_reference_comparisons": comparisons,
         "selected_local_policies": selected_policies,
+        "required_local_policy_grid": policy_grid,
         "cross_mesh_summary": {
             "ginzburg_landau": {
                 str(level): selected_policies.get(f"gl_l{level}") for level in GL_LEVELS

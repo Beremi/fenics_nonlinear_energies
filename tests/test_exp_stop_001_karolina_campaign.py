@@ -35,7 +35,7 @@ def _local_campaign(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     plan_path = local_root / "plan.json"
     plan_path.write_text(json.dumps(plan) + "\n", encoding="utf-8")
     rows = {row["row_id"]: row for row in plan["rows"]}
-    selected_ids = {
+    cluster_selected_ids = {
         "gl_l6": next(
             row["row_id"] for row in plan["rows"]
             if row["group_id"] == "gl_l6" and row["reference_row"]
@@ -49,21 +49,29 @@ def _local_campaign(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
             if row["group_id"] == "p3d_p2_nonlinear" and row["reference_row"]
         ),
     }
-    selected = {
-        group: {
-            "status": "selected_loosest_accepted_same_discretization_policy",
-            "row_id": row_id,
-            "parameter": (
-                "relative_dual_residual_target"
-                if not group.startswith("p3d_")
-                else "relative_dual_residual_target"
-            ),
-            "tolerance": rows[row_id]["parameters"]["relative_dual_residual_target"],
-        }
-        for group, row_id in selected_ids.items()
+    selection_parameter = {
+        "ginzburg_landau": "relative_dual_residual_target",
+        "hyperelasticity_reference_riesz": "riesz_ksp_rtol",
+        "hyperelasticity_nonlinear_stopping": "relative_dual_residual_target",
+        "plasticity3d_fixed_state_linear": "ksp_rtol",
+        "plasticity3d_nonlinear_stopping": "relative_dual_residual_target",
     }
+    selected: dict[str, dict[str, object]] = {}
+    for group in sorted(local.COMPLETE_REQUIRED_LOCAL_GROUPS):
+        reference = next(
+            row
+            for row in plan["rows"]
+            if row["group_id"] == group and row["reference_row"]
+        )
+        parameter = selection_parameter[str(reference["family"])]
+        selected[group] = {
+            "status": local.ACCEPTED_POLICY_STATUS,
+            "row_id": reference["row_id"],
+            "parameter": parameter,
+            "tolerance": reference["parameters"][parameter],
+        }
     plan_sha256 = reviewed.sha256_file(plan_path)
-    for row_id in selected_ids.values():
+    for row_id in cluster_selected_ids.values():
         row = rows[row_id]
         output_hashes: dict[str, str] = {}
         for raw in row["expected_outputs"]:
@@ -123,13 +131,22 @@ def _local_campaign(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
             "invalid_local": 0,
             "runtime_censored_local": 0,
             "reference_failures": 0,
+            "policy_gate_failures": 0,
             "deferred_cluster_computations": 7,
         },
         "deferred_cluster_computations": deferred,
         "selected_local_policies": selected,
+        "required_local_policy_grid": local._required_local_policy_grid(
+            [
+                row
+                for row in plan["rows"]
+                if row["execution_class"] == "required_local"
+            ],
+            selected,
+        ),
         "endpoints": {
             row_id: {"status": "endpoint_admitted", "row_id": row_id}
-            for row_id in selected_ids.values()
+            for row_id in cluster_selected_ids.values()
         },
     }
     path = tmp_path / "local_analysis.json"
@@ -288,6 +305,44 @@ def test_preparation_freezes_exact_seven_rows_and_never_contacts_scheduler(
     assert submitter.submit(root, execute=False, confirmed=False)["status"] == "dry_run_no_scheduler_contact"
 
 
+def test_preparation_rejects_a_required_local_group_without_policy(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    analysis_path = _local_campaign(tmp_path, monkeypatch)
+    analysis = json.loads(analysis_path.read_text(encoding="utf-8"))
+    analysis["selected_local_policies"]["p3d_p4"] = {
+        "status": "no_acceptable_policy",
+        "row_id": None,
+        "tolerance": None,
+    }
+    plan = json.loads((tmp_path / "local" / "plan.json").read_text(encoding="utf-8"))
+    analysis["required_local_policy_grid"] = local._required_local_policy_grid(
+        [
+            row
+            for row in plan["rows"]
+            if row["execution_class"] == "required_local"
+        ],
+        analysis["selected_local_policies"],
+    )
+    assert all(
+        analysis["counts"][key] == 0
+        for key in (
+            "missing_local",
+            "invalid_local",
+            "runtime_censored_local",
+            "reference_failures",
+            "policy_gate_failures",
+        )
+    )
+    analysis_path.write_text(json.dumps(analysis) + "\n", encoding="utf-8")
+
+    with pytest.raises(
+        reviewed.CampaignContractError,
+        match="lack accepted policies",
+    ):
+        stop._local_inputs(analysis_path)
+
+
 def test_preflight_fails_closed_on_command_or_plan_mutation(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -327,8 +382,17 @@ def test_offline_archive_settlement_and_final_merge_are_hash_bound(
         },
     )
     result = stop.adjudicate(root, expected_checksum=digest)
-    assert result["terminal_decision"] == "SCOPED_PASS"
-    assert result["complete_exp_stop_pass"] is True
+    assert result["schema_version"] == 2
+    assert (
+        result["terminal_decision"]
+        == "CALIBRATION_SCOPED_PASS_PENDING_DISCRETIZATION_GATE"
+    )
+    assert result["calibration_scope_passed"] is True
+    assert result["complete_exp_stop_pass"] is False
+    assert result["discretization_gate"]["status"] == "not_bound"
+    assert result["remaining_completion_gates"] == [
+        "hash-bound EXP-DISC-001 discretization-error adjudication"
+    ]
     assert len(result["comparisons"]) == 7
     assert result["publication_timing_admissible"] is False
 

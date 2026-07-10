@@ -121,9 +121,14 @@ submission. After copy-back, raw accounting snapshots are indexed offline,
 reparsed against the exact rank/node contract, and the complete archive is
 checksum-sealed. Final adjudication requires that pre-copy checksum digest and
 compares each MPI endpoint to its selected local endpoint and each P4 endpoint
-to the tightest successful P4 reference. The only terminal release decisions
-are `PASS`, `SCOPED_PASS`, `CENSORED`, or `INVALID`; timing remains inadmissible
-from this calibration campaign. No Karolina row has been submitted or run.
+to the tightest successful P4 reference. This merge can emit only
+`CALIBRATION_PASS_PENDING_DISCRETIZATION_GATE`,
+`CALIBRATION_SCOPED_PASS_PENDING_DISCRETIZATION_GATE`, or `CENSORED`.
+It always records `complete_exp_stop_pass: false`: a complete `PASS` or
+`SCOPED_PASS` is impossible until a later adjudicator hash-binds the required
+`EXP-DISC-001` estimate and verifies that the accepted algebraic errors are
+materially smaller. Timing remains inadmissible from this calibration
+campaign. No Karolina row has been submitted or run.
 
 ## Scientific questions
 
@@ -297,11 +302,18 @@ repetitions, complete counter accounting, and accuracy-equivalent endpoints.
 
 ## Terminal decisions
 
-- **PASS:** one common KSP/nonlinear policy meets the true-residual, Riesz-state,
-  observable, discretization, and MPI gates for every retained publication row.
-- **SCOPED PASS:** different degrees or problem classes require explicitly
-  different calibrated policies; report each policy and prohibit cross-policy
-  timing comparisons.
+- **CALIBRATION PASS PENDING DISCRETIZATION GATE:** one common KSP/nonlinear
+  policy meets the true-residual, Riesz-state, observable, and MPI gates in the
+  local-plus-cluster calibration, but no complete protocol pass is emitted
+  until hash-bound `EXP-DISC-001` evidence establishes separation from
+  discretization error.
+- **CALIBRATION SCOPED PASS PENDING DISCRETIZATION GATE:** different degrees or
+  problem classes require explicitly different calibrated policies; report
+  each policy, prohibit cross-policy timing comparisons, and retain the same
+  unresolved hash-bound discretization gate.
+- **PASS / SCOPED PASS:** reserved for a future integrated adjudicator that
+  also binds and passes the discretization gate. The current local and cluster
+  tools cannot emit these decisions or set `complete_exp_stop_pass: true`.
 - **CENSORED:** the tight reference is infeasible for a declared case; retain
   the failure and remove any accuracy or route-timing claim for that case.
 - **INVALID:** route, state, mesh, rule, solver policy, or provenance differs
