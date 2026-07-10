@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+import sys
 
 import numpy as np
 
@@ -95,3 +96,114 @@ def test_local_distributed_adjudicator_rejects_colored_action_drift(
     result = runner.validate_campaign(tmp_path)
     assert result["status"] == "failed"
     assert any("p2_mixed_np4" in error and "actions" in error for error in result["errors"])
+
+
+def test_frozen_command_is_single_valued_and_normalizes_executables_and_outputs(
+    tmp_path: Path,
+) -> None:
+    block = runner.build_blocks()[0]
+    route = block.route_order[0]
+    output = tmp_path / "campaign"
+    command = runner._command(
+        block,
+        route,
+        0,
+        output / "blocks" / block.block_id / route,
+        python=Path(sys.executable),
+        mpiexec=Path(sys.executable),
+    )
+    assert command.count("--route-order-policy") == 1
+    assert command[command.index("--route-order-policy") + 1] == (
+        "local_distributed_correctness_v2"
+    )
+    normalized = runner._normalize_command(
+        command,
+        out_root=output,
+        python=Path(sys.executable),
+        mpiexec=Path(sys.executable),
+    )
+    assert normalized[0] == "${MPIEXEC}"
+    assert normalized[4] == "${PYTHON}"
+    assert "${OUTPUT_ROOT}/blocks/p1_elastic_np1" in " ".join(normalized)
+
+
+def test_strict_child_identity_rejects_commit_and_saved_array_hash_drift() -> None:
+    block = runner.build_blocks()[0]
+    route = block.route_order[0]
+    state = np.linspace(0.0, 1.0, 4)
+    actions = np.vstack([state + index for index in range(4)])
+    arrays = {"state": state, "gradient": state.copy(), "tangent_actions": actions}
+    child_argv = ["child.py", "--example"]
+    payload = {
+        "experiment_id": "EXP-ROUTE-001",
+        "tier": "fixed_state_screen",
+        "status": "completed",
+        "route": route,
+        "mesh_name": "hetero_ssr_L1",
+        "element_degree": block.degree,
+        "quadrature_rule_id": runner.RULE_BY_DEGREE[block.degree],
+        "constraint_variant": "glued_bottom",
+        "lambda_target": 1.55,
+        "state_family": "analytic_mesh_field_v1",
+        "state_label": block.state_label,
+        "state_amplitude": block.state_amplitude,
+        "probe_count": 4,
+        "mpi_ranks": block.ranks,
+        "warmup_repetitions": 1,
+        "measured_repetitions": 5,
+        "comparison_design": {
+            "comparison_id": block.block_id,
+            "block_repetition": 1,
+            "route_order_position": 0,
+            "route_order_policy": "local_distributed_correctness_v2",
+            "timing_reduction": "mpi_collective_max",
+            "independent_process_block": True,
+        },
+        "git": {"commit": "b" * 40, "dirty": False},
+        "command": "python child.py --example",
+        "state_sha256": runner._array_sha256(state),
+        "gradient_sha256": runner._array_sha256(state),
+        "action_sha256": runner._array_sha256(actions[0]),
+        "action_sha256_by_probe": [runner._array_sha256(row) for row in actions],
+    }
+    errors: list[str] = []
+    runner._validate_child_identity(
+        errors,
+        block=block,
+        route=route,
+        route_position=0,
+        payload=payload,
+        arrays=arrays,
+        source_commit="a" * 40,
+        run_id="fixture",
+        expected_child_argv=child_argv,
+    )
+    assert any("Git identity" in error for error in errors)
+
+    payload["git"] = {"commit": "a" * 40, "dirty": False}
+    payload["action_sha256_by_probe"] = ["0" * 64] * 4
+    errors = []
+    runner._validate_child_identity(
+        errors,
+        block=block,
+        route=route,
+        route_position=0,
+        payload=payload,
+        arrays=arrays,
+        source_commit="a" * 40,
+        run_id="fixture",
+        expected_child_argv=child_argv,
+    )
+    assert any("all probes" in error for error in errors)
+
+
+def test_route_hash_closure_detects_unrecorded_or_changed_files(tmp_path: Path) -> None:
+    route = tmp_path / "route"
+    route.mkdir()
+    (route / "output.json").write_text("{}\n", encoding="utf-8")
+    record = runner._write_process_record(route, {"status": "completed"})
+    assert record["artifact_hash_closure"]["files"] == {
+        "output.json": runner.sha256_file(route / "output.json")
+    }
+    (route / "output.json").write_text('{"tampered": true}\n', encoding="utf-8")
+    assert runner._route_hash_closure(route) != record["artifact_hash_closure"]

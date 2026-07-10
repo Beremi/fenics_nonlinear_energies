@@ -4,12 +4,14 @@ MAIN := main.tex
 REVISION_EVIDENCE_ROOT ?= ../artifacts/reproduction/paper_revision_2026_07_10/pilots
 REVISION_EVIDENCE_CLASS ?= diagnostic
 REVISION_EVIDENCE_MANIFEST ?=
+DISTRIBUTED_COLORED_EVIDENCE_ROOT ?=
 REVISION_EVIDENCE_ARGS = --evidence-root $(REVISION_EVIDENCE_ROOT) --evidence-class $(REVISION_EVIDENCE_CLASS)
 ifneq ($(strip $(REVISION_EVIDENCE_MANIFEST)),)
 REVISION_EVIDENCE_ARGS += --evidence-manifest $(REVISION_EVIDENCE_MANIFEST)
 endif
 
 .PHONY: all layout figures tables literature literature-check validate publish-check submission-check release-check release-blockers submission-bundle pdf clean \
+	distributed-colored-table distributed-colored-check distributed-colored-check-if-present \
 	plasticity3d-validation-run plasticity3d-validation-assets \
 	plasticity3d-derivative-ablation-run plasticity3d-derivative-ablation-assets \
 	jax-fem-baseline-run jax-fem-baseline-assets reproducibility
@@ -25,6 +27,18 @@ figures: layout
 tables: layout
 	$(PYTHON) scripts/generate_paper_tables.py
 	$(PYTHON) scripts/generate_revision_evidence_tables.py $(REVISION_EVIDENCE_ARGS)
+
+distributed-colored-table:
+	test -n "$(DISTRIBUTED_COLORED_EVIDENCE_ROOT)"
+	$(PYTHON) scripts/generate_distributed_colored_table.py --evidence-root "$(DISTRIBUTED_COLORED_EVIDENCE_ROOT)"
+
+distributed-colored-check:
+	$(PYTHON) scripts/check_distributed_colored_manifest.py
+
+distributed-colored-check-if-present:
+	@if test -e tables/generated/distributed_colored_manifest.json; then \
+		$(PYTHON) scripts/check_distributed_colored_manifest.py; \
+	fi
 
 literature:
 	$(PYTHON) scripts/generate_literature_sources.py
@@ -72,6 +86,7 @@ submission-check:
 	$(PYTHON) scripts/check_float_placements.py
 	$(PYTHON) scripts/check_manuscript_hygiene.py build/main.pdf
 	$(PYTHON) scripts/check_revision_evidence_manifest.py
+	$(MAKE) distributed-colored-check-if-present
 	$(MAKE) literature-check
 	$(PYTHON) scripts/check_submission_bundle_manifest.py
 	$(PYTHON) scripts/validate_paper_assets.py --archive-neutral
