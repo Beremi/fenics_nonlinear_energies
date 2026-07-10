@@ -12,10 +12,10 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from common import REPO_ROOT
+from common import PAPER_BUNDLE_MANIFEST, REPO_ROOT, add_paper_bundle_root_argument
 
 
-DEFAULT_MANIFEST = REPO_ROOT / "artifacts" / "reproduction" / "paper_submission_2026_07_08" / "manifest.json"
+DEFAULT_MANIFEST = PAPER_BUNDLE_MANIFEST
 SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
 GIT_COMMIT_RE = re.compile(r"^[0-9a-f]{40}$")
 EXTERNAL_PREFIXES = ("external_reference/",)
@@ -28,9 +28,11 @@ BUNDLE_REFRESH_PATHS = (
     "paper/figures/generated/",
     "paper/tables/generated/",
     "paper/scripts/build_submission_bundle.py",
+    "paper/scripts/common.py",
     "paper/scripts/generate_paper_figures.py",
     "paper/scripts/generate_literature_sources.py",
     "paper/scripts/generate_paper_tables.py",
+    "experiments/analysis/docs_assets/data/",
 )
 SOURCE_PATH_ALIASES = (
     (
@@ -261,6 +263,7 @@ def check_manifest(
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
+    add_paper_bundle_root_argument(parser)
     parser.add_argument("manifest", nargs="?", type=Path, default=DEFAULT_MANIFEST)
     parser.add_argument(
         "--skip-git-commit-check",

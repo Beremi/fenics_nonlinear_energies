@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 from __future__ import annotations
 
+import argparse
 import csv
 import hashlib
 import json
@@ -11,11 +12,16 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from common import REPO_ROOT
+from common import (
+    PAPER_BUNDLE_INPUT_ROOT,
+    PAPER_BUNDLE_ROOT,
+    REPO_ROOT,
+    add_paper_bundle_root_argument,
+)
 
 
-BUNDLE_ROOT = REPO_ROOT / "artifacts" / "reproduction" / "paper_submission_2026_07_08"
-INPUT_ROOT = BUNDLE_ROOT / "inputs"
+BUNDLE_ROOT = PAPER_BUNDLE_ROOT
+INPUT_ROOT = PAPER_BUNDLE_INPUT_ROOT
 
 P3D_VALIDATION_ROOT = REPO_ROOT / "artifacts" / "raw_results" / "plasticity3d_validation"
 P3D_ABLATION_ROOT = REPO_ROOT / "artifacts" / "raw_results" / "plasticity3d_derivative_ablation"
@@ -66,7 +72,7 @@ P2D_L6_SUMMARY = (
 P2D_L7_SUMMARY = (
     REPO_ROOT / "artifacts" / "raw_results" / "slope_stability_l7_p4_deep_p1_tail_scaling_lambda1_maxit20" / "summary.json"
 )
-SOURCE_CONT_ROOT = REPO_ROOT / "artifacts" / "raw_results" / "source_compare"
+P3D_REFERENCE_CONT_ROOT = REPO_ROOT / "artifacts" / "raw_results" / "source_compare"
 P3D_DEGREE_ENERGY_STUDY_SUMMARY = (
     REPO_ROOT / "artifacts" / "raw_results" / "plasticity3d_lambda1p55_degree_mesh_energy_study" / "comparison_summary.json"
 )
@@ -107,8 +113,8 @@ P3D_FIXED_REFERENCE_OPERATOR_SUMMARY = (
     / "comparison_summary.json"
 )
 P3D_FIXED_REFERENCE_TABLE_IMPLS = {
-    "local_constitutiveAD_local_pmg_sourcefixed_armijo": "constitutive_ad_fixed_reference_pmg",
-    "source_local_pmg_sourcefixed_armijo": "reference_formula_fixed_reference_pmg",
+    "local_constitutiveAD_local_pmg_sourcefixed_armijo": "constitutive_ad_three_sweep_hypre_pmg",
+    "source_local_pmg_sourcefixed_armijo": "reference_formula_three_sweep_hypre_pmg",
 }
 P3D_FIXED_REFERENCE_TABLE_FIELDS = (
     "ranks",
@@ -353,10 +359,11 @@ def _copy_fixed_reference_table_summary(source: Path, dest: Path, copied: list[d
         dest,
         {
             "description": (
-                "Table-specific release summary for the Plasticity3D fixed-reference "
-                "operator PMG diagnostic. Route identifiers are paper-facing aliases "
-                "of the two compared implementations; numerical values are copied "
-                "from the full comparison summary."
+                "Table-specific release summary for the Plasticity3D alternate "
+                "three-sweep, Hypre-coarse PMG diagnostic. The tangent and Galerkin "
+                "operators are rebuilt at each Newton iteration; route identifiers "
+                "are paper-facing aliases of the two compared implementations, and "
+                "numerical values are copied from the full comparison summary."
             ),
             "rows": rows,
         },
@@ -615,6 +622,12 @@ def _copy_p3d_highest_y_slice_panels(
 
 
 def main() -> None:
+    parser = argparse.ArgumentParser(
+        description="Build the archive-neutral paper evidence bundle."
+    )
+    add_paper_bundle_root_argument(parser)
+    parser.parse_args()
+
     if BUNDLE_ROOT.exists():
         shutil.rmtree(BUNDLE_ROOT)
     copied: list[dict[str, str]] = []
@@ -707,8 +720,8 @@ def main() -> None:
         (8, "ssr_indirect_p4_l1_omega6p7e6_np8_shell_default_afterfix"),
         (32, "ssr_indirect_p4_l1_omega6p7e6_np32_shell_default_afterfix"),
     ):
-        source_dir = SOURCE_CONT_ROOT / root_name / "data"
-        dest_dir = INPUT_ROOT / "plasticity2d_reference_continuation" / f"np{ranks}"
+        source_dir = P3D_REFERENCE_CONT_ROOT / root_name / "data"
+        dest_dir = INPUT_ROOT / "plasticity3d_reference_continuation" / f"np{ranks}"
         _copy_json(source_dir / "run_info.json", dest_dir / "run_info.json", copied)
         _copy_json(source_dir / "progress_latest.json", dest_dir / "progress_latest.json", copied)
     _copy_json(
@@ -747,7 +760,8 @@ def main() -> None:
     )
 
     manifest = {
-        "id": "paper_submission_2026_07_08",
+        "id": BUNDLE_ROOT.name,
+        "bundle_root": _repo_rel(BUNDLE_ROOT),
         "created_utc": datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z"),
         "git_commit": _git_head(),
         "purpose": "Archive-neutral provenance bundle for manuscript-critical paper figure and table inputs.",
@@ -757,15 +771,17 @@ def main() -> None:
             "Hyperelastic JAX-FEM comparison summary and terminal states",
             "Plasticity3D lambda=1.55 local/multi-node scaling summaries",
             "Small generated-table report summaries for globalization, derivative-route, and supplemental solver evidence",
-            "Plasticity2D endpoint, resolution, and reference-continuation inputs",
-            "Plasticity3D degree/energy, recommended-scaling, reference-formula, and fixed-reference summary inputs",
+            "Plasticity2D endpoint and resolution inputs",
+            "Plasticity3D high-order reference-continuation inputs",
+            "Plasticity3D degree/energy, recommended-scaling, reference-formula, and alternate-PMG summary inputs",
             "Derived Plasticity3D surface, slice, degree-energy, and convergence inputs for submitted figures",
         ],
         "source_files": copied,
         "known_limitations": [
             "This bundle normalizes existing paper-critical provenance without rerunning MPI campaigns.",
             "Large Plasticity3D state arrays and same-mesh HDF5 files are not bundled; derived arrays reproduce the submitted figures, while full raw-state recomputation requires the original raw-results archive.",
-            "The full fixed-reference operator summary remains bundled for traceability; the manuscript table reads a table-specific release summary with paper-facing route identifiers.",
+            "The full historically named alternate-PMG summary remains bundled for traceability; the manuscript table reads a table-specific release summary that identifies the actual three-sweep, Hypre-coarse PMG policy and uses paper-facing route identifiers.",
+            "Processed separate endpoint-formula comparator summaries and a sanitized run manifest are bundled, but raw per-run outputs and the separately supplied external source are not redistributed.",
             "Target-journal metadata, repository license, and permanent archive DOI remain outside this bundle.",
         ],
         "validation": {

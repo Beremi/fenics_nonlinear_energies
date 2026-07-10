@@ -8,7 +8,10 @@ h5py
 /external/HPC_cluster_config/
 /experiments/runners/barbora_he_first_step_scaling/env_barbora.local.sh
 /experiments/runners/barbora_he_first_step_scaling/env_barbora.smoke_local.sh
-/artifacts/
+/artifacts/*
+!/artifacts/reproduction/
+/artifacts/reproduction/*
+!/artifacts/reproduction/paper_submission_2026_07_08/
 /artifacts/raw_results/notebook_runs/
 /artifacts/raw_results/topology_reports/
 /data/meshes/SlopeStability/*.h5
@@ -31,3 +34,4 @@ plaplace_u3_problematic_experiment_prompt.md
 /paper/literature/fulltext/
 /paper/literature/**/*.part
 /paper/literature/**/*.tmp
+tmp/

@@ -5,14 +5,23 @@ import argparse
 import subprocess
 from pathlib import Path
 
-from common import BUILD_ROOT, REPO_ROOT, ensure_paper_dirs, read_json, write_text
+from common import (
+    BUILD_ROOT,
+    PAPER_BUNDLE_MANIFEST,
+    PAPER_BUNDLE_ROOT,
+    REPO_ROOT,
+    add_paper_bundle_root_argument,
+    ensure_paper_dirs,
+    read_json,
+    write_text,
+)
 
 
 DEFAULT_OUTPUT = BUILD_ROOT / "reproducibility_note.md"
 P3D_VALIDATION_MANIFEST = REPO_ROOT / "artifacts/raw_results/plasticity3d_validation/validation_manifest.json"
 P3D_ABLATION_SUMMARY = REPO_ROOT / "artifacts/raw_results/plasticity3d_derivative_ablation/comparison_summary.json"
 JAX_FEM_BASELINE_MANIFEST = REPO_ROOT / "artifacts/raw_results/jax_fem_hyperelastic_baseline/run_manifest.json"
-SUBMISSION_BUNDLE_MANIFEST = REPO_ROOT / "artifacts/reproduction/paper_submission_2026_07_08/manifest.json"
+SUBMISSION_BUNDLE_MANIFEST = PAPER_BUNDLE_MANIFEST
 
 
 def _git_head() -> str:
@@ -25,6 +34,7 @@ def _python_version(python_bin: Path) -> str:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Generate a compact reproducibility note for the paper artifact bundle.")
+    add_paper_bundle_root_argument(parser)
     parser.add_argument("--out", type=Path, default=DEFAULT_OUTPUT)
     parser.add_argument("--repo-python", type=Path, default=REPO_ROOT / ".venv" / "bin" / "python")
     args = parser.parse_args()
@@ -42,8 +52,12 @@ def main() -> None:
         "",
         "## Archive Bundle",
         "",
+        f"- Configured bundle root: `{PAPER_BUNDLE_ROOT.relative_to(REPO_ROOT)}`",
         f"- Submission bundle manifest: `{SUBMISSION_BUNDLE_MANIFEST.relative_to(REPO_ROOT)}`",
-        "- Build or refresh bundle: `python paper/scripts/build_submission_bundle.py`",
+        "- Override bundle root: `--paper-bundle-root artifacts/reproduction/<campaign>` "
+        "or set `FNE_PAPER_BUNDLE_ROOT`.",
+        "- Build or refresh bundle: `python paper/scripts/build_submission_bundle.py "
+        "--paper-bundle-root artifacts/reproduction/<campaign>`",
         "- Validate paper assets: `python paper/scripts/validate_paper_assets.py`",
         "- Validate archive-neutral provenance: `python paper/scripts/validate_paper_assets.py --archive-neutral`",
         "",

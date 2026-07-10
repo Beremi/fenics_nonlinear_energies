@@ -271,3 +271,10 @@ def test_submission_bundle_manifest_tracks_bibliography_refresh_paths(tmp_path: 
 
     assert "bundle-refresh paths have uncommitted changes" in message
     assert "paper/references.bib" in message
+
+
+def test_submission_bundle_manifest_tracks_direct_generator_inputs() -> None:
+    checker = _load_module()
+
+    assert "paper/scripts/common.py" in checker.BUNDLE_REFRESH_PATHS
+    assert "experiments/analysis/docs_assets/data/" in checker.BUNDLE_REFRESH_PATHS
