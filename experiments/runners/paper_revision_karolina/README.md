@@ -49,8 +49,11 @@ bash experiments/runners/paper_revision_karolina/submit_prepared_campaigns.sh
 
 Optional rows are always prepared as a separate tranche. For the 45-node-hour
 route-confirmation tranche use `ONLY_OPTIONAL=1
-EXPERIMENTS=EXP-ROUTE-001`; for the 17.5-node-hour optional scaling tranche use
-`ONLY_OPTIONAL=1 EXPERIMENTS=EXP-SCALE-001`. The default dry run can inventory
+EXPERIMENTS=EXP-ROUTE-001`; this selects exactly both Tier-B tiers and all 30
+rows, and a partial Tier-B preparation is rejected. For the 17.5-node-hour
+optional scaling tranche use `ONLY_OPTIONAL=1 EXPERIMENTS=EXP-SCALE-001`; this
+selects exactly the three Plasticity3D rows. Hyperelasticity and Plasticity3D
+scaling can never share a real submission root. The default dry run can inventory
 the 99.95-node-hour required rows, but that inventory is not a scientifically
 safe real-submission tranche. Real submission requires exactly one explicit
 `EXPERIMENTS` value and explicit comma-separated `TIERS`; downstream
@@ -64,10 +67,25 @@ Git commit, matrix SHA-256, and the SHA-256 of that complete reviewed-source
 freeze. The batch script rejects a different clean commit, changed matrix,
 changed freeze, missing reviewed source, or changed reviewed-source hash before
 it starts a scientific runner.
+Internal manifest paths are archive-relative, so a completed tranche can be
+copied back or renamed without invalidating its plan, command, source-freeze,
+or release-authorization references. Historical `sbatch` command lines retain
+their original execution paths as provenance and are not rerun after copy-back.
 Every preparation requires a fresh output root and verifies the complete
 reviewed source-hash map before writing commands. Real execution records
 `submitting` before its first scheduler call, atomically persists progress after
 each response, and records `partial_submission` on interruption or failure.
+
+Preparation also runs a scheduler-free integrity preflight. It validates the
+selected matrix rows, node-hour total, optional-tranche boundaries, exact
+resource arguments, forbidden options, source freeze, and hashes of the plan
+and command file. It can be repeated after copy-back without contacting Slurm:
+
+```bash
+./.venv/bin/python \
+  experiments/runners/paper_revision_karolina/preflight_prepared_campaign.py \
+  --campaign-root artifacts/reproduction/paper_revision_karolina/<campaign-id>
+```
 
 `SBATCH_TEST_ONLY=1` can be combined with `DRY_RUN=1` to inspect the exact
 admission-test commands without contacting Slurm:
@@ -85,6 +103,9 @@ session with explicit submission authorization:
 1. Verify that the Karolina CPU allocation is active and record its new end
    date.
 2. Verify account `fta-26-40`, QoS `3571_6328`, and both `qcpu_exp` and `qcpu`.
+   The compute-node guard independently checks account, QoS, partition, nodes,
+   tasks, tasks per node (including Slurm's compact `128(xN)` spelling), and
+   CPUs per task against the selected matrix row before creating solver output.
 3. Verify the code is a clean, committed checkout and that the matrix hash
    matches the reviewed manifest.
 4. Verify the private PETSc/petsc4py environment reports PETSc 3.24.x and
@@ -148,9 +169,11 @@ batch script repeats the allocation and clean-commit checks on the compute node.
   executor rejects coefficient stopping, invalid SPD inertia, stale endpoint
   Riesz evidence, changed GMRES/Hypre tolerances, and completed rows that fail
   the residual gate.
-- `EXP-DISC-001` must be released one explicit tier at a time in matrix order:
-  P4(L1) smoke, P4(L1) quadrature, P4(L2) quadrature, then the tight-tolerance
-  case. Each successful state is
+- `EXP-DISC-001` has five explicit sequential release stages: P4(L1) smoke;
+  the paired P4(L1) 24/125-point quadrature stage; P4(L2) 24-point mesh stage;
+  P4(L2) 125-point mesh-quadrature stage; and the tight-tolerance stage. A
+  later stage needs a fresh authorization after the preceding stage is
+  inspected. Each successful state is
   re-evaluated with the common 24-point and positive 125-point rules.
   `analyze_plasticity3d_discretization.py` must admit the complete six-row
   evidence before any discretization interpretation is released.
@@ -171,6 +194,11 @@ batch script repeats the allocation and clean-commit checks on the compute node.
   fail-closed until clean submitted route records, complete paired blocks,
   production holdout gates, and the strict high/low-order endpoint analyzer all
   pass. No cluster result currently exists.
+- Tier-B endpoint admission requires, for every paired block, the complete
+  compute-node environment sections and settled raw `sacct --parsable2`
+  evidence. The analyzer reparses that raw record and checks job identity,
+  account, QoS, partition, node/CPU allocation, terminal state, and exit code
+  against the matrix before exposing timing.
 
 Protocol cards: [`EXP-ROUTE-001`](../../../paper/protocols/EXP-ROUTE-001.md),
 [`EXP-DISC-001`](../../../paper/protocols/EXP-DISC-001.md), and

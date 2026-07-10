@@ -1,4 +1,4 @@
-manifest_version: 3
+manifest_version: 4
 status: prepared_not_submitted
 prepared_for: paper publication revision
 prepared_date: "2026-07-10"
@@ -40,10 +40,15 @@ matrix:
     slurm_rows: 30
     process_executions: 60
     node_hours: 45.00
+    exact_tiers: [full_solve_confirmation, low_order_confirmation]
+    partial_preparation_forbidden: true
   discretization_required:
     slurm_rows: 6
     process_executions: 6
     node_hours: 13.25
+    release_stages: [smoke, quadrature, mesh, mesh_quadrature, tolerance]
+    paired_quadrature_stage_rows: 2
+    later_stage_requires_separate_human_authorization: true
   hyperelasticity_scaling_required:
     slurm_rows: 4
     process_executions: 20
@@ -52,6 +57,7 @@ matrix:
     slurm_rows: 3
     process_executions: 15
     node_hours: 17.50
+    separate_real_submission_from_hyperelasticity: true
 route_design:
   fixed_state_order_policy: seeded_balanced_cyclic_v1
   full_solve_order_policy: seeded_balanced_alternating_v1
@@ -65,28 +71,30 @@ route_design:
   endpoint_state_metric: common_element_ad_reference_elastic_riesz
   endpoint_branch_gate: exact_canonical_pointwise_map_hash_and_margin
   endpoint_uncertainty: paired_bootstrap_10000_seed_20260710
+  tier_b_batch_evidence: complete_environment_and_reparsed_settled_slurm_accounting
 source_sha256:
   analysis_contract: 275f08e03221aed13a1b3cdbd1649a99274cb26b2c6d949f62bb4c3e6012fb00
   route_protocol: a84cc6e5d15de7114e8c40aaf02c751648331cab01966621b094b18f3c4908b3
-  discretization_protocol: 49f9e1e72bc1e138b0e2079298afe17f71b6b58288f914f979545ebde9c84b31
+  discretization_protocol: 27b504043e09b10208df36e6e3368afb2f4528dc8b803513eaa37993cba0470d
   scaling_protocol: f4217d94d7508eca612dce69c822623ed68edc4ef49f37c7fe4d879fe8da4190
   scaling_analysis_contract: 4f64f300d7f63dcd4c4329880bb7a22d2004934b1060806007e33a80540e8286
   cost_model_analyzer: abf34fed7715173e3d8c8c4b896c728a05b97d5bf12887f870eb1d4b1b240d38
-  endpoint_analyzer: a5e4abe61fd919f91c9f5069e5f48c3841a54a99a3ac5aceaa7b85802aaefbb4
+  endpoint_analyzer: 35d8b3527a3be5b4e7bcd1e237b32372efbbfb29f3e59214f2f05949eec59e4c
   route_tranche_aggregator: ec7fcdf459fbdc2fa4fae5d53dc797802cc5de01a5b44ec84eb8e388756283be
-  discretization_analyzer: 5890507a03676ca7a0246179d82d1d7a40a86ec6914dc691a12b375357ecf4b4
+  discretization_analyzer: 71e5f57c88a9cd8449a6dec08fdcbc91416b259e2139a70cd6a752a64e94da8e
   scaling_analyzer: b173b2a2373ee9c20c33ee2eb1a7c1be6999e29322567847bbb2a51fe7a52c02
   slurm_accounting_collector: 4099821584762f1d26fb736820c9fa4b7a409c27e6e04613eb1c2db7e9a96112
-  fixed_state_runner: 804d7979b81f9bfd0d42d6c154463c44314e46b884dc55995c9537b7eae9a3d9
+  fixed_state_runner: 6c72798927a2f675e788939aed5d53f626b06eafe5444196e1e1b0443b6924cf
   factor_runner: 61af95fde6a5f354595faf246a7193040e1fa42dbdd936503a451abcadfd508d
   backend_mix_runner: 7a5d9e5f7d948af509579ac1ae3d0f4c2828697347ed2c683d034943f9595ad4
-  quadrature_runner: 76b62df3ce0bc2c7811429a5198f8d8a6f536f131c2b34797e0398732af2fd69
+  quadrature_runner: d33b791df8ec709d3f48f47a095abb63e947fdea43aae7e6483064ed280ad90b
   executor: 5ea3ee769b34177015478d1f48a35cc94afb5feab45f8639875d42e2f4418a4d
-  preparer: 4c608f3b026e46b3d240528572dd428b4efe60617567fb75ca78464065468c82
-  batch_runner: a943194549bc03ed64f6dd22b7bae60d0150c72ee117150c8c9cf2ea957e49b7
+  preparer: c9f1164c97b9cc9a335decd15e19e41ce4129ab3593950bb53908d9e902f1d05
+  offline_preflight: 2b070eb2efee144372e7d6bb2281975f56a1c7a484766406cb2a6ace127dc850
+  batch_runner: b62ddb6ba2d5310ac2c9f4b4983b98a8f50c0d5dc8a1998d9ff1b6d31e3f06ee
   submitter: f5522b1c40b6d14146790d87c02198e9008fd76220e3b8b003b32cd3093edb7a
   state_export: 51713deaff1edddc0e6490f1c8245ded428946c6617f4cd9aac97bb99bfd59cd
-  fixed_state_support: 7360726cdc55af77f2a24b5fc977a2d16688c4d837fd5dbec6ae36af0b1c4ad8
+  fixed_state_support: e5710e0ddebfba7d8dc3c6b5e9388d5651bed2fa0707413c2bf68c6c424f8991
   quadrature_support: 83272dcfa9bd5a730aedd070a5add61f7192cec4f0d170884e1181868989c206
   release_authorization_schema: 99aba3efa0f3158c3f8e5f0889a5d5137f8ba796cac259c87025cf92e9ea2064
   release_authorization_example: 62f5a73619c5b5370ade23f67f750b03426b99f132eb3f835db3aa6ca7d55843
@@ -101,6 +109,11 @@ safety:
   real_submission_requires_one_explicit_experiment: true
   real_submission_requires_explicit_tiers: true
   downstream_tiers_require_human_release_authorization_v1: true
+  archive_internal_paths_relocatable: true
+  scheduler_free_offline_preflight_required: true
+  optional_tier_b_exact_30_row_scope_required: true
+  hyperelasticity_and_optional_p3d_scaling_submission_separation_required: true
+  compute_node_account_qos_partition_shape_validation_required: true
   clean_commit_required: true
   allocation_account_qos_revalidation_required: true
   forbidden_options: [--exclusive, --mem, --mem-per-cpu]

@@ -9,6 +9,8 @@ import subprocess
 
 import numpy as np
 
+from experiments.analysis.collect_slurm_accounting import SACCT_FIELDS, parse_sacct
+
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 SCRIPT = REPO_ROOT / "experiments/analysis/analyze_plasticity3d_route_endpoints.py"
@@ -446,40 +448,95 @@ def _write_job(
                 "qos=3571_6328",
                 f"partition={row['partition']}",
                 "cluster=karolina",
+                f"nodes={row['nodes']}",
+                f"ntasks={row['total_ranks']}",
+                f"ntasks_per_node={row['ranks_per_node']}",
+                f"tasks_per_node={row['ranks_per_node']}",
+                "cpus_per_task=1",
+                f"matrix_sha256={analysis.REVIEWED_MATRIX_SHA256}",
                 "git_commit=0123456789abcdef0123456789abcdef01234567",
                 "git_dirty=false",
                 "allocation_revalidated=YES",
                 "account_qos_revalidated=YES",
                 "allocation_valid_until=2026-12-31",
+                "started_at=2026-07-10T10:00:00+00:00",
+                "finished_at=2026-07-10T10:05:00+00:00",
+                "accounting_status=pending_post_job_collection",
             )
         )
         + "\n",
         encoding="utf-8",
     )
-    (batch / "environment.txt").write_text("reviewed environment\n", encoding="utf-8")
+    (batch / "environment.txt").write_text(
+        "\n".join(
+            (
+                "=== git ===",
+                "reviewed commit",
+                "=== modules ===",
+                "reviewed modules",
+                "=== python ===",
+                "Python 3",
+                "=== PETSc contract ===",
+                "(3, 24, 0)",
+                "=== allocation ===",
+                "reviewed allocation",
+                "=== nodes ===",
+                "node001",
+                "=== reviewed environment whitelist ===",
+                "SLURM_JOB_ACCOUNT=fta-26-40",
+                "SLURM_JOB_QOS=3571_6328",
+                f"SLURM_JOB_PARTITION={row['partition']}",
+                f"SLURM_JOB_NUM_NODES={row['nodes']}",
+                f"SLURM_NTASKS={row['total_ranks']}",
+                "SLURM_CPUS_PER_TASK=1",
+            )
+        )
+        + "\n",
+        encoding="utf-8",
+    )
     (batch / "execute.log").write_text("completed\n", encoding="utf-8")
     (slurm / f"{row['case_id']}-123.out").write_text("stdout\n", encoding="utf-8")
     (slurm / f"{row['case_id']}-123.err").write_text("", encoding="utf-8")
-    raw = "raw parsable2 evidence\n"
+    values = {
+        "JobIDRaw": "123",
+        "JobID": "123",
+        "JobName": row["case_id"],
+        "Cluster": "karolina",
+        "Account": "fta-26-40",
+        "Partition": row["partition"],
+        "QOS": "3571_6328",
+        "State": "COMPLETED",
+        "ElapsedRaw": "300",
+        "AllocNodes": row["nodes"],
+        "AllocCPUS": row["total_ranks"],
+        "TotalCPU": "00:01:00",
+        "CPUTimeRAW": str(300 * int(row["total_ranks"])),
+        "MaxRSS": "1K",
+        "MaxVMSize": "2K",
+        "ConsumedEnergyRaw": "0",
+        "ExitCode": "0:0",
+        "Start": "2026-07-10T10:00:00",
+        "End": "2026-07-10T10:05:00",
+        "NodeList": "node001",
+    }
+    raw = "|".join(SACCT_FIELDS) + "\n" + "|".join(values[name] for name in SACCT_FIELDS) + "\n"
+    parsed = parse_sacct(raw, job_id="123")
     (batch / "sacct_final.json").write_text(
         json.dumps(
             {
                 "schema_id": "fenics-nonlinear-energies.slurm-accounting-snapshot",
                 "schema_version": 1,
+                "collected_at_utc": "2026-07-10T10:10:00+00:00",
                 "job_id": "123",
                 "source": {
+                    "mode": "offline_file",
                     "raw_parsable2": raw,
                     "sha256": hashlib.sha256(raw.encode()).hexdigest(),
                     "byte_count": len(raw.encode()),
                 },
-                "allocation": {
-                    "job_id_raw": "123",
-                    "cluster": "karolina",
-                    "account": "fta-26-40",
-                    "qos": "3571_6328",
-                    "state": "COMPLETED",
-                    "exit_code": "0:0",
-                },
+                "allocation": parsed["allocation"],
+                "rows": parsed["rows"],
+                "derived": parsed["derived"],
             }
         )
         + "\n",
@@ -665,6 +722,38 @@ def test_complete_balanced_campaign_admits_only_collective_max_timing(tmp_path: 
         assert block["routes"]["constitutive_ad"][
             "admitted_collective_max_wall_time_s"
         ] == 1.0
+
+
+def test_tier_b_rejects_incomplete_environment_and_accounting_shape(
+    tmp_path: Path,
+) -> None:
+    matrix, root, rows = _campaign(tmp_path)
+    target = rows[0]
+    batch = root / "jobs" / target["case_id"] / "job_123"
+    environment = batch / "environment.txt"
+    original_environment = environment.read_text(encoding="utf-8")
+    environment.write_text(
+        original_environment.replace("SLURM_JOB_QOS=3571_6328\n", ""),
+        encoding="utf-8",
+    )
+    result = analysis.analyze(matrix, root, root / "prepared_manifest.json")
+    failed = next(
+        block for block in result["blocks"] if block["case_id"] == target["case_id"]
+    )
+    assert failed["status"] == "invalid"
+    assert "SLURM_JOB_QOS" in failed["reason"]
+
+    environment.write_text(original_environment, encoding="utf-8")
+    accounting_path = batch / "sacct_final.json"
+    accounting = json.loads(accounting_path.read_text(encoding="utf-8"))
+    accounting["allocation"]["alloc_cpus"] += 1
+    accounting_path.write_text(json.dumps(accounting) + "\n", encoding="utf-8")
+    result = analysis.analyze(matrix, root, root / "prepared_manifest.json")
+    failed = next(
+        block for block in result["blocks"] if block["case_id"] == target["case_id"]
+    )
+    assert failed["status"] == "invalid"
+    assert "disagrees with raw evidence" in failed["reason"]
 
 
 def test_complete_tier_b_record_tree_is_relocatable_and_rejects_escape(

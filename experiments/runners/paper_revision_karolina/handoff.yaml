@@ -1,4 +1,4 @@
-handoff_version: 2
+handoff_version: 3
 status: prepared_not_submitted
 software:
   repository: fenics_nonlinear_energies
@@ -52,13 +52,15 @@ campaign:
   route_endpoint_analyzer: experiments/analysis/analyze_plasticity3d_route_endpoints.py
   route_cost_analyzer: experiments/analysis/analyze_plasticity3d_route_cost_model.py
   route_cost_analyzer_sha256: abf34fed7715173e3d8c8c4b896c728a05b97d5bf12887f870eb1d4b1b240d38
-  route_endpoint_analyzer_sha256: a5e4abe61fd919f91c9f5069e5f48c3841a54a99a3ac5aceaa7b85802aaefbb4
+  route_endpoint_analyzer_sha256: 35d8b3527a3be5b4e7bcd1e237b32372efbbfb29f3e59214f2f05949eec59e4c
   route_discretization_analyzer: experiments/analysis/analyze_plasticity3d_discretization.py
-  route_discretization_analyzer_sha256: 5890507a03676ca7a0246179d82d1d7a40a86ec6914dc691a12b375357ecf4b4
+  route_discretization_analyzer_sha256: 71e5f57c88a9cd8449a6dec08fdcbc91416b259e2139a70cd6a752a64e94da8e
   route_scaling_analyzer: experiments/analysis/analyze_exp_scale_001.py
   route_scaling_analyzer_sha256: b173b2a2373ee9c20c33ee2eb1a7c1be6999e29322567847bbb2a51fe7a52c02
   slurm_accounting_collector: experiments/analysis/collect_slurm_accounting.py
   slurm_accounting_collector_sha256: 4099821584762f1d26fb736820c9fa4b7a409c27e6e04613eb1c2db7e9a96112
+  offline_preflight: experiments/runners/paper_revision_karolina/preflight_prepared_campaign.py
+  offline_preflight_sha256: 2b070eb2efee144372e7d6bb2281975f56a1c7a484766406cb2a6ace127dc850
   release_authorization_schema: paper/protocols/human-release-authorization-v1.schema.json
   release_authorization_schema_sha256: 99aba3efa0f3158c3f8e5f0889a5d5137f8ba796cac259c87025cf92e9ea2064
   release_authorization_example: paper/protocols/human-release-authorization-v1.example.json
@@ -87,11 +89,18 @@ correctness:
     - endpoint state comparison across quadrature, mesh, and tolerance blocks
     - mandatory common-rule evaluator failure propagates to the outer row
     - strict six-row adjudicator required before interpretation
+    - five sequential release stages; the two L1 quadrature endpoints form one paired stage
+    - copied-back manifests and internal output references are archive-relative
   scaling:
     - identical policy and stopping contract at every rank
     - endpoint state, energy, residual, and iteration-count checks
     - per-rank and per-node memory plus Slurm accounting
     - strict HE/optional-P3D separation and post-job accounting snapshot
+    - real HE and optional P3D submissions cannot share one archive
+  tier_b_batch_evidence:
+    - complete compute-node environment sections
+    - raw settled parsable2 accounting reparsed by the endpoint analyzer
+    - account, QoS, partition, node count, CPU count, state, and exit code match the matrix
 collection:
   output_root: artifacts/reproduction/paper_revision_karolina/<campaign-id>
   required_files:
@@ -103,3 +112,5 @@ collection:
     - environment.txt and job_metadata.env
     - Slurm stdout/stderr and settled sacct_final.json
   copy_back_required: true
+  internal_manifest_paths: archive_relative
+  offline_preflight_required_before_handoff: true

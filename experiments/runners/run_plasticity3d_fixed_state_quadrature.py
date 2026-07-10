@@ -326,10 +326,32 @@ def run(args: argparse.Namespace) -> dict[str, object]:
     if len(direction_hashes) != 1 or not free_dof_sets_match:
         raise RuntimeError("cross-rule diagnostics did not use one common direction/free-DOF set")
 
+    output_value = getattr(args, "output", None)
+    state_record = str(state_path)
+    if output_value is not None:
+        output_parent = Path(output_value).resolve().parent
+        if state_path.parent != output_parent:
+            raise RuntimeError("publication quadrature state must share the output directory")
+        state_record = state_path.name
+        for row in evaluations:
+            for key in (
+                "hessian_action_artifact",
+                "residual_artifact",
+                "branch_map_artifact",
+            ):
+                artifact = row.get(key)
+                if isinstance(artifact, dict):
+                    artifact_path = Path(str(artifact["path"])).resolve()
+                    try:
+                        artifact["path"] = str(artifact_path.relative_to(output_parent))
+                    except ValueError as exc:
+                        raise RuntimeError(
+                            "publication quadrature artifact escapes the output directory"
+                        ) from exc
     return {
         "experiment_id": "EXP-DISC-001-P3D-FIXED-STATE-QUADRATURE",
         "status": "completed",
-        "state_path": str(state_path),
+        "state_path": state_record,
         "case_hdf5": str(case_path),
         "mesh_name": mesh_name,
         "element_degree": element_degree,

@@ -10,6 +10,13 @@ conditional: if high-order cases are censored or branch changes prevent an
 error interpretation, the old nine-case trend is removed from the main paper
 and the outcome is described only as endpoint sensitivity.
 
+The managed local fixed-state quadrature diagnostics use the prescribed
+normalized trigonometric displacement state with amplitude 0.02 and the
+constrained lift applied. That analytic state is a derivative/evaluator test,
+explicitly not a nonlinear-solve endpoint. The Karolina endpoint campaign
+below is a separate evidence source and cannot be replaced by those local
+diagnostics.
+
 ## Scientific question
 
 For the retained `P4` Plasticity3D endpoint, are the observed energy and primary
@@ -19,21 +26,26 @@ successful saved states with common independently rebuilt quadrature operators.
 
 ## Frozen order and cases
 
-Run the rows in the following order; do not release later rows until the prior
-gate is inspected.
+Use the following five sequential release stages; do not authorize a later
+stage until the preceding stage's run record and scientific gate have been
+inspected. Stage 2 deliberately co-submits the two `P4(L1)` quadrature rows as
+one paired scientific release unit. Their comparison requires both endpoints,
+so neither row is released or interpreted independently. All other stages
+contain one row. Every stage has a fresh prepared archive and a separate human
+release authorization, and the manifest records its predecessor.
 
-1. `disc_p4l1_q24_smoke_np64`: one Newton step on `P4(L1)`, 24-point rule,
+1. **Smoke stage:** `disc_p4l1_q24_smoke_np64`: one Newton step on `P4(L1)`, 24-point rule,
    64 ranks, 15-minute ceiling. This verifies HDF5 generation, rank-local
    independent quadrature, state export, and reference re-evaluation.
-2. `disc_p4l1_q24_np64`: complete `P4(L1)` endpoint with the 24-point rule,
-   64 ranks, one-hour ceiling.
-3. `disc_p4l1_q125_np64`: otherwise identical `P4(L1)` endpoint with the
-   positive 125-point Duffy rule, two-hour ceiling.
-4. `disc_p4l2_q24_np128`: `P4(L2)`, 24-point rule, 128 ranks over two nodes,
+2. **Quadrature stage:** `disc_p4l1_q24_np64` and
+   `disc_p4l1_q125_np64`: complete `P4(L1)` endpoints with the 24-point and
+   positive 125-point Duffy rules, respectively, at 64 ranks. The ceilings are
+   one and two hours.
+3. **Mesh stage:** `disc_p4l2_q24_np128`: `P4(L2)`, 24-point rule, 128 ranks over two nodes,
    two-hour ceiling.
-5. `disc_p4l2_q125_np128`: otherwise identical `P4(L2)` endpoint with the
+4. **Mesh-quadrature stage:** `disc_p4l2_q125_np128`: otherwise identical `P4(L2)` endpoint with the
    125-point rule, two-hour ceiling.
-6. `disc_p4l1_q24_tight_np64`: `P4(L1)`, 24-point rule with one-order tighter
+5. **Tolerance stage:** `disc_p4l1_q24_tight_np64`: `P4(L1)`, 24-point rule with one-order tighter
    KSP, correction, and gradient tolerances and a 120-iteration cap.
 
 All rows use the glued-bottom problem at strength-reduction factor 1.55, constitutive AD,

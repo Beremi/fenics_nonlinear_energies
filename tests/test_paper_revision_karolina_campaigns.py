@@ -382,8 +382,11 @@ def test_dry_run_prepares_exact_test_only_commands_without_sbatch(tmp_path: Path
     assert manifest["status"] == "prepared_not_submitted"
     assert manifest["case_count"] == 115
     assert manifest["estimated_node_hours"] == pytest.approx(99.95)
+    assert manifest["matrix"] == str(MATRIX.relative_to(REPO_ROOT))
+    assert manifest["out_root"] == "."
+    assert manifest["offline_preflight"]["status"] == "passed"
     freeze_metadata = manifest["queued_source_freeze"]
-    freeze_path = Path(freeze_metadata["path"])
+    freeze_path = out_root / freeze_metadata["path"]
     assert freeze_path == out_root / "reviewed_source_freeze.json"
     assert freeze_metadata["sha256"] == hashlib.sha256(freeze_path.read_bytes()).hexdigest()
     freeze = json.loads(freeze_path.read_text(encoding="utf-8"))
@@ -451,6 +454,7 @@ def test_batch_rejects_queued_commit_drift_before_creating_solver_output(
             "ACCOUNT_QOS_REVALIDATED": "YES",
             "ALLOCATION_VALID_UNTIL": "2099-12-31",
             "SLURM_JOB_ACCOUNT": "fta-26-40",
+            "SLURM_JOB_QOS": "3571_6328",
         }
     )
     out_root = tmp_path / "must_remain_empty"
@@ -568,7 +572,7 @@ def test_preparation_freezes_commit_matrix_and_every_reviewed_source(
     )
     out_root = tmp_path / "source_frozen"
     manifest = module.prepare(_prepare_args(out_root, execute=False))
-    freeze_path = Path(manifest["queued_source_freeze"]["path"])
+    freeze_path = out_root / manifest["queued_source_freeze"]["path"]
     freeze = json.loads(freeze_path.read_text(encoding="utf-8"))
     assert freeze["schema_id"] == "fenics-nonlinear-energies.queued-source-freeze"
     assert freeze["source_commit"] == source_commit
@@ -624,6 +628,69 @@ def test_optional_route_and_scaling_tranches_are_separately_bounded(tmp_path: Pa
     assert sum(float(row["estimated_node_hours"]) for row in route) == 45.0
     assert len(scaling) == 3
     assert sum(float(row["estimated_node_hours"]) for row in scaling) == 17.5
+
+
+def test_real_submission_scope_rejects_mixed_scaling_and_partial_tier_b() -> None:
+    preparer = _load_preparer()
+    rows = preparer.read_matrix(MATRIX)
+    mixed_scaling = preparer.select_rows(
+        rows,
+        experiments={"EXP-SCALE-001"},
+        include_optional=True,
+        tiers={"fixed_policy_he_l5", "optional_fixed_policy_p3d"},
+    )
+    with pytest.raises(RuntimeError, match="exactly one"):
+        preparer._validate_real_submission_scope(
+            SimpleNamespace(
+                experiment=["EXP-SCALE-001"],
+                tier=["fixed_policy_he_l5", "optional_fixed_policy_p3d"],
+                include_optional=True,
+                only_optional=False,
+            ),
+            selected=mixed_scaling,
+        )
+
+    partial_tier_b = preparer.select_rows(
+        rows,
+        experiments={"EXP-ROUTE-001"},
+        include_optional=False,
+        only_optional=True,
+        tiers={"full_solve_confirmation"},
+    )
+    with pytest.raises(RuntimeError, match="exact 30-row Tier-B"):
+        preparer._validate_real_submission_scope(
+            SimpleNamespace(
+                experiment=["EXP-ROUTE-001"],
+                tier=["full_solve_confirmation"],
+                include_optional=False,
+                only_optional=True,
+            ),
+            selected=partial_tier_b,
+        )
+
+
+def test_offline_preflight_remains_valid_after_archive_copy_back(
+    tmp_path: Path, monkeypatch
+) -> None:
+    module = _load_preparer()
+    reviewed_hashes = _current_reviewed_hashes(module)
+    monkeypatch.setattr(module, "_validate_reviewed_sources", lambda: reviewed_hashes)
+    monkeypatch.setattr(
+        module,
+        "_git_metadata",
+        lambda: {"commit": "0123456789abcdef0123456789abcdef01234567", "dirty": False},
+    )
+    source = tmp_path / "cluster_archive"
+    module.prepare(_prepare_args(source, execute=False))
+    copied = tmp_path / "copied_back_and_renamed"
+    source.rename(copied)
+    result = module.offline_preflight(copied, matrix=MATRIX)
+    assert result["status"] == "passed"
+    assert result["mode"] == "offline_no_scheduler_access"
+    commands = copied / "sbatch_commands.txt"
+    commands.write_text(commands.read_text(encoding="utf-8") + "sbatch tampered\n", encoding="utf-8")
+    with pytest.raises(RuntimeError, match="stale hash"):
+        module.offline_preflight(copied, matrix=MATRIX)
 
 
 def test_commands_use_explicit_karolina_binding_and_frozen_solver_policy(tmp_path: Path) -> None:

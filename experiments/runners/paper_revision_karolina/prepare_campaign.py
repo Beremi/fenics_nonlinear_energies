@@ -12,6 +12,7 @@ import csv
 from datetime import date
 import hashlib
 import json
+import math
 import os
 from pathlib import Path
 import random
@@ -73,6 +74,7 @@ REVIEWED_SOURCES = {
     / "experiments/runners/run_plasticity3d_fixed_state_quadrature.py",
     "executor": Path(__file__).with_name("execute_case.py"),
     "preparer": Path(__file__),
+    "offline_preflight": Path(__file__).with_name("preflight_prepared_campaign.py"),
     "batch_runner": SBATCH_RUNNER,
     "submitter": Path(__file__).with_name("submit_prepared_campaigns.sh"),
     "state_export": REPO_ROOT / "src/core/benchmark/state_export.py",
@@ -82,6 +84,24 @@ REVIEWED_SOURCES = {
     / "src/problems/slope_stability_3d/support/mesh.py",
     "release_authorization_schema": RELEASE_AUTHORIZATION_SCHEMA,
     "release_authorization_example": RELEASE_AUTHORIZATION_EXAMPLE,
+}
+
+TIER_B_TIERS = frozenset({"full_solve_confirmation", "low_order_confirmation"})
+HE_SCALING_TIER = "fixed_policy_he_l5"
+P3D_SCALING_TIER = "optional_fixed_policy_p3d"
+DISC_RELEASE_STAGES = (
+    "smoke",
+    "quadrature",
+    "mesh",
+    "mesh_quadrature",
+    "tolerance",
+)
+DISC_STAGE_CASE_COUNTS = {
+    "smoke": 1,
+    "quadrature": 2,
+    "mesh": 1,
+    "mesh_quadrature": 1,
+    "tolerance": 1,
 }
 
 
@@ -213,7 +233,7 @@ def _write_source_freeze(
     _atomic_write_json(path, payload)
     return {
         "schema_id": SOURCE_FREEZE_SCHEMA_ID,
-        "path": str(path),
+        "path": path.name,
         "sha256": _sha256(path),
     }
 
@@ -510,6 +530,90 @@ def select_rows(
     return selected
 
 
+def _validate_optional_tranche_scope(
+    selected: list[dict[str, str]], *, only_optional: bool
+) -> None:
+    """Reject partial or mixed optional tranches even during preparation."""
+
+    optional = [row for row in selected if row["optional"] == "1"]
+    if not optional:
+        return
+    experiments = {row["experiment_id"] for row in optional}
+    if len(experiments) != 1 or any(row["optional"] != "1" for row in selected):
+        raise RuntimeError(
+            "optional rows must be prepared as one isolated experiment tranche"
+        )
+    if not only_optional:
+        raise RuntimeError(
+            "optional rows require --only-optional so they cannot be mixed with required rows"
+        )
+    experiment = next(iter(experiments))
+    tiers = {row["tier"] for row in selected}
+    if experiment == "EXP-ROUTE-001":
+        if tiers != TIER_B_TIERS or len(selected) != 30:
+            raise RuntimeError(
+                "optional EXP-ROUTE-001 must be the exact 30-row Tier-B scope: "
+                "full_solve_confirmation plus low_order_confirmation"
+            )
+    elif experiment == "EXP-SCALE-001":
+        if tiers != {P3D_SCALING_TIER} or len(selected) != 3:
+            raise RuntimeError(
+                "optional EXP-SCALE-001 must be the exact three-row Plasticity3D tranche"
+            )
+    else:
+        raise RuntimeError(f"optional rows are not defined for {experiment}")
+
+
+def _validate_real_submission_scope(
+    args: argparse.Namespace, *, selected: list[dict[str, str]]
+) -> None:
+    """Enforce executable tranche boundaries before any scheduler command."""
+
+    experiments = {row["experiment_id"] for row in selected}
+    tiers = {row["tier"] for row in selected}
+    if len(experiments) != 1 or not args.experiment:
+        raise RuntimeError(
+            "real submission requires exactly one explicit --experiment tranche"
+        )
+    if not args.tier:
+        raise RuntimeError(
+            "real submission requires explicit --tier selection; the all-required default "
+            "is preparation-only"
+        )
+    experiment = next(iter(experiments))
+    only_optional = bool(getattr(args, "only_optional", False))
+    include_optional = bool(getattr(args, "include_optional", False))
+
+    if experiment == "EXP-DISC-001":
+        if len(tiers) != 1:
+            raise RuntimeError("EXP-DISC-001 must be released one protocol stage at a time")
+        tier = next(iter(tiers))
+        expected_count = DISC_STAGE_CASE_COUNTS.get(tier)
+        if expected_count is None or len(selected) != expected_count:
+            raise RuntimeError("EXP-DISC-001 release stage has incomplete case coverage")
+        if only_optional or include_optional:
+            raise RuntimeError("EXP-DISC-001 has no optional release scope")
+    elif experiment == "EXP-SCALE-001":
+        if tiers == {HE_SCALING_TIER}:
+            if only_optional or include_optional or any(
+                row["optional"] != "0" for row in selected
+            ):
+                raise RuntimeError(
+                    "Hyperelasticity scaling must be a required-only real submission"
+                )
+        elif tiers == {P3D_SCALING_TIER}:
+            _validate_optional_tranche_scope(selected, only_optional=only_optional)
+        else:
+            raise RuntimeError(
+                "EXP-SCALE-001 real submission must select exactly one of the "
+                "Hyperelasticity or optional Plasticity3D tiers"
+            )
+    elif experiment == "EXP-ROUTE-001" and tiers.intersection(TIER_B_TIERS):
+        _validate_optional_tranche_scope(selected, only_optional=only_optional)
+    elif any(row["optional"] == "1" for row in selected):
+        _validate_optional_tranche_scope(selected, only_optional=only_optional)
+
+
 def _validate_release_authorization_shape(gate: object) -> dict[str, object]:
     required = {
         "schema_id",
@@ -589,22 +693,10 @@ def _require_staged_real_submission(
 
     if bool(args.test_only):
         return None
+    _validate_real_submission_scope(args, selected=selected)
     experiments = {row["experiment_id"] for row in selected}
     tiers = {row["tier"] for row in selected}
-    if len(experiments) != 1 or not args.experiment:
-        raise RuntimeError(
-            "real submission requires exactly one explicit --experiment tranche"
-        )
-    if not args.tier:
-        raise RuntimeError(
-            "real submission requires explicit --tier selection; the all-required default "
-            "is preparation-only"
-        )
     experiment = next(iter(experiments))
-    if experiment == "EXP-DISC-001" and len(tiers) != 1:
-        raise RuntimeError(
-            "EXP-DISC-001 must be released one protocol tier at a time"
-        )
     gated = (
         experiment in {"EXP-ROUTE-001", "EXP-SCALE-001"}
         or (experiment == "EXP-DISC-001" and tiers != {"smoke"})
@@ -750,7 +842,7 @@ def sbatch_command(
             str(out_root),
             expected_source_commit,
             expected_matrix_sha256,
-            source_freeze["path"],
+            str(out_root / source_freeze["path"]),
             source_freeze["sha256"],
         ]
     )
@@ -794,6 +886,171 @@ def _require_revalidation(*, test_only: bool) -> None:
             raise RuntimeError("real publication jobs require a clean committed worktree")
 
 
+def _archive_member(root: Path, raw: object, *, name: str) -> Path:
+    path = Path(str(raw or ""))
+    if path.is_absolute() or not str(path):
+        raise RuntimeError(f"prepared manifest {name} must be archive-relative")
+    resolved = (root / path).resolve()
+    try:
+        resolved.relative_to(root.resolve())
+    except ValueError as exc:
+        raise RuntimeError(f"prepared manifest {name} escapes the campaign archive") from exc
+    return resolved
+
+
+def _command_option(tokens: list[str], option: str) -> str:
+    if tokens.count(option) != 1:
+        raise RuntimeError(f"prepared sbatch command must contain exactly one {option}")
+    index = tokens.index(option)
+    if index + 1 >= len(tokens):
+        raise RuntimeError(f"prepared sbatch command has no value for {option}")
+    return tokens[index + 1]
+
+
+def offline_preflight(out_root: Path, *, matrix: Path = DEFAULT_MATRIX) -> dict[str, object]:
+    """Validate a prepared archive without invoking or querying Slurm."""
+
+    root = Path(out_root).resolve()
+    matrix = Path(matrix).resolve()
+    manifest_path = root / "prepared_manifest.json"
+    with manifest_path.open(encoding="utf-8") as handle:
+        manifest = json.load(handle)
+    if not isinstance(manifest, dict):
+        raise RuntimeError("prepared_manifest.json must contain a JSON object")
+    if manifest.get("status") not in {
+        "prepared_not_submitted",
+        "testing_admission",
+        "test_only_completed",
+        "submitting",
+        "submitted",
+    }:
+        raise RuntimeError("prepared manifest has no recognized preparation/submission status")
+    if manifest.get("matrix") != _repo_relative(matrix):
+        raise RuntimeError("prepared manifest matrix path is not repository-relative")
+    if manifest.get("matrix_sha256") != _sha256(matrix):
+        raise RuntimeError("prepared manifest matrix hash is stale")
+    if manifest.get("out_root") != ".":
+        raise RuntimeError("prepared manifest out_root must be the relocatable archive root '.'")
+
+    plan_path = _archive_member(root, manifest.get("plan_file"), name="plan_file")
+    commands_path = _archive_member(
+        root, manifest.get("commands_file"), name="commands_file"
+    )
+    freeze_record = manifest.get("queued_source_freeze")
+    if not isinstance(freeze_record, dict):
+        raise RuntimeError("prepared manifest lacks a queued source freeze")
+    freeze_path = _archive_member(
+        root, freeze_record.get("path"), name="queued_source_freeze.path"
+    )
+    for path, expected, name in (
+        (plan_path, manifest.get("plan_sha256"), "prepared plan"),
+        (commands_path, manifest.get("commands_sha256"), "prepared commands"),
+        (freeze_path, freeze_record.get("sha256"), "queued source freeze"),
+    ):
+        if not path.is_file() or expected != _sha256(path):
+            raise RuntimeError(f"{name} is missing or has a stale hash")
+
+    with freeze_path.open(encoding="utf-8") as handle:
+        freeze = json.load(handle)
+    if not isinstance(freeze, dict):
+        raise RuntimeError("queued source freeze must contain a JSON object")
+    _validate_source_freeze_payload(
+        freeze,
+        matrix=matrix,
+        source_commit=str(manifest.get("source_commit", "")),
+    )
+
+    with plan_path.open(newline="", encoding="utf-8") as handle:
+        plan = [dict(row) for row in csv.DictReader(handle)]
+    if not plan or len(plan) != int(manifest.get("case_count", -1)):
+        raise RuntimeError("prepared plan count disagrees with its manifest")
+    if len({row["case_id"] for row in plan}) != len(plan):
+        raise RuntimeError("prepared plan contains duplicate case IDs")
+    matrix_by_case = {row["case_id"]: row for row in read_matrix(matrix)}
+    for row in plan:
+        if matrix_by_case.get(row["case_id"]) != row:
+            raise RuntimeError(f"prepared row {row['case_id']} differs from the matrix")
+    if sorted({row["experiment_id"] for row in plan}) != manifest.get(
+        "selected_experiments"
+    ):
+        raise RuntimeError("prepared experiment scope disagrees with its manifest")
+    if sorted({row["tier"] for row in plan}) != manifest.get("selected_tiers"):
+        raise RuntimeError("prepared tier scope disagrees with its manifest")
+    expected_hours = sum(float(row["estimated_node_hours"]) for row in plan)
+    if not math.isclose(
+        expected_hours,
+        float(manifest.get("estimated_node_hours", -1.0)),
+        rel_tol=0.0,
+        abs_tol=1.0e-9,
+    ):
+        raise RuntimeError("prepared node-hour total disagrees with its plan")
+    if any(row["optional"] == "1" for row in plan):
+        _validate_optional_tranche_scope(
+            plan, only_optional=bool(manifest.get("only_optional"))
+        )
+
+    command_lines = commands_path.read_text(encoding="utf-8").splitlines()
+    if len(command_lines) != len(plan):
+        raise RuntimeError("prepared command count disagrees with its plan")
+    common_out_root: str | None = None
+    common_freeze_path: str | None = None
+    for row, line in zip(plan, command_lines, strict=True):
+        tokens = shlex.split(line)
+        if not tokens or tokens[0] != "sbatch":
+            raise RuntimeError(f"{row['case_id']} command is not an sbatch argument vector")
+        for forbidden in ("--exclusive", "--mem", "--mem-per-cpu"):
+            if forbidden in tokens:
+                raise RuntimeError(f"{row['case_id']} command contains forbidden {forbidden}")
+        exact_options = {
+            "--job-name": row["case_id"],
+            "--account": ACCOUNT,
+            "--qos": QOS,
+            "--partition": row["partition"],
+            "--nodes": row["nodes"],
+            "--ntasks": row["total_ranks"],
+            "--ntasks-per-node": row["ranks_per_node"],
+            "--cpus-per-task": "1",
+            "--distribution": "block:block",
+            "--time": row["time_limit"],
+        }
+        for option, expected in exact_options.items():
+            if _command_option(tokens, option) != expected:
+                raise RuntimeError(f"{row['case_id']} command {option} changed")
+        if ("--test-only" in tokens) is not bool(manifest.get("test_only_commands")):
+            raise RuntimeError(f"{row['case_id']} command test-only status changed")
+        try:
+            batch_index = tokens.index(str(SBATCH_RUNNER))
+        except ValueError as exc:
+            raise RuntimeError(f"{row['case_id']} command uses an unreviewed batch runner") from exc
+        arguments = tokens[batch_index + 1 :]
+        if len(arguments) != 7:
+            raise RuntimeError(f"{row['case_id']} batch argument count changed")
+        if (
+            Path(arguments[0]).resolve() != matrix
+            or arguments[1] != row["case_id"]
+            or arguments[3] != manifest.get("source_commit")
+            or arguments[4] != manifest.get("matrix_sha256")
+            or arguments[6] != freeze_record.get("sha256")
+        ):
+            raise RuntimeError(f"{row['case_id']} batch provenance arguments changed")
+        common_out_root = arguments[2] if common_out_root is None else common_out_root
+        common_freeze_path = arguments[5] if common_freeze_path is None else common_freeze_path
+        if arguments[2] != common_out_root or arguments[5] != common_freeze_path:
+            raise RuntimeError("prepared commands do not share one output root/source freeze")
+        if Path(arguments[5]).name != freeze_path.name:
+            raise RuntimeError(f"{row['case_id']} batch source-freeze name changed")
+    return {
+        "status": "passed",
+        "mode": "offline_no_scheduler_access",
+        "case_count": len(plan),
+        "estimated_node_hours": expected_hours,
+        "matrix_sha256": _sha256(matrix),
+        "plan_sha256": _sha256(plan_path),
+        "commands_sha256": _sha256(commands_path),
+        "source_freeze_sha256": _sha256(freeze_path),
+    }
+
+
 def prepare(args: argparse.Namespace) -> dict[str, object]:
     matrix = Path(args.matrix).resolve()
     reviewed_source_hashes = _validate_reviewed_sources()
@@ -811,6 +1068,10 @@ def prepare(args: argparse.Namespace) -> dict[str, object]:
         only_optional=bool(args.only_optional),
         tiers=set(args.tier),
     )
+    if any(row["optional"] == "1" for row in selected):
+        _validate_optional_tranche_scope(
+            selected, only_optional=bool(args.only_optional)
+        )
     total_node_hours = sum(float(row["estimated_node_hours"]) for row in selected)
     if total_node_hours > float(args.max_node_hours):
         raise RuntimeError(
@@ -868,9 +1129,9 @@ def prepare(args: argparse.Namespace) -> dict[str, object]:
         "qos": QOS,
         "known_allocation_record_ends": ALLOCATION_RECORD_END,
         "allocation_revalidation_required": True,
-        "matrix": str(matrix),
+        "matrix": _repo_relative(matrix),
         "matrix_sha256": matrix_sha256,
-        "static_campaign_manifest": str(STATIC_CAMPAIGN_MANIFEST.resolve()),
+        "static_campaign_manifest": _repo_relative(STATIC_CAMPAIGN_MANIFEST),
         "static_campaign_manifest_sha256": _sha256(STATIC_CAMPAIGN_MANIFEST),
         "reviewed_source_sha256": reviewed_source_hashes,
         "queued_source_freeze": source_freeze,
@@ -886,14 +1147,34 @@ def prepare(args: argparse.Namespace) -> dict[str, object]:
         "case_count": len(selected),
         "estimated_node_hours": float(total_node_hours),
         "node_hour_guard": float(args.max_node_hours),
-        "out_root": str(out_root),
+        "out_root": ".",
         "test_only_commands": bool(args.test_only),
         "source_commit": git["commit"],
         "source_dirty": git["dirty"],
-        "commands_file": str(commands_path),
-        "plan_file": str(plan_path),
+        "commands_file": commands_path.name,
+        "commands_sha256": _sha256(commands_path),
+        "plan_file": plan_path.name,
+        "plan_sha256": _sha256(plan_path),
     }
+    if set(manifest["selected_experiments"]) == {"EXP-DISC-001"} and len(
+        manifest["selected_tiers"]
+    ) == 1:
+        stage = str(manifest["selected_tiers"][0])
+        if stage in DISC_RELEASE_STAGES:
+            index = DISC_RELEASE_STAGES.index(stage)
+            manifest["disc_release_stage"] = {
+                "unit": "protocol_stage",
+                "stage": stage,
+                "position": index + 1,
+                "stage_count": len(DISC_RELEASE_STAGES),
+                "case_count": DISC_STAGE_CASE_COUNTS[stage],
+                "prerequisite_stage": None if index == 0 else DISC_RELEASE_STAGES[index - 1],
+                "later_stage_release_requires_separate_human_authorization": True,
+            }
     manifest_path = out_root / "prepared_manifest.json"
+    _atomic_write_json(manifest_path, manifest)
+    preflight = offline_preflight(out_root, matrix=matrix)
+    manifest["offline_preflight"] = preflight
     _atomic_write_json(manifest_path, manifest)
 
     if args.execute:

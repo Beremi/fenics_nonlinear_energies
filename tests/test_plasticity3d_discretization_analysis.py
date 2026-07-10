@@ -86,7 +86,7 @@ def _artifact(run_dir: Path, name: str, values: np.ndarray) -> dict[str, object]
     path.parent.mkdir(parents=True, exist_ok=True)
     np.save(path, values, allow_pickle=False)
     return {
-        "path": str(path.resolve()),
+        "path": str(path.relative_to(run_dir)),
         "sha256": _file_sha256(path),
         "content_sha256": _content_sha256(values),
         "dtype": str(values.dtype),
@@ -313,7 +313,7 @@ def _write_case(
         "lambda_target": 1.55,
         "energy": 1.0,
         "final_grad_norm": residual_norm,
-        "state_out": str(state_path.resolve()),
+        "state_out": state_path.name,
         "git": {"commit": commit, "dirty": False},
         "job_metadata": {"slurm_job_id": job.name.removeprefix("job_")},
         "nonlinear_convergence": {
@@ -327,7 +327,7 @@ def _write_case(
     reference = {
         "experiment_id": "EXP-DISC-001-P3D-FIXED-STATE-QUADRATURE",
         "status": "completed",
-        "state_path": str(state_path.resolve()),
+        "state_path": state_path.name,
         "mesh_name": row["mesh_name"],
         "element_degree": 4,
         "constraint_variant": "glued_bottom",
@@ -362,13 +362,21 @@ def _campaigns(tmp_path: Path) -> list[Path]:
     for tier, tier_rows in by_tier.items():
         root = (tmp_path / tier).resolve()
         root.mkdir()
+        plan = root / "prepared_plan.csv"
+        commands = root / "sbatch_commands.txt"
+        freeze = root / "reviewed_source_freeze.json"
+        plan.write_text("case_id\n" + "\n".join(row["case_id"] for row in tier_rows) + "\n", encoding="utf-8")
+        commands.write_text("\n".join(f"sbatch {row['case_id']}" for row in tier_rows) + "\n", encoding="utf-8")
+        freeze.write_text('{"synthetic_test_freeze":true}\n', encoding="utf-8")
+        stage_order = ("smoke", "quadrature", "mesh", "mesh_quadrature", "tolerance")
+        position = stage_order.index(tier) + 1
         manifest = {
             "manifest_version": 1,
             "status": "submitted",
             "cluster": "Karolina CPU",
             "account": "fta-26-40",
             "qos": "3571_6328",
-            "matrix": str(MATRIX.resolve()),
+            "matrix": str(MATRIX.resolve().relative_to(REPO_ROOT)),
             "matrix_sha256": hashlib.sha256(MATRIX.read_bytes()).hexdigest(),
             "selected_experiments": ["EXP-DISC-001"],
             "selected_tiers": [tier],
@@ -378,7 +386,24 @@ def _campaigns(tmp_path: Path) -> list[Path]:
             "test_only_commands": False,
             "source_commit": commit,
             "source_dirty": False,
-            "out_root": str(root),
+            "out_root": ".",
+            "plan_file": plan.name,
+            "plan_sha256": _file_sha256(plan),
+            "commands_file": commands.name,
+            "commands_sha256": _file_sha256(commands),
+            "queued_source_freeze": {
+                "path": freeze.name,
+                "sha256": _file_sha256(freeze),
+            },
+            "disc_release_stage": {
+                "unit": "protocol_stage",
+                "stage": tier,
+                "position": position,
+                "stage_count": len(stage_order),
+                "case_count": len(tier_rows),
+                "prerequisite_stage": None if position == 1 else stage_order[position - 2],
+                "later_stage_release_requires_separate_human_authorization": True,
+            },
         }
         (root / "prepared_manifest.json").write_text(
             json.dumps(manifest) + "\n", encoding="utf-8"
@@ -422,6 +447,30 @@ def test_discretization_adjudicator_admits_complete_clean_six_row_evidence(
     assert first_evidence["accounting"]["exit_code"] == "0:0"
     assert result["comparisons"]["l1_quadrature"]["common_scalar_gate_passed"] is True
     assert result["comparisons"]["l1_quadrature"]["branch_map_changed_samples"] == 0
+
+
+def test_discretization_manifests_and_internal_records_survive_copy_back(
+    tmp_path: Path, monkeypatch
+) -> None:
+    module = _load(ANALYZER, "disc_analysis_relocated_test")
+    monkeypatch.setattr(
+        module,
+        "validate_p3d_solve_output",
+        lambda payload, row: {"status": "passed"},
+    )
+    cluster_parent = tmp_path / "cluster"
+    cluster_parent.mkdir()
+    roots = _campaigns(cluster_parent)
+    copied_parent = tmp_path / "copied_back"
+    copied_parent.mkdir()
+    copied = []
+    for root in roots:
+        destination = copied_parent / f"renamed_{root.name}"
+        root.rename(destination)
+        copied.append(destination)
+    result = module.analyze(MATRIX, copied)
+    assert result["all_six_rows_admitted"] is True
+    assert result["publication_evidence_valid"] is True
 
 
 def test_discretization_adjudicator_rejects_dirty_or_failed_evidence(

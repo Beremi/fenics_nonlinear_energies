@@ -31,6 +31,7 @@ from __future__ import annotations
 
 import argparse
 import csv
+from datetime import datetime
 import hashlib
 import json
 import math
@@ -49,6 +50,11 @@ from src.core.benchmark.run_record import atomic_write_json
 from experiments.analysis.analyze_plasticity3d_route_cost_model import (
     _cluster_batch_evidence,
     _git_metadata,
+)
+from experiments.analysis.collect_slurm_accounting import (
+    SCHEMA_ID as SLURM_ACCOUNTING_SCHEMA_ID,
+    SCHEMA_VERSION as SLURM_ACCOUNTING_SCHEMA_VERSION,
+    parse_sacct,
 )
 
 
@@ -368,6 +374,7 @@ def _validate_manifest(manifest_path: Path, matrix_path: Path) -> dict[str, Any]
     if payload.get("matrix_sha256") != _sha256_file(matrix_path):
         result["reason"] = "manifest_matrix_sha256_mismatch"
         return result
+    result["matrix_sha256"] = str(payload["matrix_sha256"])
     if EXPERIMENT_ID not in list(payload.get("selected_experiments") or []):
         result["reason"] = "manifest_does_not_select_exp_route_001"
         return result
@@ -1280,6 +1287,158 @@ def _expected_block(row: dict[str, str]) -> dict[str, Any]:
     }
 
 
+def _parse_metadata(path: Path) -> dict[str, str]:
+    values: dict[str, str] = {}
+    for line_number, line in enumerate(
+        path.read_text(encoding="utf-8").splitlines(), start=1
+    ):
+        if not line.strip():
+            continue
+        if "=" not in line:
+            raise AdmissionError(f"{path}:{line_number} is not key=value metadata")
+        key, value = line.split("=", 1)
+        if not key or key in values:
+            raise AdmissionError(f"{path}:{line_number} has an empty or duplicate key")
+        values[key] = value
+    return values
+
+
+def _timestamp(value: object, name: str) -> datetime:
+    try:
+        parsed = datetime.fromisoformat(str(value or "").replace("Z", "+00:00"))
+    except ValueError as exc:
+        raise AdmissionError(f"{name} must be an ISO-8601 timestamp") from exc
+    if parsed.tzinfo is None or parsed.utcoffset() is None:
+        raise AdmissionError(f"{name} must include a UTC offset")
+    return parsed
+
+
+def _validate_tier_b_batch_evidence(
+    *,
+    campaign_root: Path,
+    row: dict[str, str],
+    job_id: str,
+    expected_commit: str,
+    expected_matrix_sha256: str,
+) -> list[dict[str, str]]:
+    """Require complete environment and settled accounting for a Tier-B block."""
+
+    evidence = _cluster_batch_evidence(
+        campaign_root=campaign_root,
+        case_id=row["case_id"],
+        job_id=job_id,
+        expected_commit=expected_commit,
+    )
+    batch = campaign_root / "jobs" / row["case_id"] / f"job_{job_id}"
+    metadata = _parse_metadata(batch / "job_metadata.env")
+    exact_metadata = {
+        "case_id": row["case_id"],
+        "job_id": job_id,
+        "account": "fta-26-40",
+        "qos": "3571_6328",
+        "partition": row["partition"],
+        "cluster": "karolina",
+        "nodes": row["nodes"],
+        "ntasks": row["total_ranks"],
+        "ntasks_per_node": row["ranks_per_node"],
+        "cpus_per_task": "1",
+        "matrix_sha256": expected_matrix_sha256,
+        "git_commit": expected_commit,
+        "git_dirty": "false",
+        "allocation_revalidated": "YES",
+        "account_qos_revalidated": "YES",
+        "accounting_status": "pending_post_job_collection",
+    }
+    for key, expected in exact_metadata.items():
+        if str(metadata.get(key, "")).lower() != str(expected).lower():
+            raise AdmissionError(f"Tier-B job metadata {key} differs from the matrix")
+    started = _timestamp(metadata.get("started_at"), "Tier-B job start time")
+    finished = _timestamp(metadata.get("finished_at"), "Tier-B job finish time")
+    if finished < started:
+        raise AdmissionError("Tier-B job finish time precedes its start time")
+    try:
+        valid_until = datetime.fromisoformat(
+            str(metadata.get("allocation_valid_until", ""))
+        ).date()
+    except ValueError as exc:
+        raise AdmissionError("Tier-B allocation validity date is malformed") from exc
+    if valid_until <= started.date():
+        raise AdmissionError("Tier-B job ran outside the revalidated allocation interval")
+
+    environment_path = batch / "environment.txt"
+    environment = environment_path.read_text(encoding="utf-8")
+    required_sections = (
+        "=== git ===",
+        "=== modules ===",
+        "=== python ===",
+        "=== PETSc contract ===",
+        "=== allocation ===",
+        "=== nodes ===",
+        "=== reviewed environment whitelist ===",
+    )
+    if any(section not in environment for section in required_sections):
+        raise AdmissionError("Tier-B environment capture is incomplete")
+    for name, expected in (
+        ("SLURM_JOB_ACCOUNT", "fta-26-40"),
+        ("SLURM_JOB_QOS", "3571_6328"),
+        ("SLURM_JOB_PARTITION", row["partition"]),
+        ("SLURM_JOB_NUM_NODES", row["nodes"]),
+        ("SLURM_NTASKS", row["total_ranks"]),
+        ("SLURM_CPUS_PER_TASK", "1"),
+    ):
+        if f"{name}={expected}" not in environment:
+            raise AdmissionError(f"Tier-B environment capture lacks {name}={expected}")
+
+    accounting = _read_json(batch / "sacct_final.json")
+    if (
+        accounting.get("schema_id") != SLURM_ACCOUNTING_SCHEMA_ID
+        or accounting.get("schema_version") != SLURM_ACCOUNTING_SCHEMA_VERSION
+        or str(accounting.get("job_id", "")) != job_id
+    ):
+        raise AdmissionError("Tier-B accounting identity or schema is invalid")
+    _timestamp(accounting.get("collected_at_utc"), "Tier-B accounting collection time")
+    source = accounting.get("source")
+    if not isinstance(source, dict) or source.get("mode") not in {
+        "offline_file",
+        "explicit_live_query",
+    }:
+        raise AdmissionError("Tier-B accounting source mode is absent or unknown")
+    raw = source.get("raw_parsable2")
+    if not isinstance(raw, str) or not raw:
+        raise AdmissionError("Tier-B accounting lacks raw parsable2 evidence")
+    raw_bytes = raw.encode("utf-8")
+    if (
+        source.get("sha256") != hashlib.sha256(raw_bytes).hexdigest()
+        or _integer(source.get("byte_count"), "accounting raw byte count")
+        != len(raw_bytes)
+    ):
+        raise AdmissionError("Tier-B accounting raw evidence hash is invalid")
+    try:
+        reparsed = parse_sacct(raw, job_id=job_id)
+    except ValueError as exc:
+        raise AdmissionError(f"Tier-B raw accounting cannot be reparsed: {exc}") from exc
+    for key in ("job_id", "allocation", "rows", "derived"):
+        if accounting.get(key) != reparsed[key]:
+            raise AdmissionError(f"Tier-B accounting {key} disagrees with raw evidence")
+    allocation = dict(accounting["allocation"])
+    exact_allocation: dict[str, Any] = {
+        "job_id_raw": job_id,
+        "account": "fta-26-40",
+        "qos": "3571_6328",
+        "partition": row["partition"],
+        "state": "COMPLETED",
+        "exit_code": "0:0",
+        "alloc_nodes": int(row["nodes"]),
+        "alloc_cpus": int(row["total_ranks"]),
+    }
+    for key, expected in exact_allocation.items():
+        if allocation.get(key) != expected:
+            raise AdmissionError(f"Tier-B accounting allocation {key} changed")
+    if str(allocation.get("cluster", "")).lower() != "karolina":
+        raise AdmissionError("Tier-B accounting is not from Karolina")
+    return evidence
+
+
 def _job_directories(campaign_root: Path, case_id: str) -> list[Path]:
     root = campaign_root / "cases" / case_id
     if not root.is_dir():
@@ -1297,15 +1456,17 @@ def _analyze_job(
     block: dict[str, Any],
     *,
     expected_commit: str,
+    expected_matrix_sha256: str,
 ) -> dict[str, float]:
     block["job_path"] = str(job)
     campaign_root = job.parents[2]
     expected_job_id = job.name.removeprefix("job_")
-    block["batch_evidence"] = _cluster_batch_evidence(
+    block["batch_evidence"] = _validate_tier_b_batch_evidence(
         campaign_root=campaign_root,
-        case_id=row["case_id"],
+        row=row,
         job_id=expected_job_id,
         expected_commit=expected_commit,
+        expected_matrix_sha256=expected_matrix_sha256,
     )
     matrix_path = job / "matrix_row.json"
     if not matrix_path.is_file() or not _matrix_rows_equal(row, _read_json(matrix_path)):
@@ -1713,6 +1874,7 @@ def analyze(matrix_path: Path, campaign_root: Path, manifest_path: Path) -> dict
                     jobs[0],
                     block,
                     expected_commit=str(manifest.get("source_commit", "")),
+                    expected_matrix_sha256=_sha256_file(matrix_path),
                 )
             except (AdmissionError, OSError, ValueError, json.JSONDecodeError) as exc:
                 if block["status"] not in {"censored"}:

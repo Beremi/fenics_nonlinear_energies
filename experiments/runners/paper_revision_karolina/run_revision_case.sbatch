@@ -34,6 +34,10 @@ if [[ "${SLURM_JOB_ACCOUNT:-}" != "fta-26-40" ]]; then
   echo "Expected Slurm account fta-26-40, got ${SLURM_JOB_ACCOUNT:-unset}." >&2
   exit 2
 fi
+if [[ "${SLURM_JOB_QOS:-}" != "3571_6328" ]]; then
+  echo "Expected Slurm QoS 3571_6328, got ${SLURM_JOB_QOS:-unset}." >&2
+  exit 2
+fi
 
 if [[ ! "$EXPECTED_SOURCE_COMMIT" =~ ^[0-9a-f]{40}$ ]]; then
   echo "Refusing compute execution: expected source commit is malformed." >&2
@@ -186,6 +190,50 @@ export MIX_LOCAL_P4_CHUNK_SCATTER_CACHE=auto
 export MIX_LOCAL_P4_CHUNK_SCATTER_CACHE_MAX_GIB=2.0
 unset PETSC_OPTIONS PETSC_OPTIONS_FILE PETSC_OPTIONS_YAML
 
+# Validate every scheduler-supplied resource field against the reviewed row,
+# including the compact SLURM_TASKS_PER_NODE form (for example, 128(x2)).
+VALIDATED_RANKS_PER_NODE="$(
+  "$PYTHON" - "$MATRIX" "$CASE_ID" \
+    "${SLURM_JOB_ACCOUNT:?}" "${SLURM_JOB_QOS:?}" "${SLURM_JOB_PARTITION:?}" \
+    "${SLURM_JOB_NUM_NODES:?}" "${SLURM_NTASKS:?}" \
+    "${SLURM_CPUS_PER_TASK:-1}" "${SLURM_TASKS_PER_NODE:?}" <<'PY'
+import csv
+import re
+import sys
+
+
+def expand_tasks_per_node(value: str) -> list[int]:
+    expanded: list[int] = []
+    for token in value.split(","):
+        match = re.fullmatch(r"([1-9][0-9]*)(?:\(x([1-9][0-9]*)\))?", token.strip())
+        if match is None:
+            raise SystemExit(f"unsupported SLURM_TASKS_PER_NODE value {value!r}")
+        expanded.extend([int(match.group(1))] * int(match.group(2) or 1))
+    return expanded
+
+
+matrix, case_id, account, qos, partition, nodes, tasks, cpus, tasks_per_node = sys.argv[1:]
+with open(matrix, newline="", encoding="utf-8") as handle:
+    rows = [row for row in csv.DictReader(handle) if row["case_id"] == case_id]
+if len(rows) != 1:
+    raise SystemExit(f"expected one matrix row for {case_id}, got {len(rows)}")
+row = rows[0]
+expected_shape = (int(row["nodes"]), int(row["total_ranks"]), 1)
+actual_shape = (int(nodes), int(tasks), int(cpus))
+if actual_shape != expected_shape:
+    raise SystemExit(f"Slurm shape {actual_shape} does not match matrix {expected_shape}")
+if account != "fta-26-40" or qos != "3571_6328" or partition != row["partition"]:
+    raise SystemExit("Slurm account/QoS/partition differs from the reviewed matrix")
+expected_per_node = [int(row["ranks_per_node"])] * int(row["nodes"])
+actual_per_node = expand_tasks_per_node(tasks_per_node)
+if actual_per_node != expected_per_node:
+    raise SystemExit(
+        f"Slurm tasks-per-node {actual_per_node} does not match matrix {expected_per_node}"
+    )
+print(row["ranks_per_node"])
+PY
+)"
+
 JOB_ROOT="$OUT_ROOT/jobs/${CASE_ID}/job_${SLURM_JOB_ID}"
 mkdir -p "$JOB_ROOT"
 
@@ -208,6 +256,8 @@ trap cleanup EXIT
   echo "cluster=${SLURM_CLUSTER_NAME:-}"
   echo "nodes=${SLURM_JOB_NUM_NODES:-}"
   echo "ntasks=${SLURM_NTASKS:-}"
+  echo "ntasks_per_node=$VALIDATED_RANKS_PER_NODE"
+  echo "tasks_per_node=${SLURM_TASKS_PER_NODE:-}"
   echo "cpus_per_task=${SLURM_CPUS_PER_TASK:-}"
   echo "nodelist=${SLURM_JOB_NODELIST:-}"
   echo "submit_dir=${SLURM_SUBMIT_DIR:-}"
@@ -265,27 +315,12 @@ PY
     BLIS_NUM_THREADS VECLIB_MAXIMUM_THREADS MIX_LOCAL_ASSEMBLY_BACKEND \
     MIX_LOCAL_REUSE_HESSIAN_VALUE_BUFFERS MIX_LOCAL_P4_HESSIAN_CHUNK_SIZE \
     MIX_LOCAL_P4_CHUNK_SCATTER_CACHE MIX_LOCAL_P4_CHUNK_SCATTER_CACHE_MAX_GIB \
-    SLURM_JOB_ID SLURM_JOB_ACCOUNT SLURM_JOB_NUM_NODES SLURM_NTASKS \
+    SLURM_JOB_ID SLURM_JOB_ACCOUNT SLURM_JOB_QOS SLURM_JOB_PARTITION \
+    SLURM_JOB_NUM_NODES SLURM_NTASKS SLURM_TASKS_PER_NODE \
     SLURM_CPUS_PER_TASK SLURM_JOB_NODELIST; do
     printf '%s=%q\n' "$name" "${!name:-}"
   done
 } > "$JOB_ROOT/environment.txt" 2>&1
-
-"$PYTHON" - "$MATRIX" "$CASE_ID" "${SLURM_JOB_NUM_NODES:?}" "${SLURM_NTASKS:?}" "${SLURM_CPUS_PER_TASK:-1}" <<'PY'
-import csv
-import sys
-
-matrix, case_id, nodes, tasks, cpus = sys.argv[1:]
-with open(matrix, newline="", encoding="utf-8") as handle:
-    rows = [row for row in csv.DictReader(handle) if row["case_id"] == case_id]
-if len(rows) != 1:
-    raise SystemExit(f"expected one matrix row for {case_id}, got {len(rows)}")
-row = rows[0]
-expected = (int(row["nodes"]), int(row["total_ranks"]), 1)
-actual = (int(nodes), int(tasks), int(cpus))
-if actual != expected:
-    raise SystemExit(f"Slurm shape {actual} does not match matrix {expected}")
-PY
 
 "$PYTHON" -u "$SCRIPT_DIR/execute_case.py" \
   --matrix "$MATRIX" \

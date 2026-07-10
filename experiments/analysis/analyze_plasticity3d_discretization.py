@@ -2,7 +2,7 @@
 """Fail-closed adjudication of the six EXP-DISC-001 Karolina rows.
 
 The campaign is deliberately staged across one submitted root per protocol
-tier.  This analyzer admits evidence only when all five submitted manifests,
+stage.  This analyzer admits evidence only when all five submitted manifests,
 all six matrix rows, the solver/Riesz records, the saved states, and both
 independent quadrature evaluations agree with the reviewed policy.  It then
 compares the two solved quadrature endpoints on each mesh under the common
@@ -51,7 +51,7 @@ REVIEWED_DISC_ROWS_SHA256 = (
     "60a7cda2549c9e5515b0c2fd1de766402cf36dbd50c4bc5e59502dab8e850e5e"
 )
 REVIEWED_PROTOCOL_SHA256 = (
-    "49f9e1e72bc1e138b0e2079298afe17f71b6b58288f914f979545ebde9c84b31"
+    "27b504043e09b10208df36e6e3368afb2f4528dc8b803513eaa37993cba0470d"
 )
 RULES = ("tetra_24point", "tetra_duffy_125point")
 BRANCHES = ("elastic", "shear", "left_edge", "right_edge", "apex")
@@ -408,8 +408,15 @@ def _manifest(root: Path, matrix_path: Path) -> dict[str, Any]:
         raise AdmissionError(f"{path} does not record a real submission")
     if payload.get("matrix_sha256") != _sha256(matrix_path):
         raise AdmissionError(f"{path} has a stale matrix hash")
-    if Path(str(payload.get("matrix", ""))).resolve() != matrix_path.resolve():
-        raise AdmissionError(f"{path} points to a different matrix")
+    try:
+        expected_matrix = str(matrix_path.resolve().relative_to(REPO_ROOT.resolve()))
+    except ValueError as exc:
+        raise AdmissionError("analysis matrix is outside the reviewed repository") from exc
+    matrix_record = Path(str(payload.get("matrix", "")))
+    if matrix_record.is_absolute() or str(matrix_record) != expected_matrix:
+        raise AdmissionError(
+            f"{path} matrix path is not the reviewed repository-relative path"
+        )
     if payload.get("selected_experiments") != [EXPERIMENT_ID]:
         raise AdmissionError(f"{path} does not isolate EXP-DISC-001")
     if (
@@ -430,8 +437,60 @@ def _manifest(root: Path, matrix_path: Path) -> dict[str, Any]:
         raise AdmissionError(f"{path} records test-only commands")
     if payload.get("include_optional") is not False or payload.get("only_optional") is not False:
         raise AdmissionError(f"{path} changed the required-only scope")
-    if Path(str(payload.get("out_root", ""))).resolve() != root.resolve():
-        raise AdmissionError(f"{path} out_root does not match its containing root")
+    if payload.get("out_root") != ".":
+        raise AdmissionError(
+            f"{path} out_root is not the relocatable archive root '.'"
+        )
+    for path_key, hash_key in (
+        ("plan_file", "plan_sha256"),
+        ("commands_file", "commands_sha256"),
+    ):
+        relative = Path(str(payload.get(path_key, "")))
+        if relative.is_absolute() or not str(relative):
+            raise AdmissionError(f"{path} {path_key} must be archive-relative")
+        artifact = (root / relative).resolve()
+        try:
+            artifact.relative_to(root.resolve())
+        except ValueError as exc:
+            raise AdmissionError(
+                f"{path} {path_key} escapes the copied archive"
+            ) from exc
+        if not artifact.is_file() or payload.get(hash_key) != _sha256(artifact):
+            raise AdmissionError(f"{path} {path_key} is missing or has a stale hash")
+    freeze = payload.get("queued_source_freeze")
+    if not isinstance(freeze, dict):
+        raise AdmissionError(f"{path} lacks a queued source-freeze record")
+    freeze_relative = Path(str(freeze.get("path", "")))
+    if freeze_relative.is_absolute() or not str(freeze_relative):
+        raise AdmissionError(f"{path} source-freeze path must be archive-relative")
+    freeze_path = (root / freeze_relative).resolve()
+    try:
+        freeze_path.relative_to(root.resolve())
+    except ValueError as exc:
+        raise AdmissionError(
+            f"{path} source-freeze path escapes the copied archive"
+        ) from exc
+    if not freeze_path.is_file() or freeze.get("sha256") != _sha256(freeze_path):
+        raise AdmissionError(f"{path} source freeze is missing or has a stale hash")
+    stage = payload.get("disc_release_stage")
+    tier = str(tiers[0])
+    expected_position = EXPECTED_TIERS.index(tier) + 1
+    expected_count = 2 if tier == "quadrature" else 1
+    expected_stage = {
+        "unit": "protocol_stage",
+        "stage": tier,
+        "position": expected_position,
+        "stage_count": len(EXPECTED_TIERS),
+        "case_count": expected_count,
+        "prerequisite_stage": (
+            None if expected_position == 1 else EXPECTED_TIERS[expected_position - 2]
+        ),
+        "later_stage_release_requires_separate_human_authorization": True,
+    }
+    if not isinstance(stage, dict) or stage != expected_stage:
+        raise AdmissionError(
+            f"{path} has an invalid sequential DISC release-stage record"
+        )
     return {**payload, "path": str(path), "sha256": _sha256(path), "tier": tiers[0]}
 
 
@@ -522,7 +581,7 @@ def _load_state(path: Path, payload: dict[str, Any], row: dict[str, str]) -> dic
     root_energy = _finite(payload.get("energy"), "root energy")
     if not math.isclose(state_energy, root_energy, rel_tol=1.0e-12, abs_tol=1.0e-10):
         raise AdmissionError("state and root energies disagree")
-    if Path(str(payload.get("state_out", ""))).resolve() != path.resolve():
+    if _within(path.parent, payload.get("state_out")) != path.resolve():
         raise AdmissionError("root output points to a stale state archive")
     return {
         "path": str(path),
@@ -640,7 +699,7 @@ def _validate_reference(
     for key, expected in exact.items():
         if payload.get(key) != expected:
             raise AdmissionError(f"quadrature reference {key} disagrees with policy")
-    if Path(str(payload.get("state_path", ""))).resolve() != state_path.resolve():
+    if _within(run_dir, payload.get("state_path")) != state_path.resolve():
         raise AdmissionError("quadrature reference points to a stale state")
     _exact_float(payload.get("lambda_target"), 1.55, "quadrature-reference load factor")
     if not _is_sha256(payload.get("common_direction_content_sha256")):
