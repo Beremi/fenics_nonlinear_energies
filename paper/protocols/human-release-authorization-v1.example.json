@@ -1,0 +1,19 @@
+{
+  "schema_id": "fenics-nonlinear-energies.human-release-authorization",
+  "schema_version": 1,
+  "status": "approved",
+  "decision": "explicit_human_release_after_review",
+  "matrix_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+  "source_commit": "0000000000000000000000000000000000000000",
+  "authorizes_experiment": "EXP-DISC-001",
+  "authorizes_tiers": [
+    "quadrature"
+  ],
+  "reviewer": "EXAMPLE_ONLY_REPLACE_WITH_HUMAN_REVIEWER_ID",
+  "reviewed_artifacts": [
+    {
+      "path": "REPLACE_WITH_RELATIVE_PATH_TO_REVIEWED_ANALYSIS.json",
+      "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+    }
+  ]
+}

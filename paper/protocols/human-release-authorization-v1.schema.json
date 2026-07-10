@@ -1,0 +1,85 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:fenics-nonlinear-energies:schema:human-release-authorization:1",
+  "title": "Human release authorization for a Karolina publication tranche",
+  "description": "A human decision that binds one experiment and explicit tiers to a clean source commit, the reviewed campaign matrix, and hash-identified analysis artifacts. Passing numerical gates never creates this record automatically.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_id",
+    "schema_version",
+    "status",
+    "decision",
+    "matrix_sha256",
+    "source_commit",
+    "authorizes_experiment",
+    "authorizes_tiers",
+    "reviewer",
+    "reviewed_artifacts"
+  ],
+  "properties": {
+    "schema_id": {
+      "const": "fenics-nonlinear-energies.human-release-authorization"
+    },
+    "schema_version": {
+      "const": 1
+    },
+    "status": {
+      "const": "approved"
+    },
+    "decision": {
+      "const": "explicit_human_release_after_review"
+    },
+    "matrix_sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "source_commit": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{40}$"
+    },
+    "authorizes_experiment": {
+      "enum": [
+        "EXP-ROUTE-001",
+        "EXP-DISC-001",
+        "EXP-SCALE-001"
+      ]
+    },
+    "authorizes_tiers": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$"
+      }
+    },
+    "reviewer": {
+      "type": "string",
+      "pattern": "^\\S(?:.*\\S)?$"
+    },
+    "reviewed_artifacts": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "path",
+          "sha256"
+        ],
+        "properties": {
+          "path": {
+            "type": "string",
+            "pattern": "^\\S(?:.*\\S)?$"
+          },
+          "sha256": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$"
+          }
+        }
+      }
+    }
+  }
+}

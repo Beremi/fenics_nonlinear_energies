@@ -1,0 +1,27 @@
+{
+  "schema_id": "fenics-nonlinear-energies.exp-route-001-workstation-plan",
+  "schema_version": 1,
+  "experiment_id": "EXP-ROUTE-001",
+  "hardware_id": "workstation_local",
+  "source_matrix": "experiments/runners/paper_revision_karolina/campaign_matrix.csv",
+  "source_matrix_sha256": "0010453084157f5ccf0ba307ed26b377c4aff80ad9f095fa359270e90ad5b1a5",
+  "rank_count": 1,
+  "clean_commit_required": true,
+  "paired_process_blocks": true,
+  "case_ids": [
+    "route_block_p1l1_elastic_np1_b01",
+    "route_block_p1l1_elastic_np1_b02",
+    "route_block_p1l1_elastic_np1_b03",
+    "route_block_p1l1_mixed_np1_b01",
+    "route_block_p1l1_mixed_np1_b02",
+    "route_block_p1l1_mixed_np1_b03",
+    "route_block_p2l1_elastic_np1_b01",
+    "route_block_p2l1_elastic_np1_b02",
+    "route_block_p2l1_elastic_np1_b03",
+    "route_block_p2l1_mixed_np1_b01",
+    "route_block_p2l1_mixed_np1_b02",
+    "route_block_p2l1_mixed_np1_b03"
+  ],
+  "route_process_executions": 36,
+  "terminal_policy": "all_blocks_must_pass_before_manifest_status_completed"
+}

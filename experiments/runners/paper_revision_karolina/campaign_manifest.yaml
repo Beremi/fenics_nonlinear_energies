@@ -1,0 +1,106 @@
+manifest_version: 3
+status: prepared_not_submitted
+prepared_for: paper publication revision
+prepared_date: "2026-07-10"
+cluster:
+  provider: IT4I
+  resource: Karolina CPU
+  account: fta-26-40
+  qos: "3571_6328"
+  ranks_per_full_node: 128
+  placement: block:block
+  cpu_binding: explicit sequential map_cpu per node
+  memory_binding: local
+  threads_per_rank: 1
+allocation:
+  historical_record_ends: "2026-07-11"
+  authorization_status: invalid_until_revalidated
+  submitted_in_current_session: false
+  scheduler_command_invoked_in_current_session: false
+matrix:
+  path: experiments/runners/paper_revision_karolina/campaign_matrix.csv
+  sha256: 0010453084157f5ccf0ba307ed26b377c4aff80ad9f095fa359270e90ad5b1a5
+  required_slurm_rows: 115
+  required_in_allocation_process_executions: 299
+  required_node_hours: 99.95
+  optional_slurm_rows: 33
+  optional_in_allocation_process_executions: 75
+  optional_node_hours: 62.50
+  full_slurm_rows: 148
+  full_in_allocation_process_executions: 374
+  full_node_hours: 162.45
+  route_required:
+    slurm_rows: 105
+    process_executions: 273
+    node_hours: 64.20
+    paired_baseline_rows: 78
+    paired_quadrature_rows: 18
+    factor_microbenchmark_rows: 9
+  route_optional:
+    slurm_rows: 30
+    process_executions: 60
+    node_hours: 45.00
+  discretization_required:
+    slurm_rows: 6
+    process_executions: 6
+    node_hours: 13.25
+  hyperelasticity_scaling_required:
+    slurm_rows: 4
+    process_executions: 20
+    node_hours: 22.50
+  plasticity_scaling_optional:
+    slurm_rows: 3
+    process_executions: 15
+    node_hours: 17.50
+route_design:
+  fixed_state_order_policy: seeded_balanced_cyclic_v1
+  full_solve_order_policy: seeded_balanced_alternating_v1
+  order_seed: first_16_hex_digits_of_sha256_comparison_id
+  timing_reduction: mpi_collective_max_with_raw_rank_values
+  fixed_state_probes: 4
+  direct_csr_required: rank_one_degree_one_all_routes
+  p4_colored_sfd_status: prespecified_not_attempted_memory_risk_no_threshold_claim
+  factor_diagnostic_status: replicated_descriptive_non_route_faithful_not_a_selector_feature
+  predictive_selector_status: production_13_feature_model_fail_closed_until_clean_holdout_gates_pass
+  endpoint_state_metric: common_element_ad_reference_elastic_riesz
+  endpoint_branch_gate: exact_canonical_pointwise_map_hash_and_margin
+  endpoint_uncertainty: paired_bootstrap_10000_seed_20260710
+source_sha256:
+  analysis_contract: 275f08e03221aed13a1b3cdbd1649a99274cb26b2c6d949f62bb4c3e6012fb00
+  route_protocol: a84cc6e5d15de7114e8c40aaf02c751648331cab01966621b094b18f3c4908b3
+  discretization_protocol: 49f9e1e72bc1e138b0e2079298afe17f71b6b58288f914f979545ebde9c84b31
+  scaling_protocol: f4217d94d7508eca612dce69c822623ed68edc4ef49f37c7fe4d879fe8da4190
+  scaling_analysis_contract: 4f64f300d7f63dcd4c4329880bb7a22d2004934b1060806007e33a80540e8286
+  cost_model_analyzer: abf34fed7715173e3d8c8c4b896c728a05b97d5bf12887f870eb1d4b1b240d38
+  endpoint_analyzer: a5e4abe61fd919f91c9f5069e5f48c3841a54a99a3ac5aceaa7b85802aaefbb4
+  route_tranche_aggregator: ec7fcdf459fbdc2fa4fae5d53dc797802cc5de01a5b44ec84eb8e388756283be
+  discretization_analyzer: 5890507a03676ca7a0246179d82d1d7a40a86ec6914dc691a12b375357ecf4b4
+  scaling_analyzer: b173b2a2373ee9c20c33ee2eb1a7c1be6999e29322567847bbb2a51fe7a52c02
+  slurm_accounting_collector: 4099821584762f1d26fb736820c9fa4b7a409c27e6e04613eb1c2db7e9a96112
+  fixed_state_runner: 804d7979b81f9bfd0d42d6c154463c44314e46b884dc55995c9537b7eae9a3d9
+  factor_runner: 61af95fde6a5f354595faf246a7193040e1fa42dbdd936503a451abcadfd508d
+  backend_mix_runner: 7a5d9e5f7d948af509579ac1ae3d0f4c2828697347ed2c683d034943f9595ad4
+  quadrature_runner: 76b62df3ce0bc2c7811429a5198f8d8a6f536f131c2b34797e0398732af2fd69
+  executor: 5ea3ee769b34177015478d1f48a35cc94afb5feab45f8639875d42e2f4418a4d
+  preparer: 4c608f3b026e46b3d240528572dd428b4efe60617567fb75ca78464065468c82
+  batch_runner: a943194549bc03ed64f6dd22b7bae60d0150c72ee117150c8c9cf2ea957e49b7
+  submitter: f5522b1c40b6d14146790d87c02198e9008fd76220e3b8b003b32cd3093edb7a
+  state_export: 51713deaff1edddc0e6490f1c8245ded428946c6617f4cd9aac97bb99bfd59cd
+  fixed_state_support: 7360726cdc55af77f2a24b5fc977a2d16688c4d837fd5dbec6ae36af0b1c4ad8
+  quadrature_support: 83272dcfa9bd5a730aedd070a5add61f7192cec4f0d170884e1181868989c206
+  release_authorization_schema: 99aba3efa0f3158c3f8e5f0889a5d5137f8ba796cac259c87025cf92e9ea2064
+  release_authorization_example: 62f5a73619c5b5370ade23f67f750b03426b99f132eb3f835db3aa6ca7d55843
+protocol_cards:
+  EXP-ROUTE-001: paper/protocols/EXP-ROUTE-001.md
+  EXP-DISC-001: paper/protocols/EXP-DISC-001.md
+  EXP-SCALE-001: paper/protocols/EXP-SCALE-001.md
+safety:
+  dry_run_default: true
+  node_hour_guard: 100.0
+  full_matrix_submission_forbidden: true
+  real_submission_requires_one_explicit_experiment: true
+  real_submission_requires_explicit_tiers: true
+  downstream_tiers_require_human_release_authorization_v1: true
+  clean_commit_required: true
+  allocation_account_qos_revalidation_required: true
+  forbidden_options: [--exclusive, --mem, --mem-per-cpu]

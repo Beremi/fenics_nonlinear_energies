@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import csv
 import json
+import math
 import os
 import shlex
 import signal
@@ -16,8 +17,13 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-
 REPO_ROOT = Path(__file__).resolve().parents[2]
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
+
+from src.core.benchmark.run_record import atomic_write_json
+
+
 CASE_RUNNER = REPO_ROOT / "experiments/runners/run_trust_region_case.py"
 PLASTICITY3D_RUNNER = REPO_ROOT / "experiments/runners/run_plasticity3d_backend_mix_case.py"
 PLAPLACE_SCALING = REPO_ROOT / "experiments/analysis/docs_assets/data/plaplace/strong_scaling.csv"
@@ -190,9 +196,10 @@ def _safe_float(value: Any) -> float | None:
     if value is None or value == "":
         return None
     try:
-        return float(value)
+        result = float(value)
     except (TypeError, ValueError):
         return None
+    return result if math.isfinite(result) else None
 
 
 def _sum_history(step: dict[str, Any], key: str) -> float:
@@ -472,8 +479,7 @@ def _write_fallback_payload(
             "steps": [],
         },
     }
-    out_path.parent.mkdir(parents=True, exist_ok=True)
-    out_path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+    atomic_write_json(out_path, payload, nonfinite_as_null=True)
     return payload
 
 
@@ -739,17 +745,14 @@ def write_reports(rows: list[dict[str, Any]], *, mode: str, report_dir: Path) ->
         writer = csv.DictWriter(f, fieldnames=CSV_FIELDS)
         writer.writeheader()
         writer.writerows(rows)
-    json_path.write_text(
-        json.dumps(
-            {
-                "mode": mode,
-                "generated_at": time.strftime("%Y-%m-%dT%H:%M:%S%z"),
-                "rows": rows,
-            },
-            indent=2,
-        )
-        + "\n",
-        encoding="utf-8",
+    atomic_write_json(
+        json_path,
+        {
+            "mode": mode,
+            "generated_at": time.strftime("%Y-%m-%dT%H:%M:%S%z"),
+            "rows": rows,
+        },
+        nonfinite_as_null=True,
     )
 
 

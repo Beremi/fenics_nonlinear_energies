@@ -1,0 +1,208 @@
+{
+  "contract_version": 2,
+  "experiment_id": "EXP-ROUTE-001",
+  "frozen_before_karolina_results": true,
+  "route_order": [
+    "element_ad",
+    "colored_sfd",
+    "constitutive_ad"
+  ],
+  "reference_route": "element_ad",
+  "hardware": {
+    "workstation_local": {
+      "role": "training_calibration_only",
+      "allowed_ranks": [1]
+    },
+    "karolina_cpu": {
+      "role": "second_architecture_train_and_holdout",
+      "training_ranks": [1, 8],
+      "holdout_ranks": [32]
+    }
+  },
+  "configurations": [
+    {
+      "configuration_id": "p1_l1",
+      "mesh_name": "hetero_ssr_L1",
+      "element_degree": 1,
+      "quadrature_rule_id": "tetra_1point"
+    },
+    {
+      "configuration_id": "p1_l2",
+      "mesh_name": "hetero_ssr_L1_2",
+      "element_degree": 1,
+      "quadrature_rule_id": "tetra_1point"
+    },
+    {
+      "configuration_id": "p2_l1",
+      "mesh_name": "hetero_ssr_L1",
+      "element_degree": 2,
+      "quadrature_rule_id": "tetra_11point"
+    },
+    {
+      "configuration_id": "p4_l1",
+      "mesh_name": "hetero_ssr_L1",
+      "element_degree": 4,
+      "quadrature_rule_id": "tetra_24point"
+    },
+    {
+      "configuration_id": "p2_l1_q1_factor",
+      "mesh_name": "hetero_ssr_L1",
+      "element_degree": 2,
+      "quadrature_rule_id": "tetra_1point",
+      "hardware_ranks": {"karolina_cpu": [1]}
+    },
+    {
+      "configuration_id": "p2_l1_q24_factor",
+      "mesh_name": "hetero_ssr_L1",
+      "element_degree": 2,
+      "quadrature_rule_id": "tetra_24point",
+      "hardware_ranks": {"karolina_cpu": [1]}
+    },
+    {
+      "configuration_id": "p2_l1_q125_factor",
+      "mesh_name": "hetero_ssr_L1",
+      "element_degree": 2,
+      "quadrature_rule_id": "tetra_duffy_125point",
+      "hardware_ranks": {"karolina_cpu": [1]}
+    }
+  ],
+  "states": [
+    {
+      "state_id": "elastic",
+      "accepted_labels": ["elastic", "small_amplitude"],
+      "amplitude": 0.0002
+    },
+    {
+      "state_id": "mixed",
+      "accepted_labels": ["mixed", "mixed_branch", "mixed_branch_candidate"],
+      "amplitude": 0.02
+    }
+  ],
+  "expected_scope": {
+    "workstation_local": {
+      "configuration_ids": ["p1_l1", "p2_l1"],
+      "ranks": [1]
+    },
+    "karolina_cpu": {
+      "configuration_ids": ["p1_l1", "p1_l2", "p2_l1", "p4_l1"],
+      "factor_configuration_ids": [
+        "p2_l1_q1_factor",
+        "p2_l1_q24_factor",
+        "p2_l1_q125_factor"
+      ],
+      "ranks": [1, 8, 32]
+    }
+  },
+  "structural_censors": [
+    {
+      "hardware_id": "karolina_cpu",
+      "configuration_id": "p4_l1",
+      "route": "colored_sfd",
+      "all_states": true,
+      "all_ranks": true,
+      "reason": "prespecified_not_attempted_memory_risk_no_threshold_claim"
+    }
+  ],
+  "equivalence_gates": {
+    "state_array_exact": true,
+    "state_sha256_exact": true,
+    "action_relative_l2_max": 1e-08,
+    "action_max_absolute_reported": true,
+    "branch_counts_exact": true,
+    "minimum_normalized_branch_margin": 1e-08,
+    "maximum_near_boundary_fraction": 0.0,
+    "minimum_warm_repetitions": 5,
+    "all_timings_finite_and_positive": true
+  },
+  "cost_model": {
+    "response": "log_warm_median_tangent_construction_seconds",
+    "fit": "ordinary_least_squares",
+    "features_in_order": [
+      "route_is_element_ad",
+      "route_is_colored_sfd",
+      "route_is_constitutive_ad",
+      "karolina_route_is_element_ad",
+      "karolina_route_is_colored_sfd",
+      "karolina_route_is_constitutive_ad",
+      "log1p_route_work_proxy",
+      "log1p_owned_matrix_nonzeros",
+      "log1p_maximum_rank_overlap_dofs",
+      "log_rank_count",
+      "plastic_fraction",
+      "owned_element_imbalance",
+      "overlap_dof_imbalance"
+    ],
+    "route_work_proxy": {
+      "semantics": "collective-max-aligned structural operation-shape count; not an exact FLOP or compiler-cost model",
+      "element_ad": "max_r(local_elements_r) * quadrature_points_per_element * element_dofs^2",
+      "colored_sfd": "max_r(local_elements_r * local_color_count_r) * quadrature_points_per_element * element_dofs",
+      "constitutive_ad": "max_r(local_elements_r) * quadrature_points_per_element * (constitutive_dimension^2 + constitutive_dimension^2 * element_dofs + constitutive_dimension * element_dofs^2)"
+    },
+    "training_rule": "workstation_local rows and karolina_cpu ranks 1 or 8",
+    "holdout_rule": "karolina_cpu rank 32 only",
+    "minimum_training_rows": 48,
+    "minimum_holdout_rows": 20,
+    "minimum_training_rows_per_route": 6,
+    "minimum_holdout_rows_per_route": 4,
+    "minimum_training_groups": 12,
+    "minimum_holdout_groups": 8,
+    "required_training_hardware": [
+      "workstation_local",
+      "karolina_cpu"
+    ],
+    "maximum_design_condition_number": 10000000000.0,
+    "median_absolute_percentage_error_max": 0.25,
+    "p90_absolute_percentage_error_max": 0.5,
+    "practical_ordering_tie_ratio": 1.1,
+    "minimum_resolved_holdout_groups": 4,
+    "resolved_ordering_accuracy_min": 0.9,
+    "minimum_distinct_observed_holdout_winners": 2,
+    "paired_block_bootstrap_seed": 20260710,
+    "paired_block_bootstrap_resamples": 10000,
+    "paired_block_bootstrap_confidence_level": 0.95
+  },
+  "publication_model_input_gates": {
+    "design_released_for_fitting": true,
+    "release_evidence": [
+      "paired_all_route_processes_within_each_slurm_allocation",
+      "balanced_cyclic_or_alternating_route_positions",
+      "mpi_collective_max_with_per_rank_timing_proof",
+      "independent_slurm_block_repetitions",
+      "factorized_quadrature_production_route_blocks",
+      "four_actions_gradient_residual_and_feasible_direct_matrix_checks",
+      "strict_high_and_low_order_full_solve_endpoint_analyzer"
+    ],
+    "clean_git_commit_required": true,
+    "workstation_manifest_required": true,
+    "workstation_plan_sha256": "ce3a518889516288dfa1017fea638b697770c13e56e6151193d2fd366ccec04f",
+    "karolina_prepared_manifest_required": true,
+    "karolina_matrix_sha256": "0010453084157f5ccf0ba307ed26b377c4aff80ad9f095fa359270e90ad5b1a5",
+    "karolina_manifest_status_for_results": "submitted",
+    "endpoint_analysis_required_for_selector": true,
+    "endpoint_required_rows": 30,
+    "endpoint_allowed_terminal_decisions": [
+      "tier_b_descriptive_timing_only",
+      "tier_b_comparative_ranking_admissible"
+    ]
+  },
+  "factorized_calibration_policy": {
+    "required_for_selector_claim": false,
+    "current_status": "descriptive_replicated_synthetic_non_route_faithful_proxy",
+    "independent_blocks_per_rank": 3,
+    "single_rank_imbalance_policy": "mark_nonunit_imbalance_inapplicable_and_exclude_from_fit",
+    "training_ranks": [1, 8],
+    "validation_rank": 32,
+    "response": "log_warm_median_stage_seconds",
+    "fit": "ordinary_least_squares_main_effects",
+    "stage_names": ["contraction", "color_hvp", "insertion", "communication"],
+    "median_absolute_percentage_error_max": 0.5,
+    "p90_absolute_percentage_error_max": 1.0,
+    "fail_closed_reason": "factorized_mechanism_diagnostic_gate_failed"
+  },
+  "terminal_policy": {
+    "selector_claim_requires_all_model_gates": true,
+    "selector_admitted": "predictive_selector_admissible",
+    "otherwise": "finite_empirical_map_only",
+    "never_impute_censored_or_missing_timings": true
+  }
+}

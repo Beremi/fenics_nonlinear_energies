@@ -1,0 +1,105 @@
+handoff_version: 2
+status: prepared_not_submitted
+software:
+  repository: fenics_nonlinear_energies
+  code_path_on_cluster: TO_REVALIDATE
+  python: set PYTHON or source ENV_SETUP
+  environment_contract:
+    petsc: 3.24.x
+    required_api: petsc4py.PETSc.Mat.setPreallocationCOO
+    required_external_packages: [hypre, mumps]
+    compute_node_internet: unavailable
+  clean_commit_required: true
+hpc:
+  provider: IT4I
+  cluster: Karolina CPU
+  host: karolina.it4i.cz
+  username: ber0061
+  slurm_account: fta-26-40
+  slurm_qos: "3571_6328"
+  partition_short: qcpu_exp
+  partition_production: qcpu
+  cores_per_node: 128
+  ranks_per_full_node: 128
+  cpus_per_task: 1
+  distribution: block:block
+  cpu_binding: map_cpu:0..ranks_per_node-1
+  memory_binding: local
+  project_dir: /mnt/proj1/fta-26-40
+  scratch_project_dir: /scratch/project/fta-26-40
+  max_node_hours: 100
+  historical_allocation_end: "2026-07-11"
+  revalidation_required: true
+data:
+  immutable_roots:
+    - data/meshes/HyperElasticity
+    - data/meshes/SlopeStability3D
+  generated_same_mesh_cache: data/meshes/SlopeStability3D/hetero_ssr
+  checksum_policy: record matrix and input-file SHA-256 values in each collected run manifest
+campaign:
+  matrix: experiments/runners/paper_revision_karolina/campaign_matrix.csv
+  matrix_sha256: 0010453084157f5ccf0ba307ed26b377c4aff80ad9f095fa359270e90ad5b1a5
+  submitter: experiments/runners/paper_revision_karolina/submit_prepared_campaigns.sh
+  batch_runner: experiments/runners/paper_revision_karolina/run_revision_case.sbatch
+  required_node_hours: 99.95
+  optional_node_hours: 62.50
+  required_jobs: 115
+  optional_jobs: 33
+  total_node_hours: 162.45
+  total_jobs: 148
+  route_analysis_contract: paper/protocols/EXP-ROUTE-001-analysis-contract.json
+  route_analysis_contract_sha256: 275f08e03221aed13a1b3cdbd1649a99274cb26b2c6d949f62bb4c3e6012fb00
+  route_endpoint_analyzer: experiments/analysis/analyze_plasticity3d_route_endpoints.py
+  route_cost_analyzer: experiments/analysis/analyze_plasticity3d_route_cost_model.py
+  route_cost_analyzer_sha256: abf34fed7715173e3d8c8c4b896c728a05b97d5bf12887f870eb1d4b1b240d38
+  route_endpoint_analyzer_sha256: a5e4abe61fd919f91c9f5069e5f48c3841a54a99a3ac5aceaa7b85802aaefbb4
+  route_discretization_analyzer: experiments/analysis/analyze_plasticity3d_discretization.py
+  route_discretization_analyzer_sha256: 5890507a03676ca7a0246179d82d1d7a40a86ec6914dc691a12b375357ecf4b4
+  route_scaling_analyzer: experiments/analysis/analyze_exp_scale_001.py
+  route_scaling_analyzer_sha256: b173b2a2373ee9c20c33ee2eb1a7c1be6999e29322567847bbb2a51fe7a52c02
+  slurm_accounting_collector: experiments/analysis/collect_slurm_accounting.py
+  slurm_accounting_collector_sha256: 4099821584762f1d26fb736820c9fa4b7a409c27e6e04613eb1c2db7e9a96112
+  release_authorization_schema: paper/protocols/human-release-authorization-v1.schema.json
+  release_authorization_schema_sha256: 99aba3efa0f3158c3f8e5f0889a5d5137f8ba796cac259c87025cf92e9ea2064
+  release_authorization_example: paper/protocols/human-release-authorization-v1.example.json
+  release_authorization_example_sha256: 62f5a73619c5b5370ade23f67f750b03426b99f132eb3f835db3aa6ca7d55843
+correctness:
+  route_screen:
+    - identical state SHA-256 across derivative routes
+    - tangent-action comparison at prespecified relative tolerance
+    - derivative verification gate already passed for selected degree/rule
+    - Tier-B full solves use ksp_rtol 1e-8 and KSP cap 500; loose 1e-2 is forbidden
+    - P1(L1), P1(L2), P2(L1), and P4(L1) at ranks 1, 8, and 32
+    - ranks 1 and 8 are training; rank 32 is untouched holdout
+    - P4(L1) colored SFD is a prespecified non-attempt motivated by pilot memory risk; no threshold is claimed
+    - strict analysis reconstructs states/actions before timing admission
+    - no predictive model fit until the frozen minimum train/holdout gates pass
+  p3d_convergence:
+    - all p3d_solve rows use reference_elastic_energy
+    - MUMPS inertia numerically checks positive definiteness on the glued free space
+    - GMRES/Hypre Riesz solve uses rtol 1e-10, atol 1e-14, and cap 1000
+    - independently recomputed Riesz true residual must be at most 1e-8
+    - endpoint Riesz RHS must equal both coefficient-gradient diagnostics
+    - completed rows must pass the Riesz residual gate
+  discretization:
+    - terminal status and stopping metrics
+    - common fixed-state 24-point/125-point energy and observable evaluation
+    - endpoint state comparison across quadrature, mesh, and tolerance blocks
+    - mandatory common-rule evaluator failure propagates to the outer row
+    - strict six-row adjudicator required before interpretation
+  scaling:
+    - identical policy and stopping contract at every rank
+    - endpoint state, energy, residual, and iteration-count checks
+    - per-rank and per-node memory plus Slurm accounting
+    - strict HE/optional-P3D separation and post-job accounting snapshot
+collection:
+  output_root: artifacts/reproduction/paper_revision_karolina/<campaign-id>
+  required_files:
+    - prepared_manifest.json
+    - prepared_plan.csv
+    - sbatch_commands.txt
+    - per-case command.txt and output.json
+    - per-case state.npz where defined
+    - environment.txt and job_metadata.env
+    - Slurm stdout/stderr and settled sacct_final.json
+  copy_back_required: true
