@@ -40,10 +40,15 @@ The maintained runner exposes two non-interchangeable tiers:
 - `--comparison-tier controlled` compares Armijo Newton with the
   reduced-subspace trust-region method while keeping the ordinary Hessian
   solve, KSP type, preconditioner, tolerances, initial state, and stopping
-  contract fixed. The reduced trust path also uses Armijo. This tier currently
-  admits p-Laplace, Ginzburg--Landau, and hyperelasticity. Plasticity3D is
-  excluded until a branch-stable nonlinear case can use the same controlled
-  solve contract.
+  contract fixed. The reduced trust path also uses Armijo. The retained local
+  smoke contains Ginzburg--Landau and the first hyperelastic load only.
+  Hyperelastic continuation is restricted to one load so a later method-
+  specific warm start cannot enter the comparison. Plasticity3D is excluded
+  until a branch-stable nonlinear case can use the same controlled solve
+  contract. The p-Laplace row is also excluded: a code-local random generator,
+  even when seeded in the current implementation, is not treated as a
+  prescribed scientific starting-state artifact, and no new random comparison
+  is introduced here.
 - `--comparison-tier production_bundle` retains Newton/ordinary-KSP,
   Steihaug/STCG, and hybrid/STCG bundles. It answers only the second research
   question.
@@ -56,6 +61,38 @@ Example preparation-only commands are:
 ./.venv/bin/python experiments/runners/run_globalization_method_compare.py \
   --mode full --comparison-tier controlled --dry-run
 ```
+
+## Common-Start And Endpoint Identity Contract
+
+Before launching either controlled method, the orchestrator writes exactly one
+canonical NPZ start for each retained benchmark under `_canonical_starts/`.
+For Ginzburg--Landau this is the closed-form sine state on the constrained
+scalar mesh. For hyperelasticity it is the reference deformation
+(y(X)=X). The start manifest records both the NPZ file SHA-256 and a dtype-
+and-shape-aware state-content SHA-256.
+
+Every controlled command must contain both `--state-in` and `--state-out`.
+The solver validates the stored mesh level, coordinates, connectivity,
+problem identity where applicable, state dimension, and finiteness before it
+converts the state to the solver's distributed ordering. Both method rows must
+then report the same input file and content hashes. A missing or inconsistent
+hash fails the controlled identity audit.
+
+After each terminal solver return, the gradient is evaluated again outside the
+nonlinear stopping decision. The result records:
+
+- the final-state NPZ file and content hashes;
+- the distributed endpoint-state hash;
+- the independently evaluated dual residual and coefficient-space residual;
+- the distributed residual-vector hash; and
+- the Riesz-evaluation diagnostics, including the true residual of an
+  inverse-Riesz solve when that metric is selected.
+
+Endpoint hashes determine whether two completed rows occupy the same canonical
+endpoint class. Different endpoint hashes do not get silently averaged or
+timed as one comparison. The identity audit remains non-performance evidence;
+repetitions and distinct robustness instances are still required before a
+timing or general robustness claim.
 
 ## Pilot Interpretation Rule
 
@@ -82,7 +119,8 @@ $8.15\times10^{-5}$ final-energy difference, missing canonical states, and
 loose smoke tolerances fail the endpoint-equivalence gate. No timing claim is
 admitted from any row.
 
-The publication campaign remains pending a clean worktree, frozen Riesz
-stopping, canonical state output, independent residual evaluation, endpoint
-clustering, distinct robustness instances, and repeated timing after all
-correctness gates pass.
+The common-start, final-state, and independent-residual interfaces are now
+prepared, but the corrected controlled smoke has not been executed. The
+publication campaign remains pending a clean worktree, frozen Riesz stopping,
+endpoint clustering, distinct robustness instances, and repeated timing after
+all correctness gates pass.

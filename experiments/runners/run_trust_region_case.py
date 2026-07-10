@@ -32,6 +32,12 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--level", type=int, required=True)
     parser.add_argument("--out", type=str, required=True)
     parser.add_argument(
+        "--state-in",
+        type=str,
+        default="",
+        help="Optional canonical NPZ initial state loaded before the nonlinear solve",
+    )
+    parser.add_argument(
         "--state-out",
         type=str,
         default="",
@@ -265,6 +271,7 @@ def _run_plaplace(args):
         retry_on_failure=bool(args.retry_on_failure),
         nproc=args.nproc_threads,
         out="",
+        state_in=args.state_in,
         state_out=args.state_out,
         use_trust_region=args.use_trust_region,
         trust_radius_init=args.trust_radius_init,
@@ -324,6 +331,7 @@ def _run_gl(args):
         retry_on_failure=bool(args.retry_on_failure),
         nproc=args.nproc_threads,
         out="",
+        state_in=args.state_in,
         state_out=args.state_out,
         use_trust_region=args.use_trust_region,
         trust_radius_init=args.trust_radius_init,
@@ -469,6 +477,7 @@ def _run_he(args):
         save_linear_timing=args.save_linear_timing,
         quiet=args.quiet,
         out="",
+        state_in=args.state_in,
         state_out=args.state_out,
         use_trust_region=args.use_trust_region,
         trust_radius_init=args.trust_radius_init,

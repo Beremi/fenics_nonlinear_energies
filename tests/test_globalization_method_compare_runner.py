@@ -5,13 +5,21 @@ import importlib.util
 import json
 import sys
 from pathlib import Path
+from types import SimpleNamespace
 
 import numpy as np
 import pytest
+from mpi4py import MPI
 
 from experiments.runners import generate_scalar_uniform_l10_meshes as scalar_meshes
 from experiments.runners import run_globalization_method_compare as campaign
 from experiments.runners import run_trust_region_case as case_runner
+from src.core.benchmark.state_export import (
+    export_hyperelasticity_state_npz,
+    export_scalar_mesh_state_npz,
+)
+from src.core.petsc import scalar_problem_driver
+from src.problems.hyperelasticity.jax_petsc import solver as he_solver
 
 
 def _reject_nonfinite(token: str) -> None:
@@ -50,23 +58,50 @@ def test_case_runner_serializes_optional_nonfinite_diagnostics_as_null(tmp_path:
     assert payload["result"]["history"][0]["trust_ratio"] is None
 
 
-def test_controlled_matrix_excludes_unfrozen_plasticity_and_holds_ksp_fixed(
+def test_case_runner_accepts_canonical_state_input_and_final_state_output():
+    args = case_runner._build_parser().parse_args(
+        [
+            "--problem",
+            "gl",
+            "--backend",
+            "element",
+            "--level",
+            "5",
+            "--out",
+            "output.json",
+            "--state-in",
+            "canonical_start.npz",
+            "--state-out",
+            "final_state.npz",
+        ]
+    )
+    assert args.state_in == "canonical_start.npz"
+    assert args.state_out == "final_state.npz"
+
+
+def test_controlled_matrix_excludes_unprescribed_cases_and_holds_ksp_fixed(
     tmp_path: Path,
 ):
     cases = campaign.build_case_matrix("full", "controlled")
 
-    assert len(cases) == 6
-    assert {case.benchmark.problem for case in cases} == {"plaplace", "gl", "he"}
+    assert len(cases) == 4
+    assert {case.benchmark.problem for case in cases} == {"gl", "he"}
+    assert all(case.benchmark.steps == 1 for case in cases)
     assert {case.method.key for case in cases} == {
         "newton_armijo",
         "reduced_trust_armijo",
     }
     assert {case.comparison_tier for case in cases} == {"controlled"}
 
-    for problem in ("plaplace", "gl", "he"):
+    for problem in ("gl", "he"):
         problem_cases = [case for case in cases if case.benchmark.problem == problem]
         commands = [
-            campaign.build_command(case, tmp_path / f"{case.key}.json")
+            campaign.build_command(
+                case,
+                tmp_path / f"{case.key}.json",
+                state_in=tmp_path / f"{problem}_start.npz",
+                state_out=tmp_path / f"{case.key}_final.npz",
+            )
             for case in problem_cases
         ]
         ksp_types = {
@@ -76,9 +111,152 @@ def test_controlled_matrix_excludes_unfrozen_plasticity_and_holds_ksp_fixed(
         assert all(command[command.index("--line-search") + 1] == "armijo" for command in commands)
 
     trust_case = next(case for case in cases if case.method.key == "reduced_trust_armijo")
-    trust_command = campaign.build_command(trust_case, tmp_path / "trust.json")
+    trust_command = campaign.build_command(
+        trust_case,
+        tmp_path / "trust.json",
+        state_in=tmp_path / "common_start.npz",
+        state_out=tmp_path / "trust_final.npz",
+    )
     assert "--use-trust-region" in trust_command
     assert "--no-trust-subproblem-line-search" in trust_command
+    assert trust_command[trust_command.index("--state-in") + 1].endswith(
+        "common_start.npz"
+    )
+    assert trust_command[trust_command.index("--state-out") + 1].endswith(
+        "trust_final.npz"
+    )
+
+
+def test_controlled_common_start_artifacts_are_one_per_retained_benchmark(
+    tmp_path: Path,
+):
+    cases = campaign.build_case_matrix("smoke", "controlled")
+    starts = campaign.prepare_controlled_starts(cases, tmp_path)
+
+    assert len(cases) == 4
+    assert {case.benchmark.problem for case in cases} == {"gl", "he"}
+    assert set(starts) == {case.benchmark.key for case in cases}
+    assert all(len(identity["file_sha256"]) == 64 for identity in starts.values())
+    assert all(len(identity["state_sha256"]) == 64 for identity in starts.values())
+    for benchmark, identity in starts.items():
+        path = Path(identity["path"])
+        assert path.is_file(), benchmark
+        assert path == campaign.canonical_start_path(
+            tmp_path,
+            next(case.benchmark for case in cases if case.benchmark.key == benchmark),
+        ).resolve()
+
+    manifest = json.loads(
+        (tmp_path / "_canonical_starts" / "manifest.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    assert manifest["status"] == "prepared"
+    assert set(manifest["benchmarks"]) == set(starts)
+
+
+def test_controlled_identity_audit_requires_common_start_and_terminal_identity():
+    rows = []
+    for method in ("newton_armijo", "reduced_trust_armijo"):
+        rows.append(
+            {
+                "benchmark": "gl_l5_np2",
+                "method": method,
+                "result": "completed",
+                "initial_state_file_sha256": "1" * 64,
+                "initial_state_content_sha256": "2" * 64,
+                "final_state_file_sha256": "3" * 64,
+                "final_state_content_sha256": "4" * 64,
+                "endpoint_state_sha256": "5" * 64,
+                "independent_dual_residual": 1.0e-8,
+                "independent_coefficient_residual": 2.0e-8,
+                "independent_residual_sha256": "6" * 64,
+            }
+        )
+    audit = campaign.controlled_identity_audit(
+        rows,
+        {
+            "gl_l5_np2": {
+                "file_sha256": "1" * 64,
+                "state_sha256": "2" * 64,
+            }
+        },
+    )
+    assert audit["status"] == "passed"
+    assert audit["benchmarks"][0]["endpoint_content_identity_equal"] is True
+
+    rows[1]["initial_state_content_sha256"] = "7" * 64
+    failed = campaign.controlled_identity_audit(rows)
+    assert failed["status"] == "failed"
+    assert any("common hashed start" in error for error in failed["errors"])
+
+
+def test_solver_state_loaders_validate_mesh_and_convert_to_solver_order(tmp_path: Path):
+    scalar_path = tmp_path / "scalar_start.npz"
+    scalar_params = {
+        "nodes": np.asarray([[0.0, 0.0], [1.0, 0.0], [0.0, 1.0]]),
+        "elems": np.asarray([[0, 1, 2]], dtype=np.int32),
+        "u_0": np.zeros(3),
+        "freedofs": np.asarray([0, 2], dtype=np.int64),
+    }
+    scalar_state = np.asarray([1.0, 0.0, 3.0])
+    export_scalar_mesh_state_npz(
+        scalar_path,
+        coords=scalar_params["nodes"],
+        triangles=scalar_params["elems"],
+        u=scalar_state,
+        mesh_level=5,
+        problem_name="GinzburgLandau2D",
+    )
+    scalar_assembler = SimpleNamespace(
+        part=SimpleNamespace(perm=np.asarray([1, 0], dtype=np.int64))
+    )
+    reordered, scalar_identity = scalar_problem_driver._load_scalar_initial_state(
+        path=str(scalar_path),
+        params=scalar_params,
+        assembler=scalar_assembler,
+        comm=MPI.COMM_SELF,
+        mesh_level=5,
+        problem_name="GinzburgLandau2D",
+    )
+    np.testing.assert_array_equal(reordered, np.asarray([3.0, 1.0]))
+    assert scalar_identity["mesh_identity_verified"] is True
+    assert len(scalar_identity["file_sha256"]) == 64
+
+    he_path = tmp_path / "he_start.npz"
+    coords = np.asarray(
+        [[0.0, 0.0, 0.0], [1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]]
+    )
+    deformed = coords + np.asarray([0.1, 0.2, 0.3])
+    tetrahedra = np.asarray([[0, 1, 2, 3]], dtype=np.int32)
+    export_hyperelasticity_state_npz(
+        he_path,
+        coords_ref=coords,
+        x_final=deformed,
+        tetrahedra=tetrahedra,
+        mesh_level=1,
+        total_steps=24,
+    )
+    freedofs = np.asarray([3, 4, 5, 9, 10, 11], dtype=np.int64)
+    he_params = {
+        "nodes2coord": coords,
+        "elems_scalar": tetrahedra,
+        "freedofs": freedofs,
+    }
+    he_assembler = SimpleNamespace(
+        part=SimpleNamespace(perm=np.asarray([3, 4, 5, 0, 1, 2], dtype=np.int64))
+    )
+    he_values, he_identity = he_solver._load_hyperelasticity_initial_state(
+        path=str(he_path),
+        args=SimpleNamespace(level=1),
+        params=he_params,
+        assembler=he_assembler,
+        comm=MPI.COMM_SELF,
+    )
+    expected_free = deformed.reshape(-1)[freedofs]
+    np.testing.assert_array_equal(he_values, expected_free[he_assembler.part.perm])
+    assert he_identity["mesh_identity_verified"] is True
+    assert len(he_identity["state_sha256"]) == 64
 
 
 def test_full_mode_reports_generated_l10_mesh_prerequisite(tmp_path: Path, monkeypatch):

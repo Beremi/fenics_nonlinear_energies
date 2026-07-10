@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import argparse
 import csv
+import hashlib
 import json
 import os
 import shlex
@@ -18,11 +19,17 @@ import signal
 import subprocess
 import sys
 import time
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Any
 
-from src.core.benchmark.run_record import atomic_write_json
+import numpy as np
+
+from src.core.benchmark.run_record import atomic_write_json, sha256_file
+from src.core.benchmark.state_export import (
+    export_hyperelasticity_state_npz,
+    export_scalar_mesh_state_npz,
+)
 
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -37,6 +44,15 @@ GENERATED_FULL_MODE_INPUTS = (
     REPO_ROOT / "data/meshes/pLaplace/pLaplace_level10.h5",
     REPO_ROOT / "data/meshes/GinzburgLandau/GL_level10.h5",
 )
+
+
+def _array_sha256(values: object) -> str:
+    array = np.ascontiguousarray(np.asarray(values))
+    digest = hashlib.sha256()
+    digest.update(str(array.dtype).encode("utf-8"))
+    digest.update(str(tuple(int(value) for value in array.shape)).encode("utf-8"))
+    digest.update(array.view(np.uint8))
+    return digest.hexdigest()
 
 
 @dataclass(frozen=True)
@@ -405,6 +421,14 @@ CSV_FIELDS = (
     "line_search_time_s",
     "trust_rejects",
     "final_energy",
+    "initial_state_file_sha256",
+    "initial_state_content_sha256",
+    "final_state_file_sha256",
+    "final_state_content_sha256",
+    "endpoint_state_sha256",
+    "independent_dual_residual",
+    "independent_coefficient_residual",
+    "independent_residual_sha256",
     "json_path",
     "log_path",
     "command",
@@ -417,9 +441,21 @@ def build_case_matrix(
 ) -> list[CaseSpec]:
     benchmarks = SMOKE_BENCHMARKS if mode == "smoke" else FULL_BENCHMARKS
     if comparison_tier == "controlled":
-        benchmarks = tuple(
-            benchmark for benchmark in benchmarks if benchmark.runner != "plasticity3d_backend_mix"
-        )
+        controlled: list[BenchmarkSpec] = []
+        for benchmark in benchmarks:
+            # p-Laplace is intentionally excluded: its historical initializer
+            # was random and is not a retained prescribed globalization unit.
+            if benchmark.problem not in {"gl", "he"}:
+                continue
+            if benchmark.problem == "he":
+                benchmark = replace(
+                    benchmark,
+                    key=f"he_l{benchmark.level}_np{benchmark.nprocs}_step1",
+                    label=f"{benchmark.label}, first load",
+                    steps=1,
+                )
+            controlled.append(benchmark)
+        benchmarks = tuple(controlled)
         methods = CONTROLLED_METHODS
     elif comparison_tier == "production_bundle":
         methods = PRODUCTION_BUNDLE_METHODS
@@ -452,7 +488,109 @@ def require_generated_inputs(mode: str) -> None:
     )
 
 
-def build_command(case: CaseSpec, out_path: Path) -> list[str]:
+def canonical_start_path(raw_dir: Path, benchmark: BenchmarkSpec) -> Path:
+    return raw_dir / "_canonical_starts" / f"{benchmark.key}.npz"
+
+
+def prepare_canonical_start(
+    benchmark: BenchmarkSpec,
+    destination: Path,
+) -> dict[str, Any]:
+    """Create the one immutable starting-state artifact shared by both methods."""
+
+    destination = destination.resolve()
+    if destination.exists() or destination.is_symlink():
+        raise FileExistsError(f"refusing to overwrite canonical start {destination}")
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    if benchmark.problem == "gl":
+        from src.problems.ginzburg_landau.jax.mesh import MeshGL2D
+
+        mesh = MeshGL2D(int(benchmark.level))
+        params = mesh.params
+        full_state = np.asarray(params["u_0"], dtype=np.float64).copy()
+        full_state[np.asarray(params["freedofs"], dtype=np.int64)] = np.asarray(
+            mesh.u_init, dtype=np.float64
+        )
+        state_sha256 = _array_sha256(full_state)
+        export_scalar_mesh_state_npz(
+            destination,
+            coords=np.asarray(params["nodes"], dtype=np.float64),
+            triangles=np.asarray(params["elems"], dtype=np.int32),
+            u=full_state,
+            mesh_level=int(benchmark.level),
+            problem_name="GinzburgLandau2D",
+            metadata={
+                "artifact_role": "EXP-GLOB-001 canonical initial state",
+                "state_sha256": state_sha256,
+                "initializer": "sin(pi*(x-1)/2)*sin(pi*(y-1)/2) on free nodes",
+            },
+        )
+    elif benchmark.problem == "he":
+        from src.problems.hyperelasticity.support.mesh import (
+            build_procedural_hyperelasticity_export_params,
+        )
+
+        params = build_procedural_hyperelasticity_export_params(int(benchmark.level))
+        coords_ref = np.asarray(params["nodes2coord"], dtype=np.float64)
+        full_state = np.asarray(params["u_0_ref"], dtype=np.float64).reshape((-1, 3))
+        state_sha256 = _array_sha256(full_state)
+        export_hyperelasticity_state_npz(
+            destination,
+            coords_ref=coords_ref,
+            x_final=full_state,
+            tetrahedra=np.asarray(params["elems_scalar"], dtype=np.int32),
+            mesh_level=int(benchmark.level),
+            total_steps=int(benchmark.total_steps),
+            metadata={
+                "artifact_role": "EXP-GLOB-001 canonical initial state",
+                "state_sha256": state_sha256,
+                "initializer": "reference deformation y(X)=X",
+            },
+        )
+    else:
+        raise ValueError(
+            f"No retained deterministic controlled initializer for {benchmark.problem!r}"
+        )
+    return {
+        "benchmark": benchmark.key,
+        "problem": benchmark.problem,
+        "level": int(benchmark.level),
+        "path": str(destination),
+        "file_sha256": sha256_file(destination),
+        "state_sha256": state_sha256,
+    }
+
+
+def prepare_controlled_starts(
+    cases: list[CaseSpec], raw_dir: Path
+) -> dict[str, dict[str, Any]]:
+    starts: dict[str, dict[str, Any]] = {}
+    for case in cases:
+        benchmark = case.benchmark
+        if benchmark.key in starts:
+            continue
+        starts[benchmark.key] = prepare_canonical_start(
+            benchmark, canonical_start_path(raw_dir, benchmark)
+        )
+    atomic_write_json(
+        raw_dir / "_canonical_starts" / "manifest.json",
+        {
+            "schema_id": "fenics-nonlinear-energies.exp-glob-001-common-starts",
+            "schema_version": 1,
+            "status": "prepared",
+            "benchmarks": starts,
+        },
+    )
+    return starts
+
+
+def build_command(
+    case: CaseSpec,
+    out_path: Path,
+    *,
+    state_in: Path | None = None,
+    state_out: Path | None = None,
+) -> list[str]:
     benchmark = case.benchmark
     method = case.method
     if benchmark.runner == "plasticity3d_backend_mix":
@@ -502,9 +640,19 @@ def build_command(case: CaseSpec, out_path: Path) -> list[str]:
         str(benchmark.total_steps),
         "--ksp-type",
         ksp_type,
-        *benchmark.common_args,
-        *method.args,
     ]
+    if case.comparison_tier == "controlled":
+        if state_in is None or state_out is None:
+            raise ValueError("controlled globalization commands require state_in/state_out")
+        cmd.extend(
+            [
+                "--state-in",
+                str(Path(state_in).resolve()),
+                "--state-out",
+                str(Path(state_out).resolve()),
+            ]
+        )
+    cmd.extend([*benchmark.common_args, *method.args])
     return cmd
 
 
@@ -676,6 +824,16 @@ def summarize_payload(
         if is_plasticity
         else int(sum(int(_sum_history(step, "trust_rejects")) for step in steps))
     )
+    metadata = result.get("metadata", {})
+    metadata = metadata if isinstance(metadata, dict) else {}
+    initial_identity = metadata.get("initial_state_input", {})
+    initial_identity = initial_identity if isinstance(initial_identity, dict) else {}
+    endpoint_identity = metadata.get("endpoint_identity", {})
+    endpoint_identity = endpoint_identity if isinstance(endpoint_identity, dict) else {}
+    state_output = metadata.get("state_output", {})
+    state_output = state_output if isinstance(state_output, dict) else {}
+    independent = endpoint_identity.get("independent_residual", {})
+    independent = independent if isinstance(independent, dict) else {}
 
     return {
         "mode": mode,
@@ -702,18 +860,52 @@ def summarize_payload(
         "line_search_time_s": float(line_search_time),
         "trust_rejects": int(trust_rejects),
         "final_energy": "" if final_energy is None else float(final_energy),
+        "initial_state_file_sha256": str(initial_identity.get("file_sha256") or ""),
+        "initial_state_content_sha256": str(initial_identity.get("state_sha256") or ""),
+        "final_state_file_sha256": str(state_output.get("file_sha256") or ""),
+        "final_state_content_sha256": str(state_output.get("state_sha256") or ""),
+        "endpoint_state_sha256": str(
+            endpoint_identity.get("owned_reordered_state_sha256") or ""
+        ),
+        "independent_dual_residual": (
+            "" if _safe_float(independent.get("dual_norm")) is None
+            else float(independent["dual_norm"])
+        ),
+        "independent_coefficient_residual": (
+            "" if _safe_float(independent.get("coefficient_l2_norm")) is None
+            else float(independent["coefficient_l2_norm"])
+        ),
+        "independent_residual_sha256": str(
+            independent.get("owned_reordered_gradient_sha256") or ""
+        ),
         "json_path": _display_path(json_path),
         "log_path": _display_path(log_path),
         "command": shlex.join(command),
     }
 
 
-def run_case(case: CaseSpec, *, mode: str, raw_dir: Path, timeout_s: float) -> dict[str, Any]:
+def run_case(
+    case: CaseSpec,
+    *,
+    mode: str,
+    raw_dir: Path,
+    timeout_s: float,
+    canonical_start: dict[str, Any] | None = None,
+) -> dict[str, Any]:
     case_dir = raw_dir / case.key
     case_dir.mkdir(parents=True, exist_ok=True)
     out_path = case_dir / "output.json"
     log_path = case_dir / "run.log"
-    command = build_command(case, out_path)
+    state_in = (
+        Path(str(canonical_start["path"])) if canonical_start is not None else None
+    )
+    state_out = case_dir / "final_state.npz" if canonical_start is not None else None
+    command = build_command(
+        case,
+        out_path,
+        state_in=state_in,
+        state_out=state_out,
+    )
 
     start = time.perf_counter()
     returncode: int | None = None
@@ -775,13 +967,125 @@ def run_case(case: CaseSpec, *, mode: str, raw_dir: Path, timeout_s: float) -> d
     )
 
 
+def controlled_identity_audit(
+    rows: list[dict[str, Any]],
+    canonical_starts: dict[str, dict[str, Any]] | None = None,
+) -> dict[str, Any]:
+    groups: dict[str, list[dict[str, Any]]] = {}
+    for row in rows:
+        groups.setdefault(str(row["benchmark"]), []).append(row)
+    errors: list[str] = []
+    summaries: list[dict[str, Any]] = []
+    required_methods = {method.key for method in CONTROLLED_METHODS}
+    for benchmark, group in sorted(groups.items()):
+        methods = {str(row["method"]) for row in group}
+        start_files = {
+            str(row["initial_state_file_sha256"])
+            for row in group
+            if row.get("initial_state_file_sha256")
+        }
+        start_states = {
+            str(row["initial_state_content_sha256"])
+            for row in group
+            if row.get("initial_state_content_sha256")
+        }
+        if methods != required_methods:
+            errors.append(f"{benchmark}: controlled method set is incomplete")
+        if len(start_files) != 1 or len(start_states) != 1:
+            errors.append(f"{benchmark}: methods do not prove one common hashed start")
+        expected_start = (canonical_starts or {}).get(benchmark)
+        if expected_start is not None and (
+            start_files != {str(expected_start["file_sha256"])}
+            or start_states != {str(expected_start["state_sha256"])}
+        ):
+            errors.append(
+                f"{benchmark}: reported common start differs from the canonical manifest"
+            )
+        endpoint_hashes = {
+            str(row["final_state_content_sha256"])
+            for row in group
+            if row.get("final_state_content_sha256")
+        }
+        row_summaries: list[dict[str, Any]] = []
+        for row in group:
+            terminal_output_expected = row.get("result") in {"completed", "failed"}
+            missing_terminal = [
+                field
+                for field in (
+                    "final_state_file_sha256",
+                    "final_state_content_sha256",
+                    "endpoint_state_sha256",
+                    "independent_residual_sha256",
+                )
+                if terminal_output_expected and not row.get(field)
+            ]
+            dual = _safe_float(row.get("independent_dual_residual"))
+            coefficient = _safe_float(row.get("independent_coefficient_residual"))
+            if terminal_output_expected and (
+                missing_terminal
+                or dual is None
+                or coefficient is None
+                or not np.isfinite(dual)
+                or not np.isfinite(coefficient)
+            ):
+                errors.append(
+                    f"{benchmark}/{row['method']}: terminal state or independent residual identity is incomplete"
+                )
+            row_summaries.append(
+                {
+                    "method": row["method"],
+                    "result": row["result"],
+                    "final_state_content_sha256": row.get(
+                        "final_state_content_sha256", ""
+                    ),
+                    "endpoint_state_sha256": row.get("endpoint_state_sha256", ""),
+                    "independent_dual_residual": row.get(
+                        "independent_dual_residual", ""
+                    ),
+                    "independent_coefficient_residual": row.get(
+                        "independent_coefficient_residual", ""
+                    ),
+                    "independent_residual_sha256": row.get(
+                        "independent_residual_sha256", ""
+                    ),
+                }
+            )
+        summaries.append(
+            {
+                "benchmark": benchmark,
+                "common_start_file_sha256": (
+                    next(iter(start_files)) if len(start_files) == 1 else None
+                ),
+                "common_start_content_sha256": (
+                    next(iter(start_states)) if len(start_states) == 1 else None
+                ),
+                "endpoint_content_identity_equal": len(endpoint_hashes) == 1,
+                "endpoint_comparison_scope": (
+                    "same_canonical_endpoint"
+                    if len(endpoint_hashes) == 1
+                    else "different_or_incomplete_endpoints"
+                ),
+                "methods": row_summaries,
+            }
+        )
+    return {
+        "schema_id": "fenics-nonlinear-energies.exp-glob-001-identity-audit",
+        "schema_version": 1,
+        "status": "passed" if not errors else "failed",
+        "timing_claim_admissible": False,
+        "errors": errors,
+        "benchmarks": summaries,
+    }
+
+
 def write_reports(
     rows: list[dict[str, Any]],
     *,
     mode: str,
     comparison_tier: str,
     report_dir: Path,
-) -> None:
+    canonical_starts: dict[str, dict[str, Any]] | None = None,
+) -> dict[str, Any] | None:
     report_dir.mkdir(parents=True, exist_ok=True)
     csv_path = report_dir / f"{mode}_summary.csv"
     json_path = report_dir / f"{mode}_summary.json"
@@ -799,6 +1103,15 @@ def write_reports(
         },
         nonfinite_as_null=True,
     )
+    identity_audit: dict[str, Any] | None = None
+    if comparison_tier == "controlled":
+        identity_audit = controlled_identity_audit(rows, canonical_starts)
+        atomic_write_json(
+            report_dir / f"{mode}_identity_audit.json",
+            identity_audit,
+            nonfinite_as_null=True,
+        )
+    return identity_audit
 
 
 def _build_parser() -> argparse.ArgumentParser:
@@ -836,13 +1149,37 @@ def main() -> None:
     if args.dry_run:
         for case in cases:
             out_path = raw_root / args.mode / case.key / "output.json"
-            print(shlex.join(build_command(case, out_path)))
+            state_in = (
+                canonical_start_path(raw_root / args.mode, case.benchmark)
+                if args.comparison_tier == "controlled"
+                else None
+            )
+            state_out = (
+                out_path.parent / "final_state.npz"
+                if args.comparison_tier == "controlled"
+                else None
+            )
+            print(
+                shlex.join(
+                    build_command(
+                        case,
+                        out_path,
+                        state_in=state_in,
+                        state_out=state_out,
+                    )
+                )
+            )
         return
 
     require_generated_inputs(args.mode)
 
     rows: list[dict[str, Any]] = []
     raw_dir = raw_root / args.mode
+    controlled_starts = (
+        prepare_controlled_starts(cases, raw_dir)
+        if args.comparison_tier == "controlled"
+        else {}
+    )
     campaign_start = time.perf_counter()
     campaign_cap = args.campaign_wall_s
 
@@ -851,7 +1188,13 @@ def main() -> None:
         if campaign_cap is not None and elapsed >= campaign_cap:
             out_path = raw_dir / case.key / "output.json"
             log_path = raw_dir / case.key / "run.log"
-            command = build_command(case, out_path)
+            start = controlled_starts.get(case.benchmark.key)
+            command = build_command(
+                case,
+                out_path,
+                state_in=(Path(str(start["path"])) if start is not None else None),
+                state_out=(out_path.parent / "final_state.npz" if start is not None else None),
+            )
             payload = _write_fallback_payload(
                 case=case,
                 out_path=out_path,
@@ -882,7 +1225,13 @@ def main() -> None:
         if campaign_cap is not None:
             timeout_s = min(timeout_s, max(1.0, campaign_cap - elapsed))
         print(f"[{idx}/{len(cases)}] {case.key} timeout={timeout_s:.1f}s", flush=True)
-        row = run_case(case, mode=args.mode, raw_dir=raw_dir, timeout_s=timeout_s)
+        row = run_case(
+            case,
+            mode=args.mode,
+            raw_dir=raw_dir,
+            timeout_s=timeout_s,
+            canonical_start=controlled_starts.get(case.benchmark.key),
+        )
         print(
             f"  -> {row['result']} steps={row['completed_steps']}/{row['steps_requested']} "
             f"newton={row['newton_iters']} krylov={row['krylov_iters']} "
@@ -891,13 +1240,16 @@ def main() -> None:
         )
         rows.append(row)
 
-    write_reports(
+    identity_audit = write_reports(
         rows,
         mode=args.mode,
         comparison_tier=args.comparison_tier,
         report_dir=report_root,
+        canonical_starts=controlled_starts,
     )
     print(f"Wrote {report_root / (args.mode + '_summary.csv')}")
+    if identity_audit is not None and identity_audit["status"] != "passed":
+        raise SystemExit(2)
 
 
 if __name__ == "__main__":

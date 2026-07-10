@@ -73,6 +73,86 @@ def _sha256_array(values: object) -> str:
     return digest.hexdigest()
 
 
+def _distributed_vector_sha256(vec: PETSc.Vec, comm: MPI.Comm) -> str:
+    chunks = comm.gather(
+        np.asarray(vec.getArray(readonly=True), dtype=np.float64).copy(),
+        root=0,
+    )
+    digest = (
+        _sha256_array(np.concatenate(chunks or [])) if comm.rank == 0 else None
+    )
+    return str(comm.bcast(digest, root=0))
+
+
+def _load_scalar_initial_state(
+    *,
+    path: str,
+    params: Mapping[str, object],
+    assembler,
+    comm: MPI.Comm,
+    mesh_level: int,
+    problem_name: str,
+) -> tuple[np.ndarray, dict[str, object]]:
+    """Load and validate one canonical full-mesh scalar initial state."""
+
+    destination = Path(path).resolve()
+    root_error: str | None = None
+    full_state: np.ndarray | None = None
+    file_sha256: str | None = None
+    if comm.rank == 0:
+        try:
+            if destination.suffix != ".npz" or not destination.is_file():
+                raise ValueError("Scalar initial state must be an existing .npz file")
+            with np.load(destination, allow_pickle=False) as archive:
+                required = {"coords", "triangles", "u", "mesh_level", "problem_name"}
+                missing = required - set(archive.files)
+                if missing:
+                    raise ValueError(
+                        f"Scalar initial state is missing datasets {sorted(missing)}"
+                    )
+                coords = np.asarray(archive["coords"], dtype=np.float64)
+                triangles = np.asarray(archive["triangles"], dtype=np.int32)
+                full_state = np.asarray(archive["u"], dtype=np.float64).reshape(-1)
+                stored_level = int(np.asarray(archive["mesh_level"]).item())
+                stored_problem = str(np.asarray(archive["problem_name"]).item())
+            if stored_level != int(mesh_level) or stored_problem != str(problem_name):
+                raise ValueError("Scalar initial-state problem or mesh level does not match")
+            if not np.array_equal(coords, np.asarray(params["nodes"], dtype=np.float64)):
+                raise ValueError("Scalar initial-state coordinates do not match the mesh")
+            if not np.array_equal(
+                triangles, np.asarray(params["elems"], dtype=np.int32)
+            ):
+                raise ValueError("Scalar initial-state connectivity does not match the mesh")
+            if full_state.shape != np.asarray(params["u_0"]).shape:
+                raise ValueError("Scalar initial-state vector has the wrong dimension")
+            if not np.all(np.isfinite(full_state)):
+                raise ValueError("Scalar initial-state vector contains nonfinite values")
+            file_sha256 = sha256_file(destination)
+        except Exception as exc:
+            root_error = f"{type(exc).__name__}: {exc}"
+    root_error = comm.bcast(root_error, root=0)
+    if root_error is not None:
+        raise ValueError(f"Canonical scalar initial-state validation failed: {root_error}")
+    full_state = comm.bcast(full_state, root=0)
+    file_sha256 = comm.bcast(file_sha256, root=0)
+    if full_state is None or file_sha256 is None:
+        raise RuntimeError("Canonical scalar initial-state broadcast failed")
+
+    freedofs = np.asarray(params["freedofs"], dtype=np.int64)
+    permutation = np.asarray(assembler.part.perm, dtype=np.int64)
+    free_original = np.asarray(full_state[freedofs], dtype=np.float64)
+    reordered = np.asarray(free_original[permutation], dtype=np.float64)
+    return reordered, {
+        "source": "canonical_npz",
+        "path": str(destination),
+        "file_sha256": str(file_sha256),
+        "state_sha256": _sha256_array(full_state),
+        "free_state_sha256": _sha256_array(free_original),
+        "ordering": "global mesh-node order",
+        "mesh_identity_verified": True,
+    }
+
+
 def _scalar_lumped_mass_weights(params: Mapping[str, object]) -> np.ndarray:
     """Return positive P1 lumped-mass weights in original free-DOF order."""
 
@@ -288,7 +368,26 @@ def run_scalar_problem(spec: ScalarProblemDriverSpec, args) -> dict:
         assembler = spec.assembler_factories[factory_key](**assembler_kwargs)
     setup_time = time.perf_counter() - setup_start
 
-    u_init_reordered = np.asarray(u_init, dtype=np.float64)[assembler.part.perm]
+    state_in = str(getattr(args, "state_in", "") or "").strip()
+    if state_in:
+        u_init_reordered, initial_state_input = _load_scalar_initial_state(
+            path=state_in,
+            params=params,
+            assembler=assembler,
+            comm=comm,
+            mesh_level=int(args.level),
+            problem_name=spec.problem_name,
+        )
+    else:
+        initial_free = np.asarray(u_init, dtype=np.float64)
+        u_init_reordered = initial_free[assembler.part.perm]
+        initial_state_input = {
+            "source": "solver_default",
+            "file_sha256": None,
+            "free_state_sha256": _sha256_array(initial_free),
+            "ordering": "original constrained free-DOF order",
+            "mesh_identity_verified": True,
+        }
     x = assembler.create_vec(u_init_reordered)
     x_initial = x.duplicate()
     x.copy(x_initial)
@@ -444,6 +543,7 @@ def run_scalar_problem(spec: ScalarProblemDriverSpec, args) -> dict:
     used_linesearch = linesearch_interval
     solve_time = 0.0
     state_output: dict[str, object] | None = None
+    endpoint_identity: dict[str, object] | None = None
 
     try:
         for idx, (attempt_name, ls_interval, ksp_rtol_attempt, ksp_max_it_attempt) in enumerate(
@@ -548,6 +648,27 @@ def run_scalar_problem(spec: ScalarProblemDriverSpec, args) -> dict:
             step_record["linear_timing"] = list(linear_timing_records)
         step_records.append(step_record)
 
+        independent_gradient = x.duplicate()
+        try:
+            assembler.gradient_fn(x, independent_gradient)
+            independent_dual = convergence_metric.dual_norm(independent_gradient)
+            endpoint_identity = {
+                "owned_reordered_state_sha256": _distributed_vector_sha256(x, comm),
+                "independent_residual": {
+                    "dual_norm": float(independent_dual.value),
+                    "coefficient_l2_norm": float(
+                        independent_gradient.norm(PETSc.NormType.NORM_2)
+                    ),
+                    "owned_reordered_gradient_sha256": _distributed_vector_sha256(
+                        independent_gradient, comm
+                    ),
+                    "evaluation": dict(independent_dual.metadata),
+                    "evaluated_after_solver_termination": True,
+                },
+            }
+        finally:
+            independent_gradient.destroy()
+
         state_out = str(getattr(args, "state_out", "") or "").strip()
         if state_out:
             state_output = _export_scalar_state(
@@ -585,6 +706,8 @@ def run_scalar_problem(spec: ScalarProblemDriverSpec, args) -> dict:
                 "name": spec.problem_name,
             },
             "convergence": dict(convergence_configuration),
+            "initial_state_input": dict(initial_state_input),
+            "endpoint_identity": endpoint_identity,
             "state_output": state_output,
             "linear_solver": {
                 "ksp_type": str(settings["ksp_type"]),

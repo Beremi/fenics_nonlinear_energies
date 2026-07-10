@@ -7,6 +7,7 @@ CLI entry point (argparse) is in ``solve_HE_dof.py``.
 
 import gc
 import hashlib
+from pathlib import Path
 import resource
 import time
 
@@ -15,6 +16,7 @@ from mpi4py import MPI
 from petsc4py import PETSc
 
 from src.core.benchmark.repair import build_retry_attempts, needs_solver_repair
+from src.core.benchmark.run_record import sha256_file
 from src.core.benchmark.state_export import export_hyperelasticity_state_npz
 from src.core.petsc.minimizers import newton
 from src.core.petsc.metrics import (
@@ -114,10 +116,120 @@ def _gather_full_free_original(assembler, vec) -> np.ndarray:
     raise TypeError(f"Unsupported assembler type for state export: {type(assembler).__name__}")
 
 
-def _export_state_if_requested(args, assembler, params, vec, step_records, comm) -> None:
+def _distributed_vector_sha256(vec: PETSc.Vec, comm: MPI.Comm) -> str:
+    chunks = comm.gather(
+        np.asarray(vec.getArray(readonly=True), dtype=np.float64).copy(),
+        root=0,
+    )
+    digest = (
+        _sha256_array(np.concatenate(chunks or [])) if comm.rank == 0 else None
+    )
+    return str(comm.bcast(digest, root=0))
+
+
+def _load_hyperelasticity_initial_state(
+    *,
+    path: str,
+    args,
+    params: dict[str, object],
+    assembler,
+    comm: MPI.Comm,
+) -> tuple[np.ndarray, dict[str, object]]:
+    """Load a canonical full deformation map and convert it to solver ordering."""
+
+    destination = Path(path).resolve()
+    root_error: str | None = None
+    coords_final: np.ndarray | None = None
+    file_sha256: str | None = None
+    if bool(params.get("_distributed_local_data", False)):
+        mesh_source = str(params.get("_distributed_mesh_source", "hdf5"))
+        if mesh_source == "procedural":
+            export_params = build_procedural_hyperelasticity_export_params(int(args.level))
+        else:
+            export_params, _, _ = MeshHyperElasticity3D(int(args.level)).get_data()
+    else:
+        export_params = params
+
+    if comm.rank == 0:
+        try:
+            if destination.suffix != ".npz" or not destination.is_file():
+                raise ValueError(
+                    "Hyperelasticity initial state must be an existing .npz file"
+                )
+            with np.load(destination, allow_pickle=False) as archive:
+                required = {"coords_ref", "coords_final", "tetrahedra", "mesh_level"}
+                missing = required - set(archive.files)
+                if missing:
+                    raise ValueError(
+                        f"Hyperelasticity initial state is missing datasets {sorted(missing)}"
+                    )
+                coords_ref = np.asarray(archive["coords_ref"], dtype=np.float64)
+                coords_final = np.asarray(archive["coords_final"], dtype=np.float64)
+                tetrahedra = np.asarray(archive["tetrahedra"], dtype=np.int32)
+                stored_level = int(np.asarray(archive["mesh_level"]).item())
+            expected_coords = np.asarray(export_params["nodes2coord"], dtype=np.float64)
+            expected_tetrahedra = np.asarray(
+                export_params["elems_scalar"], dtype=np.int32
+            )
+            if stored_level != int(args.level):
+                raise ValueError("Hyperelasticity initial-state mesh level does not match")
+            if not np.array_equal(coords_ref, expected_coords):
+                raise ValueError(
+                    "Hyperelasticity initial-state reference coordinates do not match"
+                )
+            if not np.array_equal(tetrahedra, expected_tetrahedra):
+                raise ValueError("Hyperelasticity initial-state connectivity does not match")
+            if coords_final.shape != expected_coords.shape:
+                raise ValueError("Hyperelasticity initial-state deformation has wrong shape")
+            if not np.all(np.isfinite(coords_final)):
+                raise ValueError(
+                    "Hyperelasticity initial-state deformation contains nonfinite values"
+                )
+            file_sha256 = sha256_file(destination)
+        except Exception as exc:
+            root_error = f"{type(exc).__name__}: {exc}"
+    root_error = comm.bcast(root_error, root=0)
+    if root_error is not None:
+        raise ValueError(
+            f"Canonical Hyperelasticity initial-state validation failed: {root_error}"
+        )
+    coords_final = comm.bcast(coords_final, root=0)
+    file_sha256 = comm.bcast(file_sha256, root=0)
+    if coords_final is None or file_sha256 is None:
+        raise RuntimeError("Canonical Hyperelasticity initial-state broadcast failed")
+
+    flattened = np.asarray(coords_final, dtype=np.float64).reshape(-1)
+    if bool(params.get("_distributed_local_data", False)):
+        lo, hi = int(assembler.layout.lo), int(assembler.layout.hi)
+        total_dofs = reordered_free_to_total_dofs(
+            np.arange(lo, hi, dtype=np.int64),
+            params["_he_grid"],
+            str(params["_distributed_reorder_mode"]),
+            int(params.get("element_degree", 1)),
+        )
+        solver_values = np.asarray(flattened[total_dofs], dtype=np.float64)
+    else:
+        free_original = flattened[np.asarray(params["freedofs"], dtype=np.int64)]
+        solver_values = np.asarray(
+            free_original[np.asarray(assembler.part.perm, dtype=np.int64)],
+            dtype=np.float64,
+        )
+    return solver_values, {
+        "source": "canonical_npz",
+        "path": str(destination),
+        "file_sha256": str(file_sha256),
+        "state_sha256": _sha256_array(coords_final),
+        "ordering": "global mesh-node vector components",
+        "mesh_identity_verified": True,
+    }
+
+
+def _export_state_if_requested(
+    args, assembler, params, vec, step_records, comm
+) -> dict[str, object] | None:
     state_out = str(getattr(args, "state_out", "") or "")
     if not state_out:
-        return
+        return None
 
     full_free_original = _gather_full_free_original(assembler, vec)
     export_params = params
@@ -128,7 +240,7 @@ def _export_state_if_requested(args, assembler, params, vec, step_records, comm)
                 "element_degree=1 only"
             )
         if comm.rank != 0:
-            return
+            return None
         mesh_source = str(params.get("_distributed_mesh_source", "hdf5"))
         if mesh_source == "procedural":
             export_params = build_procedural_hyperelasticity_export_params(args.level)
@@ -170,6 +282,15 @@ def _export_state_if_requested(args, assembler, params, vec, step_records, comm)
                 "convergence_metric": str(_convergence_metric_name(args)),
             },
         )
+        destination = Path(state_out).resolve()
+        return {
+            "path": str(destination),
+            "file_sha256": sha256_file(destination),
+            "state_sha256": _sha256_array(full_state),
+            "free_state_sha256": _sha256_array(full_free_original),
+            "ordering": "global mesh-node vector components",
+        }
+    return None
 
 
 def _summarize_rank_memory(rank_summaries) -> dict[str, float | int | list[dict[str, object]]]:
@@ -828,11 +949,35 @@ def run(args):
         assembler_memory_report = {"ranks": 0, "rank_summaries": []}
         assembler_setup_report = []
 
-    if "_distributed_u_init_owned" in params:
-        x = assembler.create_vec(np.asarray(params["_distributed_u_init_owned"], dtype=np.float64))
+    state_in = str(getattr(args, "state_in", "") or "").strip()
+    if state_in:
+        initial_values, initial_state_input = _load_hyperelasticity_initial_state(
+            path=state_in,
+            args=args,
+            params=params,
+            assembler=assembler,
+            comm=comm,
+        )
+    elif "_distributed_u_init_owned" in params:
+        initial_values = np.asarray(
+            params["_distributed_u_init_owned"], dtype=np.float64
+        )
+        initial_state_input = {
+            "source": "solver_default",
+            "file_sha256": None,
+            "ordering": "owned reordered constrained free DOFs",
+            "mesh_identity_verified": True,
+        }
     else:
-        u_init_reordered = np.asarray(u_init, dtype=np.float64)[assembler.part.perm]
-        x = assembler.create_vec(u_init_reordered)
+        initial_values = np.asarray(u_init, dtype=np.float64)[assembler.part.perm]
+        initial_state_input = {
+            "source": "solver_default",
+            "file_sha256": None,
+            "ordering": "global reordered constrained free DOFs",
+            "mesh_identity_verified": True,
+        }
+    x = assembler.create_vec(initial_values)
+    initial_state_input["owned_partitions"] = _owned_partition_identity(x, comm)
     x_step_start = x.duplicate()
 
     ksp = assembler.ksp
@@ -1270,6 +1415,8 @@ def run(args):
     step_records = []
     solve_runtime_start = time.perf_counter()
     publication_setup_time = solve_runtime_start - total_runtime_start
+    state_output: dict[str, object] | None = None
+    endpoint_identity: dict[str, object] | None = None
 
     try:
         step_records = run_load_steps(
@@ -1286,9 +1433,31 @@ def run(args):
             on_step_complete=on_step_complete,
         )
         publication_solve_time = time.perf_counter() - solve_runtime_start
+        independent_gradient = x.duplicate()
+        try:
+            assembler.gradient_fn(x, independent_gradient)
+            independent_dual = convergence_metric.dual_norm(independent_gradient)
+            endpoint_identity = {
+                "owned_reordered_state_sha256": _distributed_vector_sha256(x, comm),
+                "independent_residual": {
+                    "dual_norm": float(independent_dual.value),
+                    "coefficient_l2_norm": float(
+                        independent_gradient.norm(PETSc.NormType.NORM_2)
+                    ),
+                    "owned_reordered_gradient_sha256": _distributed_vector_sha256(
+                        independent_gradient, comm
+                    ),
+                    "evaluation": dict(independent_dual.metadata),
+                    "evaluated_after_solver_termination": True,
+                },
+            }
+        finally:
+            independent_gradient.destroy()
     finally:
         try:
-            _export_state_if_requested(args, assembler, params, x, step_records, comm)
+            state_output = _export_state_if_requested(
+                args, assembler, params, x, step_records, comm
+            )
         finally:
             if isinstance(convergence_metric, MatrixRieszMetric):
                 convergence_metric.destroy()
@@ -1340,6 +1509,9 @@ def run(args):
                 "profile": args.profile,
                 "nprocs": nprocs,
                 "nproc_threads": max(1, int(args.nproc)),
+                "initial_state_input": dict(initial_state_input),
+                "endpoint_identity": endpoint_identity,
+                "state_output": state_output,
                 "convergence": dict(convergence_configuration),
                 "linear_solver": {
                     "ksp_type": str(settings["ksp_type"]),
