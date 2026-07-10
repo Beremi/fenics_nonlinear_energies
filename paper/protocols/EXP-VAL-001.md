@@ -30,13 +30,18 @@ rebuild is authorized by this card.
 3. Do hyperelastic residuals, reactions, and tangents reproduce an independent
    affine patch and a nontrivial manufactured deformation while preserving
    positive determinant?
-4. If Plasticity3D is retained, do independently assembled material and global
-   formulas reproduce the selected endpoint surrogate away from branch
-   interfaces?
+4. **Optional physical-model comparator question:** if a mechanics-validation
+   claim is introduced for Plasticity3D, do an independently derived material
+   model and global assembly reproduce the selected endpoint surrogate away
+   from branch interfaces?
 
 Questions 1 and 3, together with the branch-controlled Ginzburg--Landau block,
-have pilot evidence at this stage. Question 2 is not required by the current
-paper and remains unexecuted.
+form the required independent-verification scope. Questions 2 and 4 are not
+required by the current paper and remain unexecuted. Plasticity3D is presented
+as a synthetic branch-structured discrete optimization functional, not as a
+validated path-dependent constitutive model. Its formula, branch, derivative,
+assembly, and distribution checks belong to EXP-MC-001, EXP-DERIV-001, and
+EXP-DIST-001 and establish internal consistency only.
 
 ## Completed manufactured scalar block
 

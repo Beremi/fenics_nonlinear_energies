@@ -6,19 +6,24 @@ At an identical canonical state and discrete functional, do replicated and
 rank-local problem construction, serial and distributed assembly, and one-,
 two-, and four-rank ownership layouts produce equivalent algebraic objects?
 
-## Factorized Design
+## Claim-Aligned Design
 
-The experiment must vary one factor at a time:
+The selected paper retains two controlled questions:
 
-1. mesh source: HDF5 versus procedural construction;
-2. construction: replicated versus rank-local;
-3. distribution: all-gather versus point-to-point overlap;
-4. assembly: global COO versus owned-row local COO;
-5. ranks: 1, 2, and 4.
+1. with procedural rank-local construction, point-to-point overlap, owned-row
+   COO assembly, and the element route held fixed, does changing the MPI rank
+   count from one to two to four preserve the canonical hyperelastic algebraic
+   objects; and
+2. with the Plasticity3D mesh, prescribed state, ownership contract, and rank
+   count held fixed, do the element, colored-recovery, and constitutive routes
+   preserve the canonical gradient and tangent actions at one, two, and four
+   ranks?
 
-The current reviewer-gap pair changes mesh source, construction, distribution,
-and assembly together. It is a bundle smoke test, not an isolated correctness
-experiment.
+Mesh-source, replicated/rank-local construction, all-gather/point-to-point
+distribution, and global/owned-row COO ablations are not required because the
+manuscript makes no causal, timing, or memory claim about those factors. A
+future claim about any such factor requires a new one-factor-at-a-time protocol
+and cannot reuse the current rank-count result as evidence.
 
 ## Fixed-State Algebraic Gate
 
@@ -38,10 +43,11 @@ targeted at `1e-8`. Freeze final tolerances before the publication run.
 
 ## Solved-Endpoint Gate
 
-Only after fixed-state equality passes, solve with the same stopping and solver
-policy. Compare independent final residuals, weighted full state, energy, and
-physical observables. Partition-dependent nonlinear trajectories are allowed;
-the endpoint tolerance must be calibrated against a tighter solve.
+Only after fixed-state equality passes, the separate route Tier-B and stopping
+campaigns may compare solved endpoints under the same stopping and solver
+policy. They compare independent final residuals, weighted full state, energy,
+and declared observables. Partition-dependent nonlinear trajectories are
+allowed; the endpoint tolerance must be calibrated against a tighter solve.
 
 ## Required Outputs
 
@@ -79,9 +85,8 @@ The fixed-state gate passed at the prespecified pilot tolerances:
   and $1.84\times10^{-15}$ relative on one and two ranks, respectively.
 
 This result resolves only the controlled one-versus-two-rank fixed-state pilot.
-It does not complete the full factorized matrix above: four ranks, independent
-mesh-source/construction/distribution/assembly changes, and the calibrated
-nonlinear solved-endpoint gate remain outstanding. The worktree was dirty and
+The required four-rank extension and the separately gated nonlinear endpoints
+remain outstanding. The worktree was dirty and
 both rank counts shared one workstation. Consequently, phase timings in the
 pilot report are diagnostic only and must not support a performance or memory
 claim. Publication evidence requires a clean-commit rerun with pinned placement
@@ -107,10 +112,10 @@ conjunction of all gates and the maximum error across the two comparisons; an
 omitted or failed rank cannot be hidden by aggregation.
 
 This command has been prepared but not executed as part of the implementation
-change. Even after a successful clean run, it resolves only the rank-count
-factor at the fixed state. The other factorized construction variants and the
-calibrated nonlinear solved-endpoint gate remain separate outstanding work,
-and the local timings remain inadmissible for a performance or scaling claim.
+change. A successful clean run resolves only the required rank-count question
+at the fixed state. The calibrated nonlinear solved-endpoint gate remains a
+separate route/stopping task, and the local timings remain inadmissible for a
+performance or scaling claim.
 
 ## Separate Distributed Colored-Recovery Gate
 

@@ -2,9 +2,9 @@
 
 ## Research Question
 
-For each retained discrete functional and stored state, do element AD,
-constitutive AD, assembled sparse matrices, and matrix-free Hessian actions
-represent the same constrained discrete first and second derivatives?
+At each state and algebraic level declared below, do the independently
+implemented derivative routes represent the same constrained discrete first
+and second derivatives within the prespecified gate?
 
 ## Hypotheses
 
@@ -12,9 +12,9 @@ represent the same constrained discrete first and second derivatives?
    residuals and tangents agree with element-energy AD to FP64 accuracy.
 2. Centered finite differences of the scalar energy and residual agree with
    the reported gradient and Hessian action over a non-roundoff step window.
-3. Serial and distributed routes produce equivalent canonical free-space
-   objects within a reduction-order tolerance fixed before the distributed
-   run.
+3. The dedicated EXP-DIST-001 and EXP-ROUTE-001 matrices produce the same
+   canonical free-space objects across their declared rank counts within a
+   reduction-order tolerance fixed before execution.
 
 No hypothesis is made about differentiability at a plastic branch interface.
 Those states belong to EXP-MC-001 and cannot be certified by a fixed-branch
@@ -43,17 +43,22 @@ distance to any switch surface, principal-value gap, denominator margin, and
 tie-break scale so an apparently smooth finite-difference result cannot hide a
 known switch.
 
-## Case Matrix
+## Claim-Aligned Case Matrix
 
-| Block | Cases | States | Distribution |
+| Block | Required cases | Algebraic level | Distribution claim |
 | --- | --- | --- | --- |
-| scalar smooth | p-Laplace small/medium; Ginzburg--Landau regular and indefinite | initial, stored intermediate, final, deterministic perturbation | 1 and 2 ranks |
-| mechanics smooth | hyperelasticity small/medium | admissible initial, stored intermediate, final | 1 and 2 ranks |
-| branch-structured diagnostic | Plasticity3D `P1(L1)`, `P2(L1)`, `P4(L1)` | fixed branch interiors first; interface states handled by EXP-MC-001 | element pilot locally; assembled 1 and 2 ranks later |
+| smooth element checks | p-Laplace regular state; Ginzburg--Landau regular and indefinite states; hyperelasticity near-identity and intermediate states | one fixed element, analytic independent derivatives, Taylor curves, and centered finite differences | none |
+| branch-structured checks | Plasticity3D `P1(L1)`, `P2(L1)`, and `P4(L1)`, five deterministic fixed branch-interior states per degree | element derivatives plus one separate serial full-mesh assembled comparison per degree | none from this block |
+| distributed route checks | Plasticity3D `P1(L1)` and `P2(L1)`, prescribed elastic and mixed states | gradient, tangent actions, and feasible rank-one CSR matrices | one, two, and four ranks under EXP-DIST-001 |
+| high-order distributed confirmation | Plasticity3D `P4(L1)` | fixed-state and solved-endpoint route checks | 8 and 32 ranks under EXP-ROUTE-001 |
 
-All cases use FP64, identical quadrature and constrained spaces across routes,
-canonical state ordering, and deterministic directions. A stored state and its
-input hash are part of the case identity.
+All cases use FP64, identical quadrature and constrained spaces across compared
+routes, canonical state ordering, and deterministic directions. The smooth
+fixed-element block deliberately makes no full-mesh or MPI claim. Scalar and
+hyperelastic MPI behavior is assessed only by their separately declared
+distribution experiments; it is not inferred from the element checks. A
+stored or prescribed state and its input hash are part of the applicable case
+identity.
 
 ## Current Fixed-Element Command
 
@@ -76,10 +81,9 @@ XLA_FLAGS=--xla_cpu_multi_thread_eigen=false \
 
 The assembled-route flag adds a deterministic serial full-mesh comparison of
 the element-AD, exact local-SFD/JVP, and constitutive-AD matrices without
-calling a linear or nonlinear solver. It does not replace the prescribed
-distributed matrix/action checks. The current command is a local pilot because
-the implementation and worktree are not yet a clean immutable publication
-commit.
+calling a linear or nonlinear solver. It does not replace the separately
+admitted distributed matrix/action checks. Publication use requires execution
+from a clean immutable commit through the managed finalization driver.
 
 ## Inputs
 
@@ -96,7 +100,8 @@ commit.
 - raw Taylor and centered-finite-difference arrays;
 - state, direction, canonical ordering, constrained-DOF map, and hashes;
 - route gradients, Hessians/HVPs, branch diagnostics, and symmetry metrics;
-- distributed ownership/partition metadata and rank-aggregated errors;
+- distributed ownership/partition metadata and rank-aggregated errors for the
+  separately identified EXP-DIST-001 and EXP-ROUTE-001 records;
 - a report retaining every failed, capped, or nonfinite case.
 
 ## Success And Failure Rules
@@ -107,7 +112,9 @@ nonfinite derivative, an unexplained loss of Taylor order, a missing canonical
 state, or a route error above threshold fails the case and blocks timing of
 that route. A roundoff-limited Taylor tail is retained but is not fitted.
 
-Passing the current Plasticity3D element pilot establishes only local
-fixed-branch formula consistency. It does not establish assembled correctness,
-distributed recovery, interface regularity, solver convergence, or physical
-validation.
+Passing the smooth element block establishes fixed-element formula and
+finite-difference consistency only. Passing the Plasticity3D local block adds
+one prescribed serial assembled-state comparison per degree. Distributed
+recovery requires its separate admitted evidence; interface regularity,
+nonlinear solver termination, and physical validation are not established by
+this protocol.

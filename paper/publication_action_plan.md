@@ -702,9 +702,12 @@ and deterministic directions or seeds.
 
 ### EXP-DERIV-001: Smooth Derivative Correctness
 
-**Cases:** small and medium \(p\)-Laplace; Ginzburg--Landau at regular and
-indefinite states; hyperelasticity at initial, intermediate, and final states;
-serial and two-rank versions.
+**Cases:** fixed-element \(p\)-Laplace regular,
+Ginzburg--Landau regular/indefinite, and hyperelasticity near-identity and
+intermediate states; Plasticity3D branch-interior fixed-element checks and one
+separate serial assembled state at each retained degree. Distributed
+Plasticity3D route checks are a distinct EXP-DIST-001 block. No full-mesh or
+MPI conclusion is inferred from the smooth fixed-element cases.
 
 **Controls:** identical discrete functional, quadrature, constrained space,
 state, and direction. Use an independently evaluated centered finite difference
@@ -723,7 +726,8 @@ tautological.
 - assembled-matrix/HVP error;
 - Hessian symmetry defect;
 - constrained/free-DOF consistency;
-- serial versus distributed difference.
+- serial versus distributed difference only in the separately declared
+  distributed blocks.
 
 **Recommended prespecified gates:**
 
@@ -804,24 +808,32 @@ affected endpoint and timing experiment.
 
 ### EXP-DIST-001: Distributed Equivalence
 
-At identical states and partitions, compare replicated versus rank-local
-problem construction, serial versus distributed assembly, and canonical states
-over one, two, and four ranks. Factor mesh source, mesh construction,
-distribution strategy, ownership, and assembly backend into separate controls.
-The current reviewer-gap HE comparison changes HDF5/procedural mesh creation,
-all-gather/point-to-point distribution, and global/local COO assembly together;
-it cannot isolate rank-local correctness without first proving coordinate,
-connectivity, boundary-mask, and constrained-DOF identity.
+The selected paper requires two deliberately narrow controls. First, at an
+identical canonical hyperelastic state, hold the procedural rank-local
+construction, point-to-point overlap, owned-row COO assembly, and element
+Hessian route fixed while changing only the rank count over one, two, and four
+ranks. Second, at prescribed Plasticity3D states, hold the mesh and ownership
+contract fixed while comparing the element, colored-recovery, and constitutive
+routes over the same rank counts. Exact topology/input identity is part of both
+gates.
+
+HDF5 versus procedural mesh source, replicated versus rank-local construction,
+all-gather versus point-to-point distribution, and global versus owned-row COO
+remain useful deployment ablations, but the selected manuscript makes no
+causal or performance claim about those factors. They are therefore not
+required publication experiments. Any future statement attributing an effect
+to one of them reactivates a one-factor-at-a-time experiment before release.
 
 Use two gates:
 
 1. **Fixed-state algebraic equivalence:** require tight scaled agreement for
    coordinates/connectivity, residuals, matrices, HVPs, and branch maps at one
    identical stored state.
-2. **Solved-endpoint consistency:** allow calibrated residual, observable, and
+2. **Solved-endpoint consistency:** use the separately prepared route Tier-B
+   and stopping campaigns, with calibrated residual, observable, and
    weighted-state tolerances because partition-dependent preconditioners and
-   reduction orders can alter nonlinear trajectories, especially for nonconvex
-   problems.
+   reduction orders can alter nonlinear trajectories, especially for
+   nonconvex problems.
 
 ### Implementation And Smoke Commands
 
@@ -881,13 +893,19 @@ or the new direct checks.
    same constitutive law, quadrature, boundary data, and a nontrivial free
    response. Do not use the boundary-controlled maximum displacement as the
    primary validation metric.
-5. **Independent plasticity reference.** Release or recreate an independently
-   inspectable quadrature/material implementation and assembled-formula
-   comparator using the identical constrained space.
+5. **Conditional independent plasticity reference.** This block is required
+   only if the paper introduces a mechanics-validation claim for Plasticity3D.
+   In that case, release or recreate an independently derived and inspectable
+   quadrature/material implementation and assembled-formula comparator using
+   the identical constrained space.
 
-   This validates the endpoint-surrogate formulas and assembly only. It is not
-   physical validation of path-dependent Mohr--Coulomb plasticity unless a
-   matched incremental return-map or an analytical physical benchmark is added.
+   The selected paper instead declares Plasticity3D to be a synthetic
+   branch-structured discrete optimization functional. EXP-MC-001,
+   EXP-DERIV-001, and EXP-DIST-001 test its internal formula, derivative,
+   assembly, and distribution consistency; none is relabeled as independent
+   physical validation. Introducing a physical constitutive claim reactivates
+   this block and additionally requires a matched incremental return-map or an
+   analytical physical benchmark.
 
 6. **Physical relevance, only if claimed.** Add single-material-point
    projection tests and at least one recognized boundary-value or limit-analysis
