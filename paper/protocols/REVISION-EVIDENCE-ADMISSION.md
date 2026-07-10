@@ -138,6 +138,51 @@ in `EXP-ROUTE-001-analysis-contract.json`.  Keeping these namespaces distinct
 avoids moving the exact 14-source interface whenever the frozen scientific
 contract is revised before execution.
 
+## Offline route-dependency staging
+
+The workstation campaign and the copied-back Karolina archive enter the
+managed finalization root through a separate dependency plan.  Generate this
+plan only at the clean experiment commit shared by both archives:
+
+```bash
+HEAD=<full-40-digit-experiment-commit>
+EVIDENCE=artifacts/reproduction/<campaign>
+./.venv/bin/python experiments/analysis/stage_route_publication_dependencies.py plan \
+  --expected-commit "$HEAD" \
+  --workstation-source /path/to/completed/workstation/archive \
+  --karolina-source /path/to/copied-back/karolina/archive \
+  --endpoint-relative path/inside/karolina/to/tier_b_endpoint_analysis.json \
+  --output "$EVIDENCE/route_dependency_plan.json"
+```
+
+Plan generation independently applies the frozen workstation, Karolina, and
+Tier-B endpoint gates.  It also records every regular file and SHA-256 digest
+in each source tree.  Symbolic links, incomplete workstation closure,
+nonadmissible route rows, stale endpoint evidence, mixed commits, or later
+source-tree changes block staging.
+
+Execute the three local preparation commands in the recorded order:
+
+```bash
+for COMMAND_ID in \
+  prepare_workstation_archive \
+  prepare_route_campaign_master \
+  prepare_tier_b_endpoint_analysis
+do
+  ./.venv/bin/python experiments/analysis/finalize_revision_publication_campaign.py execute \
+    --plan "$EVIDENCE/route_dependency_plan.json" \
+    --command-id "$COMMAND_ID" \
+    --evidence-root "$EVIDENCE"
+done
+```
+
+These commands perform local validation and file copying only.  They neither
+submit work nor contact a remote system.  The managed executor writes the
+three fingerprinted receipts required by the canonical source plan.  The
+canonical Tier-B endpoint copy remains inside the relocated Karolina archive,
+so the route analyzer can enforce its independent archive-confinement gate.
+The dependency plan and receipts must be retained with the final evidence.
+
 These checks establish admission for the quantities consumed by the revision
 tables.  They do not broaden the scientific scope of an experiment.
 

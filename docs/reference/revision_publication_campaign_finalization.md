@@ -96,17 +96,45 @@ does not select either terminal.
    SHA-256. Therefore copying an old state or manifest into the expected path
    does not satisfy the contract.
 
-4. For the Karolina route archive, preserve its directory hierarchy below
-   `_publication_staging/EXP-ROUTE-001/source_archives/karolina`. The route
-   master must recursively bind every tranche manifest, submitted-job ledger,
-   human release authorization, and reviewed authorization artifact. Preserve
-   the workstation hierarchy below `source_archives/workstation`. Run
-   `analyze_plasticity3d_route_endpoints.py` as the managed
-   `prepare_tier_b_endpoint_analysis` dependency. It must admit all 30 paired
-   blocks. The only permitted non-attempts are the two rank-specific Tier-B P4
-   colored-SFD rows and the six corresponding fixed-state map slots, all with
-   reason `prespecified_not_attempted_memory_risk_no_threshold_claim` and no
-   exposed or imputed time.
+4. Stage the completed workstation campaign and copied-back Karolina route
+   archive with the tracked offline dependency producer. The endpoint argument
+   is relative to the copied-back Karolina archive:
+
+   ```bash
+   HEAD=<full-40-digit-experiment-commit>
+   ./.venv/bin/python experiments/analysis/stage_route_publication_dependencies.py plan \
+     --expected-commit "$HEAD" \
+     --workstation-source /path/to/completed/workstation/archive \
+     --karolina-source /path/to/copied-back/karolina/archive \
+     --endpoint-relative path/to/tier_b_endpoint_analysis.json \
+     --output "$ROOT/route_dependency_plan.json"
+
+   for COMMAND_ID in \
+     prepare_workstation_archive \
+     prepare_route_campaign_master \
+     prepare_tier_b_endpoint_analysis
+   do
+     ./.venv/bin/python experiments/analysis/finalize_revision_publication_campaign.py \
+       execute --plan "$ROOT/route_dependency_plan.json" \
+       --command-id "$COMMAND_ID" --evidence-root "$ROOT"
+   done
+   ```
+
+   This path performs no scheduler or remote operation. It applies the route
+   analyzer's workstation, Karolina, complete-map, factor-diagnostic, and
+   Tier-B endpoint gates before and after copying. The dependency plan freezes
+   every regular source file by relative path and SHA-256; links, changed
+   source trees, incomplete workstation closure, and mixed commits are
+   rejected. The managed receipts, their plan, their logs, and every planned
+   output are revalidated when a source command consumes an attested input.
+
+   The Karolina route master must recursively bind every tranche manifest,
+   submitted-job ledger, human release authorization, and reviewed
+   authorization artifact. The endpoint must admit all 30 paired blocks. The
+   only permitted non-attempts are the two rank-specific Tier-B P4 colored-SFD
+   rows and the six corresponding fixed-state map slots, all with reason
+   `prespecified_not_attempted_memory_risk_no_threshold_claim` and no exposed
+   or imputed time.
 
 5. Execute the 14 source commands. Independent commands may run in parallel,
    but each command ID has one exclusive receipt and raw-output set. Never run

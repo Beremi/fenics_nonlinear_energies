@@ -753,6 +753,215 @@ def load_plan(path: Path) -> tuple[dict[str, Any], dict[str, dict[str, Any]]]:
     return plan, commands
 
 
+def _validate_staging_attestation(
+    attestation_path: Path,
+    *,
+    repo_root: Path,
+    evidence_root: Path,
+    experiment_commit: str,
+    attestation_stack: frozenset[Path] = frozenset(),
+) -> dict[str, Any]:
+    """Revalidate one managed preparation receipt without executing its plan."""
+    attestation_path = attestation_path.resolve()
+    evidence_root = evidence_root.resolve()
+    try:
+        attestation_relative = attestation_path.relative_to(evidence_root)
+    except ValueError as exc:
+        raise FinalizationError(
+            f"staging input attestation escapes the evidence root: {attestation_path}"
+        ) from exc
+    if (
+        not attestation_relative.parts
+        or attestation_relative.parts[0] != RECEIPT_DIRECTORY
+        or attestation_path in attestation_stack
+    ):
+        raise FinalizationError(
+            f"staging input attestation path or dependency graph is invalid: "
+            f"{attestation_path}"
+        )
+    attested = _read_json(attestation_path)
+    fingerprint = attested.get("receipt_fingerprint_sha256")
+    unsigned = dict(attested)
+    unsigned.pop("receipt_fingerprint_sha256", None)
+    if fingerprint != _json_sha256(unsigned):
+        raise FinalizationError(
+            f"staging input attestation fingerprint mismatch: {attestation_path}"
+        )
+    command_id = str(attested.get("command_id", ""))
+    if command_id != attestation_path.stem or not SAFE_ID_RE.fullmatch(command_id):
+        raise FinalizationError(
+            f"staging input attestation command identity mismatch: {attestation_path}"
+        )
+    if attested.get("source_keys") != []:
+        raise FinalizationError(
+            f"staging input attestation is not a preparation receipt: {attestation_path}"
+        )
+    plan_record = attested.get("plan")
+    if not isinstance(plan_record, Mapping):
+        raise FinalizationError(
+            f"staging input attestation lacks its managed plan: {attestation_path}"
+        )
+    raw_plan_path = Path(str(plan_record.get("path", "")))
+    if not raw_plan_path.is_absolute() or raw_plan_path.is_symlink():
+        raise FinalizationError(
+            f"staging input attestation plan path is not absolute: {attestation_path}"
+        )
+    attested_plan_path = raw_plan_path.resolve()
+    try:
+        attested_plan_path.relative_to(evidence_root)
+    except ValueError as exc:
+        raise FinalizationError(
+            f"staging input attestation plan escapes the evidence root: "
+            f"{attested_plan_path}"
+        ) from exc
+    if (
+        not attested_plan_path.is_file()
+        or attested_plan_path.is_symlink()
+        or plan_record.get("sha256") != sha256_file(attested_plan_path)
+    ):
+        raise FinalizationError(
+            f"staging input attestation plan is missing or stale: {attestation_path}"
+        )
+    attested_plan, attested_commands = load_plan(attested_plan_path)
+    if (
+        attested_plan.get("experiment_commit") != experiment_commit
+        or attested.get("campaign_id") != attested_plan.get("campaign_id")
+        or command_id not in attested_commands
+    ):
+        raise FinalizationError(
+            f"staging input attestation differs from its managed plan: {attestation_path}"
+        )
+    command = attested_commands[command_id]
+    command_block = attested.get("command")
+    expected_argv = _expand_argv(
+        command["argv"],
+        repo_root=repo_root,
+        evidence_root=evidence_root,
+        staging_root=evidence_root / STAGING_DIRECTORY,
+    )
+    if (
+        not isinstance(command_block, Mapping)
+        or command_block.get("argv_template") != command["argv"]
+        or command_block.get("argv") != expected_argv
+        or command_block.get("working_directory") != "."
+        or command_block.get("return_code") != 0
+        or command_block.get("execution_error") is not None
+        or not str(command_block.get("started_at_utc", ""))
+        or not str(command_block.get("finished_at_utc", ""))
+    ):
+        raise FinalizationError(
+            f"staging input attestation command differs from its plan or failed: "
+            f"{attestation_path}"
+        )
+    if not isinstance(attested.get("environment"), Mapping) or not attested[
+        "environment"
+    ]:
+        raise FinalizationError(
+            f"staging input attestation environment is missing: {attestation_path}"
+        )
+    if (
+        attested.get("artifact_validation_errors") != []
+        or attested.get("missing_outputs") != []
+        or attested.get("referenced_artifact_hashes") != {}
+    ):
+        raise FinalizationError(
+            f"staging input attestation records incomplete or invalid outputs: "
+            f"{attestation_path}"
+        )
+    preflight = attested.get("preflight")
+    postflight = attested.get("postflight")
+    if (
+        not isinstance(preflight, Mapping)
+        or not isinstance(postflight, Mapping)
+        or preflight.get("git_commit") != experiment_commit
+        or preflight.get("git_clean") is not True
+        or preflight.get("git_status_porcelain") != []
+        or preflight.get("pilot_override") is not False
+        or postflight.get("git_commit") != experiment_commit
+        or postflight.get("git_clean") is not True
+    ):
+        raise FinalizationError(
+            f"staging input attestation lacks clean pre/postflight provenance: "
+            f"{attestation_path}"
+        )
+    producer_record = attested.get("producer")
+    if not isinstance(producer_record, Mapping):
+        raise FinalizationError(
+            f"staging input attestation lacks producer identity: {attestation_path}"
+        )
+    producer_relative = _canonical_relative(
+        producer_record.get("path", ""), label="attestation producer"
+    )
+    expected_producer = _canonical_relative(
+        command.get("producer", ""), label="attested-plan producer"
+    )
+    producer = _confined(
+        repo_root, producer_relative, label="attestation producer", require_exists=True
+    )
+    producer_hash = sha256_file(producer)
+    if (
+        producer_relative != expected_producer
+        or producer_record.get("sha256") != producer_hash
+        or producer_hash
+        != _committed_file_sha256(repo_root, experiment_commit, producer_relative)
+    ):
+        raise FinalizationError(
+            f"staging input attestation producer is stale: {attestation_path}"
+        )
+    configuration_hashes, input_hashes = _input_hashes(
+        command,
+        repo_root=repo_root,
+        evidence_root=evidence_root,
+        staging_root=evidence_root / STAGING_DIRECTORY,
+        experiment_commit=experiment_commit,
+        attestation_stack=attestation_stack | {attestation_path},
+    )
+    if attested.get("configuration_hashes") != configuration_hashes:
+        raise FinalizationError(
+            f"staging input attestation configuration set is stale: {attestation_path}"
+        )
+    if attested.get("input_hashes") != input_hashes:
+        raise FinalizationError(
+            f"staging input attestation input set is stale: {attestation_path}"
+        )
+    raw_output_hashes: dict[str, str] = {}
+    for relative in _required_raw_paths(command):
+        path = _confined(
+            evidence_root / STAGING_DIRECTORY,
+            relative,
+            label="attested staging output",
+            require_exists=True,
+        )
+        if not path.is_file() or path.is_symlink():
+            raise FinalizationError(
+                f"staging input attestation output is not a regular file: {relative}"
+            )
+        raw_output_hashes[
+            (Path(STAGING_DIRECTORY) / relative).as_posix()
+        ] = sha256_file(path)
+    if attested.get("raw_output_hashes") != dict(sorted(raw_output_hashes.items())):
+        raise FinalizationError(
+            f"staging input attestation output closure is stale: {attestation_path}"
+        )
+    logs = attested.get("logs")
+    if not isinstance(logs, Mapping) or len(logs) != 2:
+        raise FinalizationError(
+            f"staging input attestation log inventory is incomplete: {attestation_path}"
+        )
+    for relative, expected_hash in logs.items():
+        path = _confined(
+            evidence_root,
+            _canonical_relative(relative, label="attestation log"),
+            label="attestation log",
+            require_exists=True,
+        )
+        if not path.is_file() or path.is_symlink() or sha256_file(path) != expected_hash:
+            raise FinalizationError(
+                f"staging input attestation log is missing or stale: {relative}"
+            )
+    return attested
+
+
 def _input_hashes(
     command: Mapping[str, Any],
     *,
@@ -760,6 +969,7 @@ def _input_hashes(
     evidence_root: Path,
     staging_root: Path,
     experiment_commit: str,
+    attestation_stack: frozenset[Path] = frozenset(),
 ) -> tuple[dict[str, str], dict[str, str]]:
     configuration: dict[str, str] = {}
     for raw in command.get("configuration_files", []):
@@ -774,6 +984,7 @@ def _input_hashes(
         configuration[relative.as_posix()] = actual
 
     inputs: dict[str, str] = {}
+    verified_attestations: dict[Path, dict[str, Any]] = {}
     for index, raw in enumerate(command.get("input_files", [])):
         if not isinstance(raw, Mapping):
             raise FinalizationError(f"input_files[{index}] must be an object")
@@ -806,7 +1017,16 @@ def _input_hashes(
                     label="staging input attestation",
                     require_exists=True,
                 )
-                attested = _read_json(attestation_path)
+                attested = verified_attestations.get(attestation_path)
+                if attested is None:
+                    attested = _validate_staging_attestation(
+                        attestation_path,
+                        repo_root=repo_root,
+                        evidence_root=evidence_root,
+                        experiment_commit=experiment_commit,
+                        attestation_stack=attestation_stack,
+                    )
+                    verified_attestations[attestation_path] = attested
                 if (
                     attested.get("schema_id") != RECEIPT_SCHEMA_ID
                     or attested.get("schema_version") != RECEIPT_SCHEMA_VERSION
@@ -2456,7 +2676,13 @@ def build_execution_plan_template(*, experiment_commit: str) -> dict[str, Any]:
                 ],
             )
         )
-    endpoint = "EXP-ROUTE-001/reviewed_inputs/tier_b_endpoint_analysis.json"
+    # Keep the separately attested endpoint inside the relocated Karolina
+    # source archive.  The route analyzer's independent endpoint gate rejects
+    # paths outside that archive by design.
+    endpoint = (
+        "EXP-ROUTE-001/source_archives/karolina/"
+        "reviewed_inputs/tier_b_endpoint_analysis.json"
+    )
     endpoint_receipt = f"{RECEIPT_DIRECTORY}/prepare_tier_b_endpoint_analysis.json"
     master = "EXP-ROUTE-001/source_archives/karolina/route_campaign_master_manifest.json"
     master_receipt = f"{RECEIPT_DIRECTORY}/prepare_route_campaign_master.json"
@@ -2475,6 +2701,8 @@ def build_execution_plan_template(*, experiment_commit: str) -> dict[str, Any]:
                 "workstation_local={staging_root}/EXP-ROUTE-001/source_archives/workstation",
                 "--source",
                 "karolina_cpu={staging_root}/EXP-ROUTE-001/source_archives/karolina",
+                "--endpoint-analysis",
+                f"{{staging_root}}/{endpoint}",
                 "--output-dir",
                 "{staging_root}/EXP-ROUTE-001/analysis_contract_v1",
             ],
@@ -2490,6 +2718,7 @@ def build_execution_plan_template(*, experiment_commit: str) -> dict[str, Any]:
                 "EXP-ROUTE-001/analysis_contract_v1/empirical_route_map.csv",
                 "EXP-ROUTE-001/analysis_contract_v1/report.md",
                 "EXP-ROUTE-001/analysis_contract_v1/manifest.json",
+                "EXP-ROUTE-001/analysis_contract_v1/endpoint_analysis.json",
             ],
             extra={"route_endpoint_analysis": endpoint},
         )
