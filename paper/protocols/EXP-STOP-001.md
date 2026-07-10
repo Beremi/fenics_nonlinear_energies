@@ -77,6 +77,47 @@ evidence. A missing row leaves the analysis incomplete. A failed local command
 is retained as an unclassified runtime censor, and failure of the tightest
 same-discretization reference invalidates that comparison group.
 
+## Reviewed Karolina completion path
+
+After a clean local plan has executed all 45 locally feasible rows, the
+scheduler-free preparer
+`experiments/runners/prepare_exp_stop_001_karolina.py` binds the local plan and
+analysis and freezes exactly the seven remaining computations:
+
+| Cluster row group | Ranks | Nodes | Wall-time ceiling per row | Rows |
+| --- | ---: | ---: | ---: | ---: |
+| Plasticity3D `P4(L1)` nonlinear targets $10^{-2}$, $10^{-4}$, $10^{-6}$, and $10^{-8}$ | 32 | 1 | 4 h | 4 |
+| Ginzburg--Landau MPI consistency at the selected level-6 policy | 16 | 1 | 1 h | 1 |
+| HyperElasticity MPI consistency at the selected level-2 nonlinear policy | 32 | 1 | 2 h | 1 |
+| Plasticity3D `P2(L1)` MPI consistency at the selected nonlinear policy | 32 | 1 | 4 h | 1 |
+
+The ceiling is 23 Karolina CPU node-hours. Every row retains `result.json` and
+`state.npz`; the command contract fixes one thread per rank, local NUMA
+binding, the clean local source commit, the local plan/analysis hashes, and the
+same solver, Riesz metric, mesh, rule, and tolerance arguments used locally.
+Preparation writes a relocatable plan, source freeze, exact shell-quoted
+commands, and an offline-preflight receipt. Without reviewed environment setup
+and lock files it is deliberately marked `submission_admissible: false`.
+
+```bash
+./.venv/bin/python experiments/runners/prepare_exp_stop_001_karolina.py \
+  prepare --local-analysis <local-root>/analysis.json \
+  --output-root artifacts/reproduction/EXP-STOP-001-karolina-<commit>
+
+./.venv/bin/python experiments/runners/prepare_exp_stop_001_karolina.py \
+  preflight --campaign-root artifacts/reproduction/EXP-STOP-001-karolina-<commit>
+```
+
+No scheduler command is run by either operation. In a future explicitly
+authorized session, the generic reviewed-campaign executor journals every
+submission. After copy-back, raw accounting snapshots are indexed offline,
+reparsed against the exact rank/node contract, and the complete archive is
+checksum-sealed. Final adjudication requires that pre-copy checksum digest and
+compares each MPI endpoint to its selected local endpoint and each P4 endpoint
+to the tightest successful P4 reference. The only terminal release decisions
+are `PASS`, `SCOPED_PASS`, `CENSORED`, or `INVALID`; timing remains inadmissible
+from this calibration campaign. No Karolina row has been submitted or run.
+
 ## Scientific questions
 
 1. How much of the route-to-route endpoint difference is caused by an inexact

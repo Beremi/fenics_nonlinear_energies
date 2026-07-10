@@ -272,3 +272,15 @@ Protocol cards: [`EXP-ROUTE-001`](../../../paper/protocols/EXP-ROUTE-001.md),
 [`EXP-SCALE-001`](../../../paper/protocols/EXP-SCALE-001.md). The static
 handoff is [`handoff.yaml`](handoff.yaml), and the preparation manifest is
 [`campaign_manifest.yaml`](campaign_manifest.yaml).
+
+## Separate stopping-calibration tranche
+
+`EXP-STOP-001` is intentionally not added to the route/discretization/scaling
+matrix above. Its seven cluster-deferred rows depend on the selected policies
+from a complete 45-row local calibration and therefore use the separate
+`prepare_exp_stop_001_karolina.py` preparer. The frozen resources are four
+32-rank P4 nonlinear rows and 16/32/32-rank GL/HE/P3D MPI checks, all on one
+`qcpu_exp` node, with a total ceiling of 23 node-hours. The preparer uses the
+same reviewed source-freeze, hash-bound environment, command inventory,
+offline accounting, and copy-back checksum conventions as this directory.
+Its default is preparation-only and no scheduler command has been run.
