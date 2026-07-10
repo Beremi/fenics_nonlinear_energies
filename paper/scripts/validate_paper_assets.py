@@ -23,6 +23,7 @@ INPUT_IF_EXISTS_RE = re.compile(r"\\InputIfFileExists\s*\{([^{}]+)\}")
 GRAPHICS_RE = re.compile(r"\\includegraphics(?:\s*\[[^\]]*\])*\s*\{([^{}]+)\}")
 SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
 DISTRIBUTED_COLORED_MANIFEST = "distributed_colored_manifest.json"
+GLOBALIZATION_LOCAL_MANIFEST = "globalization_local_manifest.json"
 PROVENANCE_BANNED_SNIPPETS = (
     "/home/",
     "\\/home\\/",
@@ -330,6 +331,102 @@ def _validate_distributed_colored_manifest(tables_dir: Path) -> None:
     if findings:
         raise SystemExit(
             "Distributed-colored table provenance is malformed:\n" + "\n".join(findings)
+        )
+
+
+def _globalization_local_manifest(tables_dir: Path) -> dict[str, object]:
+    manifest_path = tables_dir / GLOBALIZATION_LOCAL_MANIFEST
+    if not manifest_path.exists():
+        return {}
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    if not isinstance(manifest, dict):
+        raise SystemExit("Local-globalization table manifest must be a JSON object.")
+    return manifest
+
+
+def _globalization_local_manifest_tables(tables_dir: Path) -> set[str]:
+    outputs = _globalization_local_manifest(tables_dir).get("outputs", {})
+    if not isinstance(outputs, dict):
+        raise SystemExit("Local-globalization manifest field `outputs` must be an object.")
+    return {Path(str(name)).name for name in outputs}
+
+
+def _validate_globalization_local_manifest(tables_dir: Path) -> None:
+    manifest = _globalization_local_manifest(tables_dir)
+    if not manifest:
+        return
+    findings: list[str] = []
+    exact = {
+        "schema_id": "fenics-nonlinear-energies.exp-glob-001-local-table-manifest",
+        "schema_version": 1,
+        "status": "admitted_bounded_local_outcomes",
+        "publication_evidence": True,
+        "experiment_id": "EXP-GLOB-001",
+        "timing_claim_admissible": False,
+        "population_robustness_claim_admissible": False,
+    }
+    for key, expected in exact.items():
+        if manifest.get(key) != expected:
+            findings.append(f"field {key} must equal {expected!r}")
+    outputs = manifest.get("outputs")
+    if not isinstance(outputs, dict) or set(outputs) != {"globalization_local_status.tex"}:
+        findings.append("outputs must bind exactly globalization_local_status.tex")
+    else:
+        for name, expected_hash in outputs.items():
+            path = tables_dir / name
+            if (
+                not isinstance(expected_hash, str)
+                or SHA256_RE.fullmatch(expected_hash) is None
+                or not path.is_file()
+                or sha256_file(path) != expected_hash
+            ):
+                findings.append(f"{name}: output is missing or its SHA-256 hash is stale")
+    tools = manifest.get("tools")
+    if not isinstance(tools, dict) or set(tools) != {"validator", "generator", "checker"}:
+        findings.append("tools must bind validator, generator, and checker")
+    else:
+        for name, entry in sorted(tools.items()):
+            if not isinstance(entry, dict):
+                findings.append(f"tool {name}: record must be an object")
+                continue
+            raw = entry.get("path")
+            expected_hash = entry.get("sha256")
+            if (
+                not isinstance(raw, str)
+                or Path(raw).is_absolute()
+                or ".." in Path(raw).parts
+            ):
+                findings.append(f"tool {name}: path is not safe and repository-relative")
+                continue
+            path = (REPO_ROOT / raw).resolve()
+            try:
+                path.relative_to(REPO_ROOT)
+            except ValueError:
+                findings.append(f"tool {name}: path resolves outside the repository")
+            else:
+                if not path.is_file() or expected_hash != sha256_file(path):
+                    findings.append(f"tool {name}: file is missing or its hash is stale")
+    source = manifest.get("source_campaign_manifest")
+    if not isinstance(source, dict):
+        findings.append("source_campaign_manifest must be an object")
+    else:
+        raw = source.get("path")
+        expected_hash = source.get("sha256")
+        if not isinstance(raw, str) or Path(raw).is_absolute() or ".." in Path(raw).parts:
+            findings.append("source campaign path is not safe and repository-relative")
+        else:
+            path = (REPO_ROOT / raw).resolve()
+            reproduction = (REPO_ROOT / "artifacts/reproduction").resolve()
+            try:
+                path.relative_to(reproduction)
+            except ValueError:
+                findings.append("source campaign manifest is outside artifacts/reproduction")
+            else:
+                if not path.is_file() or expected_hash != sha256_file(path):
+                    findings.append("source campaign manifest is missing or its hash is stale")
+    if findings:
+        raise SystemExit(
+            "Local-globalization table provenance is malformed:\n" + "\n".join(findings)
         )
 
 
@@ -692,10 +789,13 @@ def main() -> None:
     revision_manifest_tables = _revision_manifest_tables(args.tables_dir)
     distributed_manifest = _distributed_colored_manifest(args.tables_dir)
     distributed_manifest_tables = _distributed_colored_manifest_tables(args.tables_dir)
+    globalization_manifest = _globalization_local_manifest(args.tables_dir)
+    globalization_manifest_tables = _globalization_local_manifest_tables(args.tables_dir)
     all_manifest_tables = (
         base_manifest_tables
         | revision_manifest_tables
         | distributed_manifest_tables
+        | globalization_manifest_tables
     )
     _validate_no_unexpected_generated_tables(
         args.tables_dir,
@@ -704,6 +804,7 @@ def main() -> None:
         allow_unreferenced_tables=bool(
             base_table_manifest.get("allow_unreferenced_tables") is True
             or distributed_manifest.get("allow_unreferenced_tables") is True
+            or globalization_manifest.get("allow_unreferenced_tables") is True
         ),
     )
     missing_table_manifests = sorted(required_tables - all_manifest_tables)
@@ -719,6 +820,7 @@ def main() -> None:
         required_tables & revision_manifest_tables, args.tables_dir
     )
     _validate_distributed_colored_manifest(args.tables_dir)
+    _validate_globalization_local_manifest(args.tables_dir)
     provenance_targets = _provenance_targets(args.tex, seen_tex, required_tables, args.figures_dir, args.tables_dir)
     _validate_provenance_text(provenance_targets)
     if args.archive_neutral:
