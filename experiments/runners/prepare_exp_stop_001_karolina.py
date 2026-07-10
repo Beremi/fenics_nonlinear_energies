@@ -49,6 +49,29 @@ def _read(path: Path) -> dict[str, Any]:
     return value
 
 
+def _analysis_without_creation_time(value: Mapping[str, Any]) -> dict[str, Any]:
+    normalized = deepcopy(dict(value))
+    normalized.pop("created_utc", None)
+    return normalized
+
+
+def _require_fresh_local_reanalysis(
+    analysis: Mapping[str, Any], plan_path: Path
+) -> None:
+    try:
+        fresh = local.analyze_plan(plan_path)
+    except (OSError, ValueError, local.CampaignError) as exc:
+        raise reviewed.CampaignContractError(
+            f"local stopping evidence could not be independently reanalyzed: {exc}"
+        ) from exc
+    if _analysis_without_creation_time(analysis) != _analysis_without_creation_time(
+        fresh
+    ):
+        raise reviewed.CampaignContractError(
+            "stored local stopping analysis differs from a fresh 45-row reanalysis"
+        )
+
+
 def _require_complete_local_policy_grid(
     analysis: Mapping[str, Any], plan: Mapping[str, Any]
 ) -> dict[str, Any]:
@@ -133,6 +156,7 @@ def _local_inputs(analysis_path: Path) -> tuple[dict[str, Any], Path, dict[str, 
         or int(plan.get("row_counts", {}).get("deferred_cluster_computation", -1)) != 7
     ):
         raise reviewed.CampaignContractError("local plan is not the clean 45+7 publication matrix")
+    _require_fresh_local_reanalysis(analysis, plan_path)
     _require_complete_local_policy_grid(analysis, plan)
     return analysis, plan_path, plan
 

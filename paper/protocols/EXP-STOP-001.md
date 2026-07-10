@@ -86,6 +86,12 @@ scheduler-free preparer
 `experiments/runners/prepare_exp_stop_001_karolina.py` binds the local plan and
 analysis and freezes exactly the seven remaining computations:
 
+Before writing a cluster root, the preparer reparses all 45 local receipts and
+their hash-bound JSON/NPZ outputs from the frozen plan, recomputes every
+endpoint, comparison, and selected policy, and requires byte-semantic equality
+with the stored analysis apart from its creation timestamp. A summary with
+missing receipts or altered policy fields cannot cross this handoff.
+
 | Cluster row group | Ranks | Nodes | Wall-time ceiling per row | Rows |
 | --- | ---: | ---: | ---: | ---: |
 | Plasticity3D `P4(L1)` nonlinear targets $10^{-2}$, $10^{-4}$, $10^{-6}$, and $10^{-8}$ | 32 | 1 | 4 h | 4 |

@@ -19,6 +19,17 @@ from experiments.runners import submit_reviewed_karolina_campaign as submitter
 COMMIT = "a" * 40
 
 
+def _mock_fresh_analysis(
+    monkeypatch: pytest.MonkeyPatch, analysis_path: Path
+) -> None:
+    def fresh(_plan_path: Path) -> dict[str, object]:
+        value = json.loads(analysis_path.read_text(encoding="utf-8"))
+        value["created_utc"] = "independently-regenerated"
+        return value
+
+    monkeypatch.setattr(local, "analyze_plan", fresh)
+
+
 def _local_campaign(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     monkeypatch.setattr(local, "_git_metadata", lambda: {"commit": COMMIT, "dirty": False})
     plan = local.build_plan(
@@ -158,6 +169,7 @@ def _prepare(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, *, environment: bool = False
 ) -> Path:
     analysis = _local_campaign(tmp_path, monkeypatch)
+    _mock_fresh_analysis(monkeypatch, analysis)
     monkeypatch.setattr(reviewed, "git_metadata", lambda: {"commit": COMMIT, "dirty": False})
     setup = lock = None
     if environment:
@@ -335,10 +347,24 @@ def test_preparation_rejects_a_required_local_group_without_policy(
         )
     )
     analysis_path.write_text(json.dumps(analysis) + "\n", encoding="utf-8")
+    _mock_fresh_analysis(monkeypatch, analysis_path)
 
     with pytest.raises(
         reviewed.CampaignContractError,
         match="lack accepted policies",
+    ):
+        stop._local_inputs(analysis_path)
+
+
+def test_preparation_rejects_fabricated_complete_summary_with_missing_receipts(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    analysis_path = _local_campaign(tmp_path, monkeypatch)
+    assert len(list((tmp_path / "local" / "receipts").glob("*.json"))) == 3
+
+    with pytest.raises(
+        reviewed.CampaignContractError,
+        match="differs from a fresh 45-row reanalysis",
     ):
         stop._local_inputs(analysis_path)
 
