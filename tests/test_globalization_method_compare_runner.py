@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import csv
+import hashlib
 import importlib.util
 import json
 import sys
@@ -14,6 +15,11 @@ from mpi4py import MPI
 from experiments.runners import generate_scalar_uniform_l10_meshes as scalar_meshes
 from experiments.runners import run_globalization_method_compare as campaign
 from experiments.runners import run_trust_region_case as case_runner
+from src.core.benchmark.run_record import (
+    ExperimentPreflight,
+    ExperimentPreflightError,
+    validate_run_record,
+)
 from src.core.benchmark.state_export import (
     export_hyperelasticity_state_npz,
     export_scalar_mesh_state_npz,
@@ -84,9 +90,14 @@ def test_controlled_matrix_excludes_unprescribed_cases_and_holds_ksp_fixed(
 ):
     cases = campaign.build_case_matrix("full", "controlled")
 
-    assert len(cases) == 4
+    assert len(cases) == 12
     assert {case.benchmark.problem for case in cases} == {"gl", "he"}
     assert all(case.benchmark.steps == 1 for case in cases)
+    assert {case.robustness_instance.key for case in cases} == {
+        "nominal",
+        "mode_plus",
+        "mode_minus",
+    }
     assert {case.method.key for case in cases} == {
         "newton_armijo",
         "reduced_trust_armijo",
@@ -94,7 +105,12 @@ def test_controlled_matrix_excludes_unprescribed_cases_and_holds_ksp_fixed(
     assert {case.comparison_tier for case in cases} == {"controlled"}
 
     for problem in ("gl", "he"):
-        problem_cases = [case for case in cases if case.benchmark.problem == problem]
+        problem_cases = [
+            case
+            for case in cases
+            if case.benchmark.problem == problem
+            and case.robustness_instance.key == "nominal"
+        ]
         commands = [
             campaign.build_command(
                 case,
@@ -133,17 +149,20 @@ def test_controlled_common_start_artifacts_are_one_per_retained_benchmark(
     cases = campaign.build_case_matrix("smoke", "controlled")
     starts = campaign.prepare_controlled_starts(cases, tmp_path)
 
-    assert len(cases) == 4
+    assert len(cases) == 12
     assert {case.benchmark.problem for case in cases} == {"gl", "he"}
-    assert set(starts) == {case.benchmark.key for case in cases}
+    assert len(starts) == 6
+    assert set(starts) == {case.start_key for case in cases}
     assert all(len(identity["file_sha256"]) == 64 for identity in starts.values())
     assert all(len(identity["state_sha256"]) == 64 for identity in starts.values())
-    for benchmark, identity in starts.items():
+    for start_key, identity in starts.items():
         path = Path(identity["path"])
-        assert path.is_file(), benchmark
+        assert path.is_file(), start_key
+        case = next(case for case in cases if case.start_key == start_key)
         assert path == campaign.canonical_start_path(
             tmp_path,
-            next(case.benchmark for case in cases if case.benchmark.key == benchmark),
+            case.benchmark,
+            case.robustness_instance,
         ).resolve()
 
     manifest = json.loads(
@@ -152,7 +171,179 @@ def test_controlled_common_start_artifacts_are_one_per_retained_benchmark(
         )
     )
     assert manifest["status"] == "prepared"
-    assert set(manifest["benchmarks"]) == set(starts)
+    assert manifest["schema_version"] == 2
+    assert set(manifest["instances"]) == set(starts)
+    for problem in ("gl", "he"):
+        assert len(
+            {
+                identity["state_sha256"]
+                for identity in starts.values()
+                if identity["problem"] == problem
+            }
+        ) == 3
+
+
+def test_controlled_publication_grid_separates_instances_and_timing_repetitions():
+    cases = campaign.build_case_matrix(
+        "smoke", "controlled", timing_repetitions=5
+    )
+
+    assert len(cases) == 2 * 3 * 5 * 2
+    assert {case.timing_repetition for case in cases} == {1, 2, 3, 4, 5}
+    assert len({case.key for case in cases}) == len(cases)
+
+
+def test_controlled_audit_admits_repeated_timing_but_refuses_generalization():
+    rows = []
+    starts = {}
+    for benchmark in ("gl_l5_np2", "he_l2_np2_step1"):
+        for instance_index, instance in enumerate(campaign.ROBUSTNESS_INSTANCES, 1):
+            file_hash = f"{instance_index}" * 64
+            state_hash = f"{instance_index + 3}" * 64
+            starts[f"{benchmark}::{instance.key}"] = {
+                "file_sha256": file_hash,
+                "state_sha256": state_hash,
+            }
+            for repetition in range(1, 6):
+                endpoint_hash = hashlib.sha256(
+                    f"{benchmark}:{instance.key}:{repetition}".encode()
+                ).hexdigest()
+                for method in ("newton_armijo", "reduced_trust_armijo"):
+                    rows.append(
+                        {
+                            "benchmark": benchmark,
+                            "robustness_instance": instance.key,
+                            "timing_repetition": repetition,
+                            "method": method,
+                            "result": "completed",
+                            "initial_state_file_sha256": file_hash,
+                            "initial_state_content_sha256": state_hash,
+                            "final_state_file_sha256": "a" * 64,
+                            "final_state_content_sha256": endpoint_hash,
+                            "endpoint_state_sha256": endpoint_hash,
+                            "independent_dual_residual": 1.0e-8,
+                            "independent_coefficient_residual": 2.0e-8,
+                            "independent_residual_sha256": "b" * 64,
+                        }
+                    )
+
+    audit = campaign.controlled_identity_audit(
+        rows,
+        starts,
+        expected_repetitions=5,
+        expected_instances=[instance.key for instance in campaign.ROBUSTNESS_INSTANCES],
+    )
+
+    assert audit["status"] == "passed"
+    assert audit["timing_claim_admissible"] is True
+    assert audit["tested_instance_comparison_admissible"] is True
+    assert audit["robustness_generalization_claim_admissible"] is False
+
+
+def test_publication_preflight_requires_exact_sha1_commit(monkeypatch):
+    monkeypatch.setattr(
+        campaign,
+        "check_experiment_preflight",
+        lambda *_args, **_kwargs: ExperimentPreflight(
+            run_kind="publication",
+            git_commit="a" * 64,
+            git_clean=True,
+            git_status_porcelain=(),
+            pilot_override=False,
+            pilot_override_reason=None,
+            checked_at_utc="2026-07-10T00:00:00Z",
+        ),
+    )
+
+    with pytest.raises(ExperimentPreflightError, match="40-character"):
+        campaign.require_publication_preflight()
+
+
+def test_publication_run_record_is_strictly_validated(tmp_path: Path):
+    case = campaign.build_case_matrix(
+        "smoke",
+        "controlled",
+        robustness_instances=(campaign.ROBUSTNESS_BY_KEY["nominal"],),
+    )[0]
+    start = tmp_path / "start.npz"
+    start.write_bytes(b"immutable-start")
+    row = {
+        "result": "completed",
+        "failure_mode": "",
+        "returncode": 0,
+        "wall_time_s": 1.5,
+        "solve_time_s": 1.0,
+        "setup_time_s": 0.25,
+        "line_search_time_s": 0.1,
+        "newton_iters": 2,
+        "krylov_iters": 4,
+        "robustness_instance": "nominal",
+        "robustness_parameters_json": json.dumps(
+            campaign._instance_parameters(case.benchmark, case.robustness_instance)
+        ),
+        "final_state_file_sha256": "1" * 64,
+        "final_state_content_sha256": "2" * 64,
+        "endpoint_state_sha256": "3" * 64,
+        "independent_residual_sha256": "4" * 64,
+        "independent_dual_residual": 1.0e-8,
+        "independent_coefficient_residual": 2.0e-8,
+        "initial_state_file_sha256": "5" * 64,
+        "initial_state_content_sha256": "6" * 64,
+        "started_at_utc": "2026-07-10T00:00:00Z",
+        "finished_at_utc": "2026-07-10T00:00:02Z",
+    }
+    environment = {
+        "python": "3.11",
+        "packages": {"numpy": "2.0"},
+        "platform": "test-platform",
+        "jax": "test-jax",
+        "xla": "test-xla",
+        "jax_enable_x64": True,
+        "petsc": "test-petsc",
+        "mpi": "test-mpi",
+        "compiler": "test-compiler",
+        "blas": "test-blas",
+        "cpu_model": "test-cpu",
+        "node_model": "test-node",
+        "memory_model": "test-memory",
+        "scheduler": "local",
+        "scheduler_job_id": None,
+        "affinity": "0",
+    }
+    preflight = ExperimentPreflight(
+        run_kind="publication",
+        git_commit="a" * 40,
+        git_clean=True,
+        git_status_porcelain=(),
+        pilot_override=False,
+        pilot_override_reason=None,
+        checked_at_utc="2026-07-10T00:00:00Z",
+    )
+    canonical_start = {
+        "path": str(start),
+        "file_sha256": hashlib.sha256(start.read_bytes()).hexdigest(),
+    }
+    command = campaign.build_command(
+        case,
+        tmp_path / "raw" / case.key / "output.json",
+        state_in=start,
+        state_out=tmp_path / "raw" / case.key / "final_state.npz",
+    )
+
+    record = campaign.build_publication_run_record(
+        case=case,
+        mode="smoke",
+        row=row,
+        command=command,
+        preflight=preflight,
+        environment=environment,
+        source_hashes={"runner": "b" * 64},
+        campaign_configuration_sha256="c" * 64,
+        canonical_start=canonical_start,
+        raw_dir=tmp_path / "raw",
+    )
+
+    validate_run_record(record, require_publication_ready=True)
 
 
 def test_controlled_identity_audit_requires_common_start_and_terminal_identity():

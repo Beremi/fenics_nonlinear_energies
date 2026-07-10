@@ -3,8 +3,8 @@
 ## Research Questions
 
 1. With the discrete functional, Hessian action, preconditioner, forcing rule,
-   starting state, and final accuracy fixed, how do Armijo Newton, Steihaug
-   trust-region Newton, and hybrid trust-region plus line search differ?
+   starting state, and final accuracy fixed, how do Armijo Newton and the
+   reduced-subspace trust-region method with the same Armijo safeguard differ?
 2. How do complete production bundles differ when the linear solver or other
    policy components are intentionally allowed to change?
 
@@ -62,10 +62,53 @@ Example preparation-only commands are:
   --mode full --comparison-tier controlled --dry-run
 ```
 
+Publication execution is deliberately local and controlled-only. It refuses
+an existing campaign path, a dirty worktree, a non-40-character Git commit, a
+change of commit during execution, and every case above four MPI ranks. Thus,
+`--mode full` is preparation-only in this runner. A complete local smoke is:
+
+```bash
+./.venv/bin/python experiments/runners/run_globalization_method_compare.py \
+  --mode smoke --comparison-tier controlled \
+  --raw-root artifacts/reproduction/EXP-GLOB-001-local-clean-v1/raw \
+  --report-root artifacts/reproduction/EXP-GLOB-001-local-clean-v1/reports
+```
+
+The default is five cold-process machine-noise repetitions. With two problems,
+three deterministic starts, two methods, and five repetitions, this command
+launches exactly 60 two-rank solves. For a correctness-only pilot plan, use
+`--instance nominal --timing-repetitions 1 --dry-run`; timing from that reduced
+grid is explicitly inadmissible.
+
+Before any output directory is created, the runner admits one clean Git commit.
+It then records a strict-JSON, versioned campaign manifest and one validated
+publication run record per launch. These records include normalized argv,
+UTC start/finish times, source/configuration/input SHA-256 hashes, the exact
+single-thread CPU child environment, termination/censoring, solver counts,
+terminal residuals, and artifact identities.
+
+## Deterministic Robustness Instances And Repetitions
+
+Each retained problem has three prescribed instances: the nominal state and a
+positive/negative closed-form perturbation. For Ginzburg--Landau, a
+dimensionless amplitude of $\pm 0.025$ multiplies a smooth mode that vanishes on
+the boundary and is added only at free nodes. For first-load hyperelasticity, a
+$\pm 10^{-5}\,\mathrm{m}$ transverse beam mode is added only to free vector
+components. These perturbations preserve constrained degrees of freedom by
+construction and are small relative to the maintained geometry.
+
+Exactly one NPZ is created for each problem--instance pair. Both methods and
+all timing repetitions read that same immutable file; repetitions never create
+new robustness units. The three starts form a bounded deterministic sensitivity
+set, not draws from a declared population. Consequently the audit can admit a
+comparison on the tested instances, but it always sets
+`robustness_generalization_claim_admissible` to false.
+
 ## Common-Start And Endpoint Identity Contract
 
 Before launching either controlled method, the orchestrator writes exactly one
-canonical NPZ start for each retained benchmark under `_canonical_starts/`.
+canonical NPZ start for each retained benchmark and deterministic instance
+under `_canonical_starts/`.
 For Ginzburg--Landau this is the closed-form sine state on the constrained
 scalar mesh. For hyperelasticity it is the reference deformation
 (y(X)=X). The start manifest records both the NPZ file SHA-256 and a dtype-
@@ -119,8 +162,7 @@ $8.15\times10^{-5}$ final-energy difference, missing canonical states, and
 loose smoke tolerances fail the endpoint-equivalence gate. No timing claim is
 admitted from any row.
 
-The common-start, final-state, and independent-residual interfaces are now
-prepared, but the corrected controlled smoke has not been executed. The
-publication campaign remains pending a clean worktree, frozen Riesz stopping,
-endpoint clustering, distinct robustness instances, and repeated timing after
-all correctness gates pass.
+The common-start, final-state, independent-residual, deterministic-instance,
+repetition, clean-commit, and provenance interfaces are prepared. The corrected
+60-launch controlled smoke has not yet been executed. No timing or robustness-
+generalization claim is admitted from the historical pilots.
