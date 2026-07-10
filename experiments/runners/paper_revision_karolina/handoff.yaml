@@ -45,7 +45,7 @@ campaign:
   submitter: experiments/runners/paper_revision_karolina/submit_prepared_campaigns.sh
   submitter_sha256: 7935dc18d1ddc5fcb93e5f64d9c901cb77c735b9a791eb42dd07d3934a3d0abb
   preparer: experiments/runners/paper_revision_karolina/prepare_campaign.py
-  preparer_sha256: bf1245021ef632b647d3605bf38747d111f557ab358d945156ef248b48d95719
+  preparer_sha256: b5d8f247ae9516b518cff8bce19da5e04a25bb00d1d0a955c7433a8b061edc22
   batch_runner: experiments/runners/paper_revision_karolina/run_revision_case.sbatch
   batch_runner_sha256: 2527ee1bc065e6b9678464c960b73c9b22caa9f3c6abcfeab1a15f7db1cbd355
   partial_submission_resumer: experiments/runners/paper_revision_karolina/resume_partial_submission.py
@@ -68,6 +68,8 @@ campaign:
   route_scaling_analyzer_sha256: b173b2a2373ee9c20c33ee2eb1a7c1be6999e29322567847bbb2a51fe7a52c02
   slurm_accounting_collector: experiments/analysis/collect_slurm_accounting.py
   slurm_accounting_collector_sha256: 4099821584762f1d26fb736820c9fa4b7a409c27e6e04613eb1c2db7e9a96112
+  offline_accounting_index_generator: experiments/analysis/generate_offline_accounting_index.py
+  offline_accounting_index_generator_sha256: 04f7e2c3aed56174ab32be6b00c45e82a4977f79380c5bc3a00823455cec39ff
   offline_preflight: experiments/runners/paper_revision_karolina/preflight_prepared_campaign.py
   offline_preflight_sha256: 2b070eb2efee144372e7d6bb2281975f56a1c7a484766406cb2a6ace127dc850
   release_authorization_schema: paper/protocols/human-release-authorization-v1.schema.json

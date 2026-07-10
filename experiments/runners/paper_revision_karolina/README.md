@@ -106,12 +106,31 @@ hash-bound in every command, verified before the setup is sourced, and linked
 to the compute-node compiler, MPI/mpi4py, JAX/jaxlib, backend, and XLA identity
 record.
 
-After all training jobs finish, settle the complete tranche in one operation from an
-offline accounting index (default) or the explicitly opted-in live mode:
+After all training jobs finish and raw `<job-id>.sacct` snapshots have been
+captured outside this workflow, generate and verify the exact offline index:
+
+```bash
+./.venv/bin/python experiments/analysis/generate_offline_accounting_index.py \
+  generate --campaign-root <campaign-root> \
+  --snapshot-root <detached-snapshot-root> \
+  --output <detached-snapshot-root>/accounting-index.json
+
+./.venv/bin/python experiments/analysis/generate_offline_accounting_index.py \
+  verify --campaign-root <campaign-root> \
+  --snapshot-root <detached-snapshot-root> \
+  --output <detached-snapshot-root>/accounting-index.json
+```
+
+Both operations are scheduler-free. They require exact job coverage, reparse
+every raw snapshot against the matrix resources and terminal status, reject
+extra files and symlinks, and produce a timestamp-free deterministic index.
+Settle the complete tranche from that index (default) or the separately,
+explicitly opted-in live mode:
 
 ```bash
 ./.venv/bin/python experiments/analysis/finalize_karolina_campaign_archive.py \
-  --campaign-root <campaign-root> --offline-index <accounting-index.json> \
+  --campaign-root <campaign-root> \
+  --offline-index <detached-snapshot-root>/accounting-index.json \
   --receipt <detached-receipt.json>
 ```
 

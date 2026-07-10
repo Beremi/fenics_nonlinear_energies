@@ -285,6 +285,7 @@ def prepare(args: argparse.Namespace) -> dict[str, Any]:
         REPO_ROOT / "experiments/runners/execute_reviewed_karolina_case.py",
         REPO_ROOT / "experiments/runners/submit_reviewed_karolina_campaign.py",
         REPO_ROOT / "experiments/analysis/finalize_reviewed_karolina_archive.py",
+        REPO_ROOT / "experiments/analysis/generate_offline_accounting_index.py",
         REPO_ROOT / local.RUNNER_PATH,
         REPO_ROOT / local.TRUST_RUNNER_PATH,
         REPO_ROOT / local.P3D_BACKEND_PATH,

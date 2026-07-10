@@ -71,6 +71,8 @@ REVIEWED_SOURCES = {
     "scaling_analyzer": REPO_ROOT / "experiments/analysis/analyze_exp_scale_001.py",
     "slurm_accounting_collector": REPO_ROOT
     / "experiments/analysis/collect_slurm_accounting.py",
+    "offline_accounting_index_generator": REPO_ROOT
+    / "experiments/analysis/generate_offline_accounting_index.py",
     "campaign_archive_finalizer": REPO_ROOT
     / "experiments/analysis/finalize_karolina_campaign_archive.py",
     "fixed_state_runner": REPO_ROOT

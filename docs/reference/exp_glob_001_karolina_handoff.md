@@ -41,8 +41,9 @@ the six canonical starts, freezes all 60 payloads, and writes
 3. After all jobs copy back, run `prepare_exp_glob_001_karolina.py analyze`.
    This reconstructs 60 strict run records and the common-start/endpoint audit,
    but exposes no claim before accounting settlement.
-4. Capture raw `sacct --parsable2` text outside this offline workflow. Build a
-   deterministic accounting index and pass it to
+4. Capture raw `sacct --parsable2` text outside this offline workflow. Build
+   and verify the deterministic index with
+   `experiments/analysis/generate_offline_accounting_index.py`, then pass it to
    `finalize_reviewed_karolina_archive.py`; the finalizer reparses all 60
    records and writes the archive checksum manifest.
 5. Preserve the checksum-manifest digest before copy-back. Run

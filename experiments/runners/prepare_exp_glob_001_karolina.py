@@ -179,6 +179,7 @@ def prepare(args: argparse.Namespace) -> dict[str, Any]:
             REPO_ROOT / "experiments/runners/execute_reviewed_karolina_case.py",
             REPO_ROOT / "experiments/runners/submit_reviewed_karolina_campaign.py",
             REPO_ROOT / "experiments/analysis/finalize_reviewed_karolina_archive.py",
+            REPO_ROOT / "experiments/analysis/generate_offline_accounting_index.py",
             REPO_ROOT / "data/meshes/GinzburgLandau/GL_level10.h5",
         }
         return reviewed.prepare_campaign(

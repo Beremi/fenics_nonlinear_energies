@@ -240,6 +240,7 @@ def _sbatch_command(
         "sbatch",
         f"--account={ACCOUNT}",
         f"--qos={QOS}",
+        f"--job-name={case['case_id']}",
         f"--partition={case['partition']}",
         f"--nodes={case['nodes']}",
         f"--ntasks={case['total_ranks']}",
