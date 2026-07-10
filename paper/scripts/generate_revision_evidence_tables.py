@@ -77,6 +77,29 @@ def _fixed(value: float, digits: int = 3) -> str:
     return rf"\num{{{float(value):.{digits}f}}}"
 
 
+def _distribution_rank_levels(payload: dict[str, Any]) -> list[int]:
+    varied_factor = payload.get("varied_factor")
+    if not isinstance(varied_factor, dict) or varied_factor.get("name") != "mpi_ranks":
+        raise ValueError("distribution evidence must vary mpi_ranks")
+    raw_levels = varied_factor.get("levels")
+    if not isinstance(raw_levels, list) or not raw_levels:
+        raise ValueError("distribution evidence must record nonempty mpi_ranks levels")
+    if any(
+        isinstance(level, bool) or not isinstance(level, int) or level <= 0
+        for level in raw_levels
+    ):
+        raise ValueError("distribution mpi_ranks levels must be positive integers")
+    if len(set(raw_levels)) != len(raw_levels):
+        raise ValueError("distribution mpi_ranks levels must be unique")
+    return raw_levels
+
+
+def _distribution_rank_label(levels: list[int]) -> str:
+    words = {1: "one", 2: "two", 4: "four"}
+    level_label = "/".join(words.get(level, str(level)) for level in levels)
+    return f"Hyperelasticity, {level_label} ranks"
+
+
 def _write(path: Path, content: str) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(content.rstrip() + "\n", encoding="utf-8")
@@ -161,11 +184,13 @@ def _derivative_table(data: dict[str, dict[str, Any]]) -> str:
             "five branch interiors; switches excluded",
         ]
     )
-    dist = data["distribution"]["comparison"]["relative_errors"]
+    distribution = data["distribution"]
+    dist = distribution["comparison"]["relative_errors"]
+    rank_levels = _distribution_rank_levels(distribution)
     derivative_rows.append(
         [
-            "Hyperelasticity, one/two/four ranks",
-            "3",
+            _distribution_rank_label(rank_levels),
+            str(len(rank_levels)),
             _sci(max(dist["residual_relative"], dist["matrix_relative"])),
             _sci(dist["matrix_action_relative"]),
             "fixed state and canonical ordering",

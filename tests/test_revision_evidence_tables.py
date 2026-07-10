@@ -25,6 +25,7 @@ def test_revision_evidence_tables_are_generated_from_pilot_artifacts(tmp_path: P
         text=True,
     )
     verification = (tmp_path / "revision_verification_summary.tex").read_text()
+    derivatives = (tmp_path / "revision_derivative_checks.tex").read_text()
     quadrature = (tmp_path / "revision_quadrature_sensitivity.tex").read_text()
     evidence = (tmp_path / "revision_evidence_status.tex").read_text()
     manifest = json.loads((tmp_path / "revision_evidence_manifest.json").read_text())
@@ -32,6 +33,8 @@ def test_revision_evidence_tables_are_generated_from_pilot_artifacts(tmp_path: P
     assert "1.887" in verification
     assert "1.006" in verification
     assert "Hyperelastic nonaffine" in verification
+    assert "Hyperelasticity, one/two ranks & 2" in derivatives
+    assert "Hyperelasticity, one/two/four ranks" not in derivatives
     assert "P_2(L_1)" in quadrature
     assert "1.84e-08" in quadrature
     assert "0/12" in evidence

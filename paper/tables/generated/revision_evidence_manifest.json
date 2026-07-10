@@ -1,13 +1,13 @@
 {
   "schema_version": 2,
   "generator": "paper/scripts/generate_revision_evidence_tables.py",
-  "generator_sha256": "6e38c147c934ebc6cba8e0b62e9f36139a2c4495425481cd42c85e0ef2e418de",
+  "generator_sha256": "d085739d633127a3c04538971203bd8f5847f9d82b82b7deee629beefc0ef81f",
   "evidence_class": "diagnostic",
   "evidence_root": "artifacts/reproduction/paper_revision_2026_07_10/pilots",
   "publication_evidence": false,
   "status": "diagnostic_tables_not_for_submission",
   "git": {
-    "commit": "4d2bea0abbb01e4834e6f0b72312280a4a35d7de",
+    "commit": "ceddd89b08d5454a3df724dcd4b4fa142a4028fd",
     "worktree_clean": false
   },
   "source_evidence_manifest": null,
