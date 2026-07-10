@@ -86,3 +86,63 @@ both rank counts shared one workstation. Consequently, phase timings in the
 pilot report are diagnostic only and must not support a performance or memory
 claim. Publication evidence requires a clean-commit rerun with pinned placement
 and prespecified repetitions.
+
+## Managed Rank-Count Publication Run
+
+The managed local producer is prepared to execute the rank-count factor at
+exactly one, two, and four ranks:
+
+```bash
+./.venv/bin/python experiments/runners/run_hyperelasticity_distribution_equivalence.py \
+  --run-kind publication \
+  --output-dir artifacts/reproduction/<clean-campaign>/_publication_staging/EXP-DIST-001
+```
+
+Publication mode fails unless the Git worktree is clean, the output directory
+is fresh, and the frozen level, state angle, repetition count, solver
+tolerances, and comparison tolerances retain their preregistered values. It
+writes three strict run records and requires both the one-versus-two and
+one-versus-four comparisons to pass. The aggregate comparison is the
+conjunction of all gates and the maximum error across the two comparisons; an
+omitted or failed rank cannot be hidden by aggregation.
+
+This command has been prepared but not executed as part of the implementation
+change. Even after a successful clean run, it resolves only the rank-count
+factor at the fixed state. The other factorized construction variants and the
+calibrated nonlinear solved-endpoint gate remain separate outstanding work,
+and the local timings remain inadmissible for a performance or scaling claim.
+
+## Separate Distributed Colored-Recovery Gate
+
+The hyperelastic rank-count producer above deliberately uses the element-
+Hessian route, so it cannot establish distributed colored-recovery
+correctness. A second local correctness campaign is prepared in
+`experiments/runners/run_local_distributed_route_verification.py`. Its frozen
+matrix contains 12 blocks:
+
+- element degrees (P_1) and (P_2);
+- prescribed elastic and mixed-branch states;
+- one, two, and four ranks; and
+- element AD, colored sparse finite differences, and constitutive AD in a
+  balanced route order.
+
+Every route stores the canonical state, gradient, four deterministic tangent
+actions, branch diagnostics, and per-rank ownership summary. Feasible
+one-rank cases additionally store direct CSR matrices; the distributed cases
+compare the four actions and ownership partitions across ranks. The strict
+adjudicator fails on a missing route/rank, incomplete ownership, changed
+branch diagnostics, nonidentical canonical state, or an action/matrix error
+outside the frozen absolute-and-relative gate.
+
+Prepare the immutable plan without executing route processes:
+
+```bash
+./.venv/bin/python experiments/runners/run_local_distributed_route_verification.py \
+  --run-kind publication \
+  --out-root artifacts/reproduction/<clean-campaign>/EXP-DIST-001-colored
+```
+
+Execution is a separate explicit action and requires both `--execute` and
+`LOCAL_DISTRIBUTED_RUN_CONFIRMED=YES`. It has not been performed as part of
+the implementation change. Its measurements are correctness diagnostics and
+cannot support a timing or scaling claim.

@@ -66,7 +66,7 @@ For each key, the tool checks all of the following before setting `admitted`:
 5. The source-specific terminal and scientific gates below pass.
 6. Required publication run records validate against the versioned strict run
    record contract.  Material-point evidence requires one record; distribution
-   evidence requires both the one-rank and two-rank records.
+   evidence requires the one-rank, two-rank, and four-rank records.
 7. The companion manifest binds the table input by SHA-256.  Every resolvable
    declared code, input, output, and artifact hash is recomputed; a missing or
    stale file blocks admission.

@@ -214,6 +214,7 @@ SOURCE_SPECS: tuple[SourceSpec, ...] = (
         run_records=(
             Path("EXP-DIST-001/run_record_np1.json"),
             Path("EXP-DIST-001/run_record_np2.json"),
+            Path("EXP-DIST-001/run_record_np4.json"),
         ),
     ),
     SourceSpec(
@@ -987,6 +988,7 @@ def _validate_run_record_identity(
 ) -> None:
     identifiers = record.get("identifiers")
     resources = record.get("resources")
+    solver = record.get("solver")
     if not isinstance(identifiers, Mapping) or identifiers.get("experiment") != spec.experiment_id:
         raise FinalizationError(
             f"run record {relative.as_posix()} belongs to experiment "
@@ -1006,13 +1008,35 @@ def _validate_run_record_identity(
                 f"run record {relative.as_posix()} does not identify the frozen EXP-MC-001 case"
             )
     elif spec.key == "distribution":
-        match = re.fullmatch(r"run_record_np([12])\.json", relative.name)
+        match = re.fullmatch(r"run_record_np(1|2|4)\.json", relative.name)
         expected_ranks = int(match.group(1)) if match else -1
+        expected_parameters = {
+            "problem": "hyperelasticity",
+            "mesh_source": "procedural",
+            "problem_build_mode": "rank_local",
+            "distribution_strategy": "overlap_p2p",
+            "assembly_backend": "coo_local",
+            "local_hessian_mode": "element",
+            "element_reorder_mode": "block_xyz",
+            "element_degree": 1,
+            "ksp_type": "preonly",
+            "pc_type": "lu",
+            "factor_solver_type": "mumps",
+            "use_near_nullspace": False,
+            "mesh_level": 1,
+            "canonical_twist_angle_rad": 0.15,
+            "repetitions": 3,
+            "ksp_rtol": 1.0e-12,
+            "linear_residual_tolerance": 1.0e-10,
+            "residual_scale_floor": 1.0,
+        }
         if (
             identifiers.get("case") != f"hyperelasticity-p1-l1-np{expected_ranks}"
             or identifiers.get("method") != "fixed-state-distributed-equivalence"
             or identifiers.get("route") != "rank-local-procedural-p2p-local-coo"
             or resources.get("ranks") != expected_ranks
+            or not isinstance(solver, Mapping)
+            or solver.get("parameters") != expected_parameters
         ):
             raise FinalizationError(
                 f"run record {relative.as_posix()} does not identify its frozen EXP-DIST-001 rank case"

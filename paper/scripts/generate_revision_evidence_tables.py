@@ -164,8 +164,8 @@ def _derivative_table(data: dict[str, dict[str, Any]]) -> str:
     dist = data["distribution"]["comparison"]["relative_errors"]
     derivative_rows.append(
         [
-            "Hyperelasticity, one/two ranks",
-            "2",
+            "Hyperelasticity, one/two/four ranks",
+            "3",
             _sci(max(dist["residual_relative"], dist["matrix_relative"])),
             _sci(dist["matrix_action_relative"]),
             "fixed state and canonical ordering",

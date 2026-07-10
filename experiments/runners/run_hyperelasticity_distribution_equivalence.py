@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
-"""Run the fixed-state HyperElasticity part of EXP-DIST-001.
+"""Run the fixed-state HyperElasticity rank-count gate from EXP-DIST-001.
 
-This pilot deliberately holds mesh source, construction, distribution, local
-assembly, state, direction, and linear solver fixed while changing only the
-MPI rank count.  It is a correctness experiment with descriptive phase
-timings; it is not a scaling benchmark and it does not exercise the nonlinear
-solved-endpoint gate from EXP-DIST-001.
+The controller holds mesh source, construction, distribution, local assembly,
+state, direction, and linear solver fixed while changing only the MPI rank
+count over the prescribed one-, two-, and four-rank levels.  It is a
+correctness experiment with descriptive phase timings; it is not a scaling
+benchmark and it does not exercise the nonlinear solved-endpoint gate from
+EXP-DIST-001.
 """
 
 from __future__ import annotations
@@ -61,6 +62,18 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 EXPERIMENT_ID = "EXP-DIST-001"
 CAMPAIGN_ID = "paper_revision_2026_07_10"
 CONTRACT_ID = "EXP-DIST-001-fixed-state-he-v1"
+RANK_COUNTS = (1, 2, 4)
+REFERENCE_RANK_COUNT = 1
+PUBLICATION_CONFIGURATION = {
+    "level": 1,
+    "angle": 0.15,
+    "repetitions": 3,
+    "ksp_rtol": 1.0e-12,
+    "linear_residual_tolerance": 1.0e-10,
+    "derivative_tolerance": 1.0e-8,
+    "solve_tolerance": 1.0e-8,
+    "residual_scale_floor": 1.0,
+}
 FACTOR_CONFIGURATION = {
     "problem": "hyperelasticity",
     "mesh_source": "procedural",
@@ -571,7 +584,7 @@ def _worker_payload(args: argparse.Namespace) -> None:
                     "version": 1,
                 },
                 "experiment": EXPERIMENT_ID,
-                "run_kind": "pilot",
+                "run_kind": str(args.run_kind),
                 "status": "passed"
                 if mesh_gate
                 and ksp_reason > 0
@@ -583,7 +596,9 @@ def _worker_payload(args: argparse.Namespace) -> None:
                     "mesh_level": int(args.level),
                     "canonical_twist_angle_rad": float(args.angle),
                     "repetitions": int(args.repetitions),
+                    "ksp_rtol": float(args.ksp_rtol),
                     "linear_residual_tolerance": float(args.linear_residual_tolerance),
+                    "residual_scale_floor": float(args.residual_scale_floor),
                 },
                 "problem": {
                     "total_dofs": int(coordinates.size),
@@ -633,8 +648,9 @@ def _worker_payload(args: argparse.Namespace) -> None:
                     "repetitions": repetitions,
                     "median_critical_s": median_timing,
                     "interpretation": (
-                        "descriptive local pilot only; MPI ranks share one workstation and "
-                        "PETSc matvec/factorization communication is embedded in phase totals"
+                        "descriptive local correctness timing only; MPI ranks share one "
+                        "workstation and PETSc matvec/factorization communication is "
+                        "embedded in phase totals"
                     ),
                 },
                 "ownership_by_rank": ownership_by_rank,
@@ -741,6 +757,60 @@ def compare_worker_outputs(
     }
 
 
+def aggregate_rank_comparisons(
+    comparisons: Mapping[str, Mapping[str, Any]],
+) -> dict[str, Any]:
+    """Combine the prescribed np1-reference comparisons without hiding a failure."""
+    expected = {f"np{rank}" for rank in RANK_COUNTS if rank != REFERENCE_RANK_COUNT}
+    if set(comparisons) != expected:
+        raise ValueError(
+            "rank comparisons must contain exactly "
+            f"{sorted(expected)}, got {sorted(comparisons)}"
+        )
+    ordered = [
+        comparisons[f"np{rank}"]
+        for rank in RANK_COUNTS
+        if rank != REFERENCE_RANK_COUNT
+    ]
+    first = ordered[0]
+    derivative_tolerance = float(first["derivative_tolerance"])
+    solve_tolerance = float(first["solve_tolerance"])
+    for comparison in ordered[1:]:
+        if float(comparison["derivative_tolerance"]) != derivative_tolerance:
+            raise ValueError("rank comparisons use different derivative tolerances")
+        if float(comparison["solve_tolerance"]) != solve_tolerance:
+            raise ValueError("rank comparisons use different solve tolerances")
+
+    def _all_boolean_block(name: str) -> dict[str, bool]:
+        keys = set(first[name])
+        if any(set(comparison[name]) != keys for comparison in ordered[1:]):
+            raise ValueError(f"rank comparisons expose inconsistent {name} keys")
+        return {
+            key: bool(all(bool(comparison[name][key]) for comparison in ordered))
+            for key in sorted(keys)
+        }
+
+    error_keys = set(first["relative_errors"])
+    if any(set(comparison["relative_errors"]) != error_keys for comparison in ordered[1:]):
+        raise ValueError("rank comparisons expose inconsistent relative-error keys")
+    return {
+        "algebraic_gate_passed": bool(
+            all(bool(comparison["algebraic_gate_passed"]) for comparison in ordered)
+        ),
+        "exact_topology_gates": _all_boolean_block("exact_topology_gates"),
+        "exact_object_gates": _all_boolean_block("exact_object_gates"),
+        "relative_errors": {
+            key: float(max(float(comparison["relative_errors"][key]) for comparison in ordered))
+            for key in sorted(error_keys)
+        },
+        "derivative_gates": _all_boolean_block("derivative_gates"),
+        "linear_solve_gates": _all_boolean_block("linear_solve_gates"),
+        "derivative_tolerance": derivative_tolerance,
+        "solve_tolerance": solve_tolerance,
+        "aggregation": "maximum error and conjunction of np1-vs-np2 and np1-vs-np4 gates",
+    }
+
+
 def build_worker_command(
     *,
     ranks: int,
@@ -751,6 +821,8 @@ def build_worker_command(
     repetitions: int,
     ksp_rtol: float,
     linear_residual_tolerance: float,
+    residual_scale_floor: float = 1.0,
+    run_kind: str = "pilot",
 ) -> list[str]:
     return [
         "mpiexec",
@@ -759,6 +831,8 @@ def build_worker_command(
         str(int(ranks)),
         sys.executable,
         str(Path(__file__).resolve()),
+        "--run-kind",
+        str(run_kind),
         "--worker",
         "--worker-json",
         str(output_json),
@@ -774,6 +848,8 @@ def build_worker_command(
         str(float(ksp_rtol)),
         "--linear-residual-tolerance",
         str(float(linear_residual_tolerance)),
+        "--residual-scale-floor",
+        str(float(residual_scale_floor)),
     ]
 
 
@@ -822,73 +898,70 @@ def _median_phase(worker: Mapping[str, Any], phase: str) -> float:
     return float(worker["timing"]["median_critical_s"][phase])
 
 
-def _phase_ratios(reference: Mapping[str, Any], candidate: Mapping[str, Any]) -> dict[str, Any]:
-    phases = {
-        "mesh_construction": (
-            float(reference["timing"]["mesh_construction_critical_s"]),
-            float(candidate["timing"]["mesh_construction_critical_s"]),
-        ),
-        "assembler_setup": (
-            float(reference["timing"]["assembler_setup_critical_s"]),
-            float(candidate["timing"]["assembler_setup_critical_s"]),
-        ),
-        "energy": (
-            _median_phase(reference, "energy_s"),
-            _median_phase(candidate, "energy_s"),
-        ),
-        "gradient": (
-            _median_phase(reference, "gradient_s"),
-            _median_phase(candidate, "gradient_s"),
-        ),
-        "assembly": (
-            _median_phase(reference, "assembly_s"),
-            _median_phase(candidate, "assembly_s"),
-        ),
-        "matrix_action": (
-            _median_phase(reference, "matrix_action_s"),
-            _median_phase(candidate, "matrix_action_s"),
-        ),
-        "instrumented_communication": (
-            _median_phase(reference, "instrumented_communication_s"),
-            _median_phase(candidate, "instrumented_communication_s"),
-        ),
-        "preconditioner_setup": (
-            float(reference["timing"]["preconditioner_setup_critical_s"]),
-            float(candidate["timing"]["preconditioner_setup_critical_s"]),
-        ),
-        "linear_solve": (
-            float(reference["timing"]["linear_solve_critical_s"]),
-            float(candidate["timing"]["linear_solve_critical_s"]),
-        ),
-    }
-    return {
-        phase: {
-            "np1_s": left,
-            "np2_s": right,
-            "np2_over_np1": float(right / left) if left > 0.0 else None,
+def _phase_ratios(workers: Mapping[int, Mapping[str, Any]]) -> dict[str, Any]:
+    if set(workers) != set(RANK_COUNTS):
+        raise ValueError(f"phase timings require workers for ranks {list(RANK_COUNTS)}")
+
+    def _value(worker: Mapping[str, Any], phase: str) -> float:
+        direct = {
+            "mesh_construction": "mesh_construction_critical_s",
+            "assembler_setup": "assembler_setup_critical_s",
+            "preconditioner_setup": "preconditioner_setup_critical_s",
+            "linear_solve": "linear_solve_critical_s",
         }
-        for phase, (left, right) in phases.items()
-    }
+        if phase in direct:
+            return float(worker["timing"][direct[phase]])
+        return _median_phase(worker, f"{phase}_s")
+
+    result: dict[str, Any] = {}
+    for phase in (
+        "mesh_construction",
+        "assembler_setup",
+        "energy",
+        "gradient",
+        "assembly",
+        "matrix_action",
+        "instrumented_communication",
+        "preconditioner_setup",
+        "linear_solve",
+    ):
+        reference = _value(workers[REFERENCE_RANK_COUNT], phase)
+        row: dict[str, float | None] = {"np1_s": reference}
+        for rank in RANK_COUNTS[1:]:
+            value = _value(workers[rank], phase)
+            row[f"np{rank}_s"] = value
+            row[f"np{rank}_over_np1"] = float(value / reference) if reference > 0.0 else None
+        result[phase] = row
+    return result
 
 
 def _render_report(payload: Mapping[str, Any]) -> str:
     comparison = payload["comparison"]
+    publication = payload.get("run_kind") == "publication"
+    evidence_text = (
+        "This clean managed execution is eligible for publication finalization as a "
+        "fixed-state correctness result. Its timings remain descriptive and are not "
+        "publication performance evidence."
+        if publication
+        else
+        "This local pilot is not publication evidence. Its timings are descriptive "
+        "diagnostics only."
+    )
     lines = [
-        "# EXP-DIST-001 Hyperelasticity Fixed-State Pilot",
+        "# EXP-DIST-001 Hyperelasticity Fixed-State Rank-Count Gate",
         "",
         f"Status: **{payload['status']}**.",
         "",
         "## Controlled design",
         "",
-        "The one- and two-rank runs use the same procedural P1 mesh definition, "
+        "The one-, two-, and four-rank runs use the same procedural P1 mesh definition, "
         "rank-local construction, block-XYZ canonical ordering, point-to-point overlap "
         "exchange, owned-row local COO assembly, twist state, deterministic direction, "
         "and MUMPS LU solve. Only the MPI ownership partition changes.",
         "",
-        "This is a dirty-worktree local pilot. The timings are descriptive diagnostics, "
-        "not publication performance evidence. Both rank counts share one workstation, "
-        "the sample is small, and communication inside PETSc matrix-vector products and "
-        "MUMPS is embedded rather than separately attributed.",
+        evidence_text,
+        "All rank counts share one workstation, and communication inside PETSc "
+        "matrix-vector products and MUMPS is embedded rather than separately attributed.",
         "",
         "## Algebraic gate",
         "",
@@ -899,16 +972,21 @@ def _render_report(payload: Mapping[str, Any]) -> str:
         "canonical-state, canonical-direction, and matrix-pattern checks use exact "
         "hashes or exact integer/FP64 arrays.",
         "",
-        "| Quantity | np1-vs-np2 relative error | Gate |",
-        "| --- | ---: | :---: |",
+        "| Comparison | Quantity | Relative error | Gate |",
+        "| --- | --- | ---: | :---: |",
     ]
-    for key, value in comparison["relative_errors"].items():
-        gate = (
-            comparison["linear_solve_gates"]["linear_correction"]
-            if key == "linear_correction_relative"
-            else comparison["derivative_gates"][key]
-        )
-        lines.append(f"| {key.replace('_', ' ')} | {float(value):.3e} | {gate} |")
+    for candidate in ("np2", "np4"):
+        rank_comparison = payload["rank_comparisons"][candidate]
+        for key, value in rank_comparison["relative_errors"].items():
+            gate = (
+                rank_comparison["linear_solve_gates"]["linear_correction"]
+                if key == "linear_correction_relative"
+                else rank_comparison["derivative_gates"][key]
+            )
+            lines.append(
+                f"| np1 vs {candidate} | {key.replace('_', ' ')} | "
+                f"{float(value):.3e} | {gate} |"
+            )
     lines.extend(
         [
             "",
@@ -918,16 +996,19 @@ def _render_report(payload: Mapping[str, Any]) -> str:
             "",
             "## Descriptive phase timings",
             "",
-            "| Phase | np1 (s) | np2 (s) | np2/np1 |",
-            "| --- | ---: | ---: | ---: |",
+            "| Phase | np1 (s) | np2 (s) | np2/np1 | np4 (s) | np4/np1 |",
+            "| --- | ---: | ---: | ---: | ---: | ---: |",
         ]
     )
     for phase, row in payload["descriptive_phase_timings"].items():
-        ratio = row["np2_over_np1"]
-        ratio_text = "n/a" if ratio is None else f"{float(ratio):.3f}"
+        ratio2 = row["np2_over_np1"]
+        ratio4 = row["np4_over_np1"]
+        ratio2_text = "n/a" if ratio2 is None else f"{float(ratio2):.3f}"
+        ratio4_text = "n/a" if ratio4 is None else f"{float(ratio4):.3f}"
         lines.append(
             f"| {phase.replace('_', ' ')} | {float(row['np1_s']):.6f} | "
-            f"{float(row['np2_s']):.6f} | {ratio_text} |"
+            f"{float(row['np2_s']):.6f} | {ratio2_text} | "
+            f"{float(row['np4_s']):.6f} | {ratio4_text} |"
         )
     lines.extend(
         [
@@ -937,14 +1018,12 @@ def _render_report(payload: Mapping[str, Any]) -> str:
             "",
             "## Remaining EXP-DIST work",
             "",
-            "1. Repeat from a clean commit with preregistered repetitions and pinned CPU "
-            "placement on separate resources.",
-            "2. Add four ranks and independently factor HDF5/procedural source, "
+            "1. Independently factor HDF5/procedural source, "
             "replicated/rank-local construction, all-gather/P2P exchange, and "
             "global/local COO assembly one factor at a time.",
-            "3. Run the calibrated nonlinear solved-endpoint gate and compare weighted "
+            "2. Run the calibrated nonlinear solved-endpoint gate and compare weighted "
             "states, independent residuals, energy, and physical observables.",
-            "4. Only after those gates pass may timing or memory advantages be interpreted.",
+            "3. Only after those gates pass may timing or memory advantages be interpreted.",
             "",
         ]
     )
@@ -968,7 +1047,15 @@ def _build_run_record(
     gate = bool(comparison["algebraic_gate_passed"])
     phase = worker["timing"]["median_critical_s"]
     memory = worker["resources"]
-    configuration_hash = _mapping_sha256(worker["configuration"])
+    configuration_hash = _mapping_sha256(
+        {
+            "worker_configuration": dict(worker["configuration"]),
+            "rank_counts": list(RANK_COUNTS),
+            "reference_rank_count": REFERENCE_RANK_COUNT,
+            "derivative_tolerance": float(comparison["derivative_tolerance"]),
+            "solve_tolerance": float(comparison["solve_tolerance"]),
+        }
+    )
     status = "success" if gate else "failure"
     correction_error = (
         0.0
@@ -982,7 +1069,7 @@ def _build_run_record(
     return {
         "schema": {"id": RUN_RECORD_SCHEMA_ID, "version": RUN_RECORD_SCHEMA_VERSION},
         "record_id": f"paper-revision-2026-07-10-exp-dist-001-he-np{rank_count}-r01",
-        "run_kind": "pilot",
+        "run_kind": str(preflight.run_kind),
         "identifiers": {
             "campaign": CAMPAIGN_ID,
             "experiment": EXPERIMENT_ID,
@@ -1010,9 +1097,9 @@ def _build_run_record(
         "termination": {
             "status": status,
             "reason": (
-                "one- and two-rank fixed-state algebraic gates passed"
+                "one-, two-, and four-rank fixed-state algebraic gates passed"
                 if gate
-                else "one or more one- versus two-rank algebraic gates failed"
+                else "one or more prescribed rank-count algebraic gates failed"
             ),
             "exit_code": 0 if gate else 2,
             "started_at_utc": str(worker["started_at_utc"]),
@@ -1061,7 +1148,11 @@ def _build_run_record(
             "globalization_s": None,
             "state_output_s": float(worker["timing"]["state_output_s"]),
             "total_s": float(worker["total_s"]),
-            "notes": "Descriptive dirty-worktree pilot; communication omits MPI embedded in PETSc matvec and MUMPS, and total excludes final JSON/log serialization.",
+            "notes": (
+                "Descriptive local correctness timing, not performance evidence; "
+                "communication omits MPI embedded in PETSc matvec and MUMPS, and "
+                "total excludes final JSON/log serialization."
+            ),
             "mesh_construction_s": float(worker["timing"]["mesh_construction_critical_s"]),
             "matrix_action_s": float(phase["matrix_action_s"]),
         },
@@ -1078,6 +1169,7 @@ def _build_run_record(
         "diagnostics": {
             "state": {
                 "hashes": dict(worker["algebraic_objects"]["state_hashes"]),
+                "topology_hashes": dict(worker["mesh_semantics"]["topology_hashes"]),
                 "twist_angle_rad": float(worker["configuration"]["canonical_twist_angle_rad"]),
             },
             "branch": {},
@@ -1113,7 +1205,7 @@ def _build_run_record(
             "working_directory": str(REPO_ROOT),
             "code_hashes": dict(code_hashes),
             "configuration_hashes": {CONTRACT_ID: configuration_hash},
-            "input_hashes": dict(worker["mesh_semantics"]["topology_hashes"]),
+            "input_hashes": {},
             "dirty_patch_sha256": dirty_patch_sha256,
             "seed": None,
             "deterministic_policy": "Closed-form mesh, twist state, direction by global canonical DOF index, fixed rank counts and FP64.",
@@ -1140,11 +1232,15 @@ def _controller(args: argparse.Namespace) -> None:
     )
     dirty_digest = _dirty_snapshot_sha256()
     root = Path(args.output_dir).resolve()
+    if str(args.run_kind) == "publication" and root.exists() and any(root.iterdir()):
+        raise FileExistsError(
+            f"publication output directory must be fresh and empty: {root}"
+        )
     raw_dir = root / "raw"
     raw_dir.mkdir(parents=True, exist_ok=True)
     commands: dict[int, list[str]] = {}
     paths: dict[int, dict[str, Path]] = {}
-    for ranks in (1, 2):
+    for ranks in RANK_COUNTS:
         paths[ranks] = {
             "json": raw_dir / f"hyperelasticity_np{ranks}.json",
             "npz": raw_dir / f"hyperelasticity_np{ranks}_arrays.npz",
@@ -1159,19 +1255,26 @@ def _controller(args: argparse.Namespace) -> None:
             repetitions=int(args.repetitions),
             ksp_rtol=float(args.ksp_rtol),
             linear_residual_tolerance=float(args.linear_residual_tolerance),
+            residual_scale_floor=float(args.residual_scale_floor),
+            run_kind=str(args.run_kind),
         )
         _run_worker(commands[ranks], paths[ranks]["log"], float(args.timeout_s))
 
-    workers = {rank: _load_json(paths[rank]["json"]) for rank in (1, 2)}
-    arrays = {rank: _load_npz(paths[rank]["npz"]) for rank in (1, 2)}
-    comparison = compare_worker_outputs(
-        workers[1],
-        workers[2],
-        arrays[1],
-        arrays[2],
-        derivative_tolerance=float(args.derivative_tolerance),
-        solve_tolerance=float(args.solve_tolerance),
-    )
+    workers = {rank: _load_json(paths[rank]["json"]) for rank in RANK_COUNTS}
+    arrays = {rank: _load_npz(paths[rank]["npz"]) for rank in RANK_COUNTS}
+    rank_comparisons = {
+        f"np{rank}": compare_worker_outputs(
+            workers[REFERENCE_RANK_COUNT],
+            workers[rank],
+            arrays[REFERENCE_RANK_COUNT],
+            arrays[rank],
+            derivative_tolerance=float(args.derivative_tolerance),
+            solve_tolerance=float(args.solve_tolerance),
+        )
+        for rank in RANK_COUNTS
+        if rank != REFERENCE_RANK_COUNT
+    }
+    comparison = aggregate_rank_comparisons(rank_comparisons)
     payload = {
         "schema": {
             "id": "fenics-nonlinear-energies.exp-dist-he-comparison",
@@ -1179,22 +1282,24 @@ def _controller(args: argparse.Namespace) -> None:
         },
         "experiment": EXPERIMENT_ID,
         "run_kind": str(args.run_kind),
+        "publication_evidence": False,
         "status": "passed" if comparison["algebraic_gate_passed"] else "failed",
         "controlled_factors": FACTOR_CONFIGURATION,
-        "varied_factor": {"name": "mpi_ranks", "levels": [1, 2]},
+        "varied_factor": {"name": "mpi_ranks", "levels": list(RANK_COUNTS)},
         "comparison": comparison,
-        "descriptive_phase_timings": _phase_ratios(workers[1], workers[2]),
+        "rank_comparisons": rank_comparisons,
+        "descriptive_phase_timings": _phase_ratios(workers),
         "nonlinear_solved_endpoint_gate": {
             "status": "not_run",
-            "reason": "stopping calibration and clean publication rerun remain prerequisites",
+            "reason": "stopping calibration remains a prerequisite",
         },
         "timing_claim_admissible": False,
         "timing_claim_blockers": [
-            "dirty-worktree pilot",
             "one local workstation with ranks sharing hardware",
-            "only three default repetitions",
+            "correctness repetitions are not a performance sampling design",
             "PETSc and MUMPS communication is embedded in phase totals",
             "nonlinear solved-endpoint gate not run",
+            "mesh source, construction, distribution, and assembly variants not factorized",
         ],
         "workers": {
             f"np{rank}": {
@@ -1203,7 +1308,7 @@ def _controller(args: argparse.Namespace) -> None:
                 "log": _artifact_label(paths[rank]["log"]),
                 "status": workers[rank]["status"],
             }
-            for rank in (1, 2)
+            for rank in RANK_COUNTS
         },
     }
     comparison_path = root / "distribution_equivalence.json"
@@ -1224,7 +1329,7 @@ def _controller(args: argparse.Namespace) -> None:
         _artifact_label(path): sha256_file(path) for path in source_paths if path.is_file()
     }
     run_record_paths: list[Path] = []
-    for rank in (1, 2):
+    for rank in RANK_COUNTS:
         record_path = root / f"run_record_np{rank}.json"
         record = _build_run_record(
             worker=workers[rank],
@@ -1257,15 +1362,21 @@ def _controller(args: argparse.Namespace) -> None:
         "experiment": EXPERIMENT_ID,
         "status": payload["status"],
         "publication_evidence": False,
-        "reason": "dirty-worktree local controlled pilot",
+        "run_kind": str(args.run_kind),
+        "reason": (
+            "managed clean raw correctness evidence pending finalization and admission"
+            if str(args.run_kind) == "publication"
+            else "local controlled pilot not eligible for publication"
+        ),
         "preflight": preflight.provenance_fields(),
         "dirty_patch_sha256": dirty_digest,
-        "commands": {f"np{rank}": commands[rank] for rank in (1, 2)},
+        "commands": {f"np{rank}": commands[rank] for rank in RANK_COUNTS},
         "artifacts": [
             {"path": _artifact_label(path), "sha256": sha256_file(path)}
             for path in artifact_paths
         ],
         "comparison": comparison,
+        "rank_comparisons": rank_comparisons,
         "recorded_at_utc": utc_now_iso(),
     }
     atomic_write_json(root / "pilot_manifest.json", manifest)
@@ -1295,12 +1406,34 @@ def _parser() -> argparse.ArgumentParser:
     return parser
 
 
+def _validate_publication_configuration(args: argparse.Namespace) -> None:
+    if str(args.run_kind) != "publication":
+        return
+    mismatches: list[str] = []
+    for name, expected in PUBLICATION_CONFIGURATION.items():
+        actual = getattr(args, name)
+        if isinstance(expected, int):
+            matches = int(actual) == expected
+        else:
+            matches = float(actual) == expected
+        if not matches:
+            mismatches.append(f"--{name.replace('_', '-')}={actual!r} (expected {expected!r})")
+    if mismatches:
+        raise ValueError(
+            "publication execution must use the frozen EXP-DIST-001 configuration: "
+            + "; ".join(mismatches)
+        )
+
+
 def main() -> None:
     args = _parser().parse_args()
     if int(args.level) < 1:
         raise ValueError("--level must be at least one")
     if int(args.repetitions) < 1:
         raise ValueError("--repetitions must be at least one")
+    if float(args.timeout_s) <= 0.0:
+        raise ValueError("--timeout-s must be positive")
+    _validate_publication_configuration(args)
     if args.worker:
         if args.worker_json is None or args.worker_npz is None:
             raise ValueError("worker mode requires --worker-json and --worker-npz")
@@ -1308,11 +1441,6 @@ def main() -> None:
         return
     if args.output_dir is None:
         raise ValueError("controller mode requires --output-dir")
-    if str(args.run_kind) != "pilot":
-        raise ValueError(
-            "This controller is a local pilot runner. Publication mode requires a clean, "
-            "preregistered execution environment and is intentionally not enabled here."
-        )
     _controller(args)
 
 

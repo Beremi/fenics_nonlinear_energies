@@ -23,6 +23,85 @@ CHECKER = SCRIPT_DIR / "check_revision_evidence_manifest.py"
 PILOT_ROOT = REPO_ROOT / "artifacts/reproduction/paper_revision_2026_07_10/pilots"
 
 
+def _assembled_derivative_block(degree: int) -> dict:
+    routes = {
+        name: {
+            "energy": 1.0,
+            "gradient_norm": 1.0,
+            "hessian_frobenius_norm": 1.0,
+            "hessian_symmetry_defect": 0.0,
+            "assembly_mode": f"{name}_test",
+            "hessian_nonzeros": 1,
+        }
+        for name in ("element_ad", "local_sfd", "constitutive_ad")
+    }
+    pairs = (
+        ("element_ad", "local_sfd"),
+        ("element_ad", "constitutive_ad"),
+        ("local_sfd", "constitutive_ad"),
+    )
+    return {
+        "status": "passed",
+        "case": {
+            "mesh_name": "hetero_ssr_L1",
+            "degree": degree,
+            "constraint_variant": "glued_bottom",
+            "lambda_target": 1.5,
+            "free_dofs": 3,
+            "elements": 1,
+            "state_definition": "deterministic test state",
+            "state_scale": 1.0e-8,
+            "state_norm": 1.0e-8,
+        },
+        "contract": {
+            "value_atol": 1.0e-12,
+            "value_rtol": 1.0e-12,
+            "gradient_norm_atol": 1.0e-10,
+            "gradient_norm_rtol": 1.0e-12,
+            "hessian_maximum_entry_atol": 1.0e-8,
+            "hessian_frobenius_rtol": 1.0e-12,
+            "hessian_symmetry_tolerance": 1.0e-12,
+            "branch_gate": "every quadrature point must satisfy trial_yield < 0",
+        },
+        "branch_diagnostics": {
+            "quadrature_points": 1,
+            "elastic_quadrature_points": 1,
+            "plastic_quadrature_points": 0,
+            "minimum_trial_yield": -1.0,
+            "maximum_trial_yield": -1.0,
+            "minimum_normalized_elastic_margin": 1.0,
+            "all_quadrature_points_strictly_elastic": True,
+            "interpretation": "test fixture",
+        },
+        "routes": routes,
+        "pairwise_comparisons": [
+            {
+                "left": left,
+                "right": right,
+                "energy_absolute_error": 0.0,
+                "energy_relative_error": 0.0,
+                "gradient_absolute_error": 0.0,
+                "gradient_relative_error": 0.0,
+                "hessian_csr_structure_equal": True,
+                "hessian_absolute_error": 0.0,
+                "hessian_relative_error": 0.0,
+                "hessian_maximum_entry_error": 0.0,
+                "passed": True,
+            }
+            for left, right in pairs
+        ],
+        "all_values_finite": True,
+        "all_hessians_symmetric_within_tolerance": True,
+        "algebraic_scope": {
+            "linear_solver_called": False,
+            "nonlinear_solver_called": False,
+            "ksp_tolerance_used_for_comparison": None,
+            "local_sfd_meaning": "exact JVP fixture",
+            "interpretation": "fixed-state algebraic comparison fixture",
+        },
+    }
+
+
 def _source_payload(spec: admission.EvidenceSpec, *, commit: str, producer_hash: str) -> dict:
     payload: dict = {
         "status": spec.terminal_statuses[0],
@@ -46,20 +125,50 @@ def _source_payload(spec: admission.EvidenceSpec, *, commit: str, producer_hash:
     elif spec.family == "hyperelastic_nonaffine":
         payload.update({"gates": {"all": True}, "levels": [{"status": "converged"}]})
     elif spec.family == "derivative":
+        smooth = spec.key == "smooth_derivatives"
         payload.update(
             {
                 "contract": {
-                    "route_relative_tolerance": 1.0e-8,
-                    "symmetry_tolerance": 1.0e-8,
-                    "centered_fd_tolerance": 1.0e-8,
-                },
-                "summary": {
-                    "maximum_hessian_relative_error": 0.0,
-                    "maximum_hessian_symmetry_defect": 0.0,
-                    "maximum_fd_hvp_error_at_gate": 0.0,
+                    "route_relative_tolerance": 1.0e-10 if smooth else 1.0e-9,
+                    "symmetry_tolerance": 1.0e-12 if smooth else 1.0e-10,
+                    "centered_fd_tolerance": 1.0e-7,
+                    "centered_fd_gate_index": 3 if smooth else 2,
+                    "centered_fd_gate_step": 3.0e-5 if smooth else 1.0e-7,
                 },
             }
         )
+        if smooth:
+            payload["summary"] = {
+                "cases": 5,
+                "maximum_gradient_relative_error": 0.0,
+                "maximum_hessian_relative_error": 0.0,
+                "maximum_hessian_symmetry_defect": 0.0,
+                "maximum_fd_gradient_error_at_gate": 0.0,
+                "maximum_fd_hvp_error_at_gate": 0.0,
+            }
+            payload["records"] = [{} for _ in range(5)]
+        else:
+            degree = {"p1_derivatives": 1, "p2_derivatives": 2, "p4_derivatives": 4}[
+                spec.key
+            ]
+            payload.update(
+                {
+                    "case": {"mesh_name": "hetero_ssr_L1", "degree": degree},
+                    "summary": {
+                        "states": 5,
+                        "maximum_residual_relative_error": 0.0,
+                        "maximum_hessian_relative_error": 0.0,
+                        "maximum_hessian_symmetry_defect": 0.0,
+                        "maximum_centered_fd_energy_error_at_gate": 0.0,
+                        "maximum_centered_fd_hvp_error_at_gate": 0.0,
+                        "all_states_branch_stable_at_fd_gate": True,
+                        "fixed_element_status": "passed",
+                        "assembled_route_equivalence_status": "passed",
+                    },
+                    "records": [{} for _ in range(5)],
+                    "assembled_route_equivalence": _assembled_derivative_block(degree),
+                }
+            )
     elif spec.family == "material_point":
         payload["summary"] = {
             "cpu_fp64_execution_passed": True,
@@ -307,6 +416,19 @@ def test_actual_shaped_numerical_payloads_pass_family_semantics_before_publicati
         if spec.family == "route_analysis":
             continue
         payload = json.loads((PILOT_ROOT / spec.relative_path).read_text(encoding="utf-8"))
+        if spec.key in {"p1_derivatives", "p2_derivatives", "p4_derivatives"}:
+            degree = {
+                "p1_derivatives": 1,
+                "p2_derivatives": 2,
+                "p4_derivatives": 4,
+            }[spec.key]
+            payload["summary"].update(
+                {
+                    "fixed_element_status": "passed",
+                    "assembled_route_equivalence_status": "passed",
+                }
+            )
+            payload["assembled_route_equivalence"] = _assembled_derivative_block(degree)
         payload["source_schema"] = {
             "id": f"fenics-nonlinear-energies.revision-source.{spec.key}",
             "version": 1,
@@ -322,7 +444,88 @@ def test_actual_shaped_numerical_payloads_pass_family_semantics_before_publicati
             },
         }
         errors = admission._semantic_gate_errors(spec, payload)
+        if spec.key == "distribution":
+            assert any("np4" in error or "[1, 2, 4]" in error for error in errors)
+            continue
         assert errors == [], f"{spec.key}: {errors}"
+
+
+def test_distribution_admission_requires_consistent_one_two_four_rank_gate() -> None:
+    spec = next(spec for spec in admission.EVIDENCE_SPECS if spec.key == "distribution")
+    assert spec.run_records == (
+        Path("EXP-DIST-001/run_record_np1.json"),
+        Path("EXP-DIST-001/run_record_np2.json"),
+        Path("EXP-DIST-001/run_record_np4.json"),
+    )
+    payload = json.loads((PILOT_ROOT / spec.relative_path).read_text(encoding="utf-8"))
+    payload["varied_factor"] = {"name": "mpi_ranks", "levels": [1, 2, 4]}
+    payload["rank_comparisons"] = {
+        "np2": copy.deepcopy(payload["comparison"]),
+        "np4": copy.deepcopy(payload["comparison"]),
+    }
+    payload["workers"]["np4"] = copy.deepcopy(payload["workers"]["np2"])
+    assert admission._distribution_errors(payload) == []
+
+    missing_np4 = copy.deepcopy(payload)
+    del missing_np4["rank_comparisons"]["np4"]
+    assert any("np4" in error for error in admission._distribution_errors(missing_np4))
+
+    inconsistent = copy.deepcopy(payload)
+    inconsistent["rank_comparisons"]["np4"]["relative_errors"][
+        "matrix_action_relative"
+    ] = 5.0e-9
+    assert any(
+        "rank-comparison maximum" in error
+        for error in admission._distribution_errors(inconsistent)
+    )
+
+    factor_drift = copy.deepcopy(payload)
+    factor_drift["controlled_factors"]["assembly_backend"] = "global_coo"
+    assert any(
+        "controlled_factors" in error
+        for error in admission._distribution_errors(factor_drift)
+    )
+
+
+def test_managed_derivative_admission_requires_complete_assembled_route_gate() -> None:
+    spec = next(
+        spec for spec in admission.EVIDENCE_SPECS if spec.key == "p1_derivatives"
+    )
+    payload = json.loads((PILOT_ROOT / spec.relative_path).read_text(encoding="utf-8"))
+    payload["source_schema"] = {
+        "id": f"fenics-nonlinear-energies.revision-source.{spec.key}",
+        "version": 1,
+    }
+    payload["publication_provenance"] = {
+        "schema_id": "fenics-nonlinear-energies.revision-publication-source-provenance",
+        "schema_version": 1,
+        "run_kind": "publication",
+        "experiment_commit": "a" * 40,
+        "producer": {
+            "path": spec.producer_path.as_posix(),
+            "sha256": admission.sha256_file(REPO_ROOT / spec.producer_path),
+        },
+    }
+    payload["summary"].update(
+        {
+            "fixed_element_status": "passed",
+            "assembled_route_equivalence_status": "not_requested",
+        }
+    )
+    payload["assembled_route_equivalence"] = None
+    errors = admission._semantic_gate_errors(spec, payload)
+    assert any("assembled_route_equivalence_status must be passed" in error for error in errors)
+    assert any("assembled_route_equivalence must be an object" in error for error in errors)
+
+    payload["summary"]["assembled_route_equivalence_status"] = "passed"
+    payload["assembled_route_equivalence"] = _assembled_derivative_block(1)
+    assert admission._semantic_gate_errors(spec, payload) == []
+
+    payload["assembled_route_equivalence"]["pairwise_comparisons"][0][
+        "hessian_maximum_entry_error"
+    ] = 1.0e-4
+    errors = admission._semantic_gate_errors(spec, payload)
+    assert any("fails Hessian entry gate" in error for error in errors)
 
 
 def test_complete_clean_finite_map_negative_result_is_publication_admissible() -> None:

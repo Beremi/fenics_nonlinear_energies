@@ -19,6 +19,85 @@ COMMIT = "a" * 40
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "paper/scripts"))
 
 
+def _assembled_derivative_block(degree: int) -> dict:
+    route_names = ("element_ad", "local_sfd", "constitutive_ad")
+    pairs = (
+        ("element_ad", "local_sfd"),
+        ("element_ad", "constitutive_ad"),
+        ("local_sfd", "constitutive_ad"),
+    )
+    return {
+        "status": "passed",
+        "case": {
+            "mesh_name": "hetero_ssr_L1",
+            "degree": degree,
+            "constraint_variant": "glued_bottom",
+            "lambda_target": 1.5,
+            "free_dofs": 3,
+            "elements": 1,
+            "state_definition": "deterministic test state",
+            "state_scale": 1.0e-8,
+            "state_norm": 1.0e-8,
+        },
+        "contract": {
+            "value_atol": 1.0e-12,
+            "value_rtol": 1.0e-12,
+            "gradient_norm_atol": 1.0e-10,
+            "gradient_norm_rtol": 1.0e-12,
+            "hessian_maximum_entry_atol": 1.0e-8,
+            "hessian_frobenius_rtol": 1.0e-12,
+            "hessian_symmetry_tolerance": 1.0e-12,
+            "branch_gate": "every quadrature point must satisfy trial_yield < 0",
+        },
+        "branch_diagnostics": {
+            "quadrature_points": 1,
+            "elastic_quadrature_points": 1,
+            "plastic_quadrature_points": 0,
+            "minimum_trial_yield": -1.0,
+            "maximum_trial_yield": -1.0,
+            "minimum_normalized_elastic_margin": 1.0,
+            "all_quadrature_points_strictly_elastic": True,
+            "interpretation": "test fixture",
+        },
+        "routes": {
+            name: {
+                "energy": 1.0,
+                "gradient_norm": 1.0,
+                "hessian_frobenius_norm": 1.0,
+                "hessian_symmetry_defect": 0.0,
+                "assembly_mode": f"{name}_test",
+                "hessian_nonzeros": 1,
+            }
+            for name in route_names
+        },
+        "pairwise_comparisons": [
+            {
+                "left": left,
+                "right": right,
+                "energy_absolute_error": 0.0,
+                "energy_relative_error": 0.0,
+                "gradient_absolute_error": 0.0,
+                "gradient_relative_error": 0.0,
+                "hessian_csr_structure_equal": True,
+                "hessian_absolute_error": 0.0,
+                "hessian_relative_error": 0.0,
+                "hessian_maximum_entry_error": 0.0,
+                "passed": True,
+            }
+            for left, right in pairs
+        ],
+        "all_values_finite": True,
+        "all_hessians_symmetric_within_tolerance": True,
+        "algebraic_scope": {
+            "linear_solver_called": False,
+            "nonlinear_solver_called": False,
+            "ksp_tolerance_used_for_comparison": None,
+            "local_sfd_meaning": "exact JVP fixture",
+            "interpretation": "fixed-state algebraic comparison fixture",
+        },
+    }
+
+
 def _raw_payload(spec: finalizer.SourceSpec, *, commit: str = COMMIT) -> dict:
     payload: dict = {
         "experiment_id": spec.experiment_id,
@@ -204,6 +283,10 @@ def _scientific_raw_payload(spec: finalizer.SourceSpec, *, commit: str) -> dict:
                 "maximum_fd_hvp_error_at_gate": 0.0,
             }
         else:
+            degree = {"p1_derivatives": 1, "p2_derivatives": 2, "p4_derivatives": 4}[
+                spec.key
+            ]
+            payload["case"] = {"mesh_name": "hetero_ssr_L1", "degree": degree}
             payload["summary"] = {
                 "states": 5,
                 "maximum_residual_relative_error": 0.0,
@@ -212,7 +295,10 @@ def _scientific_raw_payload(spec: finalizer.SourceSpec, *, commit: str) -> dict:
                 "maximum_centered_fd_energy_error_at_gate": 0.0,
                 "maximum_centered_fd_hvp_error_at_gate": 0.0,
                 "all_states_branch_stable_at_fd_gate": True,
+                "fixed_element_status": "passed",
+                "assembled_route_equivalence_status": "passed",
             }
+            payload["assembled_route_equivalence"] = _assembled_derivative_block(degree)
         payload["records"] = [{} for _ in range(5)]
     elif spec.key == "material_point":
         branches = ["elastic", "shear", "left_edge", "right_edge", "apex"]
@@ -249,51 +335,72 @@ def _scientific_raw_payload(spec: finalizer.SourceSpec, *, commit: str) -> dict:
             "minimum_normalized_active_branch_margin": 0.1,
         }
     elif spec.key == "distribution":
+        comparison = {
+            "derivative_gates": {
+                key: True
+                for key in (
+                    "energy_relative",
+                    "matrix_action_relative",
+                    "matrix_relative",
+                    "residual_relative",
+                )
+            },
+            "exact_object_gates": {
+                key: True for key in ("direction", "matrix_indices", "matrix_indptr", "state")
+            },
+            "exact_topology_gates": {
+                key: True
+                for key in (
+                    "affine_lift",
+                    "connectivity",
+                    "coordinates",
+                    "freedofs",
+                    "right_boundary_nodes",
+                )
+            },
+            "linear_solve_gates": {
+                key: True
+                for key in (
+                    "candidate_true_residual",
+                    "linear_correction",
+                    "reference_true_residual",
+                )
+            },
+            "algebraic_gate_passed": True,
+            "derivative_tolerance": 1.0e-8,
+            "solve_tolerance": 1.0e-8,
+            "relative_errors": {
+                "energy_relative": 0.0,
+                "matrix_action_relative": 0.0,
+                "matrix_relative": 0.0,
+                "residual_relative": 0.0,
+                "linear_correction_relative": 0.0,
+            },
+        }
         payload.update(
             {
-                "comparison": {
-                    "derivative_gates": {
-                        key: True
-                        for key in (
-                            "energy_relative",
-                            "matrix_action_relative",
-                            "matrix_relative",
-                            "residual_relative",
-                        )
-                    },
-                    "exact_object_gates": {
-                        key: True for key in ("direction", "matrix_indices", "matrix_indptr", "state")
-                    },
-                    "exact_topology_gates": {
-                        key: True
-                        for key in (
-                            "affine_lift",
-                            "connectivity",
-                            "coordinates",
-                            "freedofs",
-                            "right_boundary_nodes",
-                        )
-                    },
-                    "linear_solve_gates": {
-                        key: True
-                        for key in (
-                            "candidate_true_residual",
-                            "linear_correction",
-                            "reference_true_residual",
-                        )
-                    },
-                    "algebraic_gate_passed": True,
-                    "derivative_tolerance": 1.0e-8,
-                    "solve_tolerance": 1.0e-8,
-                    "relative_errors": {
-                        "energy_relative": 0.0,
-                        "matrix_action_relative": 0.0,
-                        "matrix_relative": 0.0,
-                        "residual_relative": 0.0,
-                        "linear_correction_relative": 0.0,
-                    },
+                "controlled_factors": {
+                    "problem": "hyperelasticity",
+                    "mesh_source": "procedural",
+                    "problem_build_mode": "rank_local",
+                    "distribution_strategy": "overlap_p2p",
+                    "assembly_backend": "coo_local",
+                    "local_hessian_mode": "element",
+                    "element_reorder_mode": "block_xyz",
+                    "element_degree": 1,
+                    "ksp_type": "preonly",
+                    "pc_type": "lu",
+                    "factor_solver_type": "mumps",
+                    "use_near_nullspace": False,
                 },
-                "workers": {"np1": {"status": "passed"}, "np2": {"status": "passed"}},
+                "varied_factor": {"name": "mpi_ranks", "levels": [1, 2, 4]},
+                "comparison": comparison,
+                "rank_comparisons": {"np2": comparison, "np4": comparison},
+                "workers": {
+                    "np1": {"status": "passed"},
+                    "np2": {"status": "passed"},
+                    "np4": {"status": "passed"},
+                },
             }
         )
     elif "quadrature" in spec.key:
@@ -478,6 +585,11 @@ def test_dirty_pilot_and_already_decorated_sources_are_never_relabelled() -> Non
 
 def test_strict_run_record_identity_rejects_cross_experiment_substitution() -> None:
     spec = finalizer.SOURCE_BY_KEY["distribution"]
+    assert spec.run_records == (
+        Path("EXP-DIST-001/run_record_np1.json"),
+        Path("EXP-DIST-001/run_record_np2.json"),
+        Path("EXP-DIST-001/run_record_np4.json"),
+    )
     relative = spec.run_records[0]
     record = _run_record(
         spec=spec,
@@ -492,6 +604,21 @@ def test_strict_run_record_identity_rejects_cross_experiment_substitution() -> N
     substituted["identifiers"]["experiment"] = "EXP-MC-001"
     with pytest.raises(finalizer.FinalizationError, match="not 'EXP-DIST-001'"):
         finalizer._validate_run_record_identity(spec, relative, substituted)
+
+    np4_relative = spec.run_records[-1]
+    np4 = _run_record(
+        spec=spec,
+        relative=np4_relative,
+        commit=COMMIT,
+        producer=spec.producer_path,
+        producer_hash="b" * 64,
+        record_id="distribution-4",
+    )
+    finalizer._validate_run_record_identity(spec, np4_relative, np4)
+    drifted = deepcopy(np4)
+    drifted["solver"]["parameters"]["canonical_twist_angle_rad"] = 0.2
+    with pytest.raises(finalizer.FinalizationError, match="frozen EXP-DIST-001"):
+        finalizer._validate_run_record_identity(spec, np4_relative, drifted)
 
 
 @pytest.mark.parametrize("path", ["../escape.json", "/absolute.json", "a/./b.json", "a//b.json"])
@@ -686,12 +813,33 @@ def _run_record(
         method = "jax-scalar-autodiff"
         route = "production-mohr-coulomb-scalar"
         ranks = 1
+        parameters = {}
     else:
         ranks = int(relative.stem.removeprefix("run_record_np"))
         experiment = "EXP-DIST-001"
         case = f"hyperelasticity-p1-l1-np{ranks}"
         method = "fixed-state-distributed-equivalence"
         route = "rank-local-procedural-p2p-local-coo"
+        parameters = {
+            "problem": "hyperelasticity",
+            "mesh_source": "procedural",
+            "problem_build_mode": "rank_local",
+            "distribution_strategy": "overlap_p2p",
+            "assembly_backend": "coo_local",
+            "local_hessian_mode": "element",
+            "element_reorder_mode": "block_xyz",
+            "element_degree": 1,
+            "ksp_type": "preonly",
+            "pc_type": "lu",
+            "factor_solver_type": "mumps",
+            "use_near_nullspace": False,
+            "mesh_level": 1,
+            "canonical_twist_angle_rad": 0.15,
+            "repetitions": 3,
+            "ksp_rtol": 1.0e-12,
+            "linear_residual_tolerance": 1.0e-10,
+            "residual_scale_floor": 1.0,
+        }
     return {
         "schema": {"id": RUN_RECORD_SCHEMA_ID, "version": RUN_RECORD_SCHEMA_VERSION},
         "record_id": record_id,
@@ -716,7 +864,7 @@ def _run_record(
         "solver": {
             "algorithm": "direct",
             "implementation": "fixture",
-            "parameters": {},
+            "parameters": parameters,
             "preconditioner": {},
             "stopping_contract": "fixture-v1",
         },

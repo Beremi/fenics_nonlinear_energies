@@ -142,6 +142,7 @@ EVIDENCE_SPECS: tuple[EvidenceSpec, ...] = (
         (
             Path("EXP-DIST-001/run_record_np1.json"),
             Path("EXP-DIST-001/run_record_np2.json"),
+            Path("EXP-DIST-001/run_record_np4.json"),
         ),
     ),
     EvidenceSpec(
@@ -1203,9 +1204,6 @@ def _material_point_errors(payload: Mapping[str, Any]) -> list[str]:
 
 def _distribution_errors(payload: Mapping[str, Any]) -> list[str]:
     errors: list[str] = []
-    comparison = payload.get("comparison")
-    if not isinstance(comparison, Mapping):
-        return ["distribution comparison must be an object"]
     derivative_keys = {
         "energy_relative",
         "matrix_action_relative",
@@ -1225,58 +1223,144 @@ def _distribution_errors(payload: Mapping[str, Any]) -> list[str]:
         "linear_correction",
         "reference_true_residual",
     }
-    for label, expected in (
-        ("derivative_gates", derivative_keys),
-        ("exact_object_gates", exact_object_keys),
-        ("exact_topology_gates", topology_keys),
-        ("linear_solve_gates", linear_keys),
-    ):
-        block = _exact_keys(
-            comparison.get(label), expected, f"comparison.{label}", errors
-        )
-        if block is not None and any(block.get(key) is not True for key in expected):
-            errors.append(f"every comparison.{label} gate must be true")
-    if comparison.get("algebraic_gate_passed") is not True:
-        errors.append("comparison.algebraic_gate_passed must be true")
-    derivative_tolerance = _number(
-        comparison.get("derivative_tolerance"),
-        "comparison.derivative_tolerance",
-        errors,
-        minimum=0.0,
-        maximum=1.0e-8,
-    )
-    solve_tolerance = _number(
-        comparison.get("solve_tolerance"),
-        "comparison.solve_tolerance",
-        errors,
-        minimum=0.0,
-        maximum=1.0e-8,
-    )
-    relative_keys = derivative_keys | {"linear_correction_relative"}
-    relative = _exact_keys(
-        comparison.get("relative_errors"),
-        relative_keys,
-        "comparison.relative_errors",
-        errors,
-    ) or {}
-    for field in derivative_keys:
-        _number(
-            relative.get(field),
-            f"relative_errors.{field}",
+    expected_factors = {
+        "problem": "hyperelasticity",
+        "mesh_source": "procedural",
+        "problem_build_mode": "rank_local",
+        "distribution_strategy": "overlap_p2p",
+        "assembly_backend": "coo_local",
+        "local_hessian_mode": "element",
+        "element_reorder_mode": "block_xyz",
+        "element_degree": 1,
+        "ksp_type": "preonly",
+        "pc_type": "lu",
+        "factor_solver_type": "mumps",
+        "use_near_nullspace": False,
+    }
+    if payload.get("controlled_factors") != expected_factors:
+        errors.append("controlled_factors must equal the frozen EXP-DIST-001 rank-count design")
+    if payload.get("varied_factor") != {"name": "mpi_ranks", "levels": [1, 2, 4]}:
+        errors.append("varied_factor must contain exactly mpi_ranks levels [1, 2, 4]")
+
+    def validate_comparison(value: Any, label: str) -> Mapping[str, Any] | None:
+        if not isinstance(value, Mapping):
+            errors.append(f"{label} must be an object")
+            return None
+        for block_name, expected in (
+            ("derivative_gates", derivative_keys),
+            ("exact_object_gates", exact_object_keys),
+            ("exact_topology_gates", topology_keys),
+            ("linear_solve_gates", linear_keys),
+        ):
+            block = _exact_keys(
+                value.get(block_name), expected, f"{label}.{block_name}", errors
+            )
+            if block is not None and any(block.get(key) is not True for key in expected):
+                errors.append(f"every {label}.{block_name} gate must be true")
+        if value.get("algebraic_gate_passed") is not True:
+            errors.append(f"{label}.algebraic_gate_passed must be true")
+        derivative_tolerance = _number(
+            value.get("derivative_tolerance"),
+            f"{label}.derivative_tolerance",
             errors,
             minimum=0.0,
-            maximum=derivative_tolerance,
+            maximum=1.0e-8,
         )
-    _number(
-        relative.get("linear_correction_relative"),
-        "relative_errors.linear_correction_relative",
-        errors,
-        minimum=0.0,
-        maximum=solve_tolerance,
+        solve_tolerance = _number(
+            value.get("solve_tolerance"),
+            f"{label}.solve_tolerance",
+            errors,
+            minimum=0.0,
+            maximum=1.0e-8,
+        )
+        relative_keys = derivative_keys | {"linear_correction_relative"}
+        relative = _exact_keys(
+            value.get("relative_errors"),
+            relative_keys,
+            f"{label}.relative_errors",
+            errors,
+        ) or {}
+        for field in derivative_keys:
+            _number(
+                relative.get(field),
+                f"{label}.relative_errors.{field}",
+                errors,
+                minimum=0.0,
+                maximum=derivative_tolerance,
+            )
+        _number(
+            relative.get("linear_correction_relative"),
+            f"{label}.relative_errors.linear_correction_relative",
+            errors,
+            minimum=0.0,
+            maximum=solve_tolerance,
+        )
+        return value
+
+    comparison = validate_comparison(payload.get("comparison"), "comparison")
+    rank_comparisons = _exact_keys(
+        payload.get("rank_comparisons"), {"np2", "np4"}, "rank_comparisons", errors
     )
-    workers = _exact_keys(payload.get("workers"), {"np1", "np2"}, "workers", errors)
+    parsed_rank_comparisons: dict[str, Mapping[str, Any]] = {}
+    if rank_comparisons is not None:
+        for key in ("np2", "np4"):
+            parsed = validate_comparison(rank_comparisons.get(key), f"rank_comparisons.{key}")
+            if parsed is not None:
+                parsed_rank_comparisons[key] = parsed
+
+    if comparison is not None and set(parsed_rank_comparisons) == {"np2", "np4"}:
+        candidates = [parsed_rank_comparisons["np2"], parsed_rank_comparisons["np4"]]
+        if comparison.get("algebraic_gate_passed") is not all(
+            candidate.get("algebraic_gate_passed") is True for candidate in candidates
+        ):
+            errors.append("comparison algebraic gate is inconsistent with rank_comparisons")
+        for block_name in (
+            "derivative_gates",
+            "exact_object_gates",
+            "exact_topology_gates",
+            "linear_solve_gates",
+        ):
+            aggregate_block = comparison.get(block_name)
+            if not isinstance(aggregate_block, Mapping):
+                continue
+            for key in aggregate_block:
+                expected = all(
+                    isinstance(candidate.get(block_name), Mapping)
+                    and candidate[block_name].get(key) is True
+                    for candidate in candidates
+                )
+                if aggregate_block.get(key) is not expected:
+                    errors.append(
+                        f"comparison.{block_name}.{key} is inconsistent with rank_comparisons"
+                    )
+        aggregate_relative = comparison.get("relative_errors")
+        if isinstance(aggregate_relative, Mapping):
+            for key, value in aggregate_relative.items():
+                candidate_values = [
+                    candidate.get("relative_errors", {}).get(key)
+                    for candidate in candidates
+                    if isinstance(candidate.get("relative_errors"), Mapping)
+                ]
+                if len(candidate_values) != 2 or any(
+                    isinstance(item, bool) or not isinstance(item, (int, float))
+                    for item in candidate_values
+                ):
+                    continue
+                expected = max(float(item) for item in candidate_values)
+                if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isclose(
+                    float(value), expected, rel_tol=0.0, abs_tol=0.0
+                ):
+                    errors.append(
+                        f"comparison.relative_errors.{key} is not the rank-comparison maximum"
+                    )
+        for tolerance in ("derivative_tolerance", "solve_tolerance"):
+            values = [comparison.get(tolerance), *(candidate.get(tolerance) for candidate in candidates)]
+            if any(value != values[0] for value in values[1:]):
+                errors.append(f"{tolerance} differs across rank comparisons")
+
+    workers = _exact_keys(payload.get("workers"), {"np1", "np2", "np4"}, "workers", errors)
     if workers is not None:
-        for key in ("np1", "np2"):
+        for key in ("np1", "np2", "np4"):
             if not isinstance(workers.get(key), Mapping) or workers[key].get("status") != "passed":
                 errors.append(f"workers.{key}.status must be passed")
     return errors
