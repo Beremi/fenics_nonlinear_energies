@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import math
 from pathlib import Path
 import subprocess
 from typing import Any
@@ -171,8 +172,41 @@ def _derivative_table(data: dict[str, dict[str, Any]]) -> str:
                 summary.get("maximum_centered_fd_hvp_error_at_gate", 0.0),
             )
         )
+        assembled = data[key].get("assembled_route_equivalence")
+        if assembled is None:
+            assembled_defect = "--"
+            scope = "fixed element"
+        else:
+            if not isinstance(assembled, dict) or assembled.get("status") != "passed":
+                raise ValueError("assembled derivative evidence must have passed status")
+            comparisons = assembled.get("pairwise_comparisons")
+            if not isinstance(comparisons, list) or len(comparisons) != 3:
+                raise ValueError(
+                    "assembled derivative evidence must contain three pairwise comparisons"
+                )
+            if any(
+                not isinstance(row, dict)
+                or row.get("hessian_csr_structure_equal") is not True
+                or row.get("passed") is not True
+                for row in comparisons
+            ):
+                raise ValueError("assembled derivative CSR comparison did not pass")
+            assembled_values = [
+                float(row["hessian_relative_error"]) for row in comparisons
+            ]
+            if any(not math.isfinite(value) or value < 0.0 for value in assembled_values):
+                raise ValueError("assembled derivative defects must be finite and nonnegative")
+            assembled_defect = _sci(max(assembled_values))
+            scope = "five element states; one assembled state"
         derivative_rows.append(
-            [label, str(state_count), _sci(route_defect), _sci(fd_defect), "fixed element"]
+            [
+                label,
+                str(state_count),
+                _sci(route_defect),
+                _sci(fd_defect),
+                assembled_defect,
+                scope,
+            ]
         )
     mc = data["material_point"]["summary"]
     derivative_rows.append(
@@ -181,6 +215,7 @@ def _derivative_table(data: dict[str, dict[str, Any]]) -> str:
             str(sum(int(value) for value in mc["branch_interior_counts"].values())),
             _sci(mc["maximum_hessian_symmetry_defect"]),
             _sci(mc["maximum_centered_hvp_error_at_gate"]),
+            "--",
             "five branch interiors; switches excluded",
         ]
     )
@@ -193,15 +228,16 @@ def _derivative_table(data: dict[str, dict[str, Any]]) -> str:
             str(len(rank_levels)),
             _sci(max(dist["residual_relative"], dist["matrix_relative"])),
             _sci(dist["matrix_action_relative"]),
+            "--",
             "fixed state and canonical ordering",
         ]
     )
     body = "\n".join(
         "    " + " & ".join(row) + r" \\" for row in derivative_rows
     )
-    return rf"""\begin{{tabularx}}{{\textwidth}}{{@{{}}>{{\RaggedRight\arraybackslash}}X >{{\Centering\arraybackslash}}p{{0.08\textwidth}} *{{2}}{{>{{\Centering\arraybackslash}}p{{0.16\textwidth}}}} >{{\RaggedRight\arraybackslash}}p{{0.28\textwidth}}@{{}}}}
+    return rf"""\begin{{tabularx}}{{\textwidth}}{{@{{}}>{{\RaggedRight\arraybackslash}}X >{{\Centering\arraybackslash}}p{{0.07\textwidth}} *{{3}}{{>{{\Centering\arraybackslash}}p{{0.13\textwidth}}}} >{{\RaggedRight\arraybackslash}}p{{0.22\textwidth}}@{{}}}}
   \toprule
-  Block & Cases & Route/symmetry defect & FD/action defect & Interpretation \\
+  Block & Element states & Element route/symmetry defect & FD/action defect & Assembled CSR defect & Scope \\
   \midrule
 {body}
   \bottomrule
@@ -233,7 +269,7 @@ def _quadrature_table(data: dict[str, dict[str, Any]]) -> str:
     body = "\n".join("    " + " & ".join(row) + r" \\" for row in rows)
     return rf"""\begin{{tabularx}}{{\textwidth}}{{@{{}}>{{\Centering\arraybackslash}}p{{0.10\textwidth}} *{{5}}{{>{{\Centering\arraybackslash}}X}}@{{}}}}
   \toprule
-  Space & $n_q$ & Relative energy difference & Solve-rule residual & Reference-rule residual & Relative tangent-action difference \\
+  Space & Degree-rule $n_q$ & Relative energy difference & Degree-rule residual & Reference-rule residual & Relative tangent-action difference \\
   \midrule
 {body}
   \bottomrule

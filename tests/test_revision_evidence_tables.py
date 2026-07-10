@@ -35,8 +35,11 @@ def test_revision_evidence_tables_are_generated_from_pilot_artifacts(tmp_path: P
     assert "Hyperelastic nonaffine" in verification
     assert "Hyperelasticity, one/two ranks & 2" in derivatives
     assert "Hyperelasticity, one/two/four ranks" not in derivatives
+    assert "Assembled CSR defect" in derivatives
     assert "P_2(L_1)" in quadrature
     assert "1.84e-08" in quadrature
+    assert "Degree-rule residual" in quadrature
+    assert "Solve-rule residual" not in quadrature
     assert "0/12" in evidence
     assert "0 diagnostic rows" in evidence
     assert "0 train; 0 holdout" in evidence
@@ -239,3 +242,32 @@ def test_diagnostic_status_table_never_uses_publication_admission_labels() -> No
     assert "Predictive cost selector & 48 train; 20 holdout & not admitted" in rendered
     assert "admitted finite map" not in rendered
     assert "admitted descriptive paired timing" not in rendered
+
+
+def test_derivative_table_exposes_managed_serial_assembled_gate() -> None:
+    keys = (
+        "smooth_derivatives",
+        "p1_derivatives",
+        "p2_derivatives",
+        "p4_derivatives",
+        "material_point",
+        "distribution",
+    )
+    inputs = revision_tables._input_paths(PILOT_ROOT)
+    data = {key: json.loads(inputs[key].read_text()) for key in keys}
+    data["p1_derivatives"]["assembled_route_equivalence"] = {
+        "status": "passed",
+        "pairwise_comparisons": [
+            {
+                "hessian_csr_structure_equal": True,
+                "hessian_relative_error": value,
+                "passed": True,
+            }
+            for value in (1.0e-12, 3.0e-11, 2.0e-10)
+        ],
+    }
+
+    rendered = revision_tables._derivative_table(data)
+
+    assert r"\num{2.00e-10}" in rendered
+    assert "five element states; one assembled state" in rendered
