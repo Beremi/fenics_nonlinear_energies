@@ -3,6 +3,7 @@ from __future__ import annotations
 import hashlib
 import json
 from pathlib import Path
+import shutil
 from types import SimpleNamespace
 
 import pytest
@@ -27,7 +28,11 @@ def _local_campaign(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
         p4_policy="local",
         confirm_p4_local_feasible=True,
     )
-    plan_path = tmp_path / "local_plan.json"
+    local_root = tmp_path / "local"
+    local_root.mkdir(parents=True)
+    (local_root / "receipts").mkdir()
+    (local_root / "logs").mkdir()
+    plan_path = local_root / "plan.json"
     plan_path.write_text(json.dumps(plan) + "\n", encoding="utf-8")
     rows = {row["row_id"]: row for row in plan["rows"]}
     selected_ids = {
@@ -57,6 +62,40 @@ def _local_campaign(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
         }
         for group, row_id in selected_ids.items()
     }
+    plan_sha256 = reviewed.sha256_file(plan_path)
+    for row_id in selected_ids.values():
+        row = rows[row_id]
+        output_hashes: dict[str, str] = {}
+        for raw in row["expected_outputs"]:
+            output = Path(raw)
+            output.parent.mkdir(parents=True, exist_ok=True)
+            if output.suffix == ".json":
+                output.write_text("{}\n", encoding="utf-8")
+            else:
+                output.write_bytes(f"local-state-{row_id}".encode())
+            output_hashes[str(output.resolve())] = reviewed.sha256_file(output)
+        log_root = local_root / "logs" / row_id
+        log_root.mkdir(parents=True)
+        stdout = log_root / "stdout.log"
+        stderr = log_root / "stderr.log"
+        stdout.write_text("fixture\n", encoding="utf-8")
+        stderr.write_text("", encoding="utf-8")
+        (local_root / "receipts" / f"{row_id}.json").write_text(
+            json.dumps(
+                {
+                    "schema_id": local.RECEIPT_SCHEMA_ID,
+                    "schema_version": local.RECEIPT_SCHEMA_VERSION,
+                    "row_id": row_id,
+                    "status": "completed",
+                    "plan_sha256": plan_sha256,
+                    "command": row["command"],
+                    "output_hashes": output_hashes,
+                    "logs": {"stdout": str(stdout), "stderr": str(stderr)},
+                }
+            )
+            + "\n",
+            encoding="utf-8",
+        )
     deferred = [
         {
             "row_id": row["row_id"],
@@ -88,7 +127,10 @@ def _local_campaign(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
         },
         "deferred_cluster_computations": deferred,
         "selected_local_policies": selected,
-        "endpoints": {row_id: {"status": "endpoint_admitted"} for row_id in selected_ids.values()},
+        "endpoints": {
+            row_id: {"status": "endpoint_admitted", "row_id": row_id}
+            for row_id in selected_ids.values()
+        },
     }
     path = tmp_path / "local_analysis.json"
     path.write_text(json.dumps(analysis) + "\n", encoding="utf-8")
@@ -237,6 +279,12 @@ def test_preparation_freezes_exact_seven_rows_and_never_contacts_scheduler(
     p4 = [case for case in plan["cases"] if case["case_id"].startswith("p3d_p4_")]
     assert len(p4) == 4 and {case["total_ranks"] for case in p4} == {32}
     assert all(case["expected_outputs"] == ["result.json", "state.npz"] for case in plan["cases"])
+    references = plan["external_bindings"]["metadata"]["local_reference_artifacts"]
+    assert set(references) == {"gl_l6", "he_l2_nonlinear", "p3d_p2_nonlinear"}
+    assert all(
+        set(reference["artifacts"]) == {"result", "state", "receipt", "stdout", "stderr"}
+        for reference in references.values()
+    )
     assert submitter.submit(root, execute=False, confirmed=False)["status"] == "dry_run_no_scheduler_contact"
 
 
@@ -253,6 +301,13 @@ def test_offline_archive_settlement_and_final_merge_are_hash_bound(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     root = _prepare(tmp_path, monkeypatch, environment=True)
+    for external in (tmp_path / "local", tmp_path / "local_analysis.json"):
+        if external.is_dir():
+            shutil.rmtree(external)
+        else:
+            external.unlink()
+    assert not (tmp_path / "local").exists()
+    assert not (tmp_path / "local_analysis.json").exists()
     index = _fake_submitted_archive(root)
     settled = finalizer.finalize(root, offline_index=index)
     digest = settled["archive_checksums"]["sha256"]

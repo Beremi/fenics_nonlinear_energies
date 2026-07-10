@@ -98,6 +98,11 @@ same solver, Riesz metric, mesh, rule, and tolerance arguments used locally.
 Preparation writes a relocatable plan, source freeze, exact shell-quoted
 commands, and an offline-preflight receipt. Without reviewed environment setup
 and lock files it is deliberately marked `submission_admissible: false`.
+For each of the three MPI comparisons it also copies and hash-binds the exact
+selected local result JSON, state NPZ, completion receipt, and receipt logs.
+Final comparison reparses those archive-confined copies; it neither follows nor
+reads the original workstation paths. The local originals may therefore be
+removed before copy-back adjudication without changing the decision.
 
 ```bash
 ./.venv/bin/python experiments/runners/prepare_exp_stop_001_karolina.py \

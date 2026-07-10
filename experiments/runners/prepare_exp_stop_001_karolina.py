@@ -103,6 +103,70 @@ def _local_inputs(analysis_path: Path) -> tuple[dict[str, Any], Path, dict[str, 
     return analysis, plan_path, plan
 
 
+def _local_reference_bindings(
+    analysis: Mapping[str, Any], plan_path: Path, plan: Mapping[str, Any]
+) -> tuple[dict[str, dict[str, Any]], dict[str, Path]]:
+    output_root = Path(str(plan["output_root"])).resolve()
+    selected = analysis["selected_local_policies"]
+    metadata: dict[str, dict[str, Any]] = {}
+    bindings: dict[str, Path] = {}
+    for group in (value[0] for value in MPI_GROUPS.values()):
+        row_id = str(selected[group]["row_id"])
+        row = _row(plan, row_id)
+        status, receipt, errors = local._receipt_for_row(
+            plan_path=plan_path,
+            output_root=output_root,
+            row=row,
+        )
+        if status != "completed" or not isinstance(receipt, dict):
+            raise reviewed.CampaignContractError(
+                f"selected local reference {row_id} is not hash-complete: {errors}"
+            )
+        receipt_path = output_root / "receipts" / f"{row_id}.json"
+        result_path = local._result_json_path(row)
+        state_path = local._state_npz_path(row)
+        log_record = receipt.get("logs")
+        if not isinstance(log_record, dict) or set(log_record) != {"stdout", "stderr"}:
+            raise reviewed.CampaignContractError(
+                f"selected local reference {row_id} has no complete log record"
+            )
+        artifacts = {
+            "result": result_path,
+            "state": state_path,
+            "receipt": receipt_path,
+            "stdout": Path(str(log_record["stdout"])).resolve(),
+            "stderr": Path(str(log_record["stderr"])).resolve(),
+        }
+        archived: dict[str, dict[str, str]] = {}
+        for kind, source in artifacts.items():
+            if not source.is_file() or source.is_symlink():
+                raise reviewed.CampaignContractError(
+                    f"selected local reference artifact is missing: {row_id}/{kind}"
+                )
+            label = f"local_ref_{group}_{kind}"
+            bindings[label] = source
+            archived[kind] = {
+                "binding_label": label,
+                "archive_path": f"bound_inputs/{label}{source.suffix}",
+                "sha256": reviewed.sha256_file(source),
+            }
+        output_hashes = receipt.get("output_hashes")
+        if (
+            not isinstance(output_hashes, Mapping)
+            or output_hashes.get(str(result_path)) != archived["result"]["sha256"]
+            or output_hashes.get(str(state_path)) != archived["state"]["sha256"]
+        ):
+            raise reviewed.CampaignContractError(
+                f"selected local receipt/output hashes disagree for {row_id}"
+            )
+        metadata[group] = {
+            "row_id": row_id,
+            "plan_sha256": reviewed.sha256_file(plan_path),
+            "artifacts": archived,
+        }
+    return metadata, bindings
+
+
 def _row(plan: Mapping[str, Any], row_id: str) -> dict[str, Any]:
     matches = [row for row in plan["rows"] if row["row_id"] == row_id]
     if len(matches) != 1:
@@ -206,6 +270,9 @@ def build_cases(analysis: Mapping[str, Any], plan: Mapping[str, Any]) -> list[di
 
 def prepare(args: argparse.Namespace) -> dict[str, Any]:
     analysis, plan_path, plan = _local_inputs(args.local_analysis)
+    references, reference_bindings = _local_reference_bindings(
+        analysis, plan_path, plan
+    )
     cases = build_cases(analysis, plan)
     source_commit = str(plan["source"]["commit"])
     current = reviewed.git_metadata()
@@ -237,8 +304,13 @@ def prepare(args: argparse.Namespace) -> dict[str, Any]:
             "local_terminal_decision": analysis["terminal_decision"],
             "required_local_rows": analysis["counts"]["required_local"],
             "deferred_cluster_rows": 7,
+            "local_reference_artifacts": references,
         },
-        bound_inputs={"local_analysis": args.local_analysis, "local_plan": plan_path},
+        bound_inputs={
+            "local_analysis": args.local_analysis,
+            "local_plan": plan_path,
+            **reference_bindings,
+        },
     )
 
 
@@ -260,6 +332,33 @@ def preflight(root: Path) -> dict[str, Any]:
         }
         for case in plan["cases"]
     }
+    metadata = plan["external_bindings"]["metadata"]
+    references = metadata.get("local_reference_artifacts")
+    archived_inputs = plan["external_bindings"]["archived_inputs"]
+    if not isinstance(references, dict) or set(references) != {
+        value[0] for value in MPI_GROUPS.values()
+    }:
+        raise reviewed.CampaignContractError("prepared STOP local references are incomplete")
+    for group, reference in references.items():
+        if not isinstance(reference, dict) or set(reference) != {
+            "row_id", "plan_sha256", "artifacts"
+        }:
+            raise reviewed.CampaignContractError(f"local reference {group} is malformed")
+        artifacts = reference["artifacts"]
+        if not isinstance(artifacts, dict) or set(artifacts) != {
+            "result", "state", "receipt", "stdout", "stderr"
+        }:
+            raise reviewed.CampaignContractError(f"local reference {group} is incomplete")
+        for artifact in artifacts.values():
+            binding = archived_inputs.get(artifact.get("binding_label"))
+            if (
+                not isinstance(binding, dict)
+                or binding.get("path") != artifact.get("archive_path")
+                or binding.get("sha256") != artifact.get("sha256")
+            ):
+                raise reviewed.CampaignContractError(
+                    f"local reference {group} does not match its archived input"
+                )
     return {**result, "reviewed_resources": resources, "node_hour_ceiling": 23.0}
 
 
@@ -294,6 +393,58 @@ def _cluster_row(case: Mapping[str, Any], template: Mapping[str, Any], job_root:
         row["reference_row"] = (
             case["case_id"] == case["scientific_contract"]["reference_case_id"]
         )
+    return row
+
+
+def _archived_reference_row(
+    *, root: Path, cluster_plan: Mapping[str, Any], local_plan: Mapping[str, Any], group: str
+) -> dict[str, Any]:
+    references = cluster_plan["external_bindings"]["metadata"][
+        "local_reference_artifacts"
+    ]
+    reference = references[group]
+    row_id = str(reference["row_id"])
+    template = _row(local_plan, row_id)
+    artifacts = reference["artifacts"]
+    paths: dict[str, Path] = {}
+    for kind, record in artifacts.items():
+        path = (root / str(record["archive_path"])).resolve()
+        try:
+            path.relative_to(root)
+        except ValueError as exc:
+            raise reviewed.CampaignContractError(
+                f"archived local reference {group}/{kind} escapes the campaign"
+            ) from exc
+        if not path.is_file() or path.is_symlink() or reviewed.sha256_file(path) != record["sha256"]:
+            raise reviewed.CampaignContractError(
+                f"archived local reference {group}/{kind} is missing or stale"
+            )
+        paths[kind] = path
+    receipt = _read(paths["receipt"])
+    if (
+        receipt.get("schema_id") != local.RECEIPT_SCHEMA_ID
+        or receipt.get("schema_version") != local.RECEIPT_SCHEMA_VERSION
+        or receipt.get("row_id") != row_id
+        or receipt.get("status") != "completed"
+        or receipt.get("command") != template.get("command")
+        or receipt.get("plan_sha256") != reference["plan_sha256"]
+    ):
+        raise reviewed.CampaignContractError(
+            f"archived local reference receipt is invalid for {group}"
+        )
+    output_hashes = receipt.get("output_hashes")
+    original_result = str(local._result_json_path(template))
+    original_state = str(local._state_npz_path(template))
+    if (
+        not isinstance(output_hashes, dict)
+        or output_hashes.get(original_result) != reviewed.sha256_file(paths["result"])
+        or output_hashes.get(original_state) != reviewed.sha256_file(paths["state"])
+    ):
+        raise reviewed.CampaignContractError(
+            f"archived local receipt/output hashes disagree for {group}"
+        )
+    row = deepcopy(template)
+    row["expected_outputs"] = [str(paths["result"]), str(paths["state"])]
     return row
 
 
@@ -357,11 +508,20 @@ def adjudicate(root: Path, *, expected_checksum: str) -> dict[str, Any]:
         scientific = next(
             case["scientific_contract"] for case in cluster_plan["cases"] if case["case_id"] == case_id
         )
-        reference_id = str(scientific["local_reference_row_id"])
-        reference_row = templates[reference_id]
-        reference_endpoint = local_analysis["endpoints"].get(reference_id)
-        if not isinstance(reference_endpoint, dict):
-            raise reviewed.CampaignContractError(f"local endpoint {reference_id} is absent")
+        group = str(scientific["local_group_id"])
+        reference_row = _archived_reference_row(
+            root=root,
+            cluster_plan=cluster_plan,
+            local_plan=local_plan,
+            group=group,
+        )
+        reference_id = str(reference_row["row_id"])
+        reference_endpoint = _endpoint(reference_row)
+        recorded_endpoint = local_analysis["endpoints"].get(reference_id)
+        if not isinstance(recorded_endpoint, dict) or reference_endpoint != recorded_endpoint:
+            raise reviewed.CampaignContractError(
+                f"reparsed archived local endpoint differs from analysis for {reference_id}"
+            )
         comparisons[case_id] = _compare(
             rows[case_id], endpoints[case_id], reference_row, reference_endpoint, analysis_contract
         )
