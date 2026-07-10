@@ -57,7 +57,9 @@ The publication sequence is deliberately non-overwriting:
 ./.venv/bin/python experiments/runners/run_exp_stop_001_local_calibration.py \
   prepare \
   --run-kind publication \
-  --output-root artifacts/reproduction/exp_stop_001_local_<commit>
+  --output-root artifacts/reproduction/exp_stop_001_local_<commit> \
+  --p4-policy local \
+  --confirm-p4-local-feasible
 
 ./.venv/bin/python experiments/runners/run_exp_stop_001_local_calibration.py \
   execute \

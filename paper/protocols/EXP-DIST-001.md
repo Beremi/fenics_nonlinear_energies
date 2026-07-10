@@ -139,15 +139,31 @@ adjudicator fails on a missing route/rank, incomplete ownership, changed
 branch diagnostics, nonidentical canonical state, or an action/matrix error
 outside the frozen absolute-and-relative gate.
 
-Prepare the immutable plan without executing route processes:
+The scheduler-free review command writes an immutable 36-process plan without
+executing route processes:
 
 ```bash
+HEAD=$(git rev-parse HEAD)
 ./.venv/bin/python experiments/runners/run_local_distributed_route_verification.py \
   --run-kind publication \
-  --out-root artifacts/reproduction/<clean-campaign>/EXP-DIST-001-colored
+  --expected-commit "$HEAD" \
+  --out-root artifacts/reproduction/<clean-campaign>/EXP-DIST-001-colored-review
 ```
 
-Execution is a separate explicit action and requires both `--execute` and
-`LOCAL_DISTRIBUTED_RUN_CONFIRMED=YES`. It has not been performed as part of
-the implementation change. Its measurements are correctness diagnostics and
-cannot support a timing or scaling claim.
+The review root is preparation-only and cannot be reused for execution. A
+publication run creates a second fresh root and repeats the frozen plan before
+launching it:
+
+```bash
+HEAD=$(git rev-parse HEAD)
+LOCAL_DISTRIBUTED_RUN_CONFIRMED=YES \
+./.venv/bin/python experiments/runners/run_local_distributed_route_verification.py \
+  --run-kind publication \
+  --expected-commit "$HEAD" \
+  --out-root artifacts/reproduction/<clean-campaign>/EXP-DIST-001-colored \
+  --execute
+```
+
+The driver rejects a dirty worktree, a nonmatching full commit, or an output
+root outside `artifacts/reproduction`. Its measurements are correctness
+diagnostics and cannot support a timing or scaling claim.
