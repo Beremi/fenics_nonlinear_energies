@@ -99,10 +99,78 @@ def _maybe_float(value: Any) -> float | None:
     return float(value)
 
 
+def _topology_volume_units(payload: dict[str, Any]) -> dict[str, float | int]:
+    params = dict(payload.get("parameters", {}))
+    final = dict(payload.get("final_metrics", {}))
+    area = float(params.get("length", 1.0)) * float(params.get("height", 1.0))
+    version = int(params.get("volume_semantics_version", 1))
+    raw_final = float(final["final_volume_fraction"])
+    if version >= 2:
+        target_fraction = float(params["target_normalized_fraction"])
+        target_measure = float(params["target_material_measure"])
+        initial_fraction = float(params["initial_normalized_fraction"])
+        final_fraction = raw_final
+        final_measure = float(final.get("final_material_measure", raw_final * area))
+    elif str(payload.get("backend", "")) == "serial":
+        target_fraction = float(params["volume_fraction_target"])
+        target_measure = target_fraction * area
+        initial_fraction = target_fraction
+        final_fraction = raw_final
+        final_measure = raw_final * area
+    else:
+        target_measure = float(params["volume_fraction_target"])
+        target_fraction = target_measure / area
+        initial_fraction = 0.4
+        final_measure = raw_final
+        final_fraction = raw_final / area
+    return {
+        "volume_semantics_version": version,
+        "domain_area": area,
+        "target_normalized_fraction": target_fraction,
+        "target_material_measure": target_measure,
+        "initial_normalized_fraction": initial_fraction,
+        "final_normalized_fraction": final_fraction,
+        "final_material_measure": final_measure,
+    }
+
+
+def _topology_parallel_row_units(
+    row: dict[str, Any],
+    *,
+    raw_final_key: str,
+) -> dict[str, float | int]:
+    version = int(float(row.get("volume_semantics_version") or 1))
+    area = float(row.get("domain_area") or 2.0)
+    raw_final = float(row[raw_final_key])
+    final_fraction = float(
+        row.get("final_normalized_fraction")
+        or (raw_final if version >= 2 else raw_final / area)
+    )
+    final_measure = float(
+        row.get("final_material_measure")
+        or (raw_final * area if version >= 2 else raw_final)
+    )
+    target_measure = float(row.get("target_material_measure") or 0.4)
+    return {
+        "volume_semantics_version": version,
+        "domain_area": area,
+        "target_normalized_fraction": float(
+            row.get("target_normalized_fraction") or target_measure / area
+        ),
+        "target_material_measure": target_measure,
+        "initial_normalized_fraction": float(
+            row.get("initial_normalized_fraction") or 0.4
+        ),
+        "final_normalized_fraction": final_fraction,
+        "final_material_measure": final_measure,
+    }
+
+
 def _load_topology_scaling_rows(path: Path) -> list[dict[str, Any]]:
     rows: list[dict[str, Any]] = []
     with path.open(encoding="utf-8", newline="") as handle:
         for row in csv.DictReader(handle):
+            units = _topology_parallel_row_units(row, raw_final_key="final_volume")
             rows.append(
                 {
                     "ranks": int(row["ranks"]),
@@ -110,6 +178,7 @@ def _load_topology_scaling_rows(path: Path) -> list[dict[str, Any]]:
                     "outer_iterations": int(row["outer_iterations"]),
                     "final_p_penal": float(row["final_p"]),
                     "final_volume_fraction": float(row["final_volume"]),
+                    **units,
                     "final_compliance": float(row["final_compliance"]),
                     "wall_time_s": float(row["wall_time"]),
                     "solve_time_s": float(row["solve_time"]),
@@ -639,6 +708,8 @@ def _sync_topology(campaign_root: Path) -> list[str]:
     direct_rows = read_csv_rows(topo_root / "direct_comparison" / "direct_comparison.csv")
     parallel_final = read_json(parallel_final_json)
     serial = read_json(serial_json)
+    parallel_units = _topology_volume_units(parallel_final)
+    serial_units = _topology_volume_units(serial)
     direct_lookup = {
         (row["implementation"], int(row["mpi_ranks"])): row
         for row in direct_rows
@@ -649,10 +720,19 @@ def _sync_topology(campaign_root: Path) -> list[str]:
     serial_outer = int(serial["final_metrics"]["outer_iterations"])
     serial_compliance = float(serial["final_metrics"]["final_compliance"])
     serial_volume = float(serial["final_metrics"]["final_volume_fraction"])
+    serial_normalized_fraction = float(serial_units["final_normalized_fraction"])
+    serial_material_measure = float(serial_units["final_material_measure"])
     serial_wall = float(serial["time"])
     if serial_direct is not None:
         serial_compliance = float(serial_direct["median_final_compliance"])
         serial_volume = float(serial_direct["median_final_volume_fraction"])
+        serial_normalized_fraction = float(
+            serial_direct.get("median_final_normalized_fraction") or serial_volume
+        )
+        serial_material_measure = float(
+            serial_direct.get("median_final_material_measure")
+            or serial_normalized_fraction * float(serial_units["domain_area"])
+        )
         serial_wall = float(serial_direct["median_wall_time_s"])
 
     validated_scaling_rows: list[dict[str, Any]] = []
@@ -663,6 +743,7 @@ def _sync_topology(campaign_root: Path) -> list[str]:
             updated["outer_iterations"] = int(parallel_final["final_metrics"]["outer_iterations"])
             updated["final_p_penal"] = float(parallel_final["final_metrics"]["final_p_penal"])
             updated["final_volume_fraction"] = float(parallel_final["final_metrics"]["final_volume_fraction"])
+            updated.update(parallel_units)
             updated["final_compliance"] = float(parallel_final["final_metrics"]["final_compliance"])
             updated["wall_time_s"] = float(parallel_final["time"])
             updated["solve_time_s"] = float(parallel_final["time"] - parallel_final.get("setup_time", 0.0))
@@ -684,6 +765,9 @@ def _sync_topology(campaign_root: Path) -> list[str]:
             "outer_iterations": serial_outer,
             "final_compliance": serial_compliance,
             "final_volume_fraction": serial_volume,
+            **serial_units,
+            "final_normalized_fraction": serial_normalized_fraction,
+            "final_material_measure": serial_material_measure,
             "wall_time_s": serial_wall,
         },
         {
@@ -694,6 +778,7 @@ def _sync_topology(campaign_root: Path) -> list[str]:
             "outer_iterations": int(parallel_final["final_metrics"]["outer_iterations"]),
             "final_compliance": float(parallel_final["final_metrics"]["final_compliance"]),
             "final_volume_fraction": float(parallel_final["final_metrics"]["final_volume_fraction"]),
+            **parallel_units,
             "wall_time_s": float(parallel_final["time"]),
         },
     ]
@@ -707,31 +792,95 @@ def _sync_topology(campaign_root: Path) -> list[str]:
                 "outer_iterations": int(row["outer_iterations"]),
                 "final_compliance": float(row["final_compliance"]),
                 "final_volume_fraction": float(row["final_volume_fraction"]),
+                "volume_semantics_version": int(row["volume_semantics_version"]),
+                "domain_area": float(row["domain_area"]),
+                "target_normalized_fraction": float(row["target_normalized_fraction"]),
+                "target_material_measure": float(row["target_material_measure"]),
+                "initial_normalized_fraction": float(row["initial_normalized_fraction"]),
+                "final_normalized_fraction": float(row["final_normalized_fraction"]),
+                "final_material_measure": float(row["final_material_measure"]),
                 "wall_time_s": float(row["wall_time_s"]),
             }
         )
     path = family_dir / "resolution_objectives.csv"
-    write_csv(path, resolution_rows, ["label", "mesh", "ranks", "result", "outer_iterations", "final_compliance", "final_volume_fraction", "wall_time_s"])
+    write_csv(
+        path,
+        resolution_rows,
+        [
+            "label", "mesh", "ranks", "result", "outer_iterations", "final_compliance",
+            "volume_semantics_version", "domain_area", "target_normalized_fraction",
+            "target_material_measure", "initial_normalized_fraction", "final_volume_fraction",
+            "final_normalized_fraction", "final_material_measure", "wall_time_s",
+        ],
+    )
     outputs.append(repo_rel(path))
 
-    converted_direct = [
-        {
-            "case_id": row["case_id"],
-            "implementation": row["implementation"],
-            "mpi_ranks": int(row["mpi_ranks"]),
-            "median_wall_time_s": float(row["median_wall_time_s"]),
-            "median_final_compliance": float(row["median_final_compliance"]),
-            "median_final_volume_fraction": float(row["median_final_volume_fraction"]),
-            "status": row["status"],
-        }
-        for row in direct_rows
-    ]
+    converted_direct = []
+    for row in direct_rows:
+        raw_volume = float(row["median_final_volume_fraction"])
+        version = int(float(row.get("volume_semantics_version") or 1))
+        area = float(row.get("domain_area") or 2.0)
+        legacy_serial = row["implementation"] == "jax_serial"
+        normalized = float(
+            row.get("median_final_normalized_fraction")
+            or (raw_volume if version >= 2 or legacy_serial else raw_volume / area)
+        )
+        material = float(
+            row.get("median_final_material_measure")
+            or (normalized * area if version >= 2 or legacy_serial else raw_volume)
+        )
+        converted_direct.append(
+            {
+                "case_id": row["case_id"],
+                "implementation": row["implementation"],
+                "mpi_ranks": int(row["mpi_ranks"]),
+                "median_wall_time_s": float(row["median_wall_time_s"]),
+                "median_final_compliance": float(row["median_final_compliance"]),
+                "volume_semantics_version": version,
+                "domain_area": area,
+                "target_normalized_fraction": float(
+                    row.get("target_normalized_fraction")
+                    or (0.4 if legacy_serial else 0.4 / area)
+                ),
+                "target_material_measure": float(
+                    row.get("target_material_measure")
+                    or (0.4 * area if legacy_serial else 0.4)
+                ),
+                "initial_normalized_fraction": float(
+                    row.get("initial_normalized_fraction") or 0.4
+                ),
+                "median_final_volume_fraction": raw_volume,
+                "median_final_normalized_fraction": normalized,
+                "median_final_material_measure": material,
+                "status": row["status"],
+            }
+        )
     path = family_dir / "direct_comparison.csv"
-    write_csv(path, converted_direct, ["case_id", "implementation", "mpi_ranks", "median_wall_time_s", "median_final_compliance", "median_final_volume_fraction", "status"])
+    write_csv(
+        path,
+        converted_direct,
+        [
+            "case_id", "implementation", "mpi_ranks", "median_wall_time_s",
+            "median_final_compliance", "volume_semantics_version", "domain_area",
+            "target_normalized_fraction", "target_material_measure", "initial_normalized_fraction",
+            "median_final_volume_fraction", "median_final_normalized_fraction",
+            "median_final_material_measure", "status",
+        ],
+    )
     outputs.append(repo_rel(path))
 
     path = family_dir / "parallel_scaling.csv"
-    write_csv(path, validated_scaling_rows, ["ranks", "result", "outer_iterations", "final_p_penal", "final_volume_fraction", "final_compliance", "wall_time_s", "solve_time_s", "speedup_vs_1"])
+    write_csv(
+        path,
+        validated_scaling_rows,
+        [
+            "ranks", "result", "outer_iterations", "final_p_penal", "final_compliance",
+            "volume_semantics_version", "domain_area", "target_normalized_fraction",
+            "target_material_measure", "initial_normalized_fraction", "final_volume_fraction",
+            "final_normalized_fraction", "final_material_measure", "wall_time_s", "solve_time_s",
+            "speedup_vs_1",
+        ],
+    )
     outputs.append(repo_rel(path))
 
     mesh = parallel_final["mesh"]
@@ -746,6 +895,13 @@ def _sync_topology(campaign_root: Path) -> list[str]:
             "final_p_penal": float(row["final_p_penal"]),
             "final_compliance": float(row["final_compliance"]),
             "final_volume_fraction": float(row["final_volume_fraction"]),
+            "volume_semantics_version": int(row["volume_semantics_version"]),
+            "domain_area": float(row["domain_area"]),
+            "target_normalized_fraction": float(row["target_normalized_fraction"]),
+            "target_material_measure": float(row["target_material_measure"]),
+            "initial_normalized_fraction": float(row["initial_normalized_fraction"]),
+            "final_normalized_fraction": float(row["final_normalized_fraction"]),
+            "final_material_measure": float(row["final_material_measure"]),
             "outer_iterations": int(row["outer_iterations"]),
             "speedup_vs_1": float(row["speedup_vs_1"]),
             "result": row["result"],
@@ -753,7 +909,17 @@ def _sync_topology(campaign_root: Path) -> list[str]:
         for row in validated_scaling_rows
     ]
     path = family_dir / "strong_scaling.csv"
-    write_csv(path, strong_scaling, ["solver", "ranks", "problem_size", "wall_time_s", "solve_time_s", "final_p_penal", "final_compliance", "final_volume_fraction", "outer_iterations", "speedup_vs_1", "result"])
+    write_csv(
+        path,
+        strong_scaling,
+        [
+            "solver", "ranks", "problem_size", "wall_time_s", "solve_time_s",
+            "final_p_penal", "final_compliance", "volume_semantics_version", "domain_area",
+            "target_normalized_fraction", "target_material_measure", "initial_normalized_fraction",
+            "final_volume_fraction", "final_normalized_fraction", "final_material_measure",
+            "outer_iterations", "speedup_vs_1", "result",
+        ],
+    )
     outputs.append(repo_rel(path))
 
     mesh_rows = [
@@ -768,6 +934,7 @@ def _sync_topology(campaign_root: Path) -> list[str]:
             "solve_time_s": float(row["solve_time_s"]),
             "final_compliance": float(row["final_compliance"]),
             "final_volume_fraction": float(row["final_volume_fraction"]),
+            **_topology_parallel_row_units(row, raw_final_key="final_volume_fraction"),
             "outer_iterations": int(row["outer_iterations"]),
             "result": row["result"],
             "json_path": row["json_path"],
@@ -775,7 +942,17 @@ def _sync_topology(campaign_root: Path) -> list[str]:
         for row in read_csv_rows(topo_root / "mesh_timing" / "mesh_timing_summary.csv")
     ]
     path = family_dir / "mesh_timing.csv"
-    write_csv(path, mesh_rows, ["solver", "mesh_label", "nx", "ny", "nprocs", "problem_size", "wall_time_s", "solve_time_s", "final_compliance", "final_volume_fraction", "outer_iterations", "result", "json_path"])
+    write_csv(
+        path,
+        mesh_rows,
+        [
+            "solver", "mesh_label", "nx", "ny", "nprocs", "problem_size",
+            "wall_time_s", "solve_time_s", "final_compliance", "volume_semantics_version",
+            "domain_area", "target_normalized_fraction", "target_material_measure",
+            "initial_normalized_fraction", "final_volume_fraction", "final_normalized_fraction",
+            "final_material_measure", "outer_iterations", "result", "json_path",
+        ],
+    )
     outputs.append(repo_rel(path))
 
     _copy(topo_root / "serial_reference" / "report_state.npz", family_dir / "serial_state.npz")

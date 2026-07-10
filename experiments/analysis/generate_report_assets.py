@@ -48,7 +48,8 @@ CASE_PARAMS = {
     "load_fraction": 0.2,
     "fixed_pad_cells": 16,
     "load_pad_cells": 16,
-    "volume_fraction_target": 0.4,
+    "target_normalized_fraction": 0.4,
+    "initial_normalized_fraction": 0.4,
     "theta_min": 1e-3,
     "solid_latent": 10.0,
     "young": 1.0,
@@ -399,7 +400,12 @@ def _make_convergence_figure(result: dict) -> None:
     it = np.array([row["outer_iter"] for row in history], dtype=np.int32)
     compliance = np.array([row["compliance"] for row in history], dtype=np.float64)
     volume = np.array([row["volume_fraction"] for row in history], dtype=np.float64)
-    vol_res = np.abs(np.array([row["volume_residual"] for row in history], dtype=np.float64))
+    vol_res = np.abs(
+        np.array(
+            [row.get("normalized_fraction_residual", row["volume_residual"]) for row in history],
+            dtype=np.float64,
+        )
+    )
     theta_state_change = np.array([row["theta_state_change"] for row in history], dtype=np.float64)
     compliance_change = np.array([row["compliance_change"] for row in history], dtype=np.float64)
     mech_iters = np.array([row["mechanics_iters"] for row in history], dtype=np.int32)
@@ -416,7 +422,7 @@ def _make_convergence_figure(result: dict) -> None:
 
     axes[0, 1].plot(it, volume, marker="o", color="#9b2226", label="achieved volume fraction")
     axes[0, 1].axhline(
-        result["parameters"]["volume_fraction_target"],
+        result["parameters"]["target_normalized_fraction"],
         color="#6d6875",
         linestyle="--",
         linewidth=1.5,
@@ -472,8 +478,12 @@ def _write_history_csv(history: list[dict]) -> None:
         "lambda_effective",
         "compliance",
         "volume_fraction_before",
+        "material_measure_before",
+        "normalized_fraction_residual_before",
         "volume_residual_before",
         "volume_fraction",
+        "material_measure",
+        "normalized_fraction_residual",
         "volume_residual",
         "theta_state_change",
         "design_change",
@@ -499,7 +509,11 @@ def _solver_command(params: dict) -> str:
             f"    --nx {params['nx']} --ny {params['ny']} --length {params['length']} --height {params['height']} \\",
             f"    --traction {params['traction']} --load_fraction {params['load_fraction']} \\",
             f"    --fixed_pad_cells {params['fixed_pad_cells']} --load_pad_cells {params['load_pad_cells']} \\",
-            f"    --volume_fraction_target {params['volume_fraction_target']} --theta_min {params['theta_min']} \\",
+            (
+                f"    --target-normalized-fraction {params['target_normalized_fraction']} "
+                f"--initial-normalized-fraction {params['initial_normalized_fraction']} "
+                f"--theta_min {params['theta_min']} \\"
+            ),
             f"    --solid_latent {params['solid_latent']} --young {params['young']} --poisson {params['poisson']} \\",
             f"    --alpha_reg {params['alpha_reg']} --ell_pf {params['ell_pf']} --mu_move {params['mu_move']} \\",
             f"    --beta_lambda {params['beta_lambda']} --volume_penalty {params['volume_penalty']} \\",
@@ -535,7 +549,8 @@ def _make_report(result: dict, state: dict, mesh: CantileverTopologyMesh) -> str
         ["Elements", result["mesh"]["elements"]],
         ["Free displacement DOFs", result["mesh"]["displacement_free_dofs"]],
         ["Free design DOFs", result["mesh"]["design_free_dofs"]],
-        ["Target volume fraction", _fmt(params["volume_fraction_target"], 4)],
+        ["Target normalized fraction", _fmt(params["target_normalized_fraction"], 4)],
+        ["Initial normalized fraction", _fmt(params["initial_normalized_fraction"], 4)],
         ["Staircase schedule", f"p = p + {params['p_increment']} every {params['continuation_interval']} outer iterations"],
         ["Final p target", _fmt(params["p_max"], 2)],
         ["Volume control", f"beta_lambda = {params['beta_lambda']}, volume_penalty = {params['volume_penalty']}"],

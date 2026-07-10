@@ -110,5 +110,13 @@ def compliance(u_full, force):
     return jnp.dot(force, u_full)
 
 
+def material_measure(theta_full, nodal_volume_weights):
+    """Return the discrete material measure ``sum_i w_i theta_i``."""
+
+    return jnp.dot(nodal_volume_weights, theta_full)
+
+
 def volume_fraction(theta_full, nodal_volume_weights, domain_area):
-    return jnp.dot(nodal_volume_weights, theta_full) / domain_area
+    """Return material measure normalized by the physical domain area."""
+
+    return material_measure(theta_full, nodal_volume_weights) / domain_area

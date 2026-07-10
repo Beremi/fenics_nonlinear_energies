@@ -48,7 +48,8 @@ CASE_ARGS = [
     "--load_fraction", "0.2",
     "--fixed_pad_cells", "32",
     "--load_pad_cells", "32",
-    "--volume_fraction_target", "0.4",
+    "--target-material-measure", "0.4",
+    "--initial-normalized-fraction", "0.4",
     "--theta_min", "1e-6",
     "--solid_latent", "10.0",
     "--young", "1.0",
@@ -123,9 +124,20 @@ def _asset_rel(path: Path) -> str:
         return str(path.resolve())
 
 
+def _require_explicit_volume_contract(result: dict, source: Path) -> None:
+    params = dict(result.get("parameters", {}))
+    if int(params.get("volume_semantics_version", 0)) < 2:
+        raise RuntimeError(
+            f"Cached topology result {_asset_rel(source)} uses ambiguous volume semantics; "
+            "delete it or select a fresh asset directory."
+        )
+
+
 def _run_case(ranks: int, json_out: Path) -> dict:
     if USE_CACHE and json_out.exists():
-        return json.loads(json_out.read_text())
+        result = json.loads(json_out.read_text())
+        _require_explicit_volume_contract(result, json_out)
+        return result
 
     cmd: list[str] = []
     if ranks > 1:
@@ -135,7 +147,9 @@ def _run_case(ranks: int, json_out: Path) -> dict:
     env = os.environ.copy()
     env.update(THREAD_ENV)
     subprocess.run(cmd, cwd=REPO_ROOT, env=env, check=True)
-    return json.loads(json_out.read_text())
+    result = json.loads(json_out.read_text())
+    _require_explicit_volume_contract(result, json_out)
+    return result
 
 
 def _summarize(result: dict) -> dict[str, float | int | str | bool]:
@@ -152,6 +166,8 @@ def _summarize(result: dict) -> dict[str, float | int | str | bool]:
     design_iter = np.array([row.get("design_iter_time", 0.0) for row in history], dtype=np.float64)
 
     final = result["final_metrics"]
+    params = result["parameters"]
+    domain_area = float(params["length"]) * float(params["height"])
     return {
         "ranks": int(result["nprocs"]),
         "result": str(result["result"]),
@@ -160,6 +176,15 @@ def _summarize(result: dict) -> dict[str, float | int | str | bool]:
         "final_p": float(final["final_p_penal"]),
         "final_compliance": float(final["final_compliance"]),
         "final_volume": float(final["final_volume_fraction"]),
+        "volume_semantics_version": int(params["volume_semantics_version"]),
+        "domain_area": domain_area,
+        "target_normalized_fraction": float(params["target_normalized_fraction"]),
+        "target_material_measure": float(params["target_material_measure"]),
+        "initial_normalized_fraction": float(params["initial_normalized_fraction"]),
+        "final_normalized_fraction": float(final["final_volume_fraction"]),
+        "final_material_measure": float(
+            final.get("final_material_measure", float(final["final_volume_fraction"]) * domain_area)
+        ),
         "wall_time": float(result["time"]),
         "setup_time": float(result["setup_time"]),
         "solve_time": float(result["time"] - result["setup_time"]),

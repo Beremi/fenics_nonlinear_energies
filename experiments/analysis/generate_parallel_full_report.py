@@ -51,6 +51,56 @@ def _report_context(result: dict) -> dict:
     return ctx
 
 
+def _parallel_volume_contract(result: dict) -> dict[str, float | int]:
+    """Expose explicit units for historical and current parallel outputs."""
+
+    params = dict(result.get("parameters", {}))
+    area = float(params.get("length", 1.0)) * float(params.get("height", 1.0))
+    if area <= 0.0:
+        raise ValueError("Topology domain area must be positive.")
+    version = int(params.get("volume_semantics_version", 1))
+    if version >= 2:
+        target_measure = float(params["target_material_measure"])
+        target_fraction = float(params["target_normalized_fraction"])
+        initial_fraction = float(params["initial_normalized_fraction"])
+    else:
+        # Version-1 parallel results used the historically named fraction field
+        # for material measure.  Their design initialization was normalized 0.4.
+        target_measure = float(params["volume_fraction_target"])
+        target_fraction = target_measure / area
+        initial_fraction = 0.4
+    return {
+        "version": version,
+        "domain_area": area,
+        "target_material_measure": target_measure,
+        "target_normalized_fraction": target_fraction,
+        "initial_normalized_fraction": initial_fraction,
+    }
+
+
+def _history_normalized_fraction(result: dict, row: dict) -> float:
+    contract = _parallel_volume_contract(result)
+    value = float(row["volume_fraction"])
+    if int(contract["version"]) < 2:
+        value /= float(contract["domain_area"])
+    return value
+
+
+def _history_normalized_residual(result: dict, row: dict) -> float:
+    if "normalized_fraction_residual" in row:
+        return float(row["normalized_fraction_residual"])
+    contract = _parallel_volume_contract(result)
+    return float(row["volume_residual"]) / float(contract["domain_area"])
+
+
+def _final_normalized_fraction(result: dict) -> float:
+    contract = _parallel_volume_contract(result)
+    value = float(result["final_metrics"]["final_volume_fraction"])
+    if int(contract["version"]) < 2:
+        value /= float(contract["domain_area"])
+    return value
+
+
 def _cfg(result: dict, key: str, default=None):
     solver = result.get("solver_options", {})
     params = result.get("parameters", {})
@@ -92,8 +142,12 @@ def _write_history_csv(history: list[dict], csv_path: Path) -> None:
         "lambda_effective",
         "compliance",
         "volume_fraction_before",
+        "material_measure_before",
+        "normalized_fraction_residual_before",
         "volume_residual_before",
         "volume_fraction",
+        "material_measure",
+        "normalized_fraction_residual",
         "volume_residual",
         "theta_state_change",
         "design_change",
@@ -167,10 +221,19 @@ def _rewrite_snapshot_frames(snapshot_dir: Path) -> None:
 
 def _make_convergence_figure(result: dict, conv_png: Path) -> None:
     history = [row for row in result["history"] if "compliance" in row]
+    volume_contract = _parallel_volume_contract(result)
     it = np.array([row["outer_iter"] for row in history], dtype=np.int32)
     compliance = np.array([row["compliance"] for row in history], dtype=np.float64)
-    volume = np.array([row["volume_fraction"] for row in history], dtype=np.float64)
-    vol_res = np.abs(np.array([row["volume_residual"] for row in history], dtype=np.float64))
+    volume = np.array(
+        [_history_normalized_fraction(result, row) for row in history],
+        dtype=np.float64,
+    )
+    vol_res = np.abs(
+        np.array(
+            [_history_normalized_residual(result, row) for row in history],
+            dtype=np.float64,
+        )
+    )
     theta_state_change = np.array([row["theta_state_change"] for row in history], dtype=np.float64)
     design_change = np.array([row["design_change"] for row in history], dtype=np.float64)
     compliance_change = np.array([row["compliance_change"] for row in history], dtype=np.float64)
@@ -188,7 +251,7 @@ def _make_convergence_figure(result: dict, conv_png: Path) -> None:
 
     axes[0, 1].plot(it, volume, marker="o", color="#9b2226", label="achieved volume fraction")
     axes[0, 1].axhline(
-        result["parameters"]["volume_fraction_target"],
+        volume_contract["target_normalized_fraction"],
         color="#6d6875",
         linestyle="--",
         linewidth=1.5,
@@ -278,6 +341,7 @@ def _make_density_gif(
     snapshot_dir: Path,
     density_gif: Path,
 ) -> None:
+    volume_contract = _parallel_volume_contract(result)
     history_lookup = {int(row["outer_iter"]): row for row in result["history"]}
     frame_files = sorted(snapshot_dir.glob("theta_*.png"))
     if not frame_files:
@@ -286,7 +350,15 @@ def _make_density_gif(
         idx = np.linspace(0, len(frame_files) - 1, MAX_GIF_FRAMES, dtype=np.int32)
         frame_files = [frame_files[i] for i in idx.tolist()]
 
-    manifest = {int(outer): (float(p), float(v)) for outer, p, v in zip(snapshot_outer, snapshot_p, snapshot_volume)}
+    volume_scale = (
+        1.0 / float(volume_contract["domain_area"])
+        if int(volume_contract["version"]) < 2
+        else 1.0
+    )
+    manifest = {
+        int(outer): (float(p), float(v) * volume_scale)
+        for outer, p, v in zip(snapshot_outer, snapshot_p, snapshot_volume)
+    }
     cmap = plt.get_cmap("cividis")
     frames: list[Image.Image] = []
     for frame_path in frame_files:
@@ -303,7 +375,7 @@ def _make_density_gif(
         label = (
             f"outer {outer_iter}   "
             f"p={p_value:.2f}   "
-            f"V={v_value:.4f}   "
+            f"M/|Omega|={v_value:.4f}   "
             f"C={float(compliance):.4f}"
         )
         draw.text((12, img.height + 12), label, fill=0)
@@ -321,6 +393,7 @@ def _make_density_gif(
 
 def _solver_command(result: dict, snapshot_dir: Path, run_json: Path, state_npz: Path) -> str:
     ctx = _report_context(result)
+    volume_contract = _parallel_volume_contract(result)
     design_gd_line_search = ctx.get("design_gd_line_search", "golden_adaptive")
     design_gd_adaptive_window_scale = ctx.get("design_gd_adaptive_window_scale", None)
     return "\n".join(
@@ -329,7 +402,11 @@ def _solver_command(result: dict, snapshot_dir: Path, run_json: Path, state_npz:
             f"    --nx {ctx['nx']} --ny {ctx['ny']} --length {ctx['length']} --height {ctx['height']} \\",
             f"    --traction {ctx['traction']} --load_fraction {ctx['load_fraction']} \\",
             f"    --fixed_pad_cells {ctx['fixed_pad_cells']} --load_pad_cells {ctx['load_pad_cells']} \\",
-            f"    --volume_fraction_target {ctx['volume_fraction_target']} --theta_min {ctx['theta_min']} \\",
+            (
+                f"    --target-material-measure {volume_contract['target_material_measure']} "
+                f"--initial-normalized-fraction {volume_contract['initial_normalized_fraction']} "
+                f"--theta_min {ctx['theta_min']} \\"
+            ),
             f"    --solid_latent {ctx['solid_latent']} --young {ctx['young']} --poisson {ctx['poisson']} \\",
             f"    --alpha_reg {ctx['alpha_reg']} --ell_pf {ctx['ell_pf']} --mu_move {ctx['mu_move']} \\",
             f"    --beta_lambda {ctx['beta_lambda']} --volume_penalty {ctx['volume_penalty']} \\",
@@ -382,6 +459,7 @@ def _make_report(
     params = result["parameters"]
     solver_options = result["solver_options"]
     final = result["final_metrics"]
+    volume_contract = _parallel_volume_contract(result)
     cell_density = _cell_density(theta_grid)
     gray_ratio = float(np.mean((cell_density > 0.1) & (cell_density < 0.9)))
     total_mech_ksp = int(sum(row["mechanics_ksp_its"] for row in history))
@@ -409,7 +487,9 @@ def _make_report(
         ["Elements", result["mesh"]["elements"]],
         ["Free displacement DOFs", result["mesh"]["displacement_free_dofs"]],
         ["Free design DOFs", result["mesh"]["design_free_dofs"]],
-        ["Target volume fraction", _fmt(params["volume_fraction_target"], 4)],
+        ["Target material measure", _fmt(volume_contract["target_material_measure"], 4)],
+        ["Target normalized fraction", _fmt(volume_contract["target_normalized_fraction"], 4)],
+        ["Initial normalized fraction", _fmt(volume_contract["initial_normalized_fraction"], 4)],
         ["SIMP schedule", f"p = p + {params['p_increment']} every {params['continuation_interval']} outer iterations"],
         ["Final p target", _fmt(params["p_max"], 2)],
         ["Mechanics solver", f"{solver_options['mechanics_ksp_type']} + {solver_options['mechanics_pc_type']}"],
@@ -430,8 +510,8 @@ def _make_report(
         ["Setup time [s]", _fmt(result["setup_time"], 3)],
         ["Solve time [s]", _fmt(result["time"] - result["setup_time"], 3)],
         ["Final compliance", _fmt(final["final_compliance"], 6)],
-        ["Final volume fraction", _fmt(final["final_volume_fraction"], 6)],
-        ["Final volume error", _fmt(last["volume_residual"], 6)],
+        ["Final normalized fraction", _fmt(_final_normalized_fraction(result), 6)],
+        ["Final normalized-fraction error", _fmt(_history_normalized_residual(result, last), 6)],
         ["Final design change", _fmt(last["design_change"], 6)],
         ["Final compliance change", _fmt(last["compliance_change"], 6)],
         ["Gray fraction (cell 0.1-0.9)", _fmt(gray_ratio, 4)],
@@ -457,15 +537,15 @@ def _make_report(
                 row["design_iters"],
                 row["design_ls_evals"],
                 _fmt(row["compliance"], 6),
-                _fmt(row["volume_fraction"], 6),
-                _fmt(row["volume_residual"], 6),
+                _fmt(_history_normalized_fraction(result, row), 6),
+                _fmt(_history_normalized_residual(result, row), 6),
                 _fmt(row["design_change"], 6),
                 _fmt(row["compliance_change"], 6),
             ]
         )
 
     history_table = _markdown_table(
-        ["k", "p", "mech KSP", "GD", "LS evals", "compliance", "volume", "vol error", "dtheta", "dC"],
+        ["k", "p", "mech KSP", "GD", "LS evals", "compliance", "normalized fraction", "fraction error", "dtheta", "dC"],
         history_rows,
     )
     design_maxit = _cfg(result, "design_maxit", "?")

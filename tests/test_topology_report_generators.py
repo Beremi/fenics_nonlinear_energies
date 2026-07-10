@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pytest
+
 from experiments.analysis import (
     generate_parallel_full_report,
     generate_parallel_scaling_stallstop_report,
@@ -26,6 +28,9 @@ def test_serial_topology_report_generator_uses_canonical_paths():
 
     solver_cmd = generate_report_assets._solver_command(generate_report_assets.CASE_PARAMS)
     assert "src/problems/topology/jax/solve_topopt_jax.py" in solver_cmd
+    assert "--target-normalized-fraction 0.4" in solver_cmd
+    assert "--initial-normalized-fraction 0.4" in solver_cmd
+    assert "--volume_fraction_target" not in solver_cmd
     assert "topological_optimisation_jax" not in solver_cmd
 
 
@@ -52,7 +57,10 @@ def test_parallel_topology_generators_use_canonical_paths():
                 "load_fraction": 0.2,
                 "fixed_pad_cells": 32,
                 "load_pad_cells": 32,
-                "volume_fraction_target": 0.4,
+                "volume_semantics_version": 2,
+                "target_normalized_fraction": 0.2,
+                "target_material_measure": 0.4,
+                "initial_normalized_fraction": 0.4,
                 "theta_min": 1e-6,
                 "solid_latent": 10.0,
                 "young": 1.0,
@@ -88,4 +96,40 @@ def test_parallel_topology_generators_use_canonical_paths():
         REPO_ROOT / "artifacts" / "reproduction" / "campaign" / "parallel_full_state.npz",
     )
     assert "src/problems/topology/jax/solve_topopt_parallel.py" in solver_cmd
+    assert "--target-material-measure 0.4" in solver_cmd
+    assert "--initial-normalized-fraction 0.4" in solver_cmd
+    assert "--volume_fraction_target" not in solver_cmd
     assert "topological_optimisation_jax" not in solver_cmd
+
+    scaling_args = generate_parallel_scaling_stallstop_report.CASE_ARGS
+    assert "--volume_fraction_target" not in scaling_args
+    assert scaling_args[scaling_args.index("--target-material-measure") + 1] == "0.4"
+    assert scaling_args[scaling_args.index("--initial-normalized-fraction") + 1] == "0.4"
+
+
+def test_parallel_report_normalizes_historical_material_measure_fields():
+    historical = {
+        "parameters": {
+            "length": 2.0,
+            "height": 1.0,
+            "volume_fraction_target": 0.4,
+        },
+        "final_metrics": {"final_volume_fraction": 0.38},
+    }
+    row = {"volume_fraction": 0.36, "volume_residual": -0.04}
+
+    contract = generate_parallel_full_report._parallel_volume_contract(historical)
+    assert contract["target_material_measure"] == 0.4
+    assert contract["target_normalized_fraction"] == 0.2
+    assert contract["initial_normalized_fraction"] == 0.4
+    assert generate_parallel_full_report._history_normalized_fraction(historical, row) == pytest.approx(0.18)
+    assert generate_parallel_full_report._history_normalized_residual(historical, row) == pytest.approx(-0.02)
+    assert generate_parallel_full_report._final_normalized_fraction(historical) == pytest.approx(0.19)
+
+
+def test_parallel_scaling_rejects_legacy_cached_volume_semantics(tmp_path: Path):
+    with pytest.raises(RuntimeError, match="ambiguous volume semantics"):
+        generate_parallel_scaling_stallstop_report._require_explicit_volume_contract(
+            {"parameters": {"volume_fraction_target": 0.4}},
+            tmp_path / "legacy.json",
+        )

@@ -30,6 +30,25 @@ THREAD_ENV = {
     "XLA_FLAGS": "--xla_cpu_multi_thread_eigen=false intra_op_parallelism_threads=1",
 }
 
+# The serial-reference and direct-comparison cases use a normalized target of
+# 0.4.  The historical fine-grid/paper benchmark instead constrains the
+# unnormalized material measure to 0.4 on the area-2 domain (normalized target
+# 0.2) while starting from a normalized fraction of 0.4.  Keep the contracts
+# separate so a future cleanup cannot silently make these distinct studies
+# solve different problems.
+SERIAL_REFERENCE_VOLUME_ARGS = [
+    "--target-normalized-fraction", "0.4",
+    "--initial-normalized-fraction", "0.4",
+]
+MATCHED_COMPARISON_VOLUME_ARGS = [
+    "--target-normalized-fraction", "0.4",
+    "--initial-normalized-fraction", "0.4",
+]
+PAPER_PARALLEL_VOLUME_ARGS = [
+    "--target-material-measure", "0.4",
+    "--initial-normalized-fraction", "0.4",
+]
+
 SERIAL_REFERENCE_ARGS = [
     "--nx", "192",
     "--ny", "96",
@@ -39,7 +58,7 @@ SERIAL_REFERENCE_ARGS = [
     "--load_fraction", "0.2",
     "--fixed_pad_cells", "16",
     "--load_pad_cells", "16",
-    "--volume_fraction_target", "0.4",
+    *SERIAL_REFERENCE_VOLUME_ARGS,
     "--theta_min", "0.001",
     "--solid_latent", "10.0",
     "--young", "1.0",
@@ -73,7 +92,7 @@ DIRECT_PARALLEL_ARGS = [
     "--load_fraction", "0.2",
     "--fixed_pad_cells", "16",
     "--load_pad_cells", "16",
-    "--volume_fraction_target", "0.4",
+    *MATCHED_COMPARISON_VOLUME_ARGS,
     "--theta_min", "1e-3",
     "--solid_latent", "10.0",
     "--young", "1.0",
@@ -118,7 +137,7 @@ MESH_TIMING_ARGS_BASE = [
     "--height", "1.0",
     "--traction", "1.0",
     "--load_fraction", "0.2",
-    "--volume_fraction_target", "0.4",
+    *PAPER_PARALLEL_VOLUME_ARGS,
     "--theta_min", "1e-6",
     "--solid_latent", "10.0",
     "--young", "1.0",
@@ -223,6 +242,28 @@ def _save_run_logs(run_info: dict[str, Any], log_prefix: Path) -> dict[str, Any]
 
 def _final_metrics(payload: dict[str, Any]) -> dict[str, Any]:
     final = dict(payload.get("final_metrics", {}))
+    params = dict(payload.get("parameters", {}))
+    area = float(params.get("length", 1.0)) * float(params.get("height", 1.0))
+    version = int(params.get("volume_semantics_version", 1))
+    raw_final = float(final.get("final_volume_fraction", math.nan))
+    if version >= 2:
+        target_fraction = float(params["target_normalized_fraction"])
+        target_measure = float(params["target_material_measure"])
+        initial_fraction = float(params["initial_normalized_fraction"])
+        final_fraction = raw_final
+        final_measure = float(final.get("final_material_measure", raw_final * area))
+    elif str(payload.get("backend", "")) == "serial":
+        target_fraction = float(params.get("volume_fraction_target", math.nan))
+        target_measure = target_fraction * area
+        initial_fraction = target_fraction
+        final_fraction = raw_final
+        final_measure = raw_final * area
+    else:
+        target_measure = float(params.get("volume_fraction_target", math.nan))
+        target_fraction = target_measure / area
+        initial_fraction = 0.4
+        final_measure = raw_final
+        final_fraction = raw_final / area
     return {
         "result": str(payload.get("result", "unknown")),
         "wall_time_s": float(payload.get("time", 0.0)),
@@ -232,7 +273,39 @@ def _final_metrics(payload: dict[str, Any]) -> dict[str, Any]:
         "final_p_penal": float(final.get("final_p_penal", math.nan)),
         "final_compliance": float(final.get("final_compliance", math.nan)),
         "final_volume_fraction": float(final.get("final_volume_fraction", math.nan)),
+        "volume_semantics_version": version,
+        "domain_area": area,
+        "target_normalized_fraction": target_fraction,
+        "target_material_measure": target_measure,
+        "initial_normalized_fraction": initial_fraction,
+        "final_normalized_fraction": final_fraction,
+        "final_material_measure": final_measure,
     }
+
+
+def _require_explicit_volume_contract(payload: dict[str, Any], source: Path) -> None:
+    params = dict(payload.get("parameters", {}))
+    version = int(params.get("volume_semantics_version", 0))
+    required = {
+        "target_normalized_fraction",
+        "target_material_measure",
+        "initial_normalized_fraction",
+    }
+    missing = sorted(required - set(params))
+    if version < 2 or missing:
+        detail = f"missing {', '.join(missing)}" if missing else f"version={version}"
+        raise RuntimeError(
+            f"Cached topology result {_repo_rel(source)} uses ambiguous volume semantics "
+            f"({detail}); rerun into a fresh --out-dir."
+        )
+    area = float(params["length"]) * float(params["height"])
+    if not math.isclose(
+        float(params["target_material_measure"]),
+        float(params["target_normalized_fraction"]) * area,
+        rel_tol=1e-12,
+        abs_tol=1e-12,
+    ):
+        raise RuntimeError(f"Inconsistent topology volume units in {_repo_rel(source)}.")
 
 
 def _median(values: list[float]) -> float:
@@ -256,6 +329,7 @@ def _run_serial_report(base_dir: Path) -> dict[str, Any]:
     if run_info["exit_code"] != 0:
         raise RuntimeError("serial_reference failed")
     result = _read_json(asset_dir / "report_run.json")
+    _require_explicit_volume_contract(result, asset_dir / "report_run.json")
     summary = {"command": run_info["command"], **_final_metrics(result)}
     _write_json(asset_dir / "summary.json", summary)
     return summary
@@ -278,6 +352,13 @@ def _run_direct_comparison(base_dir: Path) -> dict[str, Any]:
                 "wall_time_s": metrics["wall_time_s"],
                 "final_compliance": metrics["final_compliance"],
                 "final_volume_fraction": metrics["final_volume_fraction"],
+                "volume_semantics_version": metrics["volume_semantics_version"],
+                "domain_area": metrics["domain_area"],
+                "target_normalized_fraction": metrics["target_normalized_fraction"],
+                "target_material_measure": metrics["target_material_measure"],
+                "initial_normalized_fraction": metrics["initial_normalized_fraction"],
+                "final_normalized_fraction": metrics["final_normalized_fraction"],
+                "final_material_measure": metrics["final_material_measure"],
                 "outer_iterations": metrics["outer_iterations"],
                 "json_path": _repo_rel(output_json),
                 "command": command,
@@ -307,6 +388,7 @@ def _run_direct_comparison(base_dir: Path) -> dict[str, Any]:
             if run_info["exit_code"] != 0:
                 raise RuntimeError(f"direct comparison serial run {run_idx} failed")
         payload = _read_json(output_json)
+        _require_explicit_volume_contract(payload, output_json)
         add_row(case_id, "jax_serial", 1, _final_metrics(payload), output_json, (run_dir / "command.txt").read_text(encoding="utf-8").strip())
 
     # Parallel repeated 3x for np=1,2,4 on 192x96.
@@ -340,6 +422,7 @@ def _run_direct_comparison(base_dir: Path) -> dict[str, Any]:
                 if run_info["exit_code"] != 0:
                     raise RuntimeError(f"direct comparison parallel np={ranks} run {run_idx} failed")
             payload = _read_json(output_json)
+            _require_explicit_volume_contract(payload, output_json)
             add_row(
                 case_id,
                 "jax_parallel",
@@ -363,6 +446,13 @@ def _run_direct_comparison(base_dir: Path) -> dict[str, Any]:
                 "median_wall_time_s": _median([float(row["wall_time_s"]) for row in group]),
                 "median_final_compliance": _median([float(row["final_compliance"]) for row in group]),
                 "median_final_volume_fraction": _median([float(row["final_volume_fraction"]) for row in group]),
+                "volume_semantics_version": min(int(row["volume_semantics_version"]) for row in group),
+                "domain_area": _median([float(row["domain_area"]) for row in group]),
+                "target_normalized_fraction": _median([float(row["target_normalized_fraction"]) for row in group]),
+                "target_material_measure": _median([float(row["target_material_measure"]) for row in group]),
+                "initial_normalized_fraction": _median([float(row["initial_normalized_fraction"]) for row in group]),
+                "median_final_normalized_fraction": _median([float(row["final_normalized_fraction"]) for row in group]),
+                "median_final_material_measure": _median([float(row["final_material_measure"]) for row in group]),
                 "status": next(iter(statuses)) if len(statuses) == 1 else "mixed",
             }
         )
@@ -370,12 +460,24 @@ def _run_direct_comparison(base_dir: Path) -> dict[str, Any]:
     _write_csv(
         root / "raw_runs.csv",
         rows,
-        ["case_id", "implementation", "mpi_ranks", "result", "wall_time_s", "final_compliance", "final_volume_fraction", "outer_iterations", "json_path", "command"],
+        [
+            "case_id", "implementation", "mpi_ranks", "result", "wall_time_s",
+            "final_compliance", "volume_semantics_version", "domain_area",
+            "target_normalized_fraction", "target_material_measure", "initial_normalized_fraction",
+            "final_volume_fraction", "final_normalized_fraction", "final_material_measure",
+            "outer_iterations", "json_path", "command",
+        ],
     )
     _write_csv(
         root / "direct_comparison.csv",
         summary_rows,
-        ["case_id", "implementation", "mpi_ranks", "median_wall_time_s", "median_final_compliance", "median_final_volume_fraction", "status"],
+        [
+            "case_id", "implementation", "mpi_ranks", "median_wall_time_s",
+            "median_final_compliance", "volume_semantics_version", "domain_area",
+            "target_normalized_fraction", "target_material_measure", "initial_normalized_fraction",
+            "median_final_volume_fraction", "median_final_normalized_fraction",
+            "median_final_material_measure", "status",
+        ],
     )
     payload = {"rows": rows, "median_rows": summary_rows}
     _write_json(root / "summary.json", payload)
@@ -420,6 +522,7 @@ def _run_mesh_timing(base_dir: Path) -> dict[str, Any]:
             if run_info["exit_code"] != 0:
                 raise RuntimeError(f"mesh timing {nx}x{ny} failed")
         payload = _read_json(output_json)
+        _require_explicit_volume_contract(payload, output_json)
         mesh = payload["mesh"]
         metrics = _final_metrics(payload)
         rows.append(
@@ -434,6 +537,13 @@ def _run_mesh_timing(base_dir: Path) -> dict[str, Any]:
                 "solve_time_s": metrics["solve_time_s"],
                 "final_compliance": metrics["final_compliance"],
                 "final_volume_fraction": metrics["final_volume_fraction"],
+                "volume_semantics_version": metrics["volume_semantics_version"],
+                "domain_area": metrics["domain_area"],
+                "target_normalized_fraction": metrics["target_normalized_fraction"],
+                "target_material_measure": metrics["target_material_measure"],
+                "initial_normalized_fraction": metrics["initial_normalized_fraction"],
+                "final_normalized_fraction": metrics["final_normalized_fraction"],
+                "final_material_measure": metrics["final_material_measure"],
                 "outer_iterations": metrics["outer_iterations"],
                 "result": metrics["result"],
                 "json_path": _repo_rel(output_json),
@@ -443,7 +553,14 @@ def _run_mesh_timing(base_dir: Path) -> dict[str, Any]:
     _write_csv(
         root / "mesh_timing_summary.csv",
         rows,
-        ["solver", "mesh_label", "nx", "ny", "nprocs", "problem_size", "wall_time_s", "solve_time_s", "final_compliance", "final_volume_fraction", "outer_iterations", "result", "json_path"],
+        [
+            "solver", "mesh_label", "nx", "ny", "nprocs", "problem_size",
+            "wall_time_s", "solve_time_s", "final_compliance",
+            "volume_semantics_version", "domain_area", "target_normalized_fraction",
+            "target_material_measure", "initial_normalized_fraction", "final_volume_fraction",
+            "final_normalized_fraction", "final_material_measure", "outer_iterations",
+            "result", "json_path",
+        ],
     )
     _write_json(root / "summary.json", {"rows": rows})
     return {"rows": rows}
@@ -503,8 +620,7 @@ def _run_parallel_final(base_dir: Path) -> dict[str, Any]:
             "32",
             "--load_pad_cells",
             "32",
-            "--volume_fraction_target",
-            "0.4",
+            *PAPER_PARALLEL_VOLUME_ARGS,
             "--theta_min",
             "1e-6",
             "--solid_latent",
@@ -597,10 +713,12 @@ def _run_parallel_final(base_dir: Path) -> dict[str, Any]:
         if "```bash\n" in report_text:
             solver_command = report_text.split("```bash\n", 1)[1].split("\n```", 1)[0].strip()
         command_path.write_text(solver_command + "\n", encoding="utf-8")
+    run_payload = _read_json(run_json)
+    _require_explicit_volume_contract(run_payload, run_json)
     payload = {
         "solver_command": command_path.read_text(encoding="utf-8").strip(),
         "report_command": report_info["command"],
-        "metrics": _final_metrics(_read_json(run_json)),
+        "metrics": _final_metrics(run_payload),
     }
     _write_json(asset_dir / "summary.json", payload)
     return payload
@@ -621,19 +739,19 @@ def _write_summary_markdown(path: Path, payload: dict[str, Any]) -> None:
         (
             "| serial reference | "
             f"result={serial['result']}, outer={serial['outer_iterations']}, "
-            f"C={serial['final_compliance']:.6f}, V={serial['final_volume_fraction']:.6f}, "
+            f"C={serial['final_compliance']:.6f}, phi={serial['final_normalized_fraction']:.6f}, "
             f"wall={serial['wall_time_s']:.3f}s |"
         ),
         (
             "| parallel final | "
             f"result={final_metrics['result']}, outer={final_metrics['outer_iterations']}, "
-            f"C={final_metrics['final_compliance']:.6f}, V={final_metrics['final_volume_fraction']:.6f}, "
+            f"C={final_metrics['final_compliance']:.6f}, phi={final_metrics['final_normalized_fraction']:.6f}, "
             f"wall={final_metrics['wall_time_s']:.3f}s |"
         ),
         "",
         "## Direct Comparison Medians",
         "",
-        "| case | implementation | ranks | wall [s] | compliance | volume | status |",
+        "| case | implementation | ranks | wall [s] | compliance | normalized fraction | status |",
         "|---|---|---:|---:|---:|---:|---|",
     ]
     for row in direct_rows:
@@ -644,7 +762,7 @@ def _write_summary_markdown(path: Path, payload: dict[str, Any]) -> None:
                 mpi_ranks=row["mpi_ranks"],
                 wall=float(row["median_wall_time_s"]),
                 comp=float(row["median_final_compliance"]),
-                vol=float(row["median_final_volume_fraction"]),
+                vol=float(row["median_final_normalized_fraction"]),
                 status=row["status"],
             )
         )
@@ -653,7 +771,7 @@ def _write_summary_markdown(path: Path, payload: dict[str, Any]) -> None:
             "",
             "## Mesh Timing",
             "",
-            "| mesh | ranks | wall [s] | compliance | volume | outer | result |",
+            "| mesh | ranks | wall [s] | compliance | normalized fraction | outer | result |",
             "|---|---:|---:|---:|---:|---:|---|",
         ]
     )
@@ -664,7 +782,7 @@ def _write_summary_markdown(path: Path, payload: dict[str, Any]) -> None:
                 nprocs=row["nprocs"],
                 wall=float(row["wall_time_s"]),
                 comp=float(row["final_compliance"]),
-                vol=float(row["final_volume_fraction"]),
+                vol=float(row["final_normalized_fraction"]),
                 outer=row["outer_iterations"],
                 result=row["result"],
             )
@@ -674,7 +792,7 @@ def _write_summary_markdown(path: Path, payload: dict[str, Any]) -> None:
             "",
             "## Fine-Grid Strong Scaling",
             "",
-            "| ranks | result | outer | p | volume | compliance | wall [s] | solve [s] |",
+            "| ranks | result | outer | p | normalized fraction | compliance | wall [s] | solve [s] |",
             "|---:|---|---:|---:|---:|---:|---:|---:|",
         ]
     )
@@ -685,7 +803,7 @@ def _write_summary_markdown(path: Path, payload: dict[str, Any]) -> None:
                 result=row["result"],
                 outer_iterations=row["outer_iterations"],
                 final_p=row["final_p"],
-                final_volume=row["final_volume"],
+                final_volume=row.get("final_normalized_fraction", row["final_volume"]),
                 final_compliance=row["final_compliance"],
                 wall_time=row["wall_time"],
                 solve_time=row["solve_time"],

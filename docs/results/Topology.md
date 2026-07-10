@@ -123,7 +123,8 @@ Parallel fine-grid benchmark:
 ```bash
 mpiexec -n 32 ./.venv/bin/python -u src/problems/topology/jax/solve_topopt_parallel.py \
   --nx 768 --ny 384 --length 2.0 --height 1.0 --traction 1.0 --load_fraction 0.2 \
-  --fixed_pad_cells 32 --load_pad_cells 32 --volume_fraction_target 0.4 --theta_min 1e-6 \
+  --fixed_pad_cells 32 --load_pad_cells 32 \
+  --target-material-measure 0.4 --initial-normalized-fraction 0.4 --theta_min 1e-6 \
   --solid_latent 10.0 --young 1.0 --poisson 0.3 --alpha_reg 0.005 --ell_pf 0.08 \
   --mu_move 0.01 --beta_lambda 12.0 --volume_penalty 10.0 \
   --p_start 1.0 --p_max 10.0 --p_increment 0.2 --continuation_interval 1 \

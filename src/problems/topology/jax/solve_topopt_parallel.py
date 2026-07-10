@@ -21,6 +21,7 @@ from src.problems.topology.support.policy import (
     relative_state_change,
     staircase_p_step,
 )
+from src.problems.topology.support.volume import resolve_volume_target
 from src.core.petsc.minimizers import gradient_descent
 from src.problems.topology.jax.jax_energy import theta_from_latent
 from src.problems.topology.jax.parallel_support import (
@@ -168,7 +169,10 @@ def run_topology_optimisation_parallel(
     load_fraction: float = 0.2,
     fixed_pad_cells: int = 16,
     load_pad_cells: int = 16,
-    volume_fraction_target: float = 0.4,
+    volume_fraction_target: float | None = None,
+    target_normalized_fraction: float | None = None,
+    target_material_measure: float | None = None,
+    initial_normalized_fraction: float | None = None,
     theta_min: float = 1e-6,
     solid_latent: float = 10.0,
     young: float = 1.0,
@@ -248,6 +252,21 @@ def run_topology_optimisation_parallel(
         solid_latent=solid_latent,
         comm=comm,
     )
+    volume_target = resolve_volume_target(
+        partition.domain_area,
+        target_normalized_fraction=target_normalized_fraction,
+        target_material_measure=target_material_measure,
+        legacy_volume_fraction_target=volume_fraction_target,
+    )
+    target_fraction = float(volume_target.normalized_fraction)
+    target_measure = float(volume_target.material_measure)
+    initial_fraction = (
+        target_fraction
+        if initial_normalized_fraction is None
+        else float(initial_normalized_fraction)
+    )
+    if not 0.0 < initial_fraction < 1.0:
+        raise ValueError("initial_normalized_fraction must lie in (0, 1).")
     _log("partition built")
     constitutive = constitutive_plane_stress(young, poisson)
 
@@ -289,7 +308,7 @@ def run_topology_optimisation_parallel(
     u_vec = mechanics_assembler.create_vec()
     z_vec, _ = create_initial_design_vec(
         partition=partition,
-        target_volume_fraction=volume_fraction_target,
+        target_normalized_fraction=initial_fraction,
         theta_min=theta_min,
         solid_latent=solid_latent,
     )
@@ -368,7 +387,9 @@ def run_topology_optimisation_parallel(
         _log(f"outer {outer_it}: theta_state_change ready")
         volume_before = float(design_eval.volume_fraction(z_vec))
         _log(f"outer {outer_it}: volume_before ready")
-        volume_residual_before = float(volume_before - volume_fraction_target)
+        material_measure_before = float(volume_before * partition.domain_area)
+        normalized_fraction_residual_before = float(volume_before - target_fraction)
+        volume_residual_before = float(material_measure_before - target_measure)
         _log(f"outer {outer_it}: pre-checks done")
 
         mechanics_assembler.update_material_scale_from_design(z_vec, p_penal)
@@ -412,7 +433,7 @@ def run_topology_optimisation_parallel(
         _log(f"outer {outer_it}: design frozen state updated (lambda=0)")
         lambda_reference = gather_quantile(
             design_eval.sensitivity_scale_owned_cells(),
-            float(np.clip(1.0 - volume_fraction_target, 0.0, 1.0)),
+            float(np.clip(1.0 - target_fraction, 0.0, 1.0)),
             comm,
         )
         lambda_penalty = float(volume_penalty * volume_residual_before)
@@ -532,7 +553,9 @@ def run_topology_optimisation_parallel(
             if np.isfinite(prev_compliance)
             else np.inf
         )
-        volume_residual = float(volume_value - volume_fraction_target)
+        material_measure_value = float(volume_value * partition.domain_area)
+        normalized_fraction_residual = float(volume_value - target_fraction)
+        volume_residual = float(material_measure_value - target_measure)
         scheduled_p_step = staircase_p_step(
             p_penal,
             p_max=p_max,
@@ -570,8 +593,12 @@ def run_topology_optimisation_parallel(
                 "lambda_effective": float(lambda_effective),
                 "compliance": float(compliance_value),
                 "volume_fraction_before": float(volume_before),
+                "material_measure_before": material_measure_before,
+                "normalized_fraction_residual_before": normalized_fraction_residual_before,
                 "volume_residual_before": float(volume_residual_before),
                 "volume_fraction": float(volume_value),
+                "material_measure": material_measure_value,
+                "normalized_fraction_residual": normalized_fraction_residual,
                 "volume_residual": float(volume_residual),
                 "theta_state_change": float(theta_state_change),
                 "design_change": float(design_change),
@@ -672,6 +699,7 @@ def run_topology_optimisation_parallel(
     final_theta_max = float(comm.allreduce(local_theta_max, op=MPI.MAX))
     total_time = time.perf_counter() - total_start
     final_volume = float(design_eval.volume_fraction(z_vec))
+    final_material_measure = float(design_eval.material_measure(z_vec))
     final_compliance = float(mechanics_assembler.compliance(u_vec))
     local_rss_mib = float(resource.getrusage(resource.RUSAGE_SELF).ru_maxrss) / 1024.0
     rank_rss_values = comm.gather(local_rss_mib, root=0)
@@ -717,7 +745,11 @@ def run_topology_optimisation_parallel(
             "load_fraction": float(load_fraction),
             "fixed_pad_cells": int(fixed_pad_cells),
             "load_pad_cells": int(load_pad_cells),
-            "volume_fraction_target": float(volume_fraction_target),
+            "target_normalized_fraction": target_fraction,
+            "target_material_measure": target_measure,
+            "initial_normalized_fraction": initial_fraction,
+            "volume_fraction_target": target_fraction,
+            "volume_semantics_version": 2,
             "theta_min": float(theta_min),
             "solid_latent": float(solid_latent),
             "young": float(young),
@@ -769,7 +801,12 @@ def run_topology_optimisation_parallel(
         "resource_usage": resource_usage,
         "final_metrics": {
             "outer_iterations": int(len(history)),
+            "initial_volume_fraction": float(initial_volume),
+            "initial_material_measure": float(initial_volume * partition.domain_area),
             "final_volume_fraction": float(final_volume),
+            "final_material_measure": final_material_measure,
+            "final_normalized_fraction_residual": float(final_volume - target_fraction),
+            "final_material_measure_residual": float(final_material_measure - target_measure),
             "final_compliance": float(final_compliance),
             "final_theta_min": float(final_theta_min),
             "final_theta_max": float(max(final_theta_max, float(theta_from_latent(jnp.asarray([solid_latent], dtype=jnp.float64), theta_min)[0]))),
@@ -805,7 +842,27 @@ def _build_arg_parser() -> argparse.ArgumentParser:
     parser.add_argument("--load_fraction", type=float, default=0.2)
     parser.add_argument("--fixed_pad_cells", type=int, default=16)
     parser.add_argument("--load_pad_cells", type=int, default=16)
-    parser.add_argument("--volume_fraction_target", type=float, default=0.4)
+    target_group = parser.add_mutually_exclusive_group()
+    target_group.add_argument(
+        "--target-normalized-fraction",
+        "--volume_fraction_target",
+        dest="target_normalized_fraction",
+        type=float,
+        default=None,
+        help="Target material fraction M/|Omega|; defaults to 0.4.",
+    )
+    target_group.add_argument(
+        "--target-material-measure",
+        type=float,
+        default=None,
+        help="Target unnormalized material measure M.",
+    )
+    parser.add_argument(
+        "--initial-normalized-fraction",
+        type=float,
+        default=None,
+        help="Initial normalized material fraction; defaults to the target fraction.",
+    )
     parser.add_argument("--theta_min", type=float, default=1e-6)
     parser.add_argument("--solid_latent", type=float, default=10.0)
     parser.add_argument("--young", type=float, default=1.0)
@@ -885,7 +942,9 @@ def main() -> None:
         load_fraction=args.load_fraction,
         fixed_pad_cells=args.fixed_pad_cells,
         load_pad_cells=args.load_pad_cells,
-        volume_fraction_target=args.volume_fraction_target,
+        target_normalized_fraction=args.target_normalized_fraction,
+        target_material_measure=args.target_material_measure,
+        initial_normalized_fraction=args.initial_normalized_fraction,
         theta_min=args.theta_min,
         solid_latent=args.solid_latent,
         young=args.young,

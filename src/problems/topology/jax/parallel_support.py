@@ -773,7 +773,7 @@ def build_structured_topology_partition(
 def _compute_initial_latent(
     partition: StructuredTopologyPartition,
     *,
-    target_volume_fraction: float,
+    target_normalized_fraction: float,
     theta_min: float,
     solid_latent: float,
 ) -> float:
@@ -788,7 +788,7 @@ def _compute_initial_latent(
     total_fixed = float(partition.comm.allreduce(local_fixed, op=MPI.SUM))
     total_free = float(partition.comm.allreduce(local_free, op=MPI.SUM))
     min_volume = total_fixed * theta_solid + total_free * theta_min
-    target_volume = target_volume_fraction * partition.domain_area
+    target_volume = target_normalized_fraction * partition.domain_area
     if target_volume < min_volume - 1e-12:
         raise ValueError("Target volume fraction is infeasible for the fixed design pads.")
     theta_free = (target_volume - theta_solid * total_fixed) / max(total_free, 1e-12)
@@ -1481,6 +1481,13 @@ class TopologyDesignEvaluator:
         del g_arr
 
     def volume_fraction(self, vec: PETSc.Vec) -> float:
+        """Return the normalized material fraction on the full domain."""
+
+        return self.material_measure(vec) / self.partition.domain_area
+
+    def material_measure(self, vec: PETSc.Vec) -> float:
+        """Return the unnormalized discrete material measure."""
+
         z_owned = np.asarray(vec.array[:], dtype=np.float64)
         z_local, _ = self.partition.scalar_layout.build_v_local_p2p(z_owned)
         theta_local = np.asarray(
@@ -1544,13 +1551,13 @@ def distributed_relative_change(current_owned: np.ndarray, previous_owned: np.nd
 def create_initial_design_vec(
     *,
     partition: StructuredTopologyPartition,
-    target_volume_fraction: float,
+    target_normalized_fraction: float,
     theta_min: float,
     solid_latent: float,
 ) -> tuple[PETSc.Vec, float]:
     latent_free = _compute_initial_latent(
         partition,
-        target_volume_fraction=target_volume_fraction,
+        target_normalized_fraction=target_normalized_fraction,
         theta_min=theta_min,
         solid_latent=solid_latent,
     )

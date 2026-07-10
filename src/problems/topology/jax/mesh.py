@@ -229,12 +229,12 @@ class CantileverTopologyMesh:
 
     def build_design_state(
         self,
-        target_volume_fraction: float,
+        target_normalized_fraction: float,
         theta_min: float,
         solid_latent: float = 10.0,
     ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
-        if not (0.0 < target_volume_fraction < 1.0):
-            raise ValueError("target_volume_fraction must lie in (0, 1).")
+        if not (0.0 < target_normalized_fraction < 1.0):
+            raise ValueError("target_normalized_fraction must lie in (0, 1).")
         if not (0.0 < theta_min < 1.0):
             raise ValueError("theta_min must lie in (0, 1).")
 
@@ -247,13 +247,13 @@ class CantileverTopologyMesh:
         )
         free_weight = float(np.sum(self.nodal_volume_weights[~self.fixed_design_mask]))
         min_volume = fixed_volume + theta_min * free_weight
-        if target_volume_fraction * self.domain_area < min_volume - 1e-12:
+        if target_normalized_fraction * self.domain_area < min_volume - 1e-12:
             raise ValueError(
                 "Target volume fraction is below the minimum possible volume once fixed solid "
                 "regions and theta_min are enforced."
             )
 
-        theta_free = (target_volume_fraction * self.domain_area - fixed_volume) / free_weight
+        theta_free = (target_normalized_fraction * self.domain_area - fixed_volume) / free_weight
         theta_free = float(np.clip(theta_free, theta_min + 1e-6, 1.0 - 1e-6))
         latent_free = float(
             _logit(np.array([(theta_free - theta_min) / (1.0 - theta_min)], dtype=np.float64))[0]

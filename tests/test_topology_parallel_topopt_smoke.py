@@ -58,6 +58,10 @@ def test_parallel_topopt_smoke_single_rank(tmp_path: Path) -> None:
     assert result["nprocs"] == 1
     assert result["result"] in {"max_outer_iterations", "completed"}
     assert len(result["history"]) == 3
+    assert result["parameters"]["volume_semantics_version"] == 2
+    assert result["parameters"]["target_normalized_fraction"] == pytest.approx(0.4)
+    assert result["parameters"]["target_material_measure"] == pytest.approx(0.8)
+    assert result["final_metrics"]["initial_volume_fraction"] == pytest.approx(0.4)
 
 
 def test_parallel_topopt_smoke_four_ranks(tmp_path: Path) -> None:
@@ -69,3 +73,30 @@ def test_parallel_topopt_smoke_four_ranks(tmp_path: Path) -> None:
     assert result["nprocs"] == 4
     assert result["result"] in {"max_outer_iterations", "completed"}
     assert len(result["history"]) == 3
+    assert result["parameters"]["volume_semantics_version"] == 2
+    assert result["final_metrics"]["initial_volume_fraction"] == pytest.approx(0.4)
+
+
+def test_parallel_topopt_separates_initial_fraction_from_measure_target(tmp_path: Path) -> None:
+    out = tmp_path / "parallel_topopt_measure_target.json"
+    args = _common_args(out)
+    outer_index = args.index("--outer_maxit") + 1
+    args[outer_index] = "1"
+    args.extend(
+        [
+            "--target-material-measure",
+            "0.4",
+            "--initial-normalized-fraction",
+            "0.4",
+        ]
+    )
+    _run([str(PYTHON), str(SOLVER), *args], REPO_ROOT)
+    result = json.loads(out.read_text())
+
+    assert result["parameters"]["target_normalized_fraction"] == pytest.approx(0.2)
+    assert result["parameters"]["target_material_measure"] == pytest.approx(0.4)
+    assert result["parameters"]["initial_normalized_fraction"] == pytest.approx(0.4)
+    assert result["final_metrics"]["initial_volume_fraction"] == pytest.approx(0.4)
+    assert result["history"][0]["material_measure_before"] == pytest.approx(0.8)
+    assert result["history"][0]["volume_residual_before"] == pytest.approx(0.4)
+    assert result["history"][0]["normalized_fraction_residual_before"] == pytest.approx(0.2)
