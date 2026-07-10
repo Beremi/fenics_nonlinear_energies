@@ -165,7 +165,7 @@ The frozen matrix SHA-256 is
 The route-analysis contract is version 2 with SHA-256
 `275f08e03221aed13a1b3cdbd1649a99274cb26b2c6d949f62bb4c3e6012fb00`;
 the route-cost analyzer SHA-256 is
-`abf34fed7715173e3d8c8c4b896c728a05b97d5bf12887f870eb1d4b1b240d38`.
+`3cfb725c930668b771471bae6ae522c3fc3e9d04ec2a6c739fa5ccafeed5470e`.
 The reviewed static campaign manifest SHA-256 is
 `26da0b6790307baa14830e1cbb30f45e301de82f1acca5ec3289a1b90aa5d5b3`.
 It contains 115 required Slurm rows (299 in-allocation process executions,
