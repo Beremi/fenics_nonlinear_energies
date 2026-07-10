@@ -4,11 +4,12 @@
 from __future__ import annotations
 
 import argparse
-import json
 import os
 from types import SimpleNamespace
 
 from mpi4py import MPI
+
+from src.core.benchmark.run_record import atomic_write_json, strict_json_dumps
 
 
 def _configure_thread_env(nproc_threads: int) -> None:
@@ -30,6 +31,12 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--backend", choices=("fenics", "sfd", "element"), required=True)
     parser.add_argument("--level", type=int, required=True)
     parser.add_argument("--out", type=str, required=True)
+    parser.add_argument(
+        "--state-out",
+        type=str,
+        default="",
+        help="Optional NPZ path for the final JAX/PETSc state",
+    )
     parser.add_argument("--quiet", action="store_true")
     parser.add_argument("--save-history", action="store_true")
     parser.add_argument("--save-linear-timing", action="store_true")
@@ -123,6 +130,33 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--tolg-rel", type=float, default=1e-3)
     parser.add_argument("--tolx-rel", type=float, default=1e-3)
     parser.add_argument("--tolx-abs", type=float, default=1e-10)
+    parser.add_argument(
+        "--convergence-metric",
+        choices=("coefficient_l2", "lumped_l2", "reference_elastic_energy"),
+        default="coefficient_l2",
+        help=(
+            "Nonlinear stopping metric: lumped_l2 is the scalar P1 map and "
+            "reference_elastic_energy is the JAX/PETSc HE mechanics map."
+        ),
+    )
+    parser.add_argument(
+        "--convergence-state-scale",
+        type=float,
+        default=None,
+        help="Positive absolute state scale in the selected primal norm.",
+    )
+    parser.add_argument("--riesz-ksp-type", type=str, default="cg")
+    parser.add_argument("--riesz-pc-type", type=str, default="jacobi")
+    parser.add_argument("--riesz-ksp-rtol", type=float, default=1.0e-10)
+    parser.add_argument("--riesz-ksp-atol", type=float, default=1.0e-14)
+    parser.add_argument("--riesz-ksp-max-it", type=int, default=5000)
+    parser.add_argument("--riesz-true-residual-rtol", type=float, default=1.0e-8)
+    parser.add_argument(
+        "--riesz-spd-factor-solver-type",
+        type=str,
+        default="mumps",
+    )
+    parser.add_argument("--riesz-symmetry-tol", type=float, default=1.0e-12)
     parser.add_argument("--maxit", type=int, default=100)
     parser.add_argument("--step-time-limit-s", type=float, default=None)
 
@@ -231,6 +265,7 @@ def _run_plaplace(args):
         retry_on_failure=bool(args.retry_on_failure),
         nproc=args.nproc_threads,
         out="",
+        state_out=args.state_out,
         use_trust_region=args.use_trust_region,
         trust_radius_init=args.trust_radius_init,
         trust_radius_min=args.trust_radius_min,
@@ -242,6 +277,8 @@ def _run_plaplace(args):
         trust_max_reject=args.trust_max_reject,
         trust_subproblem_line_search=args.trust_subproblem_line_search,
         step_time_limit_s=args.step_time_limit_s,
+        convergence_metric=args.convergence_metric,
+        convergence_state_scale=args.convergence_state_scale,
     )
     return run(ns)
 
@@ -287,6 +324,7 @@ def _run_gl(args):
         retry_on_failure=bool(args.retry_on_failure),
         nproc=args.nproc_threads,
         out="",
+        state_out=args.state_out,
         use_trust_region=args.use_trust_region,
         trust_radius_init=args.trust_radius_init,
         trust_radius_min=args.trust_radius_min,
@@ -298,11 +336,26 @@ def _run_gl(args):
         trust_max_reject=args.trust_max_reject,
         trust_subproblem_line_search=args.trust_subproblem_line_search,
         step_time_limit_s=args.step_time_limit_s,
+        convergence_metric=args.convergence_metric,
+        convergence_state_scale=args.convergence_state_scale,
     )
     return run(ns)
 
 
 def _run_he(args):
+    if args.convergence_metric == "lumped_l2":
+        raise ValueError(
+            "Hyperelasticity does not use the scalar lumped_l2 metric; select "
+            "coefficient_l2 or reference_elastic_energy."
+        )
+    if (
+        args.backend == "fenics"
+        and args.convergence_metric == "reference_elastic_energy"
+    ):
+        raise ValueError(
+            "reference_elastic_energy is currently certified only for the "
+            "JAX/PETSc HyperElasticity backends, not the FEniCS runner."
+        )
     linesearch_interval = (args.linesearch_a, args.linesearch_b)
     common = dict(
         mesh_level=args.level,
@@ -416,6 +469,7 @@ def _run_he(args):
         save_linear_timing=args.save_linear_timing,
         quiet=args.quiet,
         out="",
+        state_out=args.state_out,
         use_trust_region=args.use_trust_region,
         trust_radius_init=args.trust_radius_init,
         trust_radius_min=args.trust_radius_min,
@@ -427,8 +481,30 @@ def _run_he(args):
         trust_max_reject=args.trust_max_reject,
         trust_subproblem_line_search=args.trust_subproblem_line_search,
         step_time_limit_s=args.step_time_limit_s,
+        convergence_metric=args.convergence_metric,
+        convergence_state_scale=args.convergence_state_scale,
+        riesz_ksp_type=args.riesz_ksp_type,
+        riesz_pc_type=args.riesz_pc_type,
+        riesz_ksp_rtol=args.riesz_ksp_rtol,
+        riesz_ksp_atol=args.riesz_ksp_atol,
+        riesz_ksp_max_it=args.riesz_ksp_max_it,
+        riesz_true_residual_rtol=args.riesz_true_residual_rtol,
+        riesz_spd_factor_solver_type=args.riesz_spd_factor_solver_type,
+        riesz_symmetry_tol=args.riesz_symmetry_tol,
     )
     return run(ns)
+
+
+def _write_payload(path: str, payload: dict[str, object]) -> None:
+    """Write one durable RFC-compliant case result.
+
+    Iteration histories use non-finite floating-point values internally for
+    diagnostics that do not apply to a given algorithm.  JSON has no NaN or
+    infinity literals, so those optional sentinels are represented as null at
+    the serialization boundary.
+    """
+
+    atomic_write_json(path, payload, nonfinite_as_null=True)
 
 
 def main() -> None:
@@ -448,12 +524,8 @@ def main() -> None:
     }
 
     if MPI.COMM_WORLD.rank == 0:
-        out_dir = os.path.dirname(os.path.abspath(args.out))
-        if out_dir:
-            os.makedirs(out_dir, exist_ok=True)
-        with open(args.out, "w", encoding="utf-8") as f:
-            json.dump(payload, f, indent=2)
-        print(json.dumps(payload, indent=2))
+        _write_payload(args.out, payload)
+        print(strict_json_dumps(payload, indent=2, nonfinite_as_null=True))
 
 
 if __name__ == "__main__":

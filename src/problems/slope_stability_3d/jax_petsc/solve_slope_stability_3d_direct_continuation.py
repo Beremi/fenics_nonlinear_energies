@@ -10,6 +10,7 @@ from pathlib import Path
 import numpy as np
 from mpi4py import MPI
 
+from src.core.benchmark.run_record import atomic_write_json, strict_json_dumps
 from src.core.cli.threading import configure_jax_cpu_threading
 from src.problems.slope_stability_3d.jax_petsc.solve_slope_stability_3d_dof import (
     _build_parser as _build_fixed_parser,
@@ -17,8 +18,7 @@ from src.problems.slope_stability_3d.jax_petsc.solve_slope_stability_3d_dof impo
 
 
 def _write_json(path: Path, payload: dict[str, object]) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+    atomic_write_json(path, payload, nonfinite_as_null=True)
 
 
 def _sanitize_lambda_tag(value: float) -> str:
@@ -295,7 +295,7 @@ def main() -> None:
 
     if rank == 0:
         _write_json(branch_out_dir / "branch_summary.json", summary)
-        print(json.dumps(summary, indent=2))
+        print(strict_json_dumps(summary, indent=2, nonfinite_as_null=True))
 
 
 if __name__ == "__main__":

@@ -10,6 +10,24 @@ import time
 import numpy as np
 from petsc4py import PETSc
 
+from .metrics import EuclideanMetric
+
+
+def _resolve_convergence_correction_mode(convergence_metric, requested_mode):
+    mode = str(requested_mode or "auto")
+    if mode == "auto":
+        return (
+            "legacy_coefficient"
+            if isinstance(convergence_metric, EuclideanMetric)
+            else "metric_current_state"
+        )
+    if mode not in {"legacy_coefficient", "metric_current_state"}:
+        raise ValueError(
+            "convergence_correction_mode must be auto, legacy_coefficient, "
+            "or metric_current_state"
+        )
+    return mode
+
 
 def golden_section_search(f, a, b, tol):
     """Minimise a univariate function on ``[a, b]`` via golden-section search."""
@@ -218,6 +236,9 @@ def newton(
     trust_max_reject=6,
     step_time_limit_s=None,
     iteration_callback=None,
+    convergence_metric=None,
+    convergence_state_scale=1.0,
+    convergence_correction_mode="auto",
 ):
     """Newton's method for energy minimisation on PETSc vectors."""
     trust_shrink = float(trust_shrink)
@@ -249,6 +270,17 @@ def newton(
         def hessian_matvec_fn(_x, _vin, vout):
             vout.set(0.0)
 
+    if convergence_metric is None:
+        convergence_metric = EuclideanMetric()
+    convergence_correction_mode = _resolve_convergence_correction_mode(
+        convergence_metric,
+        convergence_correction_mode,
+    )
+    convergence_state_scale = float(convergence_state_scale)
+    if not np.isfinite(convergence_state_scale) or convergence_state_scale <= 0.0:
+        raise ValueError("convergence_state_scale must be finite and strictly positive")
+    convergence_metric_description = convergence_metric.describe()
+
     rank = 0
     if comm is not None:
         rank = comm.Get_rank()
@@ -266,6 +298,13 @@ def newton(
     message = "Maximum number of iterations reached"
     history = []
     initial_grad_norm = None
+    last_dual_residual_norm = np.nan
+    last_dual_residual_relative = np.nan
+    last_dual_residual_metadata = {}
+    last_coefficient_grad_norm = np.nan
+    last_correction_norm = np.nan
+    last_relative_correction = np.nan
+    last_state_norm = np.nan
     trust_radius = float(trust_radius_init)
     if trust_region:
         trust_radius = min(max(trust_radius, trust_radius_min), trust_radius_max)
@@ -284,14 +323,27 @@ def newton(
         t0 = time.perf_counter()
         gradient_fn(x, g)
         normg = g.norm(PETSc.NormType.NORM_2)
+        dual_residual = convergence_metric.dual_norm(g)
+        convergence_grad_norm = float(dual_residual.value)
         t_grad = time.perf_counter() - t0
 
-        if fail_on_nonfinite and not np.isfinite(normg):
+        if fail_on_nonfinite and (
+            not np.isfinite(normg) or not np.isfinite(convergence_grad_norm)
+        ):
             message = f"Non-finite gradient norm at Newton iteration {nit + 1}"
             break
 
         if initial_grad_norm is None:
-            initial_grad_norm = normg
+            initial_grad_norm = convergence_grad_norm
+
+        relative_dual_residual = float(
+            convergence_grad_norm
+            / max(float(initial_grad_norm), np.finfo(np.float64).tiny)
+        )
+        last_dual_residual_norm = convergence_grad_norm
+        last_dual_residual_relative = relative_dual_residual
+        last_dual_residual_metadata = dict(dual_residual.metadata)
+        last_coefficient_grad_norm = float(normg)
 
         grad_target = tolg
         if tolg_rel > 0.0 and np.isfinite(initial_grad_norm):
@@ -300,11 +352,12 @@ def newton(
         if verbose and rank == 0:
             print(
                 f"it={iter_index}: gradient ready, ||g||={normg:.5e}, "
+                f"||g||_dual={convergence_grad_norm:.5e}, "
                 f"target={grad_target:.5e}, t_g={t_grad:.3f}s",
                 flush=True,
             )
 
-        if (not require_all_convergence) and normg < grad_target:
+        if (not require_all_convergence) and convergence_grad_norm < grad_target:
             message = "Gradient norm converged"
             break
 
@@ -412,14 +465,28 @@ def newton(
                 return False
             if candidate_step_size <= 0.0:
                 return False
-            candidate_step_rel = candidate_step_size / max(1.0, x_prev_norm)
-            if not (candidate_step_size < tolx_abs or candidate_step_rel < tolx_rel):
+            if convergence_correction_mode == "legacy_coefficient":
+                candidate_correction = float(candidate_step_size)
+                candidate_step_rel = float(candidate_step_size) / max(
+                    1.0,
+                    float(x_prev_norm),
+                )
+            else:
+                candidate_correction = convergence_metric.distance(x_trial, x_prev).value
+                candidate_state_norm = convergence_metric.primal_norm(x_trial).value
+                candidate_step_rel = candidate_correction / max(
+                    convergence_state_scale,
+                    candidate_state_norm,
+                )
+            if not (
+                candidate_correction < tolx_abs or candidate_step_rel < tolx_rel
+            ):
                 return False
             if candidate_value > fx_old + max(tolf, _energy_roundoff_tol(fx_old, candidate_value)):
                 return False
             gradient_fn(x_trial, g_trial)
             ghost_update_fn(g_trial)
-            trial_grad_norm = g_trial.norm(PETSc.NormType.NORM_2)
+            trial_grad_norm = convergence_metric.dual_norm(g_trial).value
             return np.isfinite(trial_grad_norm) and trial_grad_norm < grad_target
 
         if trust_region:
@@ -585,7 +652,10 @@ def newton(
                             tolf, 1e-16
                         )
                         if small_step or small_pred:
-                            if require_all_convergence and normg >= grad_target:
+                            if (
+                                require_all_convergence
+                                and convergence_grad_norm >= grad_target
+                            ):
                                 terminate_message = (
                                     "Trust-region radius exhausted before full convergence"
                                 )
@@ -741,6 +811,25 @@ def newton(
                         alpha = 0.0
                         pred_reduction = 0.0
                         actual_reduction = -np.inf
+                    elif str(line_search) == "armijo":
+                        alpha, newval, ls_eval_local, accepted_armijo = _bounded_armijo(
+                            alpha_lo,
+                            alpha_hi,
+                            step_linear,
+                        )
+                        ls_evals += ls_eval_local
+                        if accepted_armijo:
+                            pred_reduction = -(
+                                alpha * step_linear + 0.5 * (alpha ** 2) * step_curv
+                            )
+                            actual_reduction = (
+                                fx_old - newval if np.isfinite(newval) else -np.inf
+                            )
+                        else:
+                            alpha = 0.0
+                            newval = np.inf
+                            pred_reduction = 0.0
+                            actual_reduction = -np.inf
                     else:
                         alpha_lo, alpha_hi, ls_repair_evals, ls_repaired = _repair_linesearch_interval(
                             _energy_at_alpha,
@@ -825,7 +914,10 @@ def newton(
                             tolf, 1e-16
                         )
                         if small_step or small_pred:
-                            if require_all_convergence and normg >= grad_target:
+                            if (
+                                require_all_convergence
+                                and convergence_grad_norm >= grad_target
+                            ):
                                 terminate_message = (
                                     "Trust-region radius exhausted before full convergence"
                                 )
@@ -942,10 +1034,19 @@ def newton(
                         f"ls_evals={ls_evals}, fx_trial={fx_trial:.5e}",
                         flush=True,
                     )
-                if (
-                    (str(line_search) == "residual_bisection" and alpha > 0.0 and np.isfinite(fx_trial))
-                    or (np.isfinite(fx_trial) and fx_trial < fx_old)
-                ):
+                accepted_by_decrease = (
+                    str(line_search) == "residual_bisection"
+                    and alpha > 0.0
+                    and np.isfinite(fx_trial)
+                ) or (np.isfinite(fx_trial) and fx_trial < fx_old)
+                accepted_by_roundoff = (
+                    not accepted_by_decrease
+                    and _accepts_roundoff_converged_candidate(
+                        fx_trial,
+                        abs(float(alpha)) * float(pnorm),
+                    )
+                )
+                if accepted_by_decrease or accepted_by_roundoff:
                     fx = fx_trial
                     dE = fx_old - fx
                     step_norm = abs(alpha) * pnorm
@@ -956,27 +1057,43 @@ def newton(
                     ghost_update_fn(x)
                     t_update = time.perf_counter() - t_update0
                     accepted_step = True
+                    used_roundoff_acceptance = bool(accepted_by_roundoff)
                 else:
                     x_prev.copy(x)
                     project_fn(x)
                     ghost_update_fn(x)
                     alpha = 0.0
                     t_update = 0.0
+                    terminate_after_iter = True
+                    terminate_message = (
+                        f"{str(line_search)} line search failed at Newton iteration {nit}"
+                    )
             else:
                 x_prev.copy(x)
                 project_fn(x)
                 ghost_update_fn(x)
                 alpha = 0.0
                 t_update = 0.0
+                terminate_after_iter = True
+                if convergence_grad_norm < grad_target:
+                    terminate_message = "Converged (gradient; Newton direction at roundoff)"
+                else:
+                    terminate_message = (
+                        "Newton direction vanished before gradient convergence at "
+                        f"Newton iteration {nit}"
+                    )
 
         t_ls = time.perf_counter() - t_ls_start
         t_iter_total = time.perf_counter() - t_iter_start
 
-        rt = float(normg / max(abs(float(grad_target)), 1.0e-30))
+        rt = float(
+            convergence_grad_norm / max(abs(float(grad_target)), 1.0e-30)
+        )
         if verbose and rank == 0:
             line = (
                 f"it={nit}, J={fx:.5f}, dJ={dE:.5e}, "
-                f"||g||={normg:.5e}, RT={rt:.5e}, alpha={alpha:.5e}, "
+                f"||g||={normg:.5e}, ||g||_dual={convergence_grad_norm:.5e}, "
+                f"RT={rt:.5e}, alpha={alpha:.5e}, "
                 f"ksp_its={ksp_its}, ls_evals={ls_evals}, "
                 f"accepted={bool(accepted_step)}, "
                 f"t_g={t_grad:.3f}s, t_H={t_hess:.3f}s, "
@@ -989,26 +1106,66 @@ def newton(
                 )
             print(line, flush=True)
 
+        if convergence_correction_mode == "legacy_coefficient":
+            state_norm = float(x.norm(PETSc.NormType.NORM_2))
+            correction_norm = float(step_norm) if accepted_step else 0.0
+            relative_correction = float(step_rel) if accepted_step else 0.0
+        else:
+            state_norm_evaluation = convergence_metric.primal_norm(x)
+            state_norm = float(state_norm_evaluation.value)
+            correction_evaluation = convergence_metric.distance(x, x_prev)
+            correction_norm = float(correction_evaluation.value) if accepted_step else 0.0
+            relative_correction = float(
+                correction_norm / max(convergence_state_scale, state_norm)
+            )
+        last_state_norm = state_norm
+        last_correction_norm = correction_norm
+        last_relative_correction = relative_correction
+
         post_grad_norm = np.nan
+        post_grad_norm_coefficient = np.nan
+        post_grad_metadata = {}
         converged_energy = accepted_step and np.isfinite(dE) and abs(dE) < tolf
-        converged_step = accepted_step and (step_norm < tolx_abs or step_rel < tolx_rel)
+        converged_step = accepted_step and (
+            correction_norm < tolx_abs or relative_correction < tolx_rel
+        )
         if require_all_convergence and converged_energy and converged_step:
             gradient_fn(x, g)
-            post_grad_norm = g.norm(PETSc.NormType.NORM_2)
-            if fail_on_nonfinite and not np.isfinite(post_grad_norm):
+            post_grad_norm_coefficient = g.norm(PETSc.NormType.NORM_2)
+            post_grad_evaluation = convergence_metric.dual_norm(g)
+            post_grad_norm = float(post_grad_evaluation.value)
+            post_grad_metadata = dict(post_grad_evaluation.metadata)
+            if fail_on_nonfinite and (
+                not np.isfinite(post_grad_norm)
+                or not np.isfinite(post_grad_norm_coefficient)
+            ):
                 x_prev.copy(x)
                 ghost_update_fn(x)
                 message = f"Non-finite post-update gradient norm at Newton iteration {nit}"
                 break
+
+            last_dual_residual_norm = post_grad_norm
+            last_dual_residual_relative = float(
+                post_grad_norm
+                / max(float(initial_grad_norm), np.finfo(np.float64).tiny)
+            )
+            last_dual_residual_metadata = dict(post_grad_metadata)
+            last_coefficient_grad_norm = float(post_grad_norm_coefficient)
 
         history_entry = {
             "it": int(nit),
             "energy": float(fx),
             "dE": float(dE),
             "grad_norm": float(normg),
+            "grad_norm_coefficient_l2": float(normg),
+            "dual_residual_norm": float(convergence_grad_norm),
+            "dual_residual_relative": float(relative_dual_residual),
+            "dual_residual_metadata": dict(dual_residual.metadata),
             "grad_target": float(grad_target),
             "rt": float(rt),
             "grad_norm_post": float(post_grad_norm),
+            "grad_norm_post_coefficient_l2": float(post_grad_norm_coefficient),
+            "dual_residual_post_metadata": dict(post_grad_metadata),
             "alpha": float(alpha),
             "ksp_its": int(ksp_its),
             "ls_evals": int(ls_evals),
@@ -1018,6 +1175,11 @@ def newton(
             "accepted_step": bool(accepted_step),
             "step_norm": float(step_norm),
             "step_rel": float(step_rel),
+            "correction_norm": float(correction_norm),
+            "relative_correction": float(relative_correction),
+            "state_norm": float(state_norm),
+            "convergence_state_scale": float(convergence_state_scale),
+            "convergence_correction_mode": str(convergence_correction_mode),
             "pred_reduction": float(pred_reduction),
             "actual_reduction": float(actual_reduction),
             "trust_rejects": int(trust_rejects),
@@ -1066,6 +1228,34 @@ def newton(
             message = "Energy change converged"
             break
 
+    if np.isfinite(fx):
+        gradient_fn(x, g)
+        ghost_update_fn(g)
+        endpoint_coefficient_norm = float(g.norm(PETSc.NormType.NORM_2))
+        if np.isfinite(endpoint_coefficient_norm):
+            endpoint_dual = convergence_metric.dual_norm(g)
+            endpoint_state = convergence_metric.primal_norm(x)
+            endpoint_dual_norm = float(endpoint_dual.value)
+            endpoint_state_norm = float(endpoint_state.value)
+            if fail_on_nonfinite and not (
+                np.isfinite(endpoint_dual_norm)
+                and np.isfinite(endpoint_state_norm)
+            ):
+                message = "Non-finite terminal convergence norm after Newton solve"
+            else:
+                if initial_grad_norm is None:
+                    initial_grad_norm = endpoint_dual_norm
+                last_dual_residual_norm = endpoint_dual_norm
+                last_dual_residual_relative = float(
+                    endpoint_dual_norm
+                    / max(float(initial_grad_norm), np.finfo(np.float64).tiny)
+                )
+                last_dual_residual_metadata = dict(endpoint_dual.metadata)
+                last_coefficient_grad_norm = endpoint_coefficient_norm
+                last_state_norm = endpoint_state_norm
+        elif fail_on_nonfinite:
+            message = "Non-finite terminal coefficient gradient after Newton solve"
+
     runtime = time.perf_counter() - start
 
     g.destroy()
@@ -1082,6 +1272,19 @@ def newton(
         "time": runtime,
         "message": message,
         "history": history,
+        "convergence_metric": convergence_metric_description,
+        "initial_dual_residual_norm": (
+            None if initial_grad_norm is None else float(initial_grad_norm)
+        ),
+        "dual_residual_norm": float(last_dual_residual_norm),
+        "dual_residual_relative": float(last_dual_residual_relative),
+        "dual_residual_metadata": dict(last_dual_residual_metadata),
+        "grad_norm_coefficient_l2": float(last_coefficient_grad_norm),
+        "correction_norm": float(last_correction_norm),
+        "relative_correction": float(last_relative_correction),
+        "state_norm": float(last_state_norm),
+        "convergence_state_scale": float(convergence_state_scale),
+        "convergence_correction_mode": str(convergence_correction_mode),
         "success": "converged" in message.lower(),
     }
 
@@ -1115,6 +1318,9 @@ def gradient_descent(
     ghost_update_fn=None,
     project_fn=None,
     save_history=False,
+    convergence_metric=None,
+    convergence_state_scale=1.0,
+    convergence_correction_mode="auto",
 ):
     """Gradient descent with PETSc vectors and line search."""
     if ghost_update_fn is None:
@@ -1124,6 +1330,17 @@ def gradient_descent(
     if project_fn is None:
         def project_fn(_v):
             return None
+
+    if convergence_metric is None:
+        convergence_metric = EuclideanMetric()
+    convergence_correction_mode = _resolve_convergence_correction_mode(
+        convergence_metric,
+        convergence_correction_mode,
+    )
+    convergence_state_scale = float(convergence_state_scale)
+    if not np.isfinite(convergence_state_scale) or convergence_state_scale <= 0.0:
+        raise ValueError("convergence_state_scale must be finite and strictly positive")
+    convergence_metric_description = convergence_metric.describe()
 
     rank = 0
     if comm is not None:
@@ -1156,6 +1373,13 @@ def gradient_descent(
     message = "Maximum number of iterations reached"
     history = []
     initial_grad_norm = None
+    last_dual_residual_norm = np.nan
+    last_dual_residual_relative = np.nan
+    last_dual_residual_metadata = {}
+    last_coefficient_grad_norm = np.nan
+    last_correction_norm = np.nan
+    last_relative_correction = np.nan
+    last_state_norm = np.nan
     last_alpha_abs = max(abs(float(adaptive_alpha0)), float(linesearch_tol))
     last_gamma_scaled = max(abs(float(adaptive_alpha0)), float(linesearch_tol))
 
@@ -1171,26 +1395,42 @@ def gradient_descent(
         t0 = time.perf_counter()
         gradient_fn(x, g)
         normg = g.norm(PETSc.NormType.NORM_2)
+        dual_residual = convergence_metric.dual_norm(g)
+        convergence_grad_norm = float(dual_residual.value)
         beta_inf = g.norm(PETSc.NormType.NORM_INFINITY)
         t_grad = time.perf_counter() - t0
         if verbose and rank == 0:
             print(
-                f"gd it={nit + 1} grad ready, ||g||={normg:.5e}, t_grad={t_grad:.3f}s",
+                f"gd it={nit + 1} grad ready, ||g||={normg:.5e}, "
+                f"||g||_dual={convergence_grad_norm:.5e}, t_grad={t_grad:.3f}s",
                 flush=True,
             )
 
-        if fail_on_nonfinite and (not np.isfinite(normg) or not np.isfinite(beta_inf)):
+        if fail_on_nonfinite and (
+            not np.isfinite(normg)
+            or not np.isfinite(convergence_grad_norm)
+            or not np.isfinite(beta_inf)
+        ):
             message = f"Non-finite gradient norm at gradient iteration {nit + 1}"
             break
 
         if initial_grad_norm is None:
-            initial_grad_norm = normg
+            initial_grad_norm = convergence_grad_norm
+
+        relative_dual_residual = float(
+            convergence_grad_norm
+            / max(float(initial_grad_norm), np.finfo(np.float64).tiny)
+        )
+        last_dual_residual_norm = convergence_grad_norm
+        last_dual_residual_relative = relative_dual_residual
+        last_dual_residual_metadata = dict(dual_residual.metadata)
+        last_coefficient_grad_norm = float(normg)
 
         grad_target = tolg
         if tolg_rel > 0.0 and np.isfinite(initial_grad_norm):
             grad_target = max(tolg, tolg_rel * initial_grad_norm)
 
-        if (not require_all_convergence) and normg < grad_target:
+        if (not require_all_convergence) and convergence_grad_norm < grad_target:
             message = "Gradient norm converged"
             break
 
@@ -1359,12 +1599,45 @@ def gradient_descent(
 
         t_iter_total = time.perf_counter() - t_iter_start
 
+        if convergence_correction_mode == "legacy_coefficient":
+            state_norm = float(x.norm(PETSc.NormType.NORM_2))
+            correction_norm = float(step_norm) if accepted_step else 0.0
+            relative_correction = float(step_rel) if accepted_step else 0.0
+        else:
+            state_norm_evaluation = convergence_metric.primal_norm(x)
+            state_norm = float(state_norm_evaluation.value)
+            correction_evaluation = convergence_metric.distance(x, x_prev)
+            correction_norm = float(correction_evaluation.value) if accepted_step else 0.0
+            relative_correction = float(
+                correction_norm / max(convergence_state_scale, state_norm)
+            )
+        last_state_norm = state_norm
+        last_correction_norm = correction_norm
+        last_relative_correction = relative_correction
+
         converged_energy = accepted_step and np.isfinite(dE) and abs(dE) < tolf
-        converged_step = accepted_step and (step_norm < tolx_abs or step_rel < tolx_rel)
+        converged_step = accepted_step and (
+            correction_norm < tolx_abs or relative_correction < tolx_rel
+        )
 
         if require_all_convergence and accepted_step and converged_energy and converged_step:
             gradient_fn(x, g)
-            post_grad_norm = g.norm(PETSc.NormType.NORM_2)
+            post_grad_norm_coefficient = g.norm(PETSc.NormType.NORM_2)
+            post_grad_evaluation = convergence_metric.dual_norm(g)
+            post_grad_norm = float(post_grad_evaluation.value)
+            if fail_on_nonfinite and (
+                not np.isfinite(post_grad_norm)
+                or not np.isfinite(post_grad_norm_coefficient)
+            ):
+                message = f"Non-finite post-update gradient norm at gradient iteration {nit}"
+                break
+            last_dual_residual_norm = post_grad_norm
+            last_dual_residual_relative = float(
+                post_grad_norm
+                / max(float(initial_grad_norm), np.finfo(np.float64).tiny)
+            )
+            last_dual_residual_metadata = dict(post_grad_evaluation.metadata)
+            last_coefficient_grad_norm = float(post_grad_norm_coefficient)
             if float(post_grad_norm) < grad_target:
                 message = "Converged (energy, step, gradient)"
                 if save_history:
@@ -1374,11 +1647,29 @@ def gradient_descent(
                             "energy": float(fx),
                             "dE": float(dE),
                             "grad_norm": float(normg),
+                            "grad_norm_coefficient_l2": float(normg),
+                            "dual_residual_norm": float(convergence_grad_norm),
+                            "dual_residual_relative": float(relative_dual_residual),
+                            "dual_residual_metadata": dict(dual_residual.metadata),
+                            "grad_norm_post": float(post_grad_norm),
+                            "grad_norm_post_coefficient_l2": float(
+                                post_grad_norm_coefficient
+                            ),
+                            "dual_residual_post_metadata": dict(
+                                post_grad_evaluation.metadata
+                            ),
                             "grad_inf_norm": float(beta_inf),
                             "grad_target": float(grad_target),
                             "alpha": float(alpha),
                             "step_norm": float(step_norm),
                             "step_rel": float(step_rel),
+                            "correction_norm": float(correction_norm),
+                            "relative_correction": float(relative_correction),
+                            "state_norm": float(state_norm),
+                            "convergence_state_scale": float(convergence_state_scale),
+                            "convergence_correction_mode": str(
+                                convergence_correction_mode
+                            ),
                             "ls_a": float(ls_a_eff),
                             "ls_b": float(ls_b_eff),
                             "ls_evals": int(ls_evals),
@@ -1407,6 +1698,7 @@ def gradient_descent(
         if verbose and rank == 0:
             print(
                 f"gd it={nit}, f={fx:.5f}, dE={dE:.5e}, ||g||={normg:.5e}, "
+                f"||g||_dual={convergence_grad_norm:.5e}, "
                 f"alpha={alpha:.5e}, ls={line_search}, ls_evals={ls_evals}, "
                 f"t_grad={t_grad:.3f}s, t_ls={t_ls:.3f}s, t_update={t_update:.3f}s",
                 flush=True,
@@ -1419,11 +1711,22 @@ def gradient_descent(
                     "energy": float(fx),
                     "dE": float(dE),
                     "grad_norm": float(normg),
+                    "grad_norm_coefficient_l2": float(normg),
+                    "dual_residual_norm": float(convergence_grad_norm),
+                    "dual_residual_relative": float(relative_dual_residual),
+                    "dual_residual_metadata": dict(dual_residual.metadata),
                     "grad_inf_norm": float(beta_inf),
                     "grad_target": float(grad_target),
                     "alpha": float(alpha),
                     "step_norm": float(step_norm),
                     "step_rel": float(step_rel),
+                    "correction_norm": float(correction_norm),
+                    "relative_correction": float(relative_correction),
+                    "state_norm": float(state_norm),
+                    "convergence_state_scale": float(convergence_state_scale),
+                    "convergence_correction_mode": str(
+                        convergence_correction_mode
+                    ),
                     "ls_a": float(ls_a_eff) if "ls_a_eff" in locals() else float("nan"),
                     "ls_b": float(ls_b_eff) if "ls_b_eff" in locals() else float("nan"),
                     "ls_evals": int(ls_evals),
@@ -1448,6 +1751,34 @@ def gradient_descent(
             message = f"Non-finite energy after update at gradient iteration {nit}"
             break
 
+    if np.isfinite(fx):
+        gradient_fn(x, g)
+        ghost_update_fn(g)
+        endpoint_coefficient_norm = float(g.norm(PETSc.NormType.NORM_2))
+        if np.isfinite(endpoint_coefficient_norm):
+            endpoint_dual = convergence_metric.dual_norm(g)
+            endpoint_state = convergence_metric.primal_norm(x)
+            endpoint_dual_norm = float(endpoint_dual.value)
+            endpoint_state_norm = float(endpoint_state.value)
+            if fail_on_nonfinite and not (
+                np.isfinite(endpoint_dual_norm)
+                and np.isfinite(endpoint_state_norm)
+            ):
+                message = "Non-finite terminal convergence norm after gradient descent"
+            else:
+                if initial_grad_norm is None:
+                    initial_grad_norm = endpoint_dual_norm
+                last_dual_residual_norm = endpoint_dual_norm
+                last_dual_residual_relative = float(
+                    endpoint_dual_norm
+                    / max(float(initial_grad_norm), np.finfo(np.float64).tiny)
+                )
+                last_dual_residual_metadata = dict(endpoint_dual.metadata)
+                last_coefficient_grad_norm = endpoint_coefficient_norm
+                last_state_norm = endpoint_state_norm
+        elif fail_on_nonfinite:
+            message = "Non-finite terminal coefficient gradient after gradient descent"
+
     runtime = time.perf_counter() - start
 
     g.destroy()
@@ -1462,6 +1793,19 @@ def gradient_descent(
         "time": float(runtime),
         "message": message,
         "history": history,
+        "convergence_metric": convergence_metric_description,
+        "initial_dual_residual_norm": (
+            None if initial_grad_norm is None else float(initial_grad_norm)
+        ),
+        "dual_residual_norm": float(last_dual_residual_norm),
+        "dual_residual_relative": float(last_dual_residual_relative),
+        "dual_residual_metadata": dict(last_dual_residual_metadata),
+        "grad_norm_coefficient_l2": float(last_coefficient_grad_norm),
+        "correction_norm": float(last_correction_norm),
+        "relative_correction": float(last_relative_correction),
+        "state_norm": float(last_state_norm),
+        "convergence_state_scale": float(convergence_state_scale),
+        "convergence_correction_mode": str(convergence_correction_mode),
         "last_alpha_abs": float(last_alpha_abs),
         "last_gamma_scaled": float(last_gamma_scaled),
         "success": "converged" in message.lower(),

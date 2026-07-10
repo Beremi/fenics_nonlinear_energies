@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import hashlib
+from pathlib import Path
 import time
 from dataclasses import dataclass
 from typing import Callable, Mapping
@@ -11,7 +13,10 @@ from mpi4py import MPI
 from petsc4py import PETSc
 
 from src.core.benchmark.repair import build_retry_attempts, needs_solver_repair
+from src.core.benchmark.run_record import sha256_file
+from src.core.benchmark.state_export import export_scalar_mesh_state_npz
 from src.core.petsc.gamg import build_gamg_coordinates
+from src.core.petsc.metrics import DiagonalRieszMetric, EuclideanMetric
 from src.core.petsc.minimizers import newton
 from src.core.petsc.trust_ksp import ksp_cg_set_radius
 
@@ -57,6 +62,182 @@ def _pc_options(settings: Mapping[str, object]) -> dict[str, object]:
         opts["pc_gamg_threshold"] = float(settings["gamg_threshold"])
         opts["pc_gamg_agg_nsmooths"] = int(settings["gamg_agg_nsmooths"])
     return opts
+
+
+def _sha256_array(values: object) -> str:
+    array = np.ascontiguousarray(np.asarray(values))
+    digest = hashlib.sha256()
+    digest.update(str(array.dtype).encode("utf-8"))
+    digest.update(str(tuple(int(value) for value in array.shape)).encode("utf-8"))
+    digest.update(array.view(np.uint8))
+    return digest.hexdigest()
+
+
+def _scalar_lumped_mass_weights(params: Mapping[str, object]) -> np.ndarray:
+    """Return positive P1 lumped-mass weights in original free-DOF order."""
+
+    nodes = np.asarray(params["nodes"], dtype=np.float64)
+    elements = np.asarray(params["elems"], dtype=np.int64)
+    volumes = np.asarray(params["vol"], dtype=np.float64).reshape(-1)
+    freedofs = np.asarray(params["freedofs"], dtype=np.int64).reshape(-1)
+    if nodes.ndim != 2 or nodes.shape[1] != 2:
+        raise ValueError("The scalar lumped-L2 metric requires two-dimensional nodes")
+    if elements.ndim != 2 or elements.shape[1] != 3:
+        raise ValueError("The scalar lumped-L2 metric requires P1 triangles")
+    if volumes.shape != (elements.shape[0],):
+        raise ValueError("Element-volume array does not match the scalar mesh")
+    if not np.all(np.isfinite(volumes)) or np.any(volumes <= 0.0):
+        raise ValueError("Element volumes must be finite and strictly positive")
+    total_weights = np.zeros(nodes.shape[0], dtype=np.float64)
+    np.add.at(
+        total_weights,
+        elements.reshape(-1),
+        np.repeat(volumes / 3.0, 3),
+    )
+    weights = np.asarray(total_weights[freedofs], dtype=np.float64)
+    if not np.all(np.isfinite(weights)) or np.any(weights <= 0.0):
+        raise ValueError("Every scalar free DOF must have positive lumped mass")
+    return weights
+
+
+def _build_scalar_convergence_metric(args, params, assembler):
+    selection = str(
+        getattr(args, "convergence_metric", "coefficient_l2") or "coefficient_l2"
+    )
+    explicit_scale = getattr(args, "convergence_state_scale", None)
+    if explicit_scale is not None:
+        explicit_scale = float(explicit_scale)
+        if not np.isfinite(explicit_scale) or explicit_scale <= 0.0:
+            raise ValueError(
+                "convergence_state_scale must be finite and strictly positive"
+            )
+    if selection == "coefficient_l2":
+        state_scale = 1.0 if explicit_scale is None else explicit_scale
+        metric = EuclideanMetric()
+        return metric, float(state_scale), {
+            "selection": selection,
+            "state_scale": float(state_scale),
+            "state_scale_source": (
+                "legacy_unit_coefficient" if explicit_scale is None else "explicit_cli"
+            ),
+            "correction_normalization": "legacy_coefficient",
+            "metric": metric.describe(),
+        }
+    if selection != "lumped_l2":
+        raise ValueError(f"Unsupported scalar convergence metric {selection!r}")
+
+    weights_original = _scalar_lumped_mass_weights(params)
+    permutation = np.asarray(assembler.part.perm, dtype=np.int64)
+    weights_reordered = np.asarray(weights_original[permutation], dtype=np.float64)
+    weights_vec = assembler.create_vec(weights_reordered)
+    try:
+        metric = DiagonalRieszMetric(
+            weights_vec,
+            name="scalar_p1_lumped_l2",
+            provenance={
+                "operator": "row-sum lumped P1 mass matrix on constrained free DOFs",
+                "quadrature": "triangle area divided equally among three P1 nodes",
+                "free_space_ordering": "assembler reordered free coefficients",
+                "free_dofs": int(weights_original.size),
+                "total_free_weight": float(np.sum(weights_original)),
+                "minimum_weight": float(np.min(weights_original)),
+                "maximum_weight": float(np.max(weights_original)),
+                "input_sha256": {
+                    "nodes": _sha256_array(np.asarray(params["nodes"])),
+                    "elements": _sha256_array(np.asarray(params["elems"])),
+                    "element_volumes": _sha256_array(np.asarray(params["vol"])),
+                    "free_dofs": _sha256_array(np.asarray(params["freedofs"])),
+                    "free_permutation": _sha256_array(permutation),
+                },
+            },
+        )
+    finally:
+        weights_vec.destroy()
+    # A unit scalar field gives a dimensionally meaningful, mesh-stable default
+    # scale even when the prescribed initial iterate is identically zero.
+    default_scale = float(np.sqrt(np.sum(weights_original)))
+    state_scale = default_scale if explicit_scale is None else explicit_scale
+    return metric, float(state_scale), {
+        "selection": selection,
+        "state_scale": float(state_scale),
+        "state_scale_source": (
+            "unit_field_lumped_l2_norm" if explicit_scale is None else "explicit_cli"
+        ),
+        "correction_normalization": "metric_current_state",
+        "primal_norm_definition": "sqrt(u^T M_lumped u)",
+        "dual_residual_definition": "sqrt(g^T M_lumped^{-1} g)",
+        "relative_correction_definition": (
+            "primal_correction_norm/max(primal_state_norm,state_scale)"
+        ),
+        "metric": metric.describe(),
+    }
+
+
+def _export_scalar_state(
+    *,
+    path: str | Path,
+    x: PETSc.Vec,
+    params: Mapping[str, object],
+    assembler,
+    comm: MPI.Comm,
+    mesh_level: int,
+    problem_name: str,
+    energy: float,
+    convergence_configuration: Mapping[str, object],
+) -> dict[str, object]:
+    destination = Path(path).resolve()
+    if destination.suffix != ".npz":
+        raise ValueError("Scalar state output must use an explicit .npz suffix")
+    owned_chunks = comm.gather(
+        np.asarray(x.getArray(readonly=True), dtype=np.float64).copy(),
+        root=0,
+    )
+    metadata: dict[str, object] | None = None
+    root_error: str | None = None
+    if comm.rank == 0:
+        try:
+            reordered = np.concatenate(owned_chunks or [])
+            permutation = np.asarray(assembler.part.perm, dtype=np.int64)
+            freedofs = np.asarray(params["freedofs"], dtype=np.int64)
+            if reordered.size != permutation.size or permutation.size != freedofs.size:
+                raise ValueError("Scalar state/free-space dimensions are inconsistent")
+            original_free = np.empty_like(reordered)
+            original_free[permutation] = reordered
+            full_state = np.asarray(params["u_0"], dtype=np.float64).copy()
+            full_state[freedofs] = original_free
+            export_scalar_mesh_state_npz(
+                destination,
+                coords=np.asarray(params["nodes"], dtype=np.float64),
+                triangles=np.asarray(params["elems"], dtype=np.int32),
+                u=full_state,
+                mesh_level=int(mesh_level),
+                problem_name=str(problem_name),
+                energy=float(energy),
+                metadata={
+                    "state_ordering": "global mesh-node order",
+                    "state_sha256": _sha256_array(full_state),
+                    "free_state_sha256": _sha256_array(original_free),
+                    "free_dofs_sha256": _sha256_array(freedofs),
+                    "free_permutation_sha256": _sha256_array(permutation),
+                    "convergence_metric": str(convergence_configuration["selection"]),
+                },
+            )
+            metadata = {
+                "path": str(destination),
+                "file_sha256": sha256_file(destination),
+                "state_sha256": _sha256_array(full_state),
+                "free_state_sha256": _sha256_array(original_free),
+                "ordering": "global mesh-node order",
+            }
+        except Exception as exc:  # broadcast the failure instead of stranding MPI peers
+            root_error = f"{type(exc).__name__}: {exc}"
+    root_error = comm.bcast(root_error, root=0)
+    if root_error is not None:
+        raise RuntimeError(f"Scalar state export failed on rank 0: {root_error}")
+    metadata = comm.bcast(metadata, root=0)
+    if metadata is None:
+        raise RuntimeError("Scalar state export produced no root metadata")
+    return dict(metadata)
 
 
 def run_scalar_problem(spec: ScalarProblemDriverSpec, args) -> dict:
@@ -111,6 +292,11 @@ def run_scalar_problem(spec: ScalarProblemDriverSpec, args) -> dict:
     x = assembler.create_vec(u_init_reordered)
     x_initial = x.duplicate()
     x.copy(x_initial)
+
+    convergence_metric = None
+    convergence_metric, convergence_state_scale, convergence_configuration = (
+        _build_scalar_convergence_metric(args, params, assembler)
+    )
 
     ksp = assembler.ksp
     A = assembler.A
@@ -257,6 +443,7 @@ def run_scalar_problem(spec: ScalarProblemDriverSpec, args) -> dict:
     used_attempt = "primary"
     used_linesearch = linesearch_interval
     solve_time = 0.0
+    state_output: dict[str, object] | None = None
 
     try:
         for idx, (attempt_name, ls_interval, ksp_rtol_attempt, ksp_max_it_attempt) in enumerate(
@@ -309,6 +496,8 @@ def run_scalar_problem(spec: ScalarProblemDriverSpec, args) -> dict:
                 trust_eta_expand=trust_eta_expand,
                 trust_max_reject=trust_max_reject,
                 step_time_limit_s=step_time_limit_s,
+                convergence_metric=convergence_metric,
+                convergence_state_scale=convergence_state_scale,
             )
             solve_time = time.perf_counter() - t0
 
@@ -326,6 +515,20 @@ def run_scalar_problem(spec: ScalarProblemDriverSpec, args) -> dict:
             "linear_iters": int(sum(linear_iters_this_attempt)),
             "energy": float(result["fun"]),
             "message": str(result["message"]),
+            "success": bool(result["success"]),
+            "convergence": {
+                "metric": dict(result["convergence_metric"]),
+                "initial_dual_residual_norm": result["initial_dual_residual_norm"],
+                "dual_residual_norm": float(result["dual_residual_norm"]),
+                "dual_residual_relative": float(result["dual_residual_relative"]),
+                "dual_residual_metadata": dict(result["dual_residual_metadata"]),
+                "coefficient_gradient_l2": float(result["grad_norm_coefficient_l2"]),
+                "correction_norm": float(result["correction_norm"]),
+                "relative_correction": float(result["relative_correction"]),
+                "state_norm": float(result["state_norm"]),
+                "state_scale": float(result["convergence_state_scale"]),
+                "correction_mode": str(result["convergence_correction_mode"]),
+            },
             "attempt": used_attempt,
             "ksp_rtol_used": float(used_ksp_rtol),
             "ksp_max_it_used": int(used_ksp_max_it),
@@ -345,7 +548,23 @@ def run_scalar_problem(spec: ScalarProblemDriverSpec, args) -> dict:
             step_record["linear_timing"] = list(linear_timing_records)
         step_records.append(step_record)
 
+        state_out = str(getattr(args, "state_out", "") or "").strip()
+        if state_out:
+            state_output = _export_scalar_state(
+                path=state_out,
+                x=x,
+                params=params,
+                assembler=assembler,
+                comm=comm,
+                mesh_level=int(args.level),
+                problem_name=spec.problem_name,
+                energy=float(result["fun"]),
+                convergence_configuration=convergence_configuration,
+            )
+
     finally:
+        if isinstance(convergence_metric, DiagonalRieszMetric):
+            convergence_metric.destroy()
         x_initial.destroy()
         x.destroy()
         assembler.cleanup()
@@ -365,6 +584,8 @@ def run_scalar_problem(spec: ScalarProblemDriverSpec, args) -> dict:
             "problem": {
                 "name": spec.problem_name,
             },
+            "convergence": dict(convergence_configuration),
+            "state_output": state_output,
             "linear_solver": {
                 "ksp_type": str(settings["ksp_type"]),
                 "pc_type": str(settings["pc_type"]),

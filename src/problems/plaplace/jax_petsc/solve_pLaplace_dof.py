@@ -16,11 +16,11 @@ Usage:
 
 import sys
 import os
-import json
 import argparse
 from pathlib import Path
 
 from mpi4py import MPI
+from src.core.benchmark.run_record import atomic_write_json
 from src.core.cli.threading import configure_jax_cpu_threading
 
 # ---- Parse args before setting env vars (critical for JAX init order) ----
@@ -58,6 +58,12 @@ parser.add_argument("--tolg", type=float, default=1e-3,
                     help="Gradient norm tolerance (default: 1e-3)")
 parser.add_argument("--linesearch-tol", type=float, default=1e-3,
                     help="Line-search tolerance (default: 1e-3)")
+parser.add_argument(
+    "--convergence-metric",
+    choices=("coefficient_l2", "lumped_l2"),
+    default="coefficient_l2",
+)
+parser.add_argument("--convergence-state-scale", type=float, default=None)
 parser.add_argument("--local-coloring", action="store_true",
                     help="Use local per-rank graph coloring + vmap (Variant B)")
 parser.add_argument("--assembly-mode", choices=("sfd", "element"), default="sfd",
@@ -127,6 +133,8 @@ def main():
                 linesearch_tol=args.linesearch_tol,
                 local_hessian_mode=args.local_hessian_mode,
                 element_reorder_mode=args.element_reorder_mode,
+                convergence_metric=args.convergence_metric,
+                convergence_state_scale=args.convergence_state_scale,
             )
             level_results.append(result)
 
@@ -194,9 +202,7 @@ def main():
             }
             output = {"metadata": metadata, "results": all_results}
             path = Path(args.json)
-            path.parent.mkdir(parents=True, exist_ok=True)
-            with path.open("w", encoding="utf-8") as fp:
-                json.dump(output, fp, indent=2, default=str)
+            atomic_write_json(path, output, nonfinite_as_null=True)
             sys.stdout.write(f"Results saved to {args.json}\n")
 
 

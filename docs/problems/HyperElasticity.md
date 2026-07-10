@@ -41,6 +41,29 @@ older replicated mesh build are retained as regression baselines.
 | JAX+PETSc element Hessian | maintained MPI benchmark path and sample render |
 | pure JAX serial | maintained serial reference up to level `3` |
 
+## Nonlinear Stopping Contract
+
+The JAX+PETSc solver keeps `coefficient_l2` as its backward-compatible default
+and additionally exposes `--convergence-metric reference_elastic_energy` for
+publication calibration. The latter copies the exact tangent at the
+undeformed configuration $y(X)=X$ on the free DOFs after both prescribed end
+faces have been eliminated. It requires a symmetry check and a direct-factor
+inertia certificate before solving, then uses the same fixed operator for the
+dual residual and primal correction norms at every load step. Each inverse
+norm solve must also pass an independently recomputed true-residual gate.
+
+Because the nonlinear coefficient vector stores the deformation map, the
+default dimensionful state scale is the reference-energy norm of the initial
+map, not a displacement coefficient norm. The output records this convention,
+the complete operator provenance, its SPD certificate, and per-step and
+terminal norm-solve diagnostics. See [convergence metrics](../reference/convergence_metrics.md)
+for the definitions and CLI controls.
+
+This implementation provides an auditable norm but does not retroactively
+calibrate the historical energy table below. Cross-mesh stopping sensitivity
+and clean publication reruns remain necessary before those values support a
+mesh-convergence claim.
+
 ## Curated Sample Result
 
 The sample render below comes from the maintained JAX+PETSc element path on

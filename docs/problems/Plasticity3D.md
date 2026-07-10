@@ -97,6 +97,28 @@ Additional source-benchmark facts for the card:
 - gravity axis: `1` (`y`)
 - `lambda_target_default = 1.0`
 
+## Publication-Oriented Convergence Metric
+
+The DOF solver keeps the historical coefficient-vector norm and raw-step,
+previous-state correction normalization as its default.
+For accuracy-calibrated work it also supports
+`--convergence-metric reference_elastic_energy`. That mode uses the elastic
+tangent at zero displacement on the canonical glued free space, requires a
+direct-factor inertia certificate of positive definiteness, and evaluates the
+dual residual with a separately controlled iterative Riesz solve. The JSON
+output distinguishes the dimensionful absolute dual norm from the
+dimensionless initial-relative residual and relative correction. It also
+records hashes of the defining mesh/free-space arrays, material and quadrature
+datasets, the free-DOF permutation, and the exact tangent/assembly route.
+
+When no explicit `--convergence-state-scale` is supplied, the scale is the
+initial nonlinear iterate's norm in the same elastic metric. Thus the
+correction denominator has the same units as its numerator; a zero reference
+norm is rejected rather than silently replaced by an arbitrary constant.
+Full controls, definitions, provenance fields, and remaining calibration steps
+are documented in [Convergence metrics for publication
+runs](../reference/convergence_metrics.md#plasticity3d-reference-elastic-energy-metric).
+
 ## Maintained `\lambda = 1.55` Degree-vs-Resolution Study
 
 To compare `p`-refinement against same-resolution `h`-refinement on the

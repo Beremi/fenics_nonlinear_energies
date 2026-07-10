@@ -5,19 +5,25 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 import os
 from pathlib import Path
 import shlex
 import subprocess
+import sys
 import time
 from time import perf_counter
+
+REPO_ROOT = Path(__file__).resolve().parents[2]
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
 
 from experiments.runners import (
     run_plasticity3d_p4_l1_lambda1p5_source_compare as source_env_tools,
 )
+from src.core.benchmark.run_record import atomic_write_json
 
 
-REPO_ROOT = Path(__file__).resolve().parents[2]
 PYTHON = REPO_ROOT / ".venv" / "bin" / "python"
 CASE_RUNNER = REPO_ROOT / "experiments" / "runners" / "run_plasticity3d_backend_mix_case.py"
 DEFAULT_SOURCE_ROOT = REPO_ROOT / "tmp" / "source_compare" / "slope_stability_petsc4py"
@@ -40,6 +46,8 @@ NORMALIZED_ROW_KEYS = (
     "solver_backend",
     "combo_label",
     "ranks",
+    "quadrature_rule_id",
+    "quadrature_points",
     "status",
     "message",
     "solver_success",
@@ -75,12 +83,21 @@ def _repo_rel(path: Path) -> str:
 
 
 def _write_json(path: Path, payload: dict) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+    atomic_write_json(path, payload, nonfinite_as_null=True)
 
 
 def _read_json(path: Path) -> dict:
     return json.loads(path.read_text(encoding="utf-8"))
+
+
+def _optional_finite_float(value: object) -> float | None:
+    if value in (None, ""):
+        return None
+    try:
+        result = float(value)
+    except (TypeError, ValueError):
+        return None
+    return result if math.isfinite(result) else None
 
 
 def _tail_text(path: Path) -> str:
@@ -240,19 +257,21 @@ def _failed_row(
         "solver_backend": str(solver_backend),
         "combo_label": _combo_label(assembly_backend, solver_backend),
         "ranks": int(ranks),
+        "quadrature_rule_id": "",
+        "quadrature_points": 0,
         "status": "failed",
         "message": str(message),
         "solver_success": False,
         "exit_code": int(exit_code),
-        "wall_time_s": float("nan"),
-        "solve_time_s": float("nan"),
+        "wall_time_s": None,
+        "solve_time_s": None,
         "nit": 0,
         "linear_iterations_total": 0,
-        "final_metric": float("nan"),
+        "final_metric": None,
         "final_metric_name": "",
-        "energy": float("nan"),
-        "omega": float("nan"),
-        "u_max": float("nan"),
+        "energy": None,
+        "omega": None,
+        "u_max": None,
         "stdout_path": _repo_rel(stdout_path),
         "stderr_path": _repo_rel(stderr_path),
         "result_json": _repo_rel(result_path),
@@ -284,14 +303,14 @@ def _normalize_payload(
     history = [dict(item) for item in payload.get("history", [])]
     history_metric_name = str(payload.get("final_metric_name", "relative_correction"))
     history_iterations: list[int] = []
-    history_metric: list[float] = []
+    history_metric: list[float | None] = []
     for item in history:
         if "it" in item:
             history_iterations.append(int(item.get("it", 0)))
         else:
             history_iterations.append(int(item.get("iteration", 0)))
-        value = item.get("step_rel", item.get("metric", float("nan")))
-        history_metric.append(float(value))
+        value = item.get("step_rel", item.get("metric"))
+        history_metric.append(_optional_finite_float(value))
 
     initial_guess = dict(payload.get("initial_guess", {}))
     row = {
@@ -300,19 +319,21 @@ def _normalize_payload(
         "solver_backend": str(solver_backend),
         "combo_label": _combo_label(assembly_backend, solver_backend),
         "ranks": int(ranks),
+        "quadrature_rule_id": str(payload.get("quadrature_rule_id", "")),
+        "quadrature_points": int(payload.get("quadrature_points", 0)),
         "status": str(payload.get("status", "failed")),
         "message": str(payload.get("message", "")),
         "solver_success": bool(payload.get("solver_success", False)),
         "exit_code": int(exit_code),
-        "wall_time_s": float(payload.get("total_time", float("nan"))),
-        "solve_time_s": float(payload.get("solve_time", float("nan"))),
+        "wall_time_s": _optional_finite_float(payload.get("total_time")),
+        "solve_time_s": _optional_finite_float(payload.get("solve_time")),
         "nit": int(payload.get("nit", 0)),
         "linear_iterations_total": int(payload.get("linear_iterations_total", 0)),
-        "final_metric": float(payload.get("final_metric", float("nan"))),
+        "final_metric": _optional_finite_float(payload.get("final_metric")),
         "final_metric_name": str(history_metric_name),
-        "energy": float(payload.get("energy", float("nan"))),
-        "omega": float(payload.get("omega", float("nan"))),
-        "u_max": float(payload.get("u_max", float("nan"))),
+        "energy": _optional_finite_float(payload.get("energy")),
+        "omega": _optional_finite_float(payload.get("omega")),
+        "u_max": _optional_finite_float(payload.get("u_max")),
         "stdout_path": _repo_rel(stdout_path),
         "stderr_path": _repo_rel(stderr_path),
         "result_json": _repo_rel(result_path),

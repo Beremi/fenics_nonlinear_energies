@@ -175,6 +175,9 @@ def run_level(
     hvp_eval_mode="sequential",
     element_reorder_mode="block_xyz",
     local_hessian_mode="element",
+    convergence_metric="coefficient_l2",
+    convergence_state_scale=None,
+    state_out="",
 ):
     del comm
     ns = SimpleNamespace(
@@ -210,6 +213,7 @@ def run_level(
         retry_on_failure=bool(retry_on_failure),
         nproc=int(nproc_threads),
         out="",
+        state_out=str(state_out or ""),
         use_trust_region=bool(use_trust_region),
         trust_radius_init=float(trust_radius_init),
         trust_radius_min=float(trust_radius_min),
@@ -221,5 +225,11 @@ def run_level(
         trust_max_reject=int(trust_max_reject),
         trust_subproblem_line_search=bool(trust_subproblem_line_search),
         step_time_limit_s=step_time_limit_s,
+        convergence_metric=str(convergence_metric),
+        convergence_state_scale=(
+            None
+            if convergence_state_scale is None
+            else float(convergence_state_scale)
+        ),
     )
     return _flatten_result(run(ns))

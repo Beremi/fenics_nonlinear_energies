@@ -45,7 +45,19 @@ _MESH_CASE_RE = re.compile(r"^SSR_hetero_(?P<kind>ada_L\d+|uni)\.msh$")
 _REFINED_MESH_RE = re.compile(r"^(?P<base>hetero_ssr_L\d+)(?P<suffix>(?:_\d+)*)$")
 SOURCE_INTERNAL_AXIS_ORDER = "xyz"
 SOURCE_INTERNAL_AXIS_PERM = np.asarray([0, 1, 2], dtype=np.int64)
-SAME_MESH_HDF5_SCHEMA_VERSION = 6
+SAME_MESH_HDF5_SCHEMA_VERSION = 7
+LEGACY_SAME_MESH_HDF5_SCHEMA_VERSION = 6
+TETRA_QUADRATURE_DEGREE_DEFAULT = "degree_default"
+TETRA_QUADRATURE_1POINT = "tetra_1point"
+TETRA_QUADRATURE_11POINT = "tetra_11point"
+TETRA_QUADRATURE_24POINT = "tetra_24point"
+TETRA_QUADRATURE_DUFFY_125POINT = "tetra_duffy_125point"
+TETRA_QUADRATURE_RULE_IDS = (
+    TETRA_QUADRATURE_1POINT,
+    TETRA_QUADRATURE_11POINT,
+    TETRA_QUADRATURE_24POINT,
+    TETRA_QUADRATURE_DUFFY_125POINT,
+)
 PLASTICITY3D_CONSTRAINT_VARIANT_COMPONENTWISE_BOTTOM = "componentwise_bottom"
 PLASTICITY3D_CONSTRAINT_VARIANT_GLUED_BOTTOM = "glued_bottom"
 DEFAULT_PLASTICITY3D_CONSTRAINT_VARIANT = PLASTICITY3D_CONSTRAINT_VARIANT_GLUED_BOTTOM
@@ -55,9 +67,9 @@ _PLASTICITY3D_CONSTRAINT_VARIANTS = frozenset(
         PLASTICITY3D_CONSTRAINT_VARIANT_GLUED_BOTTOM,
     }
 )
-_LIGHT_CASE_CACHE: dict[tuple[str, int, str], dict[str, object]] = {}
-_RANK_LOCAL_LIGHT_CACHE: dict[tuple[str, int, str, str, int, int], dict[str, object]] = {}
-_RANK_LOCAL_HEAVY_CACHE: dict[tuple[str, int, str, str, int, int], dict[str, object]] = {}
+_LIGHT_CASE_CACHE: dict[tuple[str, int, str, str], dict[str, object]] = {}
+_RANK_LOCAL_LIGHT_CACHE: dict[tuple[str, int, str, str, str, int, int], dict[str, object]] = {}
+_RANK_LOCAL_HEAVY_CACHE: dict[tuple[str, int, str, str, str, int, int], dict[str, object]] = {}
 
 
 def clear_same_mesh_case_hdf5_caches() -> None:
@@ -73,6 +85,7 @@ class SlopeStability3DCaseData:
     case_name: str
     mesh_name: str
     degree: int
+    quadrature_rule_id: str
     raw_mesh_filename: str
     constraint_variant: str
 
@@ -135,6 +148,46 @@ class _MacroMeshData:
     material_id: np.ndarray
     macro_parent: np.ndarray
     macro_parent_mesh_name: str
+
+
+def default_tetra_quadrature_rule_id(element_degree: int) -> str:
+    """Return the historical Plasticity3D quadrature rule for an FE degree."""
+
+    degree = int(element_degree)
+    defaults = {
+        1: TETRA_QUADRATURE_1POINT,
+        2: TETRA_QUADRATURE_11POINT,
+        4: TETRA_QUADRATURE_24POINT,
+    }
+    try:
+        return defaults[degree]
+    except KeyError as exc:
+        raise ValueError(
+            f"Unsupported tetra degree {degree!r}; expected 1, 2, or 4"
+        ) from exc
+
+
+def normalize_tetra_quadrature_rule_id(
+    quadrature_rule_id: str | None,
+    *,
+    element_degree: int,
+) -> str:
+    """Resolve a named rule, preserving the legacy degree-dependent default."""
+
+    value = (
+        TETRA_QUADRATURE_DEGREE_DEFAULT
+        if quadrature_rule_id is None
+        else str(quadrature_rule_id).strip().lower()
+    )
+    if value in {"", TETRA_QUADRATURE_DEGREE_DEFAULT}:
+        return default_tetra_quadrature_rule_id(int(element_degree))
+    if value not in TETRA_QUADRATURE_RULE_IDS:
+        supported = ", ".join(TETRA_QUADRATURE_RULE_IDS)
+        raise ValueError(
+            f"Unsupported tetra quadrature rule {quadrature_rule_id!r}; "
+            f"expected {TETRA_QUADRATURE_DEGREE_DEFAULT!r} or one of {supported}"
+        )
+    return value
 
 
 def normalize_constraint_variant(constraint_variant: str | None) -> str:
@@ -255,17 +308,39 @@ def legacy_unversioned_same_mesh_case_hdf5_path(mesh_name: str, degree: int) -> 
     return RAW_MESH_ROOT / f"{legacy_unversioned_same_mesh_case_name(mesh_name, degree)}.h5"
 
 
-def same_mesh_case_name(mesh_name: str, degree: int, constraint_variant: str | None = None) -> str:
+def same_mesh_case_name(
+    mesh_name: str,
+    degree: int,
+    constraint_variant: str | None = None,
+    *,
+    quadrature_rule_id: str | None = None,
+) -> str:
     variant = normalize_constraint_variant(constraint_variant)
-    return f"{str(mesh_name)}_p{int(degree)}_same_mesh_{variant}"
+    degree = int(degree)
+    rule_id = normalize_tetra_quadrature_rule_id(
+        quadrature_rule_id,
+        element_degree=degree,
+    )
+    name = f"{str(mesh_name)}_p{degree}_same_mesh_{variant}"
+    if rule_id != default_tetra_quadrature_rule_id(degree):
+        name += f"_quad_{rule_id}"
+    return name
 
 
 def same_mesh_case_hdf5_path(
     mesh_name: str,
     degree: int,
     constraint_variant: str | None = None,
+    *,
+    quadrature_rule_id: str | None = None,
 ) -> Path:
-    return RAW_MESH_ROOT / f"{same_mesh_case_name(mesh_name, degree, constraint_variant)}.h5"
+    case_name = same_mesh_case_name(
+        mesh_name,
+        degree,
+        constraint_variant,
+        quadrature_rule_id=quadrature_rule_id,
+    )
+    return RAW_MESH_ROOT / f"{case_name}.h5"
 
 
 def _load_definition() -> dict[str, object]:
@@ -940,13 +1015,23 @@ def build_near_nullspace_modes_3d(nodes: np.ndarray, freedofs: np.ndarray) -> np
     return full[freedofs, :]
 
 
-def _quadrature_volume_3d(degree: int) -> tuple[np.ndarray, np.ndarray]:
-    degree = int(degree)
-    if degree == 1:
+def tetra_quadrature_rule(quadrature_rule_id: str) -> tuple[np.ndarray, np.ndarray]:
+    """Return points and weights for one named reference-tetrahedron rule.
+
+    The first three rules reproduce the historical 1-, 11-, and 24-point
+    Plasticity3D formulas; the 24-point rule is exact through total degree six.
+    The 125-point positive-weight rule is a tensor
+    five-point Gauss--Legendre rule mapped to the tetrahedron by the Duffy
+    transformation.  It integrates tetrahedral polynomials through total
+    degree seven and is intended as an enriched fixed-state reference.
+    """
+
+    rule_id = str(quadrature_rule_id).strip().lower()
+    if rule_id == TETRA_QUADRATURE_1POINT:
         xi = np.array([[1.0 / 4.0], [1.0 / 4.0], [1.0 / 4.0]], dtype=np.float64)
         wf = np.array([1.0 / 6.0], dtype=np.float64)
         return xi, wf
-    if degree == 2:
+    if rule_id == TETRA_QUADRATURE_11POINT:
         xi = np.array(
             [
                 [
@@ -1008,7 +1093,7 @@ def _quadrature_volume_3d(degree: int) -> tuple[np.ndarray, np.ndarray]:
             dtype=np.float64,
         )
         return xi, wf
-    if degree == 4:
+    if rule_id == TETRA_QUADRATURE_24POINT:
         xi = np.array(
             [
                 [
@@ -1122,7 +1207,47 @@ def _quadrature_volume_3d(degree: int) -> tuple[np.ndarray, np.ndarray]:
             dtype=np.float64,
         ) / 6.0
         return xi, wf
-    raise ValueError(f"Unsupported tetra degree {degree!r}; expected 1, 2, or 4")
+    if rule_id == TETRA_QUADRATURE_DUFFY_125POINT:
+        gauss_points, gauss_weights = np.polynomial.legendre.leggauss(5)
+        unit_points = 0.5 * (gauss_points + 1.0)
+        unit_weights = 0.5 * gauss_weights
+        a, b, c = np.meshgrid(
+            unit_points,
+            unit_points,
+            unit_points,
+            indexing="ij",
+        )
+        wa, wb, wc = np.meshgrid(
+            unit_weights,
+            unit_weights,
+            unit_weights,
+            indexing="ij",
+        )
+        one_minus_a = 1.0 - a
+        one_minus_b = 1.0 - b
+        xi = np.vstack(
+            (
+                a.ravel(),
+                (one_minus_a * b).ravel(),
+                (one_minus_a * one_minus_b * c).ravel(),
+            )
+        ).astype(np.float64, copy=False)
+        wf = (wa * wb * wc * one_minus_a**2 * one_minus_b).ravel().astype(
+            np.float64,
+            copy=False,
+        )
+        return xi, wf
+    supported = ", ".join(TETRA_QUADRATURE_RULE_IDS)
+    raise ValueError(
+        f"Unsupported tetra quadrature rule {quadrature_rule_id!r}; expected one of {supported}"
+    )
+
+
+def _quadrature_volume_3d(degree: int) -> tuple[np.ndarray, np.ndarray]:
+    """Compatibility wrapper for the historical degree-selected quadrature."""
+
+    rule_id = default_tetra_quadrature_rule_id(int(degree))
+    return tetra_quadrature_rule(rule_id)
 
 
 def _assemble_local_tet_ops(
@@ -1130,8 +1255,13 @@ def _assemble_local_tet_ops(
     elems_scalar: np.ndarray,
     *,
     degree: int,
+    quadrature_rule_id: str | None = None,
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
-    xi, wf = _quadrature_volume_3d(int(degree))
+    rule_id = normalize_tetra_quadrature_rule_id(
+        quadrature_rule_id,
+        element_degree=int(degree),
+    )
+    xi, wf = tetra_quadrature_rule(rule_id)
     hatp, dhat1, dhat2, dhat3 = evaluate_tetra_lagrange_basis(int(degree), xi)
     elem_coords = np.asarray(nodes[np.asarray(elems_scalar, dtype=np.int64)], dtype=np.float64)
     n_elem = int(elems_scalar.shape[0])
@@ -1236,11 +1366,16 @@ def build_case_data_from_raw_mesh(
     mesh_name: str,
     degree: int,
     constraint_variant: str | None = None,
+    quadrature_rule_id: str | None = None,
 ) -> SlopeStability3DCaseData:
     degree = int(degree)
     if degree not in {1, 2, 4}:
         raise ValueError(f"Unsupported degree {degree!r}; expected 1, 2, or 4")
     variant = normalize_constraint_variant(constraint_variant)
+    rule_id = normalize_tetra_quadrature_rule_id(
+        quadrature_rule_id,
+        element_degree=degree,
+    )
 
     macro = _macro_mesh_for_case(mesh_path, mesh_name=str(mesh_name))
     nodes, elems_scalar, surf = _elevate_macro_mesh_to_degree(
@@ -1262,6 +1397,7 @@ def build_case_data_from_raw_mesh(
         nodes,
         elems_scalar,
         degree=degree,
+        quadrature_rule_id=rule_id,
     )
 
     materials = _definition_materials()
@@ -1282,9 +1418,15 @@ def build_case_data_from_raw_mesh(
     elastic_kernel = build_near_nullspace_modes_3d(nodes, freedofs)
 
     return SlopeStability3DCaseData(
-        case_name=same_mesh_case_name(mesh_name, degree, variant),
+        case_name=same_mesh_case_name(
+            mesh_name,
+            degree,
+            variant,
+            quadrature_rule_id=rule_id,
+        ),
         mesh_name=str(mesh_name),
         degree=int(degree),
+        quadrature_rule_id=str(rule_id),
         raw_mesh_filename=str(Path(mesh_path).name),
         constraint_variant=str(variant),
         nodes=np.asarray(nodes, dtype=np.float64),
@@ -1339,13 +1481,23 @@ def build_same_mesh_lagrange_case_data(
     *,
     degree: int,
     constraint_variant: str | None = None,
+    quadrature_rule_id: str | None = None,
     build_mode: str = "replicated",
     comm: MPI.Comm | None = None,
 ) -> SlopeStability3DCaseData:
     mesh_name = str(mesh_name)
     degree = int(degree)
     variant = normalize_constraint_variant(constraint_variant)
-    hdf5_path = ensure_same_mesh_case_hdf5(mesh_name, degree, constraint_variant=variant)
+    rule_id = normalize_tetra_quadrature_rule_id(
+        quadrature_rule_id,
+        element_degree=degree,
+    )
+    hdf5_path = ensure_same_mesh_case_hdf5(
+        mesh_name,
+        degree,
+        constraint_variant=variant,
+        quadrature_rule_id=rule_id,
+    )
     return _broadcast_case_data(
         lambda: (
             load_case_hdf5(hdf5_path)
@@ -1355,6 +1507,7 @@ def build_same_mesh_lagrange_case_data(
                 mesh_name=mesh_name,
                 degree=degree,
                 constraint_variant=variant,
+                quadrature_rule_id=rule_id,
             )
         ),
         build_mode=build_mode,
@@ -1374,6 +1527,10 @@ def write_case_hdf5(path: str | Path, case_data: SlopeStability3DCaseData) -> No
         handle.create_dataset("schema_version", data=int(SAME_MESH_HDF5_SCHEMA_VERSION))
         handle.create_dataset("source_internal_axis_order", data=np.bytes_(SOURCE_INTERNAL_AXIS_ORDER))
         handle.create_dataset("degree", data=int(case_data.degree))
+        handle.create_dataset(
+            "quadrature_rule_id",
+            data=np.bytes_(case_data.quadrature_rule_id),
+        )
         handle.create_dataset("nodes", data=case_data.nodes)
         handle.create_dataset("elems_scalar", data=case_data.elems_scalar)
         handle.create_dataset("elems", data=case_data.elems)
@@ -1423,10 +1580,18 @@ def load_case_hdf5(path: str | Path) -> SlopeStability3DCaseData:
             np.asarray(raw["elems"], dtype=np.int64),
             np.asarray(raw["freedofs"], dtype=np.int64),
         )
+    degree = int(raw["degree"])
+    quadrature_rule_id = _decode_hdf5_string(
+        raw.get(
+            "quadrature_rule_id",
+            np.bytes_(default_tetra_quadrature_rule_id(degree)),
+        )
+    )
     return SlopeStability3DCaseData(
         case_name=_decode_hdf5_string(raw["case_name"]),
         mesh_name=_decode_hdf5_string(raw["mesh_name"]),
-        degree=int(raw["degree"]),
+        degree=degree,
+        quadrature_rule_id=quadrature_rule_id,
         raw_mesh_filename=_decode_hdf5_string(raw["raw_mesh_filename"]),
         constraint_variant=_decode_hdf5_string(
             raw.get("constraint_variant", np.bytes_(PLASTICITY3D_CONSTRAINT_VARIANT_COMPONENTWISE_BOTTOM))
@@ -1469,9 +1634,14 @@ def load_case_hdf5_fields(
     fields: list[str] | tuple[str, ...] | set[str],
     load_adjacency: bool = False,
 ) -> tuple[dict[str, object], sp.coo_matrix | None]:
+    requested_fields = {str(key) for key in fields}
+    wants_quadrature_rule = "quadrature_rule_id" in requested_fields
+    load_fields = set(requested_fields)
+    if wants_quadrature_rule:
+        load_fields.add("degree")
     raw, adjacency = load_problem_hdf5_fields(
         str(path),
-        fields=fields,
+        fields=load_fields,
         load_adjacency=bool(load_adjacency),
     )
     for key in (
@@ -1484,6 +1654,16 @@ def load_case_hdf5_fields(
     ):
         if key in raw:
             raw[key] = _decode_hdf5_string(raw[key])
+    if wants_quadrature_rule:
+        degree = int(raw["degree"])
+        raw["quadrature_rule_id"] = _decode_hdf5_string(
+            raw.get(
+                "quadrature_rule_id",
+                np.bytes_(default_tetra_quadrature_rule_id(degree)),
+            )
+        )
+        if "degree" not in requested_fields:
+            raw.pop("degree", None)
     return raw, adjacency
 
 
@@ -1493,6 +1673,7 @@ _SAME_MESH_LIGHT_FIELDS = (
     "raw_mesh_filename",
     "constraint_variant",
     "degree",
+    "quadrature_rule_id",
     "nodes",
     "elems_scalar",
     "elems",
@@ -1517,16 +1698,26 @@ def load_same_mesh_case_hdf5_light(
     degree: int,
     *,
     constraint_variant: str | None = None,
+    quadrature_rule_id: str | None = None,
 ) -> dict[str, object]:
     variant = normalize_constraint_variant(constraint_variant)
-    cache_key = (str(mesh_name), int(degree), str(variant))
+    rule_id = normalize_tetra_quadrature_rule_id(
+        quadrature_rule_id,
+        element_degree=int(degree),
+    )
+    cache_key = (str(mesh_name), int(degree), str(variant), str(rule_id))
     cached = _LIGHT_CASE_CACHE.get(cache_key)
     if cached is not None:
         raw = dict(cached)
         raw["elem_type"] = f"P{int(degree)}"
         raw["element_degree"] = int(degree)
         return raw
-    path = ensure_same_mesh_case_hdf5(str(mesh_name), int(degree), constraint_variant=variant)
+    path = ensure_same_mesh_case_hdf5(
+        str(mesh_name),
+        int(degree),
+        constraint_variant=variant,
+        quadrature_rule_id=rule_id,
+    )
     raw, _ = load_case_hdf5_fields(path, fields=_SAME_MESH_LIGHT_FIELDS, load_adjacency=False)
     _LIGHT_CASE_CACHE[cache_key] = dict(raw)
     raw["elem_type"] = f"P{int(degree)}"
@@ -1638,16 +1829,22 @@ def load_same_mesh_case_hdf5_rank_local_light(
     degree: int,
     *,
     constraint_variant: str | None = None,
+    quadrature_rule_id: str | None = None,
     reorder_mode: str,
     comm: MPI.Comm,
     block_size: int = 3,
 ) -> dict[str, object]:
     del block_size
     variant = normalize_constraint_variant(constraint_variant)
+    rule_id = normalize_tetra_quadrature_rule_id(
+        quadrature_rule_id,
+        element_degree=int(degree),
+    )
     cache_key = (
         str(mesh_name),
         int(degree),
         str(variant),
+        str(rule_id),
         str(reorder_mode),
         int(comm.size),
         int(comm.rank),
@@ -1662,6 +1859,7 @@ def load_same_mesh_case_hdf5_rank_local_light(
         str(mesh_name),
         int(degree),
         constraint_variant=variant,
+        quadrature_rule_id=rule_id,
     )
     raw.update(_build_rank_local_partition_metadata(raw, reorder_mode=str(reorder_mode), comm=comm))
     _RANK_LOCAL_LIGHT_CACHE[cache_key] = dict(raw)
@@ -1675,15 +1873,21 @@ def load_same_mesh_case_hdf5_rank_local(
     degree: int,
     *,
     constraint_variant: str | None = None,
+    quadrature_rule_id: str | None = None,
     reorder_mode: str,
     comm: MPI.Comm,
     block_size: int = 3,
 ) -> dict[str, object]:
     variant = normalize_constraint_variant(constraint_variant)
+    rule_id = normalize_tetra_quadrature_rule_id(
+        quadrature_rule_id,
+        element_degree=int(degree),
+    )
     cache_key = (
         str(mesh_name),
         int(degree),
         str(variant),
+        str(rule_id),
         str(reorder_mode),
         int(comm.size),
         int(comm.rank),
@@ -1694,11 +1898,17 @@ def load_same_mesh_case_hdf5_rank_local(
         raw["elem_type"] = f"P{int(degree)}"
         raw["element_degree"] = int(degree)
         return raw
-    path = ensure_same_mesh_case_hdf5(str(mesh_name), int(degree), constraint_variant=variant)
+    path = ensure_same_mesh_case_hdf5(
+        str(mesh_name),
+        int(degree),
+        constraint_variant=variant,
+        quadrature_rule_id=rule_id,
+    )
     raw = load_same_mesh_case_hdf5_rank_local_light(
         str(mesh_name),
         int(degree),
         constraint_variant=variant,
+        quadrature_rule_id=rule_id,
         reorder_mode=str(reorder_mode),
         comm=comm,
         block_size=int(block_size),
@@ -1741,9 +1951,17 @@ def _materialize_legacy_componentwise_case_if_needed(mesh_name: str, degree: int
     shutil.copy2(legacy_path, out_path)
     with h5py.File(out_path, "r+") as handle:
         for key, value in (
-            ("case_name", same_mesh_case_name(mesh_name, degree, PLASTICITY3D_CONSTRAINT_VARIANT_COMPONENTWISE_BOTTOM)),
+            (
+                "case_name",
+                same_mesh_case_name(
+                    mesh_name,
+                    degree,
+                    PLASTICITY3D_CONSTRAINT_VARIANT_COMPONENTWISE_BOTTOM,
+                ),
+            ),
             ("constraint_variant", PLASTICITY3D_CONSTRAINT_VARIANT_COMPONENTWISE_BOTTOM),
             ("schema_version", int(SAME_MESH_HDF5_SCHEMA_VERSION)),
+            ("quadrature_rule_id", default_tetra_quadrature_rule_id(int(degree))),
             ("macro_parent_mesh_name", macro_parent_mesh_name_for_name(mesh_name)),
             ("source_internal_axis_order", SOURCE_INTERNAL_AXIS_ORDER),
         ):
@@ -1761,19 +1979,31 @@ def ensure_same_mesh_case_hdf5(
     degree: int,
     *,
     constraint_variant: str | None = None,
+    quadrature_rule_id: str | None = None,
 ) -> Path:
     mesh_name = str(mesh_name)
     degree = int(degree)
     variant = normalize_constraint_variant(constraint_variant)
-    path = same_mesh_case_hdf5_path(mesh_name, degree, variant)
+    rule_id = normalize_tetra_quadrature_rule_id(
+        quadrature_rule_id,
+        element_degree=degree,
+    )
+    path = same_mesh_case_hdf5_path(
+        mesh_name,
+        degree,
+        variant,
+        quadrature_rule_id=rule_id,
+    )
     if (
-        variant == PLASTICITY3D_CONSTRAINT_VARIANT_COMPONENTWISE_BOTTOM
+        rule_id == default_tetra_quadrature_rule_id(degree)
+        and variant == PLASTICITY3D_CONSTRAINT_VARIANT_COMPONENTWISE_BOTTOM
         and _materialize_legacy_componentwise_case_if_needed(mesh_name, degree, path)
         and _same_mesh_hdf5_is_current(
             path,
             mesh_name=mesh_name,
             degree=degree,
             constraint_variant=variant,
+            quadrature_rule_id=rule_id,
         )
     ):
         return path
@@ -1782,12 +2012,14 @@ def ensure_same_mesh_case_hdf5(
         mesh_name=mesh_name,
         degree=degree,
         constraint_variant=variant,
+        quadrature_rule_id=rule_id,
     ):
         case_data = build_case_data_from_raw_mesh(
             raw_mesh_path_for_name(mesh_name),
             mesh_name=mesh_name,
             degree=degree,
             constraint_variant=variant,
+            quadrature_rule_id=rule_id,
         )
         write_case_hdf5(path, case_data)
     return path
@@ -1799,11 +2031,16 @@ def _same_mesh_hdf5_is_current(
     mesh_name: str,
     degree: int,
     constraint_variant: str | None = None,
+    quadrature_rule_id: str | None = None,
 ) -> bool:
     path = Path(path)
     if not path.exists():
         return False
     variant = normalize_constraint_variant(constraint_variant)
+    rule_id = normalize_tetra_quadrature_rule_id(
+        quadrature_rule_id,
+        element_degree=int(degree),
+    )
     try:
         with h5py.File(path, "r") as handle:
             stored_degree = int(handle["degree"][()])
@@ -1825,14 +2062,27 @@ def _same_mesh_hdf5_is_current(
                 if constraint_obj is not None
                 else PLASTICITY3D_CONSTRAINT_VARIANT_COMPONENTWISE_BOTTOM
             )
+            quadrature_obj = handle.get("quadrature_rule_id")
+            stored_quadrature_rule_id = (
+                _decode_hdf5_string(quadrature_obj[()])
+                if quadrature_obj is not None
+                else default_tetra_quadrature_rule_id(stored_degree)
+            )
     except Exception:
         return False
     return (
         stored_degree == int(degree)
         and stored_mesh_name == str(mesh_name)
         and stored_raw_mesh == raw_mesh_filename_for_name(mesh_name)
-        and stored_schema == int(SAME_MESH_HDF5_SCHEMA_VERSION)
+        and (
+            stored_schema == int(SAME_MESH_HDF5_SCHEMA_VERSION)
+            or (
+                stored_schema == int(LEGACY_SAME_MESH_HDF5_SCHEMA_VERSION)
+                and rule_id == default_tetra_quadrature_rule_id(int(degree))
+            )
+        )
         and stored_axis_order == SOURCE_INTERNAL_AXIS_ORDER
         and stored_macro_parent_mesh_name == macro_parent_mesh_name_for_name(mesh_name)
         and stored_constraint_variant == str(variant)
+        and stored_quadrature_rule_id == str(rule_id)
     )

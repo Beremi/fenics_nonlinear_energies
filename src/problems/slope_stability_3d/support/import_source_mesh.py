@@ -7,6 +7,8 @@ from pathlib import Path
 
 from src.problems.slope_stability_3d.support.mesh import (
     DEFAULT_MESH_NAME,
+    TETRA_QUADRATURE_DEGREE_DEFAULT,
+    TETRA_QUADRATURE_RULE_IDS,
     build_case_data_from_raw_mesh,
     ensure_same_mesh_case_hdf5,
     raw_mesh_path_for_name,
@@ -45,6 +47,12 @@ def _build_parser() -> argparse.ArgumentParser:
         help="Same-mesh Lagrange degree to generate",
     )
     parser.add_argument(
+        "--quadrature-rule",
+        choices=(TETRA_QUADRATURE_DEGREE_DEFAULT, *TETRA_QUADRATURE_RULE_IDS),
+        default=TETRA_QUADRATURE_DEGREE_DEFAULT,
+        help="Named tetrahedral rule; degree_default preserves the historical FE-degree mapping",
+    )
+    parser.add_argument(
         "--out",
         type=str,
         default="",
@@ -67,11 +75,19 @@ def main() -> None:
     out_path = (
         Path(args.out)
         if str(args.out).strip()
-        else same_mesh_case_hdf5_path(mesh_name, int(args.degree))
+        else same_mesh_case_hdf5_path(
+            mesh_name,
+            int(args.degree),
+            quadrature_rule_id=str(args.quadrature_rule),
+        )
     )
 
     if out_path.exists() and not args.overwrite and not str(args.out).strip():
-        ensure_same_mesh_case_hdf5(mesh_name, int(args.degree))
+        ensure_same_mesh_case_hdf5(
+            mesh_name,
+            int(args.degree),
+            quadrature_rule_id=str(args.quadrature_rule),
+        )
         print(str(out_path))
         return
     if out_path.exists() and not args.overwrite:
@@ -83,6 +99,7 @@ def main() -> None:
         mesh_path,
         mesh_name=mesh_name,
         degree=int(args.degree),
+        quadrature_rule_id=str(args.quadrature_rule),
     )
     write_case_hdf5(out_path, case_data)
     print(str(out_path))

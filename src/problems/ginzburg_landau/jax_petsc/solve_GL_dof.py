@@ -4,10 +4,10 @@
 from __future__ import annotations
 
 import argparse
-import json
 from pathlib import Path
 
 from mpi4py import MPI
+from src.core.benchmark.run_record import atomic_write_json, strict_json_dumps
 from src.core.cli.threading import configure_jax_cpu_threading
 
 
@@ -96,6 +96,20 @@ def _build_parser(profile_defaults):
     parser.add_argument("--tolg_rel", type=float, default=1e-3, help="Relative gradient tolerance")
     parser.add_argument("--tolx_rel", type=float, default=1e-3, help="Relative step tolerance")
     parser.add_argument("--tolx_abs", type=float, default=1e-10, help="Absolute step tolerance")
+    parser.add_argument(
+        "--convergence-metric",
+        "--convergence_metric",
+        dest="convergence_metric",
+        choices=("coefficient_l2", "lumped_l2"),
+        default="coefficient_l2",
+    )
+    parser.add_argument(
+        "--convergence-state-scale",
+        "--convergence_state_scale",
+        dest="convergence_state_scale",
+        type=float,
+        default=None,
+    )
     parser.add_argument("--maxit", type=int, default=100, help="Maximum Newton iterations")
     parser.add_argument(
         "--step_time_limit_s",
@@ -162,12 +176,10 @@ def main():
     result = run(args)
 
     if MPI.COMM_WORLD.rank == 0:
-        print(json.dumps(result, indent=2))
+        print(strict_json_dumps(result, indent=2, nonfinite_as_null=True))
         if args.out:
             path = Path(args.out)
-            path.parent.mkdir(parents=True, exist_ok=True)
-            with path.open("w", encoding="utf-8") as f:
-                json.dump(result, f, indent=2)
+            atomic_write_json(path, result, nonfinite_as_null=True)
 
 
 if __name__ == "__main__":

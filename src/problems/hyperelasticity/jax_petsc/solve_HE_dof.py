@@ -5,10 +5,9 @@ Solver logic is in ``src/problems/hyperelasticity/jax_petsc/solver.py``.
 """
 
 import argparse
-import json
-from pathlib import Path
 
 from mpi4py import MPI
+from src.core.benchmark.run_record import atomic_write_json, strict_json_dumps
 from src.core.cli.threading import configure_jax_cpu_threading
 
 
@@ -196,6 +195,89 @@ def _build_parser(profile_defaults):
     )
     parser.add_argument("--tolx_rel", type=float, default=1e-3, help="Relative step tolerance")
     parser.add_argument("--tolx_abs", type=float, default=1e-10, help="Absolute step tolerance")
+    parser.add_argument(
+        "--convergence-metric",
+        "--convergence_metric",
+        dest="convergence_metric",
+        choices=("coefficient_l2", "reference_elastic_energy"),
+        default="coefficient_l2",
+        help=(
+            "Nonlinear stopping metric. coefficient_l2 preserves the legacy "
+            "coefficient norm; reference_elastic_energy uses the certified "
+            "reference-configuration elastic tangent on the constrained free space."
+        ),
+    )
+    parser.add_argument(
+        "--convergence-state-scale",
+        "--convergence_state_scale",
+        dest="convergence_state_scale",
+        type=float,
+        default=None,
+        help=(
+            "Positive scale in the selected primal norm. Under "
+            "reference_elastic_energy, omission uses the initial deformation "
+            "map's reference-energy norm."
+        ),
+    )
+    parser.add_argument(
+        "--riesz-ksp-type",
+        "--riesz_ksp_type",
+        dest="riesz_ksp_type",
+        type=str,
+        default="cg",
+    )
+    parser.add_argument(
+        "--riesz-pc-type",
+        "--riesz_pc_type",
+        dest="riesz_pc_type",
+        type=str,
+        default="jacobi",
+    )
+    parser.add_argument(
+        "--riesz-ksp-rtol",
+        "--riesz_ksp_rtol",
+        dest="riesz_ksp_rtol",
+        type=float,
+        default=1.0e-10,
+    )
+    parser.add_argument(
+        "--riesz-ksp-atol",
+        "--riesz_ksp_atol",
+        dest="riesz_ksp_atol",
+        type=float,
+        default=1.0e-14,
+    )
+    parser.add_argument(
+        "--riesz-ksp-max-it",
+        "--riesz_ksp_max_it",
+        dest="riesz_ksp_max_it",
+        type=int,
+        default=5000,
+    )
+    parser.add_argument(
+        "--riesz-true-residual-rtol",
+        "--riesz_true_residual_rtol",
+        dest="riesz_true_residual_rtol",
+        type=float,
+        default=1.0e-8,
+        help="Maximum independently recomputed relative residual for a Riesz solve.",
+    )
+    parser.add_argument(
+        "--riesz-spd-factor-solver-type",
+        "--riesz_spd_factor_solver_type",
+        dest="riesz_spd_factor_solver_type",
+        type=str,
+        default="mumps",
+        help="Direct factor backend used for the mandatory SPD inertia certificate.",
+    )
+    parser.add_argument(
+        "--riesz-symmetry-tol",
+        "--riesz_symmetry_tol",
+        dest="riesz_symmetry_tol",
+        type=float,
+        default=1.0e-12,
+        help="Relative-to-infinity-norm symmetry tolerance for the SPD certificate.",
+    )
     parser.add_argument("--maxit", type=int, default=100, help="Maximum Newton iterations")
     parser.add_argument(
         "--step_time_limit_s",
@@ -282,12 +364,9 @@ def main():
     result = run(args)
 
     if MPI.COMM_WORLD.rank == 0:
-        print(json.dumps(result, indent=2))
+        print(strict_json_dumps(result, indent=2, nonfinite_as_null=True))
         if args.out:
-            path = Path(args.out)
-            path.parent.mkdir(parents=True, exist_ok=True)
-            with path.open("w", encoding="utf-8") as f:
-                json.dump(result, f, indent=2)
+            atomic_write_json(args.out, result, nonfinite_as_null=True)
 
 
 if __name__ == "__main__":

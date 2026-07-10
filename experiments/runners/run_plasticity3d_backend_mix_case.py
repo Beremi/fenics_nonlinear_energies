@@ -6,9 +6,11 @@ from __future__ import annotations
 import argparse
 import ctypes
 import gc
+import hashlib
 import json
 import os
 import resource
+import subprocess
 import sys
 import time
 from dataclasses import dataclass
@@ -23,8 +25,10 @@ import numpy as np
 from mpi4py import MPI
 from petsc4py import PETSc
 
+from src.core.benchmark.run_record import atomic_write_json, strict_json_dumps
 from src.core.benchmark.state_export import export_plasticity3d_state_npz
 from src.core.petsc.dof_partition import petsc_ownership_range
+from src.core.petsc.metrics import EuclideanMetric, MatrixRieszMetric
 from src.core.petsc.minimizers import newton as local_newton
 from src.core.petsc.reordered_element_base import inverse_permutation
 from src.core.petsc.reasons import ksp_reason_name
@@ -44,21 +48,36 @@ from src.problems.slope_stability_3d.jax_petsc.reordered_element_assembler impor
 )
 from src.problems.slope_stability_3d.jax_petsc.solver import (
     _apply_strength_reduction,
+    _build_certified_reference_elastic_metric,
     _load_problem_data,
+    _reference_elastic_input_identity,
+    _reference_material_range,
 )
 from src.problems.slope_stability_3d.support.mesh import (
     DEFAULT_PLASTICITY3D_CONSTRAINT_VARIANT,
     PLASTICITY3D_CONSTRAINT_VARIANT_COMPONENTWISE_BOTTOM,
+    PLASTICITY3D_CONSTRAINT_VARIANT_GLUED_BOTTOM,
+    TETRA_QUADRATURE_DEGREE_DEFAULT,
+    TETRA_QUADRATURE_RULE_IDS,
     base_mesh_name_for_name,
     clear_same_mesh_case_hdf5_caches,
+    default_tetra_quadrature_rule_id,
     ensure_same_mesh_case_hdf5,
     load_case_hdf5_fields,
     normalize_constraint_variant,
+    normalize_tetra_quadrature_rule_id,
     ownership_block_size_3d,
     raw_mesh_filename_for_name,
     same_mesh_case_hdf5_path,
     select_reordered_perm_3d,
+    tetra_quadrature_rule,
     uniform_refinement_steps_for_name,
+)
+from src.problems.slope_stability_3d.support.fixed_state import (
+    BRANCH_MARGIN_GATE,
+    BRANCH_NAMES,
+    _branch_diagnostics_numpy,
+    _strain6_numpy,
 )
 
 SOURCE_IMPORT_ERROR: Exception | None = None
@@ -132,6 +151,8 @@ _PMG_RANK_LOCAL_FIELDS = (
     "freedofs",
     "material_id",
     "constraint_variant",
+    "quadrature_rule_id",
+    "degree",
     "macro_parent",
     "macro_parent_mesh_name",
 )
@@ -321,7 +342,14 @@ def _append_stage_event(
     }
     payload.update(fields)
     with path.open("a", encoding="utf-8") as fh:
-        fh.write(json.dumps(payload, sort_keys=True) + "\n")
+        fh.write(
+            strict_json_dumps(
+                payload,
+                sort_keys=True,
+                nonfinite_as_null=True,
+            )
+            + "\n"
+        )
 
 
 def _append_jsonl_record(path: Path | None, payload: dict[str, object]) -> None:
@@ -329,7 +357,172 @@ def _append_jsonl_record(path: Path | None, payload: dict[str, object]) -> None:
         return
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("a", encoding="utf-8") as fh:
-        fh.write(json.dumps(payload, sort_keys=True) + "\n")
+        fh.write(
+            strict_json_dumps(
+                payload,
+                sort_keys=True,
+                nonfinite_as_null=True,
+            )
+            + "\n"
+        )
+
+
+def _write_solver_json(path: Path, payload: dict[str, object]) -> None:
+    """Atomically persist a raw solver payload as standards-compliant JSON.
+
+    Iterative histories intentionally use non-finite Python sentinels for some
+    unavailable optional quantities.  Raw evidence represents those values as
+    JSON ``null`` while preserving every finite scientific value.
+    """
+    atomic_write_json(path, payload, nonfinite_as_null=True)
+
+
+def _git_metadata() -> dict[str, object]:
+    """Capture the exact source revision used by a solver process."""
+
+    def run(*args: str) -> str:
+        completed = subprocess.run(
+            ["git", "-C", str(REPO_ROOT), *args],
+            check=False,
+            capture_output=True,
+            text=True,
+        )
+        return completed.stdout.strip() if completed.returncode == 0 else ""
+
+    return {
+        "commit": run("rev-parse", "HEAD"),
+        "dirty": bool(run("status", "--porcelain")),
+    }
+
+
+def _canonical_endpoint_branch_map_sha256(
+    comm,
+    gathered: list[tuple[np.ndarray, np.ndarray]] | None,
+) -> str:
+    """Validate and hash the canonical branch map without stranding MPI ranks."""
+
+    validation: dict[str, object] | None = None
+    if comm.rank == 0:
+        try:
+            canonical_rows: list[tuple[int, np.ndarray]] = []
+            for element_ids, labels in gathered or []:
+                if labels.shape[0] != element_ids.size:
+                    raise RuntimeError(
+                        "endpoint branch labels are not aligned with element IDs"
+                    )
+                canonical_rows.extend(
+                    (int(element_id), np.asarray(label_row, dtype=np.int8))
+                    for element_id, label_row in zip(element_ids, labels, strict=True)
+                )
+            canonical_rows.sort(key=lambda item: item[0])
+            ids = np.asarray([item[0] for item in canonical_rows], dtype=np.int64)
+            if ids.size != np.unique(ids).size:
+                raise RuntimeError(
+                    "owned endpoint branch map contains duplicate global elements"
+                )
+            labels = np.stack([item[1] for item in canonical_rows], axis=0)
+            digest = hashlib.sha256()
+            digest.update(np.ascontiguousarray(ids).view(np.uint8))
+            digest.update(np.ascontiguousarray(labels).view(np.uint8))
+            validation = {
+                "status": "completed",
+                "sha256": digest.hexdigest(),
+                "error": None,
+            }
+        except Exception as exc:  # noqa: BLE001 - error must reach every MPI rank
+            validation = {
+                "status": "failed",
+                "sha256": None,
+                "error": f"{type(exc).__name__}: {exc}",
+            }
+
+    validation = comm.bcast(validation, root=0)
+    if not isinstance(validation, dict) or validation.get("status") != "completed":
+        error = (
+            validation.get("error")
+            if isinstance(validation, dict)
+            else "missing validation payload"
+        )
+        raise RuntimeError(f"endpoint branch map validation failed: {error}")
+    branch_map_sha256 = validation.get("sha256")
+    if not isinstance(branch_map_sha256, str) or not branch_map_sha256:
+        raise RuntimeError("endpoint branch map validation returned an empty digest")
+    return branch_map_sha256
+
+
+def _endpoint_branch_diagnostics(
+    backend,
+    state: PETSc.Vec,
+) -> dict[str, object]:
+    """Classify owned endpoint quadrature points and reduce over MPI ranks."""
+
+    if not isinstance(backend, LocalAssemblyBackend):
+        raise RuntimeError("endpoint branch diagnostics require LocalAssemblyBackend")
+    assembler = backend.assembler
+    v_local, _exchange = assembler._owned_to_local(  # noqa: SLF001 - audited diagnostic
+        np.asarray(state.array[:], dtype=np.float64)
+    )
+    local = assembler.local_data
+    owned = np.asarray(local.energy_weights, dtype=np.float64) > 0.5
+    element_values = np.asarray(v_local, dtype=np.float64)[local.elems_local_np][owned]
+    data = local.local_elem_data
+    strain = _strain6_numpy(
+        element_values,
+        np.asarray(data["dphix"], dtype=np.float64)[owned],
+        np.asarray(data["dphiy"], dtype=np.float64)[owned],
+        np.asarray(data["dphiz"], dtype=np.float64)[owned],
+    )
+    local_diagnostics = _branch_diagnostics_numpy(
+        strain,
+        np.asarray(data["c_bar_q"], dtype=np.float64)[owned],
+        np.asarray(data["sin_phi_q"], dtype=np.float64)[owned],
+        np.asarray(data["shear_q"], dtype=np.float64)[owned],
+        np.asarray(data["bulk_q"], dtype=np.float64)[owned],
+        np.asarray(data["lame_q"], dtype=np.float64)[owned],
+        np.asarray(data["quad_weight"], dtype=np.float64)[owned],
+        include_internal_arrays=True,
+    )
+    comm = backend.comm
+    local_counts = np.asarray(
+        [
+            int(local_diagnostics["branch_point_counts"][name])
+            for name in BRANCH_NAMES
+        ],
+        dtype=np.int64,
+    )
+    counts = np.asarray(comm.allreduce(local_counts, op=MPI.SUM), dtype=np.int64)
+    total = int(comm.allreduce(int(local_diagnostics["quadrature_points"]), op=MPI.SUM))
+    near = int(
+        comm.allreduce(
+            int(local_diagnostics["quadrature_points_at_or_below_margin_gate"]),
+            op=MPI.SUM,
+        )
+    )
+    local_min = float(local_diagnostics["minimum_normalized_active_branch_margin"])
+    minimum = float(comm.allreduce(local_min, op=MPI.MIN))
+    local_element_ids = np.asarray(local.local_elem_idx, dtype=np.int64)[owned]
+    local_labels = np.asarray(local_diagnostics.pop("_branch_labels"), dtype=np.int8)
+    gathered = comm.gather((local_element_ids, local_labels), root=0)
+    branch_map_sha256 = _canonical_endpoint_branch_map_sha256(comm, gathered)
+    if total <= 0 or int(np.sum(counts)) != total:
+        raise RuntimeError("endpoint branch diagnostic count reduction is inconsistent")
+    return {
+        "definition": "mohr_coulomb_owned_quadrature_branch_v2",
+        "owned_quadrature_points": total,
+        "counts": {
+            name: int(value) for name, value in zip(BRANCH_NAMES, counts, strict=True)
+        },
+        "fractions": {
+            name: float(value) / float(total)
+            for name, value in zip(BRANCH_NAMES, counts, strict=True)
+        },
+        "plastic_fraction": float(total - counts[0]) / float(total),
+        "normalized_boundary_margin_min": minimum,
+        "near_boundary_threshold": float(BRANCH_MARGIN_GATE),
+        "near_boundary_fraction": float(near) / float(total),
+        "canonical_map_definition": "global_element_id_then_quadrature_index_int8_v1",
+        "canonical_map_sha256": str(branch_map_sha256),
+    }
 
 
 def _set_vec_from_global(vec: PETSc.Vec, global_arr: np.ndarray) -> None:
@@ -465,6 +658,7 @@ class LocalAssemblyBackend:
         self._elastic_mat: PETSc.Mat | None = None
         self._owned_tangent_mat: PETSc.Mat | None = None
         self._owned_regularized_mat: PETSc.Mat | None = None
+        self.reference_elastic_metric_provenance: dict[str, object] | None = None
 
     @property
     def n_free(self) -> int:
@@ -504,7 +698,18 @@ class LocalAssemblyBackend:
         if self._elastic_mat is not None:
             return self._elastic_mat
         zero = np.zeros(self.layout.hi - self.layout.lo, dtype=np.float64)
-        self.assembler.assemble_hessian_with_mode(zero, constitutive_mode="elastic")
+        # The Riesz map and elastic initial guess must be one common operator,
+        # independent of the plastic tangent route under comparison.  Force the
+        # element-energy AD construction and invalidate any route-specific
+        # elastic kernel cached before this call.
+        original_tangent_mode = str(self.assembler.autodiff_tangent_mode)
+        try:
+            self.assembler.autodiff_tangent_mode = "element"
+            self.assembler._kernel_cache.pop("elastic", None)  # noqa: SLF001
+            self.assembler.assemble_hessian_with_mode(zero, constitutive_mode="elastic")
+        finally:
+            self.assembler.autodiff_tangent_mode = original_tangent_mode
+            self.assembler._kernel_cache.pop("elastic", None)  # noqa: SLF001
         self._elastic_mat = _copy_mat(self.assembler.A)
         return self._elastic_mat
 
@@ -625,6 +830,7 @@ class LocalAssemblyBackend:
             "case_name",
             "mesh_name",
             "constraint_variant",
+            "quadrature_rule_id",
             "macro_parent_mesh_name",
             "davis_type",
             "elem_type",
@@ -1013,6 +1219,7 @@ def _local_problem_args(
     mesh_name: str = "hetero_ssr_L1",
     elem_degree: int = 4,
     constraint_variant: str = DEFAULT_PLASTICITY3D_CONSTRAINT_VARIANT,
+    quadrature_rule_id: str | None = None,
     local_hessian_mode: str = "element",
     autodiff_tangent_mode: str = "element",
     ksp_rtol: float = 1.0e-2,
@@ -1037,6 +1244,12 @@ def _local_problem_args(
     return SimpleNamespace(
         mesh_name=str(mesh_name),
         elem_degree=int(elem_degree),
+        quadrature_rule=str(
+            normalize_tetra_quadrature_rule_id(
+                quadrature_rule_id,
+                element_degree=int(elem_degree),
+            )
+        ),
         constraint_variant=str(normalize_constraint_variant(constraint_variant)),
         problem_build_mode="rank_local",
         element_reorder_mode="block_xyz",
@@ -1111,6 +1324,7 @@ def _load_local_problem_for_pmg(
     mesh_name: str,
     elem_degree: int,
     constraint_variant: str = DEFAULT_PLASTICITY3D_CONSTRAINT_VARIANT,
+    quadrature_rule_id: str | None = None,
     lambda_target: float,
     ksp_rtol: float,
     ksp_max_it: int,
@@ -1124,6 +1338,7 @@ def _load_local_problem_for_pmg(
         str(mesh_name),
         int(elem_degree),
         constraint_variant=variant,
+        quadrature_rule_id=quadrature_rule_id,
     )
     params, _ = load_case_hdf5_fields(path, fields=_PMG_RANK_LOCAL_FIELDS, load_adjacency=False)
     params["u_0_len"] = int(3 * np.asarray(params["nodes"], dtype=np.float64).shape[0])
@@ -1142,6 +1357,7 @@ def _build_local_assembly_backend(
     mesh_name: str = "hetero_ssr_L1",
     elem_degree: int = 4,
     constraint_variant: str = DEFAULT_PLASTICITY3D_CONSTRAINT_VARIANT,
+    quadrature_rule_id: str | None = None,
     lambda_target: float = 1.5,
     local_hessian_mode: str = "element",
     autodiff_tangent_mode: str = "element",
@@ -1156,6 +1372,7 @@ def _build_local_assembly_backend(
         mesh_name=str(mesh_name),
         elem_degree=int(elem_degree),
         constraint_variant=str(constraint_variant),
+        quadrature_rule_id=quadrature_rule_id,
         local_hessian_mode=str(local_hessian_mode),
         autodiff_tangent_mode=str(autodiff_tangent_mode),
         ksp_rtol=float(ksp_rtol),
@@ -1597,6 +1814,7 @@ def _build_local_pmg_support(
     mesh_name: str,
     elem_degree: int | None,
     constraint_variant: str = DEFAULT_PLASTICITY3D_CONSTRAINT_VARIANT,
+    quadrature_rule_id: str | None = None,
     lambda_target: float,
     pmg_strategy: str,
     ksp_rtol: float,
@@ -1632,6 +1850,7 @@ def _build_local_pmg_support(
                 mesh_name=str(mesh_name),
                 elem_degree=int(resolved_elem_degree),
                 constraint_variant=str(constraint_variant),
+                quadrature_rule_id=quadrature_rule_id,
                 lambda_target=float(lambda_target),
                 ksp_rtol=float(ksp_rtol),
                 ksp_max_it=int(ksp_max_it),
@@ -1659,6 +1878,7 @@ def _build_local_pmg_support(
             mesh_name=str(mesh_name),
             elem_degree=int(resolved_elem_degree),
             constraint_variant=str(constraint_variant),
+            quadrature_rule_id=quadrature_rule_id,
             lambda_target=float(lambda_target),
             ksp_rtol=float(ksp_rtol),
             ksp_max_it=int(ksp_max_it),
@@ -1797,6 +2017,20 @@ def _make_local_ksp(
     ksp.setTolerances(rtol=float(ksp_rtol), max_it=int(ksp_max_it))
     ksp.setFromOptions()
     return ksp
+
+
+def _effective_ksp_payload(ksp: PETSc.KSP) -> dict[str, object]:
+    rtol, atol, dtol, max_it = ksp.getTolerances()
+    return {
+        "ksp_type": str(ksp.getType()),
+        "pc_type": str(ksp.getPC().getType()),
+        "options_prefix": str(ksp.getOptionsPrefix() or ""),
+        "rtol": float(rtol),
+        "atol": float(atol),
+        "dtol": float(dtol),
+        "max_it": int(max_it),
+        "captured_after_set_from_options": True,
+    }
 
 
 def _attach_local_pmg_metadata(
@@ -2001,6 +2235,7 @@ def _local_initial_guess(
                 "residual_norm": float(ksp.getResidualNorm()),
                 "solve_time": float(elapsed),
                 "vector_norm": float(np.linalg.norm(temp_backend.global_from_vec(temp_sol))),
+                "effective_ksp": _effective_ksp_payload(ksp),
             }
             ksp.destroy()
         finally:
@@ -2064,6 +2299,7 @@ def _local_initial_guess(
         "residual_norm": float(ksp.getResidualNorm()),
         "solve_time": float(elapsed),
         "vector_norm": float(np.linalg.norm(backend.global_from_vec(sol))),
+        "effective_ksp": _effective_ksp_payload(ksp),
     }
     rhs.destroy()
     if sol_right is not None:
@@ -2079,16 +2315,211 @@ def _local_initial_guess(
     return sol, meta
 
 
+def _convergence_settings_namespace(settings: dict[str, object]) -> SimpleNamespace:
+    return SimpleNamespace(**dict(settings))
+
+
+def _prepare_local_reference_metric_provenance(
+    backend: LocalAssemblyBackend,
+    *,
+    settings: dict[str, object],
+    assembly_backend: str,
+) -> dict[str, object]:
+    args = _convergence_settings_namespace(settings)
+    operator = backend.elastic_matrix()
+    mpi_comm = operator.getComm().tompi4py()
+    params = backend.params
+    input_identity = _reference_elastic_input_identity(
+        args=args,
+        params=params,
+        assembler=backend.assembler,
+        comm=mpi_comm,
+    )
+    tangent_identity = dict(input_identity.get("tangent_route") or {})
+    tangent_identity.update(
+        {
+            "autodiff_tangent_mode": "element",
+            "reference_operator_forced_common": True,
+            "solve_route_autodiff_tangent_mode": str(
+                backend.assembler.autodiff_tangent_mode
+            ),
+        }
+    )
+    input_identity["tangent_route"] = tangent_identity
+    return {
+        "problem": "Plasticity3D",
+        "runner": "plasticity3d_backend_mix_case",
+        "operator_source": "elastic_tangent_at_zero_displacement",
+        "constitutive_mode": "elastic",
+        "reference_operator_tangent_mode": "element_ad_for_all_routes",
+        "ordering": "backend_mix_reordered_constrained_free_dofs",
+        "ownership": "petsc_distributed_rows",
+        "mesh_name": str(backend.mesh_name),
+        "element_degree": int(params.get("element_degree", 0)),
+        "quadrature_rule_id": str(params.get("quadrature_rule_id", "")),
+        "assembly_backend": str(backend.assembler.assembly_backend),
+        "backend_mix_route": str(assembly_backend),
+        "autodiff_tangent_mode": str(backend.assembler.autodiff_tangent_mode),
+        "local_hessian_mode": str(backend.assembler.local_hessian_mode),
+        "material_parameter_ranges": {
+            "shear": _reference_material_range(params, "shear_q", comm=mpi_comm),
+            "bulk": _reference_material_range(params, "bulk_q", comm=mpi_comm),
+            "lame": _reference_material_range(params, "lame_q", comm=mpi_comm),
+        },
+        "input_identity": dict(input_identity),
+    }
+
+
+def _build_backend_convergence_metric(
+    backend: LocalAssemblyBackend,
+    *,
+    initial_state: PETSc.Vec,
+    settings: dict[str, object],
+) -> tuple[EuclideanMetric | MatrixRieszMetric, float, dict[str, object]]:
+    selection = str(settings.get("convergence_metric", "coefficient_l2"))
+    explicit_scale = settings.get("convergence_state_scale")
+    if explicit_scale is not None:
+        explicit_scale = float(explicit_scale)
+        if not np.isfinite(explicit_scale) or explicit_scale <= 0.0:
+            raise ValueError(
+                "--convergence-state-scale must be finite and strictly positive"
+            )
+    if selection == "coefficient_l2":
+        state_scale = 1.0 if explicit_scale is None else float(explicit_scale)
+        metric = EuclideanMetric()
+        return metric, float(state_scale), {
+            "selection": "coefficient_l2",
+            "legacy_default": bool(explicit_scale is None),
+            "state_scale": float(state_scale),
+            "state_scale_source": (
+                "legacy_unit_coefficient" if explicit_scale is None else "explicit_cli"
+            ),
+            "correction_normalization": "legacy_coefficient",
+            "absolute_dual_residual_units": "coefficient_l2",
+            "initial_relative_dual_residual_units": "dimensionless",
+            "relative_correction_units": "dimensionless",
+            "metric": metric.describe(),
+        }
+    if selection != "reference_elastic_energy":
+        raise ValueError(f"Unsupported backend-mix convergence metric {selection!r}")
+    provenance = backend.reference_elastic_metric_provenance
+    if provenance is None:
+        raise RuntimeError(
+            "Reference elastic metric provenance was not captured before slimming"
+        )
+    return _build_certified_reference_elastic_metric(
+        args=_convergence_settings_namespace(settings),
+        operator=backend.elastic_matrix(),
+        initial_state=initial_state,
+        constraint_variant=str(backend.params["constraint_variant"]),
+        expected_free_dofs=int(backend.n_free),
+        provenance=dict(provenance),
+    )
+
+
+def _optional_finite(value: object) -> float | None:
+    if value is None:
+        return None
+    converted = float(value)
+    return converted if np.isfinite(converted) else None
+
+
+def _backend_convergence_payload(
+    result: dict[str, object],
+    *,
+    configuration: dict[str, object],
+    absolute_tolerance: float,
+    initial_relative_tolerance: float,
+) -> dict[str, object]:
+    units = str(configuration["absolute_dual_residual_units"])
+    absolute = _optional_finite(result.get("dual_residual_norm"))
+    initial = _optional_finite(result.get("initial_dual_residual_norm"))
+    relative = _optional_finite(result.get("dual_residual_relative"))
+    effective_target = (
+        max(float(absolute_tolerance), float(initial_relative_tolerance) * initial)
+        if initial is not None
+        else (float(absolute_tolerance) if float(initial_relative_tolerance) <= 0.0 else None)
+    )
+    residual_gate_pass = bool(
+        absolute is not None
+        and effective_target is not None
+        and absolute < effective_target
+    )
+    last_dual = dict(result.get("dual_residual_metadata", {}))
+    last_riesz = (
+        dict(last_dual) if last_dual.get("riesz_solve") == "iterative" else None
+    )
+    return {
+        "configuration": dict(configuration),
+        "metric": dict(result.get("convergence_metric", configuration["metric"])),
+        "absolute_dual_residual": {"value": absolute, "units": units},
+        "initial_absolute_dual_residual": {"value": initial, "units": units},
+        "initial_relative_dual_residual": {
+            "value": relative,
+            "units": "dimensionless",
+        },
+        "residual_gate": {
+            "absolute_tolerance": float(absolute_tolerance),
+            "absolute_tolerance_units": units,
+            "initial_relative_tolerance": float(initial_relative_tolerance),
+            "initial_relative_tolerance_units": "dimensionless",
+            "effective_absolute_target": effective_target,
+            "passed": bool(residual_gate_pass),
+        },
+        "absolute_correction": {
+            "value": _optional_finite(result.get("correction_norm")),
+            "units": units,
+        },
+        "relative_correction": {
+            "value": _optional_finite(result.get("relative_correction")),
+            "units": "dimensionless",
+        },
+        "state_norm": {
+            "value": _optional_finite(result.get("state_norm")),
+            "units": units,
+        },
+        "state_scale": {
+            "value": float(configuration["state_scale"]),
+            "units": units,
+            "source": str(configuration["state_scale_source"]),
+        },
+        "coefficient_gradient_l2": _optional_finite(
+            result.get("grad_norm_coefficient_l2")
+        ),
+        "last_dual_norm_evaluation": dict(last_dual),
+        "last_riesz_solve": last_riesz,
+    }
+
+
+def _backend_result_status(
+    result: dict[str, object],
+    *,
+    metric_selection: str,
+    convergence_payload: dict[str, object],
+) -> str:
+    message_converged = "converged" in str(result.get("message", "")).lower()
+    if str(metric_selection) == "coefficient_l2":
+        return "completed" if message_converged else "failed"
+    residual_gate = dict(convergence_payload.get("residual_gate", {}))
+    return (
+        "completed"
+        if message_converged and bool(residual_gate.get("passed", False))
+        else "failed"
+    )
+
+
 def _run_local_solver_backend(
     backend,
     *,
     out_dir: Path,
     state_out: Path | None,
     mesh_name: str,
+    assembly_backend: str,
     constraint_variant: str = DEFAULT_PLASTICITY3D_CONSTRAINT_VARIANT,
     lambda_target: float,
     solver_backend: str,
     convergence_mode: str,
+    convergence_settings: dict[str, object],
     grad_stop_tol: float | None,
     grad_stop_rtol: float | None,
     stop_tol: float,
@@ -2142,6 +2573,12 @@ def _run_local_solver_backend(
             mesh_name=str(lazy_pmg_config["mesh_name"]),
             elem_degree=int(lazy_pmg_config["elem_degree"]),
             constraint_variant=str(lazy_pmg_config.get("constraint_variant", constraint_variant)),
+            quadrature_rule_id=str(
+                lazy_pmg_config.get(
+                    "quadrature_rule_id",
+                    TETRA_QUADRATURE_DEGREE_DEFAULT,
+                )
+            ),
             lambda_target=float(lazy_pmg_config["lambda_target"]),
             pmg_strategy=str(lazy_pmg_config["pmg_strategy"]),
             ksp_rtol=float(ksp_rtol),
@@ -2188,6 +2625,22 @@ def _run_local_solver_backend(
         if reuse_ksp
         else None
     )
+    convergence_metric: EuclideanMetric | MatrixRieszMetric | None = None
+    try:
+        (
+            convergence_metric,
+            convergence_state_scale,
+            convergence_configuration,
+        ) = _build_backend_convergence_metric(
+            backend,
+            initial_state=x,
+            settings=convergence_settings,
+        )
+    except Exception:
+        if persistent_ksp is not None:
+            persistent_ksp.destroy()
+        x.destroy()
+        raise
 
     def hessian_solve_fn(vec, rhs, sol):
         iteration = int(len(linear_records) + 1)
@@ -2284,6 +2737,7 @@ def _run_local_solver_backend(
             "t_assemble": float(t_assemble),
             "t_setup": float(t_setup),
             "t_solve": float(t_solve),
+            "effective_ksp": _effective_ksp_payload(ksp),
         }
         if persistent_ksp is None:
             ksp.destroy()
@@ -2345,6 +2799,7 @@ def _run_local_solver_backend(
             "t_setup": float(t_setup),
             "t_solve": float(t_solve),
             "trust_radius": float(trust_radius),
+            "effective_ksp": _effective_ksp_payload(ksp),
         }
         ksp.destroy()
         linear_records.append(rec)
@@ -2429,79 +2884,98 @@ def _run_local_solver_backend(
         energy_tol = 1.0e100
         step_tol_rel = float(stop_tol)
 
-    result = local_newton(
-        energy_fn=energy_fn,
-        gradient_fn=backend.vec_gradient,
-        hessian_solve_fn=hessian_solve_fn,
-        x=x,
-        tolf=float(energy_tol),
-        tolg=float(grad_target),
-        tolg_rel=float(grad_target_rel),
-        line_search=str(line_search),
-        linesearch_tol=float(linesearch_tol),
-        armijo_alpha0=float(armijo_alpha0),
-        armijo_c1=float(armijo_c1),
-        armijo_shrink=float(armijo_shrink),
-        armijo_max_ls=int(armijo_max_ls),
-        armijo_gradient_fallback=bool(
-            str(line_search) == "armijo" and isinstance(backend, SourceAssemblyBackend)
-        ),
-        maxit=int(maxit),
-        tolx_rel=float(step_tol_rel),
-        tolx_abs=0.0,
-        require_all_convergence=bool(require_all_convergence),
-        fail_on_nonfinite=True,
-        verbose=False,
-        comm=PETSc.COMM_WORLD.tompi4py(),
-        save_history=True,
-        hessian_matvec_fn=hessian_matvec_fn,
-        trust_subproblem_solve_fn=(
-            trust_subproblem_solve_fn if bool(use_trust_region) else None
-        ),
-        trust_subproblem_line_search=bool(trust_subproblem_line_search),
-        trust_region=bool(use_trust_region),
-        trust_radius_init=float(trust_radius_init),
-        trust_radius_min=float(trust_radius_min),
-        trust_radius_max=float(trust_radius_max),
-        trust_shrink=float(trust_shrink),
-        trust_expand=float(trust_expand),
-        trust_eta_shrink=float(trust_eta_shrink),
-        trust_eta_expand=float(trust_eta_expand),
-        trust_max_reject=int(trust_max_reject),
-        iteration_callback=_iteration_progress_callback,
-    )
-    solve_time = time.perf_counter() - solve_t0
-    g_final = x.duplicate()
     try:
-        backend.vec_gradient(x, g_final)
-        final_grad_norm = float(g_final.norm(PETSc.NormType.NORM_2))
+        result = local_newton(
+            energy_fn=energy_fn,
+            gradient_fn=backend.vec_gradient,
+            hessian_solve_fn=hessian_solve_fn,
+            x=x,
+            tolf=float(energy_tol),
+            tolg=float(grad_target),
+            tolg_rel=float(grad_target_rel),
+            line_search=str(line_search),
+            linesearch_tol=float(linesearch_tol),
+            armijo_alpha0=float(armijo_alpha0),
+            armijo_c1=float(armijo_c1),
+            armijo_shrink=float(armijo_shrink),
+            armijo_max_ls=int(armijo_max_ls),
+            armijo_gradient_fallback=bool(
+                str(line_search) == "armijo" and isinstance(backend, SourceAssemblyBackend)
+            ),
+            maxit=int(maxit),
+            tolx_rel=float(step_tol_rel),
+            tolx_abs=0.0,
+            require_all_convergence=bool(require_all_convergence),
+            fail_on_nonfinite=True,
+            verbose=False,
+            comm=PETSc.COMM_WORLD.tompi4py(),
+            save_history=True,
+            hessian_matvec_fn=hessian_matvec_fn,
+            trust_subproblem_solve_fn=(
+                trust_subproblem_solve_fn if bool(use_trust_region) else None
+            ),
+            trust_subproblem_line_search=bool(trust_subproblem_line_search),
+            trust_region=bool(use_trust_region),
+            trust_radius_init=float(trust_radius_init),
+            trust_radius_min=float(trust_radius_min),
+            trust_radius_max=float(trust_radius_max),
+            trust_shrink=float(trust_shrink),
+            trust_expand=float(trust_expand),
+            trust_eta_shrink=float(trust_eta_shrink),
+            trust_eta_expand=float(trust_eta_expand),
+            trust_max_reject=int(trust_max_reject),
+            iteration_callback=_iteration_progress_callback,
+            convergence_metric=convergence_metric,
+            convergence_state_scale=float(convergence_state_scale),
+            convergence_correction_mode=str(
+                convergence_configuration["correction_normalization"]
+            ),
+        )
+    except Exception:
+        if persistent_ksp is not None:
+            persistent_ksp.destroy()
+        x.destroy()
+        raise
     finally:
-        g_final.destroy()
+        if isinstance(convergence_metric, MatrixRieszMetric):
+            convergence_metric.destroy()
+    solve_time = time.perf_counter() - solve_t0
+    final_grad_norm = float(result["grad_norm_coefficient_l2"])
+    nonlinear_convergence = _backend_convergence_payload(
+        result,
+        configuration=convergence_configuration,
+        absolute_tolerance=float(grad_target),
+        initial_relative_tolerance=float(grad_target_rel),
+    )
     final_global = backend.global_from_vec(x)
     final_metric = (
-        float(final_grad_norm)
+        float(result["dual_residual_norm"])
         if convergence_mode == "gradient_only"
-        else (
-            float(result["history"][-1]["step_rel"])
-            if result.get("history")
-            else float("nan")
-        )
+        else float(result["relative_correction"])
     )
     observables = backend.final_observables(final_global)
+    observables["branch_diagnostics"] = _endpoint_branch_diagnostics(backend, x)
+    reference_elastic_action = _reference_elastic_action_global(
+        backend,
+        x,
+        state_out=state_out,
+    )
     _export_backend_state(
         backend,
         state_out=state_out,
         mesh_name=str(mesh_name),
+        assembly_backend=str(assembly_backend),
         constraint_variant=str(constraint_variant),
         lambda_target=float(lambda_target),
         u_global=final_global,
+        reference_elastic_action=reference_elastic_action,
         energy=float(observables.get("energy", float("nan"))),
     )
-    message_text = str(result.get("message", "")).lower()
-    status = (
-        "completed"
-        if ("converged" in message_text)
-        else "failed"
+    metric_selection = str(convergence_configuration["selection"])
+    status = _backend_result_status(
+        result,
+        metric_selection=metric_selection,
+        convergence_payload=nonlinear_convergence,
     )
     x.destroy()
     if persistent_ksp is not None:
@@ -2542,10 +3016,10 @@ def _run_local_solver_backend(
         "history": list(result.get("history", [])),
         "final_metric": float(final_metric),
         "final_metric_name": (
-            "grad_norm"
+            "dual_residual_norm"
             if convergence_mode == "gradient_only"
             else (
-                "relative_correction_and_gradient"
+                "relative_correction_and_dual_residual"
                 if combined_gradient_stop
                 else "relative_correction"
             )
@@ -2553,6 +3027,9 @@ def _run_local_solver_backend(
         "grad_stop_tol": None if grad_stop_tol_value is None else float(grad_stop_tol_value),
         "grad_stop_rtol": None if grad_stop_rtol_value is None else float(grad_stop_rtol_value),
         "final_grad_norm": float(final_grad_norm),
+        "final_grad_norm_kind": "coefficient_l2_diagnostic",
+        "convergence_metric": str(metric_selection),
+        "nonlinear_convergence": dict(nonlinear_convergence),
         "initial_guess": init_meta,
         "assembly_callbacks": assembly_callbacks,
         "assembler_setup": assembler_setup,
@@ -2618,9 +3095,11 @@ def _run_local_solver_backend_with_source_linear(
     out_dir: Path,
     state_out: Path | None,
     mesh_name: str,
+    assembly_backend: str,
     constraint_variant: str = DEFAULT_PLASTICITY3D_CONSTRAINT_VARIANT,
     lambda_target: float,
     convergence_mode: str,
+    convergence_settings: dict[str, object],
     grad_stop_tol: float | None,
     grad_stop_rtol: float | None,
     stop_tol: float,
@@ -2698,6 +3177,24 @@ def _run_local_solver_backend_with_source_linear(
         success=True,
         strategy=str(init_meta["strategy"]),
     )
+
+    convergence_metric: EuclideanMetric | MatrixRieszMetric | None = None
+    try:
+        (
+            convergence_metric,
+            convergence_state_scale,
+            convergence_configuration,
+        ) = _build_backend_convergence_metric(
+            backend,
+            initial_state=x,
+            settings=convergence_settings,
+        )
+    except Exception:
+        x.destroy()
+        close_solver = getattr(linear_solver, "close", None)
+        if callable(close_solver):
+            close_solver()
+        raise
 
     linear_records: list[dict[str, object]] = []
 
@@ -2827,60 +3324,84 @@ def _run_local_solver_backend_with_source_linear(
         energy_tol = 1.0e100
         step_tol_rel = float(stop_tol)
 
-    result = local_newton(
-        energy_fn=backend.vec_energy,
-        gradient_fn=backend.vec_gradient,
-        hessian_solve_fn=hessian_solve_fn,
-        x=x,
-        tolf=float(energy_tol),
-        tolg=float(grad_target),
-        tolg_rel=float(grad_target_rel),
-        line_search=str(line_search),
-        linesearch_tol=float(linesearch_tol),
-        armijo_alpha0=float(armijo_alpha0),
-        armijo_c1=float(armijo_c1),
-        armijo_shrink=float(armijo_shrink),
-        armijo_max_ls=int(armijo_max_ls),
-        armijo_gradient_fallback=False,
-        maxit=int(maxit),
-        tolx_rel=float(step_tol_rel),
-        tolx_abs=0.0,
-        require_all_convergence=bool(require_all_convergence),
-        fail_on_nonfinite=True,
-        verbose=False,
-        comm=PETSc.COMM_WORLD.tompi4py(),
-        save_history=True,
-        iteration_callback=_iteration_progress_callback,
-    )
-    solve_time = time.perf_counter() - solve_t0
-    g_final = x.duplicate()
     try:
-        backend.vec_gradient(x, g_final)
-        final_grad_norm = float(g_final.norm(PETSc.NormType.NORM_2))
+        result = local_newton(
+            energy_fn=backend.vec_energy,
+            gradient_fn=backend.vec_gradient,
+            hessian_solve_fn=hessian_solve_fn,
+            x=x,
+            tolf=float(energy_tol),
+            tolg=float(grad_target),
+            tolg_rel=float(grad_target_rel),
+            line_search=str(line_search),
+            linesearch_tol=float(linesearch_tol),
+            armijo_alpha0=float(armijo_alpha0),
+            armijo_c1=float(armijo_c1),
+            armijo_shrink=float(armijo_shrink),
+            armijo_max_ls=int(armijo_max_ls),
+            armijo_gradient_fallback=False,
+            maxit=int(maxit),
+            tolx_rel=float(step_tol_rel),
+            tolx_abs=0.0,
+            require_all_convergence=bool(require_all_convergence),
+            fail_on_nonfinite=True,
+            verbose=False,
+            comm=PETSc.COMM_WORLD.tompi4py(),
+            save_history=True,
+            iteration_callback=_iteration_progress_callback,
+            convergence_metric=convergence_metric,
+            convergence_state_scale=float(convergence_state_scale),
+            convergence_correction_mode=str(
+                convergence_configuration["correction_normalization"]
+            ),
+        )
+    except Exception:
+        x.destroy()
+        close_solver = getattr(linear_solver, "close", None)
+        if callable(close_solver):
+            close_solver()
+        raise
     finally:
-        g_final.destroy()
+        if isinstance(convergence_metric, MatrixRieszMetric):
+            convergence_metric.destroy()
+    solve_time = time.perf_counter() - solve_t0
+    final_grad_norm = float(result["grad_norm_coefficient_l2"])
+    nonlinear_convergence = _backend_convergence_payload(
+        result,
+        configuration=convergence_configuration,
+        absolute_tolerance=float(grad_target),
+        initial_relative_tolerance=float(grad_target_rel),
+    )
     final_global = backend.global_from_vec(x)
     final_metric = (
-        float(final_grad_norm)
+        float(result["dual_residual_norm"])
         if convergence_mode == "gradient_only"
-        else (
-            float(result["history"][-1]["step_rel"])
-            if result.get("history")
-            else float("nan")
-        )
+        else float(result["relative_correction"])
     )
     observables = backend.final_observables(final_global)
+    observables["branch_diagnostics"] = _endpoint_branch_diagnostics(backend, x)
+    reference_elastic_action = _reference_elastic_action_global(
+        backend,
+        x,
+        state_out=state_out,
+    )
     _export_backend_state(
         backend,
         state_out=state_out,
         mesh_name=str(mesh_name),
+        assembly_backend=str(assembly_backend),
         constraint_variant=str(constraint_variant),
         lambda_target=float(lambda_target),
         u_global=final_global,
+        reference_elastic_action=reference_elastic_action,
         energy=float(observables.get("energy", float("nan"))),
     )
-    message_text = str(result.get("message", "")).lower()
-    status = "completed" if ("converged" in message_text) else "failed"
+    metric_selection = str(convergence_configuration["selection"])
+    status = _backend_result_status(
+        result,
+        metric_selection=metric_selection,
+        convergence_payload=nonlinear_convergence,
+    )
     x.destroy()
     close_solver = getattr(linear_solver, "close", None)
     if callable(close_solver):
@@ -2921,10 +3442,10 @@ def _run_local_solver_backend_with_source_linear(
         "history": list(result.get("history", [])),
         "final_metric": float(final_metric),
         "final_metric_name": (
-            "grad_norm"
+            "dual_residual_norm"
             if convergence_mode == "gradient_only"
             else (
-                "relative_correction_and_gradient"
+                "relative_correction_and_dual_residual"
                 if combined_gradient_stop
                 else "relative_correction"
             )
@@ -2932,6 +3453,9 @@ def _run_local_solver_backend_with_source_linear(
         "grad_stop_tol": None if grad_stop_tol_value is None else float(grad_stop_tol_value),
         "grad_stop_rtol": None if grad_stop_rtol_value is None else float(grad_stop_rtol_value),
         "final_grad_norm": float(final_grad_norm),
+        "final_grad_norm_kind": "coefficient_l2_diagnostic",
+        "convergence_metric": str(metric_selection),
+        "nonlinear_convergence": dict(nonlinear_convergence),
         "initial_guess": init_meta,
         "assembly_callbacks": assembly_callbacks,
         "assembler_setup": assembler_setup,
@@ -3073,10 +3597,10 @@ def _run_source_solver_backend(
     except Exception:
         builder_timings = None
     if PETSc.COMM_WORLD.getRank() == 0 and builder_timings is not None:
-        builder_timings_path.parent.mkdir(parents=True, exist_ok=True)
-        builder_timings_path.write_text(
-            json.dumps(builder_timings, indent=2) + "\n",
-            encoding="utf-8",
+        atomic_write_json(
+            builder_timings_path,
+            builder_timings,
+            nonfinite_as_null=True,
         )
     close = getattr(linear_solver, "close", None)
     if callable(close):
@@ -3179,14 +3703,32 @@ def _backend_element_degree(backend) -> int:
     return 4
 
 
+def _quadrature_result_metadata(
+    quadrature_rule_id: str | None,
+    *,
+    element_degree: int,
+) -> dict[str, object]:
+    rule_id = normalize_tetra_quadrature_rule_id(
+        quadrature_rule_id,
+        element_degree=int(element_degree),
+    )
+    points, _weights = tetra_quadrature_rule(rule_id)
+    return {
+        "quadrature_rule_id": str(rule_id),
+        "quadrature_points": int(points.shape[1]),
+    }
+
+
 def _export_backend_state(
     backend,
     *,
     state_out: Path | None,
     mesh_name: str,
+    assembly_backend: str,
     constraint_variant: str,
     lambda_target: float,
     u_global: np.ndarray,
+    reference_elastic_action: np.ndarray | None,
     energy: float,
 ) -> None:
     if state_out is None or PETSc.COMM_WORLD.getRank() != 0:
@@ -3220,13 +3762,42 @@ def _export_backend_state(
         element_degree=int(_backend_element_degree(backend)),
         lambda_target=float(lambda_target),
         energy=float(energy),
+        free_displacement=u_global,
+        reference_elastic_action=reference_elastic_action,
         metadata={
             "solver_family": "backend_mix",
-            "assembly_backend": "local",
+            "assembly_backend": str(assembly_backend),
             "mpi_ranks": int(PETSc.COMM_WORLD.getSize()),
             "constraint_variant": str(normalize_constraint_variant(constraint_variant)),
+            "quadrature_rule_id": str(
+                backend.params.get(
+                    "quadrature_rule_id",
+                    default_tetra_quadrature_rule_id(_backend_element_degree(backend)),
+                )
+            ),
         },
     )
+
+
+def _reference_elastic_action_global(
+    backend,
+    state: PETSc.Vec,
+    *,
+    state_out: Path | None,
+) -> np.ndarray | None:
+    """Return ``K_elastic state`` in the exported reordered free-DOF basis."""
+
+    if state_out is None or not isinstance(backend, LocalAssemblyBackend):
+        return None
+    action = backend.create_vec()
+    try:
+        backend.elastic_matrix().mult(state, action)
+        values = np.asarray(backend.global_from_vec(action), dtype=np.float64)
+    finally:
+        action.destroy()
+    if values.size == 0 or not np.all(np.isfinite(values)):
+        raise RuntimeError("reference-elastic state action is empty or nonfinite")
+    return values
 
 
 def _stage_timings_from_stage_file(stage_path: Path) -> dict[str, float]:
@@ -3281,6 +3852,12 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--mesh-name", type=str, default="hetero_ssr_L1")
     parser.add_argument("--elem-degree", type=int, default=4)
     parser.add_argument(
+        "--quadrature-rule",
+        choices=(TETRA_QUADRATURE_DEGREE_DEFAULT, *TETRA_QUADRATURE_RULE_IDS),
+        default=TETRA_QUADRATURE_DEGREE_DEFAULT,
+        help="Named tetrahedral rule; degree_default preserves the historical FE-degree mapping",
+    )
+    parser.add_argument(
         "--constraint-variant",
         choices=(
             DEFAULT_PLASTICITY3D_CONSTRAINT_VARIANT,
@@ -3310,6 +3887,21 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--grad-stop-tol", type=float, default=None)
     parser.add_argument("--grad-stop-rtol", type=float, default=None)
     parser.add_argument("--stop-tol", type=float, default=2.0e-3)
+    parser.add_argument(
+        "--convergence-metric",
+        choices=("coefficient_l2", "reference_elastic_energy"),
+        default="coefficient_l2",
+        help="Legacy coefficient stopping remains the default.",
+    )
+    parser.add_argument("--convergence-state-scale", type=float, default=None)
+    parser.add_argument("--riesz-ksp-type", type=str, default="cg")
+    parser.add_argument("--riesz-pc-type", type=str, default="jacobi")
+    parser.add_argument("--riesz-ksp-rtol", type=float, default=1.0e-10)
+    parser.add_argument("--riesz-ksp-atol", type=float, default=1.0e-14)
+    parser.add_argument("--riesz-ksp-max-it", type=int, default=1000)
+    parser.add_argument("--riesz-true-residual-rtol", type=float, default=1.0e-8)
+    parser.add_argument("--riesz-spd-factor-solver-type", type=str, default="mumps")
+    parser.add_argument("--riesz-symmetry-tol", type=float, default=1.0e-12)
     parser.add_argument("--maxit", type=int, default=80)
     parser.add_argument(
         "--line-search",
@@ -3343,14 +3935,66 @@ def main() -> None:
     args = parser.parse_args()
     elem_degree = int(args.elem_degree)
     constraint_variant = normalize_constraint_variant(args.constraint_variant)
+    quadrature_rule_id = normalize_tetra_quadrature_rule_id(
+        args.quadrature_rule,
+        element_degree=elem_degree,
+    )
     out_dir = Path(args.out_dir).resolve()
     output_json = Path(args.output_json).resolve()
+    state_output = None if args.state_out is None else Path(args.state_out).resolve()
+    if state_output is not None:
+        try:
+            state_output.relative_to(output_json.parent)
+        except ValueError as exc:
+            raise ValueError(
+                "--state-out must remain inside the output record directory"
+            ) from exc
     if elem_degree not in {1, 2, 4}:
         raise ValueError("Plasticity3D backend-mix runner supports elem-degree 1, 2, or 4")
     if str(args.assembly_backend) == "source" and elem_degree != 4:
         raise ValueError("Source Plasticity3D assembly supports only --elem-degree 4")
+    if (
+        str(args.assembly_backend) == "source"
+        and quadrature_rule_id != default_tetra_quadrature_rule_id(elem_degree)
+    ):
+        raise ValueError(
+            "Source Plasticity3D assembly does not support nondefault --quadrature-rule"
+        )
     if str(args.solver_backend) in {LOCAL_SOLVER_SOURCE_DFGMRES, "source"} and elem_degree != 4:
         raise ValueError("Source-backed Plasticity3D linear solvers support only --elem-degree 4")
+    convergence_settings = {
+        "convergence_metric": str(args.convergence_metric),
+        "convergence_state_scale": args.convergence_state_scale,
+        "riesz_ksp_type": str(args.riesz_ksp_type),
+        "riesz_pc_type": str(args.riesz_pc_type),
+        "riesz_ksp_rtol": float(args.riesz_ksp_rtol),
+        "riesz_ksp_atol": float(args.riesz_ksp_atol),
+        "riesz_ksp_max_it": int(args.riesz_ksp_max_it),
+        "riesz_true_residual_rtol": float(args.riesz_true_residual_rtol),
+        "riesz_spd_factor_solver_type": str(args.riesz_spd_factor_solver_type),
+        "riesz_symmetry_tol": float(args.riesz_symmetry_tol),
+        "mesh_name": str(args.mesh_name),
+        "elem_degree": int(elem_degree),
+    }
+    if str(args.convergence_metric) == "reference_elastic_energy":
+        if str(constraint_variant) != PLASTICITY3D_CONSTRAINT_VARIANT_GLUED_BOTTOM:
+            raise ValueError(
+                "reference_elastic_energy requires the glued_bottom constraint"
+            )
+        if str(args.assembly_backend) not in {
+            "local",
+            "local_constitutiveAD",
+            "local_sfd",
+        }:
+            raise ValueError(
+                "reference_elastic_energy is currently supported only by local "
+                "backend-mix assembly routes with an auditable reordered free space"
+            )
+        if str(args.solver_backend) == "source":
+            raise ValueError(
+                "The source nonlinear solver does not expose the shared Riesz "
+                "stopping contract; use a local nonlinear solver backend."
+            )
     case_started = time.perf_counter()
     stage_path = out_dir / "data" / "stage.jsonl"
     if PETSc.COMM_WORLD.getRank() == 0:
@@ -3363,6 +4007,7 @@ def main() -> None:
         assembly_backend=str(args.assembly_backend),
         solver_backend=str(args.solver_backend),
         constraint_variant=str(constraint_variant),
+        quadrature_rule_id=str(quadrature_rule_id),
     )
 
     pmg_support = None
@@ -3372,6 +4017,7 @@ def main() -> None:
             mesh_name=str(args.mesh_name),
             elem_degree=int(elem_degree),
             constraint_variant=str(constraint_variant),
+            quadrature_rule_id=str(quadrature_rule_id),
             lambda_target=float(args.lambda_target),
             local_hessian_mode=(
                 "sfd_local"
@@ -3421,6 +4067,7 @@ def main() -> None:
                 "mesh_name": str(args.mesh_name),
                 "elem_degree": int(elem_degree),
                 "constraint_variant": str(constraint_variant),
+                "quadrature_rule_id": str(quadrature_rule_id),
                 "lambda_target": float(args.lambda_target),
                 "pmg_strategy": str(args.pmg_strategy),
                 "use_near_nullspace": False,
@@ -3436,6 +4083,7 @@ def main() -> None:
                 mesh_name=str(args.mesh_name),
                 elem_degree=int(elem_degree),
                 constraint_variant=str(constraint_variant),
+                quadrature_rule_id=str(quadrature_rule_id),
                 lambda_target=float(args.lambda_target),
                 pmg_strategy=str(args.pmg_strategy),
                 ksp_rtol=float(args.ksp_rtol),
@@ -3450,12 +4098,26 @@ def main() -> None:
             mesh_name=str(args.mesh_name),
             elem_degree=int(elem_degree),
             constraint_variant=str(constraint_variant),
+            quadrature_rule_id=str(quadrature_rule_id),
             lambda_target=float(args.lambda_target),
             pmg_strategy=str(args.pmg_strategy),
             ksp_rtol=float(args.ksp_rtol),
             ksp_max_it=int(args.ksp_max_it),
             stage_path=stage_path,
             stage_started=case_started,
+        )
+
+    if str(args.convergence_metric) == "reference_elastic_energy":
+        if not isinstance(backend, LocalAssemblyBackend):
+            raise RuntimeError(
+                "Certified backend-mix Riesz stopping requires LocalAssemblyBackend"
+            )
+        backend.reference_elastic_metric_provenance = (
+            _prepare_local_reference_metric_provenance(
+                backend,
+                settings=convergence_settings,
+                assembly_backend=str(args.assembly_backend),
+            )
         )
 
     if isinstance(backend, LocalAssemblyBackend):
@@ -3476,12 +4138,14 @@ def main() -> None:
         result = _run_local_solver_backend(
             backend,
             out_dir=out_dir,
-            state_out=None if args.state_out is None else Path(args.state_out).resolve(),
+            state_out=state_output,
             mesh_name=str(args.mesh_name),
+            assembly_backend=str(args.assembly_backend),
             constraint_variant=str(constraint_variant),
             lambda_target=float(args.lambda_target),
             solver_backend=str(args.solver_backend),
             convergence_mode=str(args.convergence_mode),
+            convergence_settings=convergence_settings,
             grad_stop_tol=args.grad_stop_tol,
             grad_stop_rtol=args.grad_stop_rtol,
             stop_tol=float(args.stop_tol),
@@ -3515,11 +4179,13 @@ def main() -> None:
         result = _run_local_solver_backend_with_source_linear(
             backend,
             out_dir=out_dir,
-            state_out=None if args.state_out is None else Path(args.state_out).resolve(),
+            state_out=state_output,
             mesh_name=str(args.mesh_name),
+            assembly_backend=str(args.assembly_backend),
             constraint_variant=str(constraint_variant),
             lambda_target=float(args.lambda_target),
             convergence_mode=str(args.convergence_mode),
+            convergence_settings=convergence_settings,
             grad_stop_tol=args.grad_stop_tol,
             grad_stop_rtol=args.grad_stop_rtol,
             stop_tol=float(args.stop_tol),
@@ -3545,7 +4211,16 @@ def main() -> None:
             stage_path=stage_path,
             stage_started=case_started,
         )
-    result["total_time"] = float(time.perf_counter() - total_t0)
+    local_total_time = float(time.perf_counter() - total_t0)
+    result["total_time_local_rank_s"] = local_total_time
+    result["total_time_by_rank_s"] = [
+        float(value)
+        for value in PETSc.COMM_WORLD.tompi4py().allgather(local_total_time)
+    ]
+    result["total_time"] = float(
+        max(result["total_time_by_rank_s"])
+    )
+    result["total_time_reduction"] = "mpi_collective_max"
     payload = _case_payload(
         assembly_backend=str(args.assembly_backend),
         solver_backend=str(args.solver_backend),
@@ -3561,13 +4236,48 @@ def main() -> None:
     payload["mesh_name"] = str(args.mesh_name)
     payload["elem_degree"] = int(_backend_element_degree(backend))
     payload["constraint_variant"] = str(constraint_variant)
+    payload.update(
+        _quadrature_result_metadata(
+            str(quadrature_rule_id),
+            element_degree=int(payload["elem_degree"]),
+        )
+    )
     payload["lambda_target"] = float(args.lambda_target)
     payload["pmg_strategy"] = str(args.pmg_strategy)
     payload["ksp_rtol"] = float(args.ksp_rtol)
     payload["ksp_max_it"] = int(args.ksp_max_it)
-    payload["state_out"] = "" if args.state_out is None else str(Path(args.state_out).resolve())
+    payload["convergence_metric_requested"] = str(args.convergence_metric)
+    payload["riesz_solver_requested"] = {
+        "ksp_type": str(args.riesz_ksp_type),
+        "pc_type": str(args.riesz_pc_type),
+        "rtol": float(args.riesz_ksp_rtol),
+        "atol": float(args.riesz_ksp_atol),
+        "max_it": int(args.riesz_ksp_max_it),
+        "true_residual_rtol": float(args.riesz_true_residual_rtol),
+        "spd_factor_solver_type": str(args.riesz_spd_factor_solver_type),
+        "symmetry_relative_tolerance": float(args.riesz_symmetry_tol),
+    }
+    if state_output is None:
+        payload["state_out"] = ""
+    else:
+        state_relative = state_output.relative_to(output_json.parent)
+        payload["state_out"] = str(state_relative)
+    payload["git"] = _git_metadata()
+    payload["job_metadata"] = {
+        "slurm_job_id": os.environ.get("SLURM_JOB_ID", ""),
+        "slurm_array_job_id": os.environ.get("SLURM_ARRAY_JOB_ID", ""),
+        "slurm_array_task_id": os.environ.get("SLURM_ARRAY_TASK_ID", ""),
+        "slurm_cluster_name": os.environ.get("SLURM_CLUSTER_NAME", ""),
+    }
     payload["same_mesh_case_path"] = (
-        str(same_mesh_case_hdf5_path(str(args.mesh_name), int(elem_degree), constraint_variant))
+        str(
+            same_mesh_case_hdf5_path(
+                str(args.mesh_name),
+                int(elem_degree),
+                constraint_variant,
+                quadrature_rule_id=str(quadrature_rule_id),
+            )
+        )
         if str(args.assembly_backend) in {"local", "local_constitutiveAD", "local_sfd"}
         else ""
     )
@@ -3581,9 +4291,8 @@ def main() -> None:
         )
 
     if PETSc.COMM_WORLD.getRank() == 0:
-        output_json.parent.mkdir(parents=True, exist_ok=True)
-        output_json.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
-        print(json.dumps(payload, indent=2))
+        _write_solver_json(output_json, payload)
+        print(strict_json_dumps(payload, indent=2, nonfinite_as_null=True))
     _append_stage_event(
         stage_path,
         stage="payload_written",

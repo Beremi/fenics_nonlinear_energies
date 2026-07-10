@@ -4,13 +4,17 @@
 from __future__ import annotations
 
 import argparse
-import json
 from pathlib import Path
 
 from mpi4py import MPI
 
+from src.core.benchmark.run_record import atomic_write_json, strict_json_dumps
 from src.core.cli.threading import configure_jax_cpu_threading
-from src.problems.slope_stability_3d.support.mesh import DEFAULT_MESH_NAME
+from src.problems.slope_stability_3d.support.mesh import (
+    DEFAULT_MESH_NAME,
+    TETRA_QUADRATURE_DEGREE_DEFAULT,
+    TETRA_QUADRATURE_RULE_IDS,
+)
 
 
 def _build_parser(profile_defaults):
@@ -19,6 +23,14 @@ def _build_parser(profile_defaults):
     )
     parser.add_argument("--mesh_name", type=str, default=DEFAULT_MESH_NAME)
     parser.add_argument("--elem_degree", type=int, choices=(1, 2, 4), default=2)
+    parser.add_argument(
+        "--quadrature-rule",
+        "--quadrature_rule",
+        dest="quadrature_rule",
+        choices=(TETRA_QUADRATURE_DEGREE_DEFAULT, *TETRA_QUADRATURE_RULE_IDS),
+        default=TETRA_QUADRATURE_DEGREE_DEFAULT,
+        help="Named tetrahedral rule; degree_default preserves the historical FE-degree mapping",
+    )
     parser.add_argument("--lambda-target", dest="lambda_target", type=float, default=None)
     parser.add_argument("--initial-state", type=str, default="")
     parser.add_argument(
@@ -164,6 +176,92 @@ def _build_parser(profile_defaults):
     parser.add_argument("--tolg_rel", type=float, default=1.0e-3)
     parser.add_argument("--tolx_rel", type=float, default=1.0e-3)
     parser.add_argument("--tolx_abs", type=float, default=1.0e-10)
+    parser.add_argument(
+        "--convergence-metric",
+        "--convergence_metric",
+        dest="convergence_metric",
+        choices=("coefficient_l2", "reference_elastic_energy"),
+        default="coefficient_l2",
+        help=(
+            "Nonlinear stopping metric. coefficient_l2 preserves the legacy "
+            "coefficient norm; reference_elastic_energy uses the certified "
+            "glued-free-space elastic operator."
+        ),
+    )
+    parser.add_argument(
+        "--convergence-state-scale",
+        "--convergence_state_scale",
+        dest="convergence_state_scale",
+        type=float,
+        default=None,
+        help=(
+            "Positive absolute state scale in the selected primal-norm units. "
+            "For reference_elastic_energy, omission uses the initial nonlinear "
+            "iterate's elastic-energy norm."
+        ),
+    )
+    parser.add_argument(
+        "--riesz-ksp-type",
+        "--riesz_ksp_type",
+        dest="riesz_ksp_type",
+        type=str,
+        default="cg",
+    )
+    parser.add_argument(
+        "--riesz-pc-type",
+        "--riesz_pc_type",
+        dest="riesz_pc_type",
+        type=str,
+        default="jacobi",
+    )
+    parser.add_argument(
+        "--riesz-ksp-rtol",
+        "--riesz_ksp_rtol",
+        dest="riesz_ksp_rtol",
+        type=float,
+        default=1.0e-10,
+    )
+    parser.add_argument(
+        "--riesz-ksp-atol",
+        "--riesz_ksp_atol",
+        dest="riesz_ksp_atol",
+        type=float,
+        default=1.0e-14,
+    )
+    parser.add_argument(
+        "--riesz-ksp-max-it",
+        "--riesz_ksp_max_it",
+        dest="riesz_ksp_max_it",
+        type=int,
+        default=1000,
+    )
+    parser.add_argument(
+        "--riesz-true-residual-rtol",
+        "--riesz_true_residual_rtol",
+        dest="riesz_true_residual_rtol",
+        type=float,
+        default=1.0e-8,
+        help="Maximum independently recomputed relative residual for a Riesz solve.",
+    )
+    parser.add_argument(
+        "--riesz-spd-factor-solver-type",
+        "--riesz_spd_factor_solver_type",
+        dest="riesz_spd_factor_solver_type",
+        type=str,
+        default="mumps",
+        help="PETSc direct factor backend used for the mandatory inertia certificate.",
+    )
+    parser.add_argument(
+        "--riesz-symmetry-tol",
+        "--riesz_symmetry_tol",
+        dest="riesz_symmetry_tol",
+        type=float,
+        default=1.0e-12,
+        help=(
+            "Relative entrywise symmetry tolerance, scaled by the elastic "
+            "operator infinity norm before the PETSc symmetry check."
+        ),
+    )
     parser.add_argument("--maxit", type=int, default=100)
     parser.add_argument(
         "--line_search",
@@ -252,11 +350,10 @@ def main():
     result = run(args)
 
     if MPI.COMM_WORLD.rank == 0:
-        print(json.dumps(result, indent=2))
+        print(strict_json_dumps(result, indent=2, nonfinite_as_null=True))
         if str(args.out):
             path = Path(args.out)
-            path.parent.mkdir(parents=True, exist_ok=True)
-            path.write_text(json.dumps(result, indent=2) + "\n", encoding="utf-8")
+            atomic_write_json(path, result, nonfinite_as_null=True)
 
 
 if __name__ == "__main__":

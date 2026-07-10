@@ -367,9 +367,17 @@ def main() -> None:
         "level": int(args.level),
         "schedule": schedule,
         "jax_fem_python": str(args.jax_fem_python),
+        "jax_fem_version": "0.0.10",
         "main_site_packages": str(args.main_site_packages),
         "maintained_solver": "repo_serial_direct",
         "jax_fem_solver": "jax_fem_umfpack_serial",
+        "jax_fem_quadrature_order": 2,
+        "jax_fem_solver_options": {
+            "linear_solver": "umfpack",
+            "tol": float(args.jax_fem_tol),
+            "rel_tol": float(args.jax_fem_rel_tol),
+            "line_search": bool(args.jax_fem_line_search),
+        },
         "warmup_runs": int(args.warmup_runs),
         "timing_repeats": int(args.timing_repeats),
         "artifacts": {

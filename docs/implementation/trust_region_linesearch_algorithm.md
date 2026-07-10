@@ -1,247 +1,244 @@
-# Trust-Region + Line-Search Algorithm
+# Nonlinear Globalization Contract
 
-Date: 2026-03-06
+Last revised: 2026-07-10.
 
-This note documents the current hybrid trust-region / line-search Newton
-algorithm implemented in `src/core/petsc/minimizers.py`.
+This note freezes the algorithms implemented by
+`src/core/petsc/minimizers.py:newton`. It distinguishes three methods that must
+not be conflated in experiment labels:
 
-It is a Newton method with:
+1. Newton with a one-dimensional line search;
+2. Newton with an externally solved trust-region subproblem, normally PETSc
+   Steihaug CG;
+3. a reduced-subspace trust-region method used when no external trust
+   subproblem callback is supplied.
 
-- an optional trust-region model step in a reduced subspace,
-- optional gradient fallback inside the same trust radius,
-- a golden-section line search along the chosen trust-region direction,
-- standard trust-region acceptance and radius updates based on
-  `rho = actual_reduction / predicted_reduction`.
+The optional post-subproblem line search makes method 2 a hybrid. Method 3
+follows its reduced trust step with the configured bounded Armijo or
+golden-section search. The trust-region norm is the coefficient Euclidean norm
+used by the subproblem callback. It is distinct from the optional Riesz metric
+used to decide nonlinear convergence.
 
-## Inputs
+## Common discrete contract
 
-Main nonlinear callbacks:
+At accepted state $x_k$, define
 
-- `energy_fn(x)` returns the scalar objective value
-- `gradient_fn(x, g)` assembles the gradient into `g`
-- `hessian_solve_fn(x, rhs, sol)` approximately solves `H(x) sol = rhs`
-- `hessian_matvec_fn(x, v, Hv)` applies the Hessian to a vector
+\[
+f_k=f(x_k),\qquad g_k=\nabla f(x_k),\qquad H_k v
+\]
 
-Main solver controls:
+through the supplied energy, gradient, and Hessian-action callbacks. Projection
+and ghost-update callbacks are applied to every trial state. The convergence
+metric supplies
 
-- `tolf`, `tolg`, `tolg_rel`, `tolx_abs`, `tolx_rel`
-- `linesearch_interval = [a, b]`
-- `linesearch_tol`
-- `trust_region`
-- `trust_radius_init`, `trust_radius_min`, `trust_radius_max`
-- `trust_shrink`, `trust_expand`
-- `trust_eta_shrink`, `trust_eta_expand`
-- `trust_max_reject`
+\[
+\lVert g_k\rVert_{V_h^*},\qquad
+\lVert x_{k+1}-x_k\rVert_{V_h},\qquad
+\lVert x_{k+1}\rVert_{V_h}.
+\]
 
-## High-level idea
+The absolute/relative gradient target is
 
-Without trust region:
+\[
+g_{\rm target}
+=\max\{\mathtt{tolg},\mathtt{tolg\_rel}\lVert g_0\rVert_{V_h^*}\}
+\]
 
-- compute the Newton direction,
-- line-search along it,
-- accept only if the energy decreases.
+when `tolg_rel>0`, and `tolg` otherwise. The relative accepted correction is
 
-With trust region:
+\[
+s_k^{\rm rel}
+=\frac{\lVert x_{k+1}-x_k\rVert_{V_h}}
+       {\max\{u_{\rm scale},\lVert x_{k+1}\rVert_{V_h}\}}.
+\]
 
-- build a trust-region step inside a reduced model,
-- optionally compare it with a pure gradient trust-region step,
-- line-search along that step while staying inside the trust ball,
-- compute predicted and actual reduction,
-- accept or reject using `rho`,
-- shrink or expand the radius using the exposed trust parameters.
+With `require_all_convergence=True`, success requires an accepted step and all
+three gates:
 
-## Pseudocode
+- $|f_k-f_{k+1}|<\mathtt{tolf}$;
+- absolute or relative correction below `tolx_abs` or `tolx_rel`;
+- a recomputed post-update dual residual below $g_{\rm target}$.
 
-```text
-given x
-fx := energy_fn(x)
-Delta := clamp(trust_radius_init, trust_radius_min, trust_radius_max)
+Without that option, a pre-iteration gradient gate or the configured legacy
+energy gate may terminate the solve. Publication campaigns must use the full
+contract and record the coefficient norms only as diagnostics.
 
-for k = 1 .. maxit:
-    g := gradient(x)
-    ||g|| := norm(g)
+Nonfinite energy, gradient, direction, or norm values are terminal failures.
+Solver callbacks may raise a linear-solve exception; the problem wrapper owns
+its classification and must preserve the last accepted state and a failure run
+record.
 
-    grad_target := max(tolg, tolg_rel * ||g_0||)    if tolg_rel > 0
-                   tolg                              otherwise
+## Method 1: Newton plus line search
 
-    if require_all_convergence is false and ||g|| < grad_target:
-        stop with gradient convergence
+The linear callback approximately solves
 
-    h := approximate Newton direction from H(x) h = -g
+\[
+H_k p_k=-g_k.
+\]
 
-    save x_prev := x
-    fx_prev := fx
+An unusable or nonfinite direction is terminal. A direction whose coefficient
+norm is at roundoff is successful only when the dual gradient gate is already
+satisfied; otherwise it terminates as `Newton direction vanished before
+gradient convergence`.
 
-    if trust_region is false:
-        p := h
-        choose alpha by golden-section search on
-            phi(alpha) = energy_fn(project(x_prev + alpha p))
-            over [linesearch_a, linesearch_b]
+### Armijo mode
 
-        x_trial := project(x_prev + alpha p)
-        fx_trial := energy_fn(x_trial)
+Let $d_k=g_k^\top p_k$. Starting from `armijo_alpha0`, clipped to the positive
+part of the configured interval, repeatedly multiply by `armijo_shrink`. Accept
+the first trial satisfying
 
-        if fx_trial < fx_prev:
-            accept:
-                x := x_trial
-                fx := fx_trial
-                dE := fx_prev - fx
-                step_norm := |alpha| * ||p||
-        else:
-            reject:
-                restore x := x_prev
-                dE := 0
-                step_norm := 0
+\[
+f(x_k+\alpha p_k)
+\le f_k+c_1\alpha d_k.
+\]
 
-    else:
-        build a reduced trust-region model around x:
+At most `armijo_max_ls` trials are evaluated. If no trial passes, the method
+retains $x_k$, records the rejected iteration and evaluation count, and
+terminates with an Armijo failure. It never repeats the same rejected state up
+to the nonlinear iteration cap. If explicitly enabled, the optional fallback
+repeats Armijo once along $-g_k$ and records that substitution.
 
-            m(s) = fx_prev + g^T s + 0.5 s^T H s
+### Residual-bisection modes
 
-        construct subspace basis:
-            z1 := normalized Newton direction h
-                  or normalized steepest descent direction -g if h is unusable
-            z2 := orthonormalized gradient direction if available
+These legacy modes require $d_k<0$. They search $\alpha\in[0,1]$ for the last
+trial with $\nabla f(x_k+\alpha p_k)^\top p_k<0$. The tolerance variant also
+stops when the bracket width reaches `linesearch_tol`. A positive finite trial
+is admitted according to this directional-residual rule. These modes are not
+Armijo and must have separate experiment labels.
 
-        precompute reduced Hessian data:
-            rhs_red := [g^T z1, g^T z2]
-            M_red   := [[z1^T H z1, z1^T H z2],
-                        [z2^T H z1, z2^T H z2]]
+### Golden-section modes
 
-        also precompute pure gradient trust-model data:
-            sg := normalized gradient direction
-            rhs_g := g^T sg
-            curv_g := sg^T H sg
+The interval is repaired around $\alpha=0$ when needed, then a bounded
+golden-section minimization is performed. The final trial must strictly reduce
+the objective. A failed interval or nondecreasing trial is terminal.
 
-        accepted := false
+A roundoff-limited nondecreasing trial may be accepted only under the full
+convergence contract, only when its correction is small, its energy is within a
+scale-aware roundoff/tolerance bound, and its recomputed dual residual passes.
+The history marks `used_roundoff_acceptance=true`.
 
-        for reject_iter = 0 .. trust_max_reject:
-            Delta_trial := clamp(Delta, trust_radius_min, trust_radius_max)
+## Method 2: external trust-region subproblem
 
-            solve reduced trust-region subproblem:
-                p_tr := argmin g^T p + 0.5 p^T H p
-                        subject to ||p|| <= Delta_trial
-                        in span{z1, z2}  (or 1D if z2 unavailable)
+This is the production Steihaug/hybrid path. For trial radius $\Delta$, the
+external callback receives $-g_k$ and returns a step $p$. The callback defines
+its Krylov forcing, preconditioner, negative-curvature handling, and boundary
+truncation; all must be recorded by the problem wrapper. The nonlinear method
+then computes
 
-            solve pure-gradient trust step:
-                p_g := argmin g^T p + 0.5 p^T H p
-                       subject to p = t sg, |t| <= Delta_trial
+\[
+\ell=g_k^\top p,\qquad c=p^\top H_kp,
+\qquad q(p)=\ell+\tfrac12c.
+\]
 
-            choose the better model step:
-                p := whichever gives smaller quadratic model value
+Without post-subproblem line search, $\alpha=1$. With it, the configured
+Armijo or golden search is clipped so $|\alpha|\lVert p\rVert_2\le\Delta$.
+The predicted and actual reductions are
 
-            let
-                lin  := g^T p
-                curv := p^T H p
-                ||p|| := norm(p)
+\[
+\operatorname{pred}
+=-\left(\alpha\ell+\tfrac12\alpha^2c\right),
+\qquad
+\operatorname{ared}=f_k-f(x_k+\alpha p),
+\]
 
-            restrict the line-search interval so the final step stays in the
-            trust ball:
-                alpha_min := max(linesearch_a, -Delta_trial / ||p||)
-                alpha_max := min(linesearch_b,  Delta_trial / ||p||)
+and $\rho=\operatorname{ared}/\operatorname{pred}$ only when the denominator is
+positive and both quantities are finite.
 
-            choose alpha by golden-section search on
-                phi(alpha) = energy_fn(project(x_prev + alpha p))
-                over [alpha_min, alpha_max]
+The ordinary acceptance test is exactly
 
-            s := alpha p
-            x_trial := project(x_prev + s)
-            fx_trial := energy_fn(x_trial)
+\[
+f_{\rm trial}<\infty,qquad
+\operatorname{ared}>0,qquad
+\rho\ge\eta_{\rm accept}.
+\]
 
-            predicted_reduction :=
-                -(alpha * lin + 0.5 * alpha^2 * curv)
+Equality at `trust_eta_shrink` is accepted. A passing step expands the radius
+only when
 
-            actual_reduction :=
-                fx_prev - fx_trial
+\[
+\rho\ge\mathtt{trust\_eta\_expand}
+\quad\text{and}\quad
+\lVert\alpha p\rVert_2\ge0.9\Delta;
+\]
 
-            if predicted_reduction > 0:
-                rho := actual_reduction / predicted_reduction
-            else:
-                rho := invalid
+otherwise the radius is unchanged. Rejection sets
+$\Delta\leftarrow\max\{\Delta_{\min},
+\mathtt{trust\_shrink}\,\Delta\}$ and resolves the subproblem. The method makes
+at most `trust_max_reject+1` attempts in one nonlinear iteration.
 
-            if
-                fx_trial is finite and
-                actual_reduction > 0 and
-                rho is finite and
-                rho >= trust_eta_shrink
-            then
-                accept:
-                    x := x_trial
-                    fx := fx_trial
-                    dE := actual_reduction
-                    step_norm := ||s||
-                    accepted := true
+After the final rejection, a small candidate step or negligible predicted
+reduction is classified as radius exhaustion. It is not successful under the
+full contract when the gradient gate still fails. A non-small rejected path is
+terminal with `Trust-region rejected all candidate steps`. The last accepted
+state is restored in every case.
 
-                if rho >= trust_eta_expand and step_norm >= 0.9 * Delta_trial:
-                    Delta := min(trust_radius_max, trust_expand * Delta_trial)
-                else:
-                    Delta := Delta_trial
+Negative curvature is not itself a failure: the external subproblem may return
+a boundary step, and the ordinary $\rho$ test decides acceptance. History
+retains the model value, predicted/actual reductions, ratio, radius, and reject
+count.
 
-                break reject loop
+## Method 3: reduced-subspace trust region
 
-            else
-                reject:
-                    Delta := max(trust_radius_min, trust_shrink * Delta_trial)
+When `trust_region=True` but no external subproblem callback exists, the method
+builds a space from the approximate Newton direction and an orthogonalized
+gradient direction. It solves the one- or two-dimensional quadratic trust
+problem exactly up to the implemented boundary scan. A separate one-dimensional
+gradient trust step is also constructed, and the lower quadratic-model value
+is selected. The chosen direction is followed by the configured line search,
+clipped so that $|\alpha|\lVert p\rVert_2\le\Delta$. In Armijo mode it uses the
+same $c_1$, initial step, contraction, and evaluation cap as Method 1. In
+golden-section mode it uses the same interval-repair and bounded minimization
+contract as above. Acceptance, radius update, rejection retry, roundoff
+handling, and termination then use the same formulas as Method 2.
 
-        if accepted is false:
-            if the final rejected step is already tiny, or the predicted
-            reduction is negligible:
-                stop with trust-region step convergence
-            else:
-                stop with trust-region rejection failure
+This is not full-space Steihaug CG. Papers and tables must call it a
+`reduced-subspace trust-region` method.
 
-    evaluate convergence checks:
-        energy change small?
-        step small?
-        gradient small?
+## Counter meanings
 
-    if require_all_convergence:
-        stop only when all required checks pass
-    else:
-        stop when the active stopping condition passes
-```
+- `nit`: nonlinear iterations entered after the pre-iteration gradient gate;
+- `ksp_its`: callback-reported linear/subproblem iterations for that nonlinear
+  iteration;
+- `ls_evals`: objective or directional-gradient trial evaluations accumulated
+  within that iteration;
+- `trust_rejects`: rejected trust candidates before acceptance or termination;
+- `accepted_step`: whether the stored state changed;
+- `used_gradient_fallback`: whether the explicit gradient substitute was used;
+- `used_roundoff_acceptance`: whether the strict ordinary acceptance test failed
+  but all roundoff/full-convergence guards passed.
 
-## Meaning of `rho`
+Problem wrappers must additionally record recursive and independently
+recomputed KSP residuals, convergence reasons, setup counts, and negative-
+curvature events when the underlying PETSc method exposes them.
 
-`rho` compares what the quadratic model predicted against what really happened:
+## Required experiment separation
 
-- `predicted_reduction` says how much the local quadratic model expected to gain
-- `actual_reduction` says how much the true objective actually dropped
-- `rho` near `1` means the model was accurate
-- small or negative `rho` means the model was poor
+`EXP-GLOB-001` has two tiers:
 
-This is the standard trust-region acceptance signal.
+1. a controlled tier holding the discrete functional, Hessian action,
+   preconditioner, forcing policy, start, and final accuracy fixed;
+2. a production-bundle tier that may compare GMRES line search with STCG trust
+   subproblems but cannot attribute differences to globalization alone.
 
-## Parameter semantics
+Nonconvex endpoints are clustered by weighted state, energy, and problem
+observables before time is compared. A failed line search, trust rejection,
+linear failure, cap, or timeout remains a censored result, never a slow
+converged observation.
 
-The current implementation uses the exposed trust parameters as follows:
+## Regression coverage
 
-- `trust_radius_init`:
-  initial trust radius
-- `trust_radius_min`, `trust_radius_max`:
-  hard lower and upper radius bounds
-- `trust_shrink`:
-  multiplicative shrink factor applied after a rejected trust step
-- `trust_expand`:
-  multiplicative expansion factor applied after a successful trust step when
-  `rho >= trust_eta_expand` and the accepted step is close to the current
-  radius
-- `trust_eta_shrink`:
-  minimum acceptable `rho`
-- `trust_eta_expand`:
-  threshold above which a boundary-hitting accepted step may expand the radius
-- `trust_max_reject`:
-  maximum number of rejected trust steps per Newton iteration before the solver
-  stops
+Focused tests cover:
 
-## Notes
+- inclusive trust acceptance at `rho == trust_eta_shrink`;
+- rejection immediately below that threshold;
+- a negative-curvature model step;
+- accepted roundoff-limited hybrid termination;
+- exhausted Armijo termination and last-state preservation;
+- vanishing nonconverged Newton direction termination;
+- reduced-subspace trust honoring its configured Armijo step rather than
+  silently substituting a golden-section search;
+- Riesz-scaled gradient and correction gates.
 
-- The trust-region direction is still followed by a line search. This is a
-  deliberate hybrid design, not a pure textbook trust-region method.
-- The line search is clipped so the final accepted step remains inside the
-  current trust ball.
-- The trust-region step is currently built in a small subspace spanned by the
-  Newton and gradient directions, not by solving the full trust-region
-  subproblem in the full state space.
-- The gradient fallback is still important for indefinite or poorly scaled
-  Hessian models.
+The publication protocol still requires problem-level tests of PETSc
+negative-curvature reasons, failed linear solves, timeout checkpointing, and
+all configured forcing policies before a controlled timing campaign is
+admitted.

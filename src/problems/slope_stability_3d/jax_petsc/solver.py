@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from contextlib import contextmanager, nullcontext
+import hashlib
 import json
 from dataclasses import dataclass
 from pathlib import Path
@@ -10,11 +11,18 @@ import resource
 import time
 
 import jax
+import h5py
 import numpy as np
 from mpi4py import MPI
 from petsc4py import PETSc
 
+from src.core.benchmark.run_record import atomic_write_json
 from src.core.benchmark.state_export import export_plasticity3d_state_npz
+from src.core.petsc.metrics import (
+    EuclideanMetric,
+    MatrixRieszMetric,
+    certify_spd_by_cholesky,
+)
 from src.core.petsc.minimizers import newton
 from src.core.petsc.reasons import ksp_reason_name
 from src.core.petsc.trust_ksp import ksp_cg_set_radius
@@ -31,11 +39,14 @@ from src.problems.slope_stability_3d.jax_petsc.reordered_element_assembler impor
 from src.problems.slope_stability_3d.support.mesh import (
     DEFAULT_PLASTICITY3D_CONSTRAINT_VARIANT,
     DEFAULT_MESH_NAME,
+    PLASTICITY3D_CONSTRAINT_VARIANT_GLUED_BOTTOM,
     base_mesh_name_for_name,
     build_same_mesh_lagrange_case_data,
     ensure_same_mesh_case_hdf5,
     load_same_mesh_case_hdf5_rank_local,
+    normalize_tetra_quadrature_rule_id,
     ownership_block_size_3d,
+    same_mesh_case_hdf5_path,
     select_reordered_perm_3d,
 )
 from src.problems.slope_stability_3d.support.reduction import davis_b_reduction_qp
@@ -82,9 +93,7 @@ PROFILE_DEFAULTS = {
 
 
 def _write_progress_payload(path: str | Path, payload: dict[str, object]) -> None:
-    target = Path(path)
-    target.parent.mkdir(parents=True, exist_ok=True)
-    target.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+    atomic_write_json(path, payload, nonfinite_as_null=True)
 
 
 @contextmanager
@@ -336,7 +345,16 @@ def _load_problem_data(args, comm: MPI.Comm):
     constraint_variant = str(
         getattr(args, "constraint_variant", DEFAULT_PLASTICITY3D_CONSTRAINT_VARIANT)
     )
-    ensure_same_mesh_case_hdf5(mesh_name, degree, constraint_variant=constraint_variant)
+    quadrature_rule_id = normalize_tetra_quadrature_rule_id(
+        getattr(args, "quadrature_rule", None),
+        element_degree=degree,
+    )
+    ensure_same_mesh_case_hdf5(
+        mesh_name,
+        degree,
+        constraint_variant=constraint_variant,
+        quadrature_rule_id=quadrature_rule_id,
+    )
 
     build_mode = str(getattr(args, "problem_build_mode", "root_bcast"))
     reorder_mode = str(getattr(args, "element_reorder_mode", None) or "block_xyz")
@@ -345,6 +363,7 @@ def _load_problem_data(args, comm: MPI.Comm):
             mesh_name,
             degree,
             constraint_variant=constraint_variant,
+            quadrature_rule_id=quadrature_rule_id,
             reorder_mode=reorder_mode,
             comm=comm,
             block_size=3,
@@ -355,6 +374,7 @@ def _load_problem_data(args, comm: MPI.Comm):
             mesh_name,
             degree=degree,
             constraint_variant=constraint_variant,
+            quadrature_rule_id=quadrature_rule_id,
             build_mode=build_mode,
             comm=comm,
         )
@@ -721,12 +741,23 @@ def _init_newton_regularization_state(args) -> dict[str, object]:
     }
 
 
+def _convergence_metric_name(args) -> str:
+    name = str(getattr(args, "convergence_metric", "coefficient_l2") or "coefficient_l2")
+    if name not in {"coefficient_l2", "reference_elastic_energy"}:
+        raise ValueError(f"Unsupported Plasticity3D convergence metric {name!r}")
+    return name
+
+
+def _elastic_operator_required(args, regularization_state: dict[str, object]) -> bool:
+    return bool(regularization_state["enabled"]) or (
+        _convergence_metric_name(args) == "reference_elastic_energy"
+    )
+
+
 def _capture_elastic_operator(
     assembler: SlopeStability3DReorderedElementAssembler,
     regularization_state: dict[str, object],
 ) -> None:
-    if not bool(regularization_state["enabled"]):
-        return
     elastic_operator = regularization_state.get("elastic_operator")
     if elastic_operator is not None:
         return
@@ -734,6 +765,327 @@ def _capture_elastic_operator(
     if int(getattr(assembler, "block_size", 1)) > 1:
         copied.setBlockSize(int(getattr(assembler, "block_size", 1)))
     regularization_state["elastic_operator"] = copied
+
+
+def _reference_material_range(
+    params: dict[str, object],
+    key: str,
+    *,
+    comm: MPI.Comm,
+) -> dict[str, float]:
+    source_key = key if key in params else f"_distributed_{key}"
+    if source_key not in params:
+        raise KeyError(f"Plasticity3D metric provenance is missing {key!r}")
+    values = np.asarray(params[source_key], dtype=np.float64)
+    local_minimum = float(np.min(values)) if values.size else np.inf
+    local_maximum = float(np.max(values)) if values.size else -np.inf
+    return {
+        "minimum": float(comm.allreduce(local_minimum, op=MPI.MIN)),
+        "maximum": float(comm.allreduce(local_maximum, op=MPI.MAX)),
+    }
+
+
+def _sha256_array(values: object) -> str:
+    array = np.ascontiguousarray(np.asarray(values))
+    digest = hashlib.sha256()
+    digest.update(str(array.dtype).encode("utf-8"))
+    digest.update(str(tuple(int(value) for value in array.shape)).encode("utf-8"))
+    digest.update(array.view(np.uint8))
+    return digest.hexdigest()
+
+
+def _sha256_hdf5_dataset(dataset: h5py.Dataset) -> str:
+    digest = hashlib.sha256()
+    digest.update(str(dataset.dtype).encode("utf-8"))
+    digest.update(str(tuple(int(value) for value in dataset.shape)).encode("utf-8"))
+    if dataset.ndim == 0:
+        digest.update(np.ascontiguousarray(dataset[()]).view(np.uint8))
+        return digest.hexdigest()
+    block_rows = max(1, min(int(dataset.shape[0]), 4096))
+    for start in range(0, int(dataset.shape[0]), block_rows):
+        stop = min(int(dataset.shape[0]), start + block_rows)
+        digest.update(np.ascontiguousarray(dataset[start:stop]).view(np.uint8))
+    return digest.hexdigest()
+
+
+def _reference_elastic_input_identity(
+    *,
+    args,
+    params: dict[str, object],
+    assembler: SlopeStability3DReorderedElementAssembler,
+    comm: MPI.Comm,
+) -> dict[str, object]:
+    mesh_name = str(params.get("mesh_name", getattr(args, "mesh_name", "")))
+    degree = int(getattr(args, "elem_degree", 0))
+    constraint_variant = str(params["constraint_variant"])
+    quadrature_rule_id = str(params["quadrature_rule_id"])
+    input_path = same_mesh_case_hdf5_path(
+        mesh_name,
+        degree,
+        constraint_variant,
+        quadrature_rule_id=quadrature_rule_id,
+    )
+    root_dataset_identity = None
+    if int(comm.rank) == 0:
+        with h5py.File(input_path, "r") as handle:
+            root_dataset_identity = {
+                "path": str(input_path),
+                "size_bytes": int(input_path.stat().st_size),
+                "dataset_sha256": {
+                    key: _sha256_hdf5_dataset(handle[key])
+                    for key in ("shear_q", "bulk_q", "lame_q", "quad_weight")
+                },
+            }
+    hdf5_identity = comm.bcast(root_dataset_identity, root=0)
+    return {
+        "hdf5": dict(hdf5_identity),
+        "array_sha256": {
+            "nodes": _sha256_array(np.asarray(params["nodes"], dtype=np.float64)),
+            "elements_scalar": _sha256_array(
+                np.asarray(params["elems_scalar"], dtype=np.int64)
+            ),
+            "material_id": _sha256_array(
+                np.asarray(params["material_id"], dtype=np.int64)
+            ),
+            "free_dofs": _sha256_array(
+                np.asarray(params["freedofs"], dtype=np.int64)
+            ),
+            "free_mask": _sha256_array(np.asarray(params["q_mask"], dtype=bool)),
+            "free_dof_permutation": _sha256_array(
+                np.asarray(assembler.layout.perm, dtype=np.int64)
+            ),
+        },
+        "tangent_route": {
+            "constitutive_mode": "elastic",
+            "autodiff_tangent_mode": str(assembler.autodiff_tangent_mode),
+            "local_hessian_mode": str(assembler.local_hessian_mode),
+            "assembly_backend": str(assembler.assembly_backend),
+        },
+    }
+
+
+def _build_certified_reference_elastic_metric(
+    *,
+    args,
+    operator: PETSc.Mat,
+    initial_state: PETSc.Vec,
+    constraint_variant: str,
+    expected_free_dofs: int,
+    provenance: dict[str, object],
+) -> tuple[MatrixRieszMetric, float, dict[str, object]]:
+    """Build the shared Plasticity3D elastic Riesz stopping contract."""
+
+    constraint_variant = str(constraint_variant)
+    if constraint_variant != PLASTICITY3D_CONSTRAINT_VARIANT_GLUED_BOTTOM:
+        raise ValueError(
+            "The reference elastic-energy convergence metric is certified only "
+            "for the glued_bottom constrained free space; got "
+            f"{constraint_variant!r}."
+        )
+    rows, columns = (int(value) for value in operator.getSize())
+    expected_free_dofs = int(expected_free_dofs)
+    if rows != expected_free_dofs or columns != expected_free_dofs:
+        raise ValueError(
+            "Reference elastic operator/free-space mismatch: "
+            f"matrix={rows}x{columns}, free_dofs={expected_free_dofs}."
+        )
+
+    explicit_scale = getattr(args, "convergence_state_scale", None)
+    if explicit_scale is not None:
+        explicit_scale = float(explicit_scale)
+        if not np.isfinite(explicit_scale) or explicit_scale <= 0.0:
+            raise ValueError(
+                "--convergence-state-scale must be finite and strictly positive"
+            )
+
+    certificate = certify_spd_by_cholesky(
+        operator,
+        factor_solver_type=str(
+            getattr(args, "riesz_spd_factor_solver_type", "mumps") or "mumps"
+        ),
+        symmetry_tol=float(getattr(args, "riesz_symmetry_tol", 1.0e-12)),
+        options_prefix="plasticity3d_riesz_spd_certificate_",
+    )
+    matrix_info = operator.getInfo(PETSc.Mat.InfoType.GLOBAL_SUM)
+    complete_provenance = {
+        **dict(provenance),
+        "constraint_variant": str(constraint_variant),
+        "free_space": "glued_free_dofs",
+        "free_dofs": int(expected_free_dofs),
+        "matrix_type": str(operator.getType()),
+        "matrix_nonzeros": int(matrix_info.get("nz_used", 0.0)),
+        "spd_certificate": dict(certificate),
+    }
+
+    metric: MatrixRieszMetric | None = None
+    try:
+        metric = MatrixRieszMetric(
+            operator,
+            name="plasticity3d_reference_elastic_energy",
+            provenance=complete_provenance,
+            ksp_type=str(getattr(args, "riesz_ksp_type", "cg") or "cg"),
+            pc_type=str(getattr(args, "riesz_pc_type", "jacobi") or "jacobi"),
+            rtol=float(getattr(args, "riesz_ksp_rtol", 1.0e-10)),
+            atol=float(getattr(args, "riesz_ksp_atol", 1.0e-14)),
+            max_it=int(getattr(args, "riesz_ksp_max_it", 1000)),
+            require_symmetric=False,
+            true_residual_rtol=float(
+                getattr(args, "riesz_true_residual_rtol", 1.0e-8)
+            ),
+            set_from_options=False,
+        )
+        initial_reference_norm = float(metric.primal_norm(initial_state).value)
+        if not np.isfinite(initial_reference_norm) or initial_reference_norm < 0.0:
+            raise ValueError("Initial reference elastic-energy norm is not finite")
+        if explicit_scale is None:
+            if initial_reference_norm <= 0.0:
+                raise ValueError(
+                    "The initial nonlinear iterate has zero reference elastic-energy "
+                    "norm. Provide a physically justified positive "
+                    "--convergence-state-scale or use a nonzero initial state."
+                )
+            state_scale = float(initial_reference_norm)
+            scale_source = "initial_nonlinear_iterate_primal_norm"
+        else:
+            state_scale = float(explicit_scale)
+            scale_source = "explicit_cli"
+        return (
+            metric,
+            float(state_scale),
+            {
+                "selection": "reference_elastic_energy",
+                "legacy_default": False,
+                "state_scale": float(state_scale),
+                "state_scale_source": str(scale_source),
+                "correction_normalization": "metric_current_state",
+                "initial_state_primal_norm": float(initial_reference_norm),
+                "primal_norm_definition": "sqrt(u^T K_el u)",
+                "absolute_dual_residual_definition": "sqrt(g^T K_el^{-1} g)",
+                "absolute_dual_residual_units": (
+                    "sqrt(discrete_reference_elastic_energy_unit)"
+                ),
+                "initial_relative_dual_residual_definition": (
+                    "absolute_dual_residual/initial_absolute_dual_residual"
+                ),
+                "initial_relative_dual_residual_units": "dimensionless",
+                "relative_correction_definition": (
+                    "primal_correction_norm/max(primal_state_norm,state_scale)"
+                ),
+                "relative_correction_units": "dimensionless",
+                "metric": metric.describe(),
+            },
+        )
+    except Exception:
+        if metric is not None:
+            metric.destroy()
+        raise
+
+
+def _build_convergence_metric(
+    *,
+    args,
+    assembler: SlopeStability3DReorderedElementAssembler,
+    params: dict[str, object],
+    regularization_state: dict[str, object],
+    initial_state: PETSc.Vec,
+) -> tuple[EuclideanMetric | MatrixRieszMetric, float, dict[str, object]]:
+    """Construct the selected stopping metric and its dimensionally valid scale."""
+
+    metric_name = _convergence_metric_name(args)
+    explicit_scale = getattr(args, "convergence_state_scale", None)
+    if explicit_scale is not None:
+        explicit_scale = float(explicit_scale)
+        if not np.isfinite(explicit_scale) or explicit_scale <= 0.0:
+            raise ValueError(
+                "--convergence-state-scale must be finite and strictly positive"
+            )
+
+    if metric_name == "coefficient_l2":
+        state_scale = 1.0 if explicit_scale is None else float(explicit_scale)
+        return (
+            EuclideanMetric(),
+            float(state_scale),
+            {
+                "selection": "coefficient_l2",
+                "legacy_default": bool(explicit_scale is None),
+                "state_scale": float(state_scale),
+                "state_scale_source": (
+                    "legacy_unit_coefficient" if explicit_scale is None else "explicit_cli"
+                ),
+                "correction_normalization": "legacy_coefficient",
+                "absolute_dual_residual_units": "coefficient_l2",
+                "initial_relative_dual_residual_units": "dimensionless",
+                "relative_correction_units": "dimensionless",
+                "metric": EuclideanMetric().describe(),
+            },
+        )
+
+    constraint_variant = str(params.get("constraint_variant", ""))
+    if constraint_variant != PLASTICITY3D_CONSTRAINT_VARIANT_GLUED_BOTTOM:
+        raise ValueError(
+            "The reference elastic-energy convergence metric is certified only "
+            "for the glued_bottom constrained free space; got "
+            f"{constraint_variant!r}."
+        )
+    operator = regularization_state.get("elastic_operator")
+    if operator is None:
+        raise RuntimeError(
+            "Reference elastic operator was not captured before convergence-metric setup"
+        )
+    expected_rows = int(np.asarray(params["freedofs"], dtype=np.int64).size)
+    mpi_comm = operator.getComm().tompi4py()
+    input_identity = _reference_elastic_input_identity(
+        args=args,
+        params=params,
+        assembler=assembler,
+        comm=mpi_comm,
+    )
+    provenance = {
+        "problem": "Plasticity3D",
+        "operator_source": "elastic_tangent_at_zero_displacement",
+        "constitutive_mode": "elastic",
+        "ordering": "reordered_constrained_free_dofs",
+        "ownership": "petsc_distributed_rows",
+        "mesh_name": str(params.get("mesh_name", getattr(args, "mesh_name", ""))),
+        "element_degree": int(getattr(args, "elem_degree", 0)),
+        "quadrature_rule_id": str(params.get("quadrature_rule_id", "")),
+        "assembly_backend": str(assembler.assembly_backend),
+        "autodiff_tangent_mode": str(assembler.autodiff_tangent_mode),
+        "local_hessian_mode": str(assembler.local_hessian_mode),
+        "material_parameter_ranges": {
+            "shear": _reference_material_range(params, "shear_q", comm=mpi_comm),
+            "bulk": _reference_material_range(params, "bulk_q", comm=mpi_comm),
+            "lame": _reference_material_range(params, "lame_q", comm=mpi_comm),
+        },
+        "input_identity": dict(input_identity),
+    }
+    return _build_certified_reference_elastic_metric(
+        args=args,
+        operator=operator,
+        initial_state=initial_state,
+        constraint_variant=constraint_variant,
+        expected_free_dofs=expected_rows,
+        provenance=provenance,
+    )
+
+
+def _resolve_endpoint_initial_dual_residual(
+    result: dict[str, object],
+    *,
+    tracked_initial: object | None,
+    endpoint_value: float,
+) -> float | None:
+    recorded = result.get("initial_dual_residual_norm")
+    if recorded is not None and np.isfinite(float(recorded)):
+        return float(recorded)
+    if tracked_initial is not None:
+        value = float(getattr(tracked_initial, "value"))
+        return value if np.isfinite(value) else None
+    if "convergence_metric" in result:
+        # A normal zero-iteration return has no prior evaluation; its terminal
+        # state is also the initial state.
+        return float(endpoint_value)
+    return None
 
 
 def _blend_regularized_operator(
@@ -1089,7 +1441,8 @@ def run(args):
             raise RuntimeError(str(initial_guess_meta.get("message", "Elastic initial-guess solve failed")))
         if mg_nullspace_meta is not None:
             mg_nullspaces_live.extend(list(mg_nullspace_meta.get("nullspaces", [])))
-        _capture_elastic_operator(assembler, regularization_state)
+        if _elastic_operator_required(args, regularization_state):
+            _capture_elastic_operator(assembler, regularization_state)
         x.array[:] = np.asarray(u_init_reordered, dtype=np.float64)
         x.assemble()
     else:
@@ -1100,10 +1453,48 @@ def run(args):
             "vector_norm": float(np.linalg.norm(np.asarray(x.array[:], dtype=np.float64))),
         }
         stage_timings["initial_guess_total"] = 0.0
-        if bool(regularization_state["enabled"]):
-            zero_owned = np.zeros(assembler.layout.hi - assembler.layout.lo, dtype=np.float64)
-            assembler.assemble_hessian_with_mode(zero_owned, constitutive_mode="elastic")
-            _capture_elastic_operator(assembler, regularization_state)
+
+    if (
+        _elastic_operator_required(args, regularization_state)
+        and regularization_state.get("elastic_operator") is None
+    ):
+        zero_owned = np.zeros(assembler.layout.hi - assembler.layout.lo, dtype=np.float64)
+        assembler.assemble_hessian_with_mode(zero_owned, constitutive_mode="elastic")
+        _capture_elastic_operator(assembler, regularization_state)
+
+    convergence_metric: EuclideanMetric | MatrixRieszMetric | None = None
+    try:
+        t_stage = time.perf_counter()
+        (
+            convergence_metric,
+            convergence_state_scale,
+            convergence_configuration,
+        ) = _build_convergence_metric(
+            args=args,
+            assembler=assembler,
+            params=params,
+            regularization_state=regularization_state,
+            initial_state=x,
+        )
+        stage_timings["convergence_metric_setup"] = float(
+            time.perf_counter() - t_stage
+        )
+    except Exception:
+        if isinstance(convergence_metric, MatrixRieszMetric):
+            convergence_metric.destroy()
+        for nullspace in mg_nullspaces_live:
+            nullspace.destroy()
+        elastic_operator = regularization_state.get("elastic_operator")
+        if elastic_operator is not None:
+            elastic_operator.destroy()
+            regularization_state["elastic_operator"] = None
+        residual_ax.destroy()
+        residual_vec.destroy()
+        x.destroy()
+        assembler.cleanup()
+        if mg_hierarchy is not None:
+            mg_hierarchy.cleanup()
+        raise
 
     def _make_linear_ksp() -> PETSc.KSP:
         linear_ksp = PETSc.KSP().create(comm)
@@ -1413,6 +1804,7 @@ def run(args):
                 "iterations_completed": int(enriched_entry.get("it", len(history_payload))),
                 "last_iteration": dict(enriched_entry),
                 "history": history_payload,
+                "convergence": dict(convergence_configuration),
                 "newton_regularization": {
                     "enabled": bool(regularization_state["enabled"]),
                     "current_r": float(regularization_state["r"]),
@@ -1472,6 +1864,11 @@ def run(args):
                     trust_max_reject=int(getattr(args, "trust_max_reject", 6)),
                     step_time_limit_s=getattr(args, "step_time_limit_s", None),
                     iteration_callback=_iteration_callback,
+                    convergence_metric=convergence_metric,
+                    convergence_state_scale=float(convergence_state_scale),
+                    convergence_correction_mode=str(
+                        convergence_configuration["correction_normalization"]
+                    ),
                 )
     except _LinearSolveFailure as exc:
         result = {
@@ -1480,6 +1877,127 @@ def run(args):
             "message": str(exc),
             "history": [],
         }
+    except Exception:
+        if isinstance(convergence_metric, MatrixRieszMetric):
+            convergence_metric.destroy()
+        for nullspace in mg_nullspaces_live:
+            nullspace.destroy()
+        elastic_operator = regularization_state.get("elastic_operator")
+        if elastic_operator is not None:
+            elastic_operator.destroy()
+            regularization_state["elastic_operator"] = None
+        residual_ax.destroy()
+        residual_vec.destroy()
+        x.destroy()
+        assembler.cleanup()
+        if mg_hierarchy is not None:
+            mg_hierarchy.cleanup()
+        raise
+
+    tracked_initial_before_endpoint = getattr(
+        convergence_metric,
+        "first_dual_evaluation",
+        None,
+    )
+    final_grad_vec: PETSc.Vec | None = None
+    endpoint_convergence_start = time.perf_counter()
+    try:
+        recorded_endpoint_values = (
+            result.get("grad_norm_coefficient_l2"),
+            result.get("dual_residual_norm"),
+            result.get("state_norm"),
+        )
+        has_recorded_endpoint = all(
+            value is not None and np.isfinite(float(value))
+            for value in recorded_endpoint_values
+        ) and bool(result.get("dual_residual_metadata"))
+        if has_recorded_endpoint:
+            final_grad_norm = float(result["grad_norm_coefficient_l2"])
+            endpoint_dual_value = float(result["dual_residual_norm"])
+            endpoint_dual_metadata = dict(result["dual_residual_metadata"])
+            endpoint_state_value = float(result["state_norm"])
+        else:
+            final_grad_vec = x.duplicate()
+            assembler.gradient_fn(x, final_grad_vec)
+            final_grad_norm = float(final_grad_vec.norm(PETSc.NormType.NORM_2))
+            endpoint_dual = convergence_metric.dual_norm(final_grad_vec)
+            endpoint_state = convergence_metric.primal_norm(x)
+            endpoint_dual_value = float(endpoint_dual.value)
+            endpoint_dual_metadata = dict(endpoint_dual.metadata)
+            endpoint_state_value = float(endpoint_state.value)
+        if not (
+            np.isfinite(final_grad_norm)
+            and np.isfinite(endpoint_dual_value)
+            and np.isfinite(endpoint_state_value)
+        ):
+            raise RuntimeError("Plasticity3D endpoint convergence norms are nonfinite")
+        initial_dual_residual = _resolve_endpoint_initial_dual_residual(
+            result,
+            tracked_initial=tracked_initial_before_endpoint,
+            endpoint_value=endpoint_dual_value,
+        )
+        result["convergence_metric"] = convergence_metric.describe()
+        result["initial_dual_residual_norm"] = (
+            None
+            if initial_dual_residual is None
+            else float(initial_dual_residual)
+        )
+        result["dual_residual_norm"] = float(endpoint_dual_value)
+        if initial_dual_residual is None:
+            result["dual_residual_relative"] = None
+            endpoint_dual_target = (
+                float(args.tolg) if float(args.tolg_rel) <= 0.0 else None
+            )
+        else:
+            result["dual_residual_relative"] = float(
+                float(endpoint_dual_value)
+                / max(float(initial_dual_residual), np.finfo(np.float64).tiny)
+            )
+            endpoint_dual_target = max(
+                float(args.tolg),
+                float(args.tolg_rel) * float(initial_dual_residual),
+            )
+        result["dual_residual_target"] = (
+            None if endpoint_dual_target is None else float(endpoint_dual_target)
+        )
+        result["dual_residual_gate_pass"] = bool(
+            endpoint_dual_target is not None
+            and float(endpoint_dual_value) < float(endpoint_dual_target)
+        )
+        result["dual_residual_metadata"] = dict(endpoint_dual_metadata)
+        result["grad_norm_coefficient_l2"] = float(final_grad_norm)
+        result["state_norm"] = float(endpoint_state_value)
+        result["convergence_state_scale"] = float(convergence_state_scale)
+        result["convergence_correction_mode"] = str(
+            convergence_configuration["correction_normalization"]
+        )
+    except Exception:
+        if isinstance(convergence_metric, MatrixRieszMetric):
+            convergence_metric.destroy()
+        if final_grad_vec is not None:
+            final_grad_vec.destroy()
+            final_grad_vec = None
+        for nullspace in mg_nullspaces_live:
+            nullspace.destroy()
+        elastic_operator = regularization_state.get("elastic_operator")
+        if elastic_operator is not None:
+            elastic_operator.destroy()
+            regularization_state["elastic_operator"] = None
+        residual_ax.destroy()
+        residual_vec.destroy()
+        x.destroy()
+        assembler.cleanup()
+        if mg_hierarchy is not None:
+            mg_hierarchy.cleanup()
+        raise
+    finally:
+        if final_grad_vec is not None:
+            final_grad_vec.destroy()
+        if isinstance(convergence_metric, MatrixRieszMetric):
+            convergence_metric.destroy()
+    stage_timings["endpoint_convergence"] = float(
+        time.perf_counter() - endpoint_convergence_start
+    )
     solve_time = time.perf_counter() - solve_start
 
     full_reordered, _ = assembler._allgather_full_owned(
@@ -1494,14 +2012,9 @@ def run(args):
     displacement = coords_final - coords_ref
     u_max = float(np.max(np.linalg.norm(displacement, axis=1)))
     omega = float(np.dot(np.asarray(params["force"], dtype=np.float64), u_full))
-    final_grad_vec = x.duplicate()
-    try:
-        assembler.gradient_fn(x, final_grad_vec)
-        final_grad_norm = float(final_grad_vec.norm(PETSc.NormType.NORM_2))
-    finally:
-        final_grad_vec.destroy()
     solver_success = bool(
         str(result["message"]).lower().startswith("converged")
+        and bool(result.get("dual_residual_gate_pass", False))
         and np.isfinite(float(result["fun"]))
         and np.all(np.isfinite(full_original))
     )
@@ -1553,10 +2066,78 @@ def run(args):
             metadata={
                 "solver_family": "jax_petsc",
                 "prototype_mode": "zero_history_endpoint",
+                "assembly_backend": str(assembler.assembly_backend),
+                "local_hessian_mode": str(assembler.local_hessian_mode),
+                "autodiff_tangent_mode": str(assembler.autodiff_tangent_mode),
                 "davis_type": str(params["davis_type"]),
                 "mpi_ranks": int(comm.size),
+                "constraint_variant": str(params["constraint_variant"]),
+                "quadrature_rule_id": str(params["quadrature_rule_id"]),
             },
         )
+
+    def _finite_result_value(key: str) -> float | None:
+        value = result.get(key)
+        if value is None:
+            return None
+        value = float(value)
+        return value if np.isfinite(value) else None
+
+    last_dual_metadata = dict(result.get("dual_residual_metadata", {}))
+    convergence_payload = {
+        "configuration": dict(convergence_configuration),
+        "metric": dict(
+            result.get("convergence_metric", convergence_configuration["metric"])
+        ),
+        "absolute_dual_residual": {
+            "value": _finite_result_value("dual_residual_norm"),
+            "units": str(convergence_configuration["absolute_dual_residual_units"]),
+        },
+        "initial_absolute_dual_residual": {
+            "value": _finite_result_value("initial_dual_residual_norm"),
+            "units": str(convergence_configuration["absolute_dual_residual_units"]),
+        },
+        "initial_relative_dual_residual": {
+            "value": _finite_result_value("dual_residual_relative"),
+            "units": "dimensionless",
+        },
+        "residual_gate": {
+            "absolute_tolerance": float(args.tolg),
+            "absolute_tolerance_units": str(
+                convergence_configuration["absolute_dual_residual_units"]
+            ),
+            "initial_relative_tolerance": float(args.tolg_rel),
+            "initial_relative_tolerance_units": "dimensionless",
+            "effective_absolute_target": _finite_result_value(
+                "dual_residual_target"
+            ),
+            "passed": bool(result.get("dual_residual_gate_pass", False)),
+        },
+        "absolute_correction": {
+            "value": _finite_result_value("correction_norm"),
+            "units": str(convergence_configuration["absolute_dual_residual_units"]),
+        },
+        "relative_correction": {
+            "value": _finite_result_value("relative_correction"),
+            "units": "dimensionless",
+        },
+        "state_norm": {
+            "value": _finite_result_value("state_norm"),
+            "units": str(convergence_configuration["absolute_dual_residual_units"]),
+        },
+        "state_scale": {
+            "value": float(convergence_state_scale),
+            "units": str(convergence_configuration["absolute_dual_residual_units"]),
+            "source": str(convergence_configuration["state_scale_source"]),
+        },
+        "coefficient_gradient_l2": _finite_result_value("grad_norm_coefficient_l2"),
+        "last_dual_norm_evaluation": dict(last_dual_metadata),
+        "last_riesz_solve": (
+            dict(last_dual_metadata)
+            if last_dual_metadata.get("riesz_solve") == "iterative"
+            else None
+        ),
+    }
 
     for nullspace in mg_nullspaces_live:
         nullspace.destroy()
@@ -1565,6 +2146,8 @@ def run(args):
         elastic_operator.destroy()
     residual_ax.destroy()
     residual_vec.destroy()
+    result.pop("x", None)
+    x.destroy()
     assembler.cleanup()
     if mg_hierarchy is not None:
         mg_hierarchy.cleanup()
@@ -1572,6 +2155,13 @@ def run(args):
     payload = {
         "mesh_name": str(mesh_name),
         "elem_degree": int(args.elem_degree),
+        "quadrature_rule_id": str(params["quadrature_rule_id"]),
+        "quadrature_points": int(
+            np.asarray(
+                params.get("_distributed_quad_weight", params.get("quad_weight")),
+                dtype=np.float64,
+            ).shape[1]
+        ),
         "lambda_target": float(lambda_target),
         "profile": str(args.profile),
         "pc_type": str(settings["pc_type"]),
@@ -1599,6 +2189,8 @@ def run(args):
         "u_max": float(u_max),
         "omega": float(omega),
         "final_grad_norm": float(final_grad_norm),
+        "final_grad_norm_kind": "coefficient_l2_diagnostic",
+        "nonlinear_convergence": dict(convergence_payload),
         "assembly_callbacks": assembler.callback_summary(),
         "assembler_setup": assembler.setup_summary(),
         "assembler_memory": assembler.memory_summary(),
@@ -1843,6 +2435,7 @@ def run(args):
                 "iterations_completed": int(result["nit"]),
                 "energy": float(result["fun"]),
                 "history": final_history,
+                "convergence": dict(convergence_payload),
                 "newton_regularization": {
                     "enabled": bool(regularization_state["enabled"]),
                     "current_r": float(regularization_state["r"]),

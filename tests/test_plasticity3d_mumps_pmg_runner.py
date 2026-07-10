@@ -3,6 +3,8 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+import numpy as np
+
 from experiments.runners import run_plasticity3d_backend_mix_case as case_runner
 from experiments.runners import (
     run_plasticity3d_p4_l1_2_lambda1p55_mumps_pmg_scaling as mumps_runner,
@@ -52,6 +54,104 @@ def test_backend_mix_parser_accepts_local_pmg_mumps(tmp_path: Path):
     assert args.solver_backend == "local_pmg_mumps"
     assert args.convergence_mode == "all"
     assert args.grad_stop_rtol == 0.01
+
+
+def test_backend_mix_parser_and_local_args_carry_independent_quadrature(tmp_path: Path):
+    args = case_runner._build_parser().parse_args(
+        [
+            "--assembly-backend",
+            "local_constitutiveAD",
+            "--solver-backend",
+            "local",
+            "--elem-degree",
+            "1",
+            "--quadrature-rule",
+            "tetra_24point",
+            "--out-dir",
+            str(tmp_path),
+            "--output-json",
+            str(tmp_path / "output.json"),
+        ]
+    )
+    local_args = case_runner._local_problem_args(
+        elem_degree=int(args.elem_degree),
+        quadrature_rule_id=str(args.quadrature_rule),
+    )
+
+    assert args.elem_degree == 1
+    assert args.quadrature_rule == "tetra_24point"
+    assert local_args.elem_degree == 1
+    assert local_args.quadrature_rule == "tetra_24point"
+    assert case_runner._quadrature_result_metadata(
+        local_args.quadrature_rule,
+        element_degree=local_args.elem_degree,
+    ) == {
+        "quadrature_rule_id": "tetra_24point",
+        "quadrature_points": 24,
+    }
+
+
+def test_backend_mix_raw_writer_emits_null_for_nonfinite_history_values(tmp_path: Path):
+    path = tmp_path / "output.json"
+
+    case_runner._write_solver_json(
+        path,
+        {
+            "status": "failed",
+            "history": [
+                {"it": 0, "step_rel": float("nan"), "energy": -4.0},
+                {"it": 1, "step_rel": float("inf"), "energy": -4.5},
+            ],
+        },
+    )
+
+    raw = path.read_text(encoding="utf-8")
+    assert "NaN" not in raw
+    assert "Infinity" not in raw
+    payload = json.loads(raw)
+    assert [row["step_rel"] for row in payload["history"]] == [None, None]
+    assert [row["energy"] for row in payload["history"]] == [-4.0, -4.5]
+
+
+def test_backend_mix_state_npz_preserves_constitutive_ad_route(tmp_path: Path):
+    backend = object.__new__(case_runner.LocalAssemblyBackend)
+    backend.perm = np.arange(6, dtype=np.int64)
+    backend.freedofs = np.arange(6, dtype=np.int64)
+    backend.coords_ref = np.asarray(
+        [[0.0, 0.0, 0.0], [1.0, 0.0, 0.0]],
+        dtype=np.float64,
+    )
+    backend.params = {
+        "u_0": np.zeros(6, dtype=np.float64),
+        "surf": np.empty((0, 3), dtype=np.int32),
+        "boundary_label": np.empty(0, dtype=np.int32),
+        "elems_scalar": np.asarray([[0], [1], [1], [0]], dtype=np.int32),
+        "element_degree": 1,
+        "quadrature_rule_id": "tetra_1point",
+    }
+    state_path = tmp_path / "state.npz"
+    reference_elastic_action = np.linspace(0.1, 0.6, 6)
+
+    case_runner._export_backend_state(
+        backend,
+        state_out=state_path,
+        mesh_name="hetero_ssr_L1",
+        assembly_backend="local_constitutiveAD",
+        constraint_variant="glued_bottom",
+        lambda_target=1.55,
+        u_global=np.linspace(0.0, 0.05, 6),
+        reference_elastic_action=reference_elastic_action,
+        energy=-2.0,
+    )
+
+    with np.load(state_path, allow_pickle=False) as state:
+        assert state["assembly_backend"].item() == "local_constitutiveAD"
+        assert state["solver_family"].item() == "backend_mix"
+        assert state["quadrature_rule_id"].item() == "tetra_1point"
+        np.testing.assert_allclose(
+            state["reference_elastic_action"],
+            reference_elastic_action,
+        )
 
 
 def test_local_problem_args_use_p4_scatter_cache_auto_by_default(monkeypatch):
