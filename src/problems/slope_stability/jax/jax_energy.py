@@ -86,24 +86,45 @@ def _mc_energy_density(
         s_apex = kappa / safe_den
 
         def line_return(_):
-            return s1_line, s2_line
+            mp = 0.5 * (s1_line + s2_line)
+            rp = 0.5 * (s1_line - s2_line)
+
+            # The principal direction is undefined for an exactly hydrostatic
+            # trial stress.  Away from that set this is the original atan2
+            # reconstruction.  At the repeated-principal point we explicitly
+            # select theta=0, matching the documented representative
+            # orientation while avoiding the undefined derivative of
+            # atan2(0, 0).  If a non-apex line return were selected exactly on
+            # this set, the map would still be nonsmooth there; this convention
+            # defines only the selected branch value/AD derivative and is not a
+            # claim of a classical derivative across the degeneracy.
+            radial_sq = d * d + txy * txy
+            two_theta = lax.cond(
+                radial_sq > 0.0,
+                lambda __: jnp.arctan2(2.0 * txy, sxx - syy),
+                lambda __: jnp.asarray(0.0, dtype=jnp.float64),
+                operand=None,
+            )
+            sig = jnp.array(
+                [
+                    mp + rp * jnp.cos(two_theta),
+                    mp - rp * jnp.cos(two_theta),
+                    rp * jnp.sin(two_theta),
+                ],
+                dtype=jnp.float64,
+            )
+            return sig @ eps_e - 0.5 * sig @ (S @ sig)
 
         def apex_return(_):
-            return s_apex, s_apex
+            # At the apex the two returned principal stresses coincide, so the
+            # stress tensor is isotropic and independent of principal
+            # directions.  Constructing it directly is the invariant
+            # hydrostatic extension of the existing scalar branch and avoids
+            # evaluating an irrelevant atan2 at repeated principal values.
+            sig = jnp.stack((s_apex, s_apex, jnp.zeros_like(s_apex)))
+            return sig @ eps_e - 0.5 * sig @ (S @ sig)
 
-        s1p, s2p = lax.cond(s1_line >= s2_line, line_return, apex_return, operand=None)
-        mp = 0.5 * (s1p + s2p)
-        rp = 0.5 * (s1p - s2p)
-        two_theta = jnp.arctan2(2.0 * txy, sxx - syy)
-        sig = jnp.array(
-            [
-                mp + rp * jnp.cos(two_theta),
-                mp - rp * jnp.cos(two_theta),
-                rp * jnp.sin(two_theta),
-            ],
-            dtype=jnp.float64,
-        )
-        return sig @ eps_e - 0.5 * sig @ (S @ sig)
+        return lax.cond(s1_line >= s2_line, line_return, apex_return, operand=None)
 
     return lax.cond(f_tr <= 0.0, elastic, plastic, operand=None)
 
