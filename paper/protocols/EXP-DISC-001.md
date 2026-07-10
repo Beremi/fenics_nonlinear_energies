@@ -85,6 +85,17 @@ completed row that does not pass the residual gate.
   the minimum normalized constitutive-denominator margin;
 - rank-local element/overlap counts and peak rank/node memory.
 
+For the managed local source campaign, every named rule writes the full
+residual, deterministic Hessian action, and element-major branch map as a
+separate non-object NPY array. The execution plan declares all 12 arrays per
+degree before execution. Each nested JSON artifact descriptor records a
+canonical staging-relative path, file SHA-256, array-content SHA-256, dtype,
+and shape. The managed receipt, companion manifest, and finalization manifest
+must bind the same complete path/hash set. Finalization and the independent
+admission audit reload every array with pickling disabled, recompute both
+hashes, and reject missing files, path traversal, symlink traversal, dtype or
+shape drift, and any descriptor/receipt disagreement.
+
 ## Prespecified analysis
 
 The fail-closed adjudicator is

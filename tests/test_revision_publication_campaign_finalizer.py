@@ -9,6 +9,7 @@ import subprocess
 import sys
 import shutil
 
+import numpy as np
 import pytest
 
 from experiments.analysis import finalize_revision_publication_campaign as finalizer
@@ -458,6 +459,41 @@ def _scientific_raw_payload(spec: finalizer.SourceSpec, *, commit: str) -> dict:
     return payload
 
 
+def _write_quadrature_artifact_fixture(
+    spec: finalizer.SourceSpec,
+    payload: dict,
+    *,
+    staging_root: Path,
+) -> None:
+    degree = finalizer.QUADRATURE_DEGREES[spec.key]
+    by_rule = {row["quadrature_rule_id"]: row for row in payload["evaluations"]}
+    for rule in finalizer.QUADRATURE_RULE_IDS:
+        row = by_rule[rule]
+        values = {
+            "hessian_action_artifact": np.asarray([degree, 1.0], dtype=np.float64),
+            "residual_artifact": np.asarray([degree, 2.0], dtype=np.float64),
+            "branch_map_artifact": np.asarray([0, 1], dtype=np.int8),
+        }
+        for field, array in values.items():
+            suffix, content_field, _dtype = finalizer.QUADRATURE_ARTIFACT_FIELDS[field]
+            relative = Path(
+                f"EXP-DISC-001/actions/p{degree}_l1/{rule}_{suffix}.npy"
+            )
+            path = staging_root / relative
+            path.parent.mkdir(parents=True, exist_ok=True)
+            np.save(path, array, allow_pickle=False)
+            content_digest = finalizer._array_content_sha256(array)
+            row[content_field] = content_digest
+            row[field] = {
+                "path": relative.relative_to(spec.relative_path.parent).as_posix(),
+                "sha256": finalizer.sha256_file(path),
+                "content_sha256": content_digest,
+                "dtype": str(array.dtype),
+                "shape": list(array.shape),
+                "content": "test fixture",
+            }
+
+
 def _receipt(spec: finalizer.SourceSpec, raw_hash: str) -> dict:
     return {
         "command": {"argv_template": ["python", spec.producer_path.as_posix()]},
@@ -468,6 +504,8 @@ def _receipt(spec: finalizer.SourceSpec, raw_hash: str) -> dict:
         "raw_output_hashes": {
             (Path(finalizer.STAGING_DIRECTORY) / spec.relative_path).as_posix(): raw_hash
         },
+        "referenced_artifact_hashes": {},
+        "artifact_validation_errors": [],
     }
 
 
@@ -524,9 +562,62 @@ def test_canonical_template_covers_every_source_and_clean_dependency() -> None:
         inputs = commands[f"disc_p{degree}"]["input_files"]
         assert inputs[0]["scope"] == "staging"
         assert inputs[0]["attestation"]["path"].endswith(f"p{degree}_l1_state.json")
+        assert set(commands[f"disc_p{degree}"]["expected_artifacts"]) == {
+            path.as_posix()
+            for path in finalizer._quadrature_expected_artifacts(degree)
+        }
     route = commands["route_cost_analysis"]
     assert route["route_endpoint_analysis"].endswith("tier_b_endpoint_analysis.json")
     assert len(route["input_files"]) == 3
+
+
+def test_plan_rejects_missing_or_escaping_quadrature_artifact_declarations() -> None:
+    plan = finalizer.build_execution_plan_template(experiment_commit=COMMIT)
+    command = next(row for row in plan["commands"] if row["id"] == "disc_p1")
+    command["expected_artifacts"].pop()
+    with pytest.raises(finalizer.FinalizationError, match="omits publication-critical"):
+        finalizer._plan_command_map(plan)
+
+    plan = finalizer.build_execution_plan_template(experiment_commit=COMMIT)
+    command = next(row for row in plan["commands"] if row["id"] == "disc_p1")
+    command["expected_artifacts"].append("../escaped.npy")
+    with pytest.raises(finalizer.FinalizationError, match="canonical relative path"):
+        finalizer._plan_command_map(plan)
+
+
+def test_recursive_quadrature_artifact_contract_rejects_tampering_and_escape(
+    tmp_path: Path,
+) -> None:
+    spec = finalizer.SOURCE_BY_KEY["p1_quadrature"]
+    payload = _scientific_raw_payload(spec, commit=COMMIT)
+    _write_quadrature_artifact_fixture(spec, payload, staging_root=tmp_path)
+    hashes = finalizer._quadrature_referenced_artifact_hashes(
+        spec,
+        payload,
+        staging_root=tmp_path,
+    )
+    assert set(hashes) == {
+        (Path(finalizer.STAGING_DIRECTORY) / path).as_posix()
+        for path in finalizer._quadrature_expected_artifacts(1)
+    }
+
+    first = tmp_path / finalizer._quadrature_expected_artifacts(1)[0]
+    first.write_bytes(first.read_bytes() + b"tamper")
+    with pytest.raises(finalizer.FinalizationError, match="SHA-256 mismatch"):
+        finalizer._quadrature_referenced_artifact_hashes(
+            spec,
+            payload,
+            staging_root=tmp_path,
+        )
+
+    escaped = deepcopy(payload)
+    escaped["evaluations"][0]["hessian_action_artifact"]["path"] = "../escape.npy"
+    with pytest.raises(finalizer.FinalizationError, match="canonical relative path"):
+        finalizer._quadrature_referenced_artifact_hashes(
+            spec,
+            escaped,
+            staging_root=tmp_path,
+        )
 
 
 @pytest.mark.parametrize("spec", finalizer.SOURCE_SPECS, ids=lambda spec: spec.key)
@@ -733,6 +824,13 @@ def _minimal_plan(commit: str) -> dict:
             "input_files": [],
             "expected_artifacts": [],
         }
+        if spec.key in finalizer.QUADRATURE_DEGREES:
+            command["expected_artifacts"] = [
+                path.as_posix()
+                for path in finalizer._quadrature_expected_artifacts(
+                    finalizer.QUADRATURE_DEGREES[spec.key]
+                )
+            ]
         if spec.key == "route_analysis":
             command["route_endpoint_analysis"] = "route/endpoint.json"
             command["input_files"] = [{"scope": "staging", "path": "route/endpoint.json"}]
@@ -1036,6 +1134,16 @@ def _write_receipt(
             for item in command.get("input_files", [])
         },
         "raw_output_hashes": raw_hashes,
+        "referenced_artifact_hashes": {
+            relative: digest
+            for relative, digest in raw_hashes.items()
+            if relative.endswith((
+                "_hessian_action.npy",
+                "_residual.npy",
+                "_branch_map.npy",
+            ))
+        },
+        "artifact_validation_errors": [],
         "logs": {},
         "missing_outputs": [],
     }
@@ -1119,6 +1227,18 @@ def test_finalizer_supports_clean_descendant_and_rejects_raw_and_final_tampering
             "expected_artifacts": [],
         }
         raw = _scientific_raw_payload(spec, commit=experiment_commit)
+        if spec.key in finalizer.QUADRATURE_DEGREES:
+            command["expected_artifacts"] = [
+                path.as_posix()
+                for path in finalizer._quadrature_expected_artifacts(
+                    finalizer.QUADRATURE_DEGREES[spec.key]
+                )
+            ]
+            _write_quadrature_artifact_fixture(
+                spec,
+                raw,
+                staging_root=staging,
+            )
         if spec.key == "route_analysis":
             raw.pop("status", None)
             from paper.scripts import admit_revision_publication_evidence as admission

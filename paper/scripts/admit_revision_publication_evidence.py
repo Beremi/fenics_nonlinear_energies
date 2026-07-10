@@ -21,6 +21,8 @@ import subprocess
 import sys
 from typing import Any, Iterable, Mapping, Sequence
 
+import numpy as np
+
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 if str(REPO_ROOT) not in sys.path:
@@ -45,6 +47,21 @@ DEFAULT_MANIFEST_NAME = "publication_evidence_manifest.json"
 TABLE_GENERATOR = Path("paper/scripts/generate_revision_evidence_tables.py")
 HEX40_RE = re.compile(r"[0-9a-f]{40}")
 HEX64_RE = re.compile(r"[0-9a-f]{64}")
+QUADRATURE_RULE_IDS = (
+    "tetra_1point",
+    "tetra_11point",
+    "tetra_24point",
+    "tetra_duffy_125point",
+)
+QUADRATURE_ARTIFACT_FIELDS = {
+    "hessian_action_artifact": (
+        "hessian_action",
+        "hessian_action_content_sha256",
+        "float64",
+    ),
+    "residual_artifact": ("residual", "residual_content_sha256", "float64"),
+    "branch_map_artifact": ("branch_map", "branch_map_content_sha256", "int8"),
+}
 
 
 @dataclass(frozen=True, slots=True)
@@ -1366,6 +1383,163 @@ def _distribution_errors(payload: Mapping[str, Any]) -> list[str]:
     return errors
 
 
+def _walk_artifact_references(
+    value: Any,
+    *,
+    trail: tuple[str, ...] = (),
+) -> Iterable[tuple[tuple[str, ...], str, Any, Mapping[str, Any]]]:
+    if isinstance(value, Mapping):
+        for key, child in value.items():
+            child_trail = (*trail, str(key))
+            if isinstance(key, str) and key.endswith("_artifact"):
+                yield child_trail, key, child, value
+            yield from _walk_artifact_references(child, trail=child_trail)
+    elif isinstance(value, list):
+        for index, child in enumerate(value):
+            yield from _walk_artifact_references(
+                child,
+                trail=(*trail, f"[{index}]"),
+            )
+
+
+def _array_content_sha256(values: np.ndarray) -> str:
+    array = np.ascontiguousarray(values)
+    digest = hashlib.sha256()
+    digest.update(str(array.dtype).encode("ascii"))
+    digest.update(np.asarray(array.shape, dtype=np.int64).tobytes())
+    digest.update(array.tobytes(order="C"))
+    return digest.hexdigest()
+
+
+def _quadrature_referenced_artifact_errors(
+    spec: EvidenceSpec,
+    payload: Mapping[str, Any],
+    *,
+    evidence_root: Path,
+) -> list[str]:
+    """Independently verify every publication-critical DISC array reference."""
+    errors: list[str] = []
+    degree = {"p1_quadrature": 1, "p2_quadrature": 2, "p4_quadrature": 4}[spec.key]
+    expected = {
+        (rule, field): Path(
+            f"_publication_staging/EXP-DISC-001/actions/p{degree}_l1/"
+            f"{rule}_{suffix}.npy"
+        )
+        for rule in QUADRATURE_RULE_IDS
+        for field, (suffix, _content_field, _dtype) in QUADRATURE_ARTIFACT_FIELDS.items()
+    }
+    found: set[tuple[str, str]] = set()
+    descriptor_hashes: dict[str, str] = {}
+    for trail, field, descriptor, container in _walk_artifact_references(payload):
+        location = ".".join(trail)
+        if field not in QUADRATURE_ARTIFACT_FIELDS:
+            errors.append(f"{location} is an unsupported publication artifact reference")
+            continue
+        if not isinstance(descriptor, Mapping):
+            errors.append(f"{location} must be an artifact object")
+            continue
+        identity = (str(container.get("quadrature_rule_id")), field)
+        expected_relative = expected.get(identity)
+        if expected_relative is None:
+            errors.append(f"{location} has an unknown quadrature rule/artifact identity")
+            continue
+        if identity in found:
+            errors.append(f"{location} duplicates quadrature artifact {identity}")
+            continue
+        found.add(identity)
+        raw_path = descriptor.get("path")
+        if not isinstance(raw_path, str):
+            errors.append(f"{location}.path must be a string")
+            continue
+        relative = Path(raw_path)
+        if (
+            relative.is_absolute()
+            or ".." in relative.parts
+            or "." in relative.parts
+            or relative.as_posix() != raw_path
+        ):
+            errors.append(f"{location}.path must be canonical and relative")
+            continue
+        if relative != expected_relative:
+            errors.append(
+                f"{location}.path must be {expected_relative.as_posix()}"
+            )
+            continue
+        file_digest = descriptor.get("sha256")
+        if not isinstance(file_digest, str) or not HEX64_RE.fullmatch(file_digest):
+            errors.append(f"{location}.sha256 is malformed")
+            continue
+        descriptor_hashes[relative.as_posix()] = file_digest
+        candidate = evidence_root / relative
+        try:
+            resolved = candidate.resolve(strict=True)
+        except OSError:
+            errors.append(f"{location}.path is missing")
+            continue
+        if (
+            not _is_contained(resolved, evidence_root.resolve())
+            or candidate.is_symlink()
+            or resolved != candidate.absolute()
+        ):
+            errors.append(f"{location}.path escapes or traverses a symlink")
+            continue
+        if not candidate.is_file() or sha256_file(candidate) != file_digest:
+            errors.append(f"{location}.sha256 mismatch")
+            continue
+        _suffix, content_field, expected_dtype = QUADRATURE_ARTIFACT_FIELDS[field]
+        content_digest = descriptor.get("content_sha256")
+        if not isinstance(content_digest, str) or not HEX64_RE.fullmatch(content_digest):
+            errors.append(f"{location}.content_sha256 is malformed")
+            continue
+        if container.get(content_field) != content_digest:
+            errors.append(f"{location} disagrees with {content_field}")
+        try:
+            array = np.load(candidate, allow_pickle=False)
+        except (OSError, ValueError) as exc:
+            errors.append(f"{location} is not a safe NPY array: {exc}")
+            continue
+        if not isinstance(array, np.ndarray) or array.dtype.hasobject:
+            errors.append(f"{location} must contain one non-object array")
+            continue
+        shape = descriptor.get("shape")
+        if (
+            not isinstance(shape, list)
+            or any(
+                isinstance(value, bool) or not isinstance(value, int) or value < 0
+                for value in shape
+            )
+            or tuple(shape) != array.shape
+        ):
+            errors.append(f"{location}.shape does not match its array")
+        if descriptor.get("dtype") != expected_dtype or str(array.dtype) != expected_dtype:
+            errors.append(f"{location}.dtype does not match its array")
+        if _array_content_sha256(array) != content_digest:
+            errors.append(f"{location}.content_sha256 mismatch")
+
+    if set(expected) != found:
+        missing = sorted(set(expected) - found)
+        errors.append(
+            "quadrature payload does not reference the complete residual/action/branch-map "
+            f"array set; missing={missing}"
+        )
+    provenance = payload.get("publication_provenance")
+    declared = (
+        provenance.get("referenced_artifact_hashes")
+        if isinstance(provenance, Mapping)
+        else None
+    )
+    if not isinstance(declared, Mapping):
+        errors.append(
+            "publication_provenance.referenced_artifact_hashes must be a path/hash map"
+        )
+    elif dict(declared) != dict(sorted(descriptor_hashes.items())):
+        errors.append(
+            "publication_provenance.referenced_artifact_hashes differs from recursive "
+            "quadrature references"
+        )
+    return errors
+
+
 def _quadrature_errors(spec: EvidenceSpec, payload: Mapping[str, Any]) -> list[str]:
     errors: list[str] = []
     degree = {"p1_quadrature": 1, "p2_quadrature": 2, "p4_quadrature": 4}[spec.key]
@@ -2421,10 +2595,31 @@ def _payload_hash_errors(
                     expected_producer = publication.get("producer")
                     if producer != expected_producer:
                         errors.append("execution receipt producer differs from publication provenance")
+                    declared_references = publication.get("referenced_artifact_hashes")
+                    receipt_references = receipt.get("referenced_artifact_hashes")
+                    raw_outputs = receipt.get("raw_output_hashes")
+                    if not isinstance(declared_references, Mapping):
+                        errors.append(
+                            "publication provenance referenced_artifact_hashes is missing"
+                        )
+                    elif receipt_references != declared_references:
+                        errors.append(
+                            "execution receipt referenced artifacts differ from publication provenance"
+                        )
+                    elif not isinstance(raw_outputs, Mapping) or any(
+                        raw_outputs.get(path) != digest
+                        for path, digest in declared_references.items()
+                    ):
+                        errors.append(
+                            "execution receipt raw outputs do not bind every referenced artifact"
+                        )
+                    if receipt.get("artifact_validation_errors") != []:
+                        errors.append("execution receipt records artifact validation errors")
                     for map_name, evidence_only in (
                         ("configuration_hashes", False),
                         ("input_hashes", False),
                         ("raw_output_hashes", True),
+                        ("referenced_artifact_hashes", True),
                         ("logs", True),
                     ):
                         mapping = receipt.get(map_name)
@@ -2447,6 +2642,15 @@ def _payload_hash_errors(
                         errors.append("execution receipt fingerprint is stale")
     else:
         errors.append("publication_provenance object is required")
+
+    if spec.family == "quadrature":
+        errors.extend(
+            _quadrature_referenced_artifact_errors(
+                spec,
+                payload,
+                evidence_root=evidence_root,
+            )
+        )
 
     if spec.family == "route_analysis":
         entries = _nested(payload, "provenance", "input_files")

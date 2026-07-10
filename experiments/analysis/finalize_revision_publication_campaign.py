@@ -44,6 +44,8 @@ import sys
 import tempfile
 from typing import Any, Iterable, Mapping, Sequence
 
+import numpy as np
+
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 if str(REPO_ROOT) not in sys.path:
@@ -111,6 +113,27 @@ PACKAGE_NAMES = (
     "dolfinx",
     "h5py",
 )
+
+QUADRATURE_RULE_IDS = (
+    "tetra_1point",
+    "tetra_11point",
+    "tetra_24point",
+    "tetra_duffy_125point",
+)
+QUADRATURE_ARTIFACT_FIELDS = {
+    "hessian_action_artifact": (
+        "hessian_action",
+        "hessian_action_content_sha256",
+        "float64",
+    ),
+    "residual_artifact": ("residual", "residual_content_sha256", "float64"),
+    "branch_map_artifact": ("branch_map", "branch_map_content_sha256", "int8"),
+}
+QUADRATURE_DEGREES = {
+    "p1_quadrature": 1,
+    "p2_quadrature": 2,
+    "p4_quadrature": 4,
+}
 
 
 @dataclass(frozen=True, slots=True)
@@ -327,6 +350,189 @@ def _confined(root: Path, relative: str | Path, *, label: str, require_exists: b
     return candidate
 
 
+def _quadrature_expected_artifacts(degree: int) -> tuple[Path, ...]:
+    if degree not in {1, 2, 4}:
+        raise FinalizationError(f"unsupported quadrature artifact degree {degree}")
+    directory = Path(f"EXP-DISC-001/actions/p{degree}_l1")
+    return tuple(
+        directory / f"{rule}_{suffix}.npy"
+        for rule in QUADRATURE_RULE_IDS
+        for suffix, _content_field, _dtype in QUADRATURE_ARTIFACT_FIELDS.values()
+    )
+
+
+def _walk_artifact_references(
+    value: Any,
+    *,
+    trail: tuple[str, ...] = (),
+) -> Iterable[tuple[tuple[str, ...], str, Any, Mapping[str, Any]]]:
+    """Yield every recursively nested ``*_artifact`` value and its container."""
+    if isinstance(value, Mapping):
+        for key, child in value.items():
+            child_trail = (*trail, str(key))
+            if isinstance(key, str) and key.endswith("_artifact"):
+                yield child_trail, key, child, value
+            yield from _walk_artifact_references(child, trail=child_trail)
+    elif isinstance(value, list):
+        for index, child in enumerate(value):
+            yield from _walk_artifact_references(
+                child,
+                trail=(*trail, f"[{index}]"),
+            )
+
+
+def _array_content_sha256(values: np.ndarray) -> str:
+    array = np.ascontiguousarray(values)
+    digest = hashlib.sha256()
+    digest.update(str(array.dtype).encode("ascii"))
+    digest.update(np.asarray(array.shape, dtype=np.int64).tobytes())
+    digest.update(array.tobytes(order="C"))
+    return digest.hexdigest()
+
+
+def _quadrature_referenced_artifact_hashes(
+    spec: SourceSpec,
+    payload: Mapping[str, Any],
+    *,
+    staging_root: Path,
+) -> dict[str, str]:
+    """Validate and hash every array recursively referenced by a raw DISC source.
+
+    Raw producer paths are relative to the source JSON's directory.  The
+    returned keys are evidence-root-relative paths so they can be compared
+    directly with an execution receipt's ``raw_output_hashes`` mapping.
+    """
+    degree = QUADRATURE_DEGREES.get(spec.key)
+    if degree is None:
+        return {}
+    expected_paths = set(_quadrature_expected_artifacts(degree))
+    expected_identities = {
+        (rule, field): Path(f"EXP-DISC-001/actions/p{degree}_l1/{rule}_{suffix}.npy")
+        for rule in QUADRATURE_RULE_IDS
+        for field, (suffix, _content_field, _dtype) in QUADRATURE_ARTIFACT_FIELDS.items()
+    }
+    found_identities: set[tuple[str, str]] = set()
+    hashes: dict[str, str] = {}
+    for trail, field, raw_descriptor, container in _walk_artifact_references(payload):
+        location = ".".join(trail)
+        if field not in QUADRATURE_ARTIFACT_FIELDS:
+            raise FinalizationError(
+                f"raw {spec.key} contains unsupported artifact reference {location}"
+            )
+        if not isinstance(raw_descriptor, Mapping):
+            raise FinalizationError(f"raw {spec.key} {location} must be an artifact object")
+        rule = container.get("quadrature_rule_id")
+        identity = (str(rule), field)
+        expected_relative = expected_identities.get(identity)
+        if expected_relative is None:
+            raise FinalizationError(
+                f"raw {spec.key} {location} has an unknown quadrature rule/artifact identity"
+            )
+        if identity in found_identities:
+            raise FinalizationError(f"raw {spec.key} repeats artifact reference {identity}")
+        found_identities.add(identity)
+
+        descriptor_relative = _canonical_relative(
+            raw_descriptor.get("path", ""),
+            label=f"raw {spec.key} {location}.path",
+        )
+        expected_descriptor = expected_relative.relative_to(spec.relative_path.parent)
+        if descriptor_relative != expected_descriptor:
+            raise FinalizationError(
+                f"raw {spec.key} {location}.path must be "
+                f"{expected_descriptor.as_posix()}"
+            )
+        path = _confined(
+            staging_root,
+            expected_relative,
+            label=f"raw {spec.key} referenced artifact",
+            require_exists=True,
+        )
+        if not path.is_file() or path.is_symlink():
+            raise FinalizationError(
+                f"raw {spec.key} referenced artifact is not a regular file: "
+                f"{expected_relative.as_posix()}"
+            )
+        file_digest = raw_descriptor.get("sha256")
+        if (
+            not isinstance(file_digest, str)
+            or not HEX64_RE.fullmatch(file_digest)
+            or sha256_file(path) != file_digest
+        ):
+            raise FinalizationError(
+                f"raw {spec.key} referenced artifact SHA-256 mismatch: "
+                f"{expected_relative.as_posix()}"
+            )
+        _suffix, content_field, expected_dtype = QUADRATURE_ARTIFACT_FIELDS[field]
+        content_digest = raw_descriptor.get("content_sha256")
+        if not isinstance(content_digest, str) or not HEX64_RE.fullmatch(content_digest):
+            raise FinalizationError(f"raw {spec.key} {location}.content_sha256 is malformed")
+        if container.get(content_field) != content_digest:
+            raise FinalizationError(
+                f"raw {spec.key} {location} disagrees with {content_field}"
+            )
+        try:
+            array = np.load(path, allow_pickle=False)
+        except (OSError, ValueError) as exc:
+            raise FinalizationError(
+                f"raw {spec.key} referenced artifact is not a safe NPY array: "
+                f"{expected_relative.as_posix()}: {exc}"
+            ) from exc
+        if not isinstance(array, np.ndarray) or array.dtype.hasobject:
+            raise FinalizationError(
+                f"raw {spec.key} referenced artifact must contain one non-object array: "
+                f"{expected_relative.as_posix()}"
+            )
+        shape = raw_descriptor.get("shape")
+        if (
+            not isinstance(shape, list)
+            or any(isinstance(value, bool) or not isinstance(value, int) or value < 0 for value in shape)
+            or tuple(shape) != array.shape
+        ):
+            raise FinalizationError(f"raw {spec.key} {location}.shape does not match its array")
+        if raw_descriptor.get("dtype") != expected_dtype or str(array.dtype) != expected_dtype:
+            raise FinalizationError(f"raw {spec.key} {location}.dtype does not match its array")
+        if _array_content_sha256(array) != content_digest:
+            raise FinalizationError(
+                f"raw {spec.key} referenced artifact content SHA-256 mismatch: "
+                f"{expected_relative.as_posix()}"
+            )
+        hashes[(Path(STAGING_DIRECTORY) / expected_relative).as_posix()] = file_digest
+
+    if set(expected_identities) != found_identities:
+        missing = sorted(set(expected_identities) - found_identities)
+        raise FinalizationError(
+            f"raw {spec.key} does not reference the complete residual/action/branch-map "
+            f"array set; missing={missing}"
+        )
+    if {
+        Path(path).relative_to(STAGING_DIRECTORY) for path in hashes
+    } != expected_paths:
+        raise FinalizationError(f"raw {spec.key} referenced artifact path set is incomplete")
+    return dict(sorted(hashes.items()))
+
+
+def _rewrite_quadrature_artifact_paths_for_publication(
+    spec: SourceSpec,
+    payload: dict[str, Any],
+) -> None:
+    """Retarget decorated references to the preserved raw staging archive."""
+    if spec.key not in QUADRATURE_DEGREES:
+        return
+    for trail, field, descriptor, _container in _walk_artifact_references(payload):
+        if field not in QUADRATURE_ARTIFACT_FIELDS or not isinstance(descriptor, dict):
+            raise FinalizationError(
+                f"cannot decorate invalid artifact reference {'.'.join(trail)}"
+            )
+        relative = _canonical_relative(
+            descriptor.get("path", ""),
+            label=f"raw {spec.key} {'.'.join(trail)}.path",
+        )
+        descriptor["path"] = (
+            Path(STAGING_DIRECTORY) / spec.relative_path.parent / relative
+        ).as_posix()
+
+
 def _git(repo_root: Path, *args: str, check: bool = True) -> str:
     completed = subprocess.run(
         ["git", "-C", str(repo_root), *args],
@@ -480,6 +686,24 @@ def _plan_command_map(plan: Mapping[str, Any]) -> dict[str, dict[str, Any]]:
             values = command.get(field, [])
             if not isinstance(values, list):
                 raise FinalizationError(f"plan command {command_id!r} {field} must be an array")
+        artifact_paths = [
+            _canonical_relative(raw_path, label=f"plan command {command_id!r} expected artifact")
+            for raw_path in command.get("expected_artifacts", [])
+        ]
+        if len(set(artifact_paths)) != len(artifact_paths):
+            raise FinalizationError(
+                f"plan command {command_id!r} repeats an expected artifact path"
+            )
+        quadrature_keys = [key for key in source_keys if key in QUADRATURE_DEGREES]
+        if quadrature_keys:
+            degree = QUADRATURE_DEGREES[quadrature_keys[0]]
+            required_artifacts = set(_quadrature_expected_artifacts(degree))
+            missing_artifacts = sorted(required_artifacts - set(artifact_paths))
+            if missing_artifacts:
+                raise FinalizationError(
+                    f"plan command {command_id!r} omits publication-critical quadrature "
+                    f"artifacts: {[path.as_posix() for path in missing_artifacts]}"
+                )
         if source_keys and not command.get("configuration_files"):
             raise FinalizationError(
                 f"source command {command_id!r} must bind at least one tracked protocol/configuration file"
@@ -763,12 +987,46 @@ def execute_plan_command(
             output_hashes[(Path(STAGING_DIRECTORY) / relative).as_posix()] = sha256_file(path)
         else:
             missing.append(relative.as_posix())
+    referenced_artifact_hashes: dict[str, str] = {}
+    artifact_validation_errors: list[str] = []
+    for source_key in command["source_keys"]:
+        if source_key not in QUADRATURE_DEGREES:
+            continue
+        spec = SOURCE_BY_KEY[source_key]
+        raw_path = _confined(staging_root, spec.relative_path, label="quadrature raw output")
+        if not raw_path.is_file() or raw_path.is_symlink():
+            artifact_validation_errors.append(
+                f"missing quadrature source needed to validate referenced artifacts: "
+                f"{spec.relative_path.as_posix()}"
+            )
+            continue
+        try:
+            payload = _read_json(raw_path)
+            source_hashes = _quadrature_referenced_artifact_hashes(
+                spec,
+                payload,
+                staging_root=staging_root,
+            )
+        except FinalizationError as exc:
+            artifact_validation_errors.append(str(exc))
+            continue
+        for relative, digest in source_hashes.items():
+            if relative in referenced_artifact_hashes:
+                artifact_validation_errors.append(
+                    f"duplicate publication artifact reference across sources: {relative}"
+                )
+            referenced_artifact_hashes[relative] = digest
+            if output_hashes.get(relative) != digest:
+                artifact_validation_errors.append(
+                    f"referenced artifact is not identically bound in raw_output_hashes: {relative}"
+                )
     post_commit = _git_head(repo_root)
     post_clean = _git_clean(repo_root)
     completed_ok = (
         return_code == 0
         and execution_error is None
         and not missing
+        and not artifact_validation_errors
         and post_commit == commit
         and post_clean
     )
@@ -809,6 +1067,8 @@ def execute_plan_command(
         "configuration_hashes": configuration_hashes,
         "input_hashes": input_hashes,
         "raw_output_hashes": dict(sorted(output_hashes.items())),
+        "referenced_artifact_hashes": dict(sorted(referenced_artifact_hashes.items())),
+        "artifact_validation_errors": artifact_validation_errors,
         "logs": {
             stdout_path.relative_to(evidence_root).as_posix(): sha256_file(stdout_path),
             stderr_path.relative_to(evidence_root).as_posix(): sha256_file(stderr_path),
@@ -968,6 +1228,40 @@ def _verify_receipt(
         path = _confined(evidence_root, relative, label="receipt raw output", require_exists=True)
         if not path.is_file() or path.is_symlink() or sha256_file(path) != expected:
             raise FinalizationError(f"raw output was tampered after execution: {relative}")
+    recomputed_artifact_hashes: dict[str, str] = {}
+    for source_key in command["source_keys"]:
+        if source_key not in QUADRATURE_DEGREES:
+            continue
+        spec = SOURCE_BY_KEY[source_key]
+        raw_path = _confined(
+            evidence_root / STAGING_DIRECTORY,
+            spec.relative_path,
+            label="quadrature raw output",
+            require_exists=True,
+        )
+        recomputed_artifact_hashes.update(
+            _quadrature_referenced_artifact_hashes(
+                spec,
+                _read_json(raw_path),
+                staging_root=evidence_root / STAGING_DIRECTORY,
+            )
+        )
+    if receipt.get("referenced_artifact_hashes") != dict(
+        sorted(recomputed_artifact_hashes.items())
+    ):
+        raise FinalizationError(
+            f"receipt referenced artifact hash set differs from recursive source references: "
+            f"{receipt_path}"
+        )
+    if receipt.get("artifact_validation_errors") != []:
+        raise FinalizationError(
+            f"receipt records publication artifact validation errors: {receipt_path}"
+        )
+    for relative, digest in recomputed_artifact_hashes.items():
+        if raw_hashes.get(relative) != digest:
+            raise FinalizationError(
+                f"receipt does not bind referenced publication artifact in raw outputs: {relative}"
+            )
     command_block = receipt.get("command")
     if not isinstance(command_block, Mapping) or command_block.get("return_code") != 0:
         raise FinalizationError(f"receipt command did not terminate successfully: {receipt_path}")
@@ -1054,6 +1348,7 @@ def _decorate_payload(
 ) -> dict[str, Any]:
     # JSON round-trip gives a deep copy while asserting strict JSON types.
     payload = json.loads(json.dumps(raw_payload, allow_nan=False))
+    _rewrite_quadrature_artifact_paths_for_publication(spec, payload)
     raw_relative = Path(STAGING_DIRECTORY) / spec.relative_path
     receipt_relative = receipt_path.relative_to(evidence_root)
     payload["source_schema"] = {
@@ -1084,6 +1379,7 @@ def _decorate_payload(
             "path": raw_relative.as_posix(),
             "sha256": receipt["raw_output_hashes"][raw_relative.as_posix()],
         },
+        "referenced_artifact_hashes": dict(receipt["referenced_artifact_hashes"]),
         "execution_receipt": {
             "path": receipt_relative.as_posix(),
             "sha256": sha256_file(receipt_path),
@@ -1716,14 +2012,22 @@ def finalize_campaign(
             input_hashes.update(route_archive_input_hashes)
         output_hashes: dict[str, str] = {}
         for spec in specs:
-            raw_relative = (Path(STAGING_DIRECTORY) / spec.relative_path).as_posix()
-            raw_output_hashes[raw_relative] = receipts[source_to_command[spec.key]][
+            source_receipt = receipts[source_to_command[spec.key]]
+            for receipt_relative, receipt_digest in source_receipt[
                 "raw_output_hashes"
-            ][raw_relative]
+            ].items():
+                previous = raw_output_hashes.get(receipt_relative)
+                if previous is not None and previous != receipt_digest:
+                    raise FinalizationError(
+                        f"conflicting raw output hashes for {receipt_relative}"
+                    )
+                raw_output_hashes[receipt_relative] = receipt_digest
+            raw_relative = (Path(STAGING_DIRECTORY) / spec.relative_path).as_posix()
+            raw_output_hashes[raw_relative] = source_receipt["raw_output_hashes"][raw_relative]
             output_hashes[spec.relative_path.as_posix()] = source_hashes[spec.key]
             for record_path in spec.run_records:
                 raw_record_relative = (Path(STAGING_DIRECTORY) / record_path).as_posix()
-                raw_output_hashes[raw_record_relative] = receipts[source_to_command[spec.key]][
+                raw_output_hashes[raw_record_relative] = source_receipt[
                     "raw_output_hashes"
                 ][raw_record_relative]
                 output_hashes[record_path.as_posix()] = record_hashes[record_path]
@@ -1779,6 +2083,13 @@ def finalize_campaign(
         output_hash_manifest[route_endpoint_output[0].as_posix()] = hashlib.sha256(
             route_endpoint_output[1]
         ).hexdigest()
+    finalized_raw_hashes: dict[str, str] = {}
+    for receipt in receipts.values():
+        for relative, digest in receipt["raw_output_hashes"].items():
+            previous = finalized_raw_hashes.get(relative)
+            if previous is not None and previous != digest:
+                raise FinalizationError(f"conflicting finalized raw hash for {relative}")
+            finalized_raw_hashes[relative] = digest
     finalization_payload: dict[str, Any] = {
         "schema_id": FINALIZATION_SCHEMA_ID,
         "schema_version": FINALIZATION_SCHEMA_VERSION,
@@ -1795,12 +2106,7 @@ def finalize_campaign(
             "sha256": sha256_file(plan_path),
         },
         "finalizer": {"path": FINALIZER_PATH.as_posix(), "sha256": finalizer_hash},
-        "raw_source_hashes": {
-            (Path(STAGING_DIRECTORY) / spec.relative_path).as_posix(): receipts[
-                source_to_command[spec.key]
-            ]["raw_output_hashes"][(Path(STAGING_DIRECTORY) / spec.relative_path).as_posix()]
-            for spec in SOURCE_SPECS
-        },
+        "raw_source_hashes": dict(sorted(finalized_raw_hashes.items())),
         "execution_receipts": {
             path.relative_to(evidence_root).as_posix(): sha256_file(path)
             for path in receipt_paths.values()
@@ -2145,6 +2451,9 @@ def build_execution_plan_template(*, experiment_commit: str) -> dict[str, Any]:
                 ],
                 protocol="paper/protocols/EXP-DISC-001.md",
                 inputs=[_template_input("staging", state, attestation=attestation)],
+                expected_artifacts=[
+                    path.as_posix() for path in _quadrature_expected_artifacts(degree)
+                ],
             )
         )
     endpoint = "EXP-ROUTE-001/reviewed_inputs/tier_b_endpoint_analysis.json"

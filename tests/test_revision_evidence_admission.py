@@ -7,6 +7,8 @@ from pathlib import Path
 import subprocess
 import sys
 
+import numpy as np
+
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 SCRIPT_DIR = REPO_ROOT / "paper/scripts"
@@ -409,6 +411,77 @@ def test_admission_contract_configures_exactly_fourteen_distinct_inputs() -> Non
     assert len(specs) == 14
     assert len({spec.key for spec in specs}) == 14
     assert len({spec.relative_path for spec in specs}) == 14
+
+
+def test_admission_rehashes_every_quadrature_array_and_rejects_escape(
+    tmp_path: Path,
+) -> None:
+    spec = next(spec for spec in admission.EVIDENCE_SPECS if spec.key == "p1_quadrature")
+    payload: dict = {"evaluations": [], "publication_provenance": {}}
+    declared: dict[str, str] = {}
+    paths: list[Path] = []
+    for rule in admission.QUADRATURE_RULE_IDS:
+        row: dict = {"quadrature_rule_id": rule}
+        arrays = {
+            "hessian_action_artifact": np.asarray([1.0, 2.0], dtype=np.float64),
+            "residual_artifact": np.asarray([3.0, 4.0], dtype=np.float64),
+            "branch_map_artifact": np.asarray([0, 1], dtype=np.int8),
+        }
+        for field, array in arrays.items():
+            suffix, content_field, _dtype = admission.QUADRATURE_ARTIFACT_FIELDS[field]
+            relative = Path(
+                f"_publication_staging/EXP-DISC-001/actions/p1_l1/{rule}_{suffix}.npy"
+            )
+            path = tmp_path / relative
+            path.parent.mkdir(parents=True, exist_ok=True)
+            np.save(path, array, allow_pickle=False)
+            paths.append(path)
+            content_digest = admission._array_content_sha256(array)
+            row[content_field] = content_digest
+            row[field] = {
+                "path": relative.as_posix(),
+                "sha256": admission.sha256_file(path),
+                "content_sha256": content_digest,
+                "dtype": str(array.dtype),
+                "shape": list(array.shape),
+                "content": "test fixture",
+            }
+            declared[relative.as_posix()] = admission.sha256_file(path)
+        payload["evaluations"].append(row)
+    payload["publication_provenance"]["referenced_artifact_hashes"] = dict(
+        sorted(declared.items())
+    )
+
+    assert admission._quadrature_referenced_artifact_errors(
+        spec,
+        payload,
+        evidence_root=tmp_path,
+    ) == []
+
+    paths[0].write_bytes(paths[0].read_bytes() + b"tamper")
+    errors = admission._quadrature_referenced_artifact_errors(
+        spec,
+        payload,
+        evidence_root=tmp_path,
+    )
+    assert any("sha256 mismatch" in error for error in errors)
+
+    escaped = copy.deepcopy(payload)
+    escaped["evaluations"][0]["hessian_action_artifact"]["path"] = "../escape.npy"
+    errors = admission._quadrature_referenced_artifact_errors(
+        spec,
+        escaped,
+        evidence_root=tmp_path,
+    )
+    assert any("canonical and relative" in error for error in errors)
+
+    paths[1].unlink()
+    errors = admission._quadrature_referenced_artifact_errors(
+        spec,
+        payload,
+        evidence_root=tmp_path,
+    )
+    assert any("path is missing" in error for error in errors)
 
 
 def test_actual_shaped_numerical_payloads_pass_family_semantics_before_publication_decoration() -> None:
