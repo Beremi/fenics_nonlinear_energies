@@ -47,6 +47,28 @@ EXPECTED_ENVIRONMENT = {
     "XLA_FLAGS": "--xla_cpu_multi_thread_eigen=false --xla_force_host_platform_device_count=1",
 }
 
+EXPECTED_SOURCE_PATHS = (
+    "experiments/runners/run_exp_stop_001_local_calibration.py",
+    "experiments/runners/run_trust_region_case.py",
+    "experiments/runners/run_plasticity3d_backend_mix_case.py",
+    "experiments/runners/run_plasticity3d_fixed_state_route_screen.py",
+    "src/core/petsc/scalar_problem_driver.py",
+    "src/problems/ginzburg_landau/jax_petsc/solver.py",
+    "src/problems/hyperelasticity/jax_petsc/solver.py",
+    "src/problems/slope_stability_3d/support/fixed_state.py",
+)
+EXPECTED_INPUT_PATHS = (
+    "paper/protocols/EXP-STOP-001.md",
+    "data/meshes/GinzburgLandau/GL_level5.h5",
+    "data/meshes/GinzburgLandau/GL_level6.h5",
+    "data/meshes/SlopeStability3D/hetero_ssr/hetero_ssr_L1_p1_same_mesh_glued_bottom.h5",
+    "data/meshes/SlopeStability3D/hetero_ssr/hetero_ssr_L1_p2_same_mesh_glued_bottom.h5",
+    "data/meshes/SlopeStability3D/hetero_ssr/hetero_ssr_L1_p4_same_mesh_glued_bottom.h5",
+)
+EXPECTED_PACKAGE_NAMES = frozenset(
+    {"h5py", "jax", "mpi4py", "numpy", "petsc4py", "scipy"}
+)
+
 EXPECTED_CONTRACT = {
     "gl_lumped_l2_relative_state_difference_max": 1.0e-5,
     "gl_energy_absolute_difference_max": 1.0e-10,
@@ -270,6 +292,7 @@ def expected_design() -> dict[str, dict[str, object]]:
         family: str,
         group: str,
         *,
+        scope: str,
         reference: bool,
         parameter: str,
         tolerance: float,
@@ -280,6 +303,7 @@ def expected_design() -> dict[str, dict[str, object]]:
             "execution_class": "required_local",
             "family": family,
             "group_id": group,
+            "scientific_scope": scope,
             "reference_row": reference,
             "selection_parameter": parameter,
             "selection_tolerance": float(tolerance),
@@ -296,6 +320,7 @@ def expected_design() -> dict[str, dict[str, object]]:
                 row_id,
                 "ginzburg_landau",
                 f"gl_l{level}",
+                scope="deterministic_nonlinear_endpoint_with_lumped_l2_stopping",
                 reference=target == 1.0e-8,
                 parameter="relative_dual_residual_target",
                 tolerance=target,
@@ -304,6 +329,8 @@ def expected_design() -> dict[str, dict[str, object]]:
                     "mesh_level": level,
                     "relative_dual_residual_target": target,
                     "linear_ksp_rtol": 1.0e-10,
+                    "globalization": "rho_based_trust_region_with_armijo_model_steps",
+                    "nonprimary_energy_and_correction_gates": "finite_nonbinding_caps",
                 },
             )
     for level in (1, 2):
@@ -313,6 +340,10 @@ def expected_design() -> dict[str, dict[str, object]]:
                 row_id,
                 "hyperelasticity_reference_riesz",
                 f"he_l{level}",
+                scope=(
+                    "reference_metric_setup_and_terminal_residual_only; "
+                    "maxit_zero_is_not_nonlinear_convergence"
+                ),
                 reference=tolerance == 1.0e-12,
                 parameter="riesz_ksp_rtol",
                 tolerance=tolerance,
@@ -320,6 +351,7 @@ def expected_design() -> dict[str, dict[str, object]]:
                 parameters={
                     "mesh_level": level,
                     "riesz_ksp_rtol": tolerance,
+                    "riesz_true_residual_safety_gate": 1.0e-6,
                     "nonlinear_max_iterations": 0,
                 },
             )
@@ -331,6 +363,10 @@ def expected_design() -> dict[str, dict[str, object]]:
                 row_id,
                 "hyperelasticity_nonlinear_stopping",
                 f"he_l{level}_nonlinear",
+                scope=(
+                    "one_load_step_full_nonlinear_reference_riesz_endpoint; "
+                    "same_mesh_state_export_has_no_reference_operator_action"
+                ),
                 reference=target == 1.0e-8,
                 parameter="relative_dual_residual_target",
                 tolerance=target,
@@ -338,6 +374,8 @@ def expected_design() -> dict[str, dict[str, object]]:
                 parameters={
                     "mesh_level": level,
                     "relative_dual_residual_target": target,
+                    "linear_ksp_rtol": 1.0e-8,
+                    "riesz_ksp_rtol": 1.0e-10,
                     "load_steps": 1,
                     "total_steps": 24,
                 },
@@ -351,14 +389,24 @@ def expected_design() -> dict[str, dict[str, object]]:
                 row_id,
                 "plasticity3d_fixed_state_linear",
                 f"p3d_p{degree}",
+                scope=(
+                    "fixed_elastic_state_single_linear_system_only; "
+                    "not_a_nonlinear_endpoint"
+                ),
                 reference=tolerance == 1.0e-10,
                 parameter="ksp_rtol",
                 tolerance=tolerance,
                 outputs=(f"{root}/result.json", f"{root}/state_and_correction.npz"),
                 parameters={
+                    "mesh_name": "hetero_ssr_L1",
                     "element_degree": degree,
                     "quadrature_rule_id": quadrature[degree],
+                    "state_label": "elastic",
+                    "state_amplitude": 0.0002,
+                    "ksp_type": "gmres",
+                    "pc_type": "hypre",
                     "ksp_rtol": tolerance,
+                    "true_residual_factor": 20.0,
                 },
             )
     for degree in (1, 2):
@@ -369,14 +417,18 @@ def expected_design() -> dict[str, dict[str, object]]:
                 row_id,
                 "plasticity3d_nonlinear_stopping",
                 f"p3d_p{degree}_nonlinear",
+                scope="full_nonlinear_reference_riesz_endpoint_on_one_serial_rank",
                 reference=target == 1.0e-8,
                 parameter="relative_dual_residual_target",
                 tolerance=target,
                 outputs=(f"{root}/result.json", f"{root}/state.npz"),
                 parameters={
+                    "mesh_name": "hetero_ssr_L1",
                     "element_degree": degree,
                     "quadrature_rule_id": quadrature[degree],
                     "relative_dual_residual_target": target,
+                    "linear_ksp_rtol": 1.0e-8,
+                    "riesz_ksp_rtol": 1.0e-10,
                 },
             )
     for target in gl_targets:
@@ -385,10 +437,21 @@ def expected_design() -> dict[str, dict[str, object]]:
             "execution_class": "deferred_cluster_computation",
             "family": "plasticity3d_nonlinear_stopping",
             "group_id": "p3d_p4_nonlinear_cluster",
+            "scientific_scope": "full_nonlinear_reference_riesz_endpoint",
             "reference_row": False,
             "parameters": {
+                "mesh_name": "hetero_ssr_L1",
                 "element_degree": 4,
                 "relative_residual_target": target,
+            },
+            "censor": {
+                "status": "censored",
+                "reason": (
+                    "P4 full nonlinear reference-Riesz endpoints exceed the default local "
+                    "resource scope and remain reviewed parallel-cluster computations"
+                ),
+                "timing_admissible": False,
+                "accuracy_claim_admissible": False,
             },
         }
     for family in ("ginzburg_landau", "hyperelasticity", "plasticity3d"):
@@ -397,12 +460,259 @@ def expected_design() -> dict[str, dict[str, object]]:
             "execution_class": "deferred_cluster_computation",
             "family": f"{family}_mpi_consistency",
             "group_id": f"{family}_mpi_cluster",
+            "scientific_scope": "publication_rank_count_consistency",
             "reference_row": False,
             "parameters": {
                 "rank_counts": "publication_rank_counts_from_dependent_protocols"
             },
+            "censor": {
+                "status": "censored",
+                "reason": (
+                    "multi-rank consistency is outside the serial local tranche and remains "
+                    "a parallel-cluster computation"
+                ),
+                "timing_admissible": False,
+                "accuracy_claim_admissible": False,
+            },
         }
     return rows
+
+
+def _expected_command(
+    row_id: str,
+    spec: Mapping[str, object],
+    *,
+    evidence_root: Path,
+    python: str,
+) -> list[str]:
+    """Materialize one exact frozen command from root-independent semantics."""
+
+    family = str(spec["family"])
+    parameters = spec["parameters"]
+    if not isinstance(parameters, Mapping):
+        raise AdmissionError(f"{row_id}: expected parameters are malformed")
+    outputs = [str((evidence_root / raw).absolute()) for raw in spec["expected_outputs"]]
+    if family == "ginzburg_landau":
+        level = int(parameters["mesh_level"])
+        target = float(parameters["relative_dual_residual_target"])
+        return [
+            python,
+            "experiments/runners/run_trust_region_case.py",
+            "--problem", "gl",
+            "--backend", "element",
+            "--level", str(level),
+            "--out", outputs[0],
+            "--state-out", outputs[1],
+            "--profile", "reference",
+            "--ksp-type", "gmres",
+            "--pc-type", "hypre",
+            "--ksp-rtol", "1e-10",
+            "--ksp-max-it", "1000",
+            "--gamg-threshold", "0.05",
+            "--gamg-agg-nsmooths", "1",
+            "--element-reorder-mode", "block_xyz",
+            "--local-hessian-mode", "element",
+            "--convergence-metric", "lumped_l2",
+            "--tolf", "1e300",
+            "--tolg", "0",
+            "--tolg-rel", f"{target:.0e}",
+            "--tolx-rel", "1e300",
+            "--tolx-abs", "1e300",
+            "--maxit", "100",
+            "--line-search", "armijo",
+            "--use-trust-region",
+            "--trust-radius-init", "1",
+            "--trust-radius-min", "1e-8",
+            "--trust-radius-max", "1e6",
+            "--trust-shrink", "0.5",
+            "--trust-expand", "1.5",
+            "--trust-eta-shrink", "0.05",
+            "--trust-eta-expand", "0.75",
+            "--trust-max-reject", "6",
+            "--no-retry-on-failure",
+            "--save-history",
+            "--save-linear-timing",
+            "--quiet",
+        ]
+    if family == "hyperelasticity_reference_riesz":
+        level = int(parameters["mesh_level"])
+        tolerance = float(parameters["riesz_ksp_rtol"])
+        return [
+            python,
+            "experiments/runners/run_trust_region_case.py",
+            "--problem", "he",
+            "--backend", "element",
+            "--level", str(level),
+            "--out", outputs[0],
+            "--steps", "1",
+            "--total-steps", "24",
+            "--maxit", "0",
+            "--problem-build-mode", "rank_local",
+            "--he-mesh-source", "procedural",
+            "--he-element-degree", "1",
+            "--distribution-strategy", "overlap_p2p",
+            "--assembly-backend", "coo_local",
+            "--element-reorder-mode", "block_xyz",
+            "--local-hessian-mode", "element",
+            "--ksp-type", "gmres",
+            "--pc-type", "hypre",
+            "--ksp-rtol", "1e-10",
+            "--ksp-max-it", "1000",
+            "--convergence-metric", "reference_elastic_energy",
+            "--riesz-ksp-type", "cg",
+            "--riesz-pc-type", "jacobi",
+            "--riesz-ksp-rtol", f"{tolerance:.0e}",
+            "--riesz-ksp-atol", "1e-14",
+            "--riesz-ksp-max-it", "5000",
+            "--riesz-true-residual-rtol", "1e-6",
+            "--riesz-spd-factor-solver-type", "mumps",
+            "--riesz-symmetry-tol", "1e-12",
+            "--no-retry-on-failure",
+            "--quiet",
+        ]
+    if family == "hyperelasticity_nonlinear_stopping":
+        level = int(parameters["mesh_level"])
+        target = float(parameters["relative_dual_residual_target"])
+        return [
+            python,
+            "experiments/runners/run_trust_region_case.py",
+            "--problem", "he",
+            "--backend", "element",
+            "--level", str(level),
+            "--out", outputs[0],
+            "--state-out", outputs[1],
+            "--steps", "1",
+            "--total-steps", "24",
+            "--maxit", "80",
+            "--problem-build-mode", "rank_local",
+            "--he-mesh-source", "procedural",
+            "--he-element-degree", "1",
+            "--distribution-strategy", "overlap_p2p",
+            "--assembly-backend", "coo_local",
+            "--element-reorder-mode", "block_xyz",
+            "--local-hessian-mode", "element",
+            "--ksp-type", "gmres",
+            "--pc-type", "hypre",
+            "--ksp-rtol", "1e-8",
+            "--ksp-max-it", "1000",
+            "--convergence-metric", "reference_elastic_energy",
+            "--riesz-ksp-type", "cg",
+            "--riesz-pc-type", "jacobi",
+            "--riesz-ksp-rtol", "1e-10",
+            "--riesz-ksp-atol", "1e-14",
+            "--riesz-ksp-max-it", "5000",
+            "--riesz-true-residual-rtol", "1e-8",
+            "--riesz-spd-factor-solver-type", "mumps",
+            "--riesz-symmetry-tol", "1e-12",
+            "--tolf", "1e300",
+            "--tolg", "0",
+            "--tolg-rel", f"{target:.0e}",
+            "--tolx-rel", "1e300",
+            "--tolx-abs", "1e300",
+            "--line-search", "armijo",
+            "--no-retry-on-failure",
+            "--save-history",
+            "--save-linear-timing",
+            "--quiet",
+        ]
+    if family == "plasticity3d_fixed_state_linear":
+        degree = int(parameters["element_degree"])
+        tolerance = float(parameters["ksp_rtol"])
+        return [
+            python,
+            "experiments/runners/run_exp_stop_001_local_calibration.py",
+            "p3d-fixed-state",
+            "--degree", str(degree),
+            "--quadrature-rule", str(parameters["quadrature_rule_id"]),
+            "--state-amplitude", "0.0002",
+            "--ksp-type", "gmres",
+            "--pc-type", "hypre",
+            "--ksp-rtol", f"{tolerance:.0e}",
+            "--ksp-max-it", "4000",
+            "--true-residual-factor", "20",
+            "--output", outputs[0],
+            "--state-out", outputs[1],
+        ]
+    if family == "plasticity3d_nonlinear_stopping":
+        degree = int(parameters["element_degree"])
+        target = float(parameters["relative_dual_residual_target"])
+        work = str(
+            (evidence_root / "raw" / "p3d_nonlinear" / row_id / "work").absolute()
+        )
+        return [
+            python,
+            "experiments/runners/run_plasticity3d_backend_mix_case.py",
+            "--assembly-backend", "local",
+            "--solver-backend", "local",
+            "--out-dir", work,
+            "--output-json", outputs[0],
+            "--state-out", outputs[1],
+            "--mesh-name", "hetero_ssr_L1",
+            "--elem-degree", str(degree),
+            "--quadrature-rule", str(parameters["quadrature_rule_id"]),
+            "--constraint-variant", "glued_bottom",
+            "--lambda-target", "1.55",
+            "--ksp-rtol", "1e-8",
+            "--ksp-max-it", "1000",
+            "--convergence-mode", "gradient_only",
+            "--grad-stop-tol", "0",
+            "--grad-stop-rtol", f"{target:.0e}",
+            "--stop-tol", f"{target:.0e}",
+            "--convergence-metric", "reference_elastic_energy",
+            "--riesz-ksp-type", "cg",
+            "--riesz-pc-type", "jacobi",
+            "--riesz-ksp-rtol", "1e-10",
+            "--riesz-ksp-atol", "1e-14",
+            "--riesz-ksp-max-it", "5000",
+            "--riesz-true-residual-rtol", "1e-8",
+            "--riesz-spd-factor-solver-type", "mumps",
+            "--riesz-symmetry-tol", "1e-12",
+            "--maxit", "80",
+            "--line-search", "armijo",
+            "--armijo-alpha0", "1",
+            "--armijo-c1", "1e-4",
+            "--armijo-shrink", "0.5",
+            "--armijo-max-ls", "40",
+        ]
+    raise AdmissionError(f"{row_id}: unsupported frozen command family {family}")
+
+
+def expected_plan_row(
+    row_id: str,
+    spec: Mapping[str, object],
+    *,
+    evidence_root: Path,
+    python: str,
+) -> dict[str, object]:
+    """Materialize the exact producer row, excluding no scientific fields."""
+
+    row: dict[str, object] = {
+        "row_id": row_id,
+        "family": spec["family"],
+        "group_id": spec["group_id"],
+        "execution_class": spec["execution_class"],
+        "scientific_scope": spec["scientific_scope"],
+        "parameters": spec["parameters"],
+        "reference_row": spec["reference_row"],
+    }
+    if spec["execution_class"] == "deferred_cluster_computation":
+        row.update(
+            {
+                "command": None,
+                "environment": {},
+                "expected_outputs": [],
+                "censor": spec["censor"],
+            }
+        )
+        return row
+    row["command"] = _expected_command(
+        row_id, spec, evidence_root=evidence_root, python=python
+    )
+    row["environment"] = EXPECTED_ENVIRONMENT
+    row["expected_outputs"] = [
+        str((evidence_root / raw).absolute()) for raw in spec["expected_outputs"]
+    ]
+    return row
 
 
 def _validate_plan(
@@ -413,6 +723,14 @@ def _validate_plan(
     require_release_clean: bool,
 ) -> tuple[dict[str, object], str, dict[str, dict[str, object]]]:
     plan = read_strict_json(plan_path)
+    expected_top_level = {
+        "schema_id", "schema_version", "experiment_id", "campaign_id",
+        "created_utc", "run_kind", "publication_evidence_candidate",
+        "output_root", "source", "inputs", "environment", "policies",
+        "row_counts", "claim_boundary", "rows",
+    }
+    if set(plan) != expected_top_level:
+        raise AdmissionError("plan top-level field set differs from the frozen producer schema")
     if plan.get("schema_id") != PLAN_SCHEMA_ID or plan.get("schema_version") != 1:
         raise AdmissionError("local stopping plan schema is invalid")
     if plan.get("experiment_id") != "EXP-STOP-001" or plan.get("campaign_id") != CAMPAIGN_ID:
@@ -426,33 +744,73 @@ def _validate_plan(
     if output_root != evidence_root.resolve():
         raise AdmissionError("plan output_root differs from evidence_root")
     source = plan.get("source")
-    if not isinstance(source, dict) or source.get("dirty") is not False:
+    if not isinstance(source, dict) or set(source) != {
+        "commit", "dirty", "relevant_file_hashes"
+    } or source.get("dirty") is not False:
         raise AdmissionError("plan does not record a clean source")
     source_commit = _validate_commit(
         source.get("commit"), repo_root=repo_root,
         require_release_clean=require_release_clean
     )
-    _verify_git_inventory(
+    source_inventory = _verify_git_inventory(
         source.get("relevant_file_hashes"), repo_root=repo_root,
         commit=source_commit, label="plan source hashes"
     )
+    if set(source_inventory) != set(EXPECTED_SOURCE_PATHS):
+        raise AdmissionError("plan source inventory differs from the exact canonical set")
     inputs = plan.get("inputs")
-    if not isinstance(inputs, dict):
+    if not isinstance(inputs, dict) or set(inputs) != {
+        "file_hashes", "procedural_he_mesh"
+    }:
         raise AdmissionError("plan input inventory is missing")
-    _verify_git_inventory(
+    input_inventory = _verify_git_inventory(
         inputs.get("file_hashes"), repo_root=repo_root,
         commit=source_commit, label="plan input hashes"
     )
+    if set(input_inventory) != set(EXPECTED_INPUT_PATHS):
+        raise AdmissionError("plan input inventory differs from the exact canonical set")
+    if inputs.get("procedural_he_mesh") != {
+        "levels": [1, 2],
+        "source": "rank_local_procedural_he_p1_mesh_builder",
+        "note": "no HDF5 mesh is consumed by the frozen HE commands",
+    }:
+        raise AdmissionError("procedural Hyperelasticity input declaration differs")
     environment = plan.get("environment")
-    if not isinstance(environment, dict) or environment.get("command_environment") != EXPECTED_ENVIRONMENT:
+    if not isinstance(environment, dict) or set(environment) != {
+        "python", "python_executable", "platform", "machine", "packages",
+        "command_environment",
+    } or environment.get("command_environment") != EXPECTED_ENVIRONMENT:
         raise AdmissionError("plan command environment differs from the frozen policy")
+    expected_python = str((repo_root / ".venv/bin/python").absolute())
+    if environment.get("python_executable") != expected_python or not Path(
+        expected_python
+    ).is_file():
+        raise AdmissionError("plan Python launcher is not the canonical repository virtualenv")
+    if not all(
+        isinstance(environment.get(key), str) and bool(environment.get(key))
+        for key in ("python", "platform", "machine")
+    ):
+        raise AdmissionError("plan runtime environment identity is incomplete")
+    packages = environment.get("packages")
+    if not isinstance(packages, dict) or set(packages) != EXPECTED_PACKAGE_NAMES or not all(
+        isinstance(value, str) and value for value in packages.values()
+    ):
+        raise AdmissionError("plan package inventory differs from the canonical set")
     policies = plan.get("policies")
-    if not isinstance(policies, dict):
+    if not isinstance(policies, dict) or set(policies) != {
+        "p4_fixed_state", "p4_local_feasibility_attested",
+        "fresh_output_root_required", "command_mutation_forbidden_after_prepare",
+        "timing_claims_admissible", "analysis_contract",
+    }:
         raise AdmissionError("plan policy record is missing")
     if policies.get("p4_fixed_state") != "local" or policies.get("p4_local_feasibility_attested") is not True:
         raise AdmissionError("P4 fixed-state local feasibility is not frozen and attested")
     if policies.get("timing_claims_admissible") is not False:
         raise AdmissionError("plan improperly admits timing claims")
+    if policies.get("fresh_output_root_required") is not True or policies.get(
+        "command_mutation_forbidden_after_prepare"
+    ) is not True:
+        raise AdmissionError("plan freshness/command-immutability policy differs")
     if policies.get("analysis_contract") != EXPECTED_CONTRACT:
         raise AdmissionError("analysis contract differs from the frozen thresholds")
     if plan.get("row_counts") != {
@@ -464,60 +822,46 @@ def _validate_plan(
     rows = plan.get("rows")
     if not isinstance(rows, list) or len(rows) != 52:
         raise AdmissionError("plan must contain exactly 52 rows")
-    actual = {
-        str(row.get("row_id")): row for row in rows if isinstance(row, dict)
-    }
     expected = expected_design()
-    if len(actual) != 52 or set(actual) != set(expected):
+    expected_ids = list(expected)
+    observed_ids = [
+        str(row.get("row_id")) for row in rows if isinstance(row, dict)
+    ]
+    if observed_ids != expected_ids:
+        raise AdmissionError("plan row order/grid differs from the frozen design")
+    actual = {str(row["row_id"]): row for row in rows if isinstance(row, dict)}
+    if len(actual) != 52:
         raise AdmissionError("plan row grid differs from the frozen design")
     for row_id, spec in expected.items():
         row = actual[row_id]
-        for field in ("execution_class", "family", "group_id", "reference_row"):
-            if row.get(field) != spec[field]:
-                raise AdmissionError(f"{row_id}: field {field} differs from frozen design")
-        parameters = row.get("parameters")
-        if not isinstance(parameters, dict):
-            raise AdmissionError(f"{row_id}: parameters are missing")
-        for key, value in spec["parameters"].items():
-            if parameters.get(key) != value:
-                raise AdmissionError(f"{row_id}: parameter {key} differs from frozen design")
-        if spec["execution_class"] == "deferred_cluster_computation":
-            censor = row.get("censor")
-            if row.get("command") is not None or row.get("expected_outputs") != []:
-                raise AdmissionError(f"{row_id}: cluster censor unexpectedly has a command/output")
-            if not isinstance(censor, dict) or censor.get("status") != "censored":
-                raise AdmissionError(f"{row_id}: cluster censor is malformed")
-            if censor.get("timing_admissible") is not False or censor.get("accuracy_claim_admissible") is not False:
-                raise AdmissionError(f"{row_id}: cluster censor promotes unsupported evidence")
-            continue
-        expected_outputs = [evidence_root / raw for raw in spec["expected_outputs"]]
-        outputs = row.get("expected_outputs")
-        if not isinstance(outputs, list) or len(outputs) != len(expected_outputs):
-            raise AdmissionError(f"{row_id}: expected-output inventory is malformed")
-        for index, (raw, canonical) in enumerate(zip(outputs, expected_outputs)):
-            _safe_artifact(
-                raw, repo_root=repo_root, evidence_root=evidence_root,
-                label=f"{row_id}.expected_outputs[{index}]", expected=canonical,
-                must_exist=False
+        canonical = expected_plan_row(
+            row_id,
+            spec,
+            evidence_root=evidence_root,
+            python=expected_python,
+        )
+        if row != canonical:
+            raise AdmissionError(
+                f"{row_id}: full row parameters, scope, command, or censor semantics differ"
             )
-        command = row.get("command")
-        if not isinstance(command, list) or not command or not all(isinstance(token, str) and token for token in command):
-            raise AdmissionError(f"{row_id}: frozen command is malformed")
-        if row.get("environment") != EXPECTED_ENVIRONMENT:
-            raise AdmissionError(f"{row_id}: command environment differs from frozen policy")
-        resolved_tokens: set[Path] = set()
-        for token in command:
-            candidate = Path(token)
-            if candidate.is_absolute():
-                resolved_tokens.add(candidate.resolve())
-        if not set(path.resolve() for path in expected_outputs).issubset(resolved_tokens):
-            raise AdmissionError(f"{row_id}: command does not bind every frozen output")
-    claim_boundary = plan.get("claim_boundary")
-    if not isinstance(claim_boundary, dict):
-        raise AdmissionError("plan claim boundary is missing")
-    cannot = claim_boundary.get("local_completion_cannot_establish")
-    if not isinstance(cannot, list) or not any("terminal PASS" in str(item) for item in cannot):
-        raise AdmissionError("plan does not refuse a complete local protocol pass")
+    if plan.get("claim_boundary") != {
+        "local_completion_can_establish": [
+            "deterministic GL same-mesh endpoint sensitivity on two mesh levels",
+            "HE reference-Riesz setup and terminal norm-solve sensitivity on two levels",
+            "HE L1/L2 one-load-step nonlinear endpoint sensitivity",
+            "P1/P2 fixed-state Plasticity3D linear true-residual sensitivity",
+            "P1/P2 Plasticity3D full nonlinear endpoint sensitivity",
+            "P4 fixed-state sensitivity only when locally attested in this frozen plan",
+        ],
+        "local_completion_cannot_establish": [
+            "HyperElasticity behavior beyond the frozen one-load-step L1/L2 cases",
+            "full nonlinear P4 Plasticity3D convergence",
+            "publication-rank MPI consistency",
+            "timing or scaling claims",
+            "a terminal PASS for the complete EXP-STOP-001 protocol",
+        ],
+    }:
+        raise AdmissionError("plan claim boundary differs from the frozen producer")
     return plan, source_commit, actual
 
 

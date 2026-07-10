@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import copy
 import json
 from pathlib import Path
 import shutil
@@ -18,6 +19,7 @@ import check_stopping_local_manifest as checker  # noqa: E402
 import generate_stopping_local_status as generator  # noqa: E402
 import stopping_local_evidence as evidence  # noqa: E402
 import validate_paper_assets as asset_validator  # noqa: E402
+from experiments.runners import run_exp_stop_001_local_calibration as producer  # noqa: E402
 
 
 def _write_json(path: Path, value: object) -> None:
@@ -195,12 +197,15 @@ def _fixture(tmp_path: Path) -> tuple[Path, Path, str]:
     _git(repo, "config", "user.email", "test@example.invalid")
     _git(repo, "config", "user.name", "Test")
     (repo / ".gitignore").write_text(
-        "artifacts/\npaper/tables/generated/\n__pycache__/\n", encoding="utf-8"
+        "artifacts/\npaper/tables/generated/\n.venv/\n__pycache__/\n",
+        encoding="utf-8",
     )
-    (repo / "source.py").write_text("VALUE = 1\n", encoding="utf-8")
-    (repo / "input.dat").write_text("immutable input\n", encoding="utf-8")
+    for relative in (*evidence.EXPECTED_SOURCE_PATHS, *evidence.EXPECTED_INPUT_PATHS):
+        path = repo / relative
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(f"fixture for {relative}\n", encoding="utf-8")
     scripts = repo / "paper/scripts"
-    scripts.mkdir(parents=True)
+    scripts.mkdir(parents=True, exist_ok=True)
     for name in (
         "stopping_local_evidence.py",
         "generate_stopping_local_status.py",
@@ -210,50 +215,28 @@ def _fixture(tmp_path: Path) -> tuple[Path, Path, str]:
     _git(repo, "add", ".")
     _git(repo, "commit", "-qm", "fixture")
     commit = _git(repo, "rev-parse", "HEAD")
+    python = repo / ".venv/bin/python"
+    python.parent.mkdir(parents=True)
+    python.write_text("#!/bin/sh\n", encoding="utf-8")
 
     root = repo / "artifacts/reproduction/exp-stop-fixture"
     root.mkdir(parents=True)
     design = evidence.expected_design()
     rows: list[dict[str, object]] = []
     for row_id, spec in design.items():
-        row: dict[str, object] = {
-            "row_id": row_id,
-            "family": spec["family"],
-            "group_id": spec["group_id"],
-            "execution_class": spec["execution_class"],
-            "scientific_scope": "fixture",
-            "parameters": dict(spec["parameters"]),
-            "reference_row": spec["reference_row"],
-        }
-        if spec["execution_class"] == "required_local":
-            outputs = [str(root / relative) for relative in spec["expected_outputs"]]
-            row.update(
-                {
-                    "command": [sys.executable, str(repo / "source.py"), *outputs],
-                    "environment": evidence.EXPECTED_ENVIRONMENT,
-                    "expected_outputs": outputs,
-                }
-            )
-        else:
-            row.update(
-                {
-                    "command": None,
-                    "environment": {},
-                    "expected_outputs": [],
-                    "censor": {
-                        "status": "censored",
-                        "reason": "parallel cluster computation",
-                        "timing_admissible": False,
-                        "accuracy_claim_admissible": False,
-                    },
-                }
-            )
+        row = evidence.expected_plan_row(
+            row_id,
+            spec,
+            evidence_root=root,
+            python=str(python.absolute()),
+        )
         rows.append(row)
     plan = {
         "schema_id": evidence.PLAN_SCHEMA_ID,
         "schema_version": 1,
         "experiment_id": "EXP-STOP-001",
         "campaign_id": evidence.CAMPAIGN_ID,
+        "created_utc": "2026-01-01T00:00:00Z",
         "run_kind": "publication",
         "publication_evidence_candidate": True,
         "output_root": str(root),
@@ -261,16 +244,36 @@ def _fixture(tmp_path: Path) -> tuple[Path, Path, str]:
             "commit": commit,
             "dirty": False,
             "relevant_file_hashes": {
-                "source.py": evidence.sha256_file(repo / "source.py")
+                relative: evidence.sha256_file(repo / relative)
+                for relative in evidence.EXPECTED_SOURCE_PATHS
             },
         },
         "inputs": {
-            "file_hashes": {"input.dat": evidence.sha256_file(repo / "input.dat")}
+            "file_hashes": {
+                relative: evidence.sha256_file(repo / relative)
+                for relative in evidence.EXPECTED_INPUT_PATHS
+            },
+            "procedural_he_mesh": {
+                "levels": [1, 2],
+                "source": "rank_local_procedural_he_p1_mesh_builder",
+                "note": "no HDF5 mesh is consumed by the frozen HE commands",
+            },
         },
-        "environment": {"command_environment": evidence.EXPECTED_ENVIRONMENT},
+        "environment": {
+            "python": "3.12.0",
+            "python_executable": str(python.absolute()),
+            "platform": "fixture-platform",
+            "machine": "fixture-machine",
+            "packages": {
+                package: "fixture" for package in evidence.EXPECTED_PACKAGE_NAMES
+            },
+            "command_environment": evidence.EXPECTED_ENVIRONMENT,
+        },
         "policies": {
             "p4_fixed_state": "local",
             "p4_local_feasibility_attested": True,
+            "fresh_output_root_required": True,
+            "command_mutation_forbidden_after_prepare": True,
             "timing_claims_admissible": False,
             "analysis_contract": evidence.EXPECTED_CONTRACT,
         },
@@ -280,9 +283,21 @@ def _fixture(tmp_path: Path) -> tuple[Path, Path, str]:
             "deferred_cluster_computation": 7,
         },
         "claim_boundary": {
+            "local_completion_can_establish": [
+                "deterministic GL same-mesh endpoint sensitivity on two mesh levels",
+                "HE reference-Riesz setup and terminal norm-solve sensitivity on two levels",
+                "HE L1/L2 one-load-step nonlinear endpoint sensitivity",
+                "P1/P2 fixed-state Plasticity3D linear true-residual sensitivity",
+                "P1/P2 Plasticity3D full nonlinear endpoint sensitivity",
+                "P4 fixed-state sensitivity only when locally attested in this frozen plan",
+            ],
             "local_completion_cannot_establish": [
-                "a terminal PASS for the complete EXP-STOP-001 protocol"
-            ]
+                "HyperElasticity behavior beyond the frozen one-load-step L1/L2 cases",
+                "full nonlinear P4 Plasticity3D convergence",
+                "publication-rank MPI consistency",
+                "timing or scaling claims",
+                "a terminal PASS for the complete EXP-STOP-001 protocol",
+            ],
         },
         "rows": rows,
     }
@@ -487,6 +502,90 @@ def test_audit_recomputes_complete_local_policy_grid_and_table(tmp_path: Path) -
     assert table == evidence.render_table(audit)
     assert "necessary but not sufficient" in table
     assert "separately hash-bound EXP-DISC" in table
+
+
+def test_frozen_admission_design_matches_the_actual_plan_producer(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    commit = subprocess.run(
+        ["git", "rev-parse", "HEAD"],
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout.strip()
+    monkeypatch.setattr(
+        producer, "_git_metadata", lambda: {"commit": commit, "dirty": False}
+    )
+    output_root = (tmp_path / "producer-output").resolve()
+    plan = producer.build_plan(
+        output_root,
+        run_kind="publication",
+        allow_dirty=False,
+        p4_policy="local",
+        confirm_p4_local_feasible=True,
+    )
+    design = evidence.expected_design()
+    expected_rows = [
+        evidence.expected_plan_row(
+            row_id,
+            spec,
+            evidence_root=output_root,
+            python=str(Path(sys.executable).absolute()),
+        )
+        for row_id, spec in design.items()
+    ]
+    assert plan["rows"] == expected_rows
+    assert set(plan["source"]["relevant_file_hashes"]) == set(
+        evidence.EXPECTED_SOURCE_PATHS
+    )
+    assert set(plan["inputs"]["file_hashes"]) == set(evidence.EXPECTED_INPUT_PATHS)
+
+
+def test_plan_admission_rejects_substitute_inventory_commands_and_semantics(
+    tmp_path: Path,
+) -> None:
+    repo, root, _commit = _fixture(tmp_path)
+    plan_path = root / evidence.PLAN_NAME
+    canonical = evidence.read_strict_json(plan_path)
+
+    mutated = copy.deepcopy(canonical)
+    source_hashes = mutated["source"]["relevant_file_hashes"]
+    source_hashes.pop(evidence.EXPECTED_SOURCE_PATHS[0])
+    substitute = "paper/scripts/stopping_local_evidence.py"
+    source_hashes[substitute] = evidence.sha256_file(repo / substitute)
+    _write_json(plan_path, mutated)
+    with pytest.raises(evidence.AdmissionError, match="exact canonical set"):
+        evidence.audit_campaign(root, repo_root=repo)
+
+    mutated = copy.deepcopy(canonical)
+    mutated["inputs"]["file_hashes"].pop(evidence.EXPECTED_INPUT_PATHS[-1])
+    _write_json(plan_path, mutated)
+    with pytest.raises(evidence.AdmissionError, match="exact canonical set"):
+        evidence.audit_campaign(root, repo_root=repo)
+
+    mutated = copy.deepcopy(canonical)
+    mutated["rows"][0]["command"][1] = "source.py"
+    _write_json(plan_path, mutated)
+    with pytest.raises(evidence.AdmissionError, match="full row parameters"):
+        evidence.audit_campaign(root, repo_root=repo)
+
+    mutated = copy.deepcopy(canonical)
+    mutated["rows"][0]["parameters"]["globalization"] = "substitute-policy"
+    _write_json(plan_path, mutated)
+    with pytest.raises(evidence.AdmissionError, match="full row parameters"):
+        evidence.audit_campaign(root, repo_root=repo)
+
+    mutated = copy.deepcopy(canonical)
+    mutated["rows"][0]["scientific_scope"] = "overclaimed-scope"
+    _write_json(plan_path, mutated)
+    with pytest.raises(evidence.AdmissionError, match="full row parameters"):
+        evidence.audit_campaign(root, repo_root=repo)
+
+    mutated = copy.deepcopy(canonical)
+    mutated["rows"][-1]["censor"]["reason"] = "silently changed censor"
+    _write_json(plan_path, mutated)
+    with pytest.raises(evidence.AdmissionError, match="censor semantics"):
+        evidence.audit_campaign(root, repo_root=repo)
 
 
 def test_admission_rejects_missing_receipt_and_nonfinite_npz(tmp_path: Path) -> None:
