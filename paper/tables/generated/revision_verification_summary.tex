@@ -1,0 +1,10 @@
+\begin{tabularx}{\textwidth}{@{}>{\RaggedRight\arraybackslash}X *{3}{>{\Centering\arraybackslash}p{0.12\textwidth}} >{\RaggedRight\arraybackslash}p{0.25\textwidth}@{}}
+  \toprule
+  Verification problem & $L^2$ order & $H^1$ order & \shortstack{Residual\\or defect} & Scope \\
+  \midrule
+    $p$-Laplace manufactured & \num{1.999} & \num{0.999} & \num{8.90e-09} & smooth P1 weak problem \\
+    Ginzburg--Landau manufactured & \num{2.001} & \num{1.000} & \num{2.38e-13} & controlled positive branch \\
+    Hyperelastic affine patch & -- & -- & \num{4.58e-15} & analytic $W$, $P$, and tangent \\
+    Hyperelastic nonaffine manufactured & \num{1.887} & \num{1.006} & \num{3.11e-13} & Piola order \num{0.983} \\
+  \bottomrule
+\end{tabularx}

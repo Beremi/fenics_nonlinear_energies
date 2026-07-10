@@ -7,9 +7,9 @@
 Precond. & Nonlinear work & Newton & Krylov & Solver [s] & Energy \\
 \midrule
 GAMG & 8 Newton linearizations & 8 & 42 & \num{22.3} & \num{1.608441} \\
-PMG $L_2$ + Hypre & 8 Newton linearizations & 8 & 92 & \num{23.3} & \num{0.5252349427} \\
-PMG $L_2$ + MUMPS & 8 Newton linearizations & 8 & 17 & \num{15.3} & \num{0.3848912708} \\
-PMG $L_3$ + MUMPS & 8 Newton linearizations & 8 & 17 & \num{16.3} & \num{0.3864166034} \\
+mesh-hierarchy MG $L_2$ + Hypre & 8 Newton linearizations & 8 & 92 & \num{23.3} & \num{0.5252349427} \\
+mesh-hierarchy MG $L_2$ + MUMPS & 8 Newton linearizations & 8 & 17 & \num{15.3} & \num{0.3848912708} \\
+mesh-hierarchy MG $L_3$ + MUMPS & 8 Newton linearizations & 8 & 17 & \num{16.3} & \num{0.3864166034} \\
 \bottomrule
 \end{tabularx}
 
@@ -22,9 +22,9 @@ PMG $L_3$ + MUMPS & 8 Newton linearizations & 8 & 17 & \num{16.3} & \num{0.38641
 Precond. & Coarse & Assembly [s] & PC [s] & Linear [s] \\
 \midrule
 GAMG & -- & \num{9.11} & \num{6.41} & \num{3.91} \\
-PMG $L_2$ + Hypre & Hypre & \num{10.3} & \num{2.93} & \num{8.14} \\
-PMG $L_2$ + MUMPS & MUMPS, one redundant group & \num{9.13} & \num{2.55} & \num{1.91} \\
-PMG $L_3$ + MUMPS & MUMPS, one redundant group & \num{9.14} & \num{2.93} & \num{2.51} \\
+mesh-hierarchy MG $L_2$ + Hypre & Hypre & \num{10.3} & \num{2.93} & \num{8.14} \\
+mesh-hierarchy MG $L_2$ + MUMPS & MUMPS, one redundant group & \num{9.13} & \num{2.55} & \num{1.91} \\
+mesh-hierarchy MG $L_3$ + MUMPS & MUMPS, one redundant group & \num{9.14} & \num{2.93} & \num{2.51} \\
 \bottomrule
 \end{tabularx}
 \end{minipage}

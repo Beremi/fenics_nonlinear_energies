@@ -8,7 +8,15 @@
   },
   "case_name": "jax_fem_hyperelastic_baseline",
   "jax_fem_python": "python",
+  "jax_fem_quadrature_order": 2,
   "jax_fem_solver": "jax_fem_umfpack_serial",
+  "jax_fem_solver_options": {
+    "line_search": false,
+    "linear_solver": "umfpack",
+    "rel_tol": 1e-08,
+    "tol": 1e-06
+  },
+  "jax_fem_version": "0.0.10",
   "level": 1,
   "main_site_packages": "python-environment/site-packages",
   "maintained_solver": "repo_serial_direct",

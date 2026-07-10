@@ -1,0 +1,93 @@
+{
+  "schema_version": 2,
+  "generator": "paper/scripts/generate_revision_evidence_tables.py",
+  "generator_sha256": "6e38c147c934ebc6cba8e0b62e9f36139a2c4495425481cd42c85e0ef2e418de",
+  "evidence_class": "diagnostic",
+  "evidence_root": "artifacts/reproduction/paper_revision_2026_07_10/pilots",
+  "publication_evidence": false,
+  "status": "diagnostic_tables_not_for_submission",
+  "git": {
+    "commit": "4d2bea0abbb01e4834e6f0b72312280a4a35d7de",
+    "worktree_clean": false
+  },
+  "source_evidence_manifest": null,
+  "inputs": {
+    "plaplace": {
+      "path": "artifacts/reproduction/paper_revision_2026_07_10/pilots/EXP-VAL-001/plaplace_manufactured.json",
+      "path_within_evidence_root": "EXP-VAL-001/plaplace_manufactured.json",
+      "sha256": "edc7246e1251c9db10e509bb56bbd0d3f9f2626c3a2bbc25f7069b16b85421fb"
+    },
+    "ginzburg_landau": {
+      "path": "artifacts/reproduction/paper_revision_2026_07_10/pilots/EXP-VAL-001/ginzburg_landau_manufactured.json",
+      "path_within_evidence_root": "EXP-VAL-001/ginzburg_landau_manufactured.json",
+      "sha256": "9120b13f62fddac6025a16b74ce9f676dceac2c3f03d237704e3ac451e50ac45"
+    },
+    "hyperelastic_patch": {
+      "path": "artifacts/reproduction/paper_revision_2026_07_10/pilots/EXP-VAL-001/hyperelastic_affine_patch.json",
+      "path_within_evidence_root": "EXP-VAL-001/hyperelastic_affine_patch.json",
+      "sha256": "1d9571a656ba4faf9972800227481e35ba28e6a79aa7d95150863deb79369954"
+    },
+    "hyperelastic_nonaffine": {
+      "path": "artifacts/reproduction/paper_revision_2026_07_10/pilots/EXP-VAL-001/hyperelastic_nonaffine_quadrature_refinement_v2/result.json",
+      "path_within_evidence_root": "EXP-VAL-001/hyperelastic_nonaffine_quadrature_refinement_v2/result.json",
+      "sha256": "b4d08b18d13f44d565d05d633589452396db1ead86ed2c44055a66de75fcf519"
+    },
+    "smooth_derivatives": {
+      "path": "artifacts/reproduction/paper_revision_2026_07_10/pilots/EXP-DERIV-001/smooth_fixed_element_v1.json",
+      "path_within_evidence_root": "EXP-DERIV-001/smooth_fixed_element_v1.json",
+      "sha256": "3bb3d84549227d56d7ccdb157326667ad0eca6dd6a4ba7203c8616fa6b24ec8e"
+    },
+    "p1_derivatives": {
+      "path": "artifacts/reproduction/paper_revision_2026_07_10/pilots/EXP-DERIV-001/p1_l1_fixed_element_v2.json",
+      "path_within_evidence_root": "EXP-DERIV-001/p1_l1_fixed_element_v2.json",
+      "sha256": "e613fc7d7bc8854e08cdb0e71f8b9336bc9ab6a21c15cd8ffc3d85c8afbf753d"
+    },
+    "p2_derivatives": {
+      "path": "artifacts/reproduction/paper_revision_2026_07_10/pilots/EXP-DERIV-001/p2_l1_fixed_element_v2.json",
+      "path_within_evidence_root": "EXP-DERIV-001/p2_l1_fixed_element_v2.json",
+      "sha256": "8595167736f398f31036e54c129b2ec5fde920bee96631f03c57e98d2d1115ff"
+    },
+    "p4_derivatives": {
+      "path": "artifacts/reproduction/paper_revision_2026_07_10/pilots/EXP-DERIV-001/p4_l1_fixed_element_v2.json",
+      "path_within_evidence_root": "EXP-DERIV-001/p4_l1_fixed_element_v2.json",
+      "sha256": "ef331b340b5b76a4004e4dd43f92b29bb16d239d530237bf1236240eab9698b6"
+    },
+    "material_point": {
+      "path": "artifacts/reproduction/paper_revision_2026_07_10/pilots/EXP-MC-001/material_point_verification.json",
+      "path_within_evidence_root": "EXP-MC-001/material_point_verification.json",
+      "sha256": "8090e2e69ae520aba36c0761ef6230fe746bd6a7bb4fb887dddbd1cc00e3ffcb"
+    },
+    "distribution": {
+      "path": "artifacts/reproduction/paper_revision_2026_07_10/pilots/EXP-DIST-001/distribution_equivalence.json",
+      "path_within_evidence_root": "EXP-DIST-001/distribution_equivalence.json",
+      "sha256": "516a4c6104f46ab32fbe9a42a207f01c19e7faf043a2603cfce8f7a1477b2882"
+    },
+    "p1_quadrature": {
+      "path": "artifacts/reproduction/paper_revision_2026_07_10/pilots/EXP-DISC-001/p1_l1_fixed_state_quadrature_v2.json",
+      "path_within_evidence_root": "EXP-DISC-001/p1_l1_fixed_state_quadrature_v2.json",
+      "sha256": "962c3ec105556f7a13c0a62a3e5dbceaf630f9585f5217fcb6ccb2064d4be108"
+    },
+    "p2_quadrature": {
+      "path": "artifacts/reproduction/paper_revision_2026_07_10/pilots/EXP-DISC-001/p2_l1_fixed_state_quadrature_v2.json",
+      "path_within_evidence_root": "EXP-DISC-001/p2_l1_fixed_state_quadrature_v2.json",
+      "sha256": "59db643baba6cd29d56986efdf07ae4cce5e5cd423c5cbdc88064c17d6aad27f"
+    },
+    "p4_quadrature": {
+      "path": "artifacts/reproduction/paper_revision_2026_07_10/pilots/EXP-DISC-001/p4_l1_fixed_state_quadrature_v2.json",
+      "path_within_evidence_root": "EXP-DISC-001/p4_l1_fixed_state_quadrature_v2.json",
+      "sha256": "b737797eca4647b1b14d7482f157b07e1c18deb11de556447f47107f280d8345"
+    },
+    "route_analysis": {
+      "path": "artifacts/reproduction/paper_revision_2026_07_10/pilots/EXP-ROUTE-001/analysis_contract_v1/analysis.json",
+      "path_within_evidence_root": "EXP-ROUTE-001/analysis_contract_v1/analysis.json",
+      "sha256": "cf3a0f2d90a25ad15f3055ca144b75fd302fc358714dabb50e67d84afd786054"
+    }
+  },
+  "outputs": {
+    "revision_derivative_checks.tex": "13b8602e6937d2721be0d973930b50f7f245203d5cd3c625d022464ee71a6e0f",
+    "revision_evidence_status.tex": "99eca0dacf9ba49c381cb704327d34eaa27c59e7871c88a192aa08475f35efda",
+    "revision_quadrature_sensitivity.tex": "6dc7eb7d319d22a8107c320e34ac21bfbec0c39cde3dee4e21c539f40988b7d0",
+    "revision_verification_summary.tex": "e0770eaefea0dc5c095829ca33be62038527116361ef894f7bb526857dded340"
+  },
+  "interpretation": "The generated numbers are diagnostic and must not enter a submission bundle."
+}

@@ -1,11 +1,12 @@
 {
-  "created_utc": "2026-07-09T22:10:59Z",
-  "git_commit": "e29237cf87800b94f4beb11942795b6076622c3b",
+  "created_utc": "2026-07-10T05:36:25Z",
+  "git_commit": "4d2bea0abbb01e4834e6f0b72312280a4a35d7de",
   "id": "paper_submission_2026_07_08",
   "known_limitations": [
     "This bundle normalizes existing paper-critical provenance without rerunning MPI campaigns.",
     "Large Plasticity3D state arrays and same-mesh HDF5 files are not bundled; derived arrays reproduce the submitted figures, while full raw-state recomputation requires the original raw-results archive.",
-    "The full fixed-reference operator summary remains bundled for traceability; the manuscript table reads a table-specific release summary with paper-facing route identifiers.",
+    "The full historically named alternate-PMG summary remains bundled for traceability; the manuscript table reads a table-specific release summary that identifies the actual three-sweep, Hypre-coarse PMG policy and uses paper-facing route identifiers.",
+    "Processed separate endpoint-formula comparator summaries and a sanitized run manifest are bundled, but raw per-run outputs and the separately supplied external source are not redistributed.",
     "Target-journal metadata, repository license, and permanent archive DOI remain outside this bundle."
   ],
   "purpose": "Archive-neutral provenance bundle for manuscript-critical paper figure and table inputs.",
@@ -15,8 +16,9 @@
     "Hyperelastic JAX-FEM comparison summary and terminal states",
     "Plasticity3D lambda=1.55 local/multi-node scaling summaries",
     "Small generated-table report summaries for globalization, derivative-route, and supplemental solver evidence",
-    "Plasticity2D endpoint, resolution, and reference-continuation inputs",
-    "Plasticity3D degree/energy, recommended-scaling, reference-formula, and fixed-reference summary inputs",
+    "Plasticity2D endpoint and resolution inputs",
+    "Plasticity3D high-order reference-continuation inputs",
+    "Plasticity3D degree/energy, recommended-scaling, reference-formula, and alternate-PMG summary inputs",
     "Derived Plasticity3D surface, slice, degree-energy, and convergence inputs for submitted figures"
   ],
   "source_files": [
@@ -71,10 +73,10 @@
     },
     {
       "bundle_path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/jax_fem_hyperelastic_baseline/run_manifest.json",
-      "bundle_sha256": "fe1c5f13ffcb424e3cc4ed5789a2fd0344172a2fef232319e1f280a78865df00",
+      "bundle_sha256": "7df1fc68f7fb7bd25b67692b7c8b85cd1de85a675f65cf3b86ad1c0b0077b31c",
       "sanitization": "local paths rewritten to archive-neutral references; non-finite JSON numbers written as null",
       "source_path": "artifacts/raw_results/jax_fem_hyperelastic_baseline/run_manifest.json",
-      "source_sha256": "090bf52daa52bf2944d393990f9981a6658db45fb9e034833498f99d6ca7dc00"
+      "source_sha256": "ef2430fff46b06aadd7d1d124043adcc26207e29efbaa78df2a363b63b383fb1"
     },
     {
       "bundle_path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/jax_fem_hyperelastic_baseline/parity/repo_serial_direct.json",
@@ -238,28 +240,28 @@
       "source_sha256": "ffeb4bb923fc936a797eaa25cae3cdda312b1d6b85c37f4eb454da114b24a236"
     },
     {
-      "bundle_path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity2d_reference_continuation/np8/run_info.json",
+      "bundle_path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_reference_continuation/np8/run_info.json",
       "bundle_sha256": "bab38b16a85204a9b8fe82327d4cee3e32d1d64b9559e7927db2f09dde46d455",
       "sanitization": "local paths rewritten to archive-neutral references; non-finite JSON numbers written as null",
       "source_path": "artifacts/raw_results/source_compare/ssr_indirect_p4_l1_omega6p7e6_np8_shell_default_afterfix/data/run_info.json",
       "source_sha256": "0ddf4be33ad575e5a3bbed68009cf30204e514650741b13798d93eee01db2e46"
     },
     {
-      "bundle_path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity2d_reference_continuation/np8/progress_latest.json",
+      "bundle_path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_reference_continuation/np8/progress_latest.json",
       "bundle_sha256": "1e430cec8acbee739436b935153eab59a1116ea86ea6a16753802ca47316806d",
       "sanitization": "local paths rewritten to archive-neutral references; non-finite JSON numbers written as null",
       "source_path": "artifacts/raw_results/source_compare/ssr_indirect_p4_l1_omega6p7e6_np8_shell_default_afterfix/data/progress_latest.json",
       "source_sha256": "1219ccf4552a1d65671a3ddf1eeec0330399e9059e2a91fab6282c8acedbba76"
     },
     {
-      "bundle_path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity2d_reference_continuation/np32/run_info.json",
+      "bundle_path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_reference_continuation/np32/run_info.json",
       "bundle_sha256": "dd2a54423f181b2fe7acc6f3c772a6eb562f6d95be164cc440e6b3432906c65e",
       "sanitization": "local paths rewritten to archive-neutral references; non-finite JSON numbers written as null",
       "source_path": "artifacts/raw_results/source_compare/ssr_indirect_p4_l1_omega6p7e6_np32_shell_default_afterfix/data/run_info.json",
       "source_sha256": "6946b600d58f33feb1599f6a7ada26300592fe607969f76825c8611f46684860"
     },
     {
-      "bundle_path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity2d_reference_continuation/np32/progress_latest.json",
+      "bundle_path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_reference_continuation/np32/progress_latest.json",
       "bundle_sha256": "1a11d733261c1c64680e875e59c2138d24f995640336c22114233829ab7ef82a",
       "sanitization": "local paths rewritten to archive-neutral references; non-finite JSON numbers written as null",
       "source_path": "artifacts/raw_results/source_compare/ssr_indirect_p4_l1_omega6p7e6_np32_shell_default_afterfix/data/progress_latest.json",
@@ -414,7 +416,7 @@
     },
     {
       "bundle_path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_fixed_reference_operator/table_summary.json",
-      "bundle_sha256": "f7082f4672ade29d172b68be25278536af93be53d3b72da5113d798edc96ce7a",
+      "bundle_sha256": "5b8374a51cb118b538843a2353e85d9dc93ed61eaf03ea4c90997003549f44f3",
       "sanitization": "table-specific fields copied; implementation route identifiers rewritten to paper-facing aliases",
       "source_path": "artifacts/raw_results/source_compare/plasticity3d_l1_2_lambda1_grad1e2_scaling_all_pmg/comparison_summary.json",
       "source_sha256": "92ddac0a9525c3270fd525a981cf3a741bc9588584859ec714ce7f8f406b3c36"

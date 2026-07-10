@@ -4,243 +4,289 @@
     "ginzburg_landau_energy_levels.pdf": [
       {
         "kind": "repository_path",
-        "path": "experiments/analysis/docs_assets/data/ginzburg_landau/energy_levels.csv"
+        "path": "experiments/analysis/docs_assets/data/ginzburg_landau/energy_levels.csv",
+        "sha256": "f908cafb7a1dbdc01173dc6b8307940db8ce6dd20e6be3c472b6dd82f90fab54"
       }
     ],
     "ginzburg_landau_scaling.pdf": [
       {
         "kind": "repository_path",
-        "path": "experiments/analysis/docs_assets/data/ginzburg_landau/strong_scaling.csv"
+        "path": "experiments/analysis/docs_assets/data/ginzburg_landau/strong_scaling.csv",
+        "sha256": "77dd06c9796624e496e73ed4d89580707a2e326b491cd88fe8a3dec049eb25c4"
       }
     ],
     "ginzburg_landau_state.pdf": [
       {
         "kind": "repository_path",
-        "path": "experiments/analysis/docs_assets/data/ginzburg_landau/sample_state.npz"
+        "path": "experiments/analysis/docs_assets/data/ginzburg_landau/sample_state.npz",
+        "sha256": "a4c895eeb4990bb4918a4a5d9c23416267ff7e6b5962d15444bd1da71f8d14a8"
       }
     ],
     "hyperelasticity_cpu_pmg_scaling.pdf": [
       {
         "kind": "repository_path",
-        "path": "experiments/analysis/docs_assets/data/hyperelasticity/karolina_l5_pmg_scaling.csv"
+        "path": "experiments/analysis/docs_assets/data/hyperelasticity/karolina_l5_pmg_scaling.csv",
+        "sha256": "09432e641bf1734979c60051ab7d7f585b1e28e29fc1a81ac74a23b7b2da7b79"
       }
     ],
     "hyperelasticity_energy_levels.pdf": [
       {
         "kind": "repository_path",
-        "path": "experiments/analysis/docs_assets/data/hyperelasticity/energy_levels.csv"
+        "path": "experiments/analysis/docs_assets/data/hyperelasticity/energy_levels.csv",
+        "sha256": "39fbd994f6fef860ddf1f52935b3fd10ad1ac16aced9663e705f78bbc18ce3a6"
       }
     ],
     "hyperelasticity_scaling.pdf": [
       {
         "kind": "repository_path",
-        "path": "experiments/analysis/docs_assets/data/hyperelasticity/strong_scaling.csv"
+        "path": "experiments/analysis/docs_assets/data/hyperelasticity/strong_scaling.csv",
+        "sha256": "802c599271ca81f4ce059071e8024c2f9aaddcc37acb9cfbc1e773f91d56a0a5"
       }
     ],
     "hyperelasticity_state.pdf": [
       {
         "kind": "repository_path",
-        "path": "experiments/analysis/docs_assets/data/hyperelasticity/sample_state.npz"
+        "path": "experiments/analysis/docs_assets/data/hyperelasticity/sample_state.npz",
+        "sha256": "eb09e089f41bd5b2816dfe6934ad673d2fa32c84e651061e7d201cd5d36c70dd"
       }
     ],
     "jax_fem_hyperelastic_baseline_centerline.pdf": [
       {
         "kind": "repository_path",
-        "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/jax_fem_hyperelastic_baseline/comparison_summary.json"
+        "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/jax_fem_hyperelastic_baseline/comparison_summary.json",
+        "sha256": "6bd6d393fc6b2cb2d082e6e23c1c4a1cb266201e020a14abcd383f0a7656dd18"
       },
       {
         "kind": "repository_path",
-        "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/jax_fem_hyperelastic_baseline/parity/repo_serial_direct_state.npz"
+        "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/jax_fem_hyperelastic_baseline/parity/repo_serial_direct_state.npz",
+        "sha256": "278ad0ff5eed50f9c647481983c4a6e05edb89278335ddf6efb7244d11c058a0"
       },
       {
         "kind": "repository_path",
-        "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/jax_fem_hyperelastic_baseline/parity/jax_fem_umfpack_serial_state.npz"
+        "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/jax_fem_hyperelastic_baseline/parity/jax_fem_umfpack_serial_state.npz",
+        "sha256": "870d784f7e269337711958727175c40ffc18f3881ce649cf958062f5d4e02205"
       }
     ],
     "jax_fem_hyperelastic_baseline_energy_history.pdf": [
       {
         "kind": "repository_path",
-        "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/jax_fem_hyperelastic_baseline/comparison_summary.json"
+        "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/jax_fem_hyperelastic_baseline/comparison_summary.json",
+        "sha256": "6bd6d393fc6b2cb2d082e6e23c1c4a1cb266201e020a14abcd383f0a7656dd18"
       }
     ],
     "plaplace_energy_levels.pdf": [
       {
         "kind": "repository_path",
-        "path": "experiments/analysis/docs_assets/data/plaplace/energy_levels.csv"
+        "path": "experiments/analysis/docs_assets/data/plaplace/energy_levels.csv",
+        "sha256": "d5b688df9b72e83823faca201d477800350c3ece6585e912203a83f0cd752b08"
       }
     ],
     "plaplace_scaling.pdf": [
       {
         "kind": "repository_path",
-        "path": "experiments/analysis/docs_assets/data/plaplace/strong_scaling.csv"
+        "path": "experiments/analysis/docs_assets/data/plaplace/strong_scaling.csv",
+        "sha256": "090a211a268baa2bcb7a0ea282febe8bc8a3ab6227877103ad22db7ff9493b08"
       }
     ],
     "plaplace_state.pdf": [
       {
         "kind": "repository_path",
-        "path": "experiments/analysis/docs_assets/data/plaplace/sample_state.npz"
+        "path": "experiments/analysis/docs_assets/data/plaplace/sample_state.npz",
+        "sha256": "26ae4ad17c6d49cef96a6005f22870b25e8ec4d318b80ccdc2a9fadb36291d1b"
       }
     ],
     "plasticity2d_resolution_energy.pdf": [
       {
         "kind": "repository_path",
-        "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity2d_resolution/output.json"
+        "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity2d_resolution/output.json",
+        "sha256": "83cb6f3cf7006026ac62ea65cd0b332842720f94886e0cb2a90248473259ce75"
       },
       {
         "kind": "repository_path",
-        "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity2d_resolution/slope_stability_l6_p4/summary.json"
+        "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity2d_resolution/slope_stability_l6_p4/summary.json",
+        "sha256": "4d5b0fa56afd90e4c6dfba3289ab6cc35653aece9fd69b7f87a5115b22ee89c9"
       },
       {
         "kind": "repository_path",
-        "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity2d_resolution/slope_stability_l7_p4/summary.json"
+        "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity2d_resolution/slope_stability_l7_p4/summary.json",
+        "sha256": "e857be6cb5671c57799f4820b27e6224d9f49b64e78fda0f9538ba1c26912702"
       }
     ],
     "plasticity2d_state_pair.pdf": [
       {
         "kind": "repository_path",
-        "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity2d_resolution/state.npz"
+        "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity2d_resolution/state.npz",
+        "sha256": "3eac460f12d72f78c0fd5e8e88248ddb643b474832ff4a3721bb24fe8b2279a4"
       }
     ],
     "plasticity3d_convergence.pdf": [
       {
         "kind": "repository_path",
-        "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_degree_energy_study/plot_summary.json"
+        "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_degree_energy_study/plot_summary.json",
+        "sha256": "c8dd9354e286ca68a6afc2c9bbcec0cb309a754eaeb6ced5977fe09df7d2d567"
       }
     ],
     "plasticity3d_cpu_scaling.pdf": [
       {
         "kind": "repository_path",
-        "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_lambda155_scaling/local_solver_total_scaling.csv"
+        "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_lambda155_scaling/local_solver_total_scaling.csv",
+        "sha256": "3fad2782ad3cb18192306c2c4c500cccef34adfc0b4b2ba889661ad6a5af4ee4"
       },
       {
         "kind": "repository_path",
-        "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_lambda155_scaling/karolina_rpn16_solver_total_scaling.csv"
+        "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_lambda155_scaling/karolina_rpn16_solver_total_scaling.csv",
+        "sha256": "8e91c684007b65eb3bea4be303a10bd6e5516c601fe2055d9a4b020a59ad9a77"
       }
     ],
     "plasticity3d_degree_energy_all_dofs.pdf": [
       {
         "kind": "repository_path",
-        "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_degree_energy_study/plot_summary.json"
+        "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_degree_energy_study/plot_summary.json",
+        "sha256": "c8dd9354e286ca68a6afc2c9bbcec0cb309a754eaeb6ced5977fe09df7d2d567"
       }
     ],
     "plasticity3d_degree_energy_all_time.pdf": [
       {
         "kind": "repository_path",
-        "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_degree_energy_study/plot_summary.json"
+        "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_degree_energy_study/plot_summary.json",
+        "sha256": "c8dd9354e286ca68a6afc2c9bbcec0cb309a754eaeb6ced5977fe09df7d2d567"
       }
     ],
     "plasticity3d_degree_energy_zoom_dofs.pdf": [
       {
         "kind": "repository_path",
-        "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_degree_energy_study/plot_summary.json"
+        "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_degree_energy_study/plot_summary.json",
+        "sha256": "c8dd9354e286ca68a6afc2c9bbcec0cb309a754eaeb6ced5977fe09df7d2d567"
       }
     ],
     "plasticity3d_degree_energy_zoom_time.pdf": [
       {
         "kind": "repository_path",
-        "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_degree_energy_study/plot_summary.json"
+        "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_degree_energy_study/plot_summary.json",
+        "sha256": "c8dd9354e286ca68a6afc2c9bbcec0cb309a754eaeb6ced5977fe09df7d2d567"
       }
     ],
     "plasticity3d_derivative_ablation_bars.pdf": [
       {
         "kind": "repository_path",
-        "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_derivative_ablation/comparison_summary.json"
+        "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_derivative_ablation/comparison_summary.json",
+        "sha256": "75a50a904ff0d239150310ff7340260663b5ef61a726c06efa4dd41ce4d34796"
       }
     ],
     "plasticity3d_highest_mesh_y_slice_comparison.pdf": [
       {
         "kind": "repository_path",
-        "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_figure_derived/highest_y_slice_panels.json"
+        "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_figure_derived/highest_y_slice_panels.json",
+        "sha256": "98baa664a14b2e8d210f212d23ca71ac1e73e2f7fe3a3b40e6e14ab3a24dbc3f"
       },
       {
         "kind": "repository_path",
-        "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_figure_derived/highest_y_slice_panels.npz"
+        "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_figure_derived/highest_y_slice_panels.npz",
+        "sha256": "e50574c21ed38ccce06c2681f71f63d3495876b05f9857abfcb261b04c8f304d"
       }
     ],
     "plasticity3d_recommended_scaling.pdf": [
       {
         "kind": "repository_path",
-        "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_recommended_scaling/comparison_summary.json"
+        "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_recommended_scaling/comparison_summary.json",
+        "sha256": "44d47089fac6fb602eaf3c2453b70281fcb075e11e7111a01088fa31c6ca636f"
       },
       {
         "kind": "repository_path",
-        "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_recommended_scaling/runs/np1/output.json"
+        "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_recommended_scaling/runs/np1/output.json",
+        "sha256": "7114c3df4622a1e6fed799345aafb501449cd3cb35bd062ce8c58d5243c81055"
       },
       {
         "kind": "repository_path",
-        "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_recommended_scaling/runs/np2/output.json"
+        "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_recommended_scaling/runs/np2/output.json",
+        "sha256": "ab8a0dda00e8ef3d8f7e60e1b97e5fc72fe75b8a32eb64a07322d82c98bf3cf4"
       },
       {
         "kind": "repository_path",
-        "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_recommended_scaling/runs/np4/output.json"
+        "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_recommended_scaling/runs/np4/output.json",
+        "sha256": "d35dee78aa163d2a33caa8ff4fed5659c027b6f764e8c1aabd377103a594e2c6"
       },
       {
         "kind": "repository_path",
-        "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_recommended_scaling/runs/np8/output.json"
+        "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_recommended_scaling/runs/np8/output.json",
+        "sha256": "2d6bbeaa173100986c3357e8141583dc64a9fcdd6d6ef98df893c2eb61a60df2"
       },
       {
         "kind": "repository_path",
-        "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_recommended_scaling/runs/np16/output.json"
+        "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_recommended_scaling/runs/np16/output.json",
+        "sha256": "532e4816ee53b0c760d53bf765e41a749bc5d284e0eadcac4b0051b60057fef0"
       },
       {
         "kind": "repository_path",
-        "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_recommended_scaling/runs/np32/output.json"
+        "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_recommended_scaling/runs/np32/output.json",
+        "sha256": "9b6469ca1ac9d87cad06788c7f20f2c03b1dfa104bd3f2752b843059166035ef"
       }
     ],
     "plasticity3d_state_pair.pdf": [
       {
         "kind": "repository_path",
-        "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_figure_derived/state_pair_surface.json"
+        "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_figure_derived/state_pair_surface.json",
+        "sha256": "cf5bd2f4ed04d0f314a44d4d2a507db539ad58766e3f9febca4c568cbe82f8a5"
       },
       {
         "kind": "repository_path",
-        "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_figure_derived/state_pair_surface.npz"
+        "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_figure_derived/state_pair_surface.npz",
+        "sha256": "d29919a76a5edf277cc06ccad9edbaadbd99bb961364ddfd0287978cb7d49fb2"
       }
     ],
     "plasticity3d_validation_layer1a_boundary.pdf": [
       {
         "kind": "repository_path",
-        "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_validation/validation_manifest.json"
+        "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_validation/validation_manifest.json",
+        "sha256": "c4a3a2a1c77a602b7075943bab0e8f8334a43f1d3598a7125e94cc91db0d5557"
       },
       {
         "kind": "repository_path",
-        "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_validation/comparison_summary.json"
+        "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_validation/comparison_summary.json",
+        "sha256": "f0eaed7f0df707a394cfda9207c05a0d4b742be56eb98b8f72a40396c3dfa4a9"
       },
       {
         "kind": "repository_path",
-        "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_validation/source_branch/final_source_state.mat"
+        "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_validation/source_branch/final_source_state.mat",
+        "sha256": "6745855db7e3eb0ae4bfea1b96b507890b8fbb5731f80c882a6971e04a15976b"
       },
       {
         "kind": "repository_path",
-        "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_validation/source_branch/branch_summary.json"
+        "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_validation/source_branch/branch_summary.json",
+        "sha256": "4abbe4ccd2aa3cfda34fba2544d8f59ea14757c0088e2205ca3e2a4ce8209858"
       },
       {
         "kind": "repository_path",
-        "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_validation/maintained_branch/branch_summary.json"
+        "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_validation/maintained_branch/branch_summary.json",
+        "sha256": "061d5d103ce43c180515fa241148b407bf8fb00ae1959e04ba906fed48654b36"
       }
     ],
     "plasticity3d_validation_umax_curve.pdf": [
       {
         "kind": "repository_path",
-        "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_validation/comparison_summary.json"
+        "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_validation/comparison_summary.json",
+        "sha256": "f0eaed7f0df707a394cfda9207c05a0d4b742be56eb98b8f72a40396c3dfa4a9"
       }
     ],
     "topology_density.pdf": [
       {
         "kind": "repository_path",
-        "path": "experiments/analysis/docs_assets/data/topology/parallel_final_state.npz"
+        "path": "experiments/analysis/docs_assets/data/topology/parallel_final_state.npz",
+        "sha256": "de3c40ee231ef38120a245da6a47a62118ee960f7d2881fe81487745bd1ae1e0"
       }
     ],
     "topology_history.pdf": [
       {
         "kind": "repository_path",
-        "path": "experiments/analysis/docs_assets/data/topology/objective_history.csv"
+        "path": "experiments/analysis/docs_assets/data/topology/objective_history.csv",
+        "sha256": "45233994e173bdde71f5f9adbab356891eb0efc136c36b21a6834bf1962ff952"
       }
     ],
     "topology_scaling.pdf": [
       {
         "kind": "repository_path",
-        "path": "experiments/analysis/docs_assets/data/topology/strong_scaling.csv"
+        "path": "experiments/analysis/docs_assets/data/topology/strong_scaling.csv",
+        "sha256": "a8b055b1a846c2c2e5e91f58cafc36f60c8d95e41f0f9ff92a28227ff21b307f"
       }
     ]
   },
@@ -250,7 +296,8 @@
       "data_inputs": [
         {
           "kind": "repository_path",
-          "path": "experiments/analysis/docs_assets/data/ginzburg_landau/energy_levels.csv"
+          "path": "experiments/analysis/docs_assets/data/ginzburg_landau/energy_levels.csv",
+          "sha256": "f908cafb7a1dbdc01173dc6b8307940db8ce6dd20e6be3c472b6dd82f90fab54"
         }
       ],
       "generator": {
@@ -264,7 +311,8 @@
       "data_inputs": [
         {
           "kind": "repository_path",
-          "path": "experiments/analysis/docs_assets/data/ginzburg_landau/strong_scaling.csv"
+          "path": "experiments/analysis/docs_assets/data/ginzburg_landau/strong_scaling.csv",
+          "sha256": "77dd06c9796624e496e73ed4d89580707a2e326b491cd88fe8a3dec049eb25c4"
         }
       ],
       "generator": {
@@ -278,7 +326,8 @@
       "data_inputs": [
         {
           "kind": "repository_path",
-          "path": "experiments/analysis/docs_assets/data/ginzburg_landau/sample_state.npz"
+          "path": "experiments/analysis/docs_assets/data/ginzburg_landau/sample_state.npz",
+          "sha256": "a4c895eeb4990bb4918a4a5d9c23416267ff7e6b5962d15444bd1da71f8d14a8"
         }
       ],
       "generator": {
@@ -292,7 +341,8 @@
       "data_inputs": [
         {
           "kind": "repository_path",
-          "path": "experiments/analysis/docs_assets/data/hyperelasticity/karolina_l5_pmg_scaling.csv"
+          "path": "experiments/analysis/docs_assets/data/hyperelasticity/karolina_l5_pmg_scaling.csv",
+          "sha256": "09432e641bf1734979c60051ab7d7f585b1e28e29fc1a81ac74a23b7b2da7b79"
         }
       ],
       "generator": {
@@ -306,7 +356,8 @@
       "data_inputs": [
         {
           "kind": "repository_path",
-          "path": "experiments/analysis/docs_assets/data/hyperelasticity/energy_levels.csv"
+          "path": "experiments/analysis/docs_assets/data/hyperelasticity/energy_levels.csv",
+          "sha256": "39fbd994f6fef860ddf1f52935b3fd10ad1ac16aced9663e705f78bbc18ce3a6"
         }
       ],
       "generator": {
@@ -320,7 +371,8 @@
       "data_inputs": [
         {
           "kind": "repository_path",
-          "path": "experiments/analysis/docs_assets/data/hyperelasticity/strong_scaling.csv"
+          "path": "experiments/analysis/docs_assets/data/hyperelasticity/strong_scaling.csv",
+          "sha256": "802c599271ca81f4ce059071e8024c2f9aaddcc37acb9cfbc1e773f91d56a0a5"
         }
       ],
       "generator": {
@@ -334,7 +386,8 @@
       "data_inputs": [
         {
           "kind": "repository_path",
-          "path": "experiments/analysis/docs_assets/data/hyperelasticity/sample_state.npz"
+          "path": "experiments/analysis/docs_assets/data/hyperelasticity/sample_state.npz",
+          "sha256": "eb09e089f41bd5b2816dfe6934ad673d2fa32c84e651061e7d201cd5d36c70dd"
         }
       ],
       "generator": {
@@ -348,15 +401,18 @@
       "data_inputs": [
         {
           "kind": "repository_path",
-          "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/jax_fem_hyperelastic_baseline/comparison_summary.json"
+          "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/jax_fem_hyperelastic_baseline/comparison_summary.json",
+          "sha256": "6bd6d393fc6b2cb2d082e6e23c1c4a1cb266201e020a14abcd383f0a7656dd18"
         },
         {
           "kind": "repository_path",
-          "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/jax_fem_hyperelastic_baseline/parity/repo_serial_direct_state.npz"
+          "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/jax_fem_hyperelastic_baseline/parity/repo_serial_direct_state.npz",
+          "sha256": "278ad0ff5eed50f9c647481983c4a6e05edb89278335ddf6efb7244d11c058a0"
         },
         {
           "kind": "repository_path",
-          "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/jax_fem_hyperelastic_baseline/parity/jax_fem_umfpack_serial_state.npz"
+          "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/jax_fem_hyperelastic_baseline/parity/jax_fem_umfpack_serial_state.npz",
+          "sha256": "870d784f7e269337711958727175c40ffc18f3881ce649cf958062f5d4e02205"
         }
       ],
       "generator": {
@@ -370,7 +426,8 @@
       "data_inputs": [
         {
           "kind": "repository_path",
-          "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/jax_fem_hyperelastic_baseline/comparison_summary.json"
+          "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/jax_fem_hyperelastic_baseline/comparison_summary.json",
+          "sha256": "6bd6d393fc6b2cb2d082e6e23c1c4a1cb266201e020a14abcd383f0a7656dd18"
         }
       ],
       "generator": {
@@ -384,7 +441,8 @@
       "data_inputs": [
         {
           "kind": "repository_path",
-          "path": "experiments/analysis/docs_assets/data/plaplace/energy_levels.csv"
+          "path": "experiments/analysis/docs_assets/data/plaplace/energy_levels.csv",
+          "sha256": "d5b688df9b72e83823faca201d477800350c3ece6585e912203a83f0cd752b08"
         }
       ],
       "generator": {
@@ -398,7 +456,8 @@
       "data_inputs": [
         {
           "kind": "repository_path",
-          "path": "experiments/analysis/docs_assets/data/plaplace/strong_scaling.csv"
+          "path": "experiments/analysis/docs_assets/data/plaplace/strong_scaling.csv",
+          "sha256": "090a211a268baa2bcb7a0ea282febe8bc8a3ab6227877103ad22db7ff9493b08"
         }
       ],
       "generator": {
@@ -412,7 +471,8 @@
       "data_inputs": [
         {
           "kind": "repository_path",
-          "path": "experiments/analysis/docs_assets/data/plaplace/sample_state.npz"
+          "path": "experiments/analysis/docs_assets/data/plaplace/sample_state.npz",
+          "sha256": "26ae4ad17c6d49cef96a6005f22870b25e8ec4d318b80ccdc2a9fadb36291d1b"
         }
       ],
       "generator": {
@@ -426,15 +486,18 @@
       "data_inputs": [
         {
           "kind": "repository_path",
-          "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity2d_resolution/output.json"
+          "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity2d_resolution/output.json",
+          "sha256": "83cb6f3cf7006026ac62ea65cd0b332842720f94886e0cb2a90248473259ce75"
         },
         {
           "kind": "repository_path",
-          "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity2d_resolution/slope_stability_l6_p4/summary.json"
+          "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity2d_resolution/slope_stability_l6_p4/summary.json",
+          "sha256": "4d5b0fa56afd90e4c6dfba3289ab6cc35653aece9fd69b7f87a5115b22ee89c9"
         },
         {
           "kind": "repository_path",
-          "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity2d_resolution/slope_stability_l7_p4/summary.json"
+          "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity2d_resolution/slope_stability_l7_p4/summary.json",
+          "sha256": "e857be6cb5671c57799f4820b27e6224d9f49b64e78fda0f9538ba1c26912702"
         }
       ],
       "generator": {
@@ -448,7 +511,8 @@
       "data_inputs": [
         {
           "kind": "repository_path",
-          "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity2d_resolution/state.npz"
+          "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity2d_resolution/state.npz",
+          "sha256": "3eac460f12d72f78c0fd5e8e88248ddb643b474832ff4a3721bb24fe8b2279a4"
         }
       ],
       "generator": {
@@ -463,7 +527,8 @@
       "data_inputs": [
         {
           "kind": "repository_path",
-          "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_degree_energy_study/plot_summary.json"
+          "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_degree_energy_study/plot_summary.json",
+          "sha256": "c8dd9354e286ca68a6afc2c9bbcec0cb309a754eaeb6ced5977fe09df7d2d567"
         }
       ],
       "generator": {
@@ -477,11 +542,13 @@
       "data_inputs": [
         {
           "kind": "repository_path",
-          "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_lambda155_scaling/local_solver_total_scaling.csv"
+          "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_lambda155_scaling/local_solver_total_scaling.csv",
+          "sha256": "3fad2782ad3cb18192306c2c4c500cccef34adfc0b4b2ba889661ad6a5af4ee4"
         },
         {
           "kind": "repository_path",
-          "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_lambda155_scaling/karolina_rpn16_solver_total_scaling.csv"
+          "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_lambda155_scaling/karolina_rpn16_solver_total_scaling.csv",
+          "sha256": "8e91c684007b65eb3bea4be303a10bd6e5516c601fe2055d9a4b020a59ad9a77"
         }
       ],
       "generator": {
@@ -495,7 +562,8 @@
       "data_inputs": [
         {
           "kind": "repository_path",
-          "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_degree_energy_study/plot_summary.json"
+          "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_degree_energy_study/plot_summary.json",
+          "sha256": "c8dd9354e286ca68a6afc2c9bbcec0cb309a754eaeb6ced5977fe09df7d2d567"
         }
       ],
       "generator": {
@@ -509,7 +577,8 @@
       "data_inputs": [
         {
           "kind": "repository_path",
-          "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_degree_energy_study/plot_summary.json"
+          "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_degree_energy_study/plot_summary.json",
+          "sha256": "c8dd9354e286ca68a6afc2c9bbcec0cb309a754eaeb6ced5977fe09df7d2d567"
         }
       ],
       "generator": {
@@ -523,7 +592,8 @@
       "data_inputs": [
         {
           "kind": "repository_path",
-          "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_degree_energy_study/plot_summary.json"
+          "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_degree_energy_study/plot_summary.json",
+          "sha256": "c8dd9354e286ca68a6afc2c9bbcec0cb309a754eaeb6ced5977fe09df7d2d567"
         }
       ],
       "generator": {
@@ -537,7 +607,8 @@
       "data_inputs": [
         {
           "kind": "repository_path",
-          "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_degree_energy_study/plot_summary.json"
+          "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_degree_energy_study/plot_summary.json",
+          "sha256": "c8dd9354e286ca68a6afc2c9bbcec0cb309a754eaeb6ced5977fe09df7d2d567"
         }
       ],
       "generator": {
@@ -551,7 +622,8 @@
       "data_inputs": [
         {
           "kind": "repository_path",
-          "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_derivative_ablation/comparison_summary.json"
+          "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_derivative_ablation/comparison_summary.json",
+          "sha256": "75a50a904ff0d239150310ff7340260663b5ef61a726c06efa4dd41ce4d34796"
         }
       ],
       "generator": {
@@ -565,11 +637,13 @@
       "data_inputs": [
         {
           "kind": "repository_path",
-          "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_figure_derived/highest_y_slice_panels.json"
+          "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_figure_derived/highest_y_slice_panels.json",
+          "sha256": "98baa664a14b2e8d210f212d23ca71ac1e73e2f7fe3a3b40e6e14ab3a24dbc3f"
         },
         {
           "kind": "repository_path",
-          "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_figure_derived/highest_y_slice_panels.npz"
+          "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_figure_derived/highest_y_slice_panels.npz",
+          "sha256": "e50574c21ed38ccce06c2681f71f63d3495876b05f9857abfcb261b04c8f304d"
         }
       ],
       "generator": {
@@ -584,31 +658,38 @@
       "data_inputs": [
         {
           "kind": "repository_path",
-          "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_recommended_scaling/comparison_summary.json"
+          "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_recommended_scaling/comparison_summary.json",
+          "sha256": "44d47089fac6fb602eaf3c2453b70281fcb075e11e7111a01088fa31c6ca636f"
         },
         {
           "kind": "repository_path",
-          "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_recommended_scaling/runs/np1/output.json"
+          "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_recommended_scaling/runs/np1/output.json",
+          "sha256": "7114c3df4622a1e6fed799345aafb501449cd3cb35bd062ce8c58d5243c81055"
         },
         {
           "kind": "repository_path",
-          "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_recommended_scaling/runs/np2/output.json"
+          "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_recommended_scaling/runs/np2/output.json",
+          "sha256": "ab8a0dda00e8ef3d8f7e60e1b97e5fc72fe75b8a32eb64a07322d82c98bf3cf4"
         },
         {
           "kind": "repository_path",
-          "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_recommended_scaling/runs/np4/output.json"
+          "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_recommended_scaling/runs/np4/output.json",
+          "sha256": "d35dee78aa163d2a33caa8ff4fed5659c027b6f764e8c1aabd377103a594e2c6"
         },
         {
           "kind": "repository_path",
-          "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_recommended_scaling/runs/np8/output.json"
+          "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_recommended_scaling/runs/np8/output.json",
+          "sha256": "2d6bbeaa173100986c3357e8141583dc64a9fcdd6d6ef98df893c2eb61a60df2"
         },
         {
           "kind": "repository_path",
-          "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_recommended_scaling/runs/np16/output.json"
+          "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_recommended_scaling/runs/np16/output.json",
+          "sha256": "532e4816ee53b0c760d53bf765e41a749bc5d284e0eadcac4b0051b60057fef0"
         },
         {
           "kind": "repository_path",
-          "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_recommended_scaling/runs/np32/output.json"
+          "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_recommended_scaling/runs/np32/output.json",
+          "sha256": "9b6469ca1ac9d87cad06788c7f20f2c03b1dfa104bd3f2752b843059166035ef"
         }
       ],
       "generator": {
@@ -623,11 +704,13 @@
       "data_inputs": [
         {
           "kind": "repository_path",
-          "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_figure_derived/state_pair_surface.json"
+          "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_figure_derived/state_pair_surface.json",
+          "sha256": "cf5bd2f4ed04d0f314a44d4d2a507db539ad58766e3f9febca4c568cbe82f8a5"
         },
         {
           "kind": "repository_path",
-          "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_figure_derived/state_pair_surface.npz"
+          "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_figure_derived/state_pair_surface.npz",
+          "sha256": "d29919a76a5edf277cc06ccad9edbaadbd99bb961364ddfd0287978cb7d49fb2"
         }
       ],
       "generator": {
@@ -642,23 +725,28 @@
       "data_inputs": [
         {
           "kind": "repository_path",
-          "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_validation/validation_manifest.json"
+          "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_validation/validation_manifest.json",
+          "sha256": "c4a3a2a1c77a602b7075943bab0e8f8334a43f1d3598a7125e94cc91db0d5557"
         },
         {
           "kind": "repository_path",
-          "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_validation/comparison_summary.json"
+          "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_validation/comparison_summary.json",
+          "sha256": "f0eaed7f0df707a394cfda9207c05a0d4b742be56eb98b8f72a40396c3dfa4a9"
         },
         {
           "kind": "repository_path",
-          "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_validation/source_branch/final_source_state.mat"
+          "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_validation/source_branch/final_source_state.mat",
+          "sha256": "6745855db7e3eb0ae4bfea1b96b507890b8fbb5731f80c882a6971e04a15976b"
         },
         {
           "kind": "repository_path",
-          "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_validation/source_branch/branch_summary.json"
+          "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_validation/source_branch/branch_summary.json",
+          "sha256": "4abbe4ccd2aa3cfda34fba2544d8f59ea14757c0088e2205ca3e2a4ce8209858"
         },
         {
           "kind": "repository_path",
-          "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_validation/maintained_branch/branch_summary.json"
+          "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_validation/maintained_branch/branch_summary.json",
+          "sha256": "061d5d103ce43c180515fa241148b407bf8fb00ae1959e04ba906fed48654b36"
         }
       ],
       "generator": {
@@ -672,7 +760,8 @@
       "data_inputs": [
         {
           "kind": "repository_path",
-          "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_validation/comparison_summary.json"
+          "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_validation/comparison_summary.json",
+          "sha256": "f0eaed7f0df707a394cfda9207c05a0d4b742be56eb98b8f72a40396c3dfa4a9"
         }
       ],
       "generator": {
@@ -686,7 +775,8 @@
       "data_inputs": [
         {
           "kind": "repository_path",
-          "path": "experiments/analysis/docs_assets/data/topology/parallel_final_state.npz"
+          "path": "experiments/analysis/docs_assets/data/topology/parallel_final_state.npz",
+          "sha256": "de3c40ee231ef38120a245da6a47a62118ee960f7d2881fe81487745bd1ae1e0"
         }
       ],
       "generator": {
@@ -700,7 +790,8 @@
       "data_inputs": [
         {
           "kind": "repository_path",
-          "path": "experiments/analysis/docs_assets/data/topology/objective_history.csv"
+          "path": "experiments/analysis/docs_assets/data/topology/objective_history.csv",
+          "sha256": "45233994e173bdde71f5f9adbab356891eb0efc136c36b21a6834bf1962ff952"
         }
       ],
       "generator": {
@@ -714,7 +805,8 @@
       "data_inputs": [
         {
           "kind": "repository_path",
-          "path": "experiments/analysis/docs_assets/data/topology/strong_scaling.csv"
+          "path": "experiments/analysis/docs_assets/data/topology/strong_scaling.csv",
+          "sha256": "a8b055b1a846c2c2e5e91f58cafc36f60c8d95e41f0f9ff92a28227ff21b307f"
         }
       ],
       "generator": {

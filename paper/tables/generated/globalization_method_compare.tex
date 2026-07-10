@@ -6,9 +6,9 @@
 \toprule
 Benchmark & Method & Ranks & Outcome & \shortstack{Completed/requested\\steps} & Reported time [s] & Grad/target & Energy \\
 \midrule
-$p$-Laplace $L_{10}$ & Newton + LS & 32 & completed & 1/1 & \num{6.95} & -- & \num{-0.2517224496} \\
-$p$-Laplace $L_{10}$ & Steihaug TR & 32 & completed & 1/1 & \num{11.7} & -- & \num{-0.2517227312} \\
-$p$-Laplace $L_{10}$ & Hybrid TR+LS & 32 & completed & 1/1 & \num{12} & -- & \num{-0.2517227312} \\
+\shortstack[l]{$p$-Laplace $L_{10}$\\unit load} & Newton + LS & 32 & completed & 1/1 & \num{6.95} & -- & \num{-0.2517224496} \\
+\shortstack[l]{$p$-Laplace $L_{10}$\\unit load} & Steihaug TR & 32 & completed & 1/1 & \num{11.7} & -- & \num{-0.2517227312} \\
+\shortstack[l]{$p$-Laplace $L_{10}$\\unit load} & Hybrid TR+LS & 32 & completed & 1/1 & \num{12} & -- & \num{-0.2517227312} \\
 \shortstack[l]{Ginzburg--Landau\\$L_{10}$} & Newton + LS & 16 & timeout & 0/1 & \num{121} & -- & -- \\
 \shortstack[l]{Ginzburg--Landau\\$L_{10}$} & Steihaug TR & 16 & completed & 1/1 & \num{14.3} & -- & \num{0.3456246783} \\
 \shortstack[l]{Ginzburg--Landau\\$L_{10}$} & Hybrid TR+LS & 16 & completed & 1/1 & \num{14.3} & -- & \num{0.3456246783} \\
@@ -29,10 +29,10 @@ Hyperelasticity $L_4$ & Hybrid TR+LS & 32 & completed & 8/8 & \num{149} & -- & \
 \toprule
 Benchmark & Method & Ranks & Newton & Krylov & LS evals & TR rejects \\
 \midrule
-$p$-Laplace $L_{10}$ & Newton + LS & 32 & 15 & 32 & 15 & 0 \\
-$p$-Laplace $L_{10}$ & Steihaug TR & 32 & 29 & 32 & 0 & 0 \\
-$p$-Laplace $L_{10}$ & Hybrid TR+LS & 32 & 29 & 32 & 29 & 0 \\
-\shortstack[l]{Ginzburg--Landau\\$L_{10}$} & Newton + LS & 16 & 0 & 0 & 0 & 0 \\
+\shortstack[l]{$p$-Laplace $L_{10}$\\unit load} & Newton + LS & 32 & 15 & 32 & 15 & 0 \\
+\shortstack[l]{$p$-Laplace $L_{10}$\\unit load} & Steihaug TR & 32 & 29 & 32 & 0 & 0 \\
+\shortstack[l]{$p$-Laplace $L_{10}$\\unit load} & Hybrid TR+LS & 32 & 29 & 32 & 29 & 0 \\
+\shortstack[l]{Ginzburg--Landau\\$L_{10}$} & Newton + LS & 16 & -- & -- & -- & -- \\
 \shortstack[l]{Ginzburg--Landau\\$L_{10}$} & Steihaug TR & 16 & 19 & 25 & 0 & 0 \\
 \shortstack[l]{Ginzburg--Landau\\$L_{10}$} & Hybrid TR+LS & 16 & 19 & 25 & 19 & 0 \\
 Hyperelasticity $L_4$ & Newton + LS & 32 & 420 & 6984 & 2758 & 0 \\

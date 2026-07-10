@@ -2,13 +2,13 @@
 \centering
 \textit{Timing and work}
 \par\vspace{0.2em}
-\begin{tabularx}{\textwidth}{@{}>{\hsize=1.000\hsize\linewidth=\hsize\RaggedRight\arraybackslash}X@{\hspace{0.45em}}c c c c@{}}
+\begin{tabularx}{\textwidth}{@{}>{\hsize=1.000\hsize\linewidth=\hsize\RaggedRight\arraybackslash}X@{\hspace{0.45em}}c c c c c@{}}
 \toprule
-Route & Wall time [s] & Solve time [s] & Newton iters & Krylov iters \\
+Route & Median wall [s] & Wall range [s] & Median solve [s] & Newton iters & Krylov iters \\
 \midrule
-Element AD & \num{288} & \num{255} & 8 & 376 \\
-Constitutive AD & \num{222} & \num{191} & 8 & 376 \\
-Colored recovery (AD-HVP) & \num{372} & \num{253} & 8 & 376 \\
+Element AD & \num{288} & \num{287.9}--\num{288.16} & \num{255} & 8 & 376 \\
+Constitutive AD & \num{222} & \num{221.6}--\num{221.77} & \num{191} & 8 & 376 \\
+Colored recovery (AD-HVP) & \num{372} & \num{371.52}--\num{372.74} & \num{253} & 8 & 376 \\
 \bottomrule
 \end{tabularx}
 

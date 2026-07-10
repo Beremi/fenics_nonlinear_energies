@@ -1,188 +1,224 @@
 {
+  "allow_unreferenced_tables": true,
   "generated_table_inputs": {
     "benchmark_specification_matrix.tex": [],
     "derivative_route_compare.tex": [
       {
         "kind": "repository_path",
-        "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/derivative_route_compare/full_summary.csv"
+        "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/derivative_route_compare/full_summary.csv",
+        "sha256": "b5f57522e20925a7c95de76969c65bee06e246f5f4475d5c31b6381317b834ee"
       }
     ],
     "ginzburg_landau_benchmark_summary.tex": [
       {
         "kind": "repository_path",
-        "path": "experiments/analysis/docs_assets/data/ginzburg_landau/parity_showcase.csv"
+        "path": "experiments/analysis/docs_assets/data/ginzburg_landau/parity_showcase.csv",
+        "sha256": "71a859cc198ec7686e275e80e3d2eb2c9261023c28b50ce35b2862faea8b6143"
       }
     ],
     "ginzburg_landau_globalization_fixed_budget.tex": [
       {
         "kind": "repository_path",
-        "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/supplemental_solver_evidence/full_gl_globalization.csv"
+        "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/supplemental_solver_evidence/full_gl_globalization.csv",
+        "sha256": "16bb14e60559636980474dd3bbcbeac5d1c2543ed1fbb975cc0bfb4cf5649451"
       },
       {
         "kind": "repository_path",
-        "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/supplemental_solver_evidence/gl_globalization/gl_l10_newton_linesearch_np8/run_info.json"
+        "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/supplemental_solver_evidence/gl_globalization/gl_l10_newton_linesearch_np8/run_info.json",
+        "sha256": "cbcab9a991350b3c082cea04d547270f5a54b0a12b36fa7afb515af3db7c090c"
       },
       {
         "kind": "repository_path",
-        "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/supplemental_solver_evidence/gl_globalization/gl_l10_newton_linesearch_np8/case_metadata.json"
+        "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/supplemental_solver_evidence/gl_globalization/gl_l10_newton_linesearch_np8/case_metadata.json",
+        "sha256": "f24b16a985f11c6f05ce6bdbc649cd68085f67a9a01fc25046cb3625177043aa"
       }
     ],
     "globalization_method_compare.tex": [
       {
         "kind": "repository_path",
-        "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/globalization_method_compare/full_summary.csv"
+        "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/globalization_method_compare/full_summary.csv",
+        "sha256": "e35d4afd3aba23f11dae1b4e3f14dfa91bdbaff87e09397ed930c545316dccb8"
       },
       {
         "kind": "repository_path",
-        "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/globalization_method_compare/plasticity3d_p2_l1_np32_lambda155_newton_linesearch/output.json"
+        "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/globalization_method_compare/plasticity3d_p2_l1_np32_lambda155_newton_linesearch/output.json",
+        "sha256": "f1cd71f80c1aa9960544631e8dceba426bd94a960165a2e3244259d5f0f7a474"
       },
       {
         "kind": "repository_path",
-        "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/globalization_method_compare/plasticity3d_p2_l1_np32_lambda155_steihaug_trust/output.json"
+        "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/globalization_method_compare/plasticity3d_p2_l1_np32_lambda155_steihaug_trust/output.json",
+        "sha256": "3c3a002abedd42bae9cbb1b35094b684e51f55cbaa12138589ba3181c7cbc14e"
       },
       {
         "kind": "repository_path",
-        "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/globalization_method_compare/plasticity3d_p2_l1_np32_lambda155_hybrid_trust_linesearch/output.json"
+        "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/globalization_method_compare/plasticity3d_p2_l1_np32_lambda155_hybrid_trust_linesearch/output.json",
+        "sha256": "e4f478bba164bba743d1223b9f79a51e556e77daea9a0f56f02d09e326bf8561"
       }
     ],
     "hyperelasticity_benchmark_summary.tex": [
       {
         "kind": "repository_path",
-        "path": "experiments/analysis/docs_assets/data/hyperelasticity/parity_showcase.csv"
+        "path": "experiments/analysis/docs_assets/data/hyperelasticity/parity_showcase.csv",
+        "sha256": "9a62c13bf91f62392a92db6bf4a0d53b5e76620eef2488e33820da1b65f0b004"
       }
     ],
     "hyperelasticity_cpu_pmg_scaling.tex": [
       {
         "kind": "repository_path",
-        "path": "experiments/analysis/docs_assets/data/hyperelasticity/karolina_l5_pmg_scaling.csv"
+        "path": "experiments/analysis/docs_assets/data/hyperelasticity/karolina_l5_pmg_scaling.csv",
+        "sha256": "09432e641bf1734979c60051ab7d7f585b1e28e29fc1a81ac74a23b7b2da7b79"
       }
     ],
     "hyperelasticity_distribution_memory.tex": [
       {
         "kind": "repository_path",
-        "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/supplemental_solver_evidence/full_he_distribution.csv"
+        "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/supplemental_solver_evidence/full_he_distribution.csv",
+        "sha256": "67b6918e97e21b8d83166035a53e60e9bda53f4641e6e9da37593f028164132f"
       }
     ],
     "hyperelasticity_pmg_sensitivity.tex": [
       {
         "kind": "repository_path",
-        "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/supplemental_solver_evidence/full_he_pmg.csv"
+        "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/supplemental_solver_evidence/full_he_pmg.csv",
+        "sha256": "a67ac7e699eda17a69e2e434d8216b4903c7d49a671abe1f1cf83b58094f172e"
       }
     ],
     "implementation_capability_matrix.tex": [],
     "jax_fem_hyperelastic_baseline.tex": [
       {
         "kind": "repository_path",
-        "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/jax_fem_hyperelastic_baseline/comparison_summary.json"
+        "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/jax_fem_hyperelastic_baseline/comparison_summary.json",
+        "sha256": "6bd6d393fc6b2cb2d082e6e23c1c4a1cb266201e020a14abcd383f0a7656dd18"
       }
     ],
     "numerical_protocol_summary.tex": [],
     "plaplace_benchmark_summary.tex": [
       {
         "kind": "repository_path",
-        "path": "experiments/analysis/docs_assets/data/plaplace/parity_showcase.csv"
+        "path": "experiments/analysis/docs_assets/data/plaplace/parity_showcase.csv",
+        "sha256": "21e0fbcaabd089f3819b57a594c46da9f79a711bafbe2076c8cfd3d7a2ecacd2"
       }
     ],
     "plasticity2d_benchmark_summary.tex": [
       {
         "kind": "repository_path",
-        "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity2d_resolution/output.json"
+        "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity2d_resolution/output.json",
+        "sha256": "83cb6f3cf7006026ac62ea65cd0b332842720f94886e0cb2a90248473259ce75"
       },
       {
         "kind": "repository_path",
-        "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity2d_resolution/slope_stability_l6_p4/summary.json"
+        "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity2d_resolution/slope_stability_l6_p4/summary.json",
+        "sha256": "4d5b0fa56afd90e4c6dfba3289ab6cc35653aece9fd69b7f87a5115b22ee89c9"
       },
       {
         "kind": "repository_path",
-        "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity2d_resolution/slope_stability_l7_p4/summary.json"
-      }
-    ],
-    "plasticity2d_reference_continuation.tex": [
-      {
-        "kind": "repository_path",
-        "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity2d_reference_continuation/np8/run_info.json"
-      },
-      {
-        "kind": "repository_path",
-        "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity2d_reference_continuation/np32/run_info.json"
-      },
-      {
-        "kind": "repository_path",
-        "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity2d_reference_continuation/np8/progress_latest.json"
-      },
-      {
-        "kind": "repository_path",
-        "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity2d_reference_continuation/np32/progress_latest.json"
+        "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity2d_resolution/slope_stability_l7_p4/summary.json",
+        "sha256": "e857be6cb5671c57799f4820b27e6224d9f49b64e78fda0f9538ba1c26912702"
       }
     ],
     "plasticity3d_benchmark_summary.tex": [
       {
         "kind": "repository_path",
-        "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_degree_energy_study/comparison_summary.json"
+        "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_degree_energy_study/comparison_summary.json",
+        "sha256": "668e071668d69011d3b594781a7358ad6f87745f6597ac6f14d7cf4856010e77"
       }
     ],
     "plasticity3d_constitutive_vs_reference_formula.tex": [
       {
         "kind": "repository_path",
-        "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_reference_formula/comparison_summary.json"
+        "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_reference_formula/comparison_summary.json",
+        "sha256": "49f5e0b0f9da5172ecbaf5a6c695a1096e11a984f4429de1ba55856d8f79b313"
       }
     ],
     "plasticity3d_cpu_partitioning.tex": [
       {
         "kind": "repository_path",
-        "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_lambda155_scaling/local_solver_total_scaling.csv"
+        "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_lambda155_scaling/local_solver_total_scaling.csv",
+        "sha256": "3fad2782ad3cb18192306c2c4c500cccef34adfc0b4b2ba889661ad6a5af4ee4"
       },
       {
         "kind": "repository_path",
-        "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_lambda155_scaling/karolina_rpn16_solver_total_scaling.csv"
+        "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_lambda155_scaling/karolina_rpn16_solver_total_scaling.csv",
+        "sha256": "8e91c684007b65eb3bea4be303a10bd6e5516c601fe2055d9a4b020a59ad9a77"
       },
       {
         "kind": "repository_path",
-        "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_lambda155_scaling/step_grad_convergence_summary.csv"
+        "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_lambda155_scaling/step_grad_convergence_summary.csv",
+        "sha256": "f2914b013c8ac4e3b884b19271d64dc9695ab21946415e7300ca1f7da9e128c7"
       }
     ],
     "plasticity3d_cpu_scaling.tex": [
       {
         "kind": "repository_path",
-        "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_lambda155_scaling/local_solver_total_scaling.csv"
+        "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_lambda155_scaling/local_solver_total_scaling.csv",
+        "sha256": "3fad2782ad3cb18192306c2c4c500cccef34adfc0b4b2ba889661ad6a5af4ee4"
       },
       {
         "kind": "repository_path",
-        "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_lambda155_scaling/karolina_rpn16_solver_total_scaling.csv"
+        "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_lambda155_scaling/karolina_rpn16_solver_total_scaling.csv",
+        "sha256": "8e91c684007b65eb3bea4be303a10bd6e5516c601fe2055d9a4b020a59ad9a77"
       },
       {
         "kind": "repository_path",
-        "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_lambda155_scaling/step_grad_convergence_summary.csv"
+        "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_lambda155_scaling/step_grad_convergence_summary.csv",
+        "sha256": "f2914b013c8ac4e3b884b19271d64dc9695ab21946415e7300ca1f7da9e128c7"
       }
     ],
     "plasticity3d_derivative_ablation.tex": [
       {
         "kind": "repository_path",
-        "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_derivative_ablation/comparison_summary.json"
+        "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_derivative_ablation/comparison_summary.json",
+        "sha256": "75a50a904ff0d239150310ff7340260663b5ef61a726c06efa4dd41ce4d34796"
       }
     ],
     "plasticity3d_derivative_degree.tex": [
       {
         "kind": "repository_path",
-        "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/supplemental_solver_evidence/full_p3d_derivative_degree.csv"
+        "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/supplemental_solver_evidence/full_p3d_derivative_degree.csv",
+        "sha256": "f03b6be8659d64a6c24a5ffbdccc07678a7da07902bdf8808dfe8223a62a06f2"
       }
     ],
     "plasticity3d_fixed_reference_operator_pmg.tex": [
       {
         "kind": "repository_path",
-        "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_fixed_reference_operator/table_summary.json"
+        "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_fixed_reference_operator/table_summary.json",
+        "sha256": "5b8374a51cb118b538843a2353e85d9dc93ed61eaf03ea4c90997003549f44f3"
       }
     ],
     "plasticity3d_recommended_scaling.tex": [
       {
         "kind": "repository_path",
-        "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_recommended_scaling/comparison_summary.json"
+        "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_recommended_scaling/comparison_summary.json",
+        "sha256": "44d47089fac6fb602eaf3c2453b70281fcb075e11e7111a01088fa31c6ca636f"
+      }
+    ],
+    "plasticity3d_reference_continuation.tex": [
+      {
+        "kind": "repository_path",
+        "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_reference_continuation/np8/run_info.json",
+        "sha256": "bab38b16a85204a9b8fe82327d4cee3e32d1d64b9559e7927db2f09dde46d455"
+      },
+      {
+        "kind": "repository_path",
+        "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_reference_continuation/np32/run_info.json",
+        "sha256": "dd2a54423f181b2fe7acc6f3c772a6eb562f6d95be164cc440e6b3432906c65e"
+      },
+      {
+        "kind": "repository_path",
+        "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_reference_continuation/np8/progress_latest.json",
+        "sha256": "1e430cec8acbee739436b935153eab59a1116ea86ea6a16753802ca47316806d"
+      },
+      {
+        "kind": "repository_path",
+        "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_reference_continuation/np32/progress_latest.json",
+        "sha256": "1a11d733261c1c64680e875e59c2138d24f995640336c22114233829ab7ef82a"
       }
     ],
     "plasticity3d_validation_summary.tex": [
       {
         "kind": "repository_path",
-        "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_validation/comparison_summary.json"
+        "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_validation/comparison_summary.json",
+        "sha256": "f0eaed7f0df707a394cfda9207c05a0d4b742be56eb98b8f72a40396c3dfa4a9"
       }
     ],
     "reference_availability.tex": [],
@@ -191,19 +227,22 @@
     "topology_benchmark_summary.tex": [
       {
         "kind": "repository_path",
-        "path": "experiments/analysis/docs_assets/data/topology/resolution_objectives.csv"
+        "path": "experiments/analysis/docs_assets/data/topology/resolution_objectives.csv",
+        "sha256": "1f2173b4ff5f28c6ab345da782246c1530febc1983b5850d9d512c3b06200535"
       }
     ],
     "topology_rank_consistency.tex": [
       {
         "kind": "repository_path",
-        "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/supplemental_solver_evidence/full_topology_consistency.csv"
+        "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/supplemental_solver_evidence/full_topology_consistency.csv",
+        "sha256": "be0c8082c1d82da4e3ec7e010e01a03cfdbc222630261781040201faf29e0d21"
       }
     ],
     "topology_summary.tex": [
       {
         "kind": "repository_path",
-        "path": "experiments/analysis/docs_assets/data/topology/strong_scaling.csv"
+        "path": "experiments/analysis/docs_assets/data/topology/strong_scaling.csv",
+        "sha256": "a8b055b1a846c2c2e5e91f58cafc36f60c8d95e41f0f9ff92a28227ff21b307f"
       }
     ]
   },
@@ -222,7 +261,8 @@
       "data_inputs": [
         {
           "kind": "repository_path",
-          "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/derivative_route_compare/full_summary.csv"
+          "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/derivative_route_compare/full_summary.csv",
+          "sha256": "b5f57522e20925a7c95de76969c65bee06e246f5f4475d5c31b6381317b834ee"
         }
       ],
       "generator": {
@@ -236,7 +276,8 @@
       "data_inputs": [
         {
           "kind": "repository_path",
-          "path": "experiments/analysis/docs_assets/data/ginzburg_landau/parity_showcase.csv"
+          "path": "experiments/analysis/docs_assets/data/ginzburg_landau/parity_showcase.csv",
+          "sha256": "71a859cc198ec7686e275e80e3d2eb2c9261023c28b50ce35b2862faea8b6143"
         }
       ],
       "generator": {
@@ -250,15 +291,18 @@
       "data_inputs": [
         {
           "kind": "repository_path",
-          "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/supplemental_solver_evidence/full_gl_globalization.csv"
+          "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/supplemental_solver_evidence/full_gl_globalization.csv",
+          "sha256": "16bb14e60559636980474dd3bbcbeac5d1c2543ed1fbb975cc0bfb4cf5649451"
         },
         {
           "kind": "repository_path",
-          "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/supplemental_solver_evidence/gl_globalization/gl_l10_newton_linesearch_np8/run_info.json"
+          "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/supplemental_solver_evidence/gl_globalization/gl_l10_newton_linesearch_np8/run_info.json",
+          "sha256": "cbcab9a991350b3c082cea04d547270f5a54b0a12b36fa7afb515af3db7c090c"
         },
         {
           "kind": "repository_path",
-          "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/supplemental_solver_evidence/gl_globalization/gl_l10_newton_linesearch_np8/case_metadata.json"
+          "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/supplemental_solver_evidence/gl_globalization/gl_l10_newton_linesearch_np8/case_metadata.json",
+          "sha256": "f24b16a985f11c6f05ce6bdbc649cd68085f67a9a01fc25046cb3625177043aa"
         }
       ],
       "generator": {
@@ -272,19 +316,23 @@
       "data_inputs": [
         {
           "kind": "repository_path",
-          "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/globalization_method_compare/full_summary.csv"
+          "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/globalization_method_compare/full_summary.csv",
+          "sha256": "e35d4afd3aba23f11dae1b4e3f14dfa91bdbaff87e09397ed930c545316dccb8"
         },
         {
           "kind": "repository_path",
-          "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/globalization_method_compare/plasticity3d_p2_l1_np32_lambda155_newton_linesearch/output.json"
+          "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/globalization_method_compare/plasticity3d_p2_l1_np32_lambda155_newton_linesearch/output.json",
+          "sha256": "f1cd71f80c1aa9960544631e8dceba426bd94a960165a2e3244259d5f0f7a474"
         },
         {
           "kind": "repository_path",
-          "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/globalization_method_compare/plasticity3d_p2_l1_np32_lambda155_steihaug_trust/output.json"
+          "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/globalization_method_compare/plasticity3d_p2_l1_np32_lambda155_steihaug_trust/output.json",
+          "sha256": "3c3a002abedd42bae9cbb1b35094b684e51f55cbaa12138589ba3181c7cbc14e"
         },
         {
           "kind": "repository_path",
-          "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/globalization_method_compare/plasticity3d_p2_l1_np32_lambda155_hybrid_trust_linesearch/output.json"
+          "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/globalization_method_compare/plasticity3d_p2_l1_np32_lambda155_hybrid_trust_linesearch/output.json",
+          "sha256": "e4f478bba164bba743d1223b9f79a51e556e77daea9a0f56f02d09e326bf8561"
         }
       ],
       "generator": {
@@ -298,7 +346,8 @@
       "data_inputs": [
         {
           "kind": "repository_path",
-          "path": "experiments/analysis/docs_assets/data/hyperelasticity/parity_showcase.csv"
+          "path": "experiments/analysis/docs_assets/data/hyperelasticity/parity_showcase.csv",
+          "sha256": "9a62c13bf91f62392a92db6bf4a0d53b5e76620eef2488e33820da1b65f0b004"
         }
       ],
       "generator": {
@@ -312,7 +361,8 @@
       "data_inputs": [
         {
           "kind": "repository_path",
-          "path": "experiments/analysis/docs_assets/data/hyperelasticity/karolina_l5_pmg_scaling.csv"
+          "path": "experiments/analysis/docs_assets/data/hyperelasticity/karolina_l5_pmg_scaling.csv",
+          "sha256": "09432e641bf1734979c60051ab7d7f585b1e28e29fc1a81ac74a23b7b2da7b79"
         }
       ],
       "generator": {
@@ -326,7 +376,8 @@
       "data_inputs": [
         {
           "kind": "repository_path",
-          "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/supplemental_solver_evidence/full_he_distribution.csv"
+          "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/supplemental_solver_evidence/full_he_distribution.csv",
+          "sha256": "67b6918e97e21b8d83166035a53e60e9bda53f4641e6e9da37593f028164132f"
         }
       ],
       "generator": {
@@ -340,7 +391,8 @@
       "data_inputs": [
         {
           "kind": "repository_path",
-          "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/supplemental_solver_evidence/full_he_pmg.csv"
+          "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/supplemental_solver_evidence/full_he_pmg.csv",
+          "sha256": "a67ac7e699eda17a69e2e434d8216b4903c7d49a671abe1f1cf83b58094f172e"
         }
       ],
       "generator": {
@@ -363,7 +415,8 @@
       "data_inputs": [
         {
           "kind": "repository_path",
-          "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/jax_fem_hyperelastic_baseline/comparison_summary.json"
+          "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/jax_fem_hyperelastic_baseline/comparison_summary.json",
+          "sha256": "6bd6d393fc6b2cb2d082e6e23c1c4a1cb266201e020a14abcd383f0a7656dd18"
         }
       ],
       "generator": {
@@ -386,7 +439,8 @@
       "data_inputs": [
         {
           "kind": "repository_path",
-          "path": "experiments/analysis/docs_assets/data/plaplace/parity_showcase.csv"
+          "path": "experiments/analysis/docs_assets/data/plaplace/parity_showcase.csv",
+          "sha256": "21e0fbcaabd089f3819b57a594c46da9f79a711bafbe2076c8cfd3d7a2ecacd2"
         }
       ],
       "generator": {
@@ -400,15 +454,18 @@
       "data_inputs": [
         {
           "kind": "repository_path",
-          "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity2d_resolution/output.json"
+          "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity2d_resolution/output.json",
+          "sha256": "83cb6f3cf7006026ac62ea65cd0b332842720f94886e0cb2a90248473259ce75"
         },
         {
           "kind": "repository_path",
-          "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity2d_resolution/slope_stability_l6_p4/summary.json"
+          "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity2d_resolution/slope_stability_l6_p4/summary.json",
+          "sha256": "4d5b0fa56afd90e4c6dfba3289ab6cc35653aece9fd69b7f87a5115b22ee89c9"
         },
         {
           "kind": "repository_path",
-          "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity2d_resolution/slope_stability_l7_p4/summary.json"
+          "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity2d_resolution/slope_stability_l7_p4/summary.json",
+          "sha256": "e857be6cb5671c57799f4820b27e6224d9f49b64e78fda0f9538ba1c26912702"
         }
       ],
       "generator": {
@@ -417,38 +474,13 @@
         "path": "paper/scripts/generate_paper_tables.py"
       }
     },
-    "plasticity2d_reference_continuation.tex": {
-      "archive_status": "archive_neutral",
-      "data_inputs": [
-        {
-          "kind": "repository_path",
-          "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity2d_reference_continuation/np8/run_info.json"
-        },
-        {
-          "kind": "repository_path",
-          "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity2d_reference_continuation/np32/run_info.json"
-        },
-        {
-          "kind": "repository_path",
-          "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity2d_reference_continuation/np8/progress_latest.json"
-        },
-        {
-          "kind": "repository_path",
-          "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity2d_reference_continuation/np32/progress_latest.json"
-        }
-      ],
-      "generator": {
-        "function": "main",
-        "output": "plasticity2d_reference_continuation.tex",
-        "path": "paper/scripts/generate_paper_tables.py"
-      }
-    },
     "plasticity3d_benchmark_summary.tex": {
       "archive_status": "archive_neutral",
       "data_inputs": [
         {
           "kind": "repository_path",
-          "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_degree_energy_study/comparison_summary.json"
+          "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_degree_energy_study/comparison_summary.json",
+          "sha256": "668e071668d69011d3b594781a7358ad6f87745f6597ac6f14d7cf4856010e77"
         }
       ],
       "generator": {
@@ -462,7 +494,8 @@
       "data_inputs": [
         {
           "kind": "repository_path",
-          "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_reference_formula/comparison_summary.json"
+          "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_reference_formula/comparison_summary.json",
+          "sha256": "49f5e0b0f9da5172ecbaf5a6c695a1096e11a984f4429de1ba55856d8f79b313"
         }
       ],
       "generator": {
@@ -476,15 +509,18 @@
       "data_inputs": [
         {
           "kind": "repository_path",
-          "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_lambda155_scaling/local_solver_total_scaling.csv"
+          "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_lambda155_scaling/local_solver_total_scaling.csv",
+          "sha256": "3fad2782ad3cb18192306c2c4c500cccef34adfc0b4b2ba889661ad6a5af4ee4"
         },
         {
           "kind": "repository_path",
-          "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_lambda155_scaling/karolina_rpn16_solver_total_scaling.csv"
+          "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_lambda155_scaling/karolina_rpn16_solver_total_scaling.csv",
+          "sha256": "8e91c684007b65eb3bea4be303a10bd6e5516c601fe2055d9a4b020a59ad9a77"
         },
         {
           "kind": "repository_path",
-          "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_lambda155_scaling/step_grad_convergence_summary.csv"
+          "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_lambda155_scaling/step_grad_convergence_summary.csv",
+          "sha256": "f2914b013c8ac4e3b884b19271d64dc9695ab21946415e7300ca1f7da9e128c7"
         }
       ],
       "generator": {
@@ -498,15 +534,18 @@
       "data_inputs": [
         {
           "kind": "repository_path",
-          "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_lambda155_scaling/local_solver_total_scaling.csv"
+          "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_lambda155_scaling/local_solver_total_scaling.csv",
+          "sha256": "3fad2782ad3cb18192306c2c4c500cccef34adfc0b4b2ba889661ad6a5af4ee4"
         },
         {
           "kind": "repository_path",
-          "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_lambda155_scaling/karolina_rpn16_solver_total_scaling.csv"
+          "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_lambda155_scaling/karolina_rpn16_solver_total_scaling.csv",
+          "sha256": "8e91c684007b65eb3bea4be303a10bd6e5516c601fe2055d9a4b020a59ad9a77"
         },
         {
           "kind": "repository_path",
-          "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_lambda155_scaling/step_grad_convergence_summary.csv"
+          "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_lambda155_scaling/step_grad_convergence_summary.csv",
+          "sha256": "f2914b013c8ac4e3b884b19271d64dc9695ab21946415e7300ca1f7da9e128c7"
         }
       ],
       "generator": {
@@ -520,7 +559,8 @@
       "data_inputs": [
         {
           "kind": "repository_path",
-          "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_derivative_ablation/comparison_summary.json"
+          "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_derivative_ablation/comparison_summary.json",
+          "sha256": "75a50a904ff0d239150310ff7340260663b5ef61a726c06efa4dd41ce4d34796"
         }
       ],
       "generator": {
@@ -534,7 +574,8 @@
       "data_inputs": [
         {
           "kind": "repository_path",
-          "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/supplemental_solver_evidence/full_p3d_derivative_degree.csv"
+          "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/supplemental_solver_evidence/full_p3d_derivative_degree.csv",
+          "sha256": "f03b6be8659d64a6c24a5ffbdccc07678a7da07902bdf8808dfe8223a62a06f2"
         }
       ],
       "generator": {
@@ -548,7 +589,8 @@
       "data_inputs": [
         {
           "kind": "repository_path",
-          "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_fixed_reference_operator/table_summary.json"
+          "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_fixed_reference_operator/table_summary.json",
+          "sha256": "5b8374a51cb118b538843a2353e85d9dc93ed61eaf03ea4c90997003549f44f3"
         }
       ],
       "generator": {
@@ -562,7 +604,8 @@
       "data_inputs": [
         {
           "kind": "repository_path",
-          "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_recommended_scaling/comparison_summary.json"
+          "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_recommended_scaling/comparison_summary.json",
+          "sha256": "44d47089fac6fb602eaf3c2453b70281fcb075e11e7111a01088fa31c6ca636f"
         }
       ],
       "generator": {
@@ -571,12 +614,43 @@
         "path": "paper/scripts/generate_paper_tables.py"
       }
     },
+    "plasticity3d_reference_continuation.tex": {
+      "archive_status": "archive_neutral",
+      "data_inputs": [
+        {
+          "kind": "repository_path",
+          "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_reference_continuation/np8/run_info.json",
+          "sha256": "bab38b16a85204a9b8fe82327d4cee3e32d1d64b9559e7927db2f09dde46d455"
+        },
+        {
+          "kind": "repository_path",
+          "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_reference_continuation/np32/run_info.json",
+          "sha256": "dd2a54423f181b2fe7acc6f3c772a6eb562f6d95be164cc440e6b3432906c65e"
+        },
+        {
+          "kind": "repository_path",
+          "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_reference_continuation/np8/progress_latest.json",
+          "sha256": "1e430cec8acbee739436b935153eab59a1116ea86ea6a16753802ca47316806d"
+        },
+        {
+          "kind": "repository_path",
+          "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_reference_continuation/np32/progress_latest.json",
+          "sha256": "1a11d733261c1c64680e875e59c2138d24f995640336c22114233829ab7ef82a"
+        }
+      ],
+      "generator": {
+        "function": "main",
+        "output": "plasticity3d_reference_continuation.tex",
+        "path": "paper/scripts/generate_paper_tables.py"
+      }
+    },
     "plasticity3d_validation_summary.tex": {
       "archive_status": "archive_neutral",
       "data_inputs": [
         {
           "kind": "repository_path",
-          "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_validation/comparison_summary.json"
+          "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/plasticity3d_validation/comparison_summary.json",
+          "sha256": "f0eaed7f0df707a394cfda9207c05a0d4b742be56eb98b8f72a40396c3dfa4a9"
         }
       ],
       "generator": {
@@ -617,7 +691,8 @@
       "data_inputs": [
         {
           "kind": "repository_path",
-          "path": "experiments/analysis/docs_assets/data/topology/resolution_objectives.csv"
+          "path": "experiments/analysis/docs_assets/data/topology/resolution_objectives.csv",
+          "sha256": "1f2173b4ff5f28c6ab345da782246c1530febc1983b5850d9d512c3b06200535"
         }
       ],
       "generator": {
@@ -631,7 +706,8 @@
       "data_inputs": [
         {
           "kind": "repository_path",
-          "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/supplemental_solver_evidence/full_topology_consistency.csv"
+          "path": "artifacts/reproduction/paper_submission_2026_07_08/inputs/supplemental_solver_evidence/full_topology_consistency.csv",
+          "sha256": "be0c8082c1d82da4e3ec7e010e01a03cfdbc222630261781040201faf29e0d21"
         }
       ],
       "generator": {
@@ -645,7 +721,8 @@
       "data_inputs": [
         {
           "kind": "repository_path",
-          "path": "experiments/analysis/docs_assets/data/topology/strong_scaling.csv"
+          "path": "experiments/analysis/docs_assets/data/topology/strong_scaling.csv",
+          "sha256": "a8b055b1a846c2c2e5e91f58cafc36f60c8d95e41f0f9ff92a28227ff21b307f"
         }
       ],
       "generator": {
@@ -670,7 +747,6 @@
     "numerical_protocol_summary.tex",
     "plaplace_benchmark_summary.tex",
     "plasticity2d_benchmark_summary.tex",
-    "plasticity2d_reference_continuation.tex",
     "plasticity3d_benchmark_summary.tex",
     "plasticity3d_constitutive_vs_reference_formula.tex",
     "plasticity3d_cpu_partitioning.tex",
@@ -679,6 +755,7 @@
     "plasticity3d_derivative_degree.tex",
     "plasticity3d_fixed_reference_operator_pmg.tex",
     "plasticity3d_recommended_scaling.tex",
+    "plasticity3d_reference_continuation.tex",
     "plasticity3d_validation_summary.tex",
     "reference_availability.tex",
     "solver_reporting_protocol.tex",
@@ -690,5 +767,6 @@
   "notes": [
     "Static comparison tables have empty data_inputs because their content is defined directly in paper/scripts/generate_paper_tables.py.",
     "implementation_capability_matrix.tex is a curated static summary of solver components, derivative routes, and reference availability; numeric evidence appears in the result-specific tables."
-  ]
+  ],
+  "unreferenced_table_policy": "This manifest retains the historical and supplementary table catalog. The focused manuscript includes only tables named in its TeX dependency graph; revision tables are governed by revision_evidence_manifest.json."
 }
