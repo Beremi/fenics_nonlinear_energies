@@ -96,9 +96,11 @@ Publication mode verifies the immutable experiment commit, a clean descendant
 release commit, and every admitted input hash.  Both the table generator and
 submission checker repeat the semantic source audit; an `admitted=true` flag
 alone is insufficient.  The full contract and source-specific gates are documented in
-`paper/protocols/REVISION-EVIDENCE-ADMISSION.md`. `submission-check` and
-`release-check` are expected to fail while the tables remain diagnostic, the
-bundle is stale, or final release metadata is absent.
+`paper/protocols/REVISION-EVIDENCE-ADMISSION.md`. `submission-check` is the
+local technical gate and can fail while the tables remain diagnostic or the
+bundle is stale.  Currently, `release-check` is expected to fail even after
+those local checks pass: the target venue and declarations, root repository
+license, archival DOI, and durable archive integration remain unresolved.
 
 ## Current Release Blockers
 
