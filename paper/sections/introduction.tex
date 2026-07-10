@@ -1,89 +1,82 @@
-Nonlinear finite-element models in mechanics, scalar PDEs, and design
-optimization often combine three computational difficulties. The local model may
-be easiest to write as an energy or constitutive law whose derivatives are
-error-prone to assemble by hand. The global problem then requires robust nonlinear
-globalization and sparse Newton--Krylov linear algebra. Finally, the
-implementation must remain comparable across reference formulations,
-derivative approximations, and distributed-memory solver choices. A useful
-scientific toolset for this class of problems should therefore expose not
-only a modeling interface, but also the derivative route, assembly layout,
-nonlinear solver policy, and preconditioner design.
+Nonlinear finite-element models are often defined by compact energy or
+constitutive programs, while their solution requires distributed sparse
+matrices, Krylov methods, and nonlinear globalization. Automatic
+differentiation (AD) removes many manual derivative formulas, but it does not
+remove the choice of where differentiation occurs. A tangent may be obtained
+from the complete element energy, from a low-dimensional constitutive density,
+or from colored actions of the assembled Hessian. Each route exposes a
+different combination of local arithmetic, memory traffic, sparse insertion,
+and communication.
 
-We develop and evaluate such a scientific toolset for nonlinear finite-element
-energy minimization and optimization. In the primary \jaxpetsc{} realization, JAX
-defines local energies and constitutive laws, while PETSc provides sparse
-distributed algebra, nonlinear globalization, Krylov methods, and
-preconditioners. Pure JAX and FEniCS provide matched internal formulation
-checks where benchmark definitions coincide, and JAX-FEM
-\citep{xue2023jaxfem} supplies the hyperelastic endpoint-state comparison. The
-Sysala-family
-slope-stability literature
-\citep{sysala2017returnmapping,sysala2021optimization,sysala2025convexoptimization,sysala2025advancedcontinuation}
-provides reference-model context for the plasticity endpoint observables, while
-the \v{C}erm{\'a}k--Sysala--Valdman MATLAB work \citep{cermak2019efficient}
-documents a closely related elastoplastic finite-element implementation.
+This choice is scientific only if the compared routes represent the same
+discrete problem. Quadrature, essential constraints, affine lifts, active
+constitutive branches, engineering-shear conventions, and state ordering must
+remain fixed. Distributed colored recovery introduces further requirements:
+the structural pattern must be complete, same-color columns must not interfere
+in an owned row, and every ghost value needed by a local action must be
+available. Agreement of endpoint energies alone does not verify these
+conditions.
+
+Existing frameworks establish the principal component technologies. High-level
+finite-element systems automate variational forms and parallel assembly
+\citep{logg2012fenicsbook,baratta2025dolfinx}; JAX-based methods provide
+differentiable mechanics and inverse problems
+\citep{xue2023jaxfem,xue2026implicit}; and bridge architectures combine
+differentiable local programs with established sparse solvers
+\citep{yashchuk2023bringing,latyshev2025externaloperators,cattaneo2026jetsci}.
+Recent work also develops locality-aware element differentiation, global AD
+with sparse tangent materialization, and automatic sparsity detection
+\citep{mahmoud2025locality,pundir2026tatva,hill2025sparser}. Consequently, the
+novelty of the present study is not JAX--PETSc coupling, constitutive AD, or
+graph coloring in isolation.
+
+We instead ask three narrower questions. First, which assumptions guarantee
+that element AD, constitutive AD, and colored sparse recovery differentiate one
+quadrature-defined potential? Second, which fixed-state tests are designed to
+expose errors in branch selection, local contraction, sparse recovery, or MPI
+ownership? Third, what evidence is required before descriptive route timings
+support a crossover or selection claim? The third question is treated as an
+experimental protocol in this revision because the required paired distributed
+measurements are not yet available.
 
 \subsection{Contributions}
 \label{sec:intro-contributions}
 
-Our contribution is a \jaxpetsc{} realization and numerical study that
-treats derivative construction, MPI sparse assembly, nonlinear globalization,
-and preconditioning as coupled design choices for nonlinear FEM energy
-minimization. The central thesis is that derivative construction should be
-evaluated inside the sparse nonlinear solve that consumes it. The study also
-fixes benchmark definitions while reporting the derivative route, assembly
-ownership, globalization strategy, Krylov tolerance, and preconditioner used in
-each comparison. We support this thesis through three technical components:
+The paper makes four contributions.
 \begin{enumerate}
-  \item \textbf{An integrated derivative--assembly path.} We show how local
-        JAX energy or constitutive evaluations can feed PETSc-owned sparse MPI
-        residual, tangent, and Hessian-vector-product computations without
-        changing the benchmark functional being solved.
-  \item \textbf{Controlled derivative-route comparisons.} We compare element
-        automatic differentiation (AD), constitutive AD, and colored sparse
-        recovery inside the same solver realization, so the discrete model is
-        held fixed while derivative-route and associated assembly or recovery
-        costs are compared.
-  \item \textbf{Solver-policy evidence across model classes.} We study
-        nonlinear globalization choices, Krylov and preconditioner choices, and
-        multigrid or coarse-solver choices across selected scalar, mechanics,
-        plasticity, and topology cases, with conclusions restricted to the
-        tested benchmark definitions.
+  \item We formulate a branchwise equivalence result for element and
+        constitutive differentiation of a fixed quadrature potential. The
+        statement includes the constrained affine map and excludes branch
+        switches and unresolved repeated spectra.
+  \item We state the interference, overlap, and row-ownership conditions under
+        which colored Hessian actions recover the same distributed sparse
+        operator.
+  \item We provide an evidence hierarchy that separates analytic and
+        manufactured verification, canonical fixed-state MPI checks,
+        nonlinear stopping, and equal-accuracy timing. Failed admission gates
+        prevent a route selector or speed claim from being fitted.
+  \item We exercise this hierarchy on smooth scalar energies,
+        orientation-preserving hyperelasticity, and a synthetic
+        branch-structured Mohr--Coulomb endpoint potential. The latter is used
+        to test derivative placement and is not presented as incremental
+        plasticity validation.
 \end{enumerate}
 
-Relative to the JAX-native differentiable FEM, FEM-adjoint, and bridge
-architectures discussed in \Cref{sec:related}, our emphasis is the integrated
-evaluation of local AD routes inside PETSc-owned sparse MPI Newton solvers, with
-globalization and preconditioner policy varied on the heterogeneous benchmark
-suite studied here.
+The current diagnostic results are deliberately asymmetric. The correctness and
+manufactured-solution blocks pass for the tested local states, and a canonical
+hyperelastic state is reproduced across one and two MPI ranks. These rows still
+require clean-release reproduction before submission. The
+available route timings, however, do not satisfy the clean, paired,
+train--holdout design required for a predictive cost model. We therefore
+report fixed-state correctness diagnostics and the prepared experimental
+design. No legacy route record passes the complete current map-admission
+contract, and we claim no fastest route, crossover, or scaling law.
 
-We evaluate these components on six benchmark families: $p$-Laplace, scalar
-Ginzburg--Landau, hyperelasticity, two- and three-dimensional
-Mohr--Coulomb-type plasticity, and topology optimization. The scalar problems
-isolate formulation and derivative agreement. Hyperelasticity adds
-finite-strain mechanics with a matched JAX-FEM endpoint-state companion
-comparison. The plasticity
-benchmarks test nonsmooth constitutive response, endpoint-observable
-comparison, and multigrid behavior. Topology optimization tests a distributed
-design-and-mechanics loop. The geomechanics context follows the
-finite-element strength-reduction and 3D slope-stability literature
-\citep{tschuchnigg2015nonassociated,sysala2017returnmapping,sysala2021optimization,sysala2025convexoptimization,sysala2025advancedcontinuation},
-but the present plasticity study is limited to final-load endpoint observables
-rather than path-consistent incremental plastic-history validation.
-
-The surrounding literature covers expressive finite-element automation,
-differentiable FEM, JAX--solver bridges, mechanics and topology benchmark
-families, and sparse nonlinear solver infrastructure. The present work combines
-these roles by treating local differentiation, PETSc-owned sparse MPI assembly,
-nonlinear globalization, and preconditioner policy in one heterogeneous
-benchmark suite. \Cref{sec:related} discusses these source classes by technical
-role.
-
-The paper is organized as follows. \Cref{sec:related,sec:methodology,sec:implementation}
-position the related work, define the common finite-element and derivative
-notation, and describe the primary \jaxpetsc{} realization. \Cref{sec:benchmarks}
-defines the benchmark suite, \Cref{sec:validation} separates validation and
-external-comparison evidence, and \Cref{sec:performance-solver-behavior} reports
-timing, scaling, derivative-route, and discretization evidence. \Cref{sec:discussion,sec:conclusion}
-synthesize the scope and limitations; supporting solver-policy diagnostics are
-collected in \Cref{sec:solver-evidence}.
+Section~\ref{sec:related} positions this scope against the closest software and
+methodological work. Sections~\ref{sec:methodology} and
+\ref{sec:implementation} state the mathematical and distributed contracts.
+Section~\ref{sec:benchmarks} defines the retained problems, and
+Section~\ref{sec:validation} presents independent verification designs and
+diagnostic executions. The diagnostically admitted checks and their limitations appear in
+Section~\ref{sec:performance-solver-behavior}; Sections~\ref{sec:discussion}
+and~\ref{sec:conclusion} summarize the resulting claim boundary.

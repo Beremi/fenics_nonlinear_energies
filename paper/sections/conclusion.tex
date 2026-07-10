@@ -1,28 +1,27 @@
 \label{sec:conclusion}
 
-We developed a \jaxpetsc{} scientific toolset for nonlinear finite-element energy
-minimization that couples local differentiable energy models to PETSc sparse
-distributed nonlinear solvers.
-Across the tested problems, the numerical evidence supports treating derivative
-construction, sparse ownership, nonlinear globalization, Krylov algebra, and
-preconditioning as one solver design rather than as separable implementation
-details. The concrete contribution is therefore not a single winning backend or
-preconditioner, but a scientific toolset and evaluation protocol: fixed-model
-derivative-route comparisons, PETSc-owned sparse MPI assembly, scoped
-validation checks, and timing studies whose solver-policy assumptions are
-reported explicitly.
+We formulated and tested a conditional equivalence framework for three
+placements of automatic differentiation in nonlinear finite elements. Element
+and constitutive differentiation agree when they act on the same
+quadrature-defined potential, affine constraint map, strain convention, and
+smooth active branch. Colored sparse recovery produces the same operator only
+under additional pattern, interference, overlap, and row-ownership conditions.
 
-Taken together, the high-order 3D plasticity derivative-route comparison,
-endpoint-scoped validation checks, distributed mechanics solver-policy studies,
-and topology rank-consistency diagnostic support the \jaxpetsc{} toolset as a
-controlled environment for studying coupled derivative, assembly,
-globalization, Krylov, and preconditioning choices. Pure JAX and FEniCS provide
-matched internal formulation checks, JAX-FEM supplies the hyperelastic endpoint
-comparison, and the Sysala-family and \v{C}erm{\'a}k--Sysala--Valdman works
-provide external plasticity reference context. Natural
-extensions are path-dependent mechanics validation against
-incremental-history references, broader agreement-focused external comparisons
-under matched problem definitions, and reduced preconditioner-setup and
-multigrid costs in sparse mechanics configurations. Those extensions would test
-whether the coupled solver-design discipline of the present study carries over
-to broader nonlinear mechanics and design problems.
+The prerelease diagnostic verification supports element--constitutive
+equivalence on smooth local energies and high-order branch-interior plasticity
+states. A separate canonical distributed hyperelastic check verifies
+rank-local element-Hessian assembly, while distributed colored recovery
+remains open. Independent manufactured solutions recover the expected
+P1 spatial behavior, including nonaffine hyperelastic displacement,
+deformation-gradient, and stress convergence. Conversely, the enriched-rule
+study rejects endpoint energy as a sufficient quadrature diagnostic.
+
+These results must be reproduced from the clean release commit before
+submission. They diagnose derivative correctness on the tested states, not a
+universal computational ranking. The available timings fail the prespecified
+publication-model gates, so this revision makes no speedup, crossover, or
+scaling claim. The next empirical step is the prepared paired CPU/MPI design
+with common Riesz stopping, repeated within-allocation route blocks, canonical
+endpoint comparison, and factorized cost measurements. Its outcome may support
+a route selector; the mathematical equivalence and evidence hierarchy do not
+depend on that outcome.

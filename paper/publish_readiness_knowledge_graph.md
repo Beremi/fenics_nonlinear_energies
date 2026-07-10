@@ -985,8 +985,9 @@ MATLAB literature only when there is source-backed evidence.
   more formal if the target venue expects algorithm-level reproducibility.
 - `Benchmarks/validation/results current audit` (`Bernoulli`): completed.
   Findings addressed: removed unsupported "near target" and hyperelastic
-  energy-in-table claims, reframed Plasticity2D reference continuation as
-  fixed-policy rank/timing evidence, corrected fixed reference-operator PMG
+  energy-in-table claims, initially interpreted the reference continuation as
+  fixed-policy rank/timing evidence (the July 10 audit later reclassified its
+  tetrahedral inputs as Plasticity3D), corrected fixed reference-operator PMG
   convergence wording, and recast topology timing as rank-dependent stopping
   with a separate fixed-schedule consistency check. Remaining style work:
   additional body-text interpretation for some early state/scaling figures.
@@ -1684,6 +1685,47 @@ MATLAB literature only when there is source-backed evidence.
   manuscript, generated-table, generated-figure, or bundle-generator path changed
   after that commit. `tests/test_submission_bundle_manifest.py` covers stale
   bundle commits.
+
+## 2026-07-10 Detailed Scientific Audit
+
+- Reframed the shared scope from universal energy minimization to nonlinear
+  finite-element energy problems; only the strictly convex discrete
+  $p$-Laplace case retains a unique-minimizer claim.
+- Defined the Mohr--Coulomb computations as branchwise algorithmic endpoint
+  surrogates, added a branchwise chain-rule consistency statement and a
+  derivative-route work/storage model, and excluded switching sets and repeated
+  principal values from smooth-derivative claims.
+- Recorded the actual headline derivative-route contract: glued-bottom
+  $P_4(L_1)$, eight ranks, residual bisection, KSP relative tolerance
+  $10^{-2}$ with cap 100, Newton cap 80, and relative-correction completion at
+  $2\times10^{-3}$ without a gradient gate.
+- Recorded the nine-case degree-study contract and classified it as a joint
+  discretization-and-quadrature trend. The common absolute Euclidean gradient
+  target does not establish equal algebraic accuracy over the DOF range.
+- Corrected topology reporting from stored material measure to normalized
+  fraction by dividing by $|\Omega|=2$; distinguished the parallel target
+  measure $0.4$ (fraction $0.2$) from the separate serial target fraction
+  $0.4$, and removed ideal-scaling and rank-consistency interpretations from
+  adaptive paths.
+- Reclassified the historically named Plasticity2D reference-continuation
+  artifact as Plasticity3D: its inputs contain three-dimensional coordinates,
+  35-node $P_4$ tetrahedra, and the heterogeneous 3D SSR mesh.
+- Specified the JAX-FEM 0.0.10 companion law, quadrature, UMFPACK solve, and
+  tolerances while retaining it only as a cross-constitutive endpoint-state
+  comparison under common post-evaluation of the paper energy.
+- Corrected the $p$-Laplace level-10 globalization case to unit forcing,
+  separated Ginzburg--Landau quadrature-discrete functionals, represented the
+  unavailable timeout counters as unavailable, and distinguished
+  hyperelastic mesh-hierarchy multigrid from plasticity PMG.
+- Narrowed availability claims: processed comparator summaries and sanitized
+  metadata are tracked, but the external comparator source and raw per-run
+  outputs are not. Historical timings without complete environment snapshots
+  remain descriptive; only within-allocation matched comparisons support timing
+  conclusions.
+- Strengthened provenance by hashing direct figure/table inputs, tracking
+  shared generator code and docs-asset data in bundle freshness checks, and
+  adding regression coverage for topology normalization and the 3D continuation
+  classification.
 
 ## First Edit Backlog
 

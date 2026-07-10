@@ -51,7 +51,7 @@
   \node[paper box, fill=paperdiagblue, text width=3.6cm] (jax) at (5.6,0)
     {\textbf{JAX AD}\\grad, Hessian, HVP};
   \node[paper box, fill=paperdiaggreen, text width=3.55cm] (petsc) at (11.2,0)
-    {\textbf{PETSc solve}\\distributed Newton};
+    {\textbf{PETSc algebra}\\distributed Newton driver};
 
   \node[paper box, fill=paperdiagviolet, text width=2.8cm, align=center] (elem) at (1.5,-1.85)
     {\textbf{Element AD}};
@@ -84,7 +84,7 @@
   \node[paper box, fill=paperdiagblue, text width=15.2cm] (ls) at (0,0)
     {\textbf{Line search}\\Newton direction; 1D merit decrease; accept by energy / residual drop};
   \node[paper box, fill=paperdiaggreen, text width=15.2cm, below=0.45cm of ls] (tr)
-    {\textbf{Trust region}\\reduced model step; $\rho$-based acceptance; radius shrink / expand};
+    {\textbf{Trust region}\\quadratic-model step; $\rho$-based acceptance; radius shrink / expand};
   \node[paper box, fill=paperdiagrose, text width=15.2cm, below=0.45cm of tr] (hy)
     {\textbf{Hybrid}\\trust-model direction; bounded line search; fallback to gradient-safe step};
 \end{tikzpicture}%
@@ -98,7 +98,7 @@
   \node[paper box, fill=paperdiaggray, text width=4.0cm] (patternbox) at (0.0,0.0)
     {\textbf{1. Sparse coupling}\\\textbf{pattern}\\Nearby DOFs interfere; far-away columns do not.};
   \node[paper box, fill=paperdiagviolet, text width=4.0cm] (colorbox) at (5.6,0.0)
-    {\textbf{2. Distance-2 coloring}\\Independent columns share one probe color.};
+    {\textbf{2. Conflict coloring}\\Noninterfering columns share one probe color.};
   \node[paper box, fill=paperdiaggreen, text width=4.0cm] (recoverbox) at (11.2,0.0)
     {\textbf{3. Probe and recover}\\One directional probe recovers several sparse columns.};
 
@@ -142,7 +142,7 @@
     \draw[black!45,line width=0.8pt] (0.0,0) to[out=65,in=115] (1.56,0);
     \draw[black!45,line width=0.8pt] (0.78,0) to[out=65,in=115] (2.34,0);
     \draw[black!45,line width=0.8pt] (1.56,0) to[out=65,in=115] (3.12,0);
-    \node[font=\footnotesize,align=center] at (1.56,-0.78) {repeat a color only\\if distance-2 conflicts vanish};
+    \node[font=\footnotesize,align=center] at (1.56,-0.78) {repeat a color only\\if row conflicts vanish};
   \end{scope}
 
   % Recovery panel

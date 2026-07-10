@@ -20,6 +20,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from common import (
     FIGURES_ROOT,
+    PAPER_BUNDLE_INPUT_ROOT,
+    PAPER_BUNDLE_ROOT,
     PDF_METADATA,
     PNG_METADATA,
     REPO_ROOT,
@@ -29,8 +31,10 @@ from common import (
     paper_figure_size,
     read_csv_rows,
     save_pdf_and_png,
+    sha256_file,
     text_figure_size,
     write_json,
+    add_paper_bundle_root_argument,
 )
 from experiments.analysis import generate_plasticity3d_impl_scaling_assets as impl_assets
 from experiments.analysis.docs_assets.common import implementation_style, ideal_strong_scaling
@@ -51,8 +55,8 @@ from src.problems.slope_stability_3d.support.simplex_lagrange import evaluate_te
 
 matplotlib.use("Agg")
 
-PAPER_SUBMISSION_BUNDLE_ROOT = REPO_ROOT / "artifacts/reproduction/paper_submission_2026_07_08"
-PAPER_SUBMISSION_INPUT_ROOT = PAPER_SUBMISSION_BUNDLE_ROOT / "inputs"
+PAPER_SUBMISSION_BUNDLE_ROOT = PAPER_BUNDLE_ROOT
+PAPER_SUBMISSION_INPUT_ROOT = PAPER_BUNDLE_INPUT_ROOT
 LOCAL_P3D_SUMMARY = PAPER_SUBMISSION_INPUT_ROOT / "plasticity3d_recommended_scaling/comparison_summary.json"
 MIXED_P3D_SUMMARY = PAPER_SUBMISSION_INPUT_ROOT / "plasticity3d_reference_formula/comparison_summary.json"
 SOURCEFIXED_P3D_SUMMARY = PAPER_SUBMISSION_INPUT_ROOT / "plasticity3d_fixed_reference_operator/comparison_summary.json"
@@ -105,6 +109,8 @@ PLASTICITY2D_L7_SUMMARY = PAPER_SUBMISSION_INPUT_ROOT / "plasticity2d_resolution
 TOPOLOGY_STATE = REPO_ROOT / "experiments/analysis/docs_assets/data/topology/parallel_final_state.npz"
 TOPOLOGY_HISTORY = REPO_ROOT / "experiments/analysis/docs_assets/data/topology/objective_history.csv"
 TOPOLOGY_SCALING = REPO_ROOT / "experiments/analysis/docs_assets/data/topology/strong_scaling.csv"
+TOPOLOGY_PARALLEL_DOMAIN_AREA = 2.0
+TOPOLOGY_P_MAX = 10.0
 P3D_VALIDATION_ROOT = PAPER_SUBMISSION_INPUT_ROOT / "plasticity3d_validation"
 P3D_DERIVATIVE_ABLATION_ROOT = PAPER_SUBMISSION_INPUT_ROOT / "plasticity3d_derivative_ablation"
 JAX_FEM_BASELINE_ROOT = PAPER_SUBMISSION_INPUT_ROOT / "jax_fem_hyperelastic_baseline"
@@ -136,7 +142,11 @@ def _manifest_repo_input(path: Path) -> dict[str, str]:
         relative = resolved.relative_to(REPO_ROOT)
     except ValueError as exc:
         raise ValueError(f"Paper figure manifest input is outside the repository: {path}") from exc
-    return {"kind": "repository_path", "path": relative.as_posix()}
+    return {
+        "kind": "repository_path",
+        "path": relative.as_posix(),
+        "sha256": sha256_file(path),
+    }
 
 
 PAPER_IMPLEMENTATION_LABELS = {
@@ -734,7 +744,7 @@ def generate_hyperelasticity_cpu_pmg_scaling(layout: dict[str, float]) -> str:
         color="#1f77b4",
         linestyle="-",
         linewidth=1.8,
-        label="PMG coarse level $L_2$",
+        label="mesh-hierarchy MG, coarse level $L_2$",
     )
     ax.plot(
         ranks,
@@ -1423,29 +1433,48 @@ def generate_topology_density(layout: dict[str, float]) -> str:
     return out.name
 
 
+def topology_history_normalized_fraction(rows: list[dict[str, str]]) -> np.ndarray:
+    """Normalize v1 material-measure histories and preserve explicit v2 rows."""
+
+    values = np.asarray([float(row["volume_fraction"]) for row in rows], dtype=np.float64)
+    if rows and (
+        str(rows[0].get("material_measure", "")).strip()
+        or str(rows[0].get("normalized_fraction_residual", "")).strip()
+    ):
+        return values
+    return values / TOPOLOGY_PARALLEL_DOMAIN_AREA
+
+
 def generate_topology_history(layout: dict[str, float]) -> str:
     plt = configure_paper_matplotlib()
     rows = read_csv_rows(TOPOLOGY_HISTORY)
     outer_key = "outer_iteration" if rows and "outer_iteration" in rows[0] else "outer_iter"
     outer = np.asarray([int(row[outer_key]) for row in rows], dtype=np.int64)
     compliance = np.asarray([float(row["compliance"]) for row in rows], dtype=np.float64)
-    volume = np.asarray([float(row["volume_fraction"]) for row in rows], dtype=np.float64)
+    material_fraction = topology_history_normalized_fraction(rows)
     p_penal = np.asarray([float(row["p_penal"]) for row in rows], dtype=np.float64)
-    p_ratio = p_penal / max(float(np.max(p_penal)), 1.0e-12)
+    p_ratio = p_penal / TOPOLOGY_P_MAX
 
     fig, ax = plt.subplots(figsize=paper_figure_size(layout, preset="narrow", height_ratio=0.54))
     ax_right = ax.twinx()
 
     compliance_line = ax.plot(outer, compliance, color="#111111", linewidth=1.8, label="compliance")[0]
-    volume_line = ax_right.plot(outer, volume, color="#555555", linewidth=1.5, linestyle="--", label="volume fraction")[0]
+    volume_line = ax_right.plot(
+        outer,
+        material_fraction,
+        color="#555555",
+        linewidth=1.5,
+        linestyle="--",
+        label="normalized material fraction",
+    )[0]
     penal_line = ax_right.plot(outer, p_ratio, color="#888888", linewidth=1.5, linestyle=":", label=r"$p / p_{\max}$")[0]
 
     ax.set_xlabel("Outer iteration")
     ax.set_ylabel("Compliance")
-    ax_right.set_ylabel(r"Volume fraction / $p$ ratio")
+    ax_right.set_ylabel(r"Material fraction / $p$ ratio")
     ax.grid(True, alpha=0.25)
     ax.set_xlim(float(np.min(outer)), float(np.max(outer)))
-    ax_right.set_ylim(0.0, max(1.02, float(np.nanmax(volume)) * 1.08))
+    ax_right.set_ylim(0.0, max(1.02, float(np.nanmax(material_fraction)) * 1.08))
     ax.legend(
         [compliance_line, volume_line, penal_line],
         [line.get_label() for line in (compliance_line, volume_line, penal_line)],
@@ -1463,12 +1492,40 @@ def generate_topology_history(layout: dict[str, float]) -> str:
 
 
 def generate_topology_scaling(layout: dict[str, float]) -> str:
-    return generate_family_scaling_figure(
-        layout,
-        csv_path=TOPOLOGY_SCALING,
-        implementations=("jax_parallel",),
-        out_name="topology_scaling.pdf",
+    plt = configure_paper_matplotlib()
+    rows = [
+        row
+        for row in read_csv_rows(TOPOLOGY_SCALING)
+        if row.get("result", "completed") == "completed"
+    ]
+    rows.sort(key=lambda row: int(row.get("ranks", row.get("nprocs", 0))))
+    ranks = np.asarray(
+        [int(row.get("ranks", row.get("nprocs", 0))) for row in rows],
+        dtype=np.int64,
     )
+    times = np.asarray([float(row["wall_time_s"]) for row in rows], dtype=np.float64)
+    style = paper_implementation_style("jax_parallel")
+
+    fig, ax = plt.subplots(
+        figsize=paper_figure_size(layout, preset="medium", height_ratio=0.52)
+    )
+    ax.plot(
+        ranks,
+        times,
+        marker=style["marker"],
+        color=style["color"],
+        linestyle=style["linestyle"],
+        linewidth=1.8,
+        label="adaptive JAX+PETSc",
+    )
+    _set_rank_axis(ax, ranks)
+    ax.set_ylabel("Adaptive end-to-end wall time [s]")
+    ax.legend(frameon=True, loc="best")
+    fig.subplots_adjust(left=0.14, right=0.98, bottom=0.16, top=0.96)
+    out = FIGURES_ROOT / "topology_scaling.pdf"
+    save_pdf_and_png(fig, out)
+    plt.close(fig)
+    return out.name
 
 
 def _draw_box(
@@ -1716,7 +1773,11 @@ def _plot_plasticity3d_validation_surface_compare(
         cmap_name="cividis",
         norm=diff_norm,
     )
-    for ax, title in zip(axes, ("matched comparator", "JAX+PETSc", r"$|\Delta \|u\||$"), strict=True):
+    for ax, title in zip(
+        axes,
+        ("endpoint-formula assembly", "JAX+PETSc", r"$|\Delta \|u\||$"),
+        strict=True,
+    ):
         ax.set_title(title, pad=2.0, fontsize=9.0)
 
     cax_main = fig.add_subplot(gs[1, :2])
@@ -1792,7 +1853,15 @@ def generate_plasticity3d_validation_umax_curve(layout: dict[str, float]) -> str
     rel_l2 = float(dict(summary["layer2"])["umax_curve_relative_l2"])
 
     fig, ax = plt.subplots(figsize=paper_figure_size(layout, preset="medium", height_ratio=0.42))
-    ax.plot(x, source, marker="o", linewidth=1.8, markersize=4.5, color="#111111", label="matched comparator")
+    ax.plot(
+        x,
+        source,
+        marker="o",
+        linewidth=1.8,
+        markersize=4.5,
+        color="#111111",
+        label="endpoint-formula assembly",
+    )
     ax.plot(x, maintained, marker="s", linewidth=1.6, markersize=4.3, color="#777777", linestyle="--", label="JAX+PETSc")
     ax.set_xlabel(r"$\lambda_{\mathrm{sr}}$")
     ax.set_ylabel(r"$u_{\max}$")
@@ -2129,10 +2198,10 @@ def _plot_sourcefixed(layout: dict[str, float], rows: list[dict[str, object]]) -
     plt = configure_paper_matplotlib()
     fig, axes = plt.subplots(2, 1, figsize=text_figure_size(layout, height_ratio=0.95))
     series = (
-        (LOCAL_IMPL, "local + local_pmg", "#1f77b4"),
-        (SOURCE_IMPL, "source + local_pmg", "#d62728"),
-        (LOCAL_SOURCEFIXED_IMPL, "AD tangent + frozen PMG", "#2ca02c"),
-        (SOURCE_SOURCEFIXED_IMPL, "reference tangent + frozen PMG", "#ff7f0e"),
+        (LOCAL_IMPL, "constitutive-AD PMG", "#1f77b4"),
+        (SOURCE_IMPL, "reference-formula PMG", "#d62728"),
+        (LOCAL_SOURCEFIXED_IMPL, "AD tangent + three-sweep Hypre coarse", "#2ca02c"),
+        (SOURCE_SOURCEFIXED_IMPL, "reference tangent + three-sweep Hypre coarse", "#ff7f0e"),
     )
     for implementation, label, color in series:
         selected = _find_rows(rows, implementation)
@@ -2594,6 +2663,7 @@ def _expected_generated_assets() -> list[str]:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Generate paper figures from curated repo assets and raw summaries.")
+    add_paper_bundle_root_argument(parser)
     parser.add_argument("--out-dir", type=Path, default=FIGURES_ROOT)
     parser.add_argument(
         "--manifest-only",
@@ -2601,6 +2671,8 @@ def main() -> None:
         help="refresh the figure manifest without regenerating figure PDFs",
     )
     args = parser.parse_args()
+    if args.out_dir.resolve() != FIGURES_ROOT.resolve():
+        parser.error(f"--out-dir must be the canonical paper figure directory: {FIGURES_ROOT}")
     ensure_paper_dirs()
     args.out_dir.mkdir(parents=True, exist_ok=True)
     layout = load_layout()

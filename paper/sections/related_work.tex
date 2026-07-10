@@ -1,137 +1,71 @@
 \label{sec:related}
 
-High-level finite-element systems automate variational forms and adjoint
-workflows, JAX-native finite-element codes automate local differentiation, and
-PETSc supplies scalable sparse nonlinear algebra. For nonlinear energy
-minimization, these capabilities meet inside the assembled Newton solve: the
-derivative route, ownership layout, globalization, Krylov method, and
-preconditioner are coupled numerical choices. The relevant literature therefore
-separates into high-level FEM automation, differentiable FEM and JAX--solver
-bridges, mechanics and topology benchmark context, and sparse nonlinear algebra.
-The focus of the present study is their combined evaluation on one
-heterogeneous energy-minimization suite.
+The closest literature separates into finite-element automation,
+differentiable mechanics, constitutive differentiation, and sparse derivative
+recovery. We organize it by the location of differentiation because software
+feature inventories do not determine whether two routes represent the same
+discrete functional.
 
-The sources summarized below treat these ingredients in different combinations.
-The comparison design used here combines matched derivative-route comparisons
-inside PETSc-owned sparse MPI Newton solves with separated validation,
-endpoint-comparison, timing, and solver-policy claims. The table therefore
-identifies how each source class enters the comparison design.
+The FEniCS project established symbolic weak-form specification and generated
+finite-element kernels \citep{logg2012fenicsbook}. DOLFINx extends this model
+with data-oriented parallel interfaces \citep{baratta2025dolfinx}. Automated
+adjoint systems operate at a higher program level: \code{dolfin-adjoint} and
+\code{pyadjoint} derive sensitivities of finite-element programs
+\citep{farrell2013dolfinadjoint,mitusch2019pyadjoint}, while \code{cashocs}
+provides adjoint-based optimal-control and shape-optimization workflows
+\citep{blauth2023cashocsv2}. These systems motivate automation, but the present
+work concerns primal residual and tangent construction inside a Newton solve.
 
-\Cref{tab:sota-comparison} summarizes the computational roles used in this
-positioning: modeling layer, differentiation scope, second-order information,
-parallel execution model, and the closest benchmark families.
+JAX provides composable program transformations for differentiation,
+vectorization, and compilation \citep{jax2018,baydin2018autodiff}. JAX-FEM
+applies them to forward and inverse finite-element mechanics
+\citep{xue2023jaxfem}, and second-order implicit differentiation extends this
+setting to Hessian-vector products for differentiable physics
+\citep{xue2026implicit}. AutoPDEx and JAX-CPFEM illustrate related
+energy-based and constitutive applications
+\citep{bode2025autopdex,hu2025jaxcpfem}. These results establish the viability
+of differentiable finite elements; they do not compare the three derivative
+locations studied here under one distributed algebraic contract.
 
-\begin{table}[!htbp]
-  \centering
-  \scriptsize
-  \setlength{\tabcolsep}{3pt}
-  \caption{Selected related computational roles for the software and literature
-  families most relevant to this paper.}
-  \label{tab:sota-comparison}
-  \input{tables/generated/sota_framework_comparison.tex}
-\end{table}
+Bridge architectures are particularly close. Firedrake--JAX differentiates
+PDE solves through tangent and adjoint equations \citep{yashchuk2023bringing}.
+FEniCSx external operators admit general quadrature-point programs, including
+a JAX-differentiated Mohr--Coulomb model with Taylor tests
+\citep{latyshev2025externaloperators}. JetSCI combines JAX-local
+discretizations with PETSc-owned distributed solves
+\citep{cattaneo2026jetsci}. Thus neither constitutive AD nor the JAX--PETSc
+architecture is new here. Our distinction is the fixed-functional equivalence
+contract and the fail-closed comparison of element, constitutive, and colored
+routes.
 
-\paragraph{Finite-element and PDE-optimization automation.}
-The original \fenics{} project established the high-level finite-element
-programming model in which weak forms are expressed symbolically and compiled
-into efficient kernels \citep{logg2012fenicsbook}. The more recent
-\code{DOLFINx} project keeps that mathematical abstraction while moving to a
-data-oriented design with explicit support for modern parallelism, custom
-kernels, and direct access to lower-level data structures
-\citep{baratta2025dolfinx}. In PDE-constrained optimization,
-\code{dolfin-adjoint} showed that adjoints of high-level transient
-finite-element programs can be derived automatically from the symbolic problem
-description \citep{farrell2013dolfinadjoint}, and \code{pyadjoint} documents
-the FEniCS/Firedrake adjoint framework used to automate such computations in
-practice \citep{mitusch2019pyadjoint}. The \code{cashocs} software paper
-extends this PDE-optimization thread to shape optimization, optimal control,
-topology optimization via level sets, and MPI-enabled computations
-\citep{blauth2023cashocsv2}. These works are the natural reference point for
-expressive finite-element and adjoint-centered automation. We use that context
-while focusing instead on second-order routes, nonlinear globalization, and
-sparse distributed solver policy.
+Recent systems narrow this distinction further. Locality-aware AD performs
+per-element forward differentiation and sparse Hessian assembly on GPUs
+\citep{mahmoud2025locality}. The \code{tatva} framework applies AD to a global
+energy and uses matrix-free products or coloring to materialize sparse
+tangents \citep{pundir2026tatva}. Hill and Dalle combine automatic local or
+global sparsity detection, matrix coloring, and sparse differentiation
+\citep{hill2025sparser}. These papers establish both local and global AD
+strategies. The present contribution is therefore limited to explicit
+branchwise equivalence assumptions, distributed finite-element ownership
+conditions, and a common-accuracy route-selection protocol on CPU/MPI systems.
 
-In the reported experiments, FEniCS-style formulations are used as matched
-reference formulations where available.
+Sparse recovery itself is classical. Curtis, Powell, and Reid introduced
+directional probing for sparse Jacobians \citep{curtis1974sparsejacobian};
+Coleman and Mor{\'e} related sparse Jacobian and Hessian estimation to graph
+coloring \citep{coleman1983sparsejacobian,coleman1984sparsehessian}. PETSc
+supplies the distributed vectors, matrices, Krylov methods, and preconditioners
+used in our implementation \citep{balay1997petsc,petsc2026manual}. We do not
+claim these algorithms as new. We use them to expose the assumptions needed to
+turn local Hessian actions into a canonical distributed matrix and to prevent
+timing comparisons from preceding derivative and endpoint agreement.
 
-\paragraph{Differentiable FEM and JAX--solver bridges.}
-The broad automatic-differentiation (AD) background is surveyed by
-\citet{baydin2018autodiff}, while JAX
-provides a program-transformation environment for higher-order derivatives,
-vectorization, and just-in-time compilation in scientific computing
-\citep{jax2018}. Within finite elements, JAX-FEM demonstrates inverse design,
-nonlinear constitutive modeling, and GPU-oriented differentiable computations in a
-JAX-native 3D FE solver \citep{xue2023jaxfem}. Xue's later
-finite-element differentiable-physics paper is a close methodological reference
-for second-order information because it derives implicit Hessian-vector products
-and evaluates Newton--CG use of exact Hessian information on finite-element
-inverse-problem benchmarks \citep{xue2026implicit}. AutoPDEx broadens the
-JAX-native PDE picture with
-nonlinear minimizers, implicit differentiation, and optional PETSc integration
-\citep{bode2025autopdex}; JAX-CPFEM adds differentiable crystal plasticity and
-GPU execution in a recent mechanics application \citep{hu2025jaxcpfem}.
-
-Bridge architectures ask a complementary question: how can JAX-style
-differentiation be combined with established finite-element or sparse-solver
-environments? The Firedrake--JAX bridge uses tangent-linear and adjoint
-equations derived from the high-level PDE representation, avoiding
-differentiation through low-level solver iterations
-\citep{yashchuk2023bringing}. The \code{FEniCSx} external-operator work of
-\citet{latyshev2025externaloperators} uses algorithmic automatic
-differentiation for general constitutive models inside \code{FEniCSx},
-including a Mohr--Coulomb example. The JetSCI preprint is especially
-close architecturally because it uses JAX for local finite-element
-discretization and PETSc for robust distributed sparse solves in heterogeneous
-micromechanics \citep{cattaneo2026jetsci}. These works motivate the primary
-\jaxpetsc{} realization studied here. Our emphasis, relative to the cited
-systems, is the comparison of element AD, constitutive AD, and colored sparse
-recovery from AD-based Hessian-vector-product (AD-HVP) or finite-difference
-gradient probes inside one nonlinear energy-minimization suite spanning the
-benchmark families in \Cref{sec:benchmarks}.
-
-\paragraph{Mechanics and topology benchmark context.}
-The plasticity benchmarks use Mohr--Coulomb-type slope-stability problems, so
-the relevant literature separates continuum plasticity, strength-reduction
-practice, constitutive integration, and endpoint comparisons. The Davis-style
-reduction context used in this paper traces to the plasticity treatment of
-\citet{davis1968plasticity} and to later finite-element strength-reduction
-studies such as \citet{tschuchnigg2015nonassociated}. For constitutive
-integration, the incremental reference frame is return mapping with consistent
-tangents \citep{simo1985consistent,simo1998compinel}. The Sysala
-slope-stability line provides Mohr--Coulomb source-family context, variational
-and optimization viewpoints for shear strength reduction
-\citep{sysala2017returnmapping,sysala2021optimization,sysala2025convexoptimization},
-and a 3D continuation/iterative-solver reference line
-\citep{sysala2025advancedcontinuation}. The
-\v{C}erm{\'a}k--Sysala--Valdman MATLAB implementation
-\citep{cermak2019efficient} documents practical 2D/3D elastoplastic
-finite-element algorithms for this problem class. We use these works to
-position the benchmark family; the numerical claims remain limited to the
-implemented endpoint surrogate and the reported comparison observables.
-
-For topology optimization, the classical solid isotropic material with
-penalization (SIMP) and educational references supply the compliance, filtering,
-and continuation ideas used throughout the field
-\citep{sigmund2001topology,bendsoe2003topology,ferrari2020top99,bourdin2001filters}.
-A relevant modern software reference is \code{FEniTop}, which documents a 2D/3D
-\code{FEniCSx} topology-optimization implementation with parallel support
-\citep{jia2024fenitop}. It does not duplicate the reduced design objective used
-here, but it contextualizes compact parallel topology optimization in the modern
-\code{FEniCSx} ecosystem.
-
-\paragraph{Sparse derivative recovery and scalable nonlinear infrastructure.}
-When exact second-order information is too expensive, sparse derivative recovery
-via graph coloring remains the classical alternative. Curtis, Powell, and Reid
-gave the foundational sparse-Jacobian viewpoint \citep{curtis1974sparsejacobian},
-while Coleman and Mor{\'e} extended the approach to sparse Jacobian and Hessian
-estimation with graph-coloring structure
-\citep{coleman1983sparsejacobian,coleman1984sparsehessian}. PETSc supplies the
-distributed vectors, matrices, Krylov methods, nonlinear solvers, and multigrid
-infrastructure needed to turn those derivative objects into scalable
-distributed algorithms \citep{balay1997petsc,petsc2026manual}. In the present
-toolset, PETSc ownership layout, Krylov policy, nonlinear globalization, and
-preconditioner design are part of the numerical method.
-
-Against that background, the present toolset uses JAX for local element and
-constitutive differentiation, while PETSc owns sparse distributed algebra and
-nonlinear solver policy for the benchmark suite in \Cref{sec:benchmarks}.
+The branch-structured benchmark is motivated by Mohr--Coulomb slope stability,
+but its evidentiary role is intentionally narrower. Incremental plasticity,
+return mapping, and consistent linearization provide the continuum reference
+frame \citep{simo1985consistent,simo1998compinel,sysala2017returnmapping}.
+Variational strength reduction and recent three-dimensional continuation
+methods provide application context
+\citep{sysala2021optimization,sysala2025advancedcontinuation}. Our implemented
+object is a synthetic endpoint potential with selected branches. It tests
+derivative placement; it does not validate a path-consistent constitutive
+history or a factor of safety.

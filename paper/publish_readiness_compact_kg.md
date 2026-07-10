@@ -1,6 +1,6 @@
 # Compact Publish-Readiness Knowledge Graph
 
-Last updated: 2026-07-09.
+Last updated: 2026-07-10.
 
 This is the short navigation graph for paper-readiness work. Use it beside the
 long audit log in `publish_readiness_knowledge_graph.md`; keep this file compact
@@ -9,7 +9,7 @@ enough that it can be read before each manuscript-editing pass.
 ## Core Message
 
 The paper presents a scientific JAX+PETSc toolset and accompanying numerical
-expertise for nonlinear finite-element energy minimization. The mainline object
+expertise for nonlinear finite-element energy problems. The mainline object
 is the JAX+PETSc realization: local JAX differentiation and constitutive
 evaluation coupled to PETSc sparse assembly, Newton globalization, Krylov linear
 solvers, and preconditioner policy.
@@ -109,10 +109,10 @@ not resolve the final durable archive/DOI blocker.
 | --- | --- | --- | --- |
 | p-Laplace | scalar nonlinear PDE and derivative-route check | FEniCS, pure JAX, JAX+PETSc | formulation agreement and strong scaling |
 | Ginzburg--Landau | indefinite scalar energy/globalization | FEniCS, JAX+PETSc | energy agreement, globalization diagnostics, scaling |
-| Hyperelasticity | finite-strain mechanics and external comparison | FEniCS, pure JAX, JAX+PETSc, JAX-FEM | terminal-energy agreement, distribution/memory, GAMG/PMG sensitivity |
-| Plasticity2D | Davis-B reduced slope-stability endpoint/fixed-work study | JAX+PETSc only | endpoint result, fixed-work diagnostics, reference-continuation appendix |
-| Plasticity3D | high-order Mohr-Coulomb endpoint surrogate and solver-policy study | JAX+PETSc; Sysala-family reference-model context | endpoint observables, derivative-route cost, degree-energy, scaling |
-| Topology | coupled design-mechanics distributed workflow | pure JAX serial demonstration, JAX+PETSc parallel run | objective history, timing, rank-consistency check |
+| Hyperelasticity | finite-strain mechanics and external comparison | FEniCS, pure JAX, JAX+PETSc, JAX-FEM | terminal-energy agreement, distribution/memory, GAMG and mesh-hierarchy multigrid sensitivity |
+| Plasticity2D | Davis-B reduced slope-stability endpoint/fixed-work study | JAX+PETSc only | endpoint result and fixed-work diagnostics |
+| Plasticity3D | high-order Mohr-Coulomb endpoint surrogate and solver-policy study | JAX+PETSc; Sysala-family reference-model context | endpoint observables, derivative-route cost, joint degree/quadrature trends, scaling, reference-continuation appendix |
+| Topology | coupled frozen-design/mechanics demonstration | pure JAX serial demonstration, JAX+PETSc parallel run | staggered histories, timing, rank-sensitivity check |
 
 ## Recent Audit State
 
@@ -129,22 +129,29 @@ not resolve the final durable archive/DOI blocker.
   topology diagnostics before the stopping rule, reference the effective-volume
   multiplier explicitly, and reserve `p_{\mathrm{SIMP}}` for the topology
   continuation exponent.
-- Current evidence state: subagent evidence audits found no small missing
-  experiment needed for the current evidence surface. Wording is scoped so
+- Current evidence state: the July 10 audit corrected a material-measure versus
+  normalized-fraction error in topology reporting, reclassified a mislabeled
+  high-order tetrahedral continuation artifact from Plasticity2D to
+  Plasticity3D, separated the unit-load $p$-Laplace globalization case, and
+  made Ginzburg--Landau timeout counters explicitly unavailable. Wording is scoped so
   p-Laplace energy agreement is plotted-scale across levels and about
   `1e-8` only on the selected table case, Ginzburg--Landau globalization reports
   matching energy and Newton/Krylov work, Plasticity2D state wording is visual
   rather than externally validated, Plasticity3D remains endpoint-surrogate
-  evidence, and topology keeps relying on the JAX+PETSc rank-consistency check.
+  evidence, and topology uses a fixed-schedule JAX+PETSc rank-sensitivity
+  diagnostic.
 - Current prose state: the latest validation/results/appendix audit removed
   process-style comparison language such as post-comparison, comparator-case,
   run-excerpt, and underlying-summary wording. Hyperelasticity is now described
-  as a common-energy endpoint-state check, Plasticity3D validation as an
-  independent endpoint-formula assembly, and result/appendix interpretation is
+  as a common-energy endpoint-state check, Plasticity3D validation as a
+  separate endpoint-formula assembly, and result/appendix interpretation is
   tied directly to figure/table evidence.
-- Current layout state: the latest full build is a 45-page A4 article with a
-  clean LaTeX warning scan, embedded Type 1 fonts, clean aux-order and hard-float
-  checks, and `qpdf --check` passing. Polish/risk items remain target-template
+- Historical layout state: the pre-rewrite July 10 scientific and provenance
+  corrections built as a 48-page A4 article with a clean LaTeX warning scan, embedded Type 1
+  fonts, clean aux-order and hard-float checks, and `qpdf --check` passing.
+  Representative rendered pages were visually inspected for the revised
+  methodology, comparisons, results, topology evidence, appendix, and
+  availability statement. Polish/risk items remain target-template
   dependent: an under-filled page after the Plasticity3D state figure, dense
   protocol and late-results tables, and full-width multi-panel figures that
   should not be shrunk blindly.
@@ -153,10 +160,10 @@ not resolve the final durable archive/DOI blocker.
   edits are committed, `make -C paper submission-bundle` is rerun, and the
   refreshed manifest is committed. Final archive/DOI/license/template decisions
   remain external blockers.
-- Current generator state: the Plasticity3D validation table summary is
-  data-driven rather than hard-coded, and the SOTA role table uses paper-facing
-  role/comparison headings. Regenerate generated tables after any table-source
-  or table-generator edit.
+- Current generator state: table and figure manifests now record hashes for
+  direct inputs; topology outputs normalize material measure by domain area;
+  and the continuation bundle/table aliases identify Plasticity3D. Regenerate
+  generated tables after any table-source or table-generator edit.
 - Prior completed passes: older audits already removed process-local wording,
   tightened comparator scope, reduced hard floats to the three method
   algorithms, clarified validation norms and topology diagnostics, refreshed
@@ -202,7 +209,8 @@ external release decisions:
 - durable software/artifact archive;
 - archival DOI in the availability statement.
 
-The current PDF is a 45-page A4 article. Page budget and float behavior must be
+The 48-page statement describes the historical broad baseline, not the current
+derivative-placement manuscript. Page budget and float behavior must be
 rechecked after target-template conversion.
 
 Deferred layout risks from the 2026-07-09 audits are now target-template risks

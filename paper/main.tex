@@ -4,7 +4,7 @@
 \usepackage[T1]{fontenc}
 \usepackage[utf8]{inputenc}
 \usepackage{microtype}
-\usepackage{amsmath,amssymb,mathtools}
+\usepackage{amsmath,amssymb,mathtools,amsthm}
 \usepackage{booktabs,multirow,array,tabularx}
 \usepackage{ragged2e}
 \usepackage{graphicx}
@@ -23,7 +23,7 @@
 \usepackage[nameinlink,noabbrev]{cleveref}
 
 \hypersetup{
-  pdftitle={A JAX+PETSc Toolset for Nonlinear Finite-Element Energy Minimization: Local Automatic Differentiation, Sparse Assembly, and Solver Policy},
+  pdftitle={Derivative Placement in Distributed Nonlinear Finite Elements: Equivalence, Verification, and Evidence},
   pdfauthor={Michal Beres}
 }
 
@@ -55,8 +55,10 @@
 \newcommand{\jaxpetsc}{JAX+PETSc}
 \newcommand{\purejax}{pure JAX}
 \newcommand{\fenics}{FEniCS}
-\newcommand{\plasticitythree}{3D Mohr--Coulomb plasticity}
+\newcommand{\plasticitythree}{3D Mohr--Coulomb endpoint surrogate}
 \newcommand{\localpmg}{constitutive-AD PMG configuration}
+\newtheorem{proposition}{Proposition}
+\newtheorem{remark}{Remark}
 \newcolumntype{Y}{>{\RaggedRight\arraybackslash}X}
 \newcolumntype{L}[1]{>{\RaggedRight\arraybackslash\hsize=#1\hsize\linewidth=\hsize}X}
 \newcolumntype{C}[1]{>{\Centering\arraybackslash\hsize=#1\hsize\linewidth=\hsize}X}
@@ -70,8 +72,8 @@
 
 \input{sections/tikz_diagrams}
 
-\title{A JAX+PETSc Toolset for Nonlinear Finite-Element Energy Minimization:\\
-\large Local Automatic Differentiation, Sparse Assembly, and Solver Policy}
+\title{Derivative Placement in Distributed Nonlinear Finite Elements:\\
+\large Equivalence, Verification, and Evidence}
 
 \author{
 Michal B{\'e}re{\v{s}}\\
@@ -95,19 +97,19 @@ Michal B{\'e}re{\v{s}}\\
 \section{Related Work}
 \input{sections/related_work}
 
-\section{Methodology}
+\section{Discrete Derivative Equivalence}
 \input{sections/methodology}
 
-\section{Implementation}
+\section{Distributed Construction and Numerical Contract}
 \input{sections/implementation}
 
-\section{Benchmark Problems}
+\section{Verification Problems and Test Design}
 \input{sections/benchmarks}
 
-\section{Validation and External Comparisons}
+\section{Verification}
 \input{sections/validation}
 
-\section{Performance and Solver Behavior}
+\section{Evidence Adjudication}
 \input{sections/results}
 
 \FloatBarrier
@@ -120,15 +122,17 @@ Michal B{\'e}re{\v{s}}\\
 
 \FloatBarrier
 \appendix
-\section{Solver-Policy Diagnostics}
+\section{Branch and Solver Details}
 \input{sections/appendix}
 
 \section*{Code and Data Availability}
-A version-controlled repository containing the source code, input data,
-processed benchmark summaries, and figure and table generation scripts
-supporting this study is available at the GitHub repository
-\url{https://github.com/Beremi/jax_petsc_nonlinear_energies}.
-The final archival release and DOI will be cited in the submitted version.
+The primary implementation, checked-in inputs, strict run records, canonical
+state exports, experiment protocols, and table-generation scripts are available
+in the development repository
+\url{https://github.com/Beremi/fenics_nonlinear_energies}.
+The present repository artifacts are prerelease diagnostics. A versioned
+archive containing admitted clean reruns and immutable manifests is required
+before submission; no archival DOI is claimed for the current evidence.
 
 \bibliographystyle{unsrtnat}
 \bibliography{references}

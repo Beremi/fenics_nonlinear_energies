@@ -74,7 +74,10 @@ def pdf_text(pdf_path: Path) -> str:
 def manuscript_body(text: str, *, include_references: bool = False) -> str:
     if include_references:
         return text
-    match = re.search(r"(?m)^References\s*$", text)
+    # ``pdftotext`` commonly emits a form-feed immediately before a heading
+    # that starts a new page.  Match horizontal whitespace and that page-break
+    # marker without allowing ``\s*`` to consume preceding manuscript lines.
+    match = re.search(r"(?m)^[ \t\f]*References[ \t\r]*$", text)
     if match is None:
         return text
     return text[: match.start()]

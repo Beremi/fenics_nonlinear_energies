@@ -1,66 +1,60 @@
 \label{sec:discussion}
 
-The numerical evidence supports a methodological conclusion for the tested
-benchmark classes: in nonlinear finite-element energy minimization, the useful
-unit of algorithmic design is not the AD route alone. Local derivative
-construction, sparse ownership, nonlinear globalization, Krylov algebra, and
-preconditioning together determine the observed solver behavior. We therefore
-use a staged evidence base: formulation checks and matched endpoint-state
-comparisons support validation claims, while fixed-work route studies and
-distributed timing evidence support performance and solver-policy claims.
+The analysis separates a mathematical identity from its computational
+realization. On a fixed smooth branch, element and constitutive AD are two
+applications of the chain rule. Colored recovery adds a second proposition:
+the structural pattern, interference coloring, overlap state, and row ownership
+must be compatible with every recovered entry. The fixed-element and canonical
+MPI tests do not provide one joint test of these claims: the fixed-element
+artifacts support element--constitutive equivalence, serial regression tests
+exercise colored assembly, and the reported one--two-rank MPI pilot uses the
+element-Hessian route. Thus distributed colored recovery remains an open
+experimental gate. None of these checks proves that an implementation remains
+correct after a branch switch, a change of quadrature, or an incomplete ghost
+exchange.
 
-\paragraph{Derivative information is realized through the nonlinear solve.}
-The high-order three-dimensional plasticity derivative-route ablation is the
-most complete derivative-route separation in the study; see
-\Cref{fig:plasticity3d-derivative-ablation,tab:plasticity3d-derivative-ablation}.
-In that ablation, all three derivative routes reach the same reported endpoint
-observables and iteration counts under identical residual, tangent,
-preconditioner, and nonlinear stopping definitions. The comparison therefore
-isolates derivative-route cost inside the assembled sparse nonlinear solve.
+The quadrature diagnostic illustrates why the discrete functional belongs in
+the comparison contract. For the stored $P_2(L_1)$ and $P_4(L_1)$ plasticity
+states, the solve-rule energies differ from the enriched evaluation by only
+$1.84\times10^{-8}$ and $5.10\times10^{-6}$ relatively. Nevertheless, the
+corresponding tangent actions differ by $2.08\%$ and $4.35\%$, and the states
+are not stationary for the enriched functionals. Hence energy agreement alone
+cannot establish derivative equivalence, quadrature adequacy, or a converged
+degree trend. Moreover, one P2 reference sample lies inside the declared
+switch-exclusion band, so that reported action is a selected-branch sensitivity
+rather than an ordinary smooth Hessian action.
 
-In this setting, constitutive AD has the lowest measured wall time, while
-colored sparse recovery remains a useful comparison route on the tested
-problems. The conclusion is therefore not that one derivative route is
-uniformly best, but that derivative placement should be assessed inside the
-assembled sparse nonlinear solve that will use it.
+The branch tests have a similarly precise boundary. All five selected
+Mohr--Coulomb labels are exercised at strict interior points, and rotations,
+repeated spectra, and two-sided interface probes remain finite under the stated
+tie convention. The selected Hessian may change by order one across an
+interface. We therefore use ordinary gradients and Hessians only in branch
+interiors. No generalized derivative, semismooth convergence theorem, or
+incremental plastic-history validation follows from these tests.
 
-\paragraph{Agreement evidence depends on matched definitions.}
-The hyperelastic JAX-FEM comparison in
-\Cref{fig:hyperelasticity-jaxfem-baseline,tab:hyperelasticity-jaxfem-baseline}
-is useful because the mesh, displacement schedule, and endpoint-energy
-comparison are explicitly matched. The three-dimensional plasticity
-comparison in \Cref{fig:plasticity3d-validation,tab:plasticity3d-validation}
-uses a different agreement criterion: the largest converged load value on the
-tested grid, the
-$u_{\max}(\lambda_{\mathrm{sr}})$ curve, and endpoint displacement satisfy the
-stated criteria, while deviatoric-strain and upper-slope profile comparisons serve
-as diagnostics. These two examples illustrate the same validation rule:
-external or surrogate comparisons are informative when the problem definition
-and compared observables are named before agreement is interpreted.
-The three-dimensional plasticity endpoint result is therefore endpoint-scoped
-mechanics evidence, not a path-consistent reproduction of the Sysala-family
-incremental-history plasticity references
-\citep{sysala2017returnmapping,sysala2021optimization,sysala2025convexoptimization,sysala2025advancedcontinuation}
-or the \v{C}erm{\'a}k--Sysala--Valdman MATLAB implementation context
-\citep{cermak2019efficient}.
+The current route data do not yet determine an admitted finite route map or a
+performance model. Twelve local records contain useful exact-state and
+tangent-action diagnostics, but they predate the collective-max timing record
+and clean-provenance contracts. A valid crossover
+study must measure all routes within balanced allocations, use collective-max
+MPI timings, include independent block repetitions, and admit endpoints under
+the same Riesz-scaled stopping rule. The prepared protocol also separates
+quadrature, local differentiation, contraction, sparse insertion,
+communication, cache, memory, and imbalance costs. Until those measurements
+are executed, no fastest-route, speedup, selector, or scaling statement is
+justified.
 
-\paragraph{Scalability evidence reflects solver policy.}
-The scaling results show that performance conclusions depend on solver policy
-as much as on assembly ownership. Sparse overlap, coarse solves, and
-preconditioner choices change both timing and interpretation, so we separate
-timing studies from converged benchmark comparisons. The
-$\lambda_{\mathrm{sr}}=\num{1.0}$ three-dimensional plasticity strong-scaling study is
-timing-only evidence, whereas the bottom-clamped $\lambda_{\mathrm{sr}}=\num{1.55}$
-scaling sweep is the converged benchmark comparison. The topology study reports
-end-to-end timing under adaptive stopping, then adds a smaller fixed-schedule
-rank-consistency check to separate distributed design-gradient exchange from
-adaptive termination effects. The frozen-preconditioner PMG diagnostics should
-similarly be read as solver-sensitivity tests, not as external baselines.
+The independent manufactured problems verify consistency rather than physical
+validity of the production benchmarks. The scalar solutions are smooth, and
+the recorded Ginzburg--Landau endpoints lie in a controlled positive branch. The
+nonaffine hyperelastic problem uses exact data on the complete boundary, while
+the affine patch supplies the reaction and objectivity checks. These results
+support the energy, residual, and tangent implementation, but they do not
+validate the rotating-beam trajectory or certify local minimality of a
+nonconvex endpoint.
 
-Together, these distinctions delimit the contribution. We present a nonlinear
-FEM toolset that couples JAX-based local differentiation with PETSc sparse
-distributed solvers, and we evaluate that coupling through comparisons with
-named problem definitions and observables. For the tested benchmark classes,
-the results support treating derivative route, assembly, globalization, Krylov
-algebra, and preconditioning as coupled numerical choices rather than as
-independent implementation details.
+The resulting scope is narrower than a general nonlinear finite-element
+framework comparison. It is also more reproducible: every diagnostically admitted claim names
+the differentiated functional, constrained space, branch status, norm, state
+identity, and distributed object. Future performance work should preserve this
+contract rather than trading accuracy for apparent route speed.

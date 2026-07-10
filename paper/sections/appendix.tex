@@ -1,79 +1,353 @@
 \label{sec:solver-evidence}
 
-This appendix collects supporting solver-policy diagnostics that are
-methodologically useful but narrower than the main benchmark narratives.
+\subsection{Complete endpoint-branch definition}
+\label{subsec:mc-branch-definition}
 
-\subsection{Reference-Formula and Frozen-PMG Diagnostics for 3D Mohr--Coulomb}
+This subsection records the exact scalar branch program used in
+Section~\ref{sec:bench-plasticity3d}. Let $c_0$, $\phi$, and $\psi$ denote the
+input cohesion, friction angle, and dilation angle. For strength-reduction
+factor $\lambda_{\mathrm{sr}}>0$, the Davis--B map is
+defined as in the stated slope-stability reduction context
+\citep{davis1968plasticity,tschuchnigg2015nonassociated,sysala2021optimization}:
+\begin{align}
+  c_1&:=\frac{c_0}{\lambda_{\mathrm{sr}}},
+  &
+  \phi_1&:=\arctan\!\left(
+      \frac{\tan\phi}{\lambda_{\mathrm{sr}}}\right),
+  &
+  \psi_1&:=\arctan\!\left(
+      \frac{\tan\psi}{\lambda_{\mathrm{sr}}}\right),
+  \nonumber\\
+  \beta&:=\frac{\cos\phi_1\cos\psi_1}
+                 {1-\sin\phi_1\sin\psi_1},
+  &
+  c_\lambda&:=\beta c_1,
+  &
+  \phi_\lambda&:=\arctan(\beta\tan\phi_1),
+  \label{eq:appendix-davis-b}
+\end{align}
+with
+\begin{equation}
+  \bar c_\lambda:=2c_\lambda\cos\phi_\lambda,
+  \qquad s_\lambda:=\sin\phi_\lambda.
+  \label{eq:appendix-reduced-parameters}
+\end{equation}
+The tested material table has $\psi=0$, but the implementation retains the
+complete map \eqref{eq:appendix-davis-b}.
+The mathematical domain used below has finite ordered principal strains,
+$K>0$, $\mu>0$, $-1<s_\lambda<1$, and $s_\lambda\ne0$ whenever the apex row is
+reachable. On this domain the displayed denominators are nonzero. Defensive
+tiny-denominator substitutions in the program are failure containment outside
+this model; an admitted row must instead pass the stored denominator-margin
+gate.
 
-In \Cref{sec:num-plasticity3d}, the primary 3D plasticity configuration uses
-rank-local constitutive AD.
-\Cref{tab:plasticity3d-constitutive-reference-formula,tab:plasticity3d-frozen-preconditioner-pmg}
-add two comparisons on the same $P_4(L_2)$ problem from
-\eqref{eq:plasticity3d-discrete} at $\lambda_{\mathrm{sr}}=\num{1.0}$: a
-non-AD evaluation of the active branch tangent and a PMG variant with the
-multigrid operator held fixed during nonlinear iterations.
-Both use Armijo Newton, the gradient stopping metric reported in the tables, at
-most 50 Newton iterations, and PETSc relative KSP tolerance \num{1e-1}. Here
-reference-formula assembly means
-evaluating the active constitutive branch and tangent formulas without AD,
-while frozen-preconditioner PMG means a variant in which the multigrid operator
-is not rebuilt along the nonlinear path.
+Let $I_1:=\operatorname{tr}\varepsilon$ and
+\begin{equation}
+  Q(\varepsilon)
+  :=\varepsilon_{xx}^2+\varepsilon_{yy}^2+\varepsilon_{zz}^2
+  +\frac12\left(\gamma_{xy}^2+\gamma_{yz}^2+\gamma_{xz}^2\right).
+  \label{eq:appendix-engineering-quadratic}
+\end{equation}
+The elastic energy is
+\begin{equation}
+  \Phi_{\mathrm{el}}
+  :=\frac12\lambda_{\mathrm L}I_1^2+\mu Q(\varepsilon).
+  \label{eq:appendix-elastic-branch}
+\end{equation}
+In addition to $f_{\mathrm{tr}}$ from
+\eqref{eq:plasticity3d-trial-function}, the return tests are
+\begin{align}
+  r_{\mathrm{sl}}&:=\frac{\varepsilon_1-\varepsilon_2}{1+s_\lambda},
+  &
+  r_{\mathrm{sr}}&:=\frac{\varepsilon_2-\varepsilon_3}{1-s_\lambda},
+  \nonumber\\
+  r_{\mathrm{la}}&:=
+    \frac{\varepsilon_1+\varepsilon_2-2\varepsilon_3}{3-s_\lambda},
+  &
+  r_{\mathrm{ra}}&:=
+    \frac{2\varepsilon_1-\varepsilon_2-\varepsilon_3}{3+s_\lambda}.
+  \label{eq:appendix-return-tests}
+\end{align}
+Their strictly positive denominators are
+\begin{align}
+  D_{\mathrm s}
+  &:=4\lambda_{\mathrm L}s_\lambda^2+4\mu(1+s_\lambda^2),
+  \nonumber\\
+  D_{\mathrm l}
+  &:=4\lambda_{\mathrm L}s_\lambda^2
+    +\mu(1+s_\lambda)^2+2\mu(1-s_\lambda)^2,
+  \nonumber\\
+  D_{\mathrm r}
+  &:=4\lambda_{\mathrm L}s_\lambda^2
+    +2\mu(1+s_\lambda)^2+\mu(1-s_\lambda)^2,
+  \nonumber\\
+  D_{\mathrm a}
+  &:=4Ks_\lambda^2.
+  \label{eq:appendix-branch-denominators}
+\end{align}
+For the tested parameters $s_\lambda>0$; the verifier records normalized
+denominator margins.
 
-\begin{table}[!htbp]
-  \centering
-  \caption{Matched constitutive-assembly versus reference-formula assembly
-  comparison for the same PMG solver configuration on
-  $P_4(L_2)$ at $\lambda_{\mathrm{sr}}=\num{1.0}$. The table reports wall time,
-  solve time, and their ratio for matched rank counts on
-  \eqref{eq:plasticity3d-discrete}.}
-  \label{tab:plasticity3d-constitutive-reference-formula}
-  \input{tables/generated/plasticity3d_constitutive_vs_reference_formula.tex}
-\end{table}
+The four plastic multipliers are
+\begin{align}
+  \Lambda_{\mathrm s}
+  &:=\frac{f_{\mathrm{tr}}}{D_{\mathrm s}},
+  \nonumber\\
+  \Lambda_{\mathrm l}
+  &:=\frac{
+    \mu\bigl((1+s_\lambda)(\varepsilon_1+\varepsilon_2)
+    -2(1-s_\lambda)\varepsilon_3\bigr)
+    +2\lambda_{\mathrm L}s_\lambda I_1-\bar c_\lambda}
+    {D_{\mathrm l}},
+  \nonumber\\
+  \Lambda_{\mathrm r}
+  &:=\frac{
+    \mu\bigl(2(1+s_\lambda)\varepsilon_1
+    -(1-s_\lambda)(\varepsilon_2+\varepsilon_3)\bigr)
+    +2\lambda_{\mathrm L}s_\lambda I_1-\bar c_\lambda}
+    {D_{\mathrm r}},
+  \nonumber\\
+  \Lambda_{\mathrm a}
+  &:=\frac{2Ks_\lambda I_1-\bar c_\lambda}{D_{\mathrm a}}.
+  \label{eq:appendix-branch-multipliers}
+\end{align}
+The associated energies are
+\begin{align}
+  \Phi_{\mathrm s}
+  &:=\Phi_{\mathrm{el}}
+    -\frac12D_{\mathrm s}\Lambda_{\mathrm s}^2,
+  \nonumber\\
+  \Phi_{\mathrm l}
+  &:=\frac12\lambda_{\mathrm L}I_1^2
+    +\mu\left(\varepsilon_3^2
+      +\frac12(\varepsilon_1+\varepsilon_2)^2\right)
+    -\frac12D_{\mathrm l}\Lambda_{\mathrm l}^2,
+  \nonumber\\
+  \Phi_{\mathrm r}
+  &:=\frac12\lambda_{\mathrm L}I_1^2
+    +\mu\left(\varepsilon_1^2
+      +\frac12(\varepsilon_2+\varepsilon_3)^2\right)
+    -\frac12D_{\mathrm r}\Lambda_{\mathrm r}^2,
+  \nonumber\\
+  \Phi_{\mathrm a}
+  &:=\frac12KI_1^2
+    -\frac12D_{\mathrm a}\Lambda_{\mathrm a}^2.
+  \label{eq:appendix-branch-energies}
+\end{align}
+The elastic-first selection order is
+\begin{equation}
+  \Phi_{\mathrm{MC}}(\varepsilon)
+  :=
+  \begin{cases}
+    \Phi_{\mathrm{el}},
+      & f_{\mathrm{tr}}\le0,\\
+    \Phi_{\mathrm s},
+      & f_{\mathrm{tr}}>0\ \text{and}\ \Lambda_{\mathrm s}\le
+        \min(r_{\mathrm{sl}},r_{\mathrm{sr}}),\\
+    \Phi_{\mathrm l},
+      & f_{\mathrm{tr}}>0\ \text{and}\ r_{\mathrm{sl}}<r_{\mathrm{sr}}
+        \quad\text{and}\quad
+        r_{\mathrm{sl}}\le\Lambda_{\mathrm l}\le r_{\mathrm{la}},\\
+    \Phi_{\mathrm r},
+      & f_{\mathrm{tr}}>0\ \text{and}\ r_{\mathrm{sr}}<r_{\mathrm{sl}}
+        \quad\text{and}\quad
+        r_{\mathrm{sr}}\le\Lambda_{\mathrm r}\le r_{\mathrm{ra}},\\
+    \Phi_{\mathrm a},
+      & f_{\mathrm{tr}}>0\ \text{and none of the three tests above holds},
+  \end{cases}
+  .
+  \label{eq:appendix-branch-selection}
+\end{equation}
+The cases are evaluated from top to bottom and the first true row is returned;
+mutual exclusivity of the un-ordered plastic predicates is therefore not
+assumed. The predicates are part of the discrete surrogate. Differentiation
+treats the selected row of \eqref{eq:appendix-branch-selection} as fixed.
 
-\begin{table}[!htbp]
-  \centering
-  \caption{Frozen-preconditioner PMG alternative on the same
-  $P_4(L_2)$, $\lambda_{\mathrm{sr}}=\num{1.0}$ 3D plasticity problem. The status
-  column distinguishes completed configurations from rank counts that reach the
-  maximum number of Newton iterations before satisfying the target gradient
-  tolerance.}
-  \label{tab:plasticity3d-frozen-preconditioner-pmg}
-  \input{tables/generated/plasticity3d_fixed_reference_operator_pmg.tex}
-\end{table}
+\subsection{Interface and repeated-spectrum probes}
+\label{subsec:interface-probes}
 
-These diagnostics support two narrower statements. First,
-\Cref{tab:plasticity3d-constitutive-reference-formula} shows lower wall time for
-reference-formula branch-tangent assembly at each listed rank count; the
-AD/reference wall-time ratio decreases from \num{1.805} at 4 ranks to
-\num{1.085} at 32 ranks, and all listed entries satisfy the stated gradient
-target. Second, \Cref{tab:plasticity3d-frozen-preconditioner-pmg} shows less
-consistent convergence for the frozen-preconditioner PMG variant: three of the
-eight configurations reach the 50-Newton cap. The rank-local constitutive-AD
-realization remains the primary 3D plasticity configuration because it uses the
-same local differentiable formulation as the derivative-route and converged
-scaling studies; the reference-formula configurations are retained to expose
-solver-policy sensitivity on matched discrete problems.
+For every adjacent branch pair, the material-point verifier constructs states
+on both sides of the switching predicate. Each state records the normalized
+active-branch margin, constitutive denominator, principal-value gap, finite
+stress and tangent, tangent symmetry, and centered finite-difference action.
+The two one-sided selected Hessians are compared descriptively. Their difference
+does not define a generalized derivative.
 
-\FloatBarrier
+Repeated principal values are evaluated under the deterministic diagonal
+perturbation stated in Section~\ref{sec:bench-plasticity3d}. The checks require
+finite energy, stress, and tangent, but they do not claim rotational invariance
+of the arbitrary tie-selected tangent at exact degeneracy. Separate rotations
+of strict interior states test energy invariance and stress/tangent covariance.
 
-\subsection{2D Mohr--Coulomb Reference Continuation Evidence}
+\subsection{Stopping diagnostics}
+\label{subsec:stopping-diagnostics}
 
-The 2D reference-continuation comparison provides fixed-policy rank and timing
-evidence for the same-mesh PMG policy under a common outer continuation
-procedure.
+The retained scalar lumped-mass pilot compares baseline and ten-times tighter
+linear and nonlinear tolerances on the deterministic zero-source
+Ginzburg--Landau instance. Its relative final-state difference is
+$2.22\times10^{-7}$. This value is a local sensitivity observation; it neither
+calibrates a cross-mesh stopping threshold nor provides timing evidence. The
+attempted $p$-Laplace pair is excluded because its random initial coefficients
+were not seeded or stored.
 
-\begin{table}[!htbp]
-  \centering
-  \caption{Reference continuation with the fixed PMG policy at 8 and 32 ranks.
-  This is supporting solver evidence for a reference continuation
-  setting, not a primary solver comparison.}
-  \label{tab:plasticity2d-reference-continuation}
-  \input{tables/generated/plasticity2d_reference_continuation.tex}
-\end{table}
+The hyperelastic reference operator was checked independently on one and two
+ranks for a P1 problem with 2,133 free DOFs. Both matrices have inertia
+$(0,0,2133)$ and the same initial deformation-map norm
+$1031.6632492383628$. The reported dual residuals differ by
+$7.43\times10^{-12}$ relatively, and both inverse-Riesz solves satisfy the
+$10^{-8}$ true-residual gate. This is an operator and serialization test with
+zero permitted Newton iterations, not a nonlinear endpoint comparison. The
+large Jacobi-preconditioned CG counts also motivate a separate efficiency
+calibration before production-scale use.
 
-\FloatBarrier
+\subsection{Prepared distributed comparison}
+\label{subsec:prepared-distributed-comparison}
 
-The two entries show fixed-policy timing evidence rather than a validation
-baseline: increasing from 8 to 32 ranks reduces the reported wall time from
-\SI{489}{s} to \SI{198}{s}, while the final strength-reduction values differ by
-\num{6.9e-5}.
+The executable design spans $P_1(L_1)$, $P_1(L_2)$, $P_2(L_1)$, and
+$P_4(L_1)$; elastic and mixed-branch states; and 1, 8, and 32 ranks. The
+high-order colored slot is retained as a prespecified risk-based non-attempt,
+not a measured resource failure. Full-solve confirmations use numerically
+checked reference-elastic stopping and a strict endpoint validator.
+
+The design is intentionally absent from the numerical result tables because it
+has not been executed. The exact execution inventory and resource ceilings are
+kept in the archived experiment protocol rather than the manuscript.
+Three-route fixed-state comparisons use three cyclic blocks, the two-route
+high-order comparison uses four alternating blocks, and full-solve
+confirmations use ten paired cold-process blocks. The base order is obtained
+from the first 16 hexadecimal digits of the SHA-256 of the comparison
+identifier. The release gate additionally requires collective-max phase
+timing, multiple derivative probes, and a cross-route endpoint analyzer. These
+conditions prevent scheduler, node, cache, or stopping differences from being
+interpreted as derivative-route speed.
+
+\subsection{Diagnostic configurations}
+\label{subsec:diagnostic-configurations}
+
+The scalar manufactured meshes have $8$, $16$, $32$, and $64$ uniform
+subdivisions per coordinate direction. The $p$-Laplace solve starts from the
+affine extension $x+y$ and the Ginzburg--Landau solve starts from its exact
+Dirichlet extension; both use damped Newton iteration and the relative residual
+defined in Section~\ref{subsec:verification-normalization}. The nonaffine
+hyperelastic meshes and material constants are stated in
+Section~\ref{sec:bench-he}. The affine patch uses one unit cube divided into six
+tetrahedra.
+
+The zero-source Ginzburg--Landau diagnostics instead use the checked-in level-5
+P1 mesh of $[-1,1]^2$, with 4,225 nodes, 8,192 triangles, and 3,969 free
+coefficients. They set $\epsilon=0.01$, $f=0$, and $u=0$ on the complete
+boundary, and initialize the free coefficients by
+\begin{equation}
+  u_0(x,y):=\sin\!\left(\frac{\pi(x-1)}{2}\right)
+             \sin\!\left(\frac{\pi(y-1)}{2}\right).
+  \label{eq:gl-diagnostic-initial-state}
+\end{equation}
+The lumped-$L^2$ sensitivity records hash the mesh arrays and final states.
+They do not contain a digest of the initial vector;
+equation~\eqref{eq:gl-diagnostic-initial-state} and the hashed mesh arrays are
+therefore the available start-state identity.
+
+The lumped-$L^2$ sensitivity pair uses two MPI ranks, one thread per rank,
+element Hessians, GMRES--Hypre, reduced-subspace trust with Armijo acceptance,
+and at most 100 Newton iterations. Define the tolerance vector by
+\[
+  \boldsymbol{\tau}
+  :=(\tau_E,\tau_R^{\mathrm{abs}},\tau_R^{\mathrm{rel}},
+      \tau_C^{\mathrm{abs}},\tau_C^{\mathrm{rel}}).
+\]
+The two policies are
+\[
+  \boldsymbol{\tau}_{\mathrm{base}}
+  =(10^{-6},10^{-5},10^{-3},10^{-10},10^{-3}),
+  \qquad
+  \boldsymbol{\tau}_{\mathrm{tight}}
+  =(10^{-7},10^{-6},10^{-4},10^{-11},10^{-4}).
+\]
+The KSP relative tolerance and cap change from $(10^{-3},200)$ to
+$(10^{-4},300)$. The common state scale is the unit-field lumped norm
+$s_0=1.96875$. The attempted production
+$p$-Laplace pair used independent calls to an unseeded random initializer and
+stored neither initial vector; we therefore report none of its numerical
+differences.
+
+The distributed hyperelastic diagnostic uses the brick
+$[0,0.4]\times[-0.005,0.005]^2$, an $80\times2\times2$ cell grid split into
+1,920 tetrahedra, 729 nodes, and 2,133 free vector DOFs after both end faces are
+constrained. Its constants are
+$C_1=3.8462\times10^7$ and $D_1=8.3333\times10^7$ in the nondimensional stress
+scale of Section~\ref{sec:bench-he}; run records retain the full binary64
+values. The stored fixed state twists the right face by $0.15$ radians; no
+nonlinear trajectory is inferred from that state.
+
+The Plasticity3D $L_1$ macro mesh has 3,845 vertices and 18,419 tetrahedra.
+Its bounding box is
+$[-175,30]\times[0,60]\times[0,86.6025403784]$ in the scaled coordinates of
+Section~\ref{sec:bench-he}.
+The $P_1$, $P_2$, and $P_4$ glued spaces have 10,526, 79,024, and 610,964 free
+vector DOFs. Source labels constrain $x$ on groups 1 and 2, $y$ on group 5,
+and $z$ on groups 3 and 4; the maintained case additionally fixes every
+component on $y=0$. Gravity acts in the negative $y$ direction. The four
+material rows are listed below. Here $c_0$ and $E$ are scaled by $S_0$,
+$\gamma$ is scaled by $S_0/L_0$, and $\phi$, $\psi$, and $\nu$ are
+dimensionless. The derived elastic moduli follow
+\eqref{eq:plasticity3d-elastic-moduli}.
+\begin{center}
+\begin{tabular}{@{}lrrrrrr@{}}
+  \toprule
+  region & $c_0$ & $\phi$ (deg) & $\psi$ (deg) & $E$ & $\nu$ & $\gamma$ \\
+  \midrule
+  cover layer        & 15 & 30 & 0 & 10000 & 0.33 & 19 \\
+  general foundation & 15 & 38 & 0 & 50000 & 0.30 & 22 \\
+  weak foundation    & 10 & 35 & 0 & 50000 & 0.30 & 21 \\
+  slope mass         & 18 & 32 & 0 & 20000 & 0.33 & 20 \\
+  \bottomrule
+\end{tabular}
+\end{center}
+with identical saturated and unsaturated unit weights in the tested dry table.
+The source input is the checked-in \code{SSR\_hetero\_ada\_L1.msh}; every publication run
+must record its content hash.
+
+The local fixed-element derivative diagnostic uses
+$\lambda_{\mathrm{sr}}=1.50$. The principal assembled route, stopping,
+quadrature, and any conditional scaling protocols use
+$\lambda_{\mathrm{sr}}=1.55$. These configurations remain separate in every
+evidence record and comparison.
+
+The controlled globalization diagnostic uses two MPI ranks and one thread per
+rank. Its retained Ginzburg--Landau pair uses the problem and deterministic
+initial state above, the coefficient $\ell^2$ metric, GMRES--Hypre with
+relative tolerance $10^{-3}$ and cap 200, and the baseline tolerance tuple just
+stated, with a cap of 100 Newton iterations. The compared methods are
+Newton--Armijo and reduced-subspace trust with Armijo acceptance. The pilot
+stores no canonical endpoint state. The attempted
+$p$-Laplace pair is excluded because its two unseeded random initial vectors
+were not stored.
+
+The hyperelastic pair uses the procedural level-2 P1 grid with
+$160\times4\times4$ brick cells, split into 15,360 tetrahedra, on
+$[0,0.4]\times[-0.005,0.005]^2$. It has 12,075 total and 11,925 free vector
+DOFs, $C_1=3.8461538461538464\times10^7$, and
+$D_1=8.333333333333333\times10^7$. The left face retains the identity map and
+the right face rotates about the $x$-axis. The two steps prescribe angles
+$\pi/3$ and $2\pi/3$; the first starts from the identity map and the second
+warm-starts from the method's first endpoint. Both methods use coefficient
+$\ell^2$ stopping, GMRES--GAMG with relative tolerance $10^{-1}$ and cap 30,
+at most 100 Newton iterations per load, and
+$(\tau_E,\tau_R^{\mathrm{abs}},\tau_R^{\mathrm{rel}},
+\tau_C^{\mathrm{abs}},\tau_C^{\mathrm{rel}})
+=(10^{-4},10^{-3},10^{-3},10^{-10},10^{-4})$. No initial or final state hash
+was stored for these smoke rows.
+
+For every retained globalization row, Armijo uses initial step 1,
+sufficient-decrease constant $10^{-4}$, contraction $1/2$, and at most 40
+trials. The reduced trust model uses initial, minimum, and maximum radii $1$,
+$10^{-8}$, and $10^6$, shrink/expand factors $1/2$ and $3/2$,
+acceptance-update thresholds $0.05$ and $0.75$, and at most six rejected
+candidates per Newton iteration. Section~\ref{subsec:globalization-results}
+states why none of these rows supports a timing comparison.
+
+The diagnostic environment recorded Python 3.12.10, NumPy 2.4.2, JAX/JAXlib
+0.9.1, petsc4py 3.24.2, and Open MPI 5.0.10. These versions describe the dirty
+pilots only. A clean publication record must repeat the full compiler, BLAS,
+PETSc external-package, CPU, operating-system, placement, and environment
+manifest.

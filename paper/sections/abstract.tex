@@ -1,28 +1,30 @@
 \begin{abstract}
-Large nonlinear finite-element energy problems require reliable local
-derivatives, robust nonlinear globalization, and sparse distributed linear
-algebra that is matched to the mechanics of the problem. We develop a
-scientific toolset for studying these requirements as coupled numerical choices
-in nonlinear finite-element energy minimization and energy-based topology
-optimization. The primary \jaxpetsc{} realization uses JAX for local energy and
-constitutive evaluations and PETSc for sparse assembly, Newton globalization,
-Krylov solvers, and preconditioners. The benchmark suite covers
-$p$-Laplace, Ginzburg--Landau, finite-strain hyperelasticity, two- and
-three-dimensional Mohr--Coulomb plasticity, and topology optimization.
+Second derivatives of nonlinear finite-element energies may be constructed at
+the element, constitutive, or assembled sparse-operator level. Element and
+constitutive differentiation are mathematically equivalent when they
+differentiate the same quadrature functional, affine constraint map, and smooth
+constitutive branch. Colored recovery is guaranteed to give the same sparse operator under
+additional complete-pattern, interference-coloring, overlap, and row-ownership
+conditions. We state these two conditional results and implement the three
+routes with JAX and PETSc.
 
-On representative cases, we compare element automatic differentiation,
-constitutive automatic differentiation, and colored sparse recovery inside PETSc
-nonlinear solves. In the high-order three-dimensional plasticity
-derivative-route study, constitutive AD has the lowest measured wall time among
-the tested routes while matching the reported endpoint energy, external-work,
-and maximum-displacement observables to displayed precision. The distributed
-mechanics and topology studies then show how derivative construction interacts
-with MPI assembly, nonlinear globalization, Krylov algebra, and
-preconditioning. Pure JAX and FEniCS provide matched internal formulation
-checks, JAX-FEM supplies a hyperelastic endpoint-state comparison, and the
-Sysala-family and \v{C}erm{\'a}k--Sysala--Valdman works provide external
-plasticity reference and implementation context.
-Together, the evidence indicates that, for the tested problem classes, derivative
-construction should be evaluated inside the sparse nonlinear solve that consumes
-it, together with assembly, globalization, Krylov algebra, and preconditioning.
+The verification separates derivative correctness from nonlinear-solver and
+timing evidence. In prerelease diagnostic executions, fixed-element tests with linear and high-order
+tetrahedra, element and constitutive differentiation agree to relative errors
+below $2.4\times10^{-16}$. Material-point tests exercise all five branches of a
+three-dimensional Mohr--Coulomb endpoint surrogate, while explicitly excluding
+ordinary Hessian claims at switches. A one-versus-two-rank hyperelastic test
+reproduces bitwise-identical stored residual and matrix arrays and the tangent action to
+$2.3\times10^{-16}$. Independent manufactured problems recover the expected
+P1 rates for $p$-Laplace and Ginzburg--Landau equations. A nonaffine
+hyperelastic problem gives last-pair orders $1.887$, $1.006$, and $0.983$ for
+displacement, deformation gradient, and first Piola stress, respectively.
+
+An enriched-quadrature diagnostic also shows that nearly unchanged energy can
+coexist with materially different residuals and tangent actions. The present
+diagnostics therefore exercise the conditional derivative identities and the
+fail-closed comparison protocol, but they are not clean-release evidence and do
+not support a universal route ranking or timing claim. The accompanying
+implementation provides the tests, canonical state exports, analysis contracts,
+and a prespecified distributed crossover protocol.
 \end{abstract}

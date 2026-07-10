@@ -1,321 +1,348 @@
 \label{sec:methodology}
 
-We use a common finite-element notation across all benchmark families. The
-continuous domain is $\Omega \subset \mathbb{R}^d$, and
-$V_{h,0}=\operatorname{span}\{\varphi_i\}_{i=1}^{n}$ is the conforming space of
-free basis functions after homogeneous essential constraints have been
-applied. We write $\mathbf n$ for the outward unit normal on boundary portions.
-Let $\theta$ collect benchmark parameters such as load, material, continuation,
-strength-reduction, and lift data. Nonhomogeneous essential data are represented
-by an affine lift $\bar u_h(\theta)$, with $\bar u_h=0$ in the homogeneous
-cases. For vector-valued mechanics problems, $V_{h,0}$ denotes the constrained
-vector space, basis functions may be vector-valued, and $n$ counts free scalar
-degrees of freedom. A free coefficient vector
-$x\in\mathbb{R}^{n}$ defines the finite-element state
-\[
-  u_h(x;\theta)=\bar u_h(\theta)+\sum_{i=1}^{n} x_i\varphi_i.
-\]
-When no confusion is possible, we identify $u_h$ with its coefficient vector in
-algebraic formulas. On element $e$, $x_e=R_e x$ denotes the local coefficient
-vector selected by the element restriction $R_e$, while $u_e(x;\theta)$ denotes
-the corresponding local element state including any contribution from the lift.
+We first define the algebraic object differentiated by every route. Let
+$V_{h,0}=\operatorname{span}\{\varphi_i\}_{i=1}^{n}$ be the constrained
+finite-element space, and let $x\in\mathbb{R}^n$ contain its free scalar
+coefficients. Essential data enter through an affine lift
+$\bar u_h(\theta)$, where $\theta$ collects fixed load and material
+parameters. The corresponding state is
+\begin{equation}
+  u_h(x;\theta)
+  =\bar u_h(\theta)+\sum_{i=1}^{n}x_i\varphi_i.
+  \label{eq:constrained-state}
+\end{equation}
+For element $e$, we write the local state as
+$u_e(x;\theta)=A_ex+b_e(\theta)$, where $A_e$ is the fixed restriction and
+component map. This notation includes nonhomogeneous prescribed values and
+arbitrary free-DOF permutations.
 
-The benchmark families use two scalar functional roles. A load-step potential or
-endpoint surrogate is written on a mesh
-$\mathcal{T}_h=\{e\}_{e=1}^{n_{\mathrm{el}}}$ as
+Let $B_{eq}$ map the local state to the strain or gradient argument at
+quadrature point $q$. We fix the quadrature rule, weights, local material data
+$m_{eq}$, and a deterministic first-match selector $\beta_{eq}(x)$ evaluated
+from the local strain and data. The discrete element contribution is
+\begin{equation}
+  \Phi_e(x;\theta)
+  :=\sum_{q=1}^{n_q}w_{eq}
+  \mathcal{W}_{\beta_{eq}(x)}
+  \bigl(B_{eq}(A_ex+b_e);m_{eq}\bigr),
+  \label{eq:element-quadrature-potential}
+\end{equation}
+and the global free-space potential is
 \begin{equation}
   \Pi_h(x;\theta)
-  =
-  \sum_{e=1}^{n_{\mathrm{el}}} \Phi_e(x_e;\theta_e)
-  - f_{\mathrm{ext}}^\top x,
+  :=\sum_{e\in\mathcal{T}_h}\Phi_e(x;\theta)-f_h^\top x.
   \label{eq:generic-potential}
 \end{equation}
-where $\theta_e$ is the element-local restriction of those data and
-$f_{\mathrm{ext}}$ is the assembled load vector on the free degrees of freedom.
-The expression is the reduced algebraic potential in the free variables; additive
-constants depending only on the affine lift or prescribed loads are omitted
-because they do not affect the stationarity equations. A true reduced
-optimization objective with design variable $z$ is written schematically as
+Additive terms that depend only on prescribed data may be omitted because they
+do not alter the free-space derivatives. The symbol $P_k(L_\ell)$ denotes
+degree-$k$ Lagrange elements on mesh level $L_\ell$.
+
+\subsection{Element and constitutive differentiation}
+\label{subsec:element-constitutive-equivalence}
+
+Element AD applies first- and second-order differentiation directly to
+$\Phi_e$. At a fixed state $x_\star$, write
+$\beta_{eq}^\star:=\beta_{eq}(x_\star)$. Constitutive AD differentiates that
+selected scalar density with respect to
 \begin{equation}
-  \mathcal{J}_h(z)
-  =
-  \mathcal{R}_h(z) + \mathcal{S}_h(z,x_h(z);\theta(z)),
-  \label{eq:generic-objective}
+  \varepsilon_{eq}:=B_{eq}(A_ex+b_e),
+  \qquad
+  \sigma_{eq}:=\partial_\varepsilon\mathcal{W}_{\beta_{eq}^\star},
+  \qquad
+  C_{eq}:=\partial^2_{\varepsilon\varepsilon}
+  \mathcal{W}_{\beta_{eq}^\star}.
+  \label{eq:constitutive-objects}
 \end{equation}
-where $x_h(z)$ is the state determined by the benchmark state equation or
-stationarity condition, $\mathcal{R}_h$ contains regularization or design
-penalties, and $\mathcal{S}_h$ denotes the state-dependent scalar part. Some
-design updates instead solve frozen-state subproblems. For those steps we write
-\begin{equation}
-  \mathcal{J}_h^m(z;x_h^m)
-  =
-  \mathcal{R}_h^m(z) + \mathcal{S}_h^m(z,x_h^m;\theta^m),
-  \label{eq:generic-frozen-objective}
-\end{equation}
-where $x_h^m$ is fixed from the current outer iterate. The topology objective in
-\Cref{sec:bench-topology} has this second form; its frozen compliance term is
-not the load-step potential \eqref{eq:generic-potential}. Thus
-\eqref{eq:generic-potential} covers scalar PDE, mechanics, and
-endpoint-surrogate solves, while
-\eqref{eq:generic-objective} and \eqref{eq:generic-frozen-objective} record the two
-reduced-objective roles. When an algorithm is stated independently of a
-benchmark family, we denote its merit functional by $\mathcal{F}$.
-Hyperelasticity is the only family in which $J=\det F$ denotes the deformation
-Jacobian, so we avoid the bare symbol $J$ for generic objectives elsewhere in
-the paper.
+The branch-stability assumption below makes
+$\beta_{eq}(x)=\beta_{eq}^\star$ on a neighborhood of $x_\star$; the selector
+is therefore locally constant during branch-interior differentiation.
 
-In \eqref{eq:generic-potential}, $\Phi_e$ is the integrated scalar contribution
-of element $e$. In quadrature-based mechanics examples,
-$\Phi_e(x_e;\theta_e)=\sum_q w_q\mathcal{W}_q(\varepsilon_q;\theta_q)$, where
-$\varepsilon_q := B_q u_e(x;\theta)$ is the local strain or gradient argument,
-$q$ indexes quadrature points, $n_q$ denotes the number of quadrature points on
-an element when finite quadrature limits are displayed, $w_q$ includes the
-quadrature weight and element-map Jacobian factor, $B_q$ is the corresponding
-element operator,
-$\theta_q$ is the quadrature-point restriction of the element data, and
-$\mathcal{W}_q$ is the pointwise energy density or branch potential. Within
-each benchmark family, all derivative routes and solver-realization comparisons
-use the same quadrature points and weights for the stated discrete functional;
-the comparisons therefore change the differentiation, assembly, or solver path,
-not the quadrature definition of the energy. For
-finite-element labels, $P_k(L_\ell)$ denotes
-degree-$k$ Lagrange elements on mesh level $L_\ell$; problem-specific sections
-define the mesh hierarchy behind those levels when it matters for
-interpretation.
+\begin{proposition}[Fixed-functional branchwise equivalence]
+\label{prop:branchwise-route-equivalence}
+Fix an element state $x_\star$. Assume that, on a neighborhood of $x_\star$,
+(i) both routes use the same scalar densities, quadrature weights, material and
+history data; (ii) $u_e(x)=A_ex+b_e$ is affine; (iii) every $B_{eq}$ is fixed;
+(iv) each selected density is twice continuously differentiable; (v) the
+branch labels and principal-value ordering do not change; and (vi) both routes
+use the same tensor and engineering-shear conventions. Then element AD and
+constitutive AD give identical element residuals and Hessians in exact
+arithmetic:
+\begin{align}
+  \nabla_x\Phi_e(x)
+  &=\sum_q w_{eq}A_e^\top B_{eq}^\top\sigma_{eq},
+  \nonumber\\
+  \nabla_x^2\Phi_e(x)
+  &=\sum_q w_{eq}A_e^\top B_{eq}^\top
+    C_{eq}B_{eq}A_e.
+  \label{eq:branchwise-route-identity}
+\end{align}
+Consequently, assembling either set of element objects gives the same global
+free-space gradient and Hessian of \eqref{eq:generic-potential}.
+\end{proposition}
 
-\subsection{Finite-element and derivative structure}
+\begin{proof}
+The affine map has zero second derivative. Applying the chain rule first to
+$\varepsilon_{eq}(x)$ and then to every summand of
+\eqref{eq:element-quadrature-potential} gives
+\eqref{eq:branchwise-route-identity}. Summation and the fixed free-space
+assembly map preserve the identities.
+\end{proof}
 
-The main design choice in the toolset is that problem definitions should remain
-energy-centered whenever possible. For branch potentials, all second-order
-objects below are active-branch derivatives away from switching sets and, for
-principal-value formulas, away from repeated-principal-value degeneracies. We use
-three derivative routes:
-\begin{enumerate}
-  \item \textbf{element AD:} differentiate the full scalar element contribution
-        $\Phi_e(x_e;\theta_e)$ with respect to the element free-DOF vector;
-  \item \textbf{constitutive AD:} differentiate a quadrature-point energy
-        density $\mathcal{W}_q(\varepsilon_q,m_q)$ with respect to
-        $\varepsilon_q$, holding fixed the active branch and the local material
-        and history data $m_q$ selected from $\theta_q$, then assemble
-        $r_e = \sum_q w_q B_q^\top \sigma_q$ and
-        $A_e = \sum_q w_q B_q^\top C_q B_q$, where
-        $\sigma_q := \partial_\varepsilon\mathcal{W}_q(\varepsilon_q,m_q)$ and
-        $C_q := \partial^2_{\varepsilon\varepsilon}\mathcal{W}_q(\varepsilon_q,m_q)$;
-  \item \textbf{colored sparse recovery:} recover sparse Hessian information
-        through directionally probed gradients or Hessian-vector products
-        (HVPs) and graph coloring.
-\end{enumerate}
-
-Element AD is the most literal route. In the reported high-order plasticity
-cases, constitutive AD preserves the same defining scalar-energy expression but
-changes the differentiation boundary from the full element vector to the local
-strain state and $6\times6$ constitutive tangent. The reported colored
-sparse-recovery configurations use AD-HVP probes; finite-difference gradient
-probes are the classical sparse finite-difference variant.
-
-\subsection{Newton--Krylov globalization}
-
-The nonlinear solves are based on Newton-type updates, but they are not all
-globalized in the same way. Scalar benchmarks primarily use line-search Newton.
-Hyperelasticity uses a trust-region method with optional post-step line search.
-Some benchmark configurations use a hybrid
-trust-region/line-search algorithm in which a reduced trust-region model
-provides the direction, while a bounded line search chooses the accepted step.
-The line-search and trust-region ingredients follow standard globalization ideas
-\citep[Chs.~2--4]{nocedal2006numerical}; see also \citet{conn2000trust}.
-\Cref{alg:hybrid-newton}
-is a schematic solver-policy template; the numerical configurations use the stopping
-tolerances, caps, globalization choices, and linear-solver/preconditioner
-choices stated in the benchmark and results tables.
-
-\begin{algorithm}[H]
-\caption{Hybrid trust-region / line-search Newton}
-\label{alg:hybrid-newton}
-\begin{algorithmic}[1]
-\State Given $x_0$, trust radius $\Delta_0$, tolerances, and evaluation routines for
-energy, gradient, Hessian assembly or application, and linear solves
-\For{$k=0,1,\dots$}
-  \State Assemble $g_k = \nabla \mathcal{F}(x_k)$
-  \If{convergence criteria are satisfied}
-    \State terminate
-  \EndIf
-  \State Form or define the Hessian operator
-    $H_k=\nabla^2 \mathcal{F}(x_k)$
-  \State Approximately solve for a Newton-like direction
-    $p_k^{\mathrm{N}}$ from $H_k p_k^{\mathrm{N}} = -g_k$
-  \If{trust region is enabled}
-    \State Build a small reduced model in the span of Newton and gradient directions
-    \State Solve the reduced trust subproblem with radius $\Delta_k$
-    \State Optionally compare against a pure gradient trust step
-    \State Set $d_k$ to the selected reduced-model direction
-    \State Restrict the line-search interval so the trial step stays in the trust ball
-  \Else
-    \State Set $d_k=p_k^{\mathrm{N}}$
-  \EndIf
-  \State Select a trial step $s_k=\alpha_k d_k$ with the stated line-search rule
-  \State Compute $\mathrm{ared}_k=\mathcal{F}(x_k)-\mathcal{F}(x_k+s_k)$ and
-    $\mathrm{pred}_k= -g_k^\top s_k-\frac12 s_k^\top H_k s_k$
-  \If{trust region is enabled}
-    \State accept/reject using $\rho_k = \mathrm{ared}_k/\mathrm{pred}_k$ when
-      $\mathrm{pred}_k>0$, otherwise reject as model failure; update $\Delta_k$
-  \Else
-    \State accept according to the stated merit-decrease rule
-  \EndIf
-  \If{the trial step is accepted}
-    \State Set $x_{k+1}=x_k+s_k$
-  \Else
-    \State Retry with the updated globalization state or report a capped/failed solve
-  \EndIf
-\EndFor
-\end{algorithmic}
-\end{algorithm}
-
-Here $\mathrm{ared}_k$ is the achieved decrease in the merit functional and
-$\mathrm{pred}_k$ is the decrease predicted by the local quadratic or reduced
-trust-region model. A nonpositive predicted decrease is treated as model
-failure for the trust-region acceptance test. The admissible line-search
-families are Armijo backtracking, bounded merit search, and residual-bisection
-safeguards. An Armijo step satisfies
-\[
-  \mathcal{F}(x_k+\alpha d_k)
-  \le \mathcal{F}(x_k) + c_1 \alpha g_k^\top d_k,
-\]
-with $c_1\in(0,1)$; bounded merit search examines a prescribed bounded interval
-and accepts only a trial value satisfying
-$\mathcal{F}(x_k+\alpha d_k)<\mathcal{F}(x_k)$;
-residual-bisection safeguards bisect the trial step until the residual-direction
-test used by the configuration is satisfied; in the PETSc Newton configurations this test is
-$\nabla\mathcal{F}(x_k+\alpha d_k)^\top d_k<0$, unless the line-search cap is
-reached. Benchmark tables instantiate the finite set of remaining policy
-parameters, including accept/reject thresholds, radius updates, caps, and
-fallback rules, wherever they affect interpretation. Here KSP denotes PETSc's
-Krylov-solver interface, KSP rtol denotes the relative residual tolerance, PMG denotes same-mesh polynomial
-multigrid, MUMPS denotes a multifrontal sparse direct solver used in coarse
-solves, and Hypre denotes the algebraic-multigrid/preconditioning backend used
-in the stated auxiliary configurations. Reported PETSc linear solves use the
-relative KSP residual tolerance summarized in
-\Cref{tab:numerical-protocol-summary} or stated with the corresponding result when
-the policy varies. Failed linear solves and non-descent directions are handled
-by the stated globalization safeguard or reported as capped solver behavior.
-
-Here $\lambda_{\mathrm{sr}}$ denotes the plasticity strength-reduction factor
-defined in \Cref{sec:bench-plasticity3d}. For the converged bottom-clamped
-three-dimensional plasticity scaling
-configuration reported in this paper, the chosen policy is simpler: Newton with
-Armijo backtracking and a same-mesh polynomial-multigrid
-$P_4\to P_2\to P_1$ hierarchy for the flexible-GMRES linear solve
-\citep[Sec.~3.1]{nocedal2006numerical}. The reported
-$\lambda_{\mathrm{sr}}=\num{1.55}$ scaling profile uses a redundant LU/MUMPS
-coarse solve and PETSc relative KSP tolerance \num{1e-2}; the auxiliary
-$\lambda_{\mathrm{sr}}=\num{1.0}$ timing configurations use the Hypre
-algebraic-multigrid coarse PMG profile.
-
-The numerical tables use a small common reporting vocabulary, summarized in
-\Cref{tab:solver-reporting-protocol}. These terms are part of the experimental
-protocol: a completed endpoint solve, a fixed-work diagnostic, and a capped solve
-do not support the same type of claim.
-
-\begin{table}[!htbp]
-  \centering
-  \footnotesize
-  \caption{Solver-status and timing vocabulary used in the numerical tables.}
-  \label{tab:solver-reporting-protocol}
-  \input{tables/generated/solver_reporting_protocol.tex}
-\end{table}
+Proposition~\ref{prop:branchwise-route-equivalence} is conditional. It does not
+apply at a branch switch, under an unresolved principal-value ordering, or when
+the compared codes change quadrature or constraints. It also establishes the
+derivatives of the implemented scalar potential, not equivalence to an
+incremental return-mapping model.
 
 \subsection{Colored sparse recovery}
+\label{subsec:colored-recovery}
 
-Sparse derivative recovery is built around the observation that if columns that
-do not interfere in the sparsity pattern are perturbed together, one gradient
-or HVP evaluation can recover multiple Hessian columns, equivalently multiple
-columns of the Jacobian of the gradient,
-\citep{curtis1974sparsejacobian,coleman1984sparsehessian}. The reported
-colored sparse-recovery path uses distance-2 coloring on the Hessian sparsity
-graph and AD-HVP probes; the same recovery formula also describes the classical
-finite-difference gradient-probe variant. This structure is especially effective
-when combined with overlap-domain assembly and owned-plus-ghost PETSc layouts.
+Let $H:=\nabla_x^2\Pi_h(x)$, let $I_r$ be the free rows owned by rank $r$,
+and let $\mathcal{P}_r$ contain the structural entries $(i,j)$ of those rows.
+The local element set $\mathcal{E}_r$ contains every element incident on
+$I_r$, and $J_r$ contains every free column appearing in those elements.  We
+write $H^{(r)}$ for the Hessian of the sum over $\mathcal{E}_r$, restricted to
+$J_r$.  Because all element contributions incident on an owned row are present,
+$H^{(r)}_{ij}=H_{ij}$ for $(i,j)\in\mathcal{P}_r$.
 
-Let $H := \nabla^2\mathcal{F}(x)$ denote the Hessian of the merit functional at
-the current state, and let $\mathcal{P}(H)$ be its sparsity pattern. A
-distance-2 coloring partitions the column indices into groups $\mathcal{C}_c$
-such that, for each row $i$, at most one column $j\in\mathcal{C}_c$ satisfies
-$(i,j)\in\mathcal{P}(H)$. For the color seed
-$v_c=\sum_{j\in\mathcal{C}_c} e_j$, where $e_j$ denotes the $j$th Euclidean
-basis vector, one probe produces
+The rank-local column-interference graph joins columns $j,k\in J_r$ whenever
+some owned row $i\in I_r$ satisfies
+$(i,j),(i,k)\in\mathcal{P}_r$. A local color class
+$\mathcal{C}_{r,c}$ defines the overlap seed
 \begin{equation}
-  y_c =
-  \begin{cases}
-    \bigl(\nabla \mathcal{F}(x+\delta v_c)-\nabla \mathcal{F}(x)\bigr)/\delta,
-      & \text{finite-difference gradient probe},\\
-    Hv_c,
-      & \text{AD Hessian-vector probe}
-  \end{cases}.
-  \label{eq:colored-sparse-recovery}
+  v_{r,c}:=\sum_{j\in\mathcal{C}_{r,c}}e_j,
+  \qquad y_{r,c}:=H^{(r)}v_{r,c}.
+  \label{eq:colored-seed}
 \end{equation}
-In the finite-difference branch, $\delta>0$ is the chosen gradient-probe step
-size.
-The structural separation then recovers $H_{ij}=(y_c)_i$ for
-$j\in\mathcal{C}_c$ and $(i,j)\in\mathcal{P}(H)$ in the AD-HVP branch. In the
-finite-difference branch it gives $H_{ij}=(y_c)_i+O(\delta)$ under local
-smoothness. The reported \jaxpetsc{} colored sparse-recovery cases use the AD
-Hessian-vector probe mode, so no finite-difference perturbation parameter is
-introduced in those configurations; the finite-difference formula states the classical
-recovery variant. After recovery, each rank scatters only owned sparse entries
-to the PETSc matrix, with overlap data used only for local probe evaluation.
+This construction is the direct Hessian analogue of classical sparse
+derivative probing \citep{curtis1974sparsejacobian,coleman1984sparsehessian}.
 
-\begin{algorithm}[H]
-\caption{Distributed colored Hessian recovery}
-\label{alg:colored-hessian-recovery}
-\begin{algorithmic}[1]
-\State Construct the communicator-consistent Hessian column-interference graph
-  from the owned-row sparsity pattern, including ghost-column adjacencies
-\State Compute a distance-2 coloring of that graph
-\For{each color group $c$}
-  \State Build the combined probe vector $v_c$
-  \State Evaluate one gradient difference or HVP for $v_c$
-  \State Scatter recovered entries into owned sparse storage
-\EndFor
-\State Assemble the owned rows of the distributed sparse matrix
-\end{algorithmic}
-\end{algorithm}
+\begin{proposition}[Owned-row colored recovery]
+\label{prop:owned-row-colored-recovery}
+For every rank $r$, assume that (i) $\mathcal{P}_r$ contains every active
+nonzero $(i,j)$ of each owned row; (ii) $\mathcal{E}_r$ contains every element
+contributing to those rows, with complete state, affine-lift, material, and
+selected-branch data on its overlap; (iii) $J_r$ contains every column in
+$\mathcal{P}_r$, and each owned row contains at most one structural entry from
+any $\mathcal{C}_{r,c}$; (iv) $H^{(r)}v_{r,c}$ is evaluated exactly with the
+complete overlap seed; and (v) every global row has one PETSc owner. Then, only
+for $(i,j)\in\mathcal{P}_r$ with $j\in\mathcal{C}_{r,c}$, assigning
+$H_{ij}:=(y_{r,c})_i$ recovers every owned structural entry exactly. The union
+of the owned rows is the canonical distributed matrix $H$.
+\end{proposition}
 
-\subsection{Constitutive autodiff for 3D plasticity}
+\begin{proof}
+For an owned row $i$, the identity
+$(y_{r,c})_i=\sum_{j\in\mathcal{C}_{r,c}}H^{(r)}_{ij}$ contains at most one
+structural nonzero by assumption (iii). Assumptions (i), (ii), and (iv) make
+the local sum complete and give $H^{(r)}_{ij}=H_{ij}$ on the owned pattern.
+The restricted assignment therefore recovers that entry, and unique ownership
+assembles each recovered row once.
+\end{proof}
 
-The main \plasticitythree{} result in this paper uses constitutive AD.
-Rather than applying second-order AD to the full $P_4$ element vector, we define
-one scalar Mohr--Coulomb branch potential
-$\mathcal{W}_q(\varepsilon_q,m_q)$ per quadrature point, where $m_q$ collects the
-active branch together with the local material and history data selected from
-$\theta_q$. We differentiate this scalar potential with respect to the six
-engineering-strain components and assemble the element tangent from
-the resulting stress and constitutive tangent. This keeps the scalar-energy
-definition intact while reducing the cost of branchwise second-order
-information on high-order tetrahedra. The operator $B_q$, stress vector
-$\sigma_q$, and tangent $C_q$ use the same Voigt engineering-shear convention,
-so $\sigma_q$ is dual to the chosen strain vector.
+The proposition permits different rank-local color labels and counts because
+each rank evaluates its own complete incident-element Hessian and inserts only
+its owned pattern. It does not permit a missing incident element or structural
+edge, incomplete state or seed overlap, inconsistent branch data, or two
+same-color columns that meet an owned row. Our production recovery uses AD
+Hessian-vector products; a finite-difference gradient probe would add its
+truncation error.
 
-\begin{algorithm}[H]
-\caption{Constitutive AD assembly for high-order plasticity}
-\label{alg:constitutive-ad-assembly}
-\begin{algorithmic}[1]
-\For{each local element $e$}
-  \For{each quadrature point $q$}
-    \State Evaluate strain $\varepsilon_q = B_q u_e(x;\theta)$
-    \State Evaluate scalar energy density $\mathcal{W}_q(\varepsilon_q,m_q)$
-    \State Obtain stress $\sigma_q = \partial_\varepsilon \mathcal{W}_q(\varepsilon_q,m_q)$
-    \State Obtain tangent $C_q = \partial^2_{\varepsilon\varepsilon}\mathcal{W}_q(\varepsilon_q,m_q)$
-  \EndFor
-  \State Assemble $r_e = \sum_q w_q B_q^\top \sigma_q$
-  \State Assemble $A_e = \sum_q w_q B_q^\top C_q B_q$
-\EndFor
-\end{algorithmic}
-\end{algorithm}
+\subsection{Cost components and comparison variables}
+\label{subsec:cost-model}
 
-The key methodological point is that automatic differentiation is applied
-directly to the scalar branch potential defined by the benchmark. The
-constitutive tangent is therefore obtained from that same scalar potential rather
-than replaced by a separate hand-derived formula. Away from branch switching
-sets and repeated-principal-value degeneracies, this yields branchwise exact
-derivatives of the surrogate; on those nonsmooth sets the resulting tangents are
-branchwise surrogate derivatives rather than globally smooth continuum
-derivatives.
+Let $m_e$ be the active element DOF count, $s$ the constitutive dimension,
+$n_q$ the quadrature-point count, $n_{e,r}^{\mathrm{loc}}$ the overlap-element
+count on rank $r$, and $c_r$ its local color count. Because the measured
+response is an MPI collective maximum, the structural work proxy must describe
+the busiest rank rather than the global number of uniquely owned elements. We
+therefore define
+\begin{align}
+  \chi_{\mathrm{elem}}
+  &:=\max_r n_{e,r}^{\mathrm{loc}}n_qm_e^2,
+  \nonumber\\
+  \chi_{\mathrm{color}}
+  &:=\max_r\bigl(n_{e,r}^{\mathrm{loc}}c_r\bigr)n_qm_e,
+  \nonumber\\
+  \chi_{\mathrm{const}}
+  &:=\max_r n_{e,r}^{\mathrm{loc}}n_q
+    \bigl(s^2+s^2m_e+sm_e^2\bigr).
+  \label{eq:route-work-proxies}
+\end{align}
+The first two expressions count the dense element-Hessian contribution shape
+and the vector work propagated by the exact AD-HVP seeds, respectively. In the
+constitutive expression, $s^2$ counts the dense tangent $C_q$, while $s^2m_e$
+and $sm_e^2$ count the two contractions used to form $B_q^\top C_qB_q$.
+The proxies in \eqref{eq:route-work-proxies} are structural operation-shape
+counts, not exact FLOP, cache, or compiler-cost models. We therefore also
+decompose the measured route cost as
+\begin{equation}
+  T
+  =T_{\mathrm{differentiate}}+T_{\mathrm{contract}}
+   +T_{\mathrm{insert}}+T_{\mathrm{communicate}}
+   +T_{\mathrm{cache}}+T_{\mathrm{imbalance}},
+  \label{eq:route-cost-decomposition}
+\end{equation}
+and record matrix nonzeros, overlap size, memory, branch fractions, rank count,
+and the applicable $\chi$ from \eqref{eq:route-work-proxies}. A separate
+one-factor-at-a-time diagnostic
+varies element DOFs, quadrature points, constitutive dimension, color count,
+nonzeros per row, message bytes, and imbalance. For each of four stages, an OLS
+model fits the log warm median on ranks 1 and 8 using an intercept, log rank,
+and the seven log factor ratios; rank 32 is used once for validation. Three
+independent allocation blocks are required per rank. Total synthetic work is
+held fixed while multi-rank imbalance is varied; nonunit imbalance is
+inapplicable at one rank and those two rows are excluded from the fit. The
+diagnostic must have median and 90th-percentile absolute percentage errors at
+most $50\%$ and $100\%$, respectively. Because its kernels are synthetic rather
+than route-faithful, it is used only for descriptive mechanism checks and is
+not a production-model feature.
+
+The final response is the logarithm of the collective-max warm-median
+tangent-construction time. Its 13 features are three route indicators, three
+route-specific cluster-architecture shifts, $\log(1+\chi)$,
+$\log(1+n_{\mathrm{nz}}^{\max})$,
+$\log(1+n_{\mathrm{ov}}^{\max})$, log rank, plastic fraction, and two
+untransformed max-to-mean imbalance ratios.
+More precisely, let $\mathcal{A}:=\{\mathrm{elem},\mathrm{color},
+\mathrm{const}\}$, let $I_a$ indicate route $a$, and let $K$ indicate the
+cluster architecture.
+Furthermore, let $n_{\mathrm{nz}}^{\max}$ be the maximum number of owned
+matrix nonzeros over ranks, $n_{\mathrm{ov}}^{\max}$ the maximum overlap-DOF
+count, $R$ the MPI
+rank count, $p_{\mathrm{pl}}$ the plastic quadrature fraction, and
+$\iota_e,\iota_o$ the element and overlap max-to-mean ratios. The frozen model
+is
+\begin{align}
+  \log T
+  ={}&\sum_{a\in\mathcal{A}}\alpha_a I_a
+    +\sum_{a\in\mathcal{A}}\kappa_a K I_a
+    +\beta_\chi\log(1+\chi_a)
+    +\beta_{\mathrm{nz}}\log(1+n_{\mathrm{nz}}^{\max})
+  \nonumber\\
+   &+\beta_{\mathrm{ov}}\log(1+n_{\mathrm{ov}}^{\max})
+    +\beta_R\log R+\beta_p p_{\mathrm{pl}}
+    +\beta_e\iota_e+\beta_o\iota_o.
+  \label{eq:route-time-model}
+\end{align}
+The production OLS fit has no intercept: the three mutually exclusive route
+indicators provide the route-specific levels without intercept collinearity.
+Each active route--configuration--state--rank slot contributes one equally
+weighted row after its independent block medians are aggregated; censored or
+incomplete active-route groups are excluded and never imputed. Peak RSS and
+tracked allocation are outcomes, not predictors. Local single-node runs and
+cluster ranks 1 and 8 form the training set; cluster rank 32 is the untouched
+production holdout. Fitting requires at least 48 training rows, 20 holdout rows,
+6/4 training/holdout rows per route, and 12/8 distinct training/holdout groups,
+with both architectures represented in training. The 13-column design must
+have full column rank and condition number at most $10^{10}$. Percentage errors
+are computed in seconds after exponentiating the log-time predictions. The
+selector requires holdout median and 90th-percentile absolute percentage errors
+at most $25\%$ and $50\%$, at least $90\%$ correct
+ordering outside a $10\%$ tie band, at least four resolved groups, and at least
+two distinct observed winners. A predictive selector is admissible only after
+these and all derivative, state, and endpoint gates pass. Coefficient,
+prediction, and route-order intervals use 10,000 paired allocation-block
+bootstrap resamples at 95\% confidence with the prespecified seed 20260710.
+Section~\ref{sec:performance-solver-behavior} shows that the current data do not
+meet this condition.
+
+\subsection{Mesh-aware nonlinear accuracy}
+\label{subsec:mesh-aware-stopping}
+
+Coefficient norms change with mesh density and therefore do not define a
+portable stopping contract. Let $M_h$ be a symmetric positive-definite Riesz
+operator on the constrained free space. We use the primal and dual norms
+\begin{equation}
+  \lVert s\rVert_{M_h}:=(s^\top M_hs)^{1/2},
+  \qquad
+  \lVert g\rVert_{M_h^{-1}}:=(g^\top M_h^{-1}g)^{1/2}.
+  \label{eq:riesz-primal-dual-norms}
+\end{equation}
+The scalar problems use a row-sum lumped P1 mass operator. Hyperelasticity and
+the branch-structured mechanics problem use the tangent of a reference elastic
+energy on the identical constrained free space. Before a reference tangent is
+admitted, a scale-aware symmetry check and a recorded direct factorization
+report zero negative and zero numerical zero pivots under the stated solver
+options. This is a numerical inertia check, not an analytic SPD proof. Each
+inverse-Riesz solve also passes an independently recomputed true-residual gate.
+
+For nonlinear iteration $k\geq 1$, let
+\begin{equation}
+  R_k:=\lVert g_k\rVert_{M_h^{-1}},\qquad
+  C_k:=\lVert x_k-x_{k-1}\rVert_{M_h},\qquad
+  S_k:=\lVert x_k\rVert_{M_h},\qquad
+  D_k:=\lvert\mathcal E_h(x_k)-\mathcal E_h(x_{k-1})\rvert.
+  \label{eq:absolute-residual-correction}
+\end{equation}
+We report the dimensionless quantities
+\begin{equation}
+  r_k^{\mathrm{rel}}:=\frac{R_k}{R_0},
+  \qquad
+  c_k^{\mathrm{rel}}:=\frac{C_k}{\max(s_0,S_k)},
+  \label{eq:relative-residual-correction}
+\end{equation}
+where $r_k^{\mathrm{rel}}$ is defined only when $R_0>0$. The scale $s_0>0$
+has the same units as the primal norm and is either the initial state norm or
+an explicit physical scale. With absolute and relative tolerances denoted by
+$\tau_R^{\mathrm{abs}}$, $\tau_R^{\mathrm{rel}}$,
+$\tau_C^{\mathrm{abs}}$, and $\tau_C^{\mathrm{rel}}$, the maintained scalar,
+hyperelastic, and branch-structured Newton drivers accept an updated iterate
+only when
+\begin{equation}
+\begin{split}
+  T_k={}&\{x_k\ \text{accepted and all terminal quantities finite}\}
+  \\
+  &{}\land\{D_k<\tau_E\}
+  \land\{C_k<\tau_C^{\mathrm{abs}}
+               \ \lor\ c_k^{\mathrm{rel}}<\tau_C^{\mathrm{rel}}\}
+  \\
+  &{}\land\{R_k<\max(\tau_R^{\mathrm{abs}},
+                         \tau_R^{\mathrm{rel}}R_0)\}.
+  \label{eq:terminal-boolean-contract}
+\end{split}
+\end{equation}
+Thus the energy-change test is required; it is not a reporting-only
+diagnostic. If $R_0=0$ exactly, the initial-relative residual is undefined and
+is not used; any finite implementation fallback value is treated as inapplicable.
+A zero-step stationary return then requires finite
+$\mathcal E_h(x_0)$ and $R_0<\tau_R^{\mathrm{abs}}$; the energy-change and
+correction tests are inapplicable because no update has been accepted.
+
+The Boolean logic in \eqref{eq:terminal-boolean-contract} is applied once for
+each scalar solve and each hyperelastic load step, while the branch-structured
+full solve applies it to its single prescribed load. A multi-step
+hyperelastic trajectory is complete only when every requested step is
+successful. The branch-structured publication gate additionally recomputes
+the endpoint residual and requires its selected-branch and provenance checks;
+these admission tests do not replace $T_k$.
+For hyperelasticity, the coefficient vector represents the free part of the
+deformation map under one fixed affine lift. Its reference-energy norm is used
+only within that representation and is not invariant under a change of lift.
+The endpoint record contains the selected Riesz operator, scale, free-space
+identity, numerical inertia record, inverse-solve diagnostics, and independently
+recomputed terminal norms.
+
+The tolerances in the present diagnostic records are case-specific. The
+scalar Ginzburg--Landau pair supplies one local tenfold sensitivity check, but
+cross-mesh calibration remains open. The reference-elastic hyperelastic and
+branch-structured policies have passed operator smokes only; we therefore do
+not claim a universal or publication-calibrated stopping threshold.
+
+\subsection{Evidence and timing contract}
+\label{subsec:evidence-contract}
+
+Correctness precedes time. A route row first passes the common state hash,
+energy, gradient, matrix or multiple action probes, branch margin, Riesz
+residual, and correction gates. Timing then uses warmups, balanced route order,
+collective-max MPI phases, independent repetitions, and explicit censoring.
+Compilation, setup, assembly, preconditioner construction, Krylov solution, and
+total time remain separate quantities. A capped or failed solve is not encoded
+as a large successful time.
+
+This hierarchy yields four distinct statements: a proved identity under stated
+assumptions; verification on finite tested states; a descriptive finite route
+map; and an empirical crossover or selector. Evidence for one level does not
+imply the next. In particular, near-equal energy does not replace a residual or
+tangent comparison, and one tangent probe does not establish complete matrix
+equality.

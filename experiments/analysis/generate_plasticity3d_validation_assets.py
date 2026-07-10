@@ -609,7 +609,9 @@ def _build_layer2(manifest: dict[str, object], out_dir: Path) -> dict[str, objec
         endpoint_dev_rel = relative_l2(endpoint_bundle["dev_source"], endpoint_bundle["dev_candidate"])
         profile_source = compute_boundary_profile(coords_ref, endpoint_bundle["source_coords_final"])
         profile_candidate = compute_boundary_profile(coords_ref, endpoint_bundle["maintained_coords_final"])
-        boundary_rel = relative_l2(profile_source["u_mag"], np.interp(profile_source["x"], profile_candidate["x"], profile_candidate["u_mag"]))
+        if not np.array_equal(profile_source["indices"], profile_candidate["indices"]):
+            raise RuntimeError("Selected-node profile indices do not match.")
+        boundary_rel = relative_l2(profile_source["u_mag"], profile_candidate["u_mag"])
         assets_dir = out_dir / "layer2" / "assets"
         _plot_scalar_curve(
             schedule,
@@ -625,7 +627,7 @@ def _build_layer2(manifest: dict[str, object], out_dir: Path) -> dict[str, objec
             profile_source,
             profile_candidate,
             assets_dir / "boundary_profile",
-            title="Layer 2: boundary displacement profile",
+            title="Layer 2: selected-slab displacement samples",
             ref_label="source operator reference",
             cand_label="maintained surrogate",
         )

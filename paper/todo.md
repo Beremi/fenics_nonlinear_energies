@@ -2,12 +2,14 @@
 
 ## Publishability Verdict
 
-Current status: not ready for submission until the target venue declarations,
-repository license, and citable archival record are finalized. Manuscript claims,
-citation checks, generated assets, and archive-neutral provenance validation are
-otherwise ready for final venue formatting. Validation is adequate for the
-narrowed claims, but the paper must not be submitted until the external
-submission metadata and citable archive are fixed.
+Current status: the scientific-text audit has corrected the identified
+claim-scope, model-definition, stopping-contract, quadrature, topology
+normalization, and comparator-provenance defects. The historical broad PDF and
+its local checks predate the derivative-placement rewrite and are not the
+current release gate. The authoritative scientific and archival blockers are
+maintained in `publication_action_plan.md` and
+`publication_revision_execution_report.md`. Venue formatting is outside this
+text-focused pass.
 
 ## Review Pass Scope
 
@@ -18,6 +20,15 @@ An earlier audit rechecked date-sensitive SOTA and citation metadata through
 live arXiv, DOI, and official project pages on 2026-04-30. No long MPI campaigns
 were rerun, no checked-in meshes or raw inputs were edited, and no new
 scientific claims were introduced without supporting evidence.
+
+The 2026-07-10 detailed audit additionally checked manuscript equations and
+claims against retained source, runner, summary, and bundle artifacts. It found
+and corrected a topology material-measure normalization error, a mislabeled 3D
+continuation appendix table, quadrature/stopping-contract omissions, inaccurate
+PMG and comparator wording, and overbroad minimization/validation language. It
+also records that the external endpoint-formula source and raw comparator runs
+are unavailable, most timings lack repeated-run uncertainty, and historical
+local timing records lack complete environment snapshots.
 
 ## Completed Readiness Work
 

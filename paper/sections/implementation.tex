@@ -1,206 +1,147 @@
 \label{sec:implementation}
 
-Given a discrete energy density, branch potential, or constitutive law together
-with finite-element restrictions, the \jaxpetsc{} realization evaluates local
-residual, tangent, or Hessian-vector-product contributions with JAX. The
-distributed layer scatters owned coefficients to ghosted element states,
-accumulates owned-row sparse residuals and tangents, and gives PETSc the
-resulting nonlinear residual, matrix, or matrix-free action. PETSc then controls
-globalization, Krylov iteration, preconditioning, and convergence reporting. The
-same local-to-global construction is used before narrower reference
-formulations are introduced for selected benchmark checks.
+The implementation assigns local differentiable kernels to JAX and distributed
+algebraic objects to PETSc. Each MPI rank stores one contiguous interval of the
+free coefficient vector and the ghost values required by its overlap elements.
+The same ownership map is used for the residual, tangent rows, Riesz operator,
+and canonical state export. This common map is essential: comparing local
+arrays before undoing a route-specific permutation would not compare the same
+algebraic object.
 
-\paragraph{Primary \jaxpetsc{} realization.}
-This realization combines JAX-based local physics with PETSc distributed
-vectors, matrices, Krylov solvers, and preconditioners. Problem-specific local
-evaluations stay in JAX; sparse distributed assembly, nonlinear globalization,
-and linear algebra stay in PETSc.
+\subsection{Local derivative routes}
+\label{subsec:implementation-routes}
 
-\paragraph{Pure JAX reference implementations.}
-These are compact differentiable realizations of selected benchmark energies.
-They are useful for serial formulation checks and AD diagnostics where a matched
-serial formulation exists, and for compact design demonstrations where the
-benchmark role is narrower. They are not intended to be the primary distributed
-route for the largest distributed benchmarks. They show how selected energy
-formulations can also be expressed without sparse distributed infrastructure.
+The element route evaluates a scalar $\Phi_e$ and obtains its gradient and
+Hessian by JAX transformations. The constitutive route evaluates the same
+selected quadrature density, obtains $\sigma_{eq}$ and $C_{eq}$ from
+\eqref{eq:constitutive-objects}, and contracts them according to
+\eqref{eq:branchwise-route-identity}. For the plasticity experiments, the
+residual is also evaluated by element AD; only the tangent differentiation
+boundary changes. This choice prevents a residual-formula difference from
+being hidden inside a tangent comparison.
 
-\paragraph{FEniCS reference implementations.}
-The \fenics{} implementations remain valuable on families where they exist,
-especially $p$-Laplace, Ginzburg--Landau, and hyperelasticity. They provide a
-trusted high-level FEM reference and help distinguish modeling issues from
-solver-policy issues. In this paper they are used mainly as scoped reference
-comparisons rather than as the primary distributed realization.
+The colored route first builds the complete structural pattern of every owned
+row. It colors the overlap-local column-interference graph, forms one seed per
+color, evaluates JAX Hessian-vector products, and extracts the uniquely
+identified entries. The implementation does not assume that different ranks
+obtain the same color labels. It relies instead on
+Proposition~\ref{prop:owned-row-colored-recovery} and unique PETSc row
+ownership.
 
-\subsection{Autodiff modes}
+All three routes use 64-bit arithmetic. Compilation and kernel warmup occur
+before measured repetitions. Compiled element, constitutive, and action kernels
+remain separate because their traces and intermediate arrays are different
+scientific costs.
 
-The \jaxpetsc{} realization exposes several second-order modes. The precise available
-choices depend on the benchmark family, but the common logic is:
-\begin{itemize}
-  \item \textbf{element AD}: local Hessians obtained by differentiating the full
-        element energy on the active smooth branch;
-  \item \textbf{constitutive AD}: branchwise local constitutive tangents
-        assembled from quadrature-point energy densities;
-  \item \textbf{colored sparse recovery}: structured sparse recovery from AD-HVP or
-        finite-difference gradient probes when full element Hessians are not the
-        appropriate cost tradeoff.
-\end{itemize}
+\subsection{Rank-local mesh and sparse assembly}
+\label{subsec:rank-local-assembly}
 
-This split is scientifically important. It permits comparison of AD-derived
-local second-order information with carefully structured sparse recovery routes
-without changing the nonlinear solver or sparse assembly path. Only the
-finite-difference probe variant is an approximation to the directional
-derivative. In other words, the paper compares derivative strategies inside one
-common distributed solver construction, not only across reference
-implementations.
+Let $I_r$ denote rank $r$'s owned free DOFs and $G_r$ its required ghosts. The
+retained overlap is
+\begin{equation}
+  \mathcal{T}_r^{\mathrm{loc}}
+  :=\{e:\operatorname{dofs}(e)\cap I_r\ne\varnothing\}.
+  \label{eq:rank-overlap-elements}
+\end{equation}
+Before each local evaluation, a point-to-point exchange populates $G_r$ and
+the affine lift supplies constrained values. Residual and tangent contributions
+are accumulated only for rows in $I_r$; off-rank columns retain global indices.
+PETSc's distributed coordinate format is preallocated once and reused.
 
-\begin{figure}[!htbp]
-  \centering
-  \PaperFrameworkOverviewDiagram
-  \caption{Computational structure used in the study. The \jaxpetsc{}
-  formulation is the distributed realization; \purejax{} and \fenics{} provide
-  reference formulations where matched benchmark definitions are available.}
-  \label{fig:framework-overview}
-\end{figure}
+Scalar energy requires a separate ownership rule because overlap elements occur
+on more than one rank. Each element has a deterministic owner $o(e)$ and weight
+$\omega_{r,e}=1$ if $o(e)=r$. Hence
+\begin{equation}
+  \sum_r\sum_{e\in\mathcal{T}_r^{\mathrm{loc}}}
+  \omega_{r,e}\Phi_e
+  =\sum_{e\in\mathcal{T}_h}\Phi_e.
+  \label{eq:owned-element-energy}
+\end{equation}
+This identity, the affine lift, the canonical free-DOF order, and the CSR
+indices are included in the distribution-equivalence test.
 
-\begin{figure}[!htbp]
-  \centering
-  \PaperDerivativePathDiagram
-  \caption{Derivative pathways from scalar energies and quadrature-point
-  potentials to distributed PETSc nonlinear solves.}
-  \label{fig:derivative-pathways}
-\end{figure}
+The production hyperelastic element path builds the structured mesh and overlap
+data rank locally. Its one-rank replicated construction is retained only as an
+algebraic comparator. The plasticity meshes and material data are immutable
+inputs; quadrature rules have stable names and are recorded in every result.
 
-\begin{figure}[!htbp]
-  \centering
-  \PaperAutodiffModesDiagram
-  \caption{Second-order derivative modes exposed in the \jaxpetsc{} realization. The
-  methodological choice is that the scalar energy or energy-density expression
-  remains the defining mathematical object even when the tangent route changes from element AD
-  to constitutive AD or colored sparse recovery.}
-  \label{fig:derivative-stack}
-\end{figure}
+\subsection{Nonlinear and linear solvers}
+\label{subsec:solver-implementation}
 
-\FloatBarrier
+The nonlinear driver accepts either line-search Newton or a trust-region
+policy \citep{nocedal2006numerical,conn2000trust}. Armijo backtracking is used for the controlled Newton comparisons. The
+reduced-subspace trust method minimizes the quadratic model on the span of the
+Newton and gradient directions and applies the same configured Armijo rule when
+a post-step search is requested. Thus a method label fixes the actual
+globalization algorithm rather than selecting an undocumented fallback.
 
-\Cref{fig:framework-overview,fig:derivative-pathways,fig:derivative-stack} summarize the
-computational construction used in the rest of the paper. The primary
-\jaxpetsc{} realization is the distributed nonlinear solve. Where matched
-definitions are available, reference formulations provide scoped comparisons;
-otherwise they serve as compact demonstrations. The derivative modes differ only
-in where second-order information is constructed before PETSc receives sparse
-algebraic objects.
+Each accepted Newton direction is produced by a PETSc Krylov solve on the
+current tangent. The result record contains the requested and effective KSP
+tolerances, iteration count, convergence reason, and independently recomputed
+true residual. A nonconverged KSP, nonfinite direction, rejected line search,
+trust-region rejection cap, or nonlinear iteration cap remains a failure. Such
+a row is never converted into a successful observation with a large time.
 
-\subsection{Linear solvers and preconditioners}
+The primary verification configurations use ordinary Krylov methods and Hypre
+or direct MUMPS factors. Multigrid policies remain available for subsequent
+scaling experiments, but no preconditioner ranking is inferred in this paper.
+Reference-elastic Riesz operators are independent of the Newton tangent and
+remain fixed over the associated nonlinear trajectory.
 
-The benchmark families use different Krylov and preconditioner combinations
-because the Hessian and tangent systems have different definiteness, block
-structure, and coarse-level behavior. Here CG denotes conjugate gradients, GMRES
-denotes generalized minimal residual, FGMRES denotes flexible GMRES, GAMG
-denotes PETSc's geometric-algebraic multigrid preconditioner, Hypre denotes an
-algebraic-multigrid/preconditioning backend, MUMPS denotes a multifrontal sparse
-direct solver, and PMG denotes polynomial multigrid:
-\begin{itemize}
-  \item \textbf{$p$-Laplace:} the scalar positive-definite structure makes
-        Newton--CG with algebraic multigrid a natural reference point for comparing
-        exact element Hessians and colored sparse-recovery Hessians.
-  \item \textbf{Ginzburg--Landau:} the double-well energy produces more
-        indefinite linearizations, so GMRES with algebraic multigrid is used to
-        separate globalization behavior from symmetric-positive-definite
-        assumptions.
-  \item \textbf{Hyperelasticity:} large-deformation mechanics requires
-        globalization around the logarithmic energy domain, while the linearized
-        systems motivate GAMG and same-hierarchy PMG variants with robust coarse
-        solves.
-  \item \textbf{Plasticity:} nonsmooth branch structure and high-order element
-        spaces motivate flexible Krylov methods and same-mesh polynomial
-        multigrid hierarchies, with direct or algebraic coarse solves used to
-        expose the cost of the active constitutive tangent.
-  \item \textbf{Topology:} the mechanics subproblem is solved with flexible
-        Krylov iteration and GAMG inside an outer distributed design update, so
-        the solver evidence reflects the coupled state-design optimization
-        problem.
-\end{itemize}
+\subsection{Riesz operators and terminal recomputation}
+\label{subsec:riesz-implementation}
 
-The result sections then instantiate these solver choices in concrete benchmark
-configurations. Some configurations deliberately hold the preconditioning
-operator fixed along the nonlinear path or vary only the coarse solve. These
-diagnostics are included to separate derivative-route cost, preconditioner
-construction, and outer globalization effects.
+For a lumped scalar mass operator, the diagonal weights are assembled on the
+exact free space and must be finite and strictly positive. For mechanics,
+$K_{\mathrm{ref}}$ is copied from the exact discrete elastic tangent at the
+declared reference state. Hyperelasticity uses the identity deformation
+$y(X)=X$ with both end faces constrained. The Plasticity3D operator uses the
+elastic constitutive branch at zero displacement with the glued-bottom
+constraint.
 
-\subsection{Distributed assembly and coloring}
+The constrained matrix is first checked for scale-aware symmetry. A MUMPS
+factorization then reports its numerical inertia under the stored factorization
+and scaling options; admission requires
+\begin{equation}
+  (n_-,n_0,n_+)=(0,0,n_{\mathrm{free}}).
+  \label{eq:riesz-inertia-gate}
+\end{equation}
+The dual norm is evaluated by an independent CG solve with a recomputed true-
+residual threshold. PETSc options cannot silently modify this solve unless an
+explicit, namespaced override is recorded. At every terminal state, the driver
+re-evaluates the energy, gradient, primal state norm, dual residual, and
+correction from the final stored vector. A failed run therefore cannot inherit
+an initial or pre-step residual as its endpoint value.
 
-The \jaxpetsc{} implementation uses PETSc-owned ranges, local-plus-ghost
-layouts, and owned-row sparse assembly. Let $I_r$ be the free-DOF indices owned
-by MPI rank $r$, with the sets $\{I_r\}$ forming a disjoint partition of the
-global free indices. Let $G_r$ be the ghost indices needed by elements that touch
-$I_r$, and let $\widetilde I_r=I_r\cup G_r$. Before energy, gradient, Hessian, or
-HVP work, owned coefficients are scattered to $\widetilde I_r$; the JAX
-evaluations then compute element and quadrature contributions rank-locally on
-this overlap state.
+\subsection{Canonical records and timing}
+\label{subsec:canonical-records}
 
-Matrix entries are inserted only for rows in $I_r$, with values on $G_r$ used to
-evaluate local stencils but not to duplicate ownership. Scalar energy values in
-the numerical tables are global reductions for the corresponding solver
-configuration; the ownership rule here concerns derivative and matrix
-assembly. Here $\mathcal{G}_i(u)$ and $\mathcal{A}_{ij}(u)$ are assembled residual and
-tangent entries, while $r_{e,i}$ and $a_{e,ij}$ are element contributions.
-Equivalently, if
-$\mathcal{T}_r^{\mathrm{loc}}=\{e:\operatorname{dofs}(e)\cap I_r\ne\emptyset\}$
-and $R_e$ is the element restriction from the ghosted rank state to element $e$,
-then $u_e=R_eu_{\widetilde I_r}$ and rank $r$ inserts
-\[
-  \mathcal{G}_i(u)=\sum_{e\in\mathcal{T}_r^{\mathrm{loc}}:\,i\in\operatorname{dofs}(e)}
-    r_{e,i}(u_e),\qquad
-  \mathcal{A}_{ij}(u)=\sum_{e\in\mathcal{T}_r^{\mathrm{loc}}:\,i,j\in\operatorname{dofs}(e)}
-    a_{e,ij}(u_e),
-  \quad i\in I_r,\; j\in \widetilde I_r,
-\]
-and uses ghost columns only through the local stencil. This communication order
-matters for both direct second-order assembly and colored sparse recovery. Exact
-element or constitutive assembly can write directly into local sparse buffers.
-Colored sparse recovery requires an additional graph-coloring step, but once the
-coloring is known the AD-HVP or finite-difference probe evaluations use the same
-ghost fill on $\widetilde I_r$ and still produce owned-row sparse insertions.
+Every runner writes strict JSON: nonfinite sentinels are serialized as
+\code{null}, and the file becomes visible only after an atomic replacement.
+The schema records the experiment, case, route, repetition, MPI size, threads,
+input and code identities, solver controls, terminal status, norms, work
+counters, timing phases, and state hashes. Canonical NPZ states use the original
+global ordering and include coordinate, connectivity, constraint, and metric
+metadata.
 
-\begin{figure}[!htbp]
-  \centering
-  \PaperGlobalizationDiagram
-  \caption{Globalization choices used across the benchmark suite, from pure line
-  search to trust-region and hybrid strategies.}
-  \label{fig:globalization}
-\end{figure}
+Fixed-state tangent construction is measured after one in-process warmup and
+five warm repetitions. Three-route comparisons use three independent cyclic
+blocks; the two-route high-order comparison uses four alternating blocks. The
+separate Tier-B full-solve confirmation instead uses ten independent
+cold-process paired blocks with no embedded warmup. Both series reduce elapsed
+time by the maximum over participating ranks and retain every rank-local value.
+The base route order is seeded by the first 16 hexadecimal digits of the
+SHA-256 of the comparison identifier, then cyclically rotated for three routes
+or alternated with its reverse for two. Setup,
+differentiation, contraction, insertion, communication, preconditioner, Krylov,
+and total phases are reported separately. The implementation also supports
+structural censoring when a route exceeds a prespecified memory or color-count
+bound. The active route set at a comparison point excludes only censors declared
+in the frozen contract. The high-order colored slot remains visible as a
+prespecified, risk-based non-attempt without a measured threshold; it is never
+called an out-of-memory observation, imputed, or used as a model row.
 
-\begin{figure}[!htbp]
-  \centering
-  \PaperColoringDiagram
-  \caption{Schematic view of the colored sparse-recovery logic used by the
-  colored Hessian-recovery path: a sparsity pattern, a distance-2 coloring, and the
-  corresponding grouped probes used for recovery.}
-  \label{fig:globalization-coloring}
-\end{figure}
-
-\Cref{fig:globalization,fig:globalization-coloring} make two
-solver-policy choices explicit. Globalization is varied independently of the
-element physics where the benchmark permits it, while colored sparse recovery
-uses graph structure to batch directional Hessian probes without changing the
-nonlinear problem definition.
-
-\begin{table}[!htbp]
-  \centering
-  \caption{Solver and derivative components by benchmark family.
-  ``Solver and derivative components'' summarizes the derivative routes,
-  nonlinear policies, or coupled solver features that are scientifically
-  relevant in each family.}
-  \label{tab:capability-matrix}
-  \input{tables/generated/implementation_capability_matrix.tex}
-\end{table}
-
-\FloatBarrier
-
-\Cref{tab:capability-matrix} summarizes the solver components used in the
-benchmark suite. The most important structural point is that the \jaxpetsc{}
-column is the distributed algebraic realization, even when a family also has
-\fenics{} or \purejax{} reference formulations. The table is intentionally a
-component map rather than a full parameter schedule; configuration-specific
-stopping tolerances, iteration caps, timing scopes, and coarse-solver variants
-are reported with the numerical evidence they qualify.
+The local data available in this revision predate the complete timing design.
+They are diagnostically admitted only to correctness and covariate checks. The prepared
+distributed design uses the stricter paired-block implementation and has not
+contributed performance numbers to the manuscript.

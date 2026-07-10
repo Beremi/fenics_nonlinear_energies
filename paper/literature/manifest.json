@@ -67,6 +67,7 @@
       "notes": "A local non-public copy is available in the cache."
     },
     "ginzburg1950theory": {
+      "supplemental": true,
       "canonical_source_label": "CERN record",
       "canonical_source_url": "https://cds.cern.ch/record/486430",
       "doi": null,
@@ -118,6 +119,36 @@
       "isbns": [],
       "local_filename": "cattaneo2026jetsci.pdf",
       "notes": "arXiv metadata/PDF verified arXiv:2604.22087v1 [cs.MS], submitted 2026-04-23; submitted preprint, not peer-reviewed journal evidence."
+    },
+    "mahmoud2025locality": {
+      "canonical_source_label": "arXiv abstract",
+      "canonical_source_url": "https://arxiv.org/abs/2509.00406",
+      "doi": "10.48550/arXiv.2509.00406",
+      "fulltext_label": "arXiv PDF",
+      "fulltext_url": "https://arxiv.org/pdf/2509.00406.pdf",
+      "isbns": [],
+      "local_filename": "mahmoud2025locality.pdf",
+      "notes": "arXiv metadata and abstract verified; submitted 2025-08-30. Preprint evidence only."
+    },
+    "pundir2026tatva": {
+      "canonical_source_label": "arXiv abstract",
+      "canonical_source_url": "https://arxiv.org/abs/2602.12365",
+      "doi": "10.48550/arXiv.2602.12365",
+      "fulltext_label": "arXiv PDF",
+      "fulltext_url": "https://arxiv.org/pdf/2602.12365.pdf",
+      "isbns": [],
+      "local_filename": "pundir2026tatva.pdf",
+      "notes": "arXiv metadata and abstract verified; submitted 2026-02-12. Preprint evidence only."
+    },
+    "hill2025sparser": {
+      "canonical_source_label": "TMLR OpenReview record",
+      "canonical_source_url": "https://openreview.net/forum?id=GtXSN52nIW",
+      "doi": null,
+      "fulltext_label": "arXiv PDF",
+      "fulltext_url": "https://arxiv.org/pdf/2501.17737.pdf",
+      "isbns": [],
+      "local_filename": "hill2025sparser.pdf",
+      "notes": "Accepted Transactions on Machine Learning Research record, published June 2025; arXiv precursor 2501.17737."
     },
     "balay1997petsc": {
       "canonical_source_label": "Springer chapter",
@@ -196,6 +227,7 @@
       "notes": ""
     },
     "bendsoe2003topology": {
+      "supplemental": true,
       "canonical_source_label": "Springer book page",
       "canonical_source_url": "https://link.springer.com/book/10.1007/978-3-662-05086-6",
       "doi": "10.1007/978-3-662-05086-6",
@@ -209,6 +241,7 @@
       "notes": "Normalized to the DOI-bearing Springer second-edition record; a local non-public copy is available in the cache."
     },
     "sigmund2001topology": {
+      "supplemental": true,
       "canonical_source_label": "DOI landing page",
       "canonical_source_url": "https://doi.org/10.1007/s001580050176",
       "doi": "10.1007/s001580050176",
@@ -219,6 +252,7 @@
       "notes": ""
     },
     "ferrari2020top99": {
+      "supplemental": true,
       "canonical_source_label": "DTU Orbit record",
       "canonical_source_url": "https://orbit.dtu.dk/en/publications/a-new-generation-99-line-matlab-code-for-compliance-topology-opti/",
       "doi": "10.1007/s00158-020-02629-w",
@@ -229,6 +263,7 @@
       "notes": ""
     },
     "bourdin2001filters": {
+      "supplemental": true,
       "canonical_source_label": "DOI landing page",
       "canonical_source_url": "https://doi.org/10.1002/nme.116",
       "doi": "10.1002/nme.116",
@@ -302,6 +337,7 @@
       "notes": ""
     },
     "sysala2025convexoptimization": {
+      "supplemental": true,
       "canonical_source_label": "DOI landing page",
       "canonical_source_url": "https://doi.org/10.1137/25M1723177",
       "doi": "10.1137/25M1723177",
@@ -332,6 +368,7 @@
       "notes": "CAS ASEP lists an author's postprint with restricted access; no public full text is cached."
     },
     "cermak2019efficient": {
+      "supplemental": true,
       "canonical_source_label": "DOI landing page",
       "canonical_source_url": "https://doi.org/10.1016/j.amc.2019.02.054",
       "doi": "10.1016/j.amc.2019.02.054",
@@ -372,6 +409,7 @@
       "notes": ""
     },
     "jia2024fenitop": {
+      "supplemental": true,
       "canonical_source_label": "Springer article",
       "canonical_source_url": "https://link.springer.com/article/10.1007/s00158-024-03818-7",
       "doi": "10.1007/s00158-024-03818-7",
@@ -402,6 +440,7 @@
       "notes": "arXiv metadata verified: submitted 2023-08-31, primary class cs.MS, also cs.LG and math.NA; comments state workshop publication at ICLR 2020 DeepDiffEq."
     },
     "it4i-karolina-compute-nodes": {
+      "supplemental": true,
       "canonical_source_label": "IT4I Karolina compute-node documentation",
       "canonical_source_url": "https://docs.it4i.cz/en/docs/clusters/karolina/compute-nodes",
       "doi": null,

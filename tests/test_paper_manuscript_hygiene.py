@@ -29,6 +29,17 @@ def test_manuscript_body_omits_references_by_default() -> None:
     assert hygiene.find_hygiene_findings(body) == []
 
 
+def test_manuscript_body_omits_references_after_pdf_page_break() -> None:
+    hygiene = _load_module()
+    text = "Body text is clean.\n\n44\n\n\fReferences\nKarolina: Compute nodes.\n"
+
+    body = hygiene.manuscript_body(text)
+
+    assert "References" not in body
+    assert "Karolina" not in body
+    assert hygiene.find_hygiene_findings(body) == []
+
+
 def test_hygiene_finds_process_and_local_labels() -> None:
     hygiene = _load_module()
     text = (
