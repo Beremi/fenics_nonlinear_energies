@@ -1,4 +1,4 @@
-manifest_version: 5
+manifest_version: 6
 status: prepared_not_submitted
 prepared_for: paper publication revision
 prepared_date: "2026-07-10"
@@ -47,6 +47,12 @@ matrix:
     holdout_ranks: [32]
     phase_split_required_for_real_submission: true
     incomplete_phase_preparation_forbidden: true
+  route_four_scope_contract:
+    cost_model_training_rows: 76
+    tier_b_training_rows: 20
+    cost_model_holdout_rows: 29
+    tier_b_holdout_rows: 10
+    model_freeze_schema: paper/protocols/route-model-freeze-v2.schema.json
   discretization_required:
     slurm_rows: 6
     process_executions: 6
@@ -73,8 +79,8 @@ route_design:
   p4_colored_sfd_status: prespecified_not_attempted_memory_risk_no_threshold_claim
   factor_diagnostic_status: replicated_descriptive_non_route_faithful_not_a_selector_feature
   predictive_selector_status: production_13_feature_model_fail_closed_until_clean_holdout_gates_pass
-  route_phase_policy: rank_1_8_training_then_hash_frozen_model_then_rank_32_holdout
-  training_freeze_scope: exact_76_required_cases_and_74_equivalence_admitted_model_rows
+  route_phase_policy: both_rank_1_8_training_scopes_then_v2_freeze_then_rank_32_holdouts
+  training_freeze_scope: exact_76_cost_model_plus_20_tier_b_cases_and_74_equivalence_admitted_model_rows
   endpoint_state_metric: common_element_ad_reference_elastic_riesz
   endpoint_branch_gate: exact_canonical_pointwise_map_hash_and_margin
   endpoint_uncertainty: paired_bootstrap_10000_seed_20260710
@@ -88,7 +94,7 @@ source_sha256:
   cost_model_analyzer: abf34fed7715173e3d8c8c4b896c728a05b97d5bf12887f870eb1d4b1b240d38
   endpoint_analyzer: 7f97ff5cea6c39afa92807e50800766daa5f7fec8a78327642cd2ad7eddef1bf
   route_tranche_aggregator: c38c8e5ff6c779cee2d6aae974b3f8961b9f317af46518040f4fd7eb60e38731
-  route_tier_b_aggregator: ce46681c6788db0f6b20af5903a53c0a69d055d9a2074e72e991b5e83cbea8f0
+  route_tier_b_aggregator: 028e19a583b04fc06014402d3d1cab74943ca3c2b4256930c8555dc84a9e69a6
   route_training_freezer: 0396197b1f003a78cadb4e9e53f8a1780569ab850cda9fb700f6a65c863e13ad
   discretization_analyzer: f7fcf949260ed290ad842496a392ab52b78f78bad7ffd014a813c99b67651800
   scaling_analyzer: b173b2a2373ee9c20c33ee2eb1a7c1be6999e29322567847bbb2a51fe7a52c02
@@ -99,18 +105,18 @@ source_sha256:
   backend_mix_runner: 7a5d9e5f7d948af509579ac1ae3d0f4c2828697347ed2c683d034943f9595ad4
   quadrature_runner: d33b791df8ec709d3f48f47a095abb63e947fdea43aae7e6483064ed280ad90b
   executor: 5ea3ee769b34177015478d1f48a35cc94afb5feab45f8639875d42e2f4418a4d
-  preparer: 848f121c46bb09f7defde28e0b5948ee10e341e608e18946f0bc0c859c959277
+  preparer: bf1245021ef632b647d3605bf38747d111f557ab358d945156ef248b48d95719
   offline_preflight: 2b070eb2efee144372e7d6bb2281975f56a1c7a484766406cb2a6ace127dc850
-  partial_submission_resumer: b5e77fdbb27e155e55eaa38c086103f19dbcc4b91eb636b7c71e7c133a9e8e34
+  partial_submission_resumer: e92be9ef7c203524031dad76e04d7356387a750c71ca1b1638e934ab056346d5
   batch_runner: 2527ee1bc065e6b9678464c960b73c9b22caa9f3c6abcfeab1a15f7db1cbd355
   submitter: 7935dc18d1ddc5fcb93e5f64d9c901cb77c735b9a791eb42dd07d3934a3d0abb
-  state_export: 51713deaff1edddc0e6490f1c8245ded428946c6617f4cd9aac97bb99bfd59cd
+  state_export: d8530a5e25f2c559fce56e8cc8034f516759fdec1d72675c195f82bb3fc7a569
   fixed_state_support: e5710e0ddebfba7d8dc3c6b5e9388d5651bed2fa0707413c2bf68c6c424f8991
   quadrature_support: 83272dcfa9bd5a730aedd070a5add61f7192cec4f0d170884e1181868989c206
   release_authorization_schema: 99aba3efa0f3158c3f8e5f0889a5d5137f8ba796cac259c87025cf92e9ea2064
   release_authorization_example: 62f5a73619c5b5370ade23f67f750b03426b99f132eb3f835db3aa6ca7d55843
-  model_freeze_schema: 6d7aaf7afde2fe6d6c852c3348764cf90b31d70847cba65a894108decc1818ba
-  model_freeze_example: c7838a320f2c6a92fdc98455b068ddfe6701e70b9ab6a809f495347c8868e4ea
+  model_freeze_schema: 2aecf9463f41ea8b43d6f732446f0a703e2e5ef7f7f984de48b8b8b65baf9493
+  model_freeze_example: e9eb4e019eee3e904704ef21edae67eef5cfb629e2c29ee0de84cd6e1cbd5b7c
 protocol_cards:
   EXP-ROUTE-001: paper/protocols/EXP-ROUTE-001.md
   EXP-DISC-001: paper/protocols/EXP-DISC-001.md
@@ -125,6 +131,7 @@ safety:
   archive_internal_paths_relocatable: true
   scheduler_free_offline_preflight_required: true
   optional_tier_b_exact_20_training_plus_10_holdout_union_required: true
+  route_model_freeze_v2_exact_76_20_29_10_scope_binding_required: true
   route_training_holdout_environment_hashes_must_match: true
   fsynced_submission_journal_and_locked_resume_required: true
   checksum_sealed_training_archive_required_before_model_freeze: true

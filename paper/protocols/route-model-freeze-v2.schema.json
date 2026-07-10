@@ -1,0 +1,125 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://fenics-nonlinear-energies.invalid/schemas/route-model-freeze-v2.json",
+  "title": "EXP-ROUTE-001 two-training-tranche model-freeze receipt",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_id",
+    "schema_version",
+    "status",
+    "decision",
+    "matrix_sha256",
+    "source_commit",
+    "scopes",
+    "environment_identity",
+    "created_at_utc",
+    "reviewer",
+    "cost_model_training_manifest",
+    "tier_b_training_manifest",
+    "training_analysis",
+    "frozen_model"
+  ],
+  "properties": {
+    "schema_id": {
+      "const": "fenics-nonlinear-energies.route-model-freeze"
+    },
+    "schema_version": {"const": 2},
+    "status": {"const": "frozen_before_holdout"},
+    "decision": {
+      "const": "cost_model_fit_and_tier_b_training_complete_holdouts_unopened"
+    },
+    "matrix_sha256": {"$ref": "#/$defs/sha256"},
+    "source_commit": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{40}$"
+    },
+    "scopes": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "cost_model_training",
+        "tier_b_training",
+        "cost_model_holdout",
+        "tier_b_holdout"
+      ],
+      "properties": {
+        "cost_model_training": {
+          "$ref": "#/$defs/scope76"
+        },
+        "tier_b_training": {
+          "$ref": "#/$defs/scope20"
+        },
+        "cost_model_holdout": {
+          "$ref": "#/$defs/scope29"
+        },
+        "tier_b_holdout": {
+          "$ref": "#/$defs/scope10"
+        }
+      }
+    },
+    "environment_identity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["setup_sha256", "lock_sha256"],
+      "properties": {
+        "setup_sha256": {"$ref": "#/$defs/sha256"},
+        "lock_sha256": {"$ref": "#/$defs/sha256"}
+      }
+    },
+    "created_at_utc": {"type": "string", "format": "date-time"},
+    "reviewer": {"type": "string", "minLength": 1},
+    "cost_model_training_manifest": {"$ref": "#/$defs/artifact"},
+    "tier_b_training_manifest": {"$ref": "#/$defs/artifact"},
+    "training_analysis": {"$ref": "#/$defs/artifact"},
+    "frozen_model": {"$ref": "#/$defs/artifact"}
+  },
+  "$defs": {
+    "sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "scope": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["case_count", "case_ids_sha256"],
+      "properties": {
+        "case_count": {"type": "integer"},
+        "case_ids_sha256": {"$ref": "#/$defs/sha256"}
+      }
+    },
+    "scope76": {
+      "allOf": [
+        {"$ref": "#/$defs/scope"},
+        {"properties": {"case_count": {"const": 76}}}
+      ]
+    },
+    "scope20": {
+      "allOf": [
+        {"$ref": "#/$defs/scope"},
+        {"properties": {"case_count": {"const": 20}}}
+      ]
+    },
+    "scope29": {
+      "allOf": [
+        {"$ref": "#/$defs/scope"},
+        {"properties": {"case_count": {"const": 29}}}
+      ]
+    },
+    "scope10": {
+      "allOf": [
+        {"$ref": "#/$defs/scope"},
+        {"properties": {"case_count": {"const": 10}}}
+      ]
+    },
+    "artifact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "sha256"],
+      "properties": {
+        "path": {"type": "string", "minLength": 1},
+        "sha256": {"$ref": "#/$defs/sha256"}
+      }
+    }
+  }
+}

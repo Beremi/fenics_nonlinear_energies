@@ -36,7 +36,14 @@ PHASES = ("training", "holdout")
 EXPECTED_COUNTS = {"training": 20, "holdout": 10}
 RELEASE_SCHEMA_ID = "fenics-nonlinear-energies.human-release-authorization"
 MODEL_FREEZE_SCHEMA_ID = "fenics-nonlinear-energies.route-model-freeze"
+MODEL_FREEZE_SCHEMA_VERSION = 2
 MASTER_SCHEMA_ID = "fenics-nonlinear-energies.exp-route-001-tier-b-campaign-master"
+ROUTE_SCOPE_COUNTS = {
+    "cost_model_training": 76,
+    "tier_b_training": 20,
+    "cost_model_holdout": 29,
+    "tier_b_holdout": 10,
+}
 _SUBMITTED = re.compile(r"Submitted batch job ([1-9][0-9]*)")
 
 
@@ -114,7 +121,11 @@ def _archive_relative(path: Path, *, archive_root: Path, label: str) -> str:
         raise AggregationError(f"{label} is outside the explicit archive root") from exc
 
 
-def _canonical_rows() -> tuple[str, dict[str, dict[str, dict[str, str]]], list[str]]:
+def _canonical_rows() -> tuple[
+    str,
+    dict[str, dict[str, dict[str, str]]],
+    dict[str, list[str]],
+]:
     contract = _read_object(CONTRACT)
     matrix_sha256 = str(
         contract["publication_model_input_gates"]["karolina_matrix_sha256"]
@@ -145,16 +156,33 @@ def _canonical_rows() -> tuple[str, dict[str, dict[str, dict[str, str]]], list[s
         raise AggregationError("canonical Tier-B training rows are not confined to ranks 1/8")
     if any(int(row["total_ranks"]) != 32 for row in by_phase["holdout"].values()):
         raise AggregationError("canonical Tier-B holdout rows are not rank 32")
-    training_model_case_ids = sorted(
-        str(row["case_id"])
-        for row in rows
-        if row.get("experiment_id") == EXPERIMENT_ID
-        and row.get("optional") == "0"
-        and int(row["total_ranks"]) in {1, 8}
-    )
-    if len(training_model_case_ids) != 76:
-        raise AggregationError("canonical route-model training scope is not 76 cases")
-    return matrix_sha256, by_phase, training_model_case_ids
+    route_rows = [row for row in rows if row.get("experiment_id") == EXPERIMENT_ID]
+    scopes = {
+        "cost_model_training": sorted(
+            str(row["case_id"])
+            for row in route_rows
+            if row.get("optional") == "0" and int(row["total_ranks"]) in {1, 8}
+        ),
+        "tier_b_training": sorted(by_phase["training"]),
+        "cost_model_holdout": sorted(
+            str(row["case_id"])
+            for row in route_rows
+            if row.get("optional") == "0" and int(row["total_ranks"]) == 32
+        ),
+        "tier_b_holdout": sorted(by_phase["holdout"]),
+    }
+    seen: set[str] = set()
+    for name, expected in ROUTE_SCOPE_COUNTS.items():
+        if len(scopes[name]) != expected or len(set(scopes[name])) != expected:
+            raise AggregationError(
+                f"canonical {name} scope has {len(scopes[name])} cases, expected {expected}"
+            )
+        if seen.intersection(scopes[name]):
+            raise AggregationError("canonical route scopes overlap")
+        seen.update(scopes[name])
+    if len(seen) != len(route_rows):
+        raise AggregationError("canonical route scopes do not partition EXP-ROUTE-001")
+    return matrix_sha256, by_phase, scopes
 
 
 def _validate_environment(
@@ -261,7 +289,7 @@ def _validate_plan(
         rows = [dict(row) for row in csv.DictReader(handle)]
     case_ids = [str(row.get("case_id", "")) for row in rows]
     if (
-        len(case_ids) != EXPECTED_COUNTS[phase]
+        len(case_ids) != len(expected_rows)
         or len(set(case_ids)) != len(case_ids)
         or set(case_ids) != set(expected_rows)
         or any(expected_rows[case_id] != row for case_id, row in zip(case_ids, rows, strict=True))
@@ -280,7 +308,7 @@ def _validate_ledger(
     case_ids = [str(row.get("case_id", "")) for row in rows]
     job_ids: list[str] = []
     if (
-        len(rows) != EXPECTED_COUNTS[phase]
+        len(rows) != len(expected_case_ids)
         or len(set(case_ids)) != len(case_ids)
         or set(case_ids) != expected_case_ids
     ):
@@ -313,17 +341,74 @@ def _validate_ledger(
     return path, job_ids
 
 
+def _validate_freeze_training_manifest(
+    path: Path,
+    *,
+    scope_name: str,
+    expected_case_ids: list[str],
+    matrix_sha256: str,
+    source_commit: str,
+) -> dict[str, Any]:
+    manifest = _read_object(path)
+    root = path.parent
+    with MATRIX.open(newline="", encoding="utf-8") as handle:
+        matrix_by_case = {row["case_id"]: dict(row) for row in csv.DictReader(handle)}
+    expected_rows = {case_id: matrix_by_case[case_id] for case_id in expected_case_ids}
+    expected_tiers = {row["tier"] for row in expected_rows.values()}
+    is_tier_b = scope_name == "tier_b_training"
+    if (
+        manifest.get("status") != "submitted"
+        or manifest.get("test_only_commands") is not False
+        or manifest.get("selected_experiments") != [EXPERIMENT_ID]
+        or set(manifest.get("selected_tiers") or []) != expected_tiers
+        or manifest.get("include_optional") is not is_tier_b
+        or manifest.get("only_optional") is not is_tier_b
+        or manifest.get("route_phase") != "training"
+        or int(manifest.get("case_count", -1)) != len(expected_case_ids)
+        or manifest.get("matrix_sha256") != matrix_sha256
+        or manifest.get("source_commit") != source_commit
+        or manifest.get("source_dirty") is not False
+        or manifest.get("route_phase_case_ids_sha256")
+        != _case_ids_sha256(expected_case_ids)
+    ):
+        raise AggregationError(f"model-freeze {scope_name} manifest has stale scope")
+    plan_path, case_ids = _validate_plan(
+        root,
+        manifest,
+        phase=scope_name,
+        expected_rows=expected_rows,
+    )
+    ledger_path, job_ids = _validate_ledger(
+        root,
+        phase=scope_name,
+        expected_case_ids=set(expected_case_ids),
+    )
+    environment = _validate_environment(root, manifest, phase=scope_name)
+    return {
+        "manifest_sha256": _sha256(path),
+        "plan_path": str(plan_path),
+        "ledger_path": str(ledger_path),
+        "case_ids": sorted(case_ids),
+        "job_ids": job_ids,
+        "environment": environment,
+    }
+
+
 def _validate_model_freeze(
     root: Path,
     manifest: dict[str, Any],
     *,
     matrix_sha256: str,
     source_commit: str,
-    training_model_case_ids: list[str],
-) -> dict[str, str]:
+    scope_case_ids: dict[str, list[str]],
+) -> dict[str, Any]:
     record = manifest.get("route_model_freeze")
-    if not isinstance(record, dict) or record.get("schema_id") != MODEL_FREEZE_SCHEMA_ID:
-        raise AggregationError("holdout manifest lacks its route-model freeze receipt")
+    if (
+        not isinstance(record, dict)
+        or record.get("schema_id") != MODEL_FREEZE_SCHEMA_ID
+        or record.get("schema_version") != MODEL_FREEZE_SCHEMA_VERSION
+    ):
+        raise AggregationError("holdout manifest lacks its v2 route-model freeze receipt")
     path = _within(root, record.get("path"), label="holdout route-model freeze")
     if (
         not path.is_file()
@@ -332,15 +417,39 @@ def _validate_model_freeze(
     ):
         raise AggregationError("holdout route-model freeze receipt is missing or stale")
     payload = _read_object(path)
+    required = {
+        "schema_id",
+        "schema_version",
+        "status",
+        "decision",
+        "matrix_sha256",
+        "source_commit",
+        "scopes",
+        "environment_identity",
+        "created_at_utc",
+        "reviewer",
+        "cost_model_training_manifest",
+        "tier_b_training_manifest",
+        "training_analysis",
+        "frozen_model",
+    }
+    expected_scopes = {
+        name: {
+            "case_count": ROUTE_SCOPE_COUNTS[name],
+            "case_ids_sha256": _case_ids_sha256(case_ids),
+        }
+        for name, case_ids in scope_case_ids.items()
+    }
     if (
-        payload.get("schema_id") != MODEL_FREEZE_SCHEMA_ID
-        or payload.get("schema_version") != 1
+        set(payload) != required
+        or payload.get("schema_id") != MODEL_FREEZE_SCHEMA_ID
+        or payload.get("schema_version") != MODEL_FREEZE_SCHEMA_VERSION
         or payload.get("status") != "frozen_before_holdout"
-        or payload.get("decision") != "training_fit_complete_holdout_unopened"
+        or payload.get("decision")
+        != "cost_model_fit_and_tier_b_training_complete_holdouts_unopened"
         or payload.get("matrix_sha256") != matrix_sha256
         or payload.get("source_commit") != source_commit
-        or payload.get("training_case_ids_sha256")
-        != _case_ids_sha256(training_model_case_ids)
+        or payload.get("scopes") != expected_scopes
         or not str(payload.get("reviewer", "")).strip()
         or payload.get("reviewer") != record.get("reviewer")
     ):
@@ -359,9 +468,14 @@ def _validate_model_freeze(
         raise AggregationError("holdout route-model freeze timestamp is not UTC")
     artifact_hashes: dict[str, str] = {}
     artifacts: dict[str, Path] = {}
-    for key in ("training_manifest", "training_analysis", "frozen_model"):
+    for key in (
+        "cost_model_training_manifest",
+        "tier_b_training_manifest",
+        "training_analysis",
+        "frozen_model",
+    ):
         artifact_record = payload.get(key)
-        if not isinstance(artifact_record, dict):
+        if not isinstance(artifact_record, dict) or set(artifact_record) != {"path", "sha256"}:
             raise AggregationError(f"holdout route-model freeze {key} is malformed")
         artifact = _within(root, artifact_record.get("path"), label=f"model-freeze {key}")
         if not artifact.is_file() or artifact_record.get("sha256") != _sha256(artifact):
@@ -369,6 +483,35 @@ def _validate_model_freeze(
         _read_object(artifact)
         artifacts[key] = artifact
         artifact_hashes[f"{key}_sha256"] = _sha256(artifact)
+
+    training_manifests = {
+        scope_name: _validate_freeze_training_manifest(
+            artifacts[f"{scope_name}_manifest"],
+            scope_name=scope_name,
+            expected_case_ids=scope_case_ids[scope_name],
+            matrix_sha256=matrix_sha256,
+            source_commit=source_commit,
+        )
+        for scope_name in ("cost_model_training", "tier_b_training")
+    }
+    environments = [
+        record_["environment"] for record_ in training_manifests.values()
+    ]
+    receipt_environment = payload.get("environment_identity")
+    expected_environment = {
+        "setup_sha256": environments[0]["setup_sha256"],
+        "lock_sha256": environments[0]["lock_sha256"],
+    }
+    if (
+        environments[0]["setup_sha256"] != environments[1]["setup_sha256"]
+        or environments[0]["lock_sha256"] != environments[1]["lock_sha256"]
+        or receipt_environment != expected_environment
+    ):
+        raise AggregationError(
+            "model-freeze training manifests do not share one environment identity"
+        )
+
+    training_model_case_ids = scope_case_ids["cost_model_training"]
     analysis = _read_object(artifacts["training_analysis"])
     model = _read_object(artifacts["frozen_model"])
     contract = _read_object(CONTRACT)
@@ -431,6 +574,7 @@ def _validate_model_freeze(
         "path": str(path),
         "sha256": _sha256(path),
         "reviewer": str(payload["reviewer"]),
+        "environment_identity": expected_environment,
         **artifact_hashes,
     }
 
@@ -442,7 +586,7 @@ def _validate_phase(
     archive_root: Path,
     matrix_sha256: str,
     expected_rows: dict[str, dict[str, str]],
-    training_model_case_ids: list[str],
+    scope_case_ids: dict[str, list[str]],
 ) -> dict[str, Any]:
     path = manifest_path.resolve()
     root = path.parent
@@ -497,7 +641,7 @@ def _validate_phase(
             manifest,
             matrix_sha256=matrix_sha256,
             source_commit=source_commit,
-            training_model_case_ids=training_model_case_ids,
+            scope_case_ids=scope_case_ids,
         )
     else:
         if manifest.get("route_model_freeze") is not None:
@@ -535,7 +679,7 @@ def aggregate(
     archive_root = archive_root.resolve()
     if not archive_root.is_dir():
         raise AggregationError("explicit archive root does not exist")
-    matrix_sha256, canonical, training_model_case_ids = _canonical_rows()
+    matrix_sha256, canonical, scope_case_ids = _canonical_rows()
     phases = {
         "training": _validate_phase(
             training_manifest,
@@ -543,7 +687,7 @@ def aggregate(
             archive_root=archive_root,
             matrix_sha256=matrix_sha256,
             expected_rows=canonical["training"],
-            training_model_case_ids=training_model_case_ids,
+            scope_case_ids=scope_case_ids,
         ),
         "holdout": _validate_phase(
             holdout_manifest,
@@ -551,7 +695,7 @@ def aggregate(
             archive_root=archive_root,
             matrix_sha256=matrix_sha256,
             expected_rows=canonical["holdout"],
-            training_model_case_ids=training_model_case_ids,
+            scope_case_ids=scope_case_ids,
         ),
     }
     roots = [Path(phases[phase]["root"]) for phase in PHASES]
@@ -575,9 +719,20 @@ def aggregate(
         raise AggregationError("training and holdout ledgers reuse a Slurm job ID")
     freeze = phases["holdout"]["model_freeze"]
     assert isinstance(freeze, dict)
-    if freeze["training_manifest_sha256"] != phases["training"]["manifest_sha256"]:
+    if (
+        freeze["tier_b_training_manifest_sha256"]
+        != phases["training"]["manifest_sha256"]
+    ):
         raise AggregationError(
-            "holdout model-freeze receipt is not bound to the admitted training manifest"
+            "holdout model-freeze receipt is not bound to the admitted Tier-B training manifest"
+        )
+    frozen_environment = freeze["environment_identity"]
+    if (
+        frozen_environment["setup_sha256"] != next(iter(setup_hashes))
+        or frozen_environment["lock_sha256"] != next(iter(lock_hashes))
+    ):
+        raise AggregationError(
+            "cost-model, Tier-B training, and Tier-B holdout use different environments"
         )
 
     case_to_phase = {
@@ -643,8 +798,11 @@ def aggregate(
                     ),
                     "sha256": model_freeze["sha256"],
                     "reviewer": model_freeze["reviewer"],
-                    "training_manifest_sha256": model_freeze[
-                        "training_manifest_sha256"
+                    "cost_model_training_manifest_sha256": model_freeze[
+                        "cost_model_training_manifest_sha256"
+                    ],
+                    "tier_b_training_manifest_sha256": model_freeze[
+                        "tier_b_training_manifest_sha256"
                     ],
                     "training_analysis_sha256": model_freeze[
                         "training_analysis_sha256"

@@ -93,13 +93,68 @@ def _model_freeze(
     root: Path,
     *,
     matrix_sha256: str,
-    training_manifest: Path,
-    training_model_case_ids: list[str],
+    tier_b_training_manifest: Path,
+    scope_case_ids: dict[str, list[str]],
 ) -> dict[str, str]:
     artifacts = root / "model_freeze_artifacts"
     artifacts.mkdir()
-    archived_training = artifacts / "000_training_prepared_manifest.json"
-    shutil.copy2(training_manifest, archived_training)
+    tier_b_training_root = artifacts / "tier_b_training_campaign"
+    shutil.copytree(tier_b_training_manifest.parent, tier_b_training_root)
+    archived_tier_b_training = tier_b_training_root / "prepared_manifest.json"
+
+    cost_training_root = artifacts / "cost_model_training_campaign"
+    cost_training_root.mkdir()
+    with aggregation.MATRIX.open(newline="", encoding="utf-8") as handle:
+        matrix_rows = {row["case_id"]: dict(row) for row in csv.DictReader(handle)}
+    cost_rows = [matrix_rows[case_id] for case_id in scope_case_ids["cost_model_training"]]
+    cost_plan = cost_training_root / "prepared_plan.csv"
+    with cost_plan.open("w", newline="", encoding="utf-8") as handle:
+        writer = csv.DictWriter(handle, fieldnames=list(cost_rows[0]))
+        writer.writeheader()
+        writer.writerows(cost_rows)
+    cost_ledger = cost_training_root / "submitted_jobs.jsonl"
+    with cost_ledger.open("w", encoding="utf-8") as handle:
+        for offset, row in enumerate(cost_rows):
+            job_id = str(3000 + offset)
+            handle.write(
+                json.dumps(
+                    {
+                        "case_id": row["case_id"],
+                        "command": (
+                            f"sbatch --job-name {row['case_id']} run_revision_case.sbatch"
+                        ),
+                        "returncode": 0,
+                        "stdout": f"Submitted batch job {job_id}",
+                        "stderr": "",
+                        "job_id": job_id,
+                    }
+                )
+                + "\n"
+            )
+    cost_environment = _environment(cost_training_root)
+    cost_manifest = cost_training_root / "prepared_manifest.json"
+    _write_json(
+        cost_manifest,
+        {
+            "status": "submitted",
+            "test_only_commands": False,
+            "selected_experiments": [aggregation.EXPERIMENT_ID],
+            "selected_tiers": sorted({row["tier"] for row in cost_rows}),
+            "include_optional": False,
+            "only_optional": False,
+            "route_phase": "training",
+            "route_phase_case_ids_sha256": aggregation._case_ids_sha256(
+                scope_case_ids["cost_model_training"]
+            ),
+            "case_count": len(cost_rows),
+            "matrix_sha256": matrix_sha256,
+            "source_commit": SOURCE_COMMIT,
+            "source_dirty": False,
+            "plan_file": cost_plan.name,
+            "plan_sha256": _sha256(cost_plan),
+            "environment_contract": cost_environment,
+        },
+    )
     analysis = artifacts / "001_route_training_analysis.json"
     model = artifacts / "002_frozen_route_model.json"
     contract = json.loads(aggregation.CONTRACT.read_text(encoding="utf-8"))
@@ -116,7 +171,7 @@ def _model_freeze(
             "source_commit": SOURCE_COMMIT,
             "contract_sha256": _sha256(aggregation.CONTRACT),
             "training_case_ids_sha256": aggregation._case_ids_sha256(
-                training_model_case_ids
+                scope_case_ids["cost_model_training"]
             ),
             "training_rows": 74,
             "training_row_ids": row_ids,
@@ -140,9 +195,9 @@ def _model_freeze(
             "holdout_rows_seen": 0,
             "matrix_sha256": matrix_sha256,
             "source_commit": SOURCE_COMMIT,
-            "training_case_ids": training_model_case_ids,
+            "training_case_ids": scope_case_ids["cost_model_training"],
             "training_case_ids_sha256": aggregation._case_ids_sha256(
-                training_model_case_ids
+                scope_case_ids["cost_model_training"]
             ),
             "training_row_ids": row_ids,
             "training_row_ids_sha256": aggregation._case_ids_sha256(row_ids),
@@ -151,19 +206,31 @@ def _model_freeze(
     )
     payload: dict[str, object] = {
         "schema_id": aggregation.MODEL_FREEZE_SCHEMA_ID,
-        "schema_version": 1,
+        "schema_version": aggregation.MODEL_FREEZE_SCHEMA_VERSION,
         "status": "frozen_before_holdout",
-        "decision": "training_fit_complete_holdout_unopened",
+        "decision": "cost_model_fit_and_tier_b_training_complete_holdouts_unopened",
         "matrix_sha256": matrix_sha256,
         "source_commit": SOURCE_COMMIT,
-        "training_case_ids_sha256": aggregation._case_ids_sha256(
-            training_model_case_ids
-        ),
+        "scopes": {
+            name: {
+                "case_count": aggregation.ROUTE_SCOPE_COUNTS[name],
+                "case_ids_sha256": aggregation._case_ids_sha256(case_ids),
+            }
+            for name, case_ids in scope_case_ids.items()
+        },
+        "environment_identity": {
+            "setup_sha256": cost_environment["setup_sha256"],
+            "lock_sha256": cost_environment["lock_sha256"],
+        },
         "created_at_utc": "2026-07-10T12:00:00+00:00",
         "reviewer": "holdout-model-reviewer",
-        "training_manifest": {
-            "path": str(archived_training.relative_to(root)),
-            "sha256": _sha256(archived_training),
+        "cost_model_training_manifest": {
+            "path": str(cost_manifest.relative_to(root)),
+            "sha256": _sha256(cost_manifest),
+        },
+        "tier_b_training_manifest": {
+            "path": str(archived_tier_b_training.relative_to(root)),
+            "sha256": _sha256(archived_tier_b_training),
         },
         "training_analysis": {
             "path": str(analysis.relative_to(root)),
@@ -178,6 +245,7 @@ def _model_freeze(
     _write_json(path, payload)
     return {
         "schema_id": aggregation.MODEL_FREEZE_SCHEMA_ID,
+        "schema_version": aggregation.MODEL_FREEZE_SCHEMA_VERSION,
         "path": path.name,
         "sha256": _sha256(path),
         "reviewer": "holdout-model-reviewer",
@@ -190,8 +258,8 @@ def _phase_archive(
     phase: str,
     matrix_sha256: str,
     rows: dict[str, dict[str, str]],
-    training_model_case_ids: list[str],
-    training_manifest: Path | None = None,
+    scope_case_ids: dict[str, list[str]],
+    tier_b_training_manifest: Path | None = None,
     first_job_id: int,
     lock_text: str = "shared-lock-v1\n",
 ) -> Path:
@@ -225,12 +293,12 @@ def _phase_archive(
             )
     route_model_freeze = None
     if phase == "holdout":
-        assert training_manifest is not None
+        assert tier_b_training_manifest is not None
         route_model_freeze = _model_freeze(
             root,
             matrix_sha256=matrix_sha256,
-            training_manifest=training_manifest,
-            training_model_case_ids=training_model_case_ids,
+            tier_b_training_manifest=tier_b_training_manifest,
+            scope_case_ids=scope_case_ids,
         )
     manifest: dict[str, object] = {
         "status": "submitted",
@@ -266,13 +334,13 @@ def _archives(
 ) -> tuple[Path, Path, Path]:
     root = tmp_path / "tier_b_archive"
     root.mkdir()
-    matrix_sha256, phases, training_model_case_ids = aggregation._canonical_rows()
+    matrix_sha256, phases, scope_case_ids = aggregation._canonical_rows()
     training = _phase_archive(
         root,
         phase="training",
         matrix_sha256=matrix_sha256,
         rows=phases["training"],
-        training_model_case_ids=training_model_case_ids,
+        scope_case_ids=scope_case_ids,
         first_job_id=1000,
     )
     holdout = _phase_archive(
@@ -280,8 +348,8 @@ def _archives(
         phase="holdout",
         matrix_sha256=matrix_sha256,
         rows=phases["holdout"],
-        training_model_case_ids=training_model_case_ids,
-        training_manifest=training,
+        scope_case_ids=scope_case_ids,
+        tier_b_training_manifest=training,
         first_job_id=2000,
         lock_text=holdout_lock,
     )
@@ -305,7 +373,7 @@ def test_aggregates_exact_two_phase_tier_b_archives(tmp_path: Path) -> None:
     assert result["phases"]["training"]["route_model_freeze"] is None
     assert (
         result["phases"]["holdout"]["route_model_freeze"][
-            "training_manifest_sha256"
+            "tier_b_training_manifest_sha256"
         ]
         == result["phases"]["training"]["manifest_sha256"]
     )
@@ -386,13 +454,79 @@ def test_rejects_model_freeze_not_bound_to_admitted_training_manifest(
     holdout_manifest = json.loads(holdout.read_text(encoding="utf-8"))
     freeze_path = holdout.parent / holdout_manifest["route_model_freeze"]["path"]
     freeze = json.loads(freeze_path.read_text(encoding="utf-8"))
-    archived_training = holdout.parent / freeze["training_manifest"]["path"]
-    _write_json(archived_training, {"status": "different-training-manifest"})
-    freeze["training_manifest"]["sha256"] = _sha256(archived_training)
+    archived_training = holdout.parent / freeze["tier_b_training_manifest"]["path"]
+    archived_payload = json.loads(archived_training.read_text(encoding="utf-8"))
+    archived_payload["archival_note"] = "different-byte-copy"
+    _write_json(archived_training, archived_payload)
+    freeze["tier_b_training_manifest"]["sha256"] = _sha256(archived_training)
     _write_json(freeze_path, freeze)
     holdout_manifest["route_model_freeze"]["sha256"] = _sha256(freeze_path)
     _write_json(holdout, holdout_manifest)
     with pytest.raises(aggregation.AggregationError, match="not bound"):
+        aggregation.aggregate(
+            training_manifest=training,
+            holdout_manifest=holdout,
+            archive_root=root,
+        )
+
+
+def test_rejects_ambiguous_v1_model_freeze_receipt(tmp_path: Path) -> None:
+    root, training, holdout = _archives(tmp_path)
+    holdout_payload = json.loads(holdout.read_text(encoding="utf-8"))
+    freeze_path = holdout.parent / holdout_payload["route_model_freeze"]["path"]
+    freeze = json.loads(freeze_path.read_text(encoding="utf-8"))
+    freeze["schema_version"] = 1
+    _write_json(freeze_path, freeze)
+    holdout_payload["route_model_freeze"]["schema_version"] = 1
+    holdout_payload["route_model_freeze"]["sha256"] = _sha256(freeze_path)
+    _write_json(holdout, holdout_payload)
+    with pytest.raises(aggregation.AggregationError, match="v2"):
+        aggregation.aggregate(
+            training_manifest=training,
+            holdout_manifest=holdout,
+            archive_root=root,
+        )
+
+
+def test_rejects_noncanonical_declared_29_case_holdout_scope(tmp_path: Path) -> None:
+    root, training, holdout = _archives(tmp_path)
+    holdout_payload = json.loads(holdout.read_text(encoding="utf-8"))
+    freeze_path = holdout.parent / holdout_payload["route_model_freeze"]["path"]
+    freeze = json.loads(freeze_path.read_text(encoding="utf-8"))
+    freeze["scopes"]["cost_model_holdout"]["case_count"] = 28
+    _write_json(freeze_path, freeze)
+    holdout_payload["route_model_freeze"]["sha256"] = _sha256(freeze_path)
+    _write_json(holdout, holdout_payload)
+    with pytest.raises(aggregation.AggregationError, match="identity or scope is stale"):
+        aggregation.aggregate(
+            training_manifest=training,
+            holdout_manifest=holdout,
+            archive_root=root,
+        )
+
+
+def test_rejects_different_cost_model_and_tier_b_training_environments(
+    tmp_path: Path,
+) -> None:
+    root, training, holdout = _archives(tmp_path)
+    holdout_payload = json.loads(holdout.read_text(encoding="utf-8"))
+    freeze_path = holdout.parent / holdout_payload["route_model_freeze"]["path"]
+    freeze = json.loads(freeze_path.read_text(encoding="utf-8"))
+    cost_manifest_path = holdout.parent / freeze["cost_model_training_manifest"]["path"]
+    cost_manifest = json.loads(cost_manifest_path.read_text(encoding="utf-8"))
+    lock_record = cost_manifest["environment_contract"]["archived_lock"]
+    lock_path = cost_manifest_path.parent / lock_record["path"]
+    lock_path.write_text("different-cost-model-lock\n", encoding="utf-8")
+    changed_hash = _sha256(lock_path)
+    lock_record["sha256"] = changed_hash
+    cost_manifest["environment_contract"]["lock_sha256"] = changed_hash
+    _write_json(cost_manifest_path, cost_manifest)
+    freeze["cost_model_training_manifest"]["sha256"] = _sha256(cost_manifest_path)
+    freeze["environment_identity"]["lock_sha256"] = changed_hash
+    _write_json(freeze_path, freeze)
+    holdout_payload["route_model_freeze"]["sha256"] = _sha256(freeze_path)
+    _write_json(holdout, holdout_payload)
+    with pytest.raises(aggregation.AggregationError, match="do not share one environment"):
         aggregation.aggregate(
             training_manifest=training,
             holdout_manifest=holdout,

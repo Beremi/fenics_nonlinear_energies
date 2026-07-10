@@ -16,6 +16,7 @@ import math
 import os
 from pathlib import Path
 import random
+import re
 import shutil
 import shlex
 import subprocess
@@ -34,8 +35,8 @@ RELEASE_AUTHORIZATION_SCHEMA = (
 RELEASE_AUTHORIZATION_EXAMPLE = (
     REPO_ROOT / "paper/protocols/human-release-authorization-v1.example.json"
 )
-MODEL_FREEZE_SCHEMA = REPO_ROOT / "paper/protocols/route-model-freeze-v1.schema.json"
-MODEL_FREEZE_EXAMPLE = REPO_ROOT / "paper/protocols/route-model-freeze-v1.example.json"
+MODEL_FREEZE_SCHEMA = REPO_ROOT / "paper/protocols/route-model-freeze-v2.schema.json"
+MODEL_FREEZE_EXAMPLE = REPO_ROOT / "paper/protocols/route-model-freeze-v2.example.json"
 SOURCE_FREEZE_SCHEMA_ID = "fenics-nonlinear-energies.queued-source-freeze"
 SOURCE_FREEZE_SCHEMA_VERSION = 1
 ACCOUNT = "fta-26-40"
@@ -118,6 +119,13 @@ DISC_STAGE_CASE_COUNTS = {
 }
 ROUTE_PHASES = frozenset({"training", "holdout"})
 MODEL_FREEZE_SCHEMA_ID = "fenics-nonlinear-energies.route-model-freeze"
+MODEL_FREEZE_SCHEMA_VERSION = 2
+ROUTE_SCOPE_COUNTS = {
+    "cost_model_training": 76,
+    "tier_b_training": 20,
+    "cost_model_holdout": 29,
+    "tier_b_holdout": 10,
+}
 
 
 def _sha256(path: Path) -> str:
@@ -872,14 +880,189 @@ def _case_ids_sha256(case_ids: Iterable[str]) -> str:
     return hashlib.sha256(canonical).hexdigest()
 
 
-def _model_training_case_ids(matrix: Path) -> list[str]:
-    return sorted(
-        row["case_id"]
+def _route_scopes(matrix: Path) -> dict[str, list[dict[str, str]]]:
+    """Return the four non-overlapping route scopes frozen by receipt v2."""
+
+    rows = [
+        row
         for row in read_matrix(matrix)
         if row["experiment_id"] == "EXP-ROUTE-001"
-        and row["optional"] == "0"
-        and int(row["total_ranks"]) in {1, 8}
+    ]
+    scopes = {
+        "cost_model_training": [
+            row
+            for row in rows
+            if row["optional"] == "0" and int(row["total_ranks"]) in {1, 8}
+        ],
+        "tier_b_training": [
+            row
+            for row in rows
+            if row["optional"] == "1" and int(row["total_ranks"]) in {1, 8}
+        ],
+        "cost_model_holdout": [
+            row
+            for row in rows
+            if row["optional"] == "0" and int(row["total_ranks"]) == 32
+        ],
+        "tier_b_holdout": [
+            row
+            for row in rows
+            if row["optional"] == "1" and int(row["total_ranks"]) == 32
+        ],
+    }
+    seen: set[str] = set()
+    for name, expected_count in ROUTE_SCOPE_COUNTS.items():
+        case_ids = [row["case_id"] for row in scopes[name]]
+        if len(case_ids) != expected_count or len(set(case_ids)) != expected_count:
+            raise RuntimeError(
+                f"canonical {name} scope must contain exactly {expected_count} cases"
+            )
+        if seen.intersection(case_ids):
+            raise RuntimeError("canonical route scopes overlap")
+        seen.update(case_ids)
+    if len(seen) != len(rows):
+        raise RuntimeError("canonical route scopes do not partition EXP-ROUTE-001")
+    return scopes
+
+
+def _model_training_case_ids(matrix: Path) -> list[str]:
+    return sorted(row["case_id"] for row in _route_scopes(matrix)["cost_model_training"])
+
+
+def _scope_receipt(scopes: dict[str, list[dict[str, str]]]) -> dict[str, object]:
+    return {
+        name: {
+            "case_count": ROUTE_SCOPE_COUNTS[name],
+            "case_ids_sha256": _case_ids_sha256(row["case_id"] for row in rows),
+        }
+        for name, rows in scopes.items()
+    }
+
+
+def _resolve_receipt_artifacts(
+    receipt_path: Path, receipt: dict[str, object]
+) -> dict[str, Path]:
+    resolved: dict[str, Path] = {}
+    for key in (
+        "cost_model_training_manifest",
+        "tier_b_training_manifest",
+        "training_analysis",
+        "frozen_model",
+    ):
+        artifact = receipt.get(key)
+        if not isinstance(artifact, dict) or set(artifact) != {"path", "sha256"}:
+            raise RuntimeError(f"route model-freeze {key} artifact is malformed")
+        artifact_path = Path(str(artifact["path"]))
+        if not artifact_path.is_absolute():
+            artifact_path = receipt_path.parent / artifact_path
+        if (
+            artifact_path.is_symlink()
+            or not artifact_path.resolve().is_file()
+            or artifact.get("sha256") != _sha256(artifact_path.resolve())
+        ):
+            raise RuntimeError(f"route model-freeze {key} artifact is missing or stale")
+        resolved[key] = artifact_path.resolve()
+    return resolved
+
+
+def _validate_freeze_training_manifest(
+    manifest_path: Path,
+    *,
+    matrix: Path,
+    source_commit: str,
+    scope_name: str,
+    expected_rows: list[dict[str, str]],
+) -> dict[str, str]:
+    """Validate one completed training tranche without scheduler access."""
+
+    root = manifest_path.parent.resolve()
+    with manifest_path.open(encoding="utf-8") as handle:
+        manifest = json.load(handle)
+    if not isinstance(manifest, dict):
+        raise RuntimeError(f"{scope_name} manifest is not a JSON object")
+    expected_ids = sorted(row["case_id"] for row in expected_rows)
+    expected_tiers = sorted({row["tier"] for row in expected_rows})
+    is_tier_b = scope_name == "tier_b_training"
+    if (
+        manifest.get("status") != "submitted"
+        or manifest.get("test_only_commands") is not False
+        or manifest.get("route_phase") != "training"
+        or manifest.get("selected_experiments") != ["EXP-ROUTE-001"]
+        or manifest.get("selected_tiers") != expected_tiers
+        or manifest.get("include_optional") is not is_tier_b
+        or manifest.get("only_optional") is not is_tier_b
+        or int(manifest.get("case_count", -1)) != len(expected_ids)
+        or manifest.get("matrix_sha256") != _sha256(matrix)
+        or manifest.get("source_commit") != source_commit
+        or manifest.get("source_dirty") is not False
+        or manifest.get("route_phase_case_ids_sha256")
+        != _case_ids_sha256(expected_ids)
+    ):
+        raise RuntimeError(f"{scope_name} manifest has stale scope or source identity")
+    plan_path = _archive_member(root, manifest.get("plan_file"), name=f"{scope_name}.plan")
+    if manifest.get("plan_sha256") != _sha256(plan_path):
+        raise RuntimeError(f"{scope_name} plan hash is stale")
+    with plan_path.open(newline="", encoding="utf-8") as handle:
+        plan = [dict(row) for row in csv.DictReader(handle)]
+    canonical = {row["case_id"]: row for row in expected_rows}
+    if (
+        len(plan) != len(expected_ids)
+        or len({row.get("case_id") for row in plan}) != len(expected_ids)
+        or any(canonical.get(str(row.get("case_id", ""))) != row for row in plan)
+    ):
+        raise RuntimeError(f"{scope_name} plan is not the exact canonical scope")
+
+    environment = manifest.get("environment_contract")
+    if not isinstance(environment, dict) or environment.get("status") != "hash_bound":
+        raise RuntimeError(f"{scope_name} manifest lacks a hash-bound environment")
+    identity: dict[str, str] = {}
+    for record_key, hash_key in (
+        ("archived_setup", "setup_sha256"),
+        ("archived_lock", "lock_sha256"),
+    ):
+        record = environment.get(record_key)
+        digest = environment.get(hash_key)
+        if not isinstance(record, dict) or not re.fullmatch(r"[0-9a-f]{64}", str(digest)):
+            raise RuntimeError(f"{scope_name} environment identity is malformed")
+        artifact = _archive_member(
+            root, record.get("path"), name=f"{scope_name}.{record_key}"
+        )
+        if record.get("sha256") != digest or _sha256(artifact) != digest:
+            raise RuntimeError(f"{scope_name} environment identity is stale")
+        identity[hash_key] = str(digest)
+
+    try:
+        preflight = offline_preflight(root, matrix=matrix)
+    except (OSError, RuntimeError, ValueError, json.JSONDecodeError) as exc:
+        raise RuntimeError(f"{scope_name} archive preflight failed: {exc}") from exc
+    if preflight and preflight.get("mode") not in {None, "offline_no_scheduler_access"}:
+        raise RuntimeError(f"{scope_name} archive preflight was not scheduler-free")
+
+    ledger_path = _archive_member(
+        root, "submitted_jobs.jsonl", name=f"{scope_name}.submitted_jobs"
     )
+    ledger: list[dict[str, object]] = []
+    for line in ledger_path.read_text(encoding="utf-8").splitlines():
+        if line.strip():
+            value = json.loads(line)
+            if not isinstance(value, dict):
+                raise RuntimeError(f"{scope_name} submission ledger is malformed")
+            ledger.append(value)
+    ledger_ids = [str(record.get("case_id", "")) for record in ledger]
+    job_ids = [str(record.get("job_id", "")) for record in ledger]
+    if (
+        sorted(ledger_ids) != expected_ids
+        or len(set(ledger_ids)) != len(expected_ids)
+        or len(set(job_ids)) != len(expected_ids)
+        or any(
+            int(record.get("returncode", 1)) != 0
+            or not str(record.get("job_id", "")).isdigit()
+            or int(str(record.get("job_id", "0"))) <= 0
+            for record in ledger
+        )
+    ):
+        raise RuntimeError(f"{scope_name} ledger does not prove complete submission")
+    return identity
 
 
 def _validate_model_freeze_receipt(
@@ -895,25 +1078,31 @@ def _validate_model_freeze_receipt(
         "decision",
         "matrix_sha256",
         "source_commit",
-        "training_case_ids_sha256",
+        "scopes",
+        "environment_identity",
         "created_at_utc",
         "reviewer",
-        "training_manifest",
+        "cost_model_training_manifest",
+        "tier_b_training_manifest",
         "training_analysis",
         "frozen_model",
     }
     if not isinstance(receipt, dict) or set(receipt) != required:
         raise RuntimeError("route model-freeze receipt has an unexpected shape")
-    expected_training = _model_training_case_ids(matrix)
+    canonical_scopes = _route_scopes(matrix)
+    expected_scopes = _scope_receipt(canonical_scopes)
+    expected_training = sorted(
+        row["case_id"] for row in canonical_scopes["cost_model_training"]
+    )
     if (
         receipt.get("schema_id") != MODEL_FREEZE_SCHEMA_ID
-        or receipt.get("schema_version") != 1
+        or receipt.get("schema_version") != MODEL_FREEZE_SCHEMA_VERSION
         or receipt.get("status") != "frozen_before_holdout"
-        or receipt.get("decision") != "training_fit_complete_holdout_unopened"
+        or receipt.get("decision")
+        != "cost_model_fit_and_tier_b_training_complete_holdouts_unopened"
         or receipt.get("matrix_sha256") != _sha256(matrix)
         or receipt.get("source_commit") != source_commit
-        or receipt.get("training_case_ids_sha256")
-        != _case_ids_sha256(expected_training)
+        or receipt.get("scopes") != expected_scopes
         or not str(receipt.get("reviewer", "")).strip()
     ):
         raise RuntimeError("route model-freeze receipt identity, scope, or commit is stale")
@@ -923,21 +1112,34 @@ def _validate_model_freeze_receipt(
         )
     except ValueError as exc:
         raise RuntimeError("route model-freeze timestamp is invalid") from exc
-    if created.tzinfo is None or created.utcoffset() is None:
-        raise RuntimeError("route model-freeze timestamp must include a UTC offset")
+    if (
+        created.tzinfo is None
+        or created.utcoffset() is None
+        or created.utcoffset() != timezone.utc.utcoffset(created)
+    ):
+        raise RuntimeError("route model-freeze timestamp must be UTC")
 
-    resolved_artifacts: dict[str, Path] = {}
-    for key in ("training_manifest", "training_analysis", "frozen_model"):
-        artifact = receipt.get(key)
-        if not isinstance(artifact, dict) or set(artifact) != {"path", "sha256"}:
-            raise RuntimeError(f"route model-freeze {key} artifact is malformed")
-        artifact_path = Path(str(artifact["path"]))
-        if not artifact_path.is_absolute():
-            artifact_path = path.parent / artifact_path
-        artifact_path = artifact_path.resolve()
-        if not artifact_path.is_file() or artifact["sha256"] != _sha256(artifact_path):
-            raise RuntimeError(f"route model-freeze {key} artifact is missing or stale")
-        resolved_artifacts[key] = artifact_path
+    resolved_artifacts = _resolve_receipt_artifacts(path, receipt)
+    identities = {
+        scope_name: _validate_freeze_training_manifest(
+            resolved_artifacts[f"{scope_name}_manifest"],
+            matrix=matrix,
+            source_commit=source_commit,
+            scope_name=scope_name,
+            expected_rows=canonical_scopes[scope_name],
+        )
+        for scope_name in ("cost_model_training", "tier_b_training")
+    }
+    identity = receipt.get("environment_identity")
+    if (
+        not isinstance(identity, dict)
+        or set(identity) != {"setup_sha256", "lock_sha256"}
+        or identities["cost_model_training"] != identities["tier_b_training"]
+        or identity != identities["cost_model_training"]
+    ):
+        raise RuntimeError(
+            "cost-model and Tier-B training manifests do not share the receipt environment"
+        )
 
     with resolved_artifacts["training_analysis"].open(encoding="utf-8") as handle:
         training_analysis = json.load(handle)
@@ -1031,49 +1233,6 @@ def _validate_model_freeze_receipt(
     ):
         raise RuntimeError("frozen route training model violates its prespecified design")
 
-    training_manifest = json.loads(
-        resolved_artifacts["training_manifest"].read_text(encoding="utf-8")
-    )
-    if not isinstance(training_manifest, dict):
-        raise RuntimeError("route training manifest is not a JSON object")
-    training_root = resolved_artifacts["training_manifest"].parent
-    plan_path = training_root / str(training_manifest.get("plan_file", ""))
-    with plan_path.open(newline="", encoding="utf-8") as handle:
-        training_plan = [dict(row) for row in csv.DictReader(handle)]
-    if (
-        training_manifest.get("status") != "submitted"
-        or training_manifest.get("route_phase") != "training"
-        or set(training_manifest.get("selected_experiments") or [])
-        != {"EXP-ROUTE-001"}
-        or training_manifest.get("matrix_sha256") != _sha256(matrix)
-        or training_manifest.get("source_commit") != source_commit
-        or training_manifest.get("source_dirty") is not False
-        or sorted(row["case_id"] for row in training_plan) != expected_training
-    ):
-        raise RuntimeError("route training manifest does not prove the complete frozen fit set")
-    try:
-        offline_preflight(training_root, matrix=matrix)
-    except (OSError, RuntimeError, ValueError, json.JSONDecodeError) as exc:
-        raise RuntimeError(f"route training archive preflight failed: {exc}") from exc
-    ledger_path = training_root / "submitted_jobs.jsonl"
-    ledger: list[dict[str, object]] = []
-    for line in ledger_path.read_text(encoding="utf-8").splitlines():
-        if line.strip():
-            value = json.loads(line)
-            if not isinstance(value, dict):
-                raise RuntimeError("route training submission ledger is malformed")
-            ledger.append(value)
-    ledger_case_ids = [str(record.get("case_id", "")) for record in ledger]
-    if (
-        sorted(ledger_case_ids) != expected_training
-        or len(set(ledger_case_ids)) != len(expected_training)
-        or any(
-            int(record.get("returncode", 1)) != 0
-            or not str(record.get("job_id", "")).isdigit()
-            for record in ledger
-        )
-    ):
-        raise RuntimeError("route training ledger does not prove complete submission")
     return {
         "receipt": receipt,
         "receipt_path": path,
@@ -1089,57 +1248,64 @@ def _archive_model_freeze_receipt(
     archive = out_root / "model_freeze_artifacts"
     archive.mkdir(parents=True, exist_ok=False)
 
-    training_manifest_source = Path(artifacts["training_manifest"])
-    training_root = training_manifest_source.parent.resolve()
-    with training_manifest_source.open(encoding="utf-8") as handle:
-        training_manifest = json.load(handle)
-    if not isinstance(training_manifest, dict):
-        raise RuntimeError("route training manifest is not a JSON object")
-    snapshot_root = archive / "training_campaign"
-    snapshot_root.mkdir()
-    relative_sources: set[Path] = {
-        Path(str(training_manifest["plan_file"])),
-        Path(str(training_manifest["commands_file"])),
-        Path(str(dict(training_manifest["queued_source_freeze"])["path"])),
-        Path("submitted_jobs.jsonl"),
-        Path("submission_journal.jsonl"),
-    }
-    environment = dict(training_manifest.get("environment_contract") or {})
-    for key in ("archived_setup", "archived_lock"):
-        record = environment.get(key)
-        if isinstance(record, dict):
-            relative_sources.add(Path(str(record.get("path", ""))))
-    release = training_manifest.get("release_authorization")
-    if isinstance(release, dict):
-        release_relative = Path(str(release.get("path", "")))
-        relative_sources.add(release_relative)
-        release_path = (training_root / release_relative).resolve()
-        with release_path.open(encoding="utf-8") as handle:
-            release_payload = json.load(handle)
-        for record in list(dict(release_payload).get("reviewed_artifacts") or []):
+    for manifest_key in (
+        "cost_model_training_manifest",
+        "tier_b_training_manifest",
+    ):
+        training_manifest_source = Path(artifacts[manifest_key])
+        training_root = training_manifest_source.parent.resolve()
+        with training_manifest_source.open(encoding="utf-8") as handle:
+            training_manifest = json.load(handle)
+        if not isinstance(training_manifest, dict):
+            raise RuntimeError(f"route {manifest_key} is not a JSON object")
+        scope_name = manifest_key.removesuffix("_manifest")
+        snapshot_root = archive / f"{scope_name}_campaign"
+        snapshot_root.mkdir()
+        relative_sources: set[Path] = {
+            Path(str(training_manifest["plan_file"])),
+            Path(str(training_manifest["commands_file"])),
+            Path(str(dict(training_manifest["queued_source_freeze"])["path"])),
+            Path("submitted_jobs.jsonl"),
+            Path("submission_journal.jsonl"),
+        }
+        environment = dict(training_manifest.get("environment_contract") or {})
+        for key in ("archived_setup", "archived_lock"):
+            record = environment.get(key)
             if isinstance(record, dict):
                 relative_sources.add(Path(str(record.get("path", ""))))
-    for relative in sorted(relative_sources, key=str):
-        if relative.is_absolute() or not str(relative):
-            raise RuntimeError("route training provenance path is not archive-relative")
-        source = (training_root / relative).resolve()
-        try:
-            source.relative_to(training_root)
-        except ValueError as exc:
-            raise RuntimeError("route training provenance path escapes its archive") from exc
-        if not source.is_file():
-            raise RuntimeError(f"route training provenance file is missing: {relative}")
-        destination = snapshot_root / relative
-        destination.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copy2(source, destination)
-        if _sha256(destination) != _sha256(source):
-            raise RuntimeError(f"route training provenance changed during archival: {relative}")
-    training_manifest_destination = snapshot_root / "prepared_manifest.json"
-    shutil.copy2(training_manifest_source, training_manifest_destination)
-    receipt["training_manifest"] = {
-        "path": str(training_manifest_destination.relative_to(out_root)),
-        "sha256": _sha256(training_manifest_destination),
-    }
+        release = training_manifest.get("release_authorization")
+        if isinstance(release, dict):
+            release_relative = Path(str(release.get("path", "")))
+            relative_sources.add(release_relative)
+            release_path = (training_root / release_relative).resolve()
+            with release_path.open(encoding="utf-8") as handle:
+                release_payload = json.load(handle)
+            for record in list(dict(release_payload).get("reviewed_artifacts") or []):
+                if isinstance(record, dict):
+                    relative_sources.add(Path(str(record.get("path", ""))))
+        for relative in sorted(relative_sources, key=str):
+            if relative.is_absolute() or not str(relative):
+                raise RuntimeError("route training provenance path is not archive-relative")
+            source = (training_root / relative).resolve()
+            try:
+                source.relative_to(training_root)
+            except ValueError as exc:
+                raise RuntimeError("route training provenance path escapes its archive") from exc
+            if not source.is_file():
+                raise RuntimeError(f"route training provenance file is missing: {relative}")
+            destination = snapshot_root / relative
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(source, destination)
+            if _sha256(destination) != _sha256(source):
+                raise RuntimeError(
+                    f"route training provenance changed during archival: {relative}"
+                )
+        training_manifest_destination = snapshot_root / "prepared_manifest.json"
+        shutil.copy2(training_manifest_source, training_manifest_destination)
+        receipt[manifest_key] = {
+            "path": str(training_manifest_destination.relative_to(out_root)),
+            "sha256": _sha256(training_manifest_destination),
+        }
 
     fit_archive = archive / "training_fit"
     fit_archive.mkdir()
@@ -1159,6 +1325,7 @@ def _archive_model_freeze_receipt(
     _atomic_write_json(destination, receipt)
     return {
         "schema_id": MODEL_FREEZE_SCHEMA_ID,
+        "schema_version": MODEL_FREEZE_SCHEMA_VERSION,
         "path": destination.name,
         "sha256": _sha256(destination),
         "reviewer": str(receipt["reviewer"]),
@@ -1370,7 +1537,11 @@ def _validate_archived_model_freeze(
     root: Path, manifest: dict[str, object], *, matrix: Path
 ) -> None:
     record = manifest.get("route_model_freeze")
-    if not isinstance(record, dict):
+    if (
+        not isinstance(record, dict)
+        or record.get("schema_id") != MODEL_FREEZE_SCHEMA_ID
+        or record.get("schema_version") != MODEL_FREEZE_SCHEMA_VERSION
+    ):
         raise RuntimeError("rank-32 holdout lacks its route model-freeze receipt")
     path = _archive_member(root, record.get("path"), name="route_model_freeze.path")
     if not path.is_file() or record.get("sha256") != _sha256(path):
@@ -1383,6 +1554,54 @@ def _validate_archived_model_freeze(
     receipt = dict(validated["receipt"])
     if record.get("reviewer") != receipt.get("reviewer"):
         raise RuntimeError("route model-freeze reviewer identity changed")
+    if (
+        manifest.get("matrix_sha256") != _sha256(matrix)
+        or receipt.get("matrix_sha256") != manifest.get("matrix_sha256")
+    ):
+        raise RuntimeError("rank-32 holdout does not share the frozen matrix identity")
+
+    is_tier_b = manifest.get("only_optional") is True
+    if manifest.get("include_optional") is not is_tier_b:
+        raise RuntimeError("rank-32 holdout mixes required and Tier-B scope")
+    scope_name = "tier_b_holdout" if is_tier_b else "cost_model_holdout"
+    expected_rows = _route_scopes(matrix)[scope_name]
+    expected_ids = sorted(row["case_id"] for row in expected_rows)
+    plan_path = _archive_member(root, manifest.get("plan_file"), name="holdout.plan")
+    with plan_path.open(newline="", encoding="utf-8") as handle:
+        plan = [dict(row) for row in csv.DictReader(handle)]
+    canonical = {row["case_id"]: row for row in expected_rows}
+    declared_scope = dict(receipt.get("scopes") or {}).get(scope_name)
+    if (
+        manifest.get("route_phase") != "holdout"
+        or int(manifest.get("case_count", -1)) != len(expected_ids)
+        or manifest.get("route_phase_case_ids_sha256")
+        != _case_ids_sha256(expected_ids)
+        or len(plan) != len(expected_ids)
+        or len({row.get("case_id") for row in plan}) != len(expected_ids)
+        or any(canonical.get(str(row.get("case_id", ""))) != row for row in plan)
+        or declared_scope
+        != {
+            "case_count": len(expected_ids),
+            "case_ids_sha256": _case_ids_sha256(expected_ids),
+        }
+    ):
+        raise RuntimeError(f"rank-32 holdout is not the canonical {scope_name} scope")
+
+    environment = manifest.get("environment_contract")
+    receipt_environment = receipt.get("environment_identity")
+    if (
+        not isinstance(environment, dict)
+        or environment.get("status") != "hash_bound"
+        or not isinstance(receipt_environment, dict)
+        or {
+            "setup_sha256": environment.get("setup_sha256"),
+            "lock_sha256": environment.get("lock_sha256"),
+        }
+        != receipt_environment
+    ):
+        raise RuntimeError(
+            "rank-32 holdout does not share the frozen training environment identity"
+        )
 
 
 def offline_preflight(out_root: Path, *, matrix: Path = DEFAULT_MATRIX) -> dict[str, object]:

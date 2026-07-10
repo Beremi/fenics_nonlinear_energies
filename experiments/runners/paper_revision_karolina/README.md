@@ -47,12 +47,15 @@ CAMPAIGN_ID=paper_revision_karolina_prepared_v9 \
 bash experiments/runners/paper_revision_karolina/submit_prepared_campaigns.sh
 ```
 
-Optional rows are always prepared as separate tranches. The 45-node-hour
-route-confirmation scope is split before any real submission: use
+Route evidence has four non-overlapping tranches: the required 76-row
+cost-model training scope, optional 20-row Tier-B training scope, required
+29-row cost-model holdout scope, and optional 10-row Tier-B holdout scope. Run
+both training scopes before creating the model-freeze receipt. Optional rows
+are always prepared separately: use
 `ONLY_OPTIONAL=1 EXPERIMENTS=EXP-ROUTE-001 ROUTE_PHASE=training` for the exact
-20-row rank-1/8 training phase, then use `ROUTE_PHASE=holdout` only after the
-training model has been frozen; the latter selects the exact 10-row rank-32
-holdout phase. A phase-incomplete or overlapping master archive is rejected.
+20-row phase. Neither rank-32 scope may be opened before the v2 receipt has
+frozen both training-manifest hashes and the fitted model. A phase-incomplete
+or overlapping master archive is rejected.
 For the 17.5-node-hour
 optional scaling tranche use `ONLY_OPTIONAL=1 EXPERIMENTS=EXP-SCALE-001`; this
 selects exactly the three Plasticity3D rows. Hyperelasticity and Plasticity3D
@@ -93,9 +96,11 @@ and command file. It can be repeated after copy-back without contacting Slurm:
 Real route submissions must additionally set `ROUTE_PHASE=training` for ranks
 1 and 8 or `ROUTE_PHASE=holdout` for rank 32. The holdout path is rejected
 unless `MODEL_FREEZE_RECEIPT` names a receipt conforming to
-`paper/protocols/route-model-freeze-v1.schema.json`; the receipt binds the
-complete 76-case training plan, clean commit, training analysis, and frozen
-model hashes before any holdout scheduler call. `ENV_SETUP` and `ENV_LOCK` are
+`paper/protocols/route-model-freeze-v2.schema.json`; the receipt separately
+binds the complete 76-case cost-model training manifest and 20-case Tier-B
+training manifest, the canonical 29/10 holdout scopes, clean commit, common
+matrix and environment identities, training analysis, and frozen-model hashes
+before any holdout scheduler call. `ENV_SETUP` and `ENV_LOCK` are
 also mandatory for scheduler admission. Both files are copied into the tranche,
 hash-bound in every command, verified before the setup is sourced, and linked
 to the compute-node compiler, MPI/mpi4py, JAX/jaxlib, backend, and XLA identity
@@ -128,11 +133,15 @@ training archive:
 The utility opens only the 76 planned rank-1/8 jobs, requires 74
 equivalence-admitted model rows, checks the full-rank 13-feature design, and
 writes `training_analysis.json` plus `frozen_model.json`, both explicitly
-recording that zero holdout rows were seen. A human then records those hashes,
-the checksum-sealed training manifest, and the review decision in a copy of
-`paper/protocols/route-model-freeze-v1.example.json`. The holdout preparer
-revalidates the complete training archive and both output schemas before its
-first scheduler call.
+recording that zero holdout rows were seen. After the separate 20-case Tier-B
+training archive is also complete, a human records both training-manifest
+hashes, all four canonical scope hashes, their common environment identity,
+the fit hashes, and the review decision in a copy of
+`paper/protocols/route-model-freeze-v2.example.json`. The holdout preparer
+revalidates both complete training archives and both output schemas before its
+first scheduler call. Version 1 is intentionally rejected because its single
+`training_manifest` field cannot distinguish the 76-case fit scope from the
+20-case Tier-B phase.
 
 After both optional phases have completed and been settled, create the only
 Tier-B manifest accepted by the endpoint analyzer:
@@ -146,8 +155,10 @@ Tier-B manifest accepted by the endpoint analyzer:
 ```
 
 This step is scheduler-free. It recomputes exact 20/10 phase coverage, checks
-the common clean commit and environment, binds the holdout receipt back to the
-admitted training manifest, and emits only archive-relative paths.
+the clean commit, matrix, and environment shared by both v2 training bindings
+and the holdout, binds the receipt's Tier-B training manifest (not its distinct
+cost-model training manifest) to the admitted 20-case phase, and emits only
+archive-relative paths.
 
 A real submission now journals and fsyncs an intent before every `sbatch`
 call and a result afterward. `resume_partial_submission.py` submits only case

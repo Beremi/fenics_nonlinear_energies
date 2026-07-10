@@ -1,4 +1,4 @@
-handoff_version: 4
+handoff_version: 5
 status: prepared_not_submitted
 software:
   repository: fenics_nonlinear_energies
@@ -45,11 +45,11 @@ campaign:
   submitter: experiments/runners/paper_revision_karolina/submit_prepared_campaigns.sh
   submitter_sha256: 7935dc18d1ddc5fcb93e5f64d9c901cb77c735b9a791eb42dd07d3934a3d0abb
   preparer: experiments/runners/paper_revision_karolina/prepare_campaign.py
-  preparer_sha256: 848f121c46bb09f7defde28e0b5948ee10e341e608e18946f0bc0c859c959277
+  preparer_sha256: bf1245021ef632b647d3605bf38747d111f557ab358d945156ef248b48d95719
   batch_runner: experiments/runners/paper_revision_karolina/run_revision_case.sbatch
   batch_runner_sha256: 2527ee1bc065e6b9678464c960b73c9b22caa9f3c6abcfeab1a15f7db1cbd355
   partial_submission_resumer: experiments/runners/paper_revision_karolina/resume_partial_submission.py
-  partial_submission_resumer_sha256: b5e77fdbb27e155e55eaa38c086103f19dbcc4b91eb636b7c71e7c133a9e8e34
+  partial_submission_resumer_sha256: e92be9ef7c203524031dad76e04d7356387a750c71ca1b1638e934ab056346d5
   required_node_hours: 99.95
   optional_node_hours: 62.50
   required_jobs: 115
@@ -77,22 +77,25 @@ campaign:
   route_tranche_aggregator: experiments/analysis/aggregate_route_tranche_manifests.py
   route_tranche_aggregator_sha256: c38c8e5ff6c779cee2d6aae974b3f8961b9f317af46518040f4fd7eb60e38731
   route_tier_b_aggregator: experiments/analysis/aggregate_route_tier_b_manifests.py
-  route_tier_b_aggregator_sha256: ce46681c6788db0f6b20af5903a53c0a69d055d9a2074e72e991b5e83cbea8f0
+  route_tier_b_aggregator_sha256: 028e19a583b04fc06014402d3d1cab74943ca3c2b4256930c8555dc84a9e69a6
   route_training_freezer: experiments/analysis/freeze_route_training_model.py
   route_training_freezer_sha256: 0396197b1f003a78cadb4e9e53f8a1780569ab850cda9fb700f6a65c863e13ad
   campaign_archive_finalizer: experiments/analysis/finalize_karolina_campaign_archive.py
   campaign_archive_finalizer_sha256: e813ff9797e1086fa03634dd46f7de2ffb8a337ffa8e2970aa929f3a010576ee
-  route_model_freeze_schema: paper/protocols/route-model-freeze-v1.schema.json
-  route_model_freeze_schema_sha256: 6d7aaf7afde2fe6d6c852c3348764cf90b31d70847cba65a894108decc1818ba
-  route_model_freeze_example: paper/protocols/route-model-freeze-v1.example.json
-  route_model_freeze_example_sha256: c7838a320f2c6a92fdc98455b068ddfe6701e70b9ab6a809f495347c8868e4ea
+  route_model_freeze_schema: paper/protocols/route-model-freeze-v2.schema.json
+  route_model_freeze_schema_sha256: 2aecf9463f41ea8b43d6f732446f0a703e2e5ef7f7f984de48b8b8b65baf9493
+  route_model_freeze_example: paper/protocols/route-model-freeze-v2.example.json
+  route_model_freeze_example_sha256: e9eb4e019eee3e904704ef21edae67eef5cfb629e2c29ee0de84cd6e1cbd5b7c
   route_phase_contract:
     training_ranks: [1, 8]
     holdout_ranks: [32]
     training_must_be_checksum_sealed_before_fit: true
     training_model_rows: 74
+    cost_model_training_cases: 76
     tier_b_training_rows: 20
+    cost_model_holdout_cases: 29
     tier_b_holdout_rows: 10
+    v2_receipt_binds_both_training_manifests_and_all_four_scopes: true
     holdout_requires_hash_bound_human_freeze_receipt: true
 correctness:
   route_screen:

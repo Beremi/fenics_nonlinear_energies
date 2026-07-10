@@ -155,77 +155,100 @@ def test_route_phase_and_hash_bound_model_freeze(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     monkeypatch.setattr(preparer, "offline_preflight", lambda *_args, **_kwargs: {})
-    rows = preparer.read_matrix(MATRIX)
-    training = preparer.select_rows(
-        rows,
-        experiments={"EXP-ROUTE-001"},
-        include_optional=False,
-        tiers={"fixed_state_screen", "factorized_quadrature", "factorized_microbenchmark"},
-        route_phase="training",
-    )
-    holdout = preparer.select_rows(
-        rows,
-        experiments={"EXP-ROUTE-001"},
-        include_optional=False,
-        tiers={"fixed_state_screen", "factorized_quadrature", "factorized_microbenchmark"},
-        route_phase="holdout",
-    )
-    assert len(training) == 76
-    assert len(holdout) == 29
-    assert all(int(row["total_ranks"]) in {1, 8} for row in training)
-    assert all(int(row["total_ranks"]) == 32 for row in holdout)
-
-    training_root = tmp_path / "training"
-    training_root.mkdir()
-    plan = training_root / "prepared_plan.csv"
-    with plan.open("w", newline="", encoding="utf-8") as handle:
-        writer = csv.DictWriter(handle, fieldnames=list(training[0]))
-        writer.writeheader()
-        writer.writerows(training)
     source_commit = "1" * 40
-    commands = training_root / "sbatch_commands.txt"
-    source_freeze = training_root / "reviewed_source_freeze.json"
-    commands.write_text("fixture\n", encoding="utf-8")
-    source_freeze.write_text("{}\n", encoding="utf-8")
-    (training_root / "submitted_jobs.jsonl").write_text(
-        "".join(
+    scopes = preparer._route_scopes(MATRIX)
+    assert {name: len(rows) for name, rows in scopes.items()} == {
+        "cost_model_training": 76,
+        "tier_b_training": 20,
+        "cost_model_holdout": 29,
+        "tier_b_holdout": 10,
+    }
+    setup = tmp_path / "shared_setup.sh"
+    lock = tmp_path / "shared_environment.lock"
+    setup.write_text("export TEST_REVIEWED_ENV=1\n", encoding="utf-8")
+    lock.write_text("shared-lock-v2\n", encoding="utf-8")
+
+    def write_training_manifest(
+        scope_name: str, *, first_job_id: int
+    ) -> tuple[Path, dict[str, object]]:
+        scope_rows = scopes[scope_name]
+        root = tmp_path / scope_name
+        root.mkdir()
+        plan = root / "prepared_plan.csv"
+        with plan.open("w", newline="", encoding="utf-8") as handle:
+            writer = csv.DictWriter(handle, fieldnames=list(scope_rows[0]))
+            writer.writeheader()
+            writer.writerows(scope_rows)
+        commands = root / "sbatch_commands.txt"
+        commands.write_text("fixture\n", encoding="utf-8")
+        source_freeze = root / "reviewed_source_freeze.json"
+        source_freeze.write_text("{}\n", encoding="utf-8")
+        (root / "submitted_jobs.jsonl").write_text(
+            "".join(
+                json.dumps(
+                    {
+                        "case_id": row["case_id"],
+                        "returncode": 0,
+                        "job_id": str(first_job_id + index),
+                    }
+                )
+                + "\n"
+                for index, row in enumerate(scope_rows)
+            ),
+            encoding="utf-8",
+        )
+        (root / "submission_journal.jsonl").write_text("", encoding="utf-8")
+        environment = preparer._prepare_environment_contract(
+            out_root=root, env_setup=setup, env_lock=lock
+        )
+        is_tier_b = scope_name == "tier_b_training"
+        manifest = root / "prepared_manifest.json"
+        manifest.write_text(
             json.dumps(
                 {
-                    "case_id": row["case_id"],
-                    "returncode": 0,
-                    "job_id": str(index + 1),
-                }
-            )
-            + "\n"
-            for index, row in enumerate(training)
-        ),
-        encoding="utf-8",
-    )
-    (training_root / "submission_journal.jsonl").write_text("", encoding="utf-8")
-    training_manifest = training_root / "prepared_manifest.json"
-    training_manifest.write_text(
-        json.dumps(
-            {
-                "status": "submitted",
-                "route_phase": "training",
-                "selected_experiments": ["EXP-ROUTE-001"],
-                "matrix_sha256": preparer._sha256(MATRIX),
-                "source_commit": source_commit,
+                    "status": "submitted",
+                    "test_only_commands": False,
+                    "route_phase": "training",
+                    "selected_experiments": ["EXP-ROUTE-001"],
+                    "selected_tiers": sorted({row["tier"] for row in scope_rows}),
+                    "include_optional": is_tier_b,
+                    "only_optional": is_tier_b,
+                    "case_count": len(scope_rows),
+                    "route_phase_case_ids_sha256": preparer._case_ids_sha256(
+                        row["case_id"] for row in scope_rows
+                    ),
+                    "matrix_sha256": preparer._sha256(MATRIX),
+                    "source_commit": source_commit,
                     "source_dirty": False,
                     "plan_file": plan.name,
+                    "plan_sha256": preparer._sha256(plan),
                     "commands_file": commands.name,
                     "queued_source_freeze": {"path": source_freeze.name},
-            }
+                    "environment_contract": environment,
+                }
+            )
+            + "\n",
+            encoding="utf-8",
         )
-        + "\n",
-        encoding="utf-8",
+        return manifest, environment
+
+    cost_manifest, environment = write_training_manifest(
+        "cost_model_training", first_job_id=1
     )
-    analysis = training_root / "analysis.json"
-    model = training_root / "model.json"
+    tier_b_manifest, tier_b_environment = write_training_manifest(
+        "tier_b_training", first_job_id=1001
+    )
+    assert environment["setup_sha256"] == tier_b_environment["setup_sha256"]
+    assert environment["lock_sha256"] == tier_b_environment["lock_sha256"]
+
+    fit_root = tmp_path / "training_fit"
+    fit_root.mkdir()
+    analysis = fit_root / "analysis.json"
+    model = fit_root / "model.json"
     contract = json.loads(preparer.ROUTE_ANALYSIS_CONTRACT.read_text(encoding="utf-8"))
     feature_order = list(contract["cost_model"]["features_in_order"])
     training_row_ids = [f"training-row-{index:03d}" for index in range(74)]
-    case_ids = sorted(row["case_id"] for row in training)
+    case_ids = sorted(row["case_id"] for row in scopes["cost_model_training"])
     model.write_text(
         json.dumps(
             {
@@ -286,28 +309,37 @@ def test_route_phase_and_hash_bound_model_freeze(
         + "\n",
         encoding="utf-8",
     )
-    receipt = training_root / "freeze.json"
+    receipt = tmp_path / "freeze.json"
     payload = {
         "schema_id": preparer.MODEL_FREEZE_SCHEMA_ID,
-        "schema_version": 1,
+        "schema_version": preparer.MODEL_FREEZE_SCHEMA_VERSION,
         "status": "frozen_before_holdout",
-        "decision": "training_fit_complete_holdout_unopened",
+        "decision": "cost_model_fit_and_tier_b_training_complete_holdouts_unopened",
         "matrix_sha256": preparer._sha256(MATRIX),
         "source_commit": source_commit,
-        "training_case_ids_sha256": preparer._case_ids_sha256(
-            row["case_id"] for row in training
-        ),
+        "scopes": preparer._scope_receipt(scopes),
+        "environment_identity": {
+            "setup_sha256": environment["setup_sha256"],
+            "lock_sha256": environment["lock_sha256"],
+        },
         "created_at_utc": "2026-07-10T12:00:00+00:00",
         "reviewer": "test-reviewer",
-        "training_manifest": {
-            "path": training_manifest.name,
-            "sha256": preparer._sha256(training_manifest),
+        "cost_model_training_manifest": {
+            "path": str(cost_manifest.relative_to(tmp_path)),
+            "sha256": preparer._sha256(cost_manifest),
+        },
+        "tier_b_training_manifest": {
+            "path": str(tier_b_manifest.relative_to(tmp_path)),
+            "sha256": preparer._sha256(tier_b_manifest),
         },
         "training_analysis": {
-            "path": analysis.name,
+            "path": str(analysis.relative_to(tmp_path)),
             "sha256": preparer._sha256(analysis),
         },
-        "frozen_model": {"path": model.name, "sha256": preparer._sha256(model)},
+        "frozen_model": {
+            "path": str(model.relative_to(tmp_path)),
+            "sha256": preparer._sha256(model),
+        },
     }
     receipt.write_text(json.dumps(payload) + "\n", encoding="utf-8")
     validated = preparer._validate_model_freeze_receipt(
@@ -316,11 +348,50 @@ def test_route_phase_and_hash_bound_model_freeze(
     archive = tmp_path / "holdout"
     archive.mkdir()
     metadata = preparer._archive_model_freeze_receipt(validated, out_root=archive)
+    assert metadata["schema_version"] == preparer.MODEL_FREEZE_SCHEMA_VERSION
     assert (archive / metadata["path"]).is_file()
     preparer._validate_model_freeze_receipt(
         archive / metadata["path"], matrix=MATRIX, source_commit=source_commit
     )
-    payload["training_case_ids_sha256"] = "0" * 64
+    holdout_rows = scopes["cost_model_holdout"]
+    holdout_plan = archive / "prepared_plan.csv"
+    with holdout_plan.open("w", newline="", encoding="utf-8") as handle:
+        writer = csv.DictWriter(handle, fieldnames=list(holdout_rows[0]))
+        writer.writeheader()
+        writer.writerows(holdout_rows)
+    holdout_environment = preparer._prepare_environment_contract(
+        out_root=archive, env_setup=setup, env_lock=lock
+    )
+    holdout_manifest = {
+        "route_model_freeze": metadata,
+        "source_commit": source_commit,
+        "matrix_sha256": preparer._sha256(MATRIX),
+        "route_phase": "holdout",
+        "include_optional": False,
+        "only_optional": False,
+        "case_count": len(holdout_rows),
+        "route_phase_case_ids_sha256": preparer._case_ids_sha256(
+            row["case_id"] for row in holdout_rows
+        ),
+        "plan_file": holdout_plan.name,
+        "environment_contract": holdout_environment,
+    }
+    preparer._validate_archived_model_freeze(
+        archive, holdout_manifest, matrix=MATRIX
+    )
+    incomplete_holdout = dict(holdout_manifest)
+    incomplete_holdout["case_count"] = 28
+    with pytest.raises(RuntimeError, match="canonical cost_model_holdout"):
+        preparer._validate_archived_model_freeze(
+            archive, incomplete_holdout, matrix=MATRIX
+        )
+    changed_matrix_holdout = dict(holdout_manifest)
+    changed_matrix_holdout["matrix_sha256"] = "0" * 64
+    with pytest.raises(RuntimeError, match="frozen matrix identity"):
+        preparer._validate_archived_model_freeze(
+            archive, changed_matrix_holdout, matrix=MATRIX
+        )
+    payload["scopes"]["cost_model_holdout"]["case_ids_sha256"] = "0" * 64
     receipt.write_text(json.dumps(payload) + "\n", encoding="utf-8")
     with pytest.raises(RuntimeError, match="scope"):
         preparer._validate_model_freeze_receipt(

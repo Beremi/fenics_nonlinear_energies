@@ -143,13 +143,24 @@ def _validate_archived_decision_artifacts(
     artifact_keys = (
         ("reviewed_artifacts",)
         if record_name == "release_authorization"
-        else ("training_manifest", "training_analysis", "frozen_model")
+        else (
+            "cost_model_training_manifest",
+            "tier_b_training_manifest",
+            "training_analysis",
+            "frozen_model",
+        )
     )
     if record_name == "release_authorization":
         artifacts = payload.get("reviewed_artifacts")
         if not isinstance(artifacts, list) or not artifacts:
             raise RuntimeError("resume release authorization has no reviewed artifacts")
     else:
+        if (
+            payload.get("schema_id") != campaign.MODEL_FREEZE_SCHEMA_ID
+            or payload.get("schema_version") != campaign.MODEL_FREEZE_SCHEMA_VERSION
+            or record.get("schema_version") != campaign.MODEL_FREEZE_SCHEMA_VERSION
+        ):
+            raise RuntimeError("resume route_model_freeze is not the supported v2 receipt")
         artifacts = [payload.get(key) for key in artifact_keys]
     for artifact in artifacts:
         if not isinstance(artifact, dict) or set(artifact) != {"path", "sha256"}:
