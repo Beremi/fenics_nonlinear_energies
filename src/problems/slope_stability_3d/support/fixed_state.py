@@ -30,6 +30,49 @@ BRANCH_MARGIN_GATE = 1.0e-8
 DETERMINISTIC_DIRECTION_SEED = 20260710
 
 
+def prescribed_analytic_displacement(
+    coords_ref: np.ndarray,
+    *,
+    amplitude: float,
+) -> np.ndarray:
+    """Return the route-study displacement field in canonical nodal order.
+
+    The field is defined on coordinates normalized to the axis-aligned bounding
+    box.  It is therefore independent of the polynomial degree, element
+    numbering, MPI partition, and quadrature rule.  Constraint elimination is
+    deliberately left to the caller because the same field is used both by
+    distributed free-vector runners and by full-state export utilities.
+    """
+
+    coords = np.asarray(coords_ref, dtype=np.float64)
+    if coords.ndim != 2 or coords.shape[1] != 3 or coords.shape[0] == 0:
+        raise ValueError("coords_ref must be a nonempty (n, 3) array")
+    amplitude = float(amplitude)
+    if not np.isfinite(amplitude) or amplitude <= 0.0:
+        raise ValueError("amplitude must be finite and positive")
+    if not np.all(np.isfinite(coords)):
+        raise ValueError("coords_ref must contain only finite coordinates")
+
+    lower = np.min(coords, axis=0)
+    span = np.max(coords, axis=0) - lower
+    if np.any(span <= np.finfo(np.float64).eps):
+        raise ValueError("coords_ref must span all three coordinate axes")
+    x, y, z = ((coords - lower) / span).T
+    displacement = np.empty_like(coords)
+    displacement[:, 0] = (
+        amplitude * np.sin(np.pi * x) * np.sin(np.pi * y) * np.cos(np.pi * z)
+    )
+    displacement[:, 1] = (
+        amplitude * np.cos(np.pi * x) * np.sin(np.pi * y) * np.sin(np.pi * z)
+    )
+    displacement[:, 2] = (
+        amplitude * np.sin(np.pi * x) * np.cos(np.pi * y) * np.sin(np.pi * z)
+    )
+    if not np.all(np.isfinite(displacement)):
+        raise FloatingPointError("prescribed displacement contains nonfinite values")
+    return displacement
+
+
 def _element_value_residual_hvp(
     u_elem: jnp.ndarray,
     direction_elem: jnp.ndarray,

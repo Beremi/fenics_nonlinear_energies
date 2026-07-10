@@ -29,6 +29,9 @@ from src.core.benchmark.run_record import atomic_write_json
 from experiments.runners.run_plasticity3d_backend_mix_case import (
     _build_local_assembly_backend,
 )
+from src.problems.slope_stability_3d.support.fixed_state import (
+    prescribed_analytic_displacement,
+)
 
 
 ROUTE_SETTINGS = {
@@ -61,13 +64,7 @@ def _sha256_array(values: np.ndarray) -> str:
 
 def _analytic_state(backend, amplitude: float) -> np.ndarray:
     coords = np.asarray(backend.coords_ref, dtype=np.float64)
-    lower = np.min(coords, axis=0)
-    span = np.maximum(np.max(coords, axis=0) - lower, np.finfo(float).eps)
-    x, y, z = ((coords - lower) / span).T
-    full = np.empty_like(coords)
-    full[:, 0] = amplitude * np.sin(np.pi * x) * np.sin(np.pi * y) * np.cos(np.pi * z)
-    full[:, 1] = amplitude * np.cos(np.pi * x) * np.sin(np.pi * y) * np.sin(np.pi * z)
-    full[:, 2] = amplitude * np.sin(np.pi * x) * np.cos(np.pi * y) * np.sin(np.pi * z)
+    full = prescribed_analytic_displacement(coords, amplitude=float(amplitude))
     free_original = full.reshape(-1)[np.asarray(backend.freedofs, dtype=np.int64)]
     return np.asarray(free_original[np.asarray(backend.perm, dtype=np.int64)], dtype=np.float64)
 

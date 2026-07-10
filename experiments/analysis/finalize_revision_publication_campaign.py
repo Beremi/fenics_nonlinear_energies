@@ -1917,6 +1917,27 @@ def build_execution_plan_template(*, experiment_commit: str) -> dict[str, Any]:
             value.update(extra)
         return value
 
+    def preparation_command(
+        command_id: str,
+        argv: Sequence[str],
+        *,
+        producer: str,
+        protocol: str,
+        expected_artifacts: Sequence[str],
+        environment: Mapping[str, str] | None = None,
+    ) -> dict[str, Any]:
+        return {
+            "id": command_id,
+            "source_keys": [],
+            "role": "preparation",
+            "producer": producer,
+            "argv": list(argv),
+            "environment": dict(environment or cpu_env),
+            "configuration_files": [protocol],
+            "input_files": [],
+            "expected_artifacts": list(expected_artifacts),
+        }
+
     commands: list[dict[str, Any]] = [
         command(
             "val_plaplace",
@@ -2050,7 +2071,38 @@ def build_execution_plan_template(*, experiment_commit: str) -> dict[str, Any]:
     )
     for degree, key in ((1, "p1_quadrature"), (2, "p2_quadrature"), (4, "p4_quadrature")):
         state = f"EXP-DISC-001/clean_inputs/p{degree}_l1_state.npz"
+        state_manifest = f"EXP-DISC-001/clean_inputs/p{degree}_l1_state_manifest.json"
         attestation = f"{RECEIPT_DIRECTORY}/prepare_p{degree}_l1_state.json"
+        commands.append(
+            preparation_command(
+                f"prepare_p{degree}_l1_state",
+                [
+                    "{python}",
+                    "experiments/runners/prepare_plasticity3d_fixed_state.py",
+                    "--degree",
+                    str(degree),
+                    "--mesh-name",
+                    "hetero_ssr_L1",
+                    "--constraint-variant",
+                    "glued_bottom",
+                    "--lambda-target",
+                    "1.55",
+                    "--state-label",
+                    "mixed",
+                    "--amplitude",
+                    "0.02",
+                    "--run-kind",
+                    "publication",
+                    "--output",
+                    f"{{staging_root}}/{state}",
+                    "--manifest",
+                    f"{{staging_root}}/{state_manifest}",
+                ],
+                producer="experiments/runners/prepare_plasticity3d_fixed_state.py",
+                protocol="paper/protocols/EXP-DISC-001.md",
+                expected_artifacts=[state, state_manifest],
+            )
+        )
         commands.append(
             command(
                 f"disc_p{degree}",
@@ -2115,7 +2167,7 @@ def build_execution_plan_template(*, experiment_commit: str) -> dict[str, Any]:
         "campaign_id": "paper_revision_publication_clean_v1",
         "plan_kind": "source_campaign",
         "experiment_commit": commit,
-        "template_status": "requires_clean_staged_dependency_receipts_before_execution",
+        "template_status": "includes_clean_state_producers_and_requires_route_dependency_receipts",
         "source_count": 14,
         "commands": commands,
         "dependency_contract": {

@@ -10,11 +10,14 @@ import h5py
 from mpi4py import MPI
 import numpy as np
 
+from src.core.benchmark.run_record import ExperimentPreflight
 from src.problems.slope_stability_3d.support.fixed_state import (
     evaluate_fixed_state_overintegrated,
     evaluate_fixed_state_quadrature_diagnostics,
     evaluate_fixed_state_with_quadrature,
+    prescribed_analytic_displacement,
 )
+from experiments.runners import prepare_plasticity3d_fixed_state as state_preparer
 from experiments.runners import run_plasticity3d_fixed_state_quadrature as fixed_runner
 from src.problems.slope_stability_3d.support import mesh as mesh_tools
 from src.problems.slope_stability_3d.support.mesh import (
@@ -378,3 +381,68 @@ def test_fixed_state_runner_saves_hashable_actions_and_strict_json(
         assert "free_residual_vector_comparison_to_last_rule" in row
         assert "branch_comparison_to_last_rule" in row
     json.dumps(payload, allow_nan=False)
+
+
+def test_prescribed_state_preparer_exports_constraint_aware_state(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    case = _one_tetra_case(TETRA_QUADRATURE_1POINT)
+    nodes = np.vstack(
+        [np.asarray(case.nodes, dtype=np.float64), np.asarray([[0.25, 0.25, 0.25]])]
+    )
+    freedofs = np.arange(3, 15, dtype=np.int64)
+    case_mapping = {
+        "nodes": nodes,
+        "elems_scalar": np.asarray(case.elems_scalar, dtype=np.int64),
+        "surf": np.asarray(case.surf, dtype=np.int64),
+        "boundary_label": np.asarray(case.boundary_label, dtype=np.int64),
+        "freedofs": freedofs,
+        "u_0": np.zeros(15, dtype=np.float64),
+    }
+    monkeypatch.setattr(
+        state_preparer,
+        "load_same_mesh_case_hdf5_light",
+        lambda *args, **kwargs: case_mapping,
+    )
+    monkeypatch.setattr(
+        state_preparer,
+        "check_experiment_preflight",
+        lambda *args, **kwargs: ExperimentPreflight(
+            run_kind="publication",
+            git_commit="a" * 40,
+            git_clean=True,
+            git_status_porcelain=(),
+            pilot_override=False,
+            pilot_override_reason=None,
+            checked_at_utc="2026-07-10T00:00:00Z",
+        ),
+    )
+    state_path = tmp_path / "p1_state.npz"
+    manifest_path = tmp_path / "p1_state_manifest.json"
+    payload = state_preparer.prepare(
+        argparse.Namespace(
+            output=state_path,
+            manifest=manifest_path,
+            run_kind="publication",
+            pilot_dirty_override=False,
+            pilot_override_reason=None,
+            degree=1,
+            mesh_name="one_tetra",
+            constraint_variant="glued_bottom",
+            lambda_target=1.55,
+            state_label="mixed",
+            amplitude=0.02,
+        )
+    )
+
+    assert payload["status"] == "completed"
+    assert payload["identifiers"]["state_kind"] == "analytic_not_solved"
+    assert payload["state"]["constrained_coefficients_match_reference"] is True
+    assert manifest_path.is_file()
+    with np.load(state_path, allow_pickle=False) as state:
+        displacement = np.asarray(state["displacement"], dtype=np.float64).reshape(-1)
+        assert np.array_equal(displacement[:3], np.zeros(3))
+        assert np.linalg.norm(displacement[freedofs]) > 0.0
+        assert state["solver_family"].item() == "prescribed_fixed_state"
+        assert state["state_kind"].item() == "analytic_not_solved"

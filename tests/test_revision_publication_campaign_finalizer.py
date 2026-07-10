@@ -393,7 +393,7 @@ def test_canonical_template_covers_every_source_and_clean_dependency() -> None:
     plan = finalizer.build_execution_plan_template(experiment_commit=COMMIT)
     commands = finalizer._plan_command_map(plan)
     assert plan["plan_kind"] == "source_campaign"
-    assert len(commands) == 14
+    assert len(commands) == 17
     assert {
         key for command in commands.values() for key in command["source_keys"]
     } == set(finalizer.SOURCE_BY_KEY)
@@ -402,6 +402,18 @@ def test_canonical_template_covers_every_source_and_clean_dependency() -> None:
     assert ["--run-kind", "publication"] == material["argv"][2:4]
     assert ["--run-kind", "publication"] == distribution["argv"][2:4]
     for degree in (1, 2, 4):
+        preparation = commands[f"prepare_p{degree}_l1_state"]
+        assert preparation["source_keys"] == []
+        assert preparation["role"] == "preparation"
+        assert preparation["producer"].endswith(
+            "prepare_plasticity3d_fixed_state.py"
+        )
+        assert {
+            f"EXP-DISC-001/clean_inputs/p{degree}_l1_state.npz",
+            f"EXP-DISC-001/clean_inputs/p{degree}_l1_state_manifest.json",
+        } == set(preparation["expected_artifacts"])
+        derivative_argv = commands[f"deriv_p{degree}"]["argv"]
+        assert derivative_argv.count("--assembled-route-equivalence") == 1
         inputs = commands[f"disc_p{degree}"]["input_files"]
         assert inputs[0]["scope"] == "staging"
         assert inputs[0]["attestation"]["path"].endswith(f"p{degree}_l1_state.json")
