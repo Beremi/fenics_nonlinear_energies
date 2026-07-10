@@ -2,10 +2,40 @@
 
 from __future__ import annotations
 
+import os
 from pathlib import Path
+import tempfile
 from typing import Mapping
 
 import numpy as np
+
+
+def _atomic_savez(path: str | Path, payload: Mapping[str, object]) -> None:
+    """Durably replace one NPZ artifact without exposing a partial archive."""
+
+    destination = Path(path)
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    file_descriptor, temporary_name = tempfile.mkstemp(
+        dir=destination.parent,
+        prefix=f".{destination.name}.",
+        suffix=".npz",
+    )
+    os.close(file_descriptor)
+    temporary = Path(temporary_name)
+    try:
+        np.savez(temporary, **dict(payload))
+        with temporary.open("rb") as handle:
+            os.fsync(handle.fileno())
+        os.replace(temporary, destination)
+        directory_flags = os.O_RDONLY | getattr(os, "O_DIRECTORY", 0)
+        directory_descriptor = os.open(destination.parent, directory_flags)
+        try:
+            os.fsync(directory_descriptor)
+        finally:
+            os.close(directory_descriptor)
+    except BaseException:
+        temporary.unlink(missing_ok=True)
+        raise
 
 
 def _npz_payload(
@@ -59,8 +89,7 @@ def export_scalar_function_state_npz(
             **dict(metadata or {}),
         },
     )
-    Path(path).parent.mkdir(parents=True, exist_ok=True)
-    np.savez(path, **payload)
+    _atomic_savez(path, payload)
 
 
 def export_scalar_mesh_state_npz(
@@ -92,8 +121,7 @@ def export_scalar_mesh_state_npz(
             **dict(metadata or {}),
         },
     )
-    Path(path).parent.mkdir(parents=True, exist_ok=True)
-    np.savez(path, **payload)
+    _atomic_savez(path, payload)
 
 
 def export_hyperelasticity_state_npz(
@@ -127,8 +155,7 @@ def export_hyperelasticity_state_npz(
             **dict(metadata or {}),
         },
     )
-    Path(path).parent.mkdir(parents=True, exist_ok=True)
-    np.savez(path, **payload)
+    _atomic_savez(path, payload)
 
 
 def export_planestrain_state_npz(
@@ -162,8 +189,7 @@ def export_planestrain_state_npz(
             **dict(metadata or {}),
         },
     )
-    Path(path).parent.mkdir(parents=True, exist_ok=True)
-    np.savez(path, **payload)
+    _atomic_savez(path, payload)
 
 
 def export_plasticity3d_state_npz(
@@ -178,6 +204,8 @@ def export_plasticity3d_state_npz(
     element_degree: int,
     lambda_target: float,
     energy: float | None = None,
+    free_displacement: np.ndarray | None = None,
+    reference_elastic_action: np.ndarray | None = None,
     metadata: Mapping[str, object] | None = None,
 ) -> None:
     """Export one 3D plasticity state as reference/deformed coordinates plus topology."""
@@ -188,15 +216,38 @@ def export_plasticity3d_state_npz(
     boundary_label = np.asarray(boundary_label, dtype=np.int32).reshape((-1,))
     displacement = x_final - coords_ref
 
-    payload = _npz_payload(
-        {
+    arrays: dict[str, object] = {
             "coords_ref": coords_ref,
             "coords_final": x_final,
             "displacement": displacement,
             "tetrahedra": tetrahedra,
             "surface_faces": surface_faces,
             "boundary_label": boundary_label,
-        },
+    }
+    if (free_displacement is None) != (reference_elastic_action is None):
+        raise ValueError(
+            "free_displacement and reference_elastic_action must be supplied together"
+        )
+    if free_displacement is not None and reference_elastic_action is not None:
+        free = np.asarray(free_displacement, dtype=np.float64).reshape(-1)
+        action = np.asarray(reference_elastic_action, dtype=np.float64).reshape(-1)
+        if free.shape != action.shape or free.size == 0:
+            raise ValueError("reference-elastic state/action arrays must be nonempty and aligned")
+        if not np.all(np.isfinite(free)) or not np.all(np.isfinite(action)):
+            raise ValueError("reference-elastic state/action arrays must be finite")
+        quadratic = float(np.dot(free, action))
+        if not np.isfinite(quadratic) or quadratic < 0.0:
+            raise ValueError("reference-elastic state quadratic must be finite and nonnegative")
+        arrays.update(
+            {
+                "free_displacement_reordered": free,
+                "reference_elastic_action": action,
+                "reference_elastic_state_quadratic": quadratic,
+            }
+        )
+
+    payload = _npz_payload(
+        arrays,
         metadata={
             "mesh_name": str(mesh_name),
             "element_degree": int(element_degree),
@@ -205,5 +256,4 @@ def export_plasticity3d_state_npz(
             **dict(metadata or {}),
         },
     )
-    Path(path).parent.mkdir(parents=True, exist_ok=True)
-    np.savez(path, **payload)
+    _atomic_savez(path, payload)

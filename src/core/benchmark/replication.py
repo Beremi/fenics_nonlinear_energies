@@ -12,6 +12,8 @@ import subprocess
 import time
 from typing import Any, Mapping
 
+from src.core.benchmark.run_record import atomic_write_json
+
 
 def now_iso() -> str:
     """Return a UTC ISO-8601 timestamp."""
@@ -29,8 +31,8 @@ def output_paths_exist(paths: list[Path]) -> bool:
 
 
 def write_json(path: Path, payload: Mapping[str, Any] | list[Any]) -> None:
-    """Write one JSON payload with stable formatting."""
-    path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    """Write one JSON payload atomically with stable formatting."""
+    atomic_write_json(path, payload)
 
 
 def read_json(path: Path) -> Any:
