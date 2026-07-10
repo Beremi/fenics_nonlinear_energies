@@ -1,0 +1,41 @@
+{
+  "algorithm": "sha256",
+  "files": {
+    "data/meshes/SlopeStability3D/hetero_ssr/hetero_ssr_L1_p1_same_mesh_glued_bottom.h5": {
+      "bytes": 14261703,
+      "constraint_variant": "glued_bottom",
+      "element_degree": 1,
+      "mesh_name": "hetero_ssr_L1",
+      "same_mesh_hdf5_schema_version": 7,
+      "sha256": "da80bd289cd170739659eb2d4d53519d4b2cd9133ebce703bb0d3d661b39067a"
+    },
+    "data/meshes/SlopeStability3D/hetero_ssr/hetero_ssr_L1_p2_same_mesh_glued_bottom.h5": {
+      "bytes": 184769039,
+      "constraint_variant": "glued_bottom",
+      "element_degree": 2,
+      "mesh_name": "hetero_ssr_L1",
+      "same_mesh_hdf5_schema_version": 7,
+      "sha256": "44580d8f13d39eea7925e66035b7dedfd43302fd81264ac85b75d4d73dfbd3f9"
+    },
+    "data/meshes/SlopeStability3D/hetero_ssr/hetero_ssr_L1_p4_same_mesh_glued_bottom.h5": {
+      "bytes": 2590385351,
+      "constraint_variant": "glued_bottom",
+      "element_degree": 4,
+      "mesh_name": "hetero_ssr_L1",
+      "same_mesh_hdf5_schema_version": 7,
+      "sha256": "6458ea46da347eba06056fa073fa84c4400a44b7e9053f52447b60dc074bfd33"
+    }
+  },
+  "generator": {
+    "function": "src.problems.slope_stability_3d.support.mesh.ensure_same_mesh_case_hdf5",
+    "tracked_sources": [
+      "data/meshes/SlopeStability3D/hetero_ssr/SSR_hetero_ada_L1.msh",
+      "data/meshes/SlopeStability3D/hetero_ssr/definition.py",
+      "src/problems/slope_stability_3d/support/materials.py",
+      "src/problems/slope_stability_3d/support/mesh.py",
+      "src/problems/slope_stability_3d/support/simplex_lagrange.py"
+    ]
+  },
+  "schema_id": "fenics-nonlinear-energies.manifested-generated-meshes",
+  "schema_version": 1
+}

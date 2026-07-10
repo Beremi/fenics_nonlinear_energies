@@ -91,6 +91,10 @@ from a clean immutable commit through the managed finalization driver.
 - Plasticity3D energy: `src/problems/slope_stability_3d/jax/jax_energy_3d.py`;
 - constrained same-mesh HDF5 cases under
   `data/meshes/SlopeStability3D/hetero_ssr/`;
+- the generated HDF5 caches are byte-bound by the tracked
+  `publication_mesh_manifest.json`, including their sizes, SHA-256 digests,
+  element degrees, constraint variant, schema version, and tracked generation
+  sources; they are not misrepresented as Git blobs;
 - deterministic base seed `1729`, incremented once per state;
 - default local element index `0` and strength-reduction value `1.5`.
 

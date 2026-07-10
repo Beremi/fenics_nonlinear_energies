@@ -251,8 +251,12 @@ Complete these tasks before the calibration matrix is run:
    command, environment, commit, worktree cleanliness, mesh
    checksum, state checksum, and route in a versioned run record. The raw-state
    route metadata is now fixed and regression-tested, and a dirty verification
-   rerun records the exact commands. The clean versioned terminal run record
-   and complete environment capture remain required.
+   rerun records the exact commands. The ignored generated P1/P2/P4 HDF5
+   caches are bound by the tracked `publication_mesh_manifest.json`, including
+   exact byte sizes, SHA-256 digests, schema and constraint identities, and
+   tracked generation sources; they are not treated as Git blobs. The clean
+   versioned terminal run record and complete environment capture remain
+   required.
 5. **Implemented and verified:** raw histories map inapplicable nonfinite
    sentinels to standards-compliant JSON `null` under `allow_nan=False`; the
    clean publication schema retains strict rejection of nonfinite evidence.

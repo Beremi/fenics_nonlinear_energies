@@ -81,6 +81,23 @@ RECEIPT_DIRECTORY = "_publication_receipts"
 LOG_DIRECTORY = "_publication_logs"
 FINALIZATION_MANIFEST = "publication/finalization_manifest.json"
 FINALIZER_PATH = Path("experiments/analysis/finalize_revision_publication_campaign.py")
+MANIFESTED_MESH_MANIFEST = Path(
+    "data/meshes/SlopeStability3D/hetero_ssr/publication_mesh_manifest.json"
+)
+MANIFESTED_MESH_PATHS = {
+    Path(
+        "data/meshes/SlopeStability3D/hetero_ssr/"
+        f"hetero_ssr_L1_p{degree}_same_mesh_glued_bottom.h5"
+    ): degree
+    for degree in (1, 2, 4)
+}
+MANIFESTED_MESH_GENERATOR_SOURCES = (
+    Path("data/meshes/SlopeStability3D/hetero_ssr/SSR_hetero_ada_L1.msh"),
+    Path("data/meshes/SlopeStability3D/hetero_ssr/definition.py"),
+    Path("src/problems/slope_stability_3d/support/materials.py"),
+    Path("src/problems/slope_stability_3d/support/mesh.py"),
+    Path("src/problems/slope_stability_3d/support/simplex_lagrange.py"),
+)
 
 HEX40_RE = re.compile(r"[0-9a-f]{40}")
 HEX64_RE = re.compile(r"[0-9a-f]{64}")
@@ -590,6 +607,124 @@ def _committed_file_sha256(repo_root: Path, commit: str, relative: Path) -> str:
     return hashlib.sha256(completed.stdout).hexdigest()
 
 
+def _manifested_repo_input_hashes(
+    relative: Path,
+    manifest_relative: Path,
+    *,
+    repo_root: Path,
+    experiment_commit: str,
+) -> tuple[str, dict[str, str]]:
+    """Verify one ignored generated mesh through its tracked hash manifest."""
+
+    if manifest_relative != MANIFESTED_MESH_MANIFEST:
+        raise FinalizationError(
+            "manifested repository input must use the canonical mesh manifest"
+        )
+    if relative not in MANIFESTED_MESH_PATHS:
+        raise FinalizationError(
+            f"unsupported manifested repository input: {relative.as_posix()}"
+        )
+    manifest_path = _confined(
+        repo_root,
+        manifest_relative,
+        label="manifested input manifest",
+        require_exists=True,
+    )
+    if manifest_path.is_symlink():
+        raise FinalizationError("manifested input manifest must be a regular file")
+    manifest_sha256 = sha256_file(manifest_path)
+    if manifest_sha256 != _committed_file_sha256(
+        repo_root, experiment_commit, manifest_relative
+    ):
+        raise FinalizationError(
+            "manifested input manifest differs from the experiment commit"
+        )
+    payload = _read_json(manifest_path)
+    if set(payload) != {"algorithm", "files", "generator", "schema_id", "schema_version"}:
+        raise FinalizationError("manifested input manifest has an unexpected shape")
+    if (
+        payload.get("schema_id")
+        != "fenics-nonlinear-energies.manifested-generated-meshes"
+        or payload.get("schema_version") != 1
+        or payload.get("algorithm") != "sha256"
+    ):
+        raise FinalizationError("manifested input manifest schema is invalid")
+    files = payload.get("files")
+    expected_names = {path.as_posix() for path in MANIFESTED_MESH_PATHS}
+    if not isinstance(files, Mapping) or set(files) != expected_names:
+        raise FinalizationError("manifested input file set is incomplete")
+    for path, degree in MANIFESTED_MESH_PATHS.items():
+        record = files.get(path.as_posix())
+        if not isinstance(record, Mapping) or set(record) != {
+            "bytes",
+            "constraint_variant",
+            "element_degree",
+            "mesh_name",
+            "same_mesh_hdf5_schema_version",
+            "sha256",
+        }:
+            raise FinalizationError(
+                f"manifested input record is malformed: {path.as_posix()}"
+            )
+        if (
+            not isinstance(record.get("bytes"), int)
+            or int(record["bytes"]) <= 0
+            or record.get("constraint_variant") != "glued_bottom"
+            or record.get("element_degree") != degree
+            or record.get("mesh_name") != "hetero_ssr_L1"
+            or record.get("same_mesh_hdf5_schema_version") != 7
+            or not isinstance(record.get("sha256"), str)
+            or not HEX64_RE.fullmatch(str(record["sha256"]))
+        ):
+            raise FinalizationError(
+                f"manifested input record has invalid scientific identity: {path.as_posix()}"
+            )
+    generator = payload.get("generator")
+    if not isinstance(generator, Mapping) or generator != {
+        "function": (
+            "src.problems.slope_stability_3d.support.mesh."
+            "ensure_same_mesh_case_hdf5"
+        ),
+        "tracked_sources": [
+            path.as_posix() for path in MANIFESTED_MESH_GENERATOR_SOURCES
+        ],
+    }:
+        raise FinalizationError("manifested input generator identity is invalid")
+
+    path = _confined(
+        repo_root, relative, label="manifested repository input", require_exists=True
+    )
+    record = files[relative.as_posix()]
+    assert isinstance(record, Mapping)
+    actual = sha256_file(path)
+    if (
+        path.is_symlink()
+        or path.stat().st_size != int(record["bytes"])
+        or actual != record["sha256"]
+    ):
+        raise FinalizationError(
+            f"manifested repository input is missing or stale: {relative.as_posix()}"
+        )
+    bindings = {manifest_relative.as_posix(): manifest_sha256}
+    for source_relative in MANIFESTED_MESH_GENERATOR_SOURCES:
+        source = _confined(
+            repo_root,
+            source_relative,
+            label="manifested input generator source",
+            require_exists=True,
+        )
+        source_sha256 = sha256_file(source)
+        if source_sha256 != _committed_file_sha256(
+            repo_root, experiment_commit, source_relative
+        ):
+            raise FinalizationError(
+                "manifested input generator source differs from the experiment commit: "
+                f"{source_relative.as_posix()}"
+            )
+        bindings[source_relative.as_posix()] = source_sha256
+    return actual, bindings
+
+
 def _environment_snapshot(overrides: Mapping[str, str]) -> dict[str, Any]:
     packages: dict[str, str] = {}
     for name in PACKAGE_NAMES:
@@ -1001,6 +1136,24 @@ def _input_hashes(
                 raise FinalizationError(
                     f"repository input differs from experiment commit: {relative.as_posix()}"
                 )
+        elif scope == "repo_manifested":
+            manifest_relative = _canonical_relative(
+                raw.get("manifest", ""),
+                label=f"input_files[{index}].manifest",
+            )
+            actual, manifested_bindings = _manifested_repo_input_hashes(
+                relative,
+                manifest_relative,
+                repo_root=repo_root,
+                experiment_commit=experiment_commit,
+            )
+            for binding_path, binding_sha256 in manifested_bindings.items():
+                previous = inputs.get(binding_path)
+                if previous is not None and previous != binding_sha256:
+                    raise FinalizationError(
+                        f"conflicting manifested input binding: {binding_path}"
+                    )
+                inputs[binding_path] = binding_sha256
         elif scope == "staging":
             path = _confined(staging_root, relative, label="staging input", require_exists=True)
             actual = sha256_file(path)
@@ -1064,7 +1217,10 @@ def _input_hashes(
                     attestation_path
                 )
         else:
-            raise FinalizationError(f"input_files[{index}].scope must be 'repo' or 'staging'")
+            raise FinalizationError(
+                f"input_files[{index}].scope must be 'repo', "
+                "'repo_manifested', or 'staging'"
+            )
         expected = raw.get("sha256")
         if expected is not None and (
             not isinstance(expected, str)
@@ -1074,7 +1230,7 @@ def _input_hashes(
             raise FinalizationError(f"input hash mismatch for {scope}:{relative.as_posix()}")
         hash_key = (
             relative.as_posix()
-            if scope == "repo"
+            if scope in {"repo", "repo_manifested"}
             else (Path(STAGING_DIRECTORY) / relative).as_posix()
         )
         inputs[hash_key] = actual
@@ -2417,10 +2573,13 @@ def _template_input(
     path: str,
     *,
     attestation: str | None = None,
+    manifest: str | None = None,
 ) -> dict[str, Any]:
     value: dict[str, Any] = {"scope": scope, "path": path}
     if attestation is not None:
         value["attestation"] = {"path": attestation}
+    if manifest is not None:
+        value["manifest"] = manifest
     return value
 
 
@@ -2584,7 +2743,13 @@ def build_execution_plan_template(*, experiment_commit: str) -> dict[str, Any]:
                     f"{{staging_root}}/EXP-DERIV-001/p{degree}_l1_fixed_element_v2.json",
                 ],
                 protocol="paper/protocols/EXP-DERIV-001.md",
-                inputs=[_template_input("repo", mesh)],
+                inputs=[
+                    _template_input(
+                        "repo_manifested",
+                        mesh,
+                        manifest=MANIFESTED_MESH_MANIFEST.as_posix(),
+                    )
+                ],
             )
         )
     commands.extend(

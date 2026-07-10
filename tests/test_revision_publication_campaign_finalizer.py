@@ -559,6 +559,15 @@ def test_canonical_template_covers_every_source_and_clean_dependency() -> None:
         } == set(preparation["expected_artifacts"])
         derivative_argv = commands[f"deriv_p{degree}"]["argv"]
         assert derivative_argv.count("--assembled-route-equivalence") == 1
+        derivative_input = commands[f"deriv_p{degree}"]["input_files"][0]
+        assert derivative_input == {
+            "scope": "repo_manifested",
+            "path": (
+                "data/meshes/SlopeStability3D/hetero_ssr/"
+                f"hetero_ssr_L1_p{degree}_same_mesh_glued_bottom.h5"
+            ),
+            "manifest": finalizer.MANIFESTED_MESH_MANIFEST.as_posix(),
+        }
         inputs = commands[f"disc_p{degree}"]["input_files"]
         assert inputs[0]["scope"] == "staging"
         assert inputs[0]["attestation"]["path"].endswith(f"p{degree}_l1_state.json")
@@ -738,6 +747,96 @@ def test_strict_run_record_identity_rejects_cross_experiment_substitution() -> N
 def test_path_confinement_rejects_noncanonical_paths(tmp_path: Path, path: str) -> None:
     with pytest.raises(finalizer.FinalizationError):
         finalizer._confined(tmp_path, path, label="test")
+
+
+def test_manifested_generated_mesh_is_hash_and_generator_bound(
+    tmp_path: Path,
+) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    subprocess.run(["git", "init", "-q", str(repo)], check=True)
+    subprocess.run(
+        ["git", "-C", str(repo), "config", "user.email", "test@example.invalid"],
+        check=True,
+    )
+    subprocess.run(
+        ["git", "-C", str(repo), "config", "user.name", "Test"],
+        check=True,
+    )
+    (repo / ".gitignore").write_text("*.h5\n", encoding="utf-8")
+    for relative in finalizer.MANIFESTED_MESH_GENERATOR_SOURCES:
+        source = repo / relative
+        source.parent.mkdir(parents=True, exist_ok=True)
+        source.write_text(f"source {relative.as_posix()}\n", encoding="utf-8")
+    records: dict[str, dict[str, object]] = {}
+    for relative, degree in finalizer.MANIFESTED_MESH_PATHS.items():
+        mesh = repo / relative
+        mesh.parent.mkdir(parents=True, exist_ok=True)
+        mesh.write_bytes(f"generated mesh degree {degree}\n".encode())
+        records[relative.as_posix()] = {
+            "bytes": mesh.stat().st_size,
+            "constraint_variant": "glued_bottom",
+            "element_degree": degree,
+            "mesh_name": "hetero_ssr_L1",
+            "same_mesh_hdf5_schema_version": 7,
+            "sha256": finalizer.sha256_file(mesh),
+        }
+    manifest = repo / finalizer.MANIFESTED_MESH_MANIFEST
+    manifest.parent.mkdir(parents=True, exist_ok=True)
+    manifest.write_text(
+        json.dumps(
+            {
+                "algorithm": "sha256",
+                "files": records,
+                "generator": {
+                    "function": (
+                        "src.problems.slope_stability_3d.support.mesh."
+                        "ensure_same_mesh_case_hdf5"
+                    ),
+                    "tracked_sources": [
+                        path.as_posix()
+                        for path in finalizer.MANIFESTED_MESH_GENERATOR_SOURCES
+                    ],
+                },
+                "schema_id": (
+                    "fenics-nonlinear-energies.manifested-generated-meshes"
+                ),
+                "schema_version": 1,
+            },
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    subprocess.run(["git", "-C", str(repo), "add", "."], check=True)
+    subprocess.run(
+        ["git", "-C", str(repo), "commit", "-qm", "manifest"], check=True
+    )
+    commit = subprocess.check_output(
+        ["git", "-C", str(repo), "rev-parse", "HEAD"], text=True
+    ).strip()
+    relative = next(iter(finalizer.MANIFESTED_MESH_PATHS))
+
+    actual, bindings = finalizer._manifested_repo_input_hashes(
+        relative,
+        finalizer.MANIFESTED_MESH_MANIFEST,
+        repo_root=repo,
+        experiment_commit=commit,
+    )
+    assert actual == records[relative.as_posix()]["sha256"]
+    assert finalizer.MANIFESTED_MESH_MANIFEST.as_posix() in bindings
+    assert {
+        path.as_posix() for path in finalizer.MANIFESTED_MESH_GENERATOR_SOURCES
+    } <= set(bindings)
+
+    (repo / relative).write_bytes(b"tampered\n")
+    with pytest.raises(finalizer.FinalizationError, match="missing or stale"):
+        finalizer._manifested_repo_input_hashes(
+            relative,
+            finalizer.MANIFESTED_MESH_MANIFEST,
+            repo_root=repo,
+            experiment_commit=commit,
+        )
 
 
 @pytest.mark.parametrize(

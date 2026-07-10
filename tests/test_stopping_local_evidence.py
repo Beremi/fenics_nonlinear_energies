@@ -197,13 +197,47 @@ def _fixture(tmp_path: Path) -> tuple[Path, Path, str]:
     _git(repo, "config", "user.email", "test@example.invalid")
     _git(repo, "config", "user.name", "Test")
     (repo / ".gitignore").write_text(
-        "artifacts/\npaper/tables/generated/\n.venv/\n__pycache__/\n",
+        (
+            "artifacts/\npaper/tables/generated/\n.venv/\n__pycache__/\n"
+            "data/meshes/SlopeStability3D/**/*.h5\n"
+        ),
         encoding="utf-8",
     )
     for relative in (*evidence.EXPECTED_SOURCE_PATHS, *evidence.EXPECTED_INPUT_PATHS):
+        if relative == evidence.EXPECTED_MESH_MANIFEST:
+            continue
         path = repo / relative
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(f"fixture for {relative}\n", encoding="utf-8")
+    mesh_records: dict[str, dict[str, object]] = {}
+    for relative, degree in evidence.EXPECTED_MANIFESTED_MESH_PATHS.items():
+        path = repo / relative
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_bytes(f"fixture mesh degree {degree}\n".encode())
+        mesh_records[relative] = {
+            "bytes": path.stat().st_size,
+            "constraint_variant": "glued_bottom",
+            "element_degree": degree,
+            "mesh_name": "hetero_ssr_L1",
+            "same_mesh_hdf5_schema_version": 7,
+            "sha256": evidence.sha256_file(path),
+        }
+    _write_json(
+        repo / evidence.EXPECTED_MESH_MANIFEST,
+        {
+            "algorithm": "sha256",
+            "files": mesh_records,
+            "generator": {
+                "function": (
+                    "src.problems.slope_stability_3d.support.mesh."
+                    "ensure_same_mesh_case_hdf5"
+                ),
+                "tracked_sources": list(evidence.EXPECTED_MESH_GENERATOR_SOURCES),
+            },
+            "schema_id": "fenics-nonlinear-energies.manifested-generated-meshes",
+            "schema_version": 1,
+        },
+    )
     scripts = repo / "paper/scripts"
     scripts.mkdir(parents=True, exist_ok=True)
     for name in (
@@ -252,6 +286,13 @@ def _fixture(tmp_path: Path) -> tuple[Path, Path, str]:
             "file_hashes": {
                 relative: evidence.sha256_file(repo / relative)
                 for relative in evidence.EXPECTED_INPUT_PATHS
+            },
+            "manifested_file_hashes": {
+                relative: {
+                    **record,
+                    "manifest": evidence.EXPECTED_MESH_MANIFEST,
+                }
+                for relative, record in mesh_records.items()
             },
             "procedural_he_mesh": {
                 "levels": [1, 2],
@@ -539,6 +580,11 @@ def test_frozen_admission_design_matches_the_actual_plan_producer(
         evidence.EXPECTED_SOURCE_PATHS
     )
     assert set(plan["inputs"]["file_hashes"]) == set(evidence.EXPECTED_INPUT_PATHS)
+    assert evidence._validate_manifested_meshes(
+        plan["inputs"]["manifested_file_hashes"],
+        repo_root=Path(__file__).resolve().parents[1],
+        input_inventory=plan["inputs"]["file_hashes"],
+    ) == plan["inputs"]["manifested_file_hashes"]
 
 
 def test_plan_admission_rejects_substitute_inventory_commands_and_semantics(
@@ -561,6 +607,13 @@ def test_plan_admission_rejects_substitute_inventory_commands_and_semantics(
     mutated["inputs"]["file_hashes"].pop(evidence.EXPECTED_INPUT_PATHS[-1])
     _write_json(plan_path, mutated)
     with pytest.raises(evidence.AdmissionError, match="exact canonical set"):
+        evidence.audit_campaign(root, repo_root=repo)
+
+    mutated = copy.deepcopy(canonical)
+    first_mesh = next(iter(evidence.EXPECTED_MANIFESTED_MESH_PATHS))
+    mutated["inputs"]["manifested_file_hashes"][first_mesh]["sha256"] = "0" * 64
+    _write_json(plan_path, mutated)
+    with pytest.raises(evidence.AdmissionError, match="manifested-file bindings"):
         evidence.audit_campaign(root, repo_root=repo)
 
     mutated = copy.deepcopy(canonical)

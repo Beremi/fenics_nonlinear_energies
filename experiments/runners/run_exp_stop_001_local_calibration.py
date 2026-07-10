@@ -36,6 +36,16 @@ TRUST_RUNNER_PATH = Path("experiments/runners/run_trust_region_case.py")
 P3D_BACKEND_PATH = Path("experiments/runners/run_plasticity3d_backend_mix_case.py")
 P3D_ROUTE_PATH = Path("experiments/runners/run_plasticity3d_fixed_state_route_screen.py")
 PROTOCOL_PATH = Path("paper/protocols/EXP-STOP-001.md")
+P3D_MESH_MANIFEST_PATH = Path(
+    "data/meshes/SlopeStability3D/hetero_ssr/publication_mesh_manifest.json"
+)
+P3D_MESH_GENERATOR_SOURCES = (
+    Path("data/meshes/SlopeStability3D/hetero_ssr/SSR_hetero_ada_L1.msh"),
+    Path("data/meshes/SlopeStability3D/hetero_ssr/definition.py"),
+    Path("src/problems/slope_stability_3d/support/materials.py"),
+    Path("src/problems/slope_stability_3d/support/mesh.py"),
+    Path("src/problems/slope_stability_3d/support/simplex_lagrange.py"),
+)
 
 PLAN_SCHEMA_ID = "fenics-nonlinear-energies.exp-stop-001.local-plan"
 PLAN_SCHEMA_VERSION = 1
@@ -108,6 +118,82 @@ def _read_json(path: Path) -> dict[str, Any]:
     if not isinstance(payload, dict):
         raise CampaignError(f"JSON root must be an object: {path}")
     return payload
+
+
+def _manifested_p3d_meshes() -> dict[str, dict[str, Any]]:
+    """Verify and bind the ignored P1/P2/P4 generated HDF5 caches."""
+
+    from src.problems.slope_stability_3d.support.mesh import (
+        _same_mesh_hdf5_is_current,
+    )
+
+    manifest_path = REPO_ROOT / P3D_MESH_MANIFEST_PATH
+    payload = _read_json(manifest_path)
+    expected_paths = {
+        (
+            "data/meshes/SlopeStability3D/hetero_ssr/"
+            f"hetero_ssr_L1_p{degree}_same_mesh_glued_bottom.h5"
+        ): degree
+        for degree in (1, 2, 4)
+    }
+    if (
+        set(payload) != {"algorithm", "files", "generator", "schema_id", "schema_version"}
+        or payload.get("schema_id")
+        != "fenics-nonlinear-energies.manifested-generated-meshes"
+        or payload.get("schema_version") != 1
+        or payload.get("algorithm") != "sha256"
+        or not isinstance(payload.get("files"), dict)
+        or set(payload["files"]) != set(expected_paths)
+        or payload.get("generator")
+        != {
+            "function": (
+                "src.problems.slope_stability_3d.support.mesh."
+                "ensure_same_mesh_case_hdf5"
+            ),
+            "tracked_sources": [
+                path.as_posix() for path in P3D_MESH_GENERATOR_SOURCES
+            ],
+        }
+    ):
+        raise CampaignError("publication mesh manifest identity is invalid")
+    bindings: dict[str, dict[str, Any]] = {}
+    for relative, degree in expected_paths.items():
+        record = payload["files"][relative]
+        if not isinstance(record, dict) or set(record) != {
+            "bytes",
+            "constraint_variant",
+            "element_degree",
+            "mesh_name",
+            "same_mesh_hdf5_schema_version",
+            "sha256",
+        }:
+            raise CampaignError(f"publication mesh record is malformed: {relative}")
+        path = REPO_ROOT / relative
+        if (
+            not path.is_file()
+            or path.is_symlink()
+            or not isinstance(record.get("bytes"), int)
+            or path.stat().st_size != int(record["bytes"])
+            or record.get("constraint_variant") != "glued_bottom"
+            or record.get("element_degree") != degree
+            or record.get("mesh_name") != "hetero_ssr_L1"
+            or record.get("same_mesh_hdf5_schema_version") != 7
+            or not isinstance(record.get("sha256"), str)
+            or len(str(record["sha256"])) != 64
+            or _sha256_file(path) != record["sha256"]
+            or not _same_mesh_hdf5_is_current(
+                path,
+                mesh_name="hetero_ssr_L1",
+                degree=degree,
+                constraint_variant="glued_bottom",
+            )
+        ):
+            raise CampaignError(f"publication mesh cache is missing or stale: {relative}")
+        bindings[relative] = {
+            **record,
+            "manifest": P3D_MESH_MANIFEST_PATH.as_posix(),
+        }
+    return bindings
 
 
 def _git(*args: str) -> str:
@@ -827,14 +913,10 @@ def build_plan(
     input_paths = [
         PROTOCOL_PATH,
         *(Path(f"data/meshes/GinzburgLandau/GL_level{level}.h5") for level in GL_LEVELS),
-        *(
-            Path(
-                "data/meshes/SlopeStability3D/hetero_ssr/"
-                f"hetero_ssr_L1_p{degree}_same_mesh_glued_bottom.h5"
-            )
-            for degree in (1, 2, 4)
-        ),
+        P3D_MESH_MANIFEST_PATH,
+        *P3D_MESH_GENERATOR_SOURCES,
     ]
+    manifested_meshes = _manifested_p3d_meshes()
     required_local = sum(row["execution_class"] == "required_local" for row in rows)
     deferred = len(rows) - required_local
     return {
@@ -853,6 +935,7 @@ def build_plan(
         },
         "inputs": {
             "file_hashes": _input_hashes(input_paths),
+            "manifested_file_hashes": manifested_meshes,
             "procedural_he_mesh": {
                 "levels": list(HE_LEVELS),
                 "source": "rank_local_procedural_he_p1_mesh_builder",

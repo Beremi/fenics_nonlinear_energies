@@ -61,9 +61,29 @@ EXPECTED_INPUT_PATHS = (
     "paper/protocols/EXP-STOP-001.md",
     "data/meshes/GinzburgLandau/GL_level5.h5",
     "data/meshes/GinzburgLandau/GL_level6.h5",
-    "data/meshes/SlopeStability3D/hetero_ssr/hetero_ssr_L1_p1_same_mesh_glued_bottom.h5",
-    "data/meshes/SlopeStability3D/hetero_ssr/hetero_ssr_L1_p2_same_mesh_glued_bottom.h5",
-    "data/meshes/SlopeStability3D/hetero_ssr/hetero_ssr_L1_p4_same_mesh_glued_bottom.h5",
+    "data/meshes/SlopeStability3D/hetero_ssr/publication_mesh_manifest.json",
+    "data/meshes/SlopeStability3D/hetero_ssr/SSR_hetero_ada_L1.msh",
+    "data/meshes/SlopeStability3D/hetero_ssr/definition.py",
+    "src/problems/slope_stability_3d/support/materials.py",
+    "src/problems/slope_stability_3d/support/mesh.py",
+    "src/problems/slope_stability_3d/support/simplex_lagrange.py",
+)
+EXPECTED_MESH_MANIFEST = (
+    "data/meshes/SlopeStability3D/hetero_ssr/publication_mesh_manifest.json"
+)
+EXPECTED_MANIFESTED_MESH_PATHS = {
+    (
+        "data/meshes/SlopeStability3D/hetero_ssr/"
+        f"hetero_ssr_L1_p{degree}_same_mesh_glued_bottom.h5"
+    ): degree
+    for degree in (1, 2, 4)
+}
+EXPECTED_MESH_GENERATOR_SOURCES = (
+    "data/meshes/SlopeStability3D/hetero_ssr/SSR_hetero_ada_L1.msh",
+    "data/meshes/SlopeStability3D/hetero_ssr/definition.py",
+    "src/problems/slope_stability_3d/support/materials.py",
+    "src/problems/slope_stability_3d/support/mesh.py",
+    "src/problems/slope_stability_3d/support/simplex_lagrange.py",
 )
 EXPECTED_PACKAGE_NAMES = frozenset(
     {"h5py", "jax", "mpi4py", "numpy", "petsc4py", "scipy"}
@@ -259,6 +279,87 @@ def _verify_git_inventory(
             raise AdmissionError(f"{label} differs from experiment-commit blob: {relative}")
         result[relative] = digest
     return result
+
+
+def _validate_manifested_meshes(
+    raw: object,
+    *,
+    repo_root: Path,
+    input_inventory: Mapping[str, str],
+) -> dict[str, dict[str, object]]:
+    """Independently rehash the ignored meshes bound by the tracked manifest."""
+
+    manifest_path = repo_root / EXPECTED_MESH_MANIFEST
+    if (
+        not manifest_path.is_file()
+        or manifest_path.is_symlink()
+        or input_inventory.get(EXPECTED_MESH_MANIFEST) != sha256_file(manifest_path)
+    ):
+        raise AdmissionError("tracked publication mesh manifest is missing or stale")
+    manifest = read_strict_json(manifest_path)
+    if (
+        set(manifest)
+        != {"algorithm", "files", "generator", "schema_id", "schema_version"}
+        or manifest.get("schema_id")
+        != "fenics-nonlinear-energies.manifested-generated-meshes"
+        or manifest.get("schema_version") != 1
+        or manifest.get("algorithm") != "sha256"
+        or manifest.get("generator")
+        != {
+            "function": (
+                "src.problems.slope_stability_3d.support.mesh."
+                "ensure_same_mesh_case_hdf5"
+            ),
+            "tracked_sources": list(EXPECTED_MESH_GENERATOR_SOURCES),
+        }
+    ):
+        raise AdmissionError("tracked publication mesh manifest identity is invalid")
+    files = manifest.get("files")
+    if not isinstance(files, dict) or set(files) != set(
+        EXPECTED_MANIFESTED_MESH_PATHS
+    ):
+        raise AdmissionError("tracked publication mesh manifest file set is incomplete")
+    expected_bindings: dict[str, dict[str, object]] = {}
+    for relative, degree in EXPECTED_MANIFESTED_MESH_PATHS.items():
+        record = files.get(relative)
+        if not isinstance(record, dict) or set(record) != {
+            "bytes",
+            "constraint_variant",
+            "element_degree",
+            "mesh_name",
+            "same_mesh_hdf5_schema_version",
+            "sha256",
+        }:
+            raise AdmissionError(f"publication mesh record is malformed: {relative}")
+        digest = record.get("sha256")
+        if (
+            not isinstance(record.get("bytes"), int)
+            or int(record["bytes"]) <= 0
+            or record.get("constraint_variant") != "glued_bottom"
+            or record.get("element_degree") != degree
+            or record.get("mesh_name") != "hetero_ssr_L1"
+            or record.get("same_mesh_hdf5_schema_version") != 7
+            or not isinstance(digest, str)
+            or HEX64.fullmatch(digest) is None
+        ):
+            raise AdmissionError(
+                f"publication mesh record has invalid scientific identity: {relative}"
+            )
+        path = repo_root / relative
+        _assert_no_symlink(path, root=repo_root, label=f"manifested mesh {relative}")
+        if (
+            not path.is_file()
+            or path.stat().st_size != int(record["bytes"])
+            or sha256_file(path) != digest
+        ):
+            raise AdmissionError(f"manifested publication mesh is stale: {relative}")
+        expected_bindings[relative] = {
+            **record,
+            "manifest": EXPECTED_MESH_MANIFEST,
+        }
+    if raw != expected_bindings:
+        raise AdmissionError("plan manifested-file bindings differ from the tracked manifest")
+    return expected_bindings
 
 
 def _load_npz(path: Path, *, required: Sequence[str] = ()) -> dict[str, np.ndarray]:
@@ -760,7 +861,7 @@ def _validate_plan(
         raise AdmissionError("plan source inventory differs from the exact canonical set")
     inputs = plan.get("inputs")
     if not isinstance(inputs, dict) or set(inputs) != {
-        "file_hashes", "procedural_he_mesh"
+        "file_hashes", "manifested_file_hashes", "procedural_he_mesh"
     }:
         raise AdmissionError("plan input inventory is missing")
     input_inventory = _verify_git_inventory(
@@ -769,6 +870,11 @@ def _validate_plan(
     )
     if set(input_inventory) != set(EXPECTED_INPUT_PATHS):
         raise AdmissionError("plan input inventory differs from the exact canonical set")
+    _validate_manifested_meshes(
+        inputs.get("manifested_file_hashes"),
+        repo_root=repo_root,
+        input_inventory=input_inventory,
+    )
     if inputs.get("procedural_he_mesh") != {
         "levels": [1, 2],
         "source": "rank_local_procedural_he_p1_mesh_builder",
