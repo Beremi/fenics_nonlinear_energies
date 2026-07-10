@@ -22,6 +22,60 @@ and tolerance calibration are still required. Until this card reaches a
 terminal decision, all affected full-solve route, discretization, scaling, and
 timing rows are blocked from publication admission.
 
+## Executable staged local campaign
+
+`experiments/runners/run_exp_stop_001_local_calibration.py` now freezes and
+executes the locally feasible portion of this card. Its default plan contains
+40 required-local rows:
+
+- deterministic lumped-$L^2$ Ginzburg--Landau endpoints on levels 5 and 6 at
+  relative dual-residual targets `1e-2`, `1e-4`, `1e-6`, and `1e-8`;
+- HyperElasticity reference-Riesz setup/terminal-residual checks on levels 1
+  and 2 at norm-solve tolerances `1e-8`, `1e-10`, and `1e-12`;
+- one-load-step nonlinear HyperElasticity endpoints on levels 1 and 2 at the
+  four residual targets above;
+- Plasticity3D P1/P2 fixed-state tangent solves at requested KSP tolerances
+  `1e-2`, `1e-4`, `1e-6`, `1e-8`, and `1e-10`, with an independently rebuilt
+  true residual; and
+- full nonlinear reference-Riesz Plasticity3D P1/P2 endpoints at the four
+  residual targets above.
+
+The default plan also retains 12 explicit censors: five P4 fixed-state rows
+whose local feasibility has not been attested, four nonlinear P4 rows, and one
+publication-rank MPI-consistency row for each problem family. P4 fixed-state
+rows become required-local only when preparation uses both `--p4-policy local`
+and `--confirm-p4-local-feasible`. Nonlinear P4 and MPI rows remain cluster
+computations. The existing HyperElasticity state export does not retain the
+reference-operator action, so its same-mesh coefficient displacement
+difference is reported only as a diagnostic and is not relabeled as a Riesz
+state difference.
+
+The publication sequence is deliberately non-overwriting:
+
+```bash
+./.venv/bin/python experiments/runners/run_exp_stop_001_local_calibration.py \
+  prepare \
+  --run-kind publication \
+  --output-root artifacts/reproduction/exp_stop_001_local_<commit>
+
+./.venv/bin/python experiments/runners/run_exp_stop_001_local_calibration.py \
+  execute \
+  --plan artifacts/reproduction/exp_stop_001_local_<commit>/plan.json \
+  --all-local \
+  --confirm-all-local-execution
+
+./.venv/bin/python experiments/runners/run_exp_stop_001_local_calibration.py \
+  analyze \
+  --plan artifacts/reproduction/exp_stop_001_local_<commit>/plan.json
+```
+
+Publication preparation and execution require the frozen commit and a clean
+worktree. Diagnostic preparation from a dirty tree must say both
+`--run-kind diagnostic` and `--allow-dirty`; such output is never publication
+evidence. A missing row leaves the analysis incomplete. A failed local command
+is retained as an unclassified runtime censor, and failure of the tightest
+same-discretization reference invalidates that comparison group.
+
 ## Scientific questions
 
 1. How much of the route-to-route endpoint difference is caused by an inexact
