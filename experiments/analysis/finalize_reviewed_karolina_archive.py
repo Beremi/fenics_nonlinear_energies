@@ -203,6 +203,7 @@ def finalize(root: Path, *, offline_index: Path) -> dict[str, Any]:
             source_freeze_sha256=source_freeze_sha256,
         )
         contract.atomic_json(job_root / "sacct_final.json", accounting)
+    verify_settled_archive(root)
     checksum = write_archive_checksums(root)
     return {
         "status": "settled_and_checksums_written",
@@ -210,6 +211,31 @@ def finalize(root: Path, *, offline_index: Path) -> dict[str, Any]:
         "settled_jobs": len(jobs),
         "archive_checksums": checksum,
     }
+
+
+def verify_settled_archive(root: Path) -> dict[str, Any]:
+    """Reparse every retained accounting record and recheck every job/output."""
+    root = Path(root).resolve()
+    manifest, plan = contract.load_plan(root)
+    if manifest.get("status") != "submitted" or manifest.get("scheduler_contact") is not True:
+        raise contract.CampaignContractError("settled verification requires a submitted campaign")
+    jobs = submitted_jobs(root, plan)
+    cases = {case["case_id"]: case for case in plan["cases"]}
+    for case_id, job_id in jobs.items():
+        job_root = root / "jobs" / case_id / f"job_{job_id}"
+        accounting_path = job_root / "sacct_final.json"
+        if not accounting_path.is_file() or accounting_path.is_symlink():
+            raise contract.CampaignContractError(f"settled accounting is missing for {case_id}")
+        _validate_job(
+            job_root=job_root,
+            case=cases[case_id],
+            job_id=job_id,
+            accounting=contract.read_object(accounting_path),
+            source_commit=str(plan["source_commit"]),
+            plan_sha256=str(manifest["plan"]["sha256"]),
+            source_freeze_sha256=str(manifest["source_freeze"]["sha256"]),
+        )
+    return {"status": "settled_archive_verified", "job_count": len(jobs)}
 
 
 def parser() -> argparse.ArgumentParser:

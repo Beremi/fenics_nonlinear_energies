@@ -153,7 +153,9 @@ def validate_case(case: Mapping[str, Any]) -> dict[str, Any]:
         raise CampaignContractError(f"{case_id} payload_argv must be a nonempty string list")
     if argv[0] != "{PYTHON}":
         raise CampaignContractError(f"{case_id} payload must start with {{PYTHON}}")
-    allowed_placeholders = {"{PYTHON}", "{REPO_ROOT}", "{JOB_ROOT}"}
+    allowed_placeholders = {
+        "{PYTHON}", "{REPO_ROOT}", "{CAMPAIGN_ROOT}", "{JOB_ROOT}"
+    }
     for token in argv:
         for placeholder in re.findall(r"\{[A-Z_]+\}", token):
             if placeholder not in allowed_placeholders:

@@ -10,6 +10,7 @@ from pathlib import Path
 import platform
 import subprocess
 import sys
+import time
 from typing import Any
 
 
@@ -20,10 +21,13 @@ if str(REPO_ROOT) not in sys.path:
 from experiments.runners import karolina_reviewed_campaign as contract
 
 
-def _expand(token: str, *, job_root: Path, python: str) -> str:
+def _expand(
+    token: str, *, campaign_root: Path, job_root: Path, python: str
+) -> str:
     return (
         token.replace("{PYTHON}", python)
         .replace("{REPO_ROOT}", str(REPO_ROOT))
+        .replace("{CAMPAIGN_ROOT}", str(campaign_root))
         .replace("{JOB_ROOT}", str(job_root))
     )
 
@@ -57,6 +61,15 @@ def execute(args: argparse.Namespace) -> dict[str, Any]:
     if len(matches) != 1:
         raise contract.CampaignContractError("case ID is absent or duplicated in the plan")
     case = matches[0]
+    controlled_environment = case["scientific_contract"].get("controlled_environment")
+    if controlled_environment is not None:
+        if not isinstance(controlled_environment, dict) or not controlled_environment:
+            raise contract.CampaignContractError("controlled environment contract is malformed")
+        for name, expected in controlled_environment.items():
+            if os.environ.get(str(name)) != str(expected):
+                raise contract.CampaignContractError(
+                    f"controlled environment {name} differs from the reviewed plan"
+                )
     exact = {
         "SLURM_JOB_ACCOUNT": contract.ACCOUNT,
         "SLURM_JOB_QOS": contract.QOS,
@@ -77,7 +90,10 @@ def execute(args: argparse.Namespace) -> dict[str, Any]:
     job_root = root / "jobs" / str(case["case_id"]) / f"job_{job_id}"
     job_root.mkdir(parents=True, exist_ok=False)
     python = str(Path(sys.executable).absolute())
-    payload = [_expand(token, job_root=job_root, python=python) for token in case["payload_argv"]]
+    payload = [
+        _expand(token, campaign_root=root, job_root=job_root, python=python)
+        for token in case["payload_argv"]
+    ]
     srun = [
         "srun",
         "--kill-on-bad-exit=1",
@@ -127,9 +143,13 @@ def execute(args: argparse.Namespace) -> dict[str, Any]:
             },
         },
     )
+    started_at_utc = contract.utc_now()
+    started = time.perf_counter()
     completed = subprocess.run(
         [*srun, *payload], check=False, capture_output=True, text=True, cwd=REPO_ROOT
     )
+    wall_time_s = time.perf_counter() - started
+    finished_at_utc = contract.utc_now()
     (job_root / "stdout.log").write_text(completed.stdout, encoding="utf-8")
     (job_root / "stderr.log").write_text(completed.stderr, encoding="utf-8")
     outputs: dict[str, str] = {}
@@ -149,6 +169,9 @@ def execute(args: argparse.Namespace) -> dict[str, Any]:
         "case_id": case["case_id"],
         "job_id": job_id,
         "returncode": int(completed.returncode),
+        "started_at_utc": started_at_utc,
+        "finished_at_utc": finished_at_utc,
+        "wall_time_s": wall_time_s,
         "output_hashes": outputs,
     }
     contract.atomic_json(job_root / "execution.json", receipt)
@@ -178,4 +201,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-

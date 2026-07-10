@@ -87,6 +87,44 @@ UTC start/finish times, source/configuration/input SHA-256 hashes, the exact
 single-thread CPU child environment, termination/censoring, solver counts,
 terminal residuals, and artifact identities.
 
+## Reviewed full-rank Karolina path
+
+The local runner does not execute the full-rank matrix. The separate
+scheduler-free preparer
+`experiments/runners/prepare_exp_glob_001_karolina.py` freezes the same
+controlled algorithms at the intended ranks: Ginzburg--Landau level 10 at 16
+ranks and the first HyperElasticity level-4 load at 32 ranks. For each problem
+it creates the nominal and two signed deterministic starts once, then binds the
+same immutable NPZ to both methods and all five cold-process repetitions.
+
+The resulting matrix has exactly 60 one-node jobs: 30 Ginzburg--Landau
+launches with a 10-minute allocation ceiling and 30 HyperElasticity launches
+with a 15-minute ceiling. Its total ceiling is 12.5 Karolina CPU node-hours.
+Every row requires one thread per rank and the frozen CPU/JAX/XLA environment,
+and retains `output.json`, `final_state.npz`, stdout, stderr, job metadata,
+environment identity, and a validated publication run record. Preparation
+writes only a plan, source/input hashes, common-start artifacts, and exact
+shell-quoted command text:
+
+```bash
+./.venv/bin/python experiments/runners/prepare_exp_glob_001_karolina.py \
+  prepare --output-root artifacts/reproduction/EXP-GLOB-001-karolina-<commit>
+
+./.venv/bin/python experiments/runners/prepare_exp_glob_001_karolina.py \
+  preflight --campaign-root artifacts/reproduction/EXP-GLOB-001-karolina-<commit>
+```
+
+Neither command contacts Slurm. Without reviewed environment setup and lock
+files, the manifest is explicitly ineligible for submission. In a future
+authorized execution, the pre-seal analyzer must reconstruct all 60 run
+records and pass the common-start, terminal-identity, exact repetition, and
+bounded-instance audit. Offline accounting settlement then reparses each raw
+record against its 16- or 32-rank allocation and checksum-seals the archive.
+Only a detached post-copy adjudication using that checksum digest can expose a
+timing or tested-instance comparison decision. Population-level robustness
+generalization remains inadmissible by construction. No full-rank Karolina
+launch has been submitted or run.
+
 ## Deterministic Robustness Instances And Repetitions
 
 Each retained problem has three prescribed instances: the nominal state and a
