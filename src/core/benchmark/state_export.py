@@ -133,6 +133,8 @@ def export_hyperelasticity_state_npz(
     mesh_level: int,
     total_steps: int,
     energy: float | None = None,
+    free_deformation: np.ndarray | None = None,
+    reference_elastic_action: np.ndarray | None = None,
     metadata: Mapping[str, object] | None = None,
 ) -> None:
     """Export one HE state as reference/deformed coordinates plus tetra connectivity."""
@@ -141,13 +143,39 @@ def export_hyperelasticity_state_npz(
     tetrahedra = np.asarray(tetrahedra, dtype=np.int32)
     displacement = x_final - coords_ref
 
+    arrays: dict[str, object] = {
+        "coords_ref": coords_ref,
+        "coords_final": x_final,
+        "displacement": displacement,
+        "tetrahedra": tetrahedra,
+    }
+    if (free_deformation is None) != (reference_elastic_action is None):
+        raise ValueError(
+            "free_deformation and reference_elastic_action must be supplied together"
+        )
+    if free_deformation is not None and reference_elastic_action is not None:
+        free = np.asarray(free_deformation, dtype=np.float64).reshape(-1)
+        action = np.asarray(reference_elastic_action, dtype=np.float64).reshape(-1)
+        if free.shape != action.shape or free.size == 0:
+            raise ValueError("reference-elastic state/action arrays must be nonempty and aligned")
+        if not np.all(np.isfinite(free)) or not np.all(np.isfinite(action)):
+            raise ValueError("reference-elastic state/action arrays must be finite")
+        quadratic = float(np.dot(free, action))
+        tolerance = 256.0 * np.finfo(np.float64).eps * max(1.0, abs(quadratic))
+        if not np.isfinite(quadratic) or quadratic < -tolerance:
+            raise ValueError(
+                "reference-elastic state quadratic must be finite and nonnegative"
+            )
+        arrays.update(
+            {
+                "free_deformation_original": free,
+                "reference_elastic_action": action,
+                "reference_elastic_state_quadratic": max(0.0, quadratic),
+            }
+        )
+
     payload = _npz_payload(
-        {
-            "coords_ref": coords_ref,
-            "coords_final": x_final,
-            "displacement": displacement,
-            "tetrahedra": tetrahedra,
-        },
+        arrays,
         metadata={
             "mesh_level": int(mesh_level),
             "total_steps": int(total_steps),

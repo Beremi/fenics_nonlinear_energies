@@ -225,13 +225,27 @@ def _load_hyperelasticity_initial_state(
 
 
 def _export_state_if_requested(
-    args, assembler, params, vec, step_records, comm
+    args,
+    assembler,
+    params,
+    vec,
+    step_records,
+    comm,
+    reference_elastic_operator: PETSc.Mat | None = None,
 ) -> dict[str, object] | None:
     state_out = str(getattr(args, "state_out", "") or "")
     if not state_out:
         return None
 
     full_free_original = _gather_full_free_original(assembler, vec)
+    reference_action_original: np.ndarray | None = None
+    if reference_elastic_operator is not None:
+        action = vec.duplicate()
+        try:
+            reference_elastic_operator.mult(vec, action)
+            reference_action_original = _gather_full_free_original(assembler, action)
+        finally:
+            action.destroy()
     export_params = params
     if bool(params.get("_distributed_local_data", False)):
         if int(params.get("element_degree", 1)) != 1:
@@ -275,6 +289,12 @@ def _export_state_if_requested(
             mesh_level=int(args.level),
             total_steps=int(args.total_steps),
             energy=final_energy,
+            free_deformation=(
+                full_free_original
+                if reference_action_original is not None
+                else None
+            ),
+            reference_elastic_action=reference_action_original,
             metadata={
                 "solver_family": "hyperelasticity_jax_petsc_element",
                 "mpi_ranks": int(comm.Get_size()),
@@ -288,6 +308,11 @@ def _export_state_if_requested(
             "file_sha256": sha256_file(destination),
             "state_sha256": _sha256_array(full_state),
             "free_state_sha256": _sha256_array(full_free_original),
+            "reference_elastic_action_sha256": (
+                None
+                if reference_action_original is None
+                else _sha256_array(reference_action_original)
+            ),
             "ordering": "global mesh-node vector components",
         }
     return None
@@ -1456,7 +1481,13 @@ def run(args):
     finally:
         try:
             state_output = _export_state_if_requested(
-                args, assembler, params, x, step_records, comm
+                args,
+                assembler,
+                params,
+                x,
+                step_records,
+                comm,
+                reference_elastic_operator,
             )
         finally:
             if isinstance(convergence_metric, MatrixRieszMetric):

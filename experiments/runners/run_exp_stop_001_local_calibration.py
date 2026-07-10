@@ -871,6 +871,7 @@ def build_plan(
                 "he_true_residual_factor": 20.0,
                 "he_true_residual_floor": 1.0e-8,
                 "he_nonlinear_displacement_relative_difference_max": 1.0e-5,
+                "he_nonlinear_reference_elastic_relative_state_difference_max": 1.0e-5,
                 "he_nonlinear_energy_absolute_difference_max": 1.0e-8,
                 "p3d_correction_relative_difference_max": 1.0e-4,
                 "p3d_reference_elastic_relative_difference_max": 1.0e-4,
@@ -1282,7 +1283,37 @@ def _he_nonlinear_endpoint(row: Mapping[str, Any]) -> dict[str, Any]:
     )
     state_path = _state_npz_path(row)
     with np.load(state_path, allow_pickle=False) as state:
+        required = {
+            "displacement",
+            "free_deformation_original",
+            "reference_elastic_action",
+        }
+        missing = required - set(state.files)
+        if missing:
+            raise CampaignError(
+                "HE nonlinear state export is missing reference-Riesz arrays: "
+                f"{sorted(missing)}"
+            )
         displacement = np.asarray(state["displacement"], dtype=np.float64)
+        free_deformation = np.asarray(
+            state["free_deformation_original"], dtype=np.float64
+        ).reshape(-1)
+        reference_action = np.asarray(
+            state["reference_elastic_action"], dtype=np.float64
+        ).reshape(-1)
+        if (
+            free_deformation.shape != reference_action.shape
+            or free_deformation.size == 0
+            or not np.all(np.isfinite(free_deformation))
+            or not np.all(np.isfinite(reference_action))
+        ):
+            raise CampaignError("HE nonlinear reference-Riesz arrays are invalid")
+        state_quadratic = float(np.dot(free_deformation, reference_action))
+        quadratic_tolerance = 256.0 * np.finfo(np.float64).eps * max(
+            1.0, abs(state_quadratic)
+        )
+        if not np.isfinite(state_quadratic) or state_quadratic < -quadratic_tolerance:
+            raise CampaignError("HE nonlinear reference-Riesz state norm is invalid")
         state_sha = _sha256_array(displacement)
     admitted = bool(
         step.get("success") is True
@@ -1311,11 +1342,9 @@ def _he_nonlinear_endpoint(row: Mapping[str, Any]) -> dict[str, Any]:
         "certified_spd": certified_spd,
         "state_sha256": state_sha,
         "state_file_sha256": _sha256_file(state_path),
-        "riesz_state_difference_available": False,
-        "riesz_state_difference_note": (
-            "the existing HE state exporter does not store K_ref times the endpoint; "
-            "same-mesh displacement differences are reported as diagnostics"
-        ),
+        "reference_elastic_state_norm": math.sqrt(max(0.0, state_quadratic)),
+        "reference_elastic_action_sha256": _sha256_array(reference_action),
+        "riesz_state_difference_available": True,
     }
 
 
@@ -1582,14 +1611,68 @@ def _compare_he_nonlinear(
         reference_displacement = np.asarray(
             reference_state["displacement"], dtype=np.float64
         ).reshape(-1)
+        required = {"free_deformation_original", "reference_elastic_action"}
+        if required - set(candidate_state.files) or required - set(reference_state.files):
+            raise CampaignError(
+                "HE same-level nonlinear comparison lacks reference-Riesz arrays"
+            )
+        candidate_free = np.asarray(
+            candidate_state["free_deformation_original"], dtype=np.float64
+        ).reshape(-1)
+        reference_free = np.asarray(
+            reference_state["free_deformation_original"], dtype=np.float64
+        ).reshape(-1)
+        candidate_action = np.asarray(
+            candidate_state["reference_elastic_action"], dtype=np.float64
+        ).reshape(-1)
+        reference_action = np.asarray(
+            reference_state["reference_elastic_action"], dtype=np.float64
+        ).reshape(-1)
+    if not (
+        candidate_free.shape
+        == reference_free.shape
+        == candidate_action.shape
+        == reference_action.shape
+    ) or candidate_free.size == 0:
+        raise CampaignError("HE same-level reference-Riesz arrays are not aligned")
+    if not all(
+        np.all(np.isfinite(values))
+        for values in (candidate_free, reference_free, candidate_action, reference_action)
+    ):
+        raise CampaignError("HE same-level reference-Riesz arrays are nonfinite")
     displacement_relative = float(
         np.linalg.norm(candidate_displacement - reference_displacement)
         / max(np.linalg.norm(reference_displacement), np.finfo(np.float64).tiny)
+    )
+    state_difference = candidate_free - reference_free
+    action_difference = candidate_action - reference_action
+    squared_difference = float(np.dot(state_difference, action_difference))
+    difference_tolerance = 256.0 * np.finfo(np.float64).eps * max(
+        1.0,
+        float(np.linalg.norm(state_difference) * np.linalg.norm(action_difference)),
+    )
+    if not np.isfinite(squared_difference) or squared_difference < -difference_tolerance:
+        raise CampaignError("HE reference-elastic state difference is invalid")
+    reference_squared = float(np.dot(reference_free, reference_action))
+    reference_tolerance = 256.0 * np.finfo(np.float64).eps * max(
+        1.0, abs(reference_squared)
+    )
+    if not np.isfinite(reference_squared) or reference_squared < -reference_tolerance:
+        raise CampaignError("HE reference-elastic reference norm is invalid")
+    riesz_difference = math.sqrt(max(0.0, squared_difference))
+    riesz_relative = riesz_difference / max(
+        math.sqrt(max(0.0, reference_squared)), np.finfo(np.float64).tiny
     )
     energy_difference = abs(float(endpoint["energy"]) - float(reference["energy"]))
     passed = bool(
         displacement_relative
         <= float(contract["he_nonlinear_displacement_relative_difference_max"])
+        and riesz_relative
+        <= float(
+            contract[
+                "he_nonlinear_reference_elastic_relative_state_difference_max"
+            ]
+        )
         and energy_difference
         <= float(contract["he_nonlinear_energy_absolute_difference_max"])
     )
@@ -1597,11 +1680,16 @@ def _compare_he_nonlinear(
         "status": "accepted" if passed else "rejected",
         "reference_row_id": reference_row["row_id"],
         "coefficient_displacement_relative_difference": displacement_relative,
+        "reference_elastic_state_difference": riesz_difference,
+        "reference_elastic_relative_state_difference": riesz_relative,
         "energy_absolute_difference": energy_difference,
-        "riesz_state_difference_available": False,
+        "riesz_state_difference_available": True,
         "gates": {
             "coefficient_displacement_relative_max": contract[
                 "he_nonlinear_displacement_relative_difference_max"
+            ],
+            "reference_elastic_relative_state_max": contract[
+                "he_nonlinear_reference_elastic_relative_state_difference_max"
             ],
             "energy_absolute_max": contract[
                 "he_nonlinear_energy_absolute_difference_max"
@@ -1609,8 +1697,8 @@ def _compare_he_nonlinear(
             "passed": passed,
         },
         "interpretation": (
-            "same-mesh coefficient displacement is diagnostic; the existing HE state "
-            "export lacks the reference-operator action needed for a Riesz difference"
+            "same-mesh endpoint difference in the frozen reference-elastic Riesz metric; "
+            "the coefficient displacement difference is retained as a secondary diagnostic"
         ),
     }
 
@@ -1938,8 +2026,9 @@ def analyze_plan(plan_path: Path) -> dict[str, Any]:
             "The local tranche calibrates deterministic GL endpoints, HE reference-Riesz "
             "setup/norm solves and L1/L2 nonlinear endpoints, P1/P2 fixed-state P3D linear "
             "solves, and P1/P2 nonlinear P3D endpoints. P4 nonlinear and MPI consistency "
-            "remain cluster-deferred. HE endpoint Riesz state differences remain unavailable "
-            "from the existing state export and are not inferred from coefficient differences."
+            "remain cluster-deferred. Same-mesh HE and P3D endpoint comparisons use the "
+            "action of the frozen reference-elastic operator; coefficient-space differences "
+            "are retained only as secondary diagnostics."
         ),
         "plan": {
             "path": str(Path(plan_path).resolve()),

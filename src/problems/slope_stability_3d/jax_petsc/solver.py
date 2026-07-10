@@ -2003,6 +2003,21 @@ def run(args):
     full_reordered, _ = assembler._allgather_full_owned(
         np.asarray(x.array[:], dtype=np.float64)
     )
+    reference_elastic_action_reordered: np.ndarray | None = None
+    elastic_operator = regularization_state.get("elastic_operator")
+    if (
+        getattr(args, "state_out", "")
+        and convergence_configuration.get("selection") == "reference_elastic_energy"
+        and elastic_operator is not None
+    ):
+        action = x.duplicate()
+        try:
+            elastic_operator.mult(x, action)
+            reference_elastic_action_reordered, _ = assembler._allgather_full_owned(
+                np.asarray(action.array[:], dtype=np.float64)
+            )
+        finally:
+            action.destroy()
     full_original = np.empty_like(full_reordered)
     full_original[np.asarray(assembler.layout.perm, dtype=np.int64)] = full_reordered
     u_full = np.asarray(params["u_0"], dtype=np.float64).copy()
@@ -2063,6 +2078,12 @@ def run(args):
             element_degree=int(args.elem_degree),
             lambda_target=float(lambda_target),
             energy=float(result["fun"]),
+            free_displacement=(
+                full_reordered
+                if reference_elastic_action_reordered is not None
+                else None
+            ),
+            reference_elastic_action=reference_elastic_action_reordered,
             metadata={
                 "solver_family": "jax_petsc",
                 "prototype_mode": "zero_history_endpoint",

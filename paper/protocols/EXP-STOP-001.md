@@ -45,10 +45,11 @@ whose local feasibility has not been attested, four nonlinear P4 rows, and one
 publication-rank MPI-consistency row for each problem family. P4 fixed-state
 rows become required-local only when preparation uses both `--p4-policy local`
 and `--confirm-p4-local-feasible`. Nonlinear P4 and MPI rows remain cluster
-computations. The existing HyperElasticity state export does not retain the
-reference-operator action, so its same-mesh coefficient displacement
-difference is reported only as a diagnostic and is not relabeled as a Riesz
-state difference.
+computations. HyperElasticity and Plasticity3D nonlinear state exports retain
+the free state and the action of the frozen reference-elastic operator in the
+same canonical ordering. Same-mesh endpoint differences are therefore measured
+in the declared Riesz norm; coefficient-space differences remain secondary
+diagnostics and cannot replace that weighted comparison.
 
 The publication sequence is deliberately non-overwriting:
 
