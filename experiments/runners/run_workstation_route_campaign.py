@@ -55,6 +55,16 @@ MANIFEST_NAME = "workstation_manifest.json"
 PROCESS_RECORD_NAME = "process_record.json"
 COMMIT_RE = re.compile(r"[0-9a-fA-F]{40,64}")
 RUN_ID_RE = re.compile(r"[A-Za-z0-9][A-Za-z0-9_.-]{0,127}")
+REQUIRED_WORKSTATION_ENVIRONMENT = {
+    "JAX_PLATFORMS": "cpu",
+    "JAX_ENABLE_X64": "True",
+    "OMP_NUM_THREADS": "1",
+    "OPENBLAS_NUM_THREADS": "1",
+    "MKL_NUM_THREADS": "1",
+    "NUMEXPR_NUM_THREADS": "1",
+    "XLA_PYTHON_CLIENT_PREALLOCATE": "false",
+    "XLA_FLAGS": "--xla_cpu_multi_thread_eigen=false",
+}
 
 
 class WorkstationCampaignError(RuntimeError):
@@ -260,7 +270,30 @@ def _package_versions() -> dict[str, str]:
     return versions
 
 
+def _require_workstation_environment() -> dict[str, str]:
+    actual = {
+        name: os.environ.get(name, "")
+        for name in REQUIRED_WORKSTATION_ENVIRONMENT
+    }
+    mismatches = {
+        name: {"expected": expected, "actual": actual[name]}
+        for name, expected in REQUIRED_WORKSTATION_ENVIRONMENT.items()
+        if actual[name] != expected
+    }
+    if mismatches:
+        details = ", ".join(
+            f"{name}={record['actual']!r} (expected {record['expected']!r})"
+            for name, record in sorted(mismatches.items())
+        )
+        raise WorkstationCampaignError(
+            "controlled workstation environment differs from the frozen contract: "
+            + details
+        )
+    return actual
+
+
 def _capture_environment(python_path: Path) -> dict[str, object]:
+    controlled_environment = _require_workstation_environment()
     return {
         "captured_at_utc": _utc_now(),
         "hostname": socket.gethostname(),
@@ -277,15 +310,9 @@ def _capture_environment(python_path: Path) -> dict[str, object]:
             if hasattr(os, "sched_getaffinity")
             else []
         ),
-        "thread_environment": {
-            name: os.environ.get(name, "")
-            for name in (
-                "JAX_PLATFORMS",
-                "OMP_NUM_THREADS",
-                "OPENBLAS_NUM_THREADS",
-                "MKL_NUM_THREADS",
-                "XLA_FLAGS",
-            )
+        "controlled_environment": {
+            "status": "passed",
+            "values": controlled_environment,
         },
     }
 
@@ -368,6 +395,7 @@ def _preflight(
         raise WorkstationCampaignError(
             "publication workstation campaign requires a clean worktree" + suffix
         )
+    _require_workstation_environment()
     expected_commit = str(args.expected_commit or "").strip()
     if expected_commit and COMMIT_RE.fullmatch(expected_commit) is None:
         raise WorkstationCampaignError("--expected-commit must be a full 40--64 digit hash")

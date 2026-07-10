@@ -531,6 +531,61 @@ def test_route_master_archive_remains_valid_after_relocation(tmp_path: Path) -> 
     assert gate["reason"] == "reviewed_submitted_tranche_master_manifest"
 
 
+def test_workstation_provenance_requires_exact_controlled_environment(
+    tmp_path: Path,
+) -> None:
+    contract = _contract()
+    plan_source = REPO_ROOT / "paper/protocols/EXP-ROUTE-001-workstation-plan.json"
+    plan_path = tmp_path / "workstation_plan.json"
+    plan_path.write_bytes(plan_source.read_bytes())
+    environment_path = tmp_path / "environment.json"
+    environment = {
+        "controlled_environment": {
+            "status": "passed",
+            "values": dict(analysis.WORKSTATION_ENVIRONMENT_CONTRACT),
+        }
+    }
+    environment_path.write_text(json.dumps(environment) + "\n", encoding="utf-8")
+    manifest_path = tmp_path / "workstation_manifest.json"
+    manifest = {
+        "schema_id": "fenics-nonlinear-energies.exp-route-001-workstation-manifest",
+        "schema_version": 1,
+        "status": "completed",
+        "hardware_id": "workstation_local",
+        "case_count": 12,
+        "route_process_executions": 36,
+        "matrix_sha256": contract["publication_model_input_gates"][
+            "karolina_matrix_sha256"
+        ],
+        "plan_path": plan_path.name,
+        "plan_sha256": analysis._sha256_file(plan_path),
+        "environment_path": environment_path.name,
+        "environment_sha256": analysis._sha256_file(environment_path),
+        "source_commit": "0123456789abcdef0123456789abcdef01234567",
+        "source_dirty": False,
+        "run_id": "controlled-environment-test",
+    }
+    manifest_path.write_text(json.dumps(manifest) + "\n", encoding="utf-8")
+
+    admitted = analysis._source_provenance_gate(
+        "workstation_local", tmp_path, contract
+    )
+    assert admitted["eligible"] is True
+
+    environment["controlled_environment"]["values"]["OMP_NUM_THREADS"] = "2"
+    environment_path.write_text(json.dumps(environment) + "\n", encoding="utf-8")
+    manifest["environment_sha256"] = analysis._sha256_file(environment_path)
+    manifest_path.write_text(json.dumps(manifest) + "\n", encoding="utf-8")
+    rejected = analysis._source_provenance_gate(
+        "workstation_local", tmp_path, contract
+    )
+    assert rejected == {
+        "eligible": False,
+        "reason": "workstation_environment_contract_mismatch",
+        "manifest_path": str(manifest_path),
+    }
+
+
 def test_selector_endpoint_gate_is_hash_bound_and_semantically_deep(tmp_path: Path) -> None:
     contract = _contract()
     root = tmp_path / "karolina"

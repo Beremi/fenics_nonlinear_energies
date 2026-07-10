@@ -15,6 +15,14 @@ COMMIT = "0123456789abcdef0123456789abcdef01234567"
 TREE = "89abcdef0123456789abcdef0123456789abcdef"
 
 
+@pytest.fixture(autouse=True)
+def _controlled_workstation_environment(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    for name, value in campaign.REQUIRED_WORKSTATION_ENVIRONMENT.items():
+        monkeypatch.setenv(name, value)
+
+
 def _git(*, dirty: bool = False) -> dict[str, object]:
     return {
         "commit": COMMIT,
@@ -116,6 +124,12 @@ def test_python_launcher_preserves_virtual_environment_symlink() -> None:
             False,
             "requires --expected-commit",
         ),
+        (
+            {"execute": True},
+            {"WORKSTATION_RUN_CONFIRMED": "YES", "OMP_NUM_THREADS": "2"},
+            False,
+            "controlled workstation environment differs",
+        ),
     ],
 )
 def test_publication_preflight_fails_before_output_mutation(
@@ -136,6 +150,23 @@ def test_publication_preflight_fails_before_output_mutation(
         campaign.prepare_or_execute(_args(root, **overrides))
 
     assert not root.exists()
+
+
+def test_environment_capture_records_the_exact_frozen_contract(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    captured = campaign._capture_environment(Path(sys.executable))
+    assert captured["controlled_environment"] == {
+        "status": "passed",
+        "values": campaign.REQUIRED_WORKSTATION_ENVIRONMENT,
+    }
+
+    monkeypatch.delenv("XLA_PYTHON_CLIENT_PREALLOCATE")
+    with pytest.raises(
+        campaign.WorkstationCampaignError,
+        match="XLA_PYTHON_CLIENT_PREALLOCATE",
+    ):
+        campaign._capture_environment(Path(sys.executable))
 
 
 def test_prepare_requires_fresh_root_and_freezes_commands_hashes_and_environment(

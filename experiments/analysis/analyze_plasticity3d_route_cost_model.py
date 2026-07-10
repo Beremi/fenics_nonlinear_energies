@@ -42,6 +42,16 @@ DEFAULT_CONTRACT = (
 REVIEWED_MATRIX = (
     REPO_ROOT / "experiments/runners/paper_revision_karolina/campaign_matrix.csv"
 )
+WORKSTATION_ENVIRONMENT_CONTRACT = {
+    "JAX_PLATFORMS": "cpu",
+    "JAX_ENABLE_X64": "True",
+    "OMP_NUM_THREADS": "1",
+    "OPENBLAS_NUM_THREADS": "1",
+    "MKL_NUM_THREADS": "1",
+    "NUMEXPR_NUM_THREADS": "1",
+    "XLA_PYTHON_CLIENT_PREALLOCATE": "false",
+    "XLA_FLAGS": "--xla_cpu_multi_thread_eigen=false",
+}
 
 
 def _reject_nonfinite(token: str) -> None:
@@ -735,6 +745,23 @@ def _source_provenance_gate(
             return {
                 "eligible": False,
                 "reason": "workstation_manifest_archived_evidence_mismatch",
+                "manifest_path": str(manifest_path),
+            }
+        try:
+            environment = _read_json(environment_path)
+        except (OSError, ValueError, json.JSONDecodeError) as exc:
+            return {
+                "eligible": False,
+                "reason": f"workstation_environment_invalid: {exc}",
+                "manifest_path": str(manifest_path),
+            }
+        if environment.get("controlled_environment") != {
+            "status": "passed",
+            "values": WORKSTATION_ENVIRONMENT_CONTRACT,
+        }:
+            return {
+                "eligible": False,
+                "reason": "workstation_environment_contract_mismatch",
                 "manifest_path": str(manifest_path),
             }
         source_commit = str(manifest.get("source_commit", ""))
