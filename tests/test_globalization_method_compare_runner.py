@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import csv
 import importlib.util
+import json
 import sys
 from pathlib import Path
 
@@ -10,6 +11,11 @@ import pytest
 
 from experiments.runners import generate_scalar_uniform_l10_meshes as scalar_meshes
 from experiments.runners import run_globalization_method_compare as campaign
+from experiments.runners import run_trust_region_case as case_runner
+
+
+def _reject_nonfinite(token: str) -> None:
+    raise ValueError(f"non-standard JSON constant: {token}")
 
 
 def test_full_case_matrix_matches_requested_campaign_shape(tmp_path: Path):
@@ -31,6 +37,48 @@ def test_full_case_matrix_matches_requested_campaign_shape(tmp_path: Path):
         "steihaug_trust",
         "hybrid_trust_linesearch",
     }
+
+
+def test_case_runner_serializes_optional_nonfinite_diagnostics_as_null(tmp_path: Path):
+    path = tmp_path / "case.json"
+    case_runner._write_payload(
+        str(path),
+        {"result": {"history": [{"trust_ratio": float("nan"), "value": 1.0}]}},
+    )
+
+    payload = json.loads(path.read_text(encoding="utf-8"), parse_constant=_reject_nonfinite)
+    assert payload["result"]["history"][0]["trust_ratio"] is None
+
+
+def test_controlled_matrix_excludes_unfrozen_plasticity_and_holds_ksp_fixed(
+    tmp_path: Path,
+):
+    cases = campaign.build_case_matrix("full", "controlled")
+
+    assert len(cases) == 6
+    assert {case.benchmark.problem for case in cases} == {"plaplace", "gl", "he"}
+    assert {case.method.key for case in cases} == {
+        "newton_armijo",
+        "reduced_trust_armijo",
+    }
+    assert {case.comparison_tier for case in cases} == {"controlled"}
+
+    for problem in ("plaplace", "gl", "he"):
+        problem_cases = [case for case in cases if case.benchmark.problem == problem]
+        commands = [
+            campaign.build_command(case, tmp_path / f"{case.key}.json")
+            for case in problem_cases
+        ]
+        ksp_types = {
+            command[command.index("--ksp-type") + 1] for command in commands
+        }
+        assert ksp_types == {problem_cases[0].benchmark.line_ksp_type}
+        assert all(command[command.index("--line-search") + 1] == "armijo" for command in commands)
+
+    trust_case = next(case for case in cases if case.method.key == "reduced_trust_armijo")
+    trust_command = campaign.build_command(trust_case, tmp_path / "trust.json")
+    assert "--use-trust-region" in trust_command
+    assert "--no-trust-subproblem-line-search" in trust_command
 
 
 def test_full_mode_reports_generated_l10_mesh_prerequisite(tmp_path: Path, monkeypatch):

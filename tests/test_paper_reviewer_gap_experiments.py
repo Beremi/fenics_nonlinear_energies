@@ -5,13 +5,155 @@ import json
 from pathlib import Path
 
 import numpy as np
+import pytest
 
 from experiments.runners import run_paper_reviewer_gap_experiments as campaign
+
+
+RUN_UUID = "12345678-1234-5678-9234-567812345678"
 
 
 def _write_json(path: Path, payload: object) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(payload) + "\n", encoding="utf-8")
+
+
+def test_revision_layout_is_all_or_none_and_cannot_reuse_legacy_paths(
+    monkeypatch, tmp_path: Path
+):
+    legacy_raw = tmp_path / "legacy_raw"
+    legacy_reports = tmp_path / "legacy_reports"
+    monkeypatch.setattr(campaign, "RAW_ROOT", legacy_raw)
+    monkeypatch.setattr(campaign, "REPORT_ROOT", legacy_reports)
+    case = campaign.build_case_matrix("smoke")[0]
+
+    legacy = campaign._campaign_layout()
+    revision = campaign._campaign_layout(
+        campaign_root=tmp_path / "revision_raw",
+        report_root=tmp_path / "revision_reports",
+        campaign_id="paper_revision_2026_07_10",
+        run_uuid=RUN_UUID,
+        repetition=2,
+    )
+
+    assert campaign._case_paths("smoke", case, layout=legacy)[0] == (
+        legacy_raw / "smoke" / case.section / case.key
+    )
+    revision_case_dir = campaign._case_paths("smoke", case, layout=revision)[0]
+    assert revision_case_dir == (
+        tmp_path
+        / "revision_raw"
+        / "paper_revision_2026_07_10"
+        / RUN_UUID
+        / "repetition_002"
+        / "smoke"
+        / case.section
+        / case.key
+    )
+    assert revision_case_dir != campaign._case_paths("smoke", case, layout=legacy)[0]
+    assert revision.report_run_root == (
+        tmp_path
+        / "revision_reports"
+        / "paper_revision_2026_07_10"
+        / RUN_UUID
+        / "repetition_002"
+    )
+
+    with pytest.raises(ValueError, match="all-or-none"):
+        campaign._campaign_layout(campaign_root=tmp_path / "partial")
+    with pytest.raises(ValueError, match="valid UUID"):
+        campaign._campaign_layout(
+            campaign_root=tmp_path / "raw",
+            report_root=tmp_path / "reports",
+            campaign_id="revision",
+            run_uuid="not-a-uuid",
+            repetition=1,
+        )
+    with pytest.raises(ValueError, match="positive integer"):
+        campaign._campaign_layout(
+            campaign_root=tmp_path / "raw",
+            report_root=tmp_path / "reports",
+            campaign_id="revision",
+            run_uuid=RUN_UUID,
+            repetition=0,
+        )
+
+
+def test_revision_runs_record_identity_resume_and_isolate_repetitions(monkeypatch, tmp_path: Path):
+    case = next(
+        case
+        for case in campaign.build_case_matrix("smoke")
+        if case.section == "he_distribution" and case.metadata["build_mode"] == "rank_local"
+    )
+    monkeypatch.setattr(campaign, "build_case_matrix", lambda mode: [case])
+    launched: list[list[str]] = []
+
+    def fake_run(argv, *, timeout_s, log_path):
+        launched.append(argv)
+        output_path = Path(argv[argv.index("--out") + 1])
+        _write_json(output_path, {"result": {"steps": []}})
+        log_path.parent.mkdir(parents=True, exist_ok=True)
+        log_path.write_text("test\n", encoding="utf-8")
+        return {"returncode": 0, "timed_out": False, "wall_time_s": 0.1}
+
+    monkeypatch.setattr(campaign, "_run_subprocess", fake_run)
+    layout = campaign._campaign_layout(
+        campaign_root=tmp_path / "raw",
+        report_root=tmp_path / "reports",
+        campaign_id="revision_campaign",
+        run_uuid=RUN_UUID,
+        repetition=1,
+    )
+    kwargs = {
+        "resume": True,
+        "campaign_wall_s": None,
+        "allow_oom_risk": False,
+        "layout": layout,
+    }
+
+    campaign.run_cases("smoke", {"he_distribution"}, **kwargs)
+    campaign.run_cases("smoke", {"he_distribution"}, **kwargs)
+
+    assert len(launched) == 1
+    case_dir, output_json, _log = campaign._case_paths("smoke", case, layout=layout)
+    assert output_json.exists()
+    case_metadata = json.loads((case_dir / "case_metadata.json").read_text(encoding="utf-8"))
+    run_info = json.loads((case_dir / "run_info.json").read_text(encoding="utf-8"))
+    for payload in (case_metadata, run_info):
+        assert payload["evidence_namespace"] == "revision_campaign"
+        assert payload["campaign_id"] == "revision_campaign"
+        assert payload["run_uuid"] == RUN_UUID
+        assert payload["repetition"] == 1
+        assert payload["experiment_id"] == "he_distribution"
+        assert payload["case_id"] == case.key
+        assert payload["route_id"] == "rank_local"
+
+    campaign.summarize("smoke", {"he_distribution"}, layout=layout)
+    report_path = layout.report_run_root / "smoke_he_distribution.csv"
+    with report_path.open(encoding="utf-8", newline="") as handle:
+        row = next(csv.DictReader(handle))
+    assert row["campaign_id"] == "revision_campaign"
+    assert row["run_uuid"] == RUN_UUID
+    assert row["repetition"] == "1"
+    assert row["route_id"] == "rank_local"
+
+    repetition_two = campaign._campaign_layout(
+        campaign_root=tmp_path / "raw",
+        report_root=tmp_path / "reports",
+        campaign_id="revision_campaign",
+        run_uuid=RUN_UUID,
+        repetition=2,
+    )
+    campaign.run_cases(
+        "smoke",
+        {"he_distribution"},
+        resume=True,
+        campaign_wall_s=None,
+        allow_oom_risk=False,
+        layout=repetition_two,
+    )
+    assert len(launched) == 2
+    assert campaign._case_paths("smoke", case, layout=repetition_two)[1] != output_json
 
 
 def test_case_matrices_match_requested_shapes():
@@ -76,6 +218,9 @@ def test_topology_and_gl_commands_encode_fixed_schedule_and_l10_cleanup():
     topo_cmd = campaign.build_command("full", topology)
     assert "--fixed_outer_schedule" in topo_cmd
     assert topo_cmd[topo_cmd.index("--outer_maxit") + 1] == "40"
+    assert "--volume_fraction_target" not in topo_cmd
+    assert topo_cmd[topo_cmd.index("--target-material-measure") + 1] == "0.4"
+    assert topo_cmd[topo_cmd.index("--initial-normalized-fraction") + 1] == "0.4"
     assert "--state_out" in topo_cmd
 
     gl_cases = {
@@ -207,10 +352,19 @@ def test_topology_summary_computes_rank_consistency_against_np1(monkeypatch, tmp
                 "result": "fixed_work_completed",
                 "time": 2.0,
                 "setup_time": 0.5,
+                "parameters": {
+                    "length": 2.0,
+                    "height": 1.0,
+                    "volume_semantics_version": 2,
+                    "target_normalized_fraction": 0.2,
+                    "target_material_measure": 0.4,
+                    "initial_normalized_fraction": 0.4,
+                },
                 "final_metrics": {
                     "outer_iterations": 3,
                     "final_compliance": compliance,
-                    "final_volume_fraction": 0.4,
+                    "final_volume_fraction": 0.2,
+                    "final_material_measure": 0.4,
                     "final_p_penal": 1.6,
                 },
             },
@@ -220,6 +374,10 @@ def test_topology_summary_computes_rank_consistency_against_np1(monkeypatch, tmp
     rows = campaign.summarize_topology("smoke", cases)
 
     assert rows[0]["density_rel_l2_vs_np1"] == 0.0
+    assert rows[0]["target_normalized_fraction"] == 0.2
+    assert rows[0]["target_material_measure"] == 0.4
+    assert rows[0]["final_normalized_fraction"] == 0.2
+    assert rows[0]["final_material_measure"] == 0.4
     assert np.isclose(rows[1]["compliance_rel_diff_vs_np1"], 0.04)
     assert rows[1]["density_rel_l2_vs_np1"] > 0.0
 

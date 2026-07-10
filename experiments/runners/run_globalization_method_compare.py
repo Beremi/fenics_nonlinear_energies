@@ -22,6 +22,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from src.core.benchmark.run_record import atomic_write_json
+
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 CASE_RUNNER = REPO_ROOT / "experiments/runners/run_trust_region_case.py"
@@ -66,13 +68,14 @@ class BenchmarkSpec:
 class CaseSpec:
     benchmark: BenchmarkSpec
     method: MethodSpec
+    comparison_tier: str = "production_bundle"
 
     @property
     def key(self) -> str:
         return f"{self.benchmark.key}_{self.method.key}"
 
 
-METHODS: tuple[MethodSpec, ...] = (
+PRODUCTION_BUNDLE_METHODS: tuple[MethodSpec, ...] = (
     MethodSpec(
         key="newton_linesearch",
         label="Newton + line search",
@@ -89,6 +92,32 @@ METHODS: tuple[MethodSpec, ...] = (
         args=("--use-trust-region", "--trust-subproblem-line-search", "--line-search", "armijo"),
     ),
 )
+
+# This tier holds the discrete problem, Hessian solve, KSP, preconditioner,
+# forcing tolerance, starting state, and stopping contract fixed.  The trust
+# method deliberately uses the minimizer's reduced-subspace subproblem so the
+# same non-trust KSP can be used for both rows.  Plasticity3D is excluded until
+# a branch-stable nonlinear benchmark with the same controlled solve is frozen.
+CONTROLLED_METHODS: tuple[MethodSpec, ...] = (
+    MethodSpec(
+        key="newton_armijo",
+        label="Newton + Armijo line search",
+        args=("--no-use-trust-region", "--line-search", "armijo"),
+    ),
+    MethodSpec(
+        key="reduced_trust_armijo",
+        label="Reduced-subspace trust region + Armijo",
+        args=(
+            "--use-trust-region",
+            "--no-trust-subproblem-line-search",
+            "--line-search",
+            "armijo",
+        ),
+    ),
+)
+
+# Backward-compatible public name used by older scripts.
+METHODS = PRODUCTION_BUNDLE_METHODS
 
 
 def _scalar_common(*, ksp_rtol: float, ksp_max_it: int, tolf: float, tolg: float, linesearch_tol: float) -> tuple[str, ...]:
@@ -353,6 +382,7 @@ FULL_BENCHMARKS: tuple[BenchmarkSpec, ...] = (
 
 CSV_FIELDS = (
     "mode",
+    "comparison_tier",
     "benchmark",
     "benchmark_label",
     "method",
@@ -381,9 +411,29 @@ CSV_FIELDS = (
 )
 
 
-def build_case_matrix(mode: str) -> list[CaseSpec]:
+def build_case_matrix(
+    mode: str,
+    comparison_tier: str = "production_bundle",
+) -> list[CaseSpec]:
     benchmarks = SMOKE_BENCHMARKS if mode == "smoke" else FULL_BENCHMARKS
-    return [CaseSpec(benchmark=benchmark, method=method) for benchmark in benchmarks for method in METHODS]
+    if comparison_tier == "controlled":
+        benchmarks = tuple(
+            benchmark for benchmark in benchmarks if benchmark.runner != "plasticity3d_backend_mix"
+        )
+        methods = CONTROLLED_METHODS
+    elif comparison_tier == "production_bundle":
+        methods = PRODUCTION_BUNDLE_METHODS
+    else:
+        raise ValueError(f"unknown comparison tier: {comparison_tier!r}")
+    return [
+        CaseSpec(
+            benchmark=benchmark,
+            method=method,
+            comparison_tier=comparison_tier,
+        )
+        for benchmark in benchmarks
+        for method in methods
+    ]
 
 
 def require_generated_inputs(mode: str) -> None:
@@ -421,7 +471,14 @@ def build_command(case: CaseSpec, out_path: Path) -> list[str]:
             *method.args,
         ]
 
-    ksp_type = benchmark.line_ksp_type if method.key == "newton_linesearch" else benchmark.trust_ksp_type
+    if case.comparison_tier == "controlled":
+        ksp_type = benchmark.line_ksp_type
+    else:
+        ksp_type = (
+            benchmark.line_ksp_type
+            if method.key == "newton_linesearch"
+            else benchmark.trust_ksp_type
+        )
     cmd = [
         "mpiexec",
         "-n",
@@ -523,6 +580,7 @@ def _write_fallback_payload(
             "nprocs": case.benchmark.nprocs,
             "method": case.method.key,
             "method_label": case.method.label,
+            "comparison_tier": case.comparison_tier,
             "command": command,
         },
         "result": {
@@ -533,8 +591,7 @@ def _write_fallback_payload(
             "steps": [],
         },
     }
-    out_path.parent.mkdir(parents=True, exist_ok=True)
-    out_path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+    atomic_write_json(out_path, payload, nonfinite_as_null=True)
     return payload
 
 
@@ -622,6 +679,7 @@ def summarize_payload(
 
     return {
         "mode": mode,
+        "comparison_tier": case.comparison_tier,
         "benchmark": case.benchmark.key,
         "benchmark_label": case.benchmark.label,
         "method": case.method.key,
@@ -717,7 +775,13 @@ def run_case(case: CaseSpec, *, mode: str, raw_dir: Path, timeout_s: float) -> d
     )
 
 
-def write_reports(rows: list[dict[str, Any]], *, mode: str, report_dir: Path) -> None:
+def write_reports(
+    rows: list[dict[str, Any]],
+    *,
+    mode: str,
+    comparison_tier: str,
+    report_dir: Path,
+) -> None:
     report_dir.mkdir(parents=True, exist_ok=True)
     csv_path = report_dir / f"{mode}_summary.csv"
     json_path = report_dir / f"{mode}_summary.json"
@@ -725,22 +789,30 @@ def write_reports(rows: list[dict[str, Any]], *, mode: str, report_dir: Path) ->
         writer = csv.DictWriter(f, fieldnames=CSV_FIELDS)
         writer.writeheader()
         writer.writerows(rows)
-    json_path.write_text(
-        json.dumps(
-            {
-                "mode": mode,
-                "generated_at": time.strftime("%Y-%m-%dT%H:%M:%S%z"),
-                "rows": rows,
-            },
-            indent=2,
-        ),
-        encoding="utf-8",
+    atomic_write_json(
+        json_path,
+        {
+            "mode": mode,
+            "comparison_tier": comparison_tier,
+            "generated_at": time.strftime("%Y-%m-%dT%H:%M:%S%z"),
+            "rows": rows,
+        },
+        nonfinite_as_null=True,
     )
 
 
 def _build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--mode", choices=("smoke", "full"), default="smoke")
+    parser.add_argument(
+        "--comparison-tier",
+        choices=("controlled", "production_bundle"),
+        default="production_bundle",
+        help=(
+            "controlled keeps the Hessian solve/KSP policy fixed; "
+            "production_bundle retains the existing three complete solver bundles"
+        ),
+    )
     parser.add_argument("--raw-root", type=Path, default=RAW_ROOT)
     parser.add_argument("--report-root", type=Path, default=REPORT_ROOT)
     parser.add_argument("--campaign-wall-s", type=float, default=None)
@@ -750,17 +822,27 @@ def _build_parser() -> argparse.ArgumentParser:
 
 def main() -> None:
     args = _build_parser().parse_args()
-    cases = build_case_matrix(args.mode)
+    cases = build_case_matrix(args.mode, args.comparison_tier)
+    raw_root = (
+        args.raw_root / "controlled"
+        if args.comparison_tier == "controlled"
+        else args.raw_root
+    )
+    report_root = (
+        args.report_root / "controlled"
+        if args.comparison_tier == "controlled"
+        else args.report_root
+    )
     if args.dry_run:
         for case in cases:
-            out_path = args.raw_root / args.mode / case.key / "output.json"
+            out_path = raw_root / args.mode / case.key / "output.json"
             print(shlex.join(build_command(case, out_path)))
         return
 
     require_generated_inputs(args.mode)
 
     rows: list[dict[str, Any]] = []
-    raw_dir = args.raw_root / args.mode
+    raw_dir = raw_root / args.mode
     campaign_start = time.perf_counter()
     campaign_cap = args.campaign_wall_s
 
@@ -809,8 +891,13 @@ def main() -> None:
         )
         rows.append(row)
 
-    write_reports(rows, mode=args.mode, report_dir=args.report_root)
-    print(f"Wrote {args.report_root / (args.mode + '_summary.csv')}")
+    write_reports(
+        rows,
+        mode=args.mode,
+        comparison_tier=args.comparison_tier,
+        report_dir=report_root,
+    )
+    print(f"Wrote {report_root / (args.mode + '_summary.csv')}")
 
 
 if __name__ == "__main__":

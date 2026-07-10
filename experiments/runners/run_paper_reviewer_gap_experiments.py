@@ -8,19 +8,26 @@ import csv
 import json
 import math
 import os
+import re
 import shlex
 import signal
 import subprocess
 import sys
 import time
+import uuid
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
 import numpy as np
 
-
 REPO_ROOT = Path(__file__).resolve().parents[2]
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
+
+from src.core.benchmark.run_record import atomic_write_json
+
+
 PYTHON = REPO_ROOT / ".venv" / "bin" / "python"
 TRUST_RUNNER = REPO_ROOT / "experiments/runners/run_trust_region_case.py"
 P3D_RUNNER = REPO_ROOT / "experiments/runners/run_plasticity3d_backend_mix_case.py"
@@ -28,6 +35,9 @@ TOPO_RUNNER = REPO_ROOT / "src/problems/topology/jax/solve_topopt_parallel.py"
 SCALAR_L10_GENERATOR = REPO_ROOT / "experiments/runners/generate_scalar_uniform_l10_meshes.py"
 RAW_ROOT = REPO_ROOT / "artifacts/raw_results/paper_reviewer_gap_experiments"
 REPORT_ROOT = REPO_ROOT / "artifacts/reports/paper_reviewer_gap_experiments"
+LEGACY_EVIDENCE_NAMESPACE = "historical_pilot"
+REVISION_EVIDENCE_NAMESPACE = "revision_campaign"
+_CAMPAIGN_ID_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.-]*$")
 
 SECTIONS = (
     "he_distribution",
@@ -119,7 +129,9 @@ TOPO_BASE_ARGS = (
     "1.0",
     "--load_fraction",
     "0.2",
-    "--volume_fraction_target",
+    "--target-material-measure",
+    "0.4",
+    "--initial-normalized-fraction",
     "0.4",
     "--theta_min",
     "1e-6",
@@ -194,6 +206,66 @@ class CaseSpec:
     metadata: dict[str, Any] = field(default_factory=dict)
 
 
+@dataclass(frozen=True)
+class CampaignLayout:
+    """Filesystem layout and immutable identity for one campaign repetition.
+
+    The legacy layout deliberately remains available so existing pilot commands,
+    reports, and resume paths continue to work.  A publication-revision layout is
+    activated only when every identity field is supplied; it is namespaced by the
+    campaign ID, run UUID, and repetition so it cannot reuse a historical pilot
+    row accidentally.
+    """
+
+    campaign_root: Path
+    report_root: Path
+    campaign_id: str | None = None
+    run_uuid: str | None = None
+    repetition: int | None = None
+
+    @property
+    def is_revision(self) -> bool:
+        return self.campaign_id is not None
+
+    @property
+    def evidence_namespace(self) -> str:
+        return REVISION_EVIDENCE_NAMESPACE if self.is_revision else LEGACY_EVIDENCE_NAMESPACE
+
+    @property
+    def repetition_label(self) -> str:
+        if self.repetition is None:
+            raise ValueError("Legacy pilot layouts do not have a repetition label.")
+        return f"repetition_{self.repetition:03d}"
+
+    @property
+    def raw_run_root(self) -> Path:
+        if not self.is_revision:
+            return self.campaign_root
+        assert self.campaign_id is not None
+        assert self.run_uuid is not None
+        return self.campaign_root / self.campaign_id / self.run_uuid / self.repetition_label
+
+    @property
+    def report_run_root(self) -> Path:
+        if not self.is_revision:
+            return self.report_root
+        assert self.campaign_id is not None
+        assert self.run_uuid is not None
+        return self.report_root / self.campaign_id / self.run_uuid / self.repetition_label
+
+    def metadata(self) -> dict[str, Any]:
+        return {
+            "evidence_namespace": self.evidence_namespace,
+            "campaign_id": self.campaign_id or "",
+            "run_uuid": self.run_uuid or "",
+            "repetition": self.repetition if self.repetition is not None else "",
+            "campaign_root": _repo_rel(self.campaign_root),
+            "report_root": _repo_rel(self.report_root),
+            "raw_run_root": _repo_rel(self.raw_run_root),
+            "report_run_root": _repo_rel(self.report_run_root),
+        }
+
+
 P3D_ROUTE_BACKENDS = (
     ("element_ad", "local"),
     ("colored_sfd", "local_sfd"),
@@ -251,6 +323,81 @@ def _repo_rel(path: Path) -> str:
         return str(path.resolve())
 
 
+def _campaign_layout(
+    *,
+    campaign_root: Path | None = None,
+    report_root: Path | None = None,
+    campaign_id: str | None = None,
+    run_uuid: str | None = None,
+    repetition: int | None = None,
+) -> CampaignLayout:
+    """Create a legacy or fully identified revision-campaign layout.
+
+    Partial revision identities are rejected.  Falling back field-by-field would
+    make it too easy for a publication run to reuse the historical pilot tree.
+    """
+
+    supplied = {
+        "--campaign-root": campaign_root,
+        "--report-root": report_root,
+        "--campaign-id": campaign_id,
+        "--run-uuid": run_uuid,
+        "--repetition": repetition,
+    }
+    if all(value is None for value in supplied.values()):
+        return CampaignLayout(campaign_root=RAW_ROOT, report_root=REPORT_ROOT)
+    missing = [name for name, value in supplied.items() if value is None]
+    if missing:
+        raise ValueError(
+            "Revision campaign identity is all-or-none; missing " + ", ".join(missing) + "."
+        )
+    assert campaign_root is not None
+    assert report_root is not None
+    assert campaign_id is not None
+    assert run_uuid is not None
+    assert repetition is not None
+    if not _CAMPAIGN_ID_RE.fullmatch(campaign_id):
+        raise ValueError(
+            "--campaign-id must start with an alphanumeric character and contain only "
+            "letters, digits, '.', '_', or '-'."
+        )
+    try:
+        canonical_uuid = str(uuid.UUID(run_uuid))
+    except (AttributeError, TypeError, ValueError) as exc:
+        raise ValueError("--run-uuid must be a valid UUID.") from exc
+    if repetition < 1:
+        raise ValueError("--repetition must be a one-based positive integer.")
+    return CampaignLayout(
+        campaign_root=Path(campaign_root),
+        report_root=Path(report_root),
+        campaign_id=campaign_id,
+        run_uuid=canonical_uuid,
+        repetition=repetition,
+    )
+
+
+def _effective_layout(layout: CampaignLayout | None) -> CampaignLayout:
+    return layout if layout is not None else _campaign_layout()
+
+
+def _route_id(case: CaseSpec) -> str:
+    for key in ("route", "method", "candidate", "build_mode"):
+        value = case.metadata.get(key)
+        if value not in (None, ""):
+            return str(value)
+    return case.kind
+
+
+def _case_identity(mode: str, case: CaseSpec, layout: CampaignLayout) -> dict[str, Any]:
+    return {
+        **layout.metadata(),
+        "experiment_id": case.section,
+        "case_id": case.key,
+        "route_id": _route_id(case),
+        "mode": mode,
+    }
+
+
 def _safe_float(value: Any, default: float = math.nan) -> float:
     try:
         if value in (None, ""):
@@ -270,8 +417,7 @@ def _safe_int(value: Any, default: int = 0) -> int:
 
 
 def _write_json(path: Path, payload: Any) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+    atomic_write_json(path, payload, nonfinite_as_null=True)
 
 
 def _read_json(path: Path) -> Any:
@@ -671,13 +817,24 @@ def _selected_sections(value: str) -> set[str]:
     return parts
 
 
-def _case_paths(mode: str, case: CaseSpec) -> tuple[Path, Path, Path]:
-    case_dir = RAW_ROOT / mode / case.section / case.key
+def _case_paths(
+    mode: str,
+    case: CaseSpec,
+    *,
+    layout: CampaignLayout | None = None,
+) -> tuple[Path, Path, Path]:
+    active_layout = _effective_layout(layout)
+    case_dir = active_layout.raw_run_root / mode / case.section / case.key
     return case_dir, case_dir / "output.json", case_dir / "run.log"
 
 
-def build_command(mode: str, case: CaseSpec) -> list[str]:
-    case_dir, output_json, _log_path = _case_paths(mode, case)
+def build_command(
+    mode: str,
+    case: CaseSpec,
+    *,
+    layout: CampaignLayout | None = None,
+) -> list[str]:
+    case_dir, output_json, _log_path = _case_paths(mode, case, layout=layout)
     if case.kind == "trust":
         return [
             "mpiexec",
@@ -733,6 +890,49 @@ def _ensure_l10_inputs(mode: str, selected: set[str]) -> None:
     subprocess.run([str(PYTHON), str(SCALAR_L10_GENERATOR)], cwd=REPO_ROOT, check=True, env=_base_env())
 
 
+def _write_or_validate_identity(path: Path, identity: dict[str, Any]) -> None:
+    if path.exists():
+        existing = _read_json(path)
+        if existing != identity:
+            raise RuntimeError(
+                f"Refusing to mix campaign identities in {_repo_rel(path.parent)}."
+            )
+        return
+    _write_json(path, identity)
+
+
+def _validate_existing_case_identity(
+    case_dir: Path,
+    expected: dict[str, Any],
+    *,
+    layout: CampaignLayout,
+) -> None:
+    if not layout.is_revision or not case_dir.exists():
+        return
+    metadata_path = case_dir / "case_metadata.json"
+    output_path = case_dir / "output.json"
+    if output_path.exists() and not metadata_path.exists():
+        raise RuntimeError(
+            f"Refusing to resume unidentified output {_repo_rel(output_path)}."
+        )
+    if not metadata_path.exists():
+        return
+    existing = _read_json(metadata_path)
+    mismatches = {
+        key: (existing.get(key), value)
+        for key, value in expected.items()
+        if existing.get(key) != value
+    }
+    if mismatches:
+        details = ", ".join(
+            f"{key}={actual!r} (expected {wanted!r})"
+            for key, (actual, wanted) in sorted(mismatches.items())
+        )
+        raise RuntimeError(
+            f"Refusing to reuse {_repo_rel(case_dir)} with mismatched identity: {details}."
+        )
+
+
 def run_cases(
     mode: str,
     selected: set[str],
@@ -740,23 +940,32 @@ def run_cases(
     resume: bool,
     campaign_wall_s: float | None,
     allow_oom_risk: bool,
+    layout: CampaignLayout | None = None,
 ) -> None:
+    active_layout = _effective_layout(layout)
     _ensure_l10_inputs(mode, selected)
+    if active_layout.is_revision:
+        _write_or_validate_identity(
+            active_layout.raw_run_root / "run_identity.json",
+            active_layout.metadata(),
+        )
     started = time.perf_counter()
     for case in build_case_matrix(mode):
         if case.section not in selected:
             continue
         if campaign_wall_s is not None and time.perf_counter() - started > float(campaign_wall_s):
             raise SystemExit(f"Campaign wall cap {campaign_wall_s}s reached before {case.key}.")
-        case_dir, output_json, log_path = _case_paths(mode, case)
+        case_dir, output_json, log_path = _case_paths(mode, case, layout=active_layout)
+        identity = _case_identity(mode, case, active_layout)
+        _validate_existing_case_identity(case_dir, identity, layout=active_layout)
         case_dir.mkdir(parents=True, exist_ok=True)
-        argv = build_command(mode, case)
+        argv = build_command(mode, case, layout=active_layout)
         command = _normalize_command(argv)
         (case_dir / "command.txt").write_text(command + "\n", encoding="utf-8")
         _write_json(
             case_dir / "case_metadata.json",
             {
-                "mode": mode,
+                **identity,
                 "section": case.section,
                 "key": case.key,
                 "label": case.label,
@@ -773,6 +982,7 @@ def run_cases(
             _write_json(
                 case_dir / "run_info.json",
                 {
+                    **identity,
                     "returncode": "",
                     "timed_out": False,
                     "wall_time_s": 0.0,
@@ -791,7 +1001,10 @@ def run_cases(
             output_json.unlink()
         print(f"[run] {case.key}", flush=True)
         run_info = _run_subprocess(argv, timeout_s=case.wall_cap_s, log_path=log_path)
-        _write_json(case_dir / "run_info.json", {**run_info, "command": command})
+        _write_json(
+            case_dir / "run_info.json",
+            {**identity, **run_info, "command": command},
+        )
 
 
 def _trust_payload_result(payload: dict[str, Any]) -> dict[str, Any]:
@@ -810,11 +1023,18 @@ def _sum_history_key(steps: list[dict[str, Any]], key: str) -> int:
     return int(sum(int(row.get(key, 0)) for step in steps for row in step.get("history", [])))
 
 
-def _trust_common_row(mode: str, case: CaseSpec) -> dict[str, Any]:
-    case_dir, output_json, log_path = _case_paths(mode, case)
+def _trust_common_row(
+    mode: str,
+    case: CaseSpec,
+    *,
+    layout: CampaignLayout | None = None,
+) -> dict[str, Any]:
+    active_layout = _effective_layout(layout)
+    case_dir, output_json, log_path = _case_paths(mode, case, layout=active_layout)
     metadata = _read_json(case_dir / "case_metadata.json") if (case_dir / "case_metadata.json").exists() else {}
     run_info = _read_json(case_dir / "run_info.json") if (case_dir / "run_info.json").exists() else {}
     row = {
+        **_case_identity(mode, case, active_layout),
         "mode": mode,
         "section": case.section,
         "case": case.key,
@@ -900,13 +1120,19 @@ def _he_memory_metrics(row: dict[str, Any], result: dict[str, Any]) -> None:
     )
 
 
-def summarize_he_distribution(mode: str, cases: list[CaseSpec]) -> list[dict[str, Any]]:
+def summarize_he_distribution(
+    mode: str,
+    cases: list[CaseSpec],
+    *,
+    layout: CampaignLayout | None = None,
+) -> list[dict[str, Any]]:
+    active_layout = _effective_layout(layout)
     rows = []
     for case in cases:
         if case.section != "he_distribution":
             continue
-        row = _trust_common_row(mode, case)
-        output_json = _case_paths(mode, case)[1]
+        row = _trust_common_row(mode, case, layout=active_layout)
+        output_json = _case_paths(mode, case, layout=active_layout)[1]
         if output_json.exists():
             result = _trust_payload_result(_read_json(output_json))
             _he_memory_metrics(row, result)
@@ -914,13 +1140,19 @@ def summarize_he_distribution(mode: str, cases: list[CaseSpec]) -> list[dict[str
     return rows
 
 
-def summarize_he_pmg(mode: str, cases: list[CaseSpec]) -> list[dict[str, Any]]:
+def summarize_he_pmg(
+    mode: str,
+    cases: list[CaseSpec],
+    *,
+    layout: CampaignLayout | None = None,
+) -> list[dict[str, Any]]:
+    active_layout = _effective_layout(layout)
     rows = []
     for case in cases:
         if case.section != "he_pmg":
             continue
-        row = _trust_common_row(mode, case)
-        output_json = _case_paths(mode, case)[1]
+        row = _trust_common_row(mode, case, layout=active_layout)
+        output_json = _case_paths(mode, case, layout=active_layout)[1]
         if output_json.exists():
             result = _trust_payload_result(_read_json(output_json))
             steps = [dict(step) for step in result.get("steps", [])]
@@ -943,7 +1175,13 @@ def summarize_he_pmg(mode: str, cases: list[CaseSpec]) -> list[dict[str, Any]]:
     return rows
 
 
-def summarize_gl_globalization(mode: str, cases: list[CaseSpec]) -> list[dict[str, Any]]:
+def summarize_gl_globalization(
+    mode: str,
+    cases: list[CaseSpec],
+    *,
+    layout: CampaignLayout | None = None,
+) -> list[dict[str, Any]]:
+    active_layout = _effective_layout(layout)
     rows = []
     labels = {
         "newton_linesearch": "Newton + LS",
@@ -953,7 +1191,7 @@ def summarize_gl_globalization(mode: str, cases: list[CaseSpec]) -> list[dict[st
     for case in cases:
         if case.section != "gl_globalization":
             continue
-        row = _trust_common_row(mode, case)
+        row = _trust_common_row(mode, case, layout=active_layout)
         method = str(case.metadata.get("method", ""))
         row["method"] = method
         row["method_label"] = labels.get(method, method)
@@ -962,16 +1200,23 @@ def summarize_gl_globalization(mode: str, cases: list[CaseSpec]) -> list[dict[st
     return rows
 
 
-def summarize_topology(mode: str, cases: list[CaseSpec]) -> list[dict[str, Any]]:
+def summarize_topology(
+    mode: str,
+    cases: list[CaseSpec],
+    *,
+    layout: CampaignLayout | None = None,
+) -> list[dict[str, Any]]:
+    active_layout = _effective_layout(layout)
     rows = []
     base_theta = None
     base_compliance = None
     for case in cases:
         if case.section != "topology_consistency":
             continue
-        case_dir, output_json, log_path = _case_paths(mode, case)
+        case_dir, output_json, log_path = _case_paths(mode, case, layout=active_layout)
         run_info = _read_json(case_dir / "run_info.json") if (case_dir / "run_info.json").exists() else {}
         row = {
+            **_case_identity(mode, case, active_layout),
             "mode": mode,
             "case": case.key,
             "label": case.label,
@@ -993,6 +1238,18 @@ def summarize_topology(mode: str, cases: list[CaseSpec]) -> list[dict[str, Any]]
         if output_json.exists():
             payload = _read_json(output_json)
             final = dict(payload.get("final_metrics", {}))
+            params = dict(payload.get("parameters", {}))
+            domain_area = float(params.get("length", 1.0)) * float(params.get("height", 1.0))
+            volume_version = int(params.get("volume_semantics_version", 1))
+            if volume_version >= 2:
+                final_normalized_fraction = _safe_float(final.get("final_volume_fraction"))
+                final_material_measure = _safe_float(
+                    final.get("final_material_measure"),
+                    final_normalized_fraction * domain_area,
+                )
+            else:
+                final_material_measure = _safe_float(final.get("final_volume_fraction"))
+                final_normalized_fraction = final_material_measure / domain_area
             row.update(
                 {
                     "result": payload.get("result", ""),
@@ -1002,6 +1259,13 @@ def summarize_topology(mode: str, cases: list[CaseSpec]) -> list[dict[str, Any]]
                     "outer_iterations": final.get("outer_iterations", ""),
                     "final_compliance": final.get("final_compliance", ""),
                     "final_volume_fraction": final.get("final_volume_fraction", ""),
+                    "volume_semantics_version": volume_version,
+                    "domain_area": domain_area,
+                    "target_normalized_fraction": params.get("target_normalized_fraction", ""),
+                    "target_material_measure": params.get("target_material_measure", ""),
+                    "initial_normalized_fraction": params.get("initial_normalized_fraction", ""),
+                    "final_normalized_fraction": final_normalized_fraction,
+                    "final_material_measure": final_material_measure,
                     "final_p": final.get("final_p_penal", ""),
                 }
             )
@@ -1025,15 +1289,22 @@ def summarize_topology(mode: str, cases: list[CaseSpec]) -> list[dict[str, Any]]
     return rows
 
 
-def summarize_p3d(mode: str, cases: list[CaseSpec]) -> list[dict[str, Any]]:
+def summarize_p3d(
+    mode: str,
+    cases: list[CaseSpec],
+    *,
+    layout: CampaignLayout | None = None,
+) -> list[dict[str, Any]]:
+    active_layout = _effective_layout(layout)
     rows = []
     for case in cases:
         if case.section != "p3d_derivative_degree":
             continue
-        case_dir, output_json, log_path = _case_paths(mode, case)
+        case_dir, output_json, log_path = _case_paths(mode, case, layout=active_layout)
         run_info = _read_json(case_dir / "run_info.json") if (case_dir / "run_info.json").exists() else {}
         degree = int(case.metadata.get("degree", 0))
         row = {
+            **_case_identity(mode, case, active_layout),
             "mode": mode,
             "case": case.key,
             "discretization": case.metadata.get("discretization", f"P{degree}"),
@@ -1095,18 +1366,33 @@ def summarize_p3d(mode: str, cases: list[CaseSpec]) -> list[dict[str, Any]]:
     return rows
 
 
-def summarize(mode: str, selected: set[str]) -> dict[str, list[dict[str, Any]]]:
+def summarize(
+    mode: str,
+    selected: set[str],
+    *,
+    layout: CampaignLayout | None = None,
+) -> dict[str, list[dict[str, Any]]]:
+    active_layout = _effective_layout(layout)
     cases = [case for case in build_case_matrix(mode) if case.section in selected]
     by_section = {
-        "he_distribution": summarize_he_distribution(mode, cases),
-        "he_pmg": summarize_he_pmg(mode, cases),
-        "topology_consistency": summarize_topology(mode, cases),
-        "gl_globalization": summarize_gl_globalization(mode, cases),
-        "p3d_derivative_degree": summarize_p3d(mode, cases),
+        "he_distribution": summarize_he_distribution(mode, cases, layout=active_layout),
+        "he_pmg": summarize_he_pmg(mode, cases, layout=active_layout),
+        "topology_consistency": summarize_topology(mode, cases, layout=active_layout),
+        "gl_globalization": summarize_gl_globalization(mode, cases, layout=active_layout),
+        "p3d_derivative_degree": summarize_p3d(mode, cases, layout=active_layout),
     }
+    identity_fields = [
+        "evidence_namespace",
+        "campaign_id",
+        "run_uuid",
+        "repetition",
+        "experiment_id",
+        "case_id",
+        "route_id",
+    ]
     fields = {
         "he_distribution": [
-            "mode", "case", "label", "probe", "level", "build_mode", "nprocs", "result",
+            *identity_fields, "mode", "case", "label", "probe", "level", "build_mode", "nprocs", "result",
             "completed_steps", "newton_iters", "krylov_iters", "energy", "setup_time_s",
             "solve_time_s", "total_time_s", "ru_maxrss_mib_max", "ru_maxrss_mib_total",
             "tracked_total_gib_max", "tracked_total_gib_total", "local_elements_max",
@@ -1114,26 +1400,28 @@ def summarize(mode: str, selected: set[str]) -> dict[str, list[dict[str, Any]]]:
             "problem_build_mode", "mesh_source", "assembly_backend", "json_path", "log_path",
         ],
         "he_pmg": [
-            "mode", "case", "label", "candidate", "level", "nprocs", "result",
+            *identity_fields, "mode", "case", "label", "candidate", "level", "nprocs", "result",
             "newton_iters", "krylov_iters", "energy", "setup_time_s", "solve_time_s",
             "total_time_s", "assemble_time_s", "pc_setup_time_s", "linear_solve_time_s",
             "linear_total_time_s", "pc_type", "pmg_coarsest_level", "coarse_pc",
             "coarse_redundant_number", "coarse_factor_solver", "json_path", "log_path",
         ],
         "topology_consistency": [
-            "mode", "case", "label", "nprocs", "nx", "ny", "outer_maxit", "result",
+            *identity_fields, "mode", "case", "label", "nprocs", "nx", "ny", "outer_maxit", "result",
             "outer_iterations", "wall_time_s", "solve_time_s", "setup_time_s",
-            "final_compliance", "final_volume_fraction", "final_p",
+            "final_compliance", "volume_semantics_version", "domain_area",
+            "target_normalized_fraction", "target_material_measure", "initial_normalized_fraction",
+            "final_volume_fraction", "final_normalized_fraction", "final_material_measure", "final_p",
             "compliance_rel_diff_vs_np1", "density_rel_l2_vs_np1", "json_path", "log_path",
         ],
         "gl_globalization": [
-            "mode", "case", "method", "method_label", "level", "nprocs", "result",
+            *identity_fields, "mode", "case", "method", "method_label", "level", "nprocs", "result",
             "completed_steps", "newton_iters", "krylov_iters", "line_search_evals",
             "trust_rejects", "setup_time_s", "solve_time_s", "total_time_s", "energy",
             "message", "json_path", "log_path",
         ],
         "p3d_derivative_degree": [
-            "mode", "case", "discretization", "mesh_case", "mesh_name", "degree",
+            *identity_fields, "mode", "case", "discretization", "mesh_case", "mesh_name", "degree",
             "route", "assembly_backend", "pmg_strategy", "nprocs", "free_dofs",
             "local_element_dofs", "local_elements", "local_overlap_dofs", "result",
             "newton_iters", "krylov_iters", "solve_time_s", "total_time_s",
@@ -1142,27 +1430,79 @@ def summarize(mode: str, selected: set[str]) -> dict[str, list[dict[str, Any]]]:
             "finite_metrics", "skip_reason", "json_path", "log_path",
         ],
     }
+    if active_layout.is_revision:
+        _write_or_validate_identity(
+            active_layout.report_run_root / "run_identity.json",
+            active_layout.metadata(),
+        )
     for section, rows in by_section.items():
         if section not in selected:
             continue
-        _write_csv(REPORT_ROOT / f"{mode}_{section}.csv", rows, fields[section])
-    _write_json(REPORT_ROOT / f"{mode}_summary.json", by_section)
+        _write_csv(active_layout.report_run_root / f"{mode}_{section}.csv", rows, fields[section])
+    _write_json(active_layout.report_run_root / f"{mode}_summary.json", by_section)
     return by_section
 
 
-def main() -> None:
+def _build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--mode", choices=("smoke", "full", "summarize"), required=True)
     parser.add_argument("--sections", default="all")
     parser.add_argument("--resume", action=argparse.BooleanOptionalAction, default=True)
     parser.add_argument("--campaign-wall-s", type=float, default=None)
     parser.add_argument(
+        "--campaign-root",
+        type=Path,
+        default=None,
+        help=(
+            "Raw root for an identified revision campaign. Requires --report-root, "
+            "--campaign-id, --run-uuid, and --repetition. If omitted with those flags, "
+            "the historical pilot paths remain unchanged."
+        ),
+    )
+    parser.add_argument(
+        "--report-root",
+        type=Path,
+        default=None,
+        help="Report root for an identified revision campaign.",
+    )
+    parser.add_argument(
+        "--campaign-id",
+        default=None,
+        help="Stable publication-revision campaign identifier.",
+    )
+    parser.add_argument(
+        "--run-uuid",
+        default=None,
+        help="UUID shared by the cases in this invocation/repetition.",
+    )
+    parser.add_argument(
+        "--repetition",
+        type=int,
+        default=None,
+        help="One-based independent repetition index.",
+    )
+    parser.add_argument(
         "--allow-oom-risk",
         action="store_true",
         help="Run rows that are known to exceed the local workstation memory budget.",
     )
+    return parser
+
+
+def main() -> None:
+    parser = _build_parser()
     args = parser.parse_args()
 
+    try:
+        layout = _campaign_layout(
+            campaign_root=args.campaign_root,
+            report_root=args.report_root,
+            campaign_id=args.campaign_id,
+            run_uuid=args.run_uuid,
+            repetition=args.repetition,
+        )
+    except ValueError as exc:
+        parser.error(str(exc))
     selected = _selected_sections(str(args.sections))
     run_mode = "full" if args.mode == "summarize" else str(args.mode)
     if args.mode != "summarize":
@@ -1172,9 +1512,10 @@ def main() -> None:
             resume=bool(args.resume),
             campaign_wall_s=args.campaign_wall_s,
             allow_oom_risk=bool(args.allow_oom_risk),
+            layout=layout,
         )
-    summarize(run_mode, selected)
-    print(f"Reports written under {_repo_rel(REPORT_ROOT)}", flush=True)
+    summarize(run_mode, selected, layout=layout)
+    print(f"Reports written under {_repo_rel(layout.report_run_root)}", flush=True)
 
 
 if __name__ == "__main__":
