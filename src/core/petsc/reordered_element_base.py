@@ -819,6 +819,7 @@ class ReorderedElementAssemblerBase:
         assembly_backend="coo",
         petsc_log_events=False,
         memory_guard_total_gib=None,
+        sfd_hvp_batch_size=None,
     ):
         self.comm = comm
         self.rank = comm.Get_rank()
@@ -838,6 +839,11 @@ class ReorderedElementAssemblerBase:
             None
             if memory_guard_total_gib is None
             else float(memory_guard_total_gib)
+        )
+        self.sfd_hvp_batch_size_requested = (
+            None
+            if sfd_hvp_batch_size is None
+            else max(1, int(sfd_hvp_batch_size))
         )
         self._petsc_event_cache: dict[str, PETSc.LogEvent] = {}
         self.distribution_strategy = str(
@@ -1424,22 +1430,6 @@ class ReorderedElementAssemblerBase:
         self._sfd_J_dofs = J_arr
         self._sfd_J_to_idx = J_to_idx
 
-        # SFD on high-order vector problems can require very large
-        # `(n_colors, n_local_overlap)` indicator and HVP work arrays.
-        # Guard before materializing them so benchmarks fail cleanly.
-        indicator_shape_bytes = (
-            float(self._sfd_n_colors)
-            * float(len(local_reord))
-            * float(np.dtype(np.float64).itemsize)
-        )
-        indicator_gib = indicator_shape_bytes / float(1024**3)
-        # Lower-bound estimate:
-        # 1x individual indicator storage + 1x stacked indicator array + 1x HVP output.
-        self._check_memory_guard(
-            extra_local_gib=3.0 * float(indicator_gib),
-            reason=f"SFD local setup ({self.local_hessian_mode})",
-        )
-
         reord_to_local = np.full(self.layout.n_free, -1, dtype=np.int64)
         free_mask = local_reord >= 0
         reord_to_local[local_reord[free_mask]] = np.nonzero(free_mask)[0]
@@ -1450,28 +1440,83 @@ class ReorderedElementAssemblerBase:
         owned_col_J_idx = J_to_idx[self.layout.owned_cols]
         if np.any(owned_col_J_idx < 0):
             raise RuntimeError("Owned reordered columns are missing from the local SFD set")
-        owned_col_colors = self._sfd_local_coloring[owned_col_J_idx]
-
-        self._sfd_color_nz = {}
-        for c in range(self._sfd_n_colors):
-            mask_c = owned_col_colors == c
-            positions = np.where(mask_c)[0].astype(np.int64)
-            local_rows = owned_local_rows[positions].astype(np.int64)
-            self._sfd_color_nz[c] = (positions, local_rows)
-
-        indicators_local = []
-        for c in range(self._sfd_n_colors):
-            indicator = np.zeros(len(local_reord), dtype=np.float64)
-            J_dofs_c = self._sfd_J_dofs[self._sfd_local_coloring == c]
-            local_idx = reord_to_local[J_dofs_c]
-            indicator[local_idx] = 1.0
-            indicators_local.append(jnp.array(indicator))
-        self._sfd_indicators_local = indicators_local
-        self._sfd_indicators_stacked = (
-            jnp.stack(indicators_local)
-            if len(indicators_local) > 0
-            else jnp.zeros((0, len(local_reord)), dtype=jnp.float64)
+        owned_col_colors = np.asarray(
+            self._sfd_local_coloring[owned_col_J_idx], dtype=np.int32
         )
+
+        self._sfd_hvp_batch_size = (
+            int(self._sfd_n_colors)
+            if self.sfd_hvp_batch_size_requested is None
+            else min(
+                int(self.sfd_hvp_batch_size_requested),
+                max(1, int(self._sfd_n_colors)),
+            )
+        )
+        if self._sfd_n_colors == 0:
+            self._sfd_hvp_batch_size = 0
+
+        entry_count = int(owned_col_colors.size)
+        entry_index_dtype = (
+            np.int32
+            if entry_count <= int(np.iinfo(np.int32).max)
+            else np.int64
+        )
+        local_index_dtype = (
+            np.int32
+            if len(local_reord) <= int(np.iinfo(np.int32).max)
+            else np.int64
+        )
+        batch_shape_bytes = (
+            float(max(0, self._sfd_hvp_batch_size))
+            * float(len(local_reord))
+            * float(np.dtype(np.float64).itemsize)
+        )
+        # One int64 argsort result, the two compact color-major arrays, and
+        # input/output JAX batches. This deliberately overestimates the arrays
+        # that coexist after the sort result is released.
+        recovery_plan_bytes = (
+            float(entry_count) * float(np.dtype(np.int64).itemsize)
+            + float(entry_count) * float(np.dtype(entry_index_dtype).itemsize)
+            + float(entry_count) * float(np.dtype(local_index_dtype).itemsize)
+        )
+        self._check_memory_guard(
+            extra_local_gib=float(recovery_plan_bytes + 2.0 * batch_shape_bytes)
+            / float(1024**3),
+            reason=f"SFD color-major recovery plan ({self.local_hessian_mode})",
+        )
+
+        entry_counts = np.bincount(
+            owned_col_colors,
+            minlength=int(self._sfd_n_colors),
+        ).astype(np.int64, copy=False)
+        self._sfd_entry_color_offsets = np.concatenate(
+            (np.zeros(1, dtype=np.int64), np.cumsum(entry_counts, dtype=np.int64))
+        )
+        entry_order = np.argsort(owned_col_colors, kind="stable")
+        self._sfd_entry_positions_by_color = np.asarray(
+            entry_order, dtype=entry_index_dtype
+        )
+        self._sfd_entry_local_rows_by_color = np.asarray(
+            owned_local_rows[entry_order], dtype=local_index_dtype
+        )
+        del entry_order, entry_counts, owned_col_colors
+
+        seed_local_dofs = np.asarray(
+            reord_to_local[self._sfd_J_dofs], dtype=local_index_dtype
+        )
+        seed_order = np.argsort(self._sfd_local_coloring, kind="stable")
+        seed_counts = np.bincount(
+            self._sfd_local_coloring,
+            minlength=int(self._sfd_n_colors),
+        ).astype(np.int64, copy=False)
+        self._sfd_seed_color_offsets = np.concatenate(
+            (np.zeros(1, dtype=np.int64), np.cumsum(seed_counts, dtype=np.int64))
+        )
+        self._sfd_seed_local_dofs_by_color = np.asarray(
+            seed_local_dofs[seed_order], dtype=local_index_dtype
+        )
+        self._sfd_local_vector_size = int(len(local_reord))
+        del seed_order, seed_counts, seed_local_dofs
 
         def hvp_fn(v_local, tangent):
             return jax.jvp(self._local_grad_raw, (v_local,), (tangent,))[1]
@@ -1487,6 +1532,44 @@ class ReorderedElementAssemblerBase:
             return jax.vmap(lambda t: self._sfd_hvp_jit(v_local, t))(tangents)
 
         self._sfd_hvp_vmap = hvp_vmap
+
+    def _sfd_tangent_batch(
+        self,
+        *,
+        color_start: int,
+        batch_size: int,
+    ) -> tuple[np.ndarray, int]:
+        """Build one fixed-shape color seed batch and return its active rows."""
+        batch_size = int(batch_size)
+        color_start = int(color_start)
+        active = min(batch_size, max(0, int(self._sfd_n_colors) - color_start))
+        tangents = np.zeros(
+            (batch_size, int(self._sfd_local_vector_size)), dtype=np.float64
+        )
+        for batch_row in range(active):
+            color = color_start + batch_row
+            lo = int(self._sfd_seed_color_offsets[color])
+            hi = int(self._sfd_seed_color_offsets[color + 1])
+            local_dofs = self._sfd_seed_local_dofs_by_color[lo:hi]
+            tangents[batch_row, local_dofs] = 1.0
+        return tangents, int(active)
+
+    def _scatter_sfd_hvp_batch(
+        self,
+        owned_values: np.ndarray,
+        hvps: np.ndarray,
+        *,
+        color_start: int,
+        active: int,
+    ) -> None:
+        """Recover owned matrix entries from one color-major HVP batch."""
+        for batch_row in range(int(active)):
+            color = int(color_start) + batch_row
+            lo = int(self._sfd_entry_color_offsets[color])
+            hi = int(self._sfd_entry_color_offsets[color + 1])
+            positions = self._sfd_entry_positions_by_color[lo:hi]
+            local_rows = self._sfd_entry_local_rows_by_color[lo:hi]
+            owned_values[positions] = hvps[batch_row, local_rows]
 
     def _setup_distribution_exchange(self) -> None:
         if "_distributed_local_total_to_free_reord" in self.params:
@@ -1872,16 +1955,18 @@ class ReorderedElementAssemblerBase:
             return self._assemble_hessian_sfd_local_vmap(u_owned)
         return self.assemble_hessian_element(u_owned)
 
-    def _finalize_sfd_local_hessian(self, all_hvps_np, t_comm, t_build, t_total):
+    def _finalize_sfd_local_hessian(
+        self,
+        owned_vals,
+        t_comm,
+        t_build,
+        t_total,
+        *,
+        hvp_compute,
+        extraction,
+        batch_count,
+    ):
         timings = {}
-
-        t0 = time.perf_counter()
-        owned_vals = self._reset_owned_hessian_values()
-        for c in range(self._sfd_n_colors):
-            positions, local_rows = self._sfd_color_nz[c]
-            if len(positions) > 0:
-                owned_vals[positions] = all_hvps_np[c, local_rows]
-        timings["extraction"] = time.perf_counter() - t0
 
         t0 = time.perf_counter()
         with self._petsc_event("reordered:hessian_matrix_insert"):
@@ -1892,75 +1977,88 @@ class ReorderedElementAssemblerBase:
         timings["ghost_exchange"] = 0.0
         timings["build_v_local"] = float(t_build)
         timings["p2p_exchange"] = float(t_comm + t_build)
+        timings["hvp_compute"] = float(hvp_compute)
+        timings["extraction"] = float(extraction)
         timings["n_hvps"] = int(self._sfd_n_colors)
+        timings["hvp_batch_size"] = int(self._sfd_hvp_batch_size)
+        timings["hvp_batch_count"] = int(batch_count)
         timings["total"] = time.perf_counter() - t_total
         self.iter_timings.append(timings)
         self._record_hessian_iteration(timings)
         return timings
 
-    def _assemble_hessian_sfd_local(self, u_owned):
+    def _assemble_hessian_sfd_streamed(self, u_owned, *, use_vmap_hvpjit: bool):
         t_total = time.perf_counter()
 
         v_local, exchange = self._owned_to_local(
             np.asarray(u_owned, dtype=np.float64),
             zero_dirichlet=False,
         )
-
-        timings = {}
+        owned_vals = self._reset_owned_hessian_values()
+        hvp_compute = 0.0
+        extraction = 0.0
+        batch_count = 0
+        batch_size = int(self._sfd_hvp_batch_size)
         if self._sfd_n_colors > 0:
-            t0 = time.perf_counter()
-            all_hvps = self._sfd_hvp_batched_jit(
-                jnp.asarray(v_local), self._sfd_indicators_stacked
-            ).block_until_ready()
-            all_hvps_np = np.asarray(all_hvps)
-            timings["hvp_compute"] = time.perf_counter() - t0
-        else:
-            all_hvps_np = np.zeros((0, len(v_local)), dtype=np.float64)
-            timings["hvp_compute"] = 0.0
+            v_local_jax = jnp.asarray(v_local)
+            for color_start in range(0, int(self._sfd_n_colors), batch_size):
+                tangents, active = self._sfd_tangent_batch(
+                    color_start=color_start,
+                    batch_size=batch_size,
+                )
+                t0 = time.perf_counter()
+                if use_vmap_hvpjit:
+                    all_hvps = self._sfd_hvp_vmap(
+                        v_local_jax,
+                        jnp.asarray(tangents),
+                    )
+                else:
+                    all_hvps = self._sfd_hvp_batched_jit(
+                        v_local_jax,
+                        jnp.asarray(tangents),
+                    )
+                all_hvps_np = np.asarray(all_hvps.block_until_ready())
+                hvp_compute += float(time.perf_counter() - t0)
 
-        timings["assembly_mode"] = "sfd_overlap_local"
+                t0 = time.perf_counter()
+                self._scatter_sfd_hvp_batch(
+                    owned_vals,
+                    all_hvps_np,
+                    color_start=color_start,
+                    active=active,
+                )
+                extraction += float(time.perf_counter() - t0)
+                batch_count += 1
+
         finalize = self._finalize_sfd_local_hessian(
-            all_hvps_np,
+            owned_vals,
             float(exchange["allgatherv"] + exchange["ghost_exchange"]),
             float(exchange["build_v_local"]),
             t_total,
+            hvp_compute=hvp_compute,
+            extraction=extraction,
+            batch_count=batch_count,
         )
         finalize["allgatherv"] = float(exchange["allgatherv"])
         finalize["ghost_exchange"] = float(exchange["ghost_exchange"])
-        finalize.update(timings)
+        finalize["assembly_mode"] = (
+            "sfd_overlap_local_vmap_hvpjit"
+            if use_vmap_hvpjit
+            else "sfd_overlap_local"
+        )
         return finalize
+
+    def _assemble_hessian_sfd_local(self, u_owned):
+        return self._assemble_hessian_sfd_streamed(
+            u_owned,
+            use_vmap_hvpjit=False,
+        )
 
     def _assemble_hessian_sfd_local_vmap(self, u_owned):
-        t_total = time.perf_counter()
-
-        v_local, exchange = self._owned_to_local(
-            np.asarray(u_owned, dtype=np.float64),
-            zero_dirichlet=False,
+        return self._assemble_hessian_sfd_streamed(
+            u_owned,
+            use_vmap_hvpjit=True,
         )
-
-        timings = {}
-        if self._sfd_n_colors > 0:
-            t0 = time.perf_counter()
-            all_hvps = self._sfd_hvp_vmap(
-                jnp.asarray(v_local), self._sfd_indicators_stacked
-            )
-            all_hvps_np = np.asarray(all_hvps.block_until_ready())
-            timings["hvp_compute"] = time.perf_counter() - t0
-        else:
-            all_hvps_np = np.zeros((0, len(v_local)), dtype=np.float64)
-            timings["hvp_compute"] = 0.0
-
-        timings["assembly_mode"] = "sfd_overlap_local_vmap_hvpjit"
-        finalize = self._finalize_sfd_local_hessian(
-            all_hvps_np,
-            float(exchange["allgatherv"] + exchange["ghost_exchange"]),
-            float(exchange["build_v_local"]),
-            t_total,
-        )
-        finalize["allgatherv"] = float(exchange["allgatherv"])
-        finalize["ghost_exchange"] = float(exchange["ghost_exchange"])
-        finalize.update(timings)
-        return finalize
 
     def assemble_hessian_element(self, u_owned):
         if (
