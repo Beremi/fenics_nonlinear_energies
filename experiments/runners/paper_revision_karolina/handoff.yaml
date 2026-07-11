@@ -83,7 +83,7 @@ campaign:
       route_processes_launched: 0
       plan_sha256: ce3a518889516288dfa1017fea638b697770c13e56e6151193d2fd366ccec04f
   route_analysis_contract: paper/protocols/EXP-ROUTE-001-analysis-contract.json
-  route_analysis_contract_sha256: 34ecaed9b930131b142ce0c0e294ff6088c0c178396bd3bbda1274d1eecd3ff2
+  route_analysis_contract_sha256: 22e63a402cdeab9f4127f72ecf8dcbe15dabbeea4f002f34f7571e92c862d5de
   route_endpoint_analyzer: experiments/analysis/analyze_plasticity3d_route_endpoints.py
   route_cost_analyzer: experiments/analysis/analyze_plasticity3d_route_cost_model.py
   route_cost_analyzer_sha256: 1bf95d587a7181c2cc2d0772d51e997b98f84b56faa5ba59ec2f99ec95ca4766

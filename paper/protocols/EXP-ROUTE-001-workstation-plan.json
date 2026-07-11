@@ -4,7 +4,7 @@
   "experiment_id": "EXP-ROUTE-001",
   "hardware_id": "workstation_local",
   "source_matrix": "experiments/runners/paper_revision_karolina/campaign_matrix.csv",
-  "source_matrix_sha256": "0010453084157f5ccf0ba307ed26b377c4aff80ad9f095fa359270e90ad5b1a5",
+  "source_matrix_sha256": "cfc137573f1ae19b5a7916cf459526ec203b68cf14ddfe8b6df16a6ac04132b5",
   "rank_count": 1,
   "clean_commit_required": true,
   "paired_process_blocks": true,

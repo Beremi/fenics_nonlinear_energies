@@ -175,7 +175,7 @@
     ],
     "clean_git_commit_required": true,
     "workstation_manifest_required": true,
-    "workstation_plan_sha256": "ce3a518889516288dfa1017fea638b697770c13e56e6151193d2fd366ccec04f",
+    "workstation_plan_sha256": "29932cfb0f8371b5aad890229a41e920799d7e49f867483f6730e0660cacee91",
     "karolina_prepared_manifest_required": true,
     "karolina_matrix_sha256": "cfc137573f1ae19b5a7916cf459526ec203b68cf14ddfe8b6df16a6ac04132b5",
     "karolina_manifest_status_for_results": "submitted",
