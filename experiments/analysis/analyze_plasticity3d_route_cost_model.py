@@ -1187,6 +1187,15 @@ def _scan_source(
     censors: dict[tuple[str, str, str, int, str], str] = {}
     invalid: list[dict[str, str]] = []
     for path in sorted(root.rglob("*.json")):
+        # Matrix rows are execution metadata, not route measurements.  They
+        # intentionally repeat the experiment and tier identifiers and are
+        # validated below against the reviewed matrix, where they also define
+        # censored slots.  Passing them through the measurement validator here
+        # creates a spurious invalid record because their schema uses
+        # ``quadrature_rule`` rather than a measurement's
+        # ``quadrature_rule_id``.
+        if path.name == "matrix_row.json":
+            continue
         try:
             payload = _read_json(path)
         except (OSError, ValueError, json.JSONDecodeError):

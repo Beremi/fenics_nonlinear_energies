@@ -122,6 +122,62 @@ def _observed(root: Path) -> dict[tuple[str, str, str, int, str], dict[str, obje
     return observed
 
 
+def test_scan_treats_reviewed_matrix_row_as_metadata(tmp_path: Path) -> None:
+    state = np.asarray([1.0, 2.0, 3.0])
+    action = np.asarray([4.0, 5.0, 6.0])
+    for route in ("element_ad", "colored_sfd", "constitutive_ad"):
+        _write_record(tmp_path, route=route, state=state, action=action)
+
+    with analysis.REVIEWED_MATRIX.open(newline="", encoding="utf-8") as handle:
+        row = next(
+            item
+            for item in csv.DictReader(handle)
+            if item["case_id"] == "route_block_p1l1_elastic_np1_b01"
+        )
+    (tmp_path / "matrix_row.json").write_text(
+        json.dumps(row) + "\n", encoding="utf-8"
+    )
+
+    observed, censors, invalid = analysis._scan_source(
+        "workstation_local", tmp_path, contract=_contract()
+    )
+    assert len(observed) == 3
+    assert not censors
+    assert not invalid
+
+
+def test_scan_still_rejects_out_of_contract_matrix_metadata(tmp_path: Path) -> None:
+    state = np.asarray([1.0, 2.0, 3.0])
+    action = np.asarray([4.0, 5.0, 6.0])
+    for route in ("element_ad", "colored_sfd", "constitutive_ad"):
+        _write_record(tmp_path, route=route, state=state, action=action)
+
+    with analysis.REVIEWED_MATRIX.open(newline="", encoding="utf-8") as handle:
+        row = next(
+            item
+            for item in csv.DictReader(handle)
+            if item["case_id"] == "route_block_p1l1_elastic_np1_b01"
+        )
+    row["quadrature_rule"] = "tetra_out_of_contract"
+    matrix_path = tmp_path / "matrix_row.json"
+    matrix_path.write_text(json.dumps(row) + "\n", encoding="utf-8")
+
+    observed, censors, invalid = analysis._scan_source(
+        "workstation_local", tmp_path, contract=_contract()
+    )
+    assert len(observed) == 3
+    assert not censors
+    assert invalid == [
+        {
+            "path": str(matrix_path),
+            "reason": (
+                "record has out-of-contract configuration "
+                "('hetero_ssr_L1', 1, 'tetra_out_of_contract')"
+            ),
+        }
+    ]
+
+
 def test_contract_freezes_split_features_and_terminal_gates() -> None:
     contract = _contract()
     model = contract["cost_model"]
