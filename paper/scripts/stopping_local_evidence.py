@@ -1217,7 +1217,6 @@ def _extract_he_reference(row: Mapping[str, object], *, repo_root: Path, evidenc
         "riesz_reason": reason,
         "relative_true_residual": true_residual,
         "true_residual_rtol_gate": true_gate,
-        "riesz_ksp_norm_type": solver_contract["norm_type"],
         "riesz_solver_contract": solver_contract,
         "certified_spd": certified,
     }
@@ -1273,7 +1272,6 @@ def _extract_he_nonlinear(row: Mapping[str, object], *, repo_root: Path, evidenc
         "state_scale": _finite(convergence.get("state_scale"), label="HE nonlinear state scale", nonnegative=True),
         "relative_true_residual": true_residual,
         "true_residual_rtol_gate": true_gate,
-        "riesz_ksp_norm_type": solver_contract["norm_type"],
         "riesz_solver_contract": solver_contract,
         "certified_spd": certified,
         "state_sha256": array_sha256(np.asarray(arrays["displacement"], dtype=np.float64)),
@@ -1394,7 +1392,6 @@ def _extract_p3d_nonlinear(row: Mapping[str, object], *, repo_root: Path, eviden
         "relative_correction": _finite(correction_row.get("value"), label="P3D nonlinear correction", nonnegative=True),
         "relative_true_residual": true_residual,
         "true_residual_rtol_gate": true_gate,
-        "riesz_ksp_norm_type": solver_contract["norm_type"],
         "riesz_solver_contract": solver_contract,
         "certified_spd": certified,
         "branch_diagnostics": dict(payload.get("branch_diagnostics", {})),

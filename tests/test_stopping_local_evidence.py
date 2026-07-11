@@ -582,6 +582,39 @@ def test_audit_recomputes_complete_local_policy_grid_and_table(tmp_path: Path) -
     assert "separately hash-bound EXP-DISC" in table
 
 
+def test_independent_endpoint_schema_matches_producer_for_all_local_rows(
+    tmp_path: Path,
+) -> None:
+    repo, root, _commit = _fixture(tmp_path)
+    plan = evidence.read_strict_json(root / evidence.PLAN_NAME)
+    producer_extractors = {
+        "ginzburg_landau": producer._gl_endpoint,
+        "hyperelasticity_reference_riesz": producer._he_endpoint,
+        "hyperelasticity_nonlinear_stopping": producer._he_nonlinear_endpoint,
+        "plasticity3d_fixed_state_linear": producer._p3d_endpoint,
+        "plasticity3d_nonlinear_stopping": producer._p3d_nonlinear_endpoint,
+    }
+    riesz_endpoint_count = 0
+    for row in plan["rows"]:
+        if row["execution_class"] != "required_local":
+            continue
+        row_id = str(row["row_id"])
+        independent = evidence.extract_endpoint(
+            row,
+            repo_root=repo,
+            evidence_root=root,
+        )
+        produced = producer_extractors[str(row["family"])](row)
+        assert independent == produced, row_id
+        if "riesz_solver_contract" in independent:
+            riesz_endpoint_count += 1
+            assert independent["riesz_solver_contract"]["norm_type"] == (
+                "unpreconditioned"
+            )
+            assert "riesz_ksp_norm_type" not in independent
+    assert riesz_endpoint_count == 22
+
+
 def test_riesz_solver_contract_rejects_inconsistent_provenance() -> None:
     row = {
         "row_id": "he_l1_nonlinear_1em08",
