@@ -9,6 +9,11 @@ supplies owned sparse algebra. Performance, crossover, and scaling claims are
 excluded until the paired distributed experiment satisfies the admission
 contract.
 
+The current clean-workstation terminal record is
+[`local_experiment_completion_report.md`](local_experiment_completion_report.md).
+It identifies the 16 completed managed commands, the completed workstation
+route calibration, and the computations that remain cluster-only.
+
 ## Writing Style
 
 Use the ignored local snapshot in `paper/style_guide/` before manuscript edits:
