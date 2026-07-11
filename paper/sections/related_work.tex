@@ -28,18 +28,20 @@ of differentiable finite elements; they do not compare the three derivative
 locations studied here under one distributed algebraic contract.
 
 Bridge architectures are particularly close. Firedrake--JAX differentiates
-PDE solves through tangent and adjoint equations \citep{yashchuk2023bringing}.
+partial differential equation solves through tangent and adjoint equations
+\citep{yashchuk2023bringing}.
 FEniCSx external operators admit general quadrature-point programs, including
 a JAX-differentiated Mohr--Coulomb model with Taylor tests
 \citep{latyshev2025externaloperators}. JetSCI combines JAX-local
 discretizations with PETSc-owned distributed solves
 \citep{cattaneo2026jetsci}. Thus neither constitutive AD nor the JAX--PETSc
 architecture is new here. Our distinction is the fixed-functional equivalence
-contract and the fail-closed comparison of element, constitutive, and colored
-routes.
+result and an evidence hierarchy for comparing element, constitutive, and
+colored routes.
 
 Recent systems narrow this distinction further. Locality-aware AD performs
-per-element forward differentiation and sparse Hessian assembly on GPUs
+per-element forward differentiation and sparse Hessian assembly on graphics
+processing units
 \citep{mahmoud2025locality}. The \code{tatva} framework applies AD to a global
 energy and uses matrix-free products or coloring to materialize sparse
 tangents \citep{pundir2026tatva}. Hill and Dalle combine automatic local or
@@ -47,7 +49,8 @@ global sparsity detection, matrix coloring, and sparse differentiation
 \citep{hill2025sparser}. These papers establish both local and global AD
 strategies. The present contribution is therefore limited to explicit
 branchwise equivalence assumptions, distributed finite-element ownership
-conditions, and a common-accuracy route-selection protocol on CPU/MPI systems.
+conditions, and a fixed-state verification hierarchy on processor-based MPI
+systems.
 
 Sparse recovery itself is classical. Curtis, Powell, and Reid introduced
 directional probing for sparse Jacobians \citep{curtis1974sparsejacobian};
@@ -56,8 +59,8 @@ coloring \citep{coleman1983sparsejacobian,coleman1984sparsehessian}. PETSc
 supplies the distributed vectors, matrices, Krylov methods, and preconditioners
 used in our implementation \citep{balay1997petsc,petsc2026manual}. We do not
 claim these algorithms as new. We use them to expose the assumptions needed to
-turn local Hessian actions into a canonical distributed matrix and to prevent
-timing comparisons from preceding derivative and endpoint agreement.
+turn local Hessian actions into a canonical distributed matrix and to separate
+finite correctness evidence from performance claims.
 
 The branch-structured benchmark is motivated by Mohr--Coulomb slope stability,
 but its evidentiary role is intentionally narrower. Incremental plasticity,

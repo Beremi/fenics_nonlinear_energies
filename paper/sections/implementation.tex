@@ -15,7 +15,7 @@ The element route evaluates a scalar $\Phi_e$ and obtains its gradient and
 Hessian by JAX transformations. The constitutive route evaluates the same
 selected quadrature density, obtains $\sigma_{eq}$ and $C_{eq}$ from
 \eqref{eq:constitutive-objects}, and contracts them according to
-\eqref{eq:branchwise-route-identity}. For the plasticity experiments, the
+\eqref{eq:branchwise-route-identity}. For the endpoint-surrogate experiments, the
 residual is also evaluated by element AD; only the tangent differentiation
 boundary changes. This choice prevents a residual-formula difference from
 being hidden inside a tangent comparison.
@@ -34,11 +34,6 @@ zero padded, so compilation shape does not depend on the color count. The
 implementation does not assume that different ranks obtain the same color
 labels. It relies instead on Proposition~\ref{prop:owned-row-colored-recovery}
 and unique PETSc row ownership.
-
-Some archived schemas retain the historical identifier
-\code{colored\_sfd} for this route. In the reported implementation, however,
-every probe is an exact AD Hessian-vector product; no finite-difference gradient
-probe is used.
 
 All three routes use binary64 arithmetic. Compilation and kernel warmup occur
 before measured repetitions. Compiled element, constitutive, and action kernels
@@ -77,9 +72,9 @@ $\omega_{r,e}=1$ if $o(e)=r$. Hence
 This identity, the affine lift, the canonical free-DOF order, and the CSR
 indices are included in the distribution-equivalence test.
 
-The production hyperelastic element path builds the structured mesh and overlap
+The distributed hyperelastic element path builds the structured mesh and overlap
 data rank locally. Its one-rank replicated construction is retained only as an
-algebraic comparator. The plasticity meshes and material data are immutable
+algebraic comparator. The endpoint-surrogate meshes and material data are immutable
 inputs; quadrature rules have stable names and are recorded in every result.
 
 \subsection{Nonlinear and linear solvers}
@@ -100,9 +95,9 @@ direction, rejected line search, trust-region rejection cap, or nonlinear
 iteration cap remains a failure. Such a row is never converted into a
 successful observation with a large time.
 
-The primary verification configurations use ordinary Krylov methods and Hypre
-or direct MUMPS factors. Multigrid policies remain available for subsequent
-scaling experiments, but no preconditioner ranking is inferred in this paper.
+The primary verification configurations use ordinary Krylov methods with
+hypre preconditioning or a sparse direct factorization. No preconditioner
+ranking is inferred in this paper.
 Reference-elastic Riesz operators are independent of the Newton tangent and
 remain fixed over the associated nonlinear trajectory.
 
@@ -113,13 +108,14 @@ For a lumped scalar mass operator, the diagonal weights are assembled on the
 exact free space and must be finite and strictly positive. For mechanics,
 $K_{\mathrm{ref}}$ is copied from the exact discrete elastic tangent at the
 declared reference state. Hyperelasticity uses the identity deformation
-$y(X)=X$ with both end faces constrained. The Plasticity3D operator uses the
+$y(X)=X$ with both end faces constrained. The branch-structured mechanics
+Riesz operator uses the
 elastic constitutive branch at zero displacement with the glued-bottom
 constraint.
 
-The constrained matrix is first checked for scale-aware symmetry. A MUMPS
-factorization then reports its numerical inertia under the stored factorization
-and scaling options; admission requires
+The constrained matrix is first checked for scale-aware symmetry. A sparse
+direct factorization then reports its numerical inertia under the stored
+factorization and scaling options; admission requires
 \begin{equation}
   (n_-,n_0,n_+)=(0,0,n_{\mathrm{free}}).
   \label{eq:riesz-inertia-gate}
@@ -131,7 +127,7 @@ re-evaluates the energy, gradient, primal state norm, dual residual, and
 correction from the final stored vector. A failed run therefore cannot inherit
 an initial or pre-step residual as its endpoint value.
 
-\subsection{Canonical records and timing}
+\subsection{Canonical records}
 \label{subsec:canonical-records}
 
 Every runner writes strict JavaScript Object Notation (JSON): nonfinite
@@ -139,33 +135,9 @@ sentinels are serialized as
 \code{null}, and the file becomes visible only after an atomic replacement.
 The schema records the experiment, case, route, repetition, MPI size, threads,
 input and code identities, solver controls, terminal status, norms, work
-counters, timing phases, and state hashes. Canonical NumPy zipped-archive (NPZ)
-states use the original global ordering and include coordinate, connectivity,
-constraint, and metric metadata.
-
-Fixed-state tangent construction is measured after one in-process warmup and
-five warm repetitions. Three-route comparisons use three independent cyclic
-blocks; the two-route high-order comparison uses four alternating blocks. The
-separate Tier-B full-solve confirmation instead uses ten independent
-cold-process paired blocks with no embedded warmup. Both series reduce elapsed
-time by the maximum over participating ranks and retain every rank-local value.
-The base route order is seeded by the first 16 hexadecimal digits of the
-SHA-256 of the comparison identifier, then cyclically rotated for three routes
-or alternated with its reverse for two. The outer wall time is the primary route
-measurement. Cumulative callback diagnostics record Hessian actions, extraction,
-insertion, and communication across compilation, warmup, and measured calls;
-they are not treated as an additive phase decomposition. Full-solve records
-additionally keep setup, preconditioner, Krylov, and total timings distinct. The
-implementation also supports
-structural censoring when a route exceeds a prespecified memory or color-count
-bound. The active route set at a comparison point excludes only censors declared
-in the frozen contract. The high-order colored slot remains visible as a
-prespecified, risk-based non-attempt without a measured threshold; it is never
-called an out-of-memory observation, imputed, or used as a model row.
-
-The reported local executions use this machinery only for correctness and
-covariate checks. Although the workstation blocks satisfy the balanced-order
-and collective-reduction contract, they do not satisfy the prespecified
-conditions for reporting timings. The second-architecture train--holdout
-experiment has not been executed, so no performance number from the route
-instrumentation enters the manuscript.
+counters, timing phases, and state hashes. Canonical NumPy \code{.npz} states
+use the original global ordering and include coordinate, connectivity,
+constraint, and metric metadata. State identities use the 256-bit Secure Hash
+Algorithm (SHA-256) applied to the array data type, shape, and raw binary64
+bytes. Hash equality is an exact reproducibility check, not a numerical norm or
+an assertion of physical endpoint equivalence.

@@ -49,7 +49,7 @@ For a unit direction $d$, the centered Hessian-action check is
   \qquad \delta\bigl(D_hg(x;d),H(x)d\bigr).
   \label{eq:centered-action-check}
 \end{equation}
-The smooth-energy, fixed-element plasticity, and material-point checks use
+The smooth-energy, fixed-element endpoint-surrogate, and material-point checks use
 $h=3\times10^{-5}$, $10^{-7}$, and $10^{-6}$, respectively. Their prescribed
 action tolerance is $10^{-7}$; analytic route defects must not exceed
 $10^{-8}$, and smooth-branch symmetry defects must not exceed $10^{-10}$.
@@ -111,7 +111,7 @@ trajectory, but not a general nonlinear convergence rate.
 The smooth fixed-element block contains linear, nonlinear, indefinite, and
 admissible finite-strain energies. Across its five cases, the maximum analytic
 gradient and Hessian discrepancies are $1.29\times10^{-15}$ and
-$2.23\times10^{-16}$. The $P_1$, $P_2$, and $P_4$ plasticity blocks each
+$2.23\times10^{-16}$. The $P_1$, $P_2$, and $P_4$ endpoint-surrogate blocks each
 contain five prescribed element states and pass their exact CSR-structure gates.
 Across these blocks, the maximum residual and Hessian relative errors are
 $2.35\times10^{-16}$ and $2.34\times10^{-16}$, respectively. For $P_4$
@@ -125,9 +125,10 @@ cases. All finiteness, symmetry, transcription, rotation, and directional
 gates pass. Across the five strict interiors, the largest centered
 Hessian-action error at the prescribed step is $1.54\times10^{-9}$, and the
 maximum Hessian-symmetry defect is $8.68\times10^{-17}$. The two-sided probes
-exhibit order-one changes in the selected Hessian, which confirms that
-Proposition~\ref{prop:branchwise-route-equivalence} must not be extended across
-branch interfaces.
+exhibit order-one changes in the selected Hessian. They illustrate why the
+smooth-branch assumptions of
+Proposition~\ref{prop:branchwise-route-equivalence} exclude branch interfaces;
+the finite probes do not prove a general impossibility result there.
 
 \subsection{Canonical distributed equivalence}
 \label{subsec:distributed-verification}
@@ -154,10 +155,10 @@ comparison.
 
 \input{tables/generated/distributed_colored_verification.tex}
 
-\subsection{Scope of the plasticity checks}
+\subsection{Scope of the endpoint-surrogate checks}
 \label{sec:val-plasticity3d}
 
-The Plasticity3D experiments verify the scalar branch program and its
+The endpoint-surrogate experiments verify the scalar branch program and its
 derivatives, not an independent constitutive model. The NumPy material-point
 code independently implements rotations, finite differences, and interface
 construction, but it transcribes the same endpoint energy. We therefore treat

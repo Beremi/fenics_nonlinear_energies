@@ -3,28 +3,30 @@ Second derivatives of nonlinear finite-element energies may be constructed at
 the element, constitutive, or assembled sparse-operator level. Element and
 constitutive differentiation are mathematically equivalent when they
 differentiate the same quadrature functional, affine constraint map, and smooth
-constitutive branch. Colored recovery is guaranteed to give the same sparse operator under
-additional complete-pattern, interference-coloring, overlap, and row-ownership
-conditions. We state these two conditional results and implement the three
-routes with JAX and PETSc.
+constitutive branch. Colored recovery yields the same sparse operator under the
+additional requirements of a complete structural pattern, a valid column-
+interference coloring, consistent overlap values, and unique global row
+ownership. We state these conditional results and implement the three routes
+with JAX and PETSc.
 
-The verification separates derivative correctness from nonlinear-solver and
-timing evidence. In prerelease diagnostic executions, fixed-element tests with linear and high-order
-tetrahedra, element and constitutive differentiation agree to relative errors
-below $2.4\times10^{-16}$. Material-point tests exercise all five branches of a
-three-dimensional Mohr--Coulomb endpoint surrogate, while explicitly excluding
-ordinary Hessian claims at switches. A one-versus-two-rank hyperelastic test
-reproduces bitwise-identical stored residual and matrix arrays and the tangent action to
-$2.3\times10^{-16}$. Independent manufactured problems recover the expected
-P1 rates for $p$-Laplace and Ginzburg--Landau equations. A nonaffine
-hyperelastic problem gives last-pair orders $1.887$, $1.006$, and $0.983$ for
-displacement, deformation gradient, and first Piola stress, respectively.
+The numerical study separates derivative correctness from nonlinear and
+performance claims. Across 15 prescribed $P_1$, $P_2$, and $P_4$ states, the
+largest element-versus-constitutive residual and Hessian discrepancies are
+$2.35\times10^{-16}$ and $2.34\times10^{-16}$. For distributed colored
+recovery, prescribed tangent actions agree on elastic and mixed states over
+one, two, and four Message Passing Interface (MPI) ranks; the largest
+cross-rank discrepancy is $2.64\times10^{-16}$, and direct compressed sparse
+row (CSR) comparisons pass at one rank.
+Material-point tests cover all five branches of a three-dimensional
+Mohr--Coulomb endpoint surrogate while excluding ordinary Hessian claims at
+switches. Independent scalar and hyperelastic manufactured problems recover
+the expected linear-element spatial behavior.
 
-An enriched-quadrature diagnostic also shows that nearly unchanged energy can
-coexist with materially different residuals and tangent actions. The present
-diagnostics therefore exercise the conditional derivative identities and the
-fail-closed comparison protocol, but they are not clean-release evidence and do
-not support a universal route ranking or timing claim. The accompanying
-implementation provides the tests, canonical state exports, analysis contracts,
-and a prespecified distributed crossover protocol.
+Fixed-state quadrature comparisons show that small potential differences can
+coexist with appreciable residual and Hessian-action differences; for
+degree-four elements on the base mesh, the latter reach $2.68\%$ and
+$6.91\%$, respectively. The results
+therefore support the conditional derivative identities and distributed
+construction on the tested states. We make no universal route-ranking,
+crossover, timing, or scaling claim.
 \end{abstract}

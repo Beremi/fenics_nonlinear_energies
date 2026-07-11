@@ -1,60 +1,70 @@
 \label{sec:discussion}
 
-The analysis separates a mathematical identity from its computational
-realization. On a fixed smooth branch, element and constitutive AD are two
-applications of the chain rule. Colored recovery adds a second proposition:
-the structural pattern, interference coloring, overlap state, and row ownership
-must be compatible with every recovered entry. The fixed-element and canonical
-MPI tests do not provide one joint test of these claims: the fixed-element
-artifacts support element--constitutive equivalence, serial regression tests
-exercise colored assembly, and the reported one--two-rank MPI pilot uses the
-element-Hessian route. Thus distributed colored recovery remains an open
-experimental gate. None of these checks proves that an implementation remains
-correct after a branch switch, a change of quadrature, or an incomplete ghost
-exchange.
+The analysis distinguishes a mathematical identity from the conditions needed
+to realize it in distributed software. On a fixed smooth branch, element and
+constitutive differentiation are two applications of the chain rule to the
+same finite-dimensional potential. Colored recovery adds genuinely algebraic
+requirements: a complete pattern, noninterfering same-color columns, consistent
+overlap values, and unique ownership of every recovered row. Failure of any one
+condition can preserve the scalar potential while corrupting the sparse
+operator.
 
-The quadrature diagnostic illustrates why the discrete functional belongs in
-the comparison contract. At the prescribed $P_2(L_1)$ and $P_4(L_1)$ states,
-the degree-associated energies differ from the enriched evaluation by only
-$1.84\times10^{-8}$ and $5.10\times10^{-6}$ relatively. Nevertheless, the
-corresponding tangent actions differ by $2.08\%$ and $4.35\%$. Thus energy
-agreement alone cannot establish derivative equivalence or quadrature
-adequacy. Because these states are prescribed, the experiment does not assess
-stationarity or establish a degree trend. Moreover, one P2 reference sample
-lies inside the declared switch-exclusion band, so the reported action is a
-selected-branch sensitivity rather than an ordinary smooth Hessian action.
+The finite-element experiments support both conditional statements on their
+declared scopes. Element and constitutive routes agree across 15 prescribed
+$P_1$, $P_2$, and $P_4$ states, with maximum residual and Hessian relative
+discrepancies of $2.35\times10^{-16}$ and $2.34\times10^{-16}$. The separate
+colored-recovery study covers $P_1(L_1)$ and $P_2(L_1)$, elastic and mixed
+states, and one, two, and four ranks. Direct CSR comparisons pass in the four
+one-rank blocks, and the maximum cross-rank action discrepancy is
+$2.64\times10^{-16}$. These are strong regression tests for the stated discrete
+objects, but they are not proofs for arbitrary meshes, constraint maps,
+partitions, or future implementation changes.
 
-The branch tests have a similarly precise boundary. All five selected
-Mohr--Coulomb labels are exercised at strict interior points, and rotations,
-repeated spectra, and two-sided interface probes remain finite under the stated
-tie convention. The selected Hessian may change by order one across an
-interface. We therefore use ordinary gradients and Hessians only in branch
-interiors. No generalized derivative, semismooth convergence theorem, or
-incremental plastic-history validation follows from these tests.
+The quadrature study shows why the discrete functional must be part of every
+derivative claim. Relative to the 125-point reference, the degree-associated
+$P_2(L_1)$ rule changes the potential scale by only
+$7.11\times10^{-5}$, while the free residual and Hessian action change by
+$3.43\times10^{-3}$ and $3.24\times10^{-2}$. For $P_4(L_1)$ the corresponding
+values are $6.28\times10^{-4}$, $2.68\times10^{-2}$, and
+$6.91\times10^{-2}$. No sampled $P_2$ point lies inside the declared
+$10^{-8}$ switch band. The discrepancies therefore quantify fixed-state
+quadrature sensitivity on the selected branches; they neither establish a
+degree trend nor replace separately converged nonlinear endpoints.
 
-The current route data do not yet determine an admitted finite route map or a
-performance model. Twelve local records contain useful exact-state and
-tangent-action diagnostics, but they predate the collective-max timing record
-and clean-provenance contracts. A valid crossover
-study must measure all routes within balanced allocations, use collective-max
-MPI timings, include independent block repetitions, and admit endpoints under
-the same Riesz-scaled stopping rule. The prepared protocol also separates
-quadrature, local differentiation, contraction, sparse insertion,
-communication, cache, memory, and imbalance costs. Until those measurements
-are executed, no fastest-route, speedup, selector, or scaling statement is
-justified.
+The Mohr--Coulomb endpoint tests have an equally specific boundary. All five
+selected labels are exercised at strict interior points, and the two-sided
+interface, rotation, and repeated-spectrum probes remain finite under the
+declared tie convention. Ordinary gradients and Hessians are used only within
+branch interiors. No generalized derivative, semismooth convergence result,
+incremental history validation, or physical slope-stability validation follows
+from this surrogate.
+
+The nonlinear studies illustrate why solver outcomes and method comparisons
+must be reported separately. All 45 local stopping cases completed; 43 records
+and 28 same-discretization comparisons pass their explicitly stated gates. The
+seven cluster-deferred rows prevent a complete 52-row stopping-protocol pass.
+These deterministic calibrations do not establish mesh convergence, a universal
+stopping tolerance, or rank independence. In the 60-execution
+globalization study, Newton--Armijo fails on all 15 Ginzburg--Landau
+executions, whereas the reduced-trust method completes all 15; both methods
+complete all 15 first-load hyperelastic executions. The Ginzburg--Landau pairs
+never become eligible for endpoint comparison, and none of the 15
+hyperelastic pairs passes the exact endpoint-identity condition. These counts
+therefore support neither a method ordering nor a robustness probability.
+Failure of the zero-tolerance hash gate also does not establish distinct
+physical endpoint classes.
+
+The checksum-verified workstation study verifies four-probe tangent-action
+agreement rather than performance. It comprises 12 blocks and 36 sequential
+route executions and limits the maximum action discrepancy to
+$2.34\times10^{-16}$. No route timing enters the analysis, so the data support
+no speedup, crossover, or route-ordering statement.
 
 The independent manufactured problems verify consistency rather than physical
-validity of the production benchmarks. The scalar solutions are smooth, and
-the recorded Ginzburg--Landau endpoints lie in a controlled positive branch. The
-nonaffine hyperelastic problem uses exact data on the complete boundary, while
-the affine patch supplies the reaction and objectivity checks. These results
-support the energy, residual, and tangent implementation, but they do not
-validate the rotating-beam trajectory or certify local minimality of a
-nonconvex endpoint.
-
-The resulting scope is narrower than a general nonlinear finite-element
-framework comparison. It is also more reproducible: every diagnostically admitted claim names
-the differentiated functional, constrained space, branch status, norm, state
-identity, and distributed object. Future performance work should preserve this
-contract rather than trading accuracy for apparent route speed.
+validity of the production benchmarks. The scalar solutions are smooth, the
+Ginzburg--Landau verifier stays on a positive-curvature branch, and the
+hyperelastic tests retain positive determinant. Except for the strictly convex
+$p$-Laplace problem, small first-order residuals do not certify a local or
+global minimizer. The main conclusion is therefore deliberately limited:
+derivative placement can be changed without changing the tested discrete
+operator when the mathematical and distributed contracts are both satisfied.

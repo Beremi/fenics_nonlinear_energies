@@ -9,7 +9,6 @@
 \usepackage{ragged2e}
 \usepackage{graphicx}
 \usepackage{subcaption}
-\usepackage{tikz}
 \usepackage{float}
 \usepackage{siunitx}
 \usepackage{xcolor}
@@ -23,7 +22,7 @@
 \usepackage[nameinlink,noabbrev]{cleveref}
 
 \hypersetup{
-  pdftitle={Derivative Placement in Distributed Nonlinear Finite Elements: Equivalence, Verification, and Evidence},
+  pdftitle={Derivative Placement in Distributed Nonlinear Finite Elements: Conditional Equivalence and Distributed Verification},
   pdfauthor={Michal Beres}
 }
 
@@ -52,28 +51,14 @@
 \sisetup{detect-all=true,group-separator={,},group-digits=integer}
 
 \newcommand{\code}[1]{\texttt{#1}}
-\newcommand{\jaxpetsc}{JAX+PETSc}
-\newcommand{\purejax}{pure JAX}
-\newcommand{\fenics}{FEniCS}
-\newcommand{\plasticitythree}{3D Mohr--Coulomb endpoint surrogate}
-\newcommand{\localpmg}{constitutive-AD PMG configuration}
 \newtheorem{proposition}{Proposition}
 \newtheorem{remark}{Remark}
 \newcolumntype{Y}{>{\RaggedRight\arraybackslash}X}
 \newcolumntype{L}[1]{>{\RaggedRight\arraybackslash\hsize=#1\hsize\linewidth=\hsize}X}
 \newcolumntype{C}[1]{>{\Centering\arraybackslash\hsize=#1\hsize\linewidth=\hsize}X}
 \newcolumntype{R}[1]{>{\RaggedLeft\arraybackslash\hsize=#1\hsize\linewidth=\hsize}X}
-\newlength{\PaperFigureFull}
-\newlength{\PaperFigureMedium}
-\newlength{\PaperFigureNarrow}
-\setlength{\PaperFigureFull}{\textwidth}
-\setlength{\PaperFigureMedium}{0.84\textwidth}
-\setlength{\PaperFigureNarrow}{0.72\textwidth}
-
-\input{sections/tikz_diagrams}
-
 \title{Derivative Placement in Distributed Nonlinear Finite Elements:\\
-\large Equivalence, Verification, and Evidence}
+\large Conditional Equivalence and Distributed Verification}
 
 \author{
 Michal B{\'e}re{\v{s}}\\
@@ -109,7 +94,7 @@ Michal B{\'e}re{\v{s}}\\
 \section{Verification}
 \input{sections/validation}
 
-\section{Evidence Adjudication}
+\section{Numerical Results}
 \input{sections/results}
 
 \FloatBarrier
@@ -126,13 +111,14 @@ Michal B{\'e}re{\v{s}}\\
 \input{sections/appendix}
 
 \section*{Code and Data Availability}
-The primary implementation, checked-in inputs, strict run records, canonical
-state exports, experiment protocols, and table-generation scripts are available
-in the development repository
-\url{https://github.com/Beremi/fenics_nonlinear_energies}.
-The present repository artifacts are prerelease diagnostics. A versioned
-archive containing admitted clean reruns and immutable manifests is required
-before submission; no archival DOI is claimed for the current evidence.
+The implementation, checked-in mesh inputs, experiment protocols, and
+table-generation scripts are available in the development repository
+\url{https://github.com/Beremi/fenics_nonlinear_energies}. The clean run
+archives summarized in this paper are not tracked by that repository and have
+not yet been deposited in a public archive. A submission release must therefore
+include an immutable archive of the run records, canonical states, manifests,
+and checksums, together with a persistent identifier. No archival digital
+object identifier (DOI) is claimed here.
 
 \bibliographystyle{unsrtnat}
 \bibliography{references}

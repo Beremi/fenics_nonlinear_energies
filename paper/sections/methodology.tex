@@ -20,8 +20,9 @@ in the chosen local component ordering. We define
   \label{eq:element-affine-map}
 \end{equation}
 where $b_e(\theta)$ contains the element coefficients of the affine lift.
-Thus $A_e$ is fixed for a given constrained space and includes arbitrary
-free-DOF permutations without assigning coefficients to constrained DOFs.
+Thus $A_e$ is fixed for a given constrained space and permits arbitrary
+permutations of the free degrees of freedom (DOFs) without assigning
+coefficients to constrained DOFs.
 
 Let $B_{eq}$ be the fixed linear map from the local coefficients to the complete
 quadrature-point argument required by the density. This argument may stack a
@@ -230,10 +231,11 @@ unique mathematical assignment, not on this particular library convention.
 
 \begin{proposition}[Component-lifted scalar coloring]
 \label{prop:component-lifted-coloring}
-Let $S$ be the scalar finite-element support and suppose that the structural
-pattern of a $d$-component vector Hessian is a subpattern of
-$S\otimes\mathbf{1}_{d\times d}$. If $c_s$ is a column-intersection coloring
-of $S$, then
+Let $S\in\{0,1\}^{N_s\times N_s}$ be the scalar support pattern, with
+$S_{ab}=1$ whenever scalar basis functions $a$ and $b$ occur together on at
+least one element. Suppose that the structural pattern of a $d$-component
+vector Hessian is a subpattern of $S\otimes\mathbf{1}_{d\times d}$. If $c_s$
+is a column-intersection coloring of $S$, then
 \begin{equation}
   c(a,k):=d\,c_s(a)+k,
   \qquad k\in\{0,\ldots,d-1\},
@@ -259,96 +261,6 @@ same-color columns that meet an owned row. The implemented recovery uses AD
 Hessian-vector products; a finite-difference gradient probe would add its
 truncation error.
 
-\subsection{Cost components and comparison variables}
-\label{subsec:cost-model}
-
-Let $m_e$ be the nominal number of local element coefficient slots, including
-slots whose values are fixed by essential conditions. Furthermore, let $s$ be
-the constitutive dimension, $n_q$ the quadrature-point count,
-$n_{e,r}^{\mathrm{loc}}$ the overlap-element count on rank $r$, and $c_r$ its
-local color count. Because the measured response is an MPI collective maximum,
-the structural work proxy must describe the busiest rank rather than the global
-number of uniquely owned elements. We therefore define
-\begin{align}
-  \chi_{\mathrm{elem}}
-  &:=\max_r n_{e,r}^{\mathrm{loc}}n_qm_e^2,
-  \nonumber\\
-  \chi_{\mathrm{color}}
-  &:=\max_r\bigl(n_{e,r}^{\mathrm{loc}}c_r\bigr)n_qm_e,
-  \nonumber\\
-  \chi_{\mathrm{const}}
-  &:=\max_r n_{e,r}^{\mathrm{loc}}n_q
-    \bigl(s^2+s^2m_e+sm_e^2\bigr).
-  \label{eq:route-work-proxies}
-\end{align}
-The first two expressions count the dense element-Hessian contribution shape
-and the vector work propagated by the exact AD-HVP seeds, respectively. In the
-constitutive expression, $s^2$ counts the dense tangent $C_{eq}$, while
-$s^2m_e$ and $sm_e^2$ count the two contractions used to form
-$B_{eq}^\top C_{eq}B_{eq}$.
-The proxies in \eqref{eq:route-work-proxies} are structural operation-shape
-counts, not exact models of operation counts, cache behavior, or compiler cost.
-For warm fixed-state measurement $j$, let $T_{rj}^{\mathrm{wall}}$ be the outer
-tangent-construction wall time on rank $r$. The primary observation and its
-within-process summary are
-\begin{equation}
-  T_j^{\mathrm{wall}}:=\max_r T_{rj}^{\mathrm{wall}},
-  \qquad
-  T:=\operatorname{median}_{j=1,\ldots,5}T_j^{\mathrm{wall}}.
-  \label{eq:route-wall-time-response}
-\end{equation}
-The implementation also records cumulative callback diagnostics for Hessian
-actions, extraction, insertion, and communication. These counters include
-compilation, warmup, and measured calls; hence they are neither an additive
-partition of $T$ nor confirmatory phase timings. Architecture and working-set
-descriptors serve as cache covariates, while $\iota_e$ and $\iota_o$, the
-element and overlap max-to-mean ratios, serve as imbalance covariates. We also
-record matrix nonzeros, overlap size, branch fractions, rank count, and the
-applicable proxy from \eqref{eq:route-work-proxies}; peak memory remains an
-outcome. A prespecified synthetic factor diagnostic varies these mechanisms one
-at a time. Because its kernels are not route-faithful, it can support only
-descriptive mechanism checks.
-
-The confirmatory cost analysis is prespecified; we do not fit it to the present
-local evidence. Let $I_a$ indicate route $a\in\mathcal{A}$, where
-$\mathcal{A}:=\{\mathrm{elem},\allowbreak\mathrm{color},\allowbreak
-\mathrm{const}\}$, and let $K$ indicate the cluster architecture. We set
-\begin{equation}
-  \chi:=\sum_{a\in\mathcal{A}}I_a\chi_a,
-  \label{eq:selected-route-work-proxy}
-\end{equation}
-where the three route-specific proxies are defined in
-\eqref{eq:route-work-proxies}. We denote
-the maximum owned matrix-nonzero count by $n_{\mathrm{nz}}^{\max}$ and the
-maximum overlap-DOF count by $n_{\mathrm{ov}}^{\max}$. The remaining
-variables are the MPI rank count $R$, the plastic quadrature fraction
-$p_{\mathrm{pl}}$, and the imbalance ratios $\iota_e,\iota_o$ defined above.
-If the complete cluster-backed design becomes admissible, the prespecified
-no-intercept model for the collective-max warm-median
-tangent-construction time is
-\begin{align}
-  \log T
-  ={}&\sum_{a\in\mathcal{A}}\alpha_a I_a
-    +\sum_{a\in\mathcal{A}}\kappa_a K I_a
-    +\beta_\chi\log(1+\chi)
-    +\beta_{\mathrm{nz}}\log(1+n_{\mathrm{nz}}^{\max})
-  \nonumber\\
-   &+\beta_{\mathrm{ov}}\log(1+n_{\mathrm{ov}}^{\max})
-    +\beta_R\log R+\beta_p p_{\mathrm{pl}}
-    +\beta_e\iota_e+\beta_o\iota_o.
-  \label{eq:route-time-model}
-\end{align}
-The route indicators supply the three levels. Complete block medians would be
-equally weighted; censored or incomplete groups would be excluded without
-imputation. Workstation rank 1 and cluster ranks 1 and 8 are reserved for
-training, while cluster rank 32 is an untouched holdout. The frozen protocol also specifies
-minimum sample counts, design-rank and conditioning checks, prediction and
-ordering criteria, and paired block-bootstrap intervals. Unless those
-requirements and the derivative, state, endpoint, and provenance gates all
-pass, we estimate no coefficients and make no selector or crossover claim.
-Section~\ref{sec:performance-solver-behavior} records the current
-insufficiency.
-
 \subsection{Mesh-aware nonlinear accuracy}
 \label{subsec:mesh-aware-stopping}
 
@@ -361,18 +273,19 @@ operator on the constrained free space. We use the primal and dual norms
   \lVert g\rVert_{M_h^{-1}}:=(g^\top M_h^{-1}g)^{1/2}.
   \label{eq:riesz-primal-dual-norms}
 \end{equation}
-The scalar problems use a row-sum lumped P1 mass operator. Hyperelasticity and
+The scalar problems use a row-sum lumped $P_1$ mass operator. Hyperelasticity and
 the branch-structured mechanics problem use the tangent of a reference elastic
 energy on the identical constrained free space. Before a reference tangent is
 admitted, a scale-aware symmetry check and a recorded direct factorization
 report zero negative and zero numerical zero pivots under the stated solver
-options. This is a numerical inertia check, not an analytic SPD proof. Each
+options. This is a numerical inertia check, not an analytic
+positive-definiteness proof. Each
 inverse-Riesz solve also passes an independently recomputed true-residual gate.
 
 For nonlinear iteration $k\geq0$, let $g_k:=g_h(x_k;\theta)$ and define
 \begin{equation}
   R_k:=\lVert g_k\rVert_{M_h^{-1}},\qquad
-  S_k:=\lVert x_k\rVert_{M_h}.
+  U_k:=\lVert x_k\rVert_{M_h}.
   \label{eq:absolute-residual-state}
 \end{equation}
 For $k\geq1$, we additionally define
@@ -385,43 +298,34 @@ We report the dimensionless quantities
 \begin{equation}
   r_k^{\mathrm{rel}}:=\frac{R_k}{R_0},
   \qquad
-  c_k^{\mathrm{rel}}:=\frac{C_k}{\max(s_0,S_k)},
+  c_k^{\mathrm{rel}}:=\frac{C_k}{\max(u_{\mathrm{ref}},U_k)},
   \label{eq:relative-residual-correction}
 \end{equation}
-where $r_k^{\mathrm{rel}}$ is defined only when $R_0>0$. The scale $s_0>0$
-has the same units as the primal norm. It may equal $S_0$ when $S_0>0$;
+where $r_k^{\mathrm{rel}}$ is defined only when $R_0>0$. The scale
+$u_{\mathrm{ref}}>0$ has the same units as the primal norm. It may equal $U_0$
+when $U_0>0$;
 otherwise, an explicit positive scale must be prescribed independently.
 
-The Tier-B branch-structured solves use a gradient-only, initial-relative
-criterion. For polynomial degree $p\in\{1,4\}$, let
+The branch-structured nonlinear stopping rows use a gradient-only,
+initial-relative criterion with a prescribed target
+$\tau_R^{\mathrm{rel}}>0$. The terminal Boolean is
 \begin{equation}
-  \tau_{R,p}^{\mathrm{rel}}
-  :=\begin{cases}
-       10^{-6}, & p=1,\\
-       10^{-7}, & p=4.
-     \end{cases}
-  \label{eq:tier-b-relative-targets}
-\end{equation}
-The terminal Boolean is
-\begin{equation}
-  T_{k,p}^{\mathrm{B}}
+  T_k
   :=\{R_0>0\}\land
     \left\{r_k^{\mathrm{rel}}
-      \leq\tau_{R,p}^{\mathrm{rel}}\right\}.
+      \leq\tau_R^{\mathrm{rel}}\right\}.
   \label{eq:terminal-boolean-contract}
 \end{equation}
 The absolute residual tolerance is zero, so no absolute fallback modifies
-\eqref{eq:terminal-boolean-contract}. An iterate may terminate a Tier-B solve
+\eqref{eq:terminal-boolean-contract}. An iterate may terminate
 only after it is accepted and all required terminal data are finite, but these
 run-validity conditions are not alternative convergence measures. If $R_0=0$,
 the ratio is undefined and the solve lies outside this relative-only contract;
 such an initially stationary case must be documented separately.
 
-The quantities $D_k$, $C_k$, $S_k$, and $c_k^{\mathrm{rel}}$ are reported as
-diagnostics. In particular, the recorded correction reference
-$c_k^{\mathrm{rel}}\leq 2\times10^{-3}$ neither terminates nor rejects a
-Tier-B solve, and no energy-change threshold enters
-\eqref{eq:terminal-boolean-contract}. The endpoint analysis independently
+The quantities $D_k$, $C_k$, $U_k$, and $c_k^{\mathrm{rel}}$ are reported as
+diagnostics; neither a correction threshold nor an energy-change threshold
+enters \eqref{eq:terminal-boolean-contract}. The endpoint analysis independently
 recomputes $R_k$ and verifies the selected branch, Riesz solve, state identity,
 and provenance; these admission checks do not alter the gradient-only stopping
 rule.
@@ -437,31 +341,19 @@ The Riesz operators and tolerances are case-specific. The resulting residuals
 permit comparisons within the stated free-space representation; they do not
 establish a universal mesh-independent stopping threshold.
 
-\subsection{Evidence and timing contract}
+\subsection{Evidence contract}
 \label{subsec:evidence-contract}
 
 Correctness precedes time. A fixed-state route row first passes the exact state
 identity, the common element-AD residual, four prescribed tangent actions,
 branch, and structural-covariate checks. The common residual verifies the state
 and shared assembly path; it is not an independent constitutive-gradient test.
-At the feasible one-rank $P_1$ points, the row also passes a direct full-CSR
-comparison. A Tier-B full-solve row additionally passes the initial-relative
-Riesz residual, independent Riesz true-residual, endpoint-equivalence, selected
-branch, and provenance gates. Energy-change and correction quantities remain
-diagnostics and are not route-admission gates.
+At the feasible one-rank $P_1$ points, the row also passes a direct complete
+compressed sparse row (CSR) comparison. Energy-change and correction quantities
+remain diagnostics and are not route-admission gates.
 
-The fixed-state timing design uses one compilation/warmup assembly, five warm
-measurements, balanced route order, collective-max wall times, and independent
-allocation blocks. Tier B instead uses ten cold-process paired blocks per route
-and rank, with no embedded warmup. Both designs retain explicit censoring. The
-full-solve records keep compilation, setup, assembly, preconditioner
-construction, Krylov solution, and total time as distinct diagnostics, without
-asserting that independently reduced quantities form an additive partition. A
-capped or failed solve is not encoded as a large successful time.
-
-This hierarchy yields four distinct statements: a proved identity under stated
-assumptions; verification on finite tested states; a descriptive finite route
-map; and an empirical crossover or selector. Evidence for one level does not
-imply the next. In particular, near-equal energy does not replace a residual or
-tangent comparison, and one tangent probe does not establish complete matrix
-equality.
+This hierarchy separates a proved identity under stated assumptions from
+verification on finite tested states. Evidence for either statement does not
+imply a performance ordering. In particular, near-equal energy does not replace
+a residual or tangent comparison, and one tangent probe does not establish
+complete matrix equality.

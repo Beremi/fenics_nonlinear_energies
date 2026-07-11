@@ -179,50 +179,127 @@ finite energy, stress, and tangent, but they do not claim rotational invariance
 of the arbitrary tie-selected tangent at exact degeneracy. Separate rotations
 of strict interior states test energy invariance and stress/tangent covariance.
 
-\subsection{Stopping diagnostics}
-\label{subsec:stopping-diagnostics}
+\subsection{Stopping-study scope}
+\label{subsec:stopping-study-scope}
 
-The retained scalar lumped-mass pilot compares baseline and ten-times tighter
-linear and nonlinear tolerances on the deterministic zero-source
-Ginzburg--Landau instance. Its relative final-state difference is
-$2.22\times10^{-7}$. This value is a local sensitivity observation; it neither
-calibrates a cross-mesh stopping threshold nor provides timing evidence. The
-attempted $p$-Laplace pair is excluded because its random initial coefficients
-were not seeded or stored.
+The local stopping matrix contains 45 checksum-identified cases. Its parameter
+grid is as follows: Ginzburg--Landau relative residual targets
+$10^{-2},10^{-4},10^{-6},10^{-8}$ on $L_5$ and $L_6$; hyperelastic Riesz-solve
+relative tolerances $10^{-8},10^{-10},10^{-12}$ on $L_1$ and $L_2$;
+hyperelastic nonlinear relative residual targets
+$10^{-2},10^{-4},10^{-6},10^{-8}$ on the same two levels; fixed-state
+endpoint-surrogate Krylov tolerances $10^{-2},10^{-4},10^{-6},10^{-8},10^{-10}$
+for degrees one, two, and four; and endpoint-surrogate nonlinear relative
+residual targets $10^{-2},10^{-4},10^{-6},10^{-7}$ for degrees one and two.
+The reported 45-row local subset contains no degree-four nonlinear endpoint
+and supports no inference about rank-count consistency. The four
+degree-four nonlinear rows and three MPI-consistency rows in the 52-row frozen
+plan remain cluster-deferred.
 
-The hyperelastic reference operator was checked independently on one and two
-ranks for a P1 problem with 2,133 free DOFs. Both matrices have inertia
-$(0,0,2133)$ and the same initial deformation-map norm
-$1031.6632492383628$. The reported dual residuals differ by
-$7.43\times10^{-12}$ relatively, and both inverse-Riesz solves satisfy the
-$10^{-8}$ true-residual gate. This is an operator and serialization test with
-zero permitted Newton iterations, not a nonlinear endpoint comparison. The
-large Jacobi-preconditioned CG counts also motivate a separate efficiency
-calibration before production-scale use.
+For every mesh/discretization group, let $x_\star$ denote the result at the
+tightest computed tolerance and $x_\tau$ a candidate. When a scalar relative
+difference is required, we use
+\begin{equation}
+  d_{\mathrm{rel}}(a,b)
+  :=\frac{|a-b|}{\max(|a|,|b|,\operatorname{tiny}_{64})}.
+  \label{eq:stopping-scalar-relative-difference}
+\end{equation}
+For Ginzburg--Landau, the same-mesh state discrepancy is
+\begin{equation}
+  \eta_{L_h^2}
+  :=\frac{\bigl[\sum_i m_i(u_{\tau,i}-u_{\star,i})^2\bigr]^{1/2}}
+          {\max\!\left(
+           [\sum_i m_i u_{\star,i}^2]^{1/2},
+           \operatorname{tiny}_{64}\right)},
+  \qquad
+  m_i:=\sum_{T\ni i}\frac{|T|}{3}.
+  \label{eq:stopping-lumped-state-difference}
+\end{equation}
+For mechanics, with the frozen reference-elastic Riesz operator
+$K_{\mathrm{ref}}$, the state discrepancy is
+\begin{equation}
+  \eta_K
+  :=\frac{\bigl[(x_\tau-x_\star)^\top K_{\mathrm{ref}}
+                    (x_\tau-x_\star)\bigr]^{1/2}}
+          {\max\!\left(
+           [x_\star^\top K_{\mathrm{ref}}x_\star]^{1/2},
+           \operatorname{tiny}_{64}\right)}.
+  \label{eq:stopping-riesz-state-difference}
+\end{equation}
+The fixed-state linear comparison applies the same formula to the correction
+vectors. The coefficient-space discrepancy is
+\begin{equation}
+  \eta_2(v_\tau,v_\star)
+  :=\frac{\lVert v_\tau-v_\star\rVert_2}
+          {\max(\lVert v_\star\rVert_2,\operatorname{tiny}_{64})},
+  \label{eq:stopping-coefficient-state-difference}
+\end{equation}
+where $v$ is the displacement array for a hyperelastic endpoint and the
+correction vector for a fixed-state endpoint-surrogate solve. We write
+$\Pi_\tau:=\Pi_h(x_\tau)$, $\Pi_\star:=\Pi_h(x_\star)$,
+$\omega_\tau:=f_h^\top x_\tau$, and $\omega_\star:=f_h^\top x_\star$. The
+maximum nodal displacements are
+$u_{\max,\tau}:=\max_i\lVert\boldsymbol{u}_{\tau,i}\rVert_2$ and
+$u_{\max,\star}:=\max_i\lVert\boldsymbol{u}_{\star,i}\rVert_2$.
 
-\subsection{Prepared distributed comparison}
-\label{subsec:prepared-distributed-comparison}
+Record admission is distinct from comparison admission. Ginzburg--Landau
+requires one successful solve/load record, the lumped-$L^2$ residual metric,
+and a stored relative residual independently checked against its row target.
+Every
+reference-elastic norm solve uses conjugate gradients with Jacobi
+preconditioning, the unpreconditioned residual norm, zero absolute tolerance,
+and a cap of 5,000 iterations; the requested and effective settings must agree,
+and runtime options may not alter them. Hyperelastic Riesz-setup rows require a
+positive numerical-inertia certificate for $K_{\mathrm{ref}}$, a positive
+Krylov convergence reason, and a relative true residual no larger than
+$10^{-6}$. Hyperelastic nonlinear and nonlinear endpoint-surrogate rows require
+the same certificate and convergence reason with a true-residual gate of
+$10^{-8}$. A nonlinear endpoint must also satisfy
+$R_k/R_0\leq\tau_R^{\mathrm{rel}}$. A fixed-state endpoint-surrogate row requires a positive
+Krylov reason, branch margin at least $10^{-8}$, zero quadrature fraction in the
+switch band, and relative true residual no larger than
+$\max(10^{-12},20\tau_{\mathrm{Krylov}})$.
 
-The executable design spans $P_1(L_1)$, $P_1(L_2)$, $P_2(L_1)$, and
-$P_4(L_1)$; elastic and mixed-branch states; and 1, 8, and 32 ranks. The
-high-order colored slot is retained as a prespecified risk-based non-attempt,
-not a measured resource failure. Full-solve confirmations use numerically
-checked reference-elastic stopping and a strict endpoint validator.
+Subject to endpoint admission, every condition in the applicable comparison
+row below is conjunctive:
+\begin{enumerate}
+  \item Ginzburg--Landau requires $\eta_{L_h^2}\leq10^{-5}$ and
+        $|\Pi_\tau-\Pi_\star|\leq10^{-10}$.
+  \item A hyperelastic Riesz setup check requires relative dual-norm and
+        state-scale differences no larger than $10^{-6}$ and $10^{-12}$,
+        respectively, and a relative true residual no larger than
+        $\max(10^{-8},20\tau_{\mathrm{Riesz}})$.
+  \item A hyperelastic nonlinear endpoint requires $\eta_2$ and $\eta_K$ to be
+        no larger than $10^{-5}$,
+        and $|\Pi_\tau-\Pi_\star|\leq10^{-8}$.
+  \item A fixed-state endpoint-surrogate solve requires $\eta_2$ and the
+        reference-elastic relative correction discrepancy to be no larger than
+        $10^{-4}$, and a relative true residual no larger than
+        $\max(10^{-10},20\tau_{\mathrm{Krylov}})$.
+  \item A nonlinear endpoint-surrogate solve requires
+        $\eta_K\leq10^{-5}$,
+        $|\Pi_\tau-\Pi_\star|\leq10^{-6}$,
+        $|\omega_\tau-\omega_\star|\leq10^{-6}$,
+        $|u_{\max,\tau}-u_{\max,\star}|\leq10^{-8}$, and exact equality of
+        the complete branch-count dictionaries.
+\end{enumerate}
 
-The design is intentionally absent from the numerical result tables because it
-has not been executed. The exact execution inventory and resource ceilings are
-kept in the archived experiment protocol rather than the manuscript.
-Three-route fixed-state comparisons use three cyclic blocks, the two-route
-high-order comparison uses four alternating blocks, and full-solve
-confirmations use ten paired cold-process blocks. The base order is obtained
-from the first 16 hexadecimal digits of the SHA-256 of the comparison
-identifier. The release gate additionally requires collective-max phase
-timing, multiple derivative probes, and a cross-route endpoint analyzer. These
-conditions prevent scheduler, node, cache, or stopping differences from being
-interpreted as derivative-route speed.
+The two inadmissible records are degree-four fixed-state solves. Their
+independent relative true residuals are $0.305>0.2$ at
+$\tau_{\mathrm{Krylov}}=10^{-2}$ and
+$2.20\times10^{-5}>2.00\times10^{-5}$ at
+$\tau_{\mathrm{Krylov}}=10^{-6}$. Among the 15 rejected but comparable rows,
+the failed-predicate incidences are: Ginzburg--Landau state 2 and energy 3;
+hyperelastic nonlinear coefficient, Riesz-state, and energy 2 each;
+fixed-state surrogate coefficient and Riesz-correction 5 each; and nonlinear
+surrogate Riesz-state 2, energy 4, external work 5, maximum displacement 4,
+and branch counts 3. These incidences are nonexclusive because one row may
+fail several predicates. Thus the local study calibrates deterministic
+same-discretization accuracy only; it is neither a mesh-convergence study nor a
+timing, scaling, or population-robustness experiment.
 
-\subsection{Diagnostic configurations}
-\label{subsec:diagnostic-configurations}
+\subsection{Numerical configurations}
+\label{subsec:numerical-configurations}
 
 The scalar manufactured meshes have $8$, $16$, $32$, and $64$ uniform
 subdivisions per coordinate direction. The $p$-Laplace solve starts from the
@@ -233,121 +310,143 @@ hyperelastic meshes and material constants are stated in
 Section~\ref{sec:bench-he}. The affine patch uses one unit cube divided into six
 tetrahedra.
 
-The zero-source Ginzburg--Landau diagnostics instead use the checked-in level-5
-P1 mesh of $[-1,1]^2$, with 4,225 nodes, 8,192 triangles, and 3,969 free
-coefficients. They set $\epsilon=0.01$, $f=0$, and $u=0$ on the complete
-boundary, and initialize the free coefficients by
+The controlled zero-source Ginzburg--Landau study uses the level-5
+$P_1$ mesh of $[-1,1]^2$, with 4,225 nodes, 8,192 triangles, and 3,969 free
+coefficients. It sets $\epsilon=0.01$, $f=0$, and $u=0$ on the complete
+boundary. The nominal free state is
 \begin{equation}
   u_0(x,y):=\sin\!\left(\frac{\pi(x-1)}{2}\right)
              \sin\!\left(\frac{\pi(y-1)}{2}\right).
-  \label{eq:gl-diagnostic-initial-state}
+  \label{eq:gl-globalization-initial-state}
 \end{equation}
-The lumped-$L^2$ sensitivity records hash the mesh arrays and final states.
-They do not contain a digest of the initial vector;
-equation~\eqref{eq:gl-diagnostic-initial-state} and the hashed mesh arrays are
-therefore the available start-state identity.
+The two additional starts are
+$u_0\pm0.025\,m_{\mathrm{GL}}$, where
+\begin{equation}
+  m_{\mathrm{GL}}(x,y)
+  :=\sin\!\left(\frac{\pi(x+1)}{2}\right)
+    \sin\!\left(\frac{\pi(y+1)}{2}\right)
+    \sin\!\bigl(\pi(x+1)\bigr)
+    \sin\!\bigl(\pi(y+1)\bigr).
+  \label{eq:gl-globalization-perturbation}
+\end{equation}
+The perturbation is applied only to free nodes and vanishes on the boundary.
+Each state is stored once in a checksum-identified NumPy archive and is shared
+by both methods and all five executions. The comparison uses two MPI ranks,
+one thread per rank, element Hessians, GMRES with hypre preconditioning,
+relative tolerance $10^{-3}$ and cap 200, and at most 100 nonlinear iterations.
+The three starts are deterministic sensitivity cases rather than population
+samples.
 
-The lumped-$L^2$ sensitivity pair uses two MPI ranks, one thread per rank,
-element Hessians, GMRES--Hypre, reduced-subspace trust with Armijo acceptance,
-and at most 100 Newton iterations. Define the tolerance vector by
-\[
-  \boldsymbol{\tau}
-  :=(\tau_E,\tau_R^{\mathrm{abs}},\tau_R^{\mathrm{rel}},
-      \tau_C^{\mathrm{abs}},\tau_C^{\mathrm{rel}}).
-\]
-The two policies are
-\[
-  \boldsymbol{\tau}_{\mathrm{base}}
-  =(10^{-6},10^{-5},10^{-3},10^{-10},10^{-3}),
-  \qquad
-  \boldsymbol{\tau}_{\mathrm{tight}}
-  =(10^{-7},10^{-6},10^{-4},10^{-11},10^{-4}).
-\]
-The KSP relative tolerance and cap change from $(10^{-3},200)$ to
-$(10^{-4},300)$. The common state scale is the unit-field lumped norm
-$s_0=1.96875$. The attempted production
-$p$-Laplace pair used independent calls to an unseeded random initializer and
-stored neither initial vector; we therefore report none of its numerical
-differences.
-
-The distributed hyperelastic diagnostic uses the brick
+The distributed hyperelastic fixed-state test uses the brick
 $[0,0.4]\times[-0.005,0.005]^2$, an $80\times2\times2$ cell grid split into
 1,920 tetrahedra, 729 nodes, and 2,133 free vector DOFs after both end faces are
 constrained. Its constants are
 $C_1=3.8462\times10^7$ and $D_1=8.3333\times10^7$ in the nondimensional stress
 scale of Section~\ref{sec:bench-he}; run records retain the full binary64
-values. The stored fixed state twists the right face by $0.15$ radians; no
-nonlinear trajectory is inferred from that state.
+values. The stored fixed state twists the right face by $0.15$ radians and is
+assembled independently on one, two, and four ranks; no nonlinear trajectory is
+inferred from that state.
 
-The Plasticity3D $L_1$ macro mesh has 3,845 vertices and 18,419 tetrahedra.
-Its bounding box is
+The branch-structured endpoint benchmark uses the $L_1$ macro mesh with 3,845
+vertices and 18,419 tetrahedra. Its bounding box is
 $[-175,30]\times[0,60]\times[0,86.6025403784]$ in the scaled coordinates of
-Section~\ref{sec:bench-he}.
-The $P_1$, $P_2$, and $P_4$ glued spaces have 10,526, 79,024, and 610,964 free
-vector DOFs. Source labels constrain $x$ on groups 1 and 2, $y$ on group 5,
-and $z$ on groups 3 and 4; the maintained case additionally fixes every
-component on $y=0$. Gravity acts in the negative $y$ direction. The four
-material rows are listed below. Here $c_0$ and $E$ are scaled by $S_0$,
+Section~\ref{sec:bench-he}. Define
+\begin{equation}
+  \begin{aligned}
+    \Gamma_b&:=\partial\Omega\cap\{y=0\},\\
+    \Gamma_x^-&:=\partial\Omega\cap\{x=-175\},&
+    \Gamma_x^+&:=\partial\Omega\cap\{x=30\},\\
+    \Gamma_z^-&:=\partial\Omega\cap\{z=0\},&
+    \Gamma_z^+&:=\partial\Omega\cap\{z=86.6025403784\}.
+  \end{aligned}
+  \label{eq:endpoint-surrogate-boundaries}
+\end{equation}
+For $\boldsymbol{u}=(u_x,u_y,u_z)$, the homogeneous essential conditions are
+\begin{equation}
+  \boldsymbol{u}=\boldsymbol{0}\ \text{on }\Gamma_b,\qquad
+  u_x=0\ \text{on }\Gamma_x^-\cup\Gamma_x^+,\qquad
+  u_z=0\ \text{on }\Gamma_z^-\cup\Gamma_z^+.
+  \label{eq:endpoint-surrogate-boundary-conditions}
+\end{equation}
+All remaining displacement components are free. No surface-load term is
+applied; hence the fully free boundary has zero natural traction, and the
+unconstrained components of the roller planes have zero natural tangential
+traction. The body force is
+$\boldsymbol{b}(X)=-\gamma(X)\boldsymbol{e}_y$, with $\gamma$ piecewise
+constant by material region. All prescribed displacement values vanish, so
+the affine lift is zero.
+
+The $P_1$, $P_2$, and $P_4$ constrained spaces have 10,526, 79,024, and
+610,964 free vector DOFs. The four material rows are given in
+Table~\ref{tab:plasticity3d-materials}. Here $c_0$ and $E$ are scaled by $S_0$,
 $\gamma$ is scaled by $S_0/L_0$, and $\phi$, $\psi$, and $\nu$ are
 dimensionless. The derived elastic moduli follow
 \eqref{eq:plasticity3d-elastic-moduli}.
-\begin{center}
-\begin{tabular}{@{}lrrrrrr@{}}
-  \toprule
-  region & $c_0$ & $\phi$ (deg) & $\psi$ (deg) & $E$ & $\nu$ & $\gamma$ \\
-  \midrule
-  cover layer        & 15 & 30 & 0 & 10000 & 0.33 & 19 \\
-  general foundation & 15 & 38 & 0 & 50000 & 0.30 & 22 \\
-  weak foundation    & 10 & 35 & 0 & 50000 & 0.30 & 21 \\
-  slope mass         & 18 & 32 & 0 & 20000 & 0.33 & 20 \\
-  \bottomrule
-\end{tabular}
-\end{center}
-with identical saturated and unsaturated unit weights in the tested dry table.
-The source input is the checked-in \code{SSR\_hetero\_ada\_L1.msh}; every publication run
-must record its content hash.
+\begin{table}[t]
+  \caption{Scaled material parameters for the dry heterogeneous
+  three-dimensional slope. Saturated and unsaturated unit weights coincide in
+  this test.}
+  \label{tab:plasticity3d-materials}
+  \centering
+  \begin{tabularx}{\linewidth}{L{1.90}C{0.85}C{0.85}C{0.85}C{0.85}C{0.85}C{0.85}}
+    \toprule
+    Region & $c_0/S_0$ & $\phi$ (deg) & $\psi$ (deg) & $E/S_0$ & $\nu$ &
+    $\gamma L_0/S_0$ \\
+    \midrule
+    Cover layer        & \num{15} & \num{30} & \num{0} & \num{10000} & \num{0.33} & \num{19} \\
+    General foundation & \num{15} & \num{38} & \num{0} & \num{50000} & \num{0.30} & \num{22} \\
+    Weak foundation    & \num{10} & \num{35} & \num{0} & \num{50000} & \num{0.30} & \num{21} \\
+    Slope mass         & \num{18} & \num{32} & \num{0} & \num{20000} & \num{0.33} & \num{20} \\
+    \bottomrule
+  \end{tabularx}
+\end{table}
+The archived evidence identifies the source-mesh contents by a SHA-256 digest.
 
-The local fixed-element derivative diagnostic uses
-$\lambda_{\mathrm{sr}}=1.50$. The principal assembled route, stopping,
-quadrature, and any conditional scaling protocols use
-$\lambda_{\mathrm{sr}}=1.55$. These configurations remain separate in every
-evidence record and comparison.
+The fixed-element derivative comparison uses
+$\lambda_{\mathrm{sr}}=1.50$, whereas the assembled route, stopping, and
+quadrature studies use $\lambda_{\mathrm{sr}}=1.55$. These configurations
+remain separate in every numerical comparison.
 
-The controlled globalization diagnostic uses two MPI ranks and one thread per
-rank. Its retained Ginzburg--Landau pair uses the problem and deterministic
-initial state above, the coefficient $\ell^2$ metric, GMRES--Hypre with
-relative tolerance $10^{-3}$ and cap 200, and the baseline tolerance tuple just
-stated, with a cap of 100 Newton iterations. The compared methods are
-Newton--Armijo and reduced-subspace trust with Armijo acceptance. The pilot
-stores no canonical endpoint state. The attempted
-$p$-Laplace pair is excluded because its two unseeded random initial vectors
-were not stored.
+The controlled globalization study uses two MPI ranks and one thread per rank.
+Both Newton--Armijo and reduced-subspace trust with Armijo acceptance use the
+same stored initial state for each of the three starts and are used in five
+separate executions. Ginzburg--Landau uses the coefficient $\ell^2$ metric,
+GMRES with hypre preconditioning, relative tolerance $10^{-3}$ and cap 200,
+and at most 100 nonlinear iterations.
 
-The hyperelastic pair uses the procedural level-2 P1 grid with
+The hyperelastic study uses the procedural level-2 $P_1$ grid with
 $160\times4\times4$ brick cells, split into 15,360 tetrahedra, on
 $[0,0.4]\times[-0.005,0.005]^2$. It has 12,075 total and 11,925 free vector
 DOFs, $C_1=3.8461538461538464\times10^7$, and
 $D_1=8.333333333333333\times10^7$. The left face retains the identity map and
-the right face rotates about the $x$-axis. The two steps prescribe angles
-$\pi/3$ and $2\pi/3$; the first starts from the identity map and the second
-warm-starts from the method's first endpoint. Both methods use coefficient
-$\ell^2$ stopping, GMRES--GAMG with relative tolerance $10^{-1}$ and cap 30,
-at most 100 Newton iterations per load, and
-$(\tau_E,\tau_R^{\mathrm{abs}},\tau_R^{\mathrm{rel}},
-\tau_C^{\mathrm{abs}},\tau_C^{\mathrm{rel}})
-=(10^{-4},10^{-3},10^{-3},10^{-10},10^{-4})$. No initial or final state hash
-was stored for these smoke rows.
+the right face rotates by $\pi/3$ about the $x$-axis. The nominal free
+coefficients are initialized from the identity deformation, while the
+prescribed rotated-boundary lift is imposed exactly. The two additional starts add
+$\pm10^{-5}m_{\mathrm{HE}}$ on the free components, where
+\begin{equation}
+  m_{\mathrm{HE}}(X)
+  :=\left(0,\sin\!\frac{\pi X_1}{0.4},
+            -\frac12\sin\!\frac{\pi X_1}{0.4}\right).
+  \label{eq:he-globalization-perturbation}
+\end{equation}
+Both methods use coefficient $\ell^2$ stopping and GMRES with PETSc's
+algebraic multigrid preconditioner, relative tolerance $10^{-1}$, cap 30, and
+at most 100 nonlinear iterations. Initial and terminal states are identified
+by SHA-256 digests.
 
 For every retained globalization row, Armijo uses initial step 1,
 sufficient-decrease constant $10^{-4}$, contraction $1/2$, and at most 40
 trials. The reduced trust model uses initial, minimum, and maximum radii $1$,
 $10^{-8}$, and $10^6$, shrink/expand factors $1/2$ and $3/2$,
-acceptance-update thresholds $0.05$ and $0.75$, and at most six rejected
-candidates per Newton iteration. Section~\ref{subsec:globalization-results}
+acceptance-update thresholds $0.05$ and $0.75$, and at most six
+radius-reduction retries after the initial candidate, for seven candidate
+attempts in total. Section~\ref{subsec:globalization-results}
 states why none of these rows supports a timing comparison.
 
-The diagnostic environment recorded Python 3.12.10, NumPy 2.4.2, JAX/JAXlib
-0.9.1, petsc4py 3.24.2, and Open MPI 5.0.10. These versions describe the dirty
-pilots only. A clean publication record must repeat the full compiler, BLAS,
-PETSc external-package, CPU, operating-system, placement, and environment
-manifest.
+The local calculations used an AMD Ryzen Threadripper PRO 7975WX processor and
+the Linux 7.1.2 kernel on x86-64. The software environment contained Python 3.12.10, NumPy
+2.4.2, JAX/JAXlib 0.9.1, petsc4py 3.24.2, and Open MPI 5.0.10, with one thread
+for OpenMP and the basic linear algebra subprograms (BLAS). Every retained
+archive binds the source commit, inputs, configuration, command, environment
+variables, outputs, and referenced state artifacts by SHA-256. The public data
+deposit must preserve these manifests together with the run records.

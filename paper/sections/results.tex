@@ -47,21 +47,45 @@ separately converged nonlinear endpoints under each rule.
 \subsection{Mesh-aware stopping results}
 \label{subsec:stopping-results}
 
-Table~\ref{tab:stopping-local-status} summarizes the completed local stopping
-matrix. All 45 locally feasible executions have checksum-identified outputs and
-independent numerical rechecks. The endpoint gate admits 43 rows: all
-Ginzburg--Landau,
-hyperelasticity, and Plasticity3D nonlinear endpoints pass, while 13 of the 15
-Plasticity3D fixed-state endpoints pass. Applying the stricter comparison
-criteria admits 28 of the 45 local rows.
+Table~\ref{tab:stopping-local-status} summarizes the completed deterministic
+local stopping matrix. All 45 executions have checksum-identified outputs and
+independent numerical rechecks. Row-level admission applies a family-specific
+gate: Ginzburg--Landau and nonlinear rows require successful termination,
+setup-only hyperelastic metric checks require the positive-inertia and
+Riesz-solve certificate, and fixed-state rows require a passed linear solve.
+Every record must contain its finite required diagnostics and prescribed
+provenance. For Ginzburg--Landau, the stored residual ratio is independently
+checked against its target; Riesz/Krylov rows additionally require an
+explicitly formed true residual within the family gate. The row-level gate
+admits 43 records: all Ginzburg--Landau and hyperelasticity records and all
+endpoint-surrogate nonlinear endpoints pass, while 13 of the 15
+endpoint-surrogate fixed-state solves pass.
 
-\input{tables/generated/stopping_local_status.tex}
+Within each of 11 mesh/discretization groups, the tightest computed tolerance
+is the reference. A candidate comparison is accepted only when all
+family-specific state, energy, observable, branch, and true-residual predicates
+in Appendix~\ref{subsec:stopping-study-scope} hold. Of 45 comparisons, 28 are
+accepted, 15 are rejected, and two are censored because their fixed-state
+linear endpoints fail the independent true-residual gate. The 28 accepted rows
+include the 11 reference self-comparisons, leaving 17 accepted nonreference
+candidates.
 
-Seven prescribed tests remain outside the local matrix: four $P_4$ nonlinear
-calibrations and three publication-rank MPI-consistency comparisons. Their
-absence prevents a complete mesh- and rank-aware stopping conclusion. The
-local counts therefore verify the stated endpoint checks on the tested rows;
-they do not identify a preferred stopping policy or support a timing claim.
+\input{tables/generated/stopping_submission_status.tex}
+
+The selected largest accepted tolerances are $10^{-6}$ and $10^{-4}$ for the
+two Ginzburg--Landau meshes; $10^{-8}$ for both hyperelastic metric checks;
+$10^{-4}$ for both hyperelastic nonlinear levels; $10^{-6}$, $10^{-6}$, and
+$10^{-8}$ for the degree-one, degree-two, and degree-four fixed-state
+surrogate solves; and $10^{-6}$ and $10^{-7}$ for the degree-one and
+degree-two nonlinear surrogate solves. These are deterministic
+same-discretization calibrations, not mesh-convergence evidence or a universal
+stopping policy.
+
+The reported subset contains 45 of the 52 computations in the frozen stopping
+plan. Four degree-four nonlinear rows and three MPI-consistency rows remain
+cluster-deferred. Hence the local calibration is admissible, but the complete
+stopping protocol has not passed; closing those rows is necessary but not
+sufficient without the separate discretization gate and final adjudication.
 
 \subsection{Controlled globalization outcomes}
 \label{subsec:globalization-results}
@@ -75,13 +99,20 @@ $L_2$, both methods complete all 15 executions.
 
 \input{tables/generated/globalization_local_status.tex}
 
-The common-start identity check passes, but the paired endpoint-identity gate
-does not. The Ginzburg--Landau pairs are incomplete because Newton--Armijo does
-not terminate successfully, and the saved hyperelastic endpoints from the two
-methods have different identities. Consequently, the experiment supports only
-the displayed completion and failure counts for these deterministic starts. It
-does not support a paired method ranking, a robustness probability, or a timing
-comparison.
+A paired comparison is admitted only if both methods terminate successfully
+and produce exactly the same canonical endpoint. The gate compares dtype-,
+shape-, and byte-aware SHA-256 digests of both the exported global state and the
+canonically ordered solver vector; it uses no positive numerical tolerance.
+All 30 common-start checks pass. The 15 Ginzburg--Landau pairs are ineligible
+for endpoint comparison because Newton--Armijo fails at its first iteration
+after 40 Armijo evaluations in every execution, whereas reduced trust--Armijo
+completes. All 15 first-load hyperelastic pairs reach endpoint comparison, but
+none passes exact digest equality.
+Consequently, the experiment supports only the displayed completion and
+failure counts. It does not support a paired method ranking, a robustness
+probability, or a timing comparison. Because this is an exact reproducibility
+gate rather than a prespecified state--energy--observable distance, its failure
+alone does not establish distinct physical endpoint classes.
 
 \subsection{Fixed-state tangent-action agreement}
 \label{subsec:route-map-results}
@@ -97,9 +128,8 @@ Across four deterministic probes per route and state, the largest relative
 tangent-action discrepancy is $2.34\times10^{-16}$. The saved states and the
 common element-AD residuals agree exactly at stored precision. This finite study
 therefore corroborates four-probe tangent-action agreement on the tested serial
-states. Since it contains neither a distributed timing design nor the full
-degree--rank coverage, it defines no finite performance map, crossover
-predictor, or route ranking.
+states. No route timing is reported, and the finite action checks imply no
+performance ordering.
 
 Together, these experiments quantify higher-order quadrature sensitivity,
 establish the local extent of the stopping checks, record bounded globalization

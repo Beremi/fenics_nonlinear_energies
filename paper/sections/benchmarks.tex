@@ -1,14 +1,12 @@
 \label{sec:benchmarks}
 
-The experiment hierarchy uses four problem blocks. Smooth scalar manufactured
+The numerical study uses four problem blocks. Smooth scalar manufactured
 solutions measure spatial consistency. Hyperelasticity supplies analytic
-stress/tangent checks, nonaffine convergence, and a canonical MPI assembly
-test. A synthetic Mohr--Coulomb endpoint potential exercises constitutive
-branches and high-order quadrature. Controlled Ginzburg--Landau runs probe an
-indefinite Hessian and globalization failure semantics. Topology optimization
-and the two-dimensional plasticity surrogate are excluded from the central
-evidence because they do not satisfy the optimization and validation gates of
-this revision.
+stress/tangent checks, nonaffine convergence, and canonical distributed
+assembly tests.
+A synthetic Mohr--Coulomb endpoint potential exercises constitutive branches
+and high-order quadrature. Controlled Ginzburg--Landau runs probe an indefinite
+Hessian and globalization failure semantics.
 
 \subsection{Manufactured \texorpdfstring{$p$-Laplace}{p-Laplace} problem}
 \label{sec:bench-plaplace}
@@ -32,16 +30,16 @@ with exact Dirichlet data and source determined by
 The gradient satisfies
 $\lvert\nabla u_\star\rvert\ge 1-0.1\pi>0.685$, avoiding the degenerate
 zero-gradient Hessian during the consistency test. The independent verifier
-uses uniform P1 triangles, a degree-five seven-point load/error rule, and a
-consistent NumPy/SciPy Newton tangent. It does not call the production JAX or
+uses uniform $P_1$ triangles, a degree-five seven-point load/error rule, and a
+consistent NumPy/SciPy Newton tangent. It does not call the implemented JAX or
 PETSc assembly.
 
 On the nonempty affine Dirichlet space, the gradient term is coercive and its
 strictly monotone derivative is injective on free variations; hence the
-finite-dimensional energy has a unique discrete minimizer. The measured quantities
-are the weighted $L^2$ error, the $H^1$-seminorm error, the weak residual, the
-tangent symmetry defect, and the minimum element-gradient norm. The expected
-P1 orders are two and one.
+finite-dimensional energy has a unique discrete minimizer. The measured
+quantities are the weighted $L^2$ error, the $H^1$-seminorm error, the weak
+residual, the tangent symmetry defect, and the minimum element-gradient norm.
+The expected $P_1$ orders are two and one.
 
 \subsection{Manufactured Ginzburg--Landau problem}
 \label{sec:bench-gl}
@@ -71,21 +69,23 @@ solution alone, establish the positive-curvature restriction. This design
 measures spatial consistency without conflating it with selection among
 competing double-well basins.
 
-The separate globalization diagnostic uses the zero-source production-style
-functional and one fixed initial state. It compares Newton--Armijo with the
-reduced-subspace trust method under the same ordinary GMRES--Hypre contract.
-One instance is sufficient to verify failure reporting, but not a robustness
-probability or timing distribution.
+The separate globalization study uses the zero-source functional implemented
+by the nonlinear driver and three checksum-identified initial states: a nominal
+state and two deterministic modal perturbations. It compares Newton--Armijo with the
+reduced-subspace trust method under the same generalized minimal residual
+(GMRES) method with hypre preconditioning, with five separate executions for each
+start--method pair. This design verifies bounded outcome semantics; it does not
+estimate a robustness probability.
 
 \subsection{Hyperelasticity}
 \label{sec:bench-he}
 
 Each mechanics benchmark below uses an explicitly nondimensional computational
-system. Let $L_0>0$ and $S_0>0$ denote its reference length and stress (equivalently,
-energy-density) scales. We report $X/L_0$, $y/L_0$, $W/S_0$, stress-like
+system. Let $L_0>0$ and $S_0>0$ denote its reference length and stress, or
+equivalently energy-density, scales. We report $X/L_0$, $y/L_0$, $W/S_0$, stress-like
 material parameters divided by $S_0$, and body-force densities multiplied by
 $L_0/S_0$. The stored arrays contain these scaled quantities, so the
-computational data take $L_0=S_0=1$; we make no SI-unit or physical-calibration
+computational data take $L_0=S_0=1$; we make no physical-unit or calibration
 claim.
 
 Let $y:\Omega\to\mathbb{R}^3$ be the deformation map,
@@ -118,8 +118,8 @@ The affine patch maps a unit cube by
   \label{eq:hyperelastic-affine-patch}
 \end{equation}
 An independent analytic implementation assembles $W$, $P$, the material
-tangent, nodal internal forces, and constant boundary tractions. The production
-JAX energy is differentiated on the identical six-tetrahedron mesh. Translation
+tangent, nodal internal forces, and constant boundary tractions. The JAX element
+energy is differentiated on the identical six-tetrahedron mesh. Translation
 modes and a superposed rigid rotation test objectivity and covariance.
 
 The nonaffine manufactured deformation is
@@ -129,7 +129,7 @@ The nonaffine manufactured deformation is
   \label{eq:hyperelastic-manufactured}
 \end{equation}
 Its trace is imposed on the complete boundary, and the analytic body force is
-$b=-\operatorname{Div}P(\nabla y_\star)$. The independent P1 verifier uses
+$b=-\operatorname{Div}P(\nabla y_\star)$. The independent $P_1$ verifier uses
 uniform cube subdivisions $4$, $8$, $16$, and $24$, assembles $P$ and its
 consistent tangent, and applies a fourth-order Duffy-product load rule. Orders
 six and eight provide a load-quadrature refinement check. It reports
@@ -137,12 +137,11 @@ displacement $L^2$, deformation-gradient, first-Piola, and minimum-determinant
 errors. Initialization by the identity deformation targets the intended local
 basin.
 
-The distributed fixed-state test uses the production cantilever geometry at a
-prescribed small rotation. One- and two-rank constructions share the mesh,
-free-space map, affine lift, state, direction, exact element Hessian, and MUMPS
-linear solve. The compared canonical objects are coordinates, connectivity,
-constraints, state, residual, CSR matrix, tangent action, and correction. Time
-is recorded only as a diagnostic because rank count is the varied factor.
+The distributed fixed-state test uses the cantilever geometry at a
+prescribed small rotation. One-, two-, and four-rank constructions share the mesh,
+free-space map, affine lift, state, direction, exact element Hessian, and sparse
+direct linear solve. The compared canonical objects are coordinates, connectivity,
+constraints, state, residual, CSR matrix, tangent action, and correction.
 
 For subsequent nonlinear solves, the fixed Riesz map is the exact Hessian of
 \eqref{eq:hyperelasticity-energy} at $y(X)=X$ on the two-end constrained free
@@ -202,18 +201,18 @@ The assembled benchmark is
   \Pi_h^{\mathrm{MC}}(x;\lambda_{\mathrm{sr}})
   :=\sum_{e\in\mathcal{T}_h}\sum_{q=1}^{n_q}
      w_{eq}\Phi_{\mathrm{MC}}
-     \bigl(B_{eq}A_ex;\bar c_{\lambda,eq},s_{\lambda,eq},
+     \bigl(B_{eq}A_e x;\bar c_{\lambda,eq},s_{\lambda,eq},
            \mu_{eq},K_{eq},\lambda_{\mathrm L,eq}\bigr)
      -f_h^\top x.
   \label{eq:plasticity3d-discrete}
 \end{equation}
 The heterogeneous slope mesh contains four material regions, has bounding box
 $[-175,30]\times[0,60]\times[0,86.6025403784]$ in scaled coordinates, and
-uses the glued-bottom free space. The principal assembled route, stopping, and
-discretization studies use $\lambda_{\mathrm{sr}}=1.55$. The earlier local
-fixed-element derivative diagnostic instead uses
-$\lambda_{\mathrm{sr}}=1.50$; the two configurations are identified separately
-and are never pooled. Named tetrahedral rules use 1, 11, and 24 points for
+uses the glued-bottom free space. The assembled route, stopping, and
+discretization studies use $\lambda_{\mathrm{sr}}=1.55$. The fixed-element
+derivative comparisons instead use $\lambda_{\mathrm{sr}}=1.50$; the two
+configurations are identified separately and are never pooled. Named
+tetrahedral rules use 1, 11, and 24 points for
 $P_1$, $P_2$, and $P_4$, respectively; an enriched 125-point Duffy rule is the
 fixed-state reference. Because the integrand is branchwise nonpolynomial, these
 names specify the discrete functional rather than an exactness claim.
@@ -222,9 +221,9 @@ The material-point matrix contains one strict interior state for every label,
 two-sided probes of all adjacent interfaces, rotated copies, and repeated-
 principal-value cases. A normalized branch margin records distance from the
 selected switching predicate. Ordinary Hessian claims are restricted to strict
-interiors. The finite-element tests add fixed P1, P2, and P4 elements, a
-constructed P2 state containing all five labels, and canonical tangent-action
-comparisons between the three derivative routes.
+interiors. The finite-element tests add fixed $P_1$, $P_2$, and $P_4$ elements,
+a constructed $P_2$ state containing all five labels, and canonical
+tangent-action comparisons between the three derivative routes.
 
 This block tests branch programming, contractions, quadrature sensitivity, and
 distributed derivative placement. It does not establish generalized
@@ -239,9 +238,11 @@ Every numerical block follows the same order:
 \begin{enumerate}
   \item analytic, finite-difference, or manufactured verification;
   \item canonical state, residual, matrix, and action comparison;
-  \item Riesz-scaled stopping and endpoint recomputation;
-  \item repeated timing under a common allocation and solver policy.
+  \item where a nonlinear endpoint is used, Riesz-scaled stopping and terminal
+        recomputation.
 \end{enumerate}
-Failure at one stage prevents promotion to the next. The current paper reaches
-the first two stages for the reported local and fixed-state problems. It does
-not promote the unexecuted distributed route matrix to a performance result.
+Failure at one stage excludes every statement that depends on it. The reported
+fixed-state problems pass the first two stages on their declared scopes, and
+Section~\ref{subsec:stopping-results} states the exact endpoint and
+same-discretization gates for the local stopping study. None of these checks is
+used as performance evidence.
