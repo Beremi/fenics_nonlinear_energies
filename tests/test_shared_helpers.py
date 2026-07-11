@@ -44,11 +44,18 @@ def test_configure_jax_cpu_threading_sets_standard_env(monkeypatch):
     monkeypatch.delenv("OMP_NUM_THREADS", raising=False)
     monkeypatch.delenv("MKL_NUM_THREADS", raising=False)
     monkeypatch.delenv("OPENBLAS_NUM_THREADS", raising=False)
+    monkeypatch.delenv("BLIS_NUM_THREADS", raising=False)
+    monkeypatch.delenv("NUMEXPR_NUM_THREADS", raising=False)
+    monkeypatch.delenv("VECLIB_MAXIMUM_THREADS", raising=False)
     threads = configure_jax_cpu_threading(3)
     assert threads == 3
     assert os.environ["OMP_NUM_THREADS"] == "3"
     assert os.environ["MKL_NUM_THREADS"] == "3"
     assert os.environ["OPENBLAS_NUM_THREADS"] == "3"
+    assert os.environ["BLIS_NUM_THREADS"] == "3"
+    assert os.environ["NUMEXPR_NUM_THREADS"] == "3"
+    assert os.environ["VECLIB_MAXIMUM_THREADS"] == "3"
+    assert "intra_op_parallelism_threads=3" in os.environ["XLA_FLAGS"]
     assert "xla_force_host_platform_device_count=1" in os.environ["XLA_FLAGS"]
 
 

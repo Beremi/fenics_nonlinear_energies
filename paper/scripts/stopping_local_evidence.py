@@ -37,14 +37,21 @@ HEX40 = re.compile(r"[0-9a-f]{40}")
 HEX64 = re.compile(r"[0-9a-f]{64}")
 
 EXPECTED_ENVIRONMENT = {
+    "BLIS_NUM_THREADS": "1",
     "FNE_SKIP_REORDERED_WARMUP": "1",
     "JAX_ENABLE_X64": "True",
     "JAX_PLATFORMS": "cpu",
     "MKL_NUM_THREADS": "1",
+    "NUMEXPR_NUM_THREADS": "1",
     "OMP_NUM_THREADS": "1",
     "OPENBLAS_NUM_THREADS": "1",
     "PYTHONHASHSEED": "0",
-    "XLA_FLAGS": "--xla_cpu_multi_thread_eigen=false --xla_force_host_platform_device_count=1",
+    "VECLIB_MAXIMUM_THREADS": "1",
+    "XLA_FLAGS": (
+        "--xla_cpu_multi_thread_eigen=false "
+        "intra_op_parallelism_threads=1 "
+        "--xla_force_host_platform_device_count=1"
+    ),
 }
 
 EXPECTED_SOURCE_PATHS = (
@@ -52,6 +59,7 @@ EXPECTED_SOURCE_PATHS = (
     "experiments/runners/run_trust_region_case.py",
     "experiments/runners/run_plasticity3d_backend_mix_case.py",
     "experiments/runners/run_plasticity3d_fixed_state_route_screen.py",
+    "src/core/cli/threading.py",
     "src/core/petsc/metrics.py",
     "src/core/petsc/scalar_problem_driver.py",
     "src/problems/ginzburg_landau/jax_petsc/solver.py",

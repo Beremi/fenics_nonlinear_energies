@@ -205,7 +205,23 @@ def test_reference_elastic_metric_p1_mpi_smoke(
         "--quiet",
     ]
     environment = dict(os.environ)
-    environment["FNE_SKIP_REORDERED_WARMUP"] = "1"
+    environment.update(
+        {
+            "BLIS_NUM_THREADS": "1",
+            "FNE_SKIP_REORDERED_WARMUP": "1",
+            "JAX_PLATFORMS": "cpu",
+            "MKL_NUM_THREADS": "1",
+            "NUMEXPR_NUM_THREADS": "1",
+            "OMP_NUM_THREADS": "1",
+            "OPENBLAS_NUM_THREADS": "1",
+            "VECLIB_MAXIMUM_THREADS": "1",
+            "XLA_FLAGS": (
+                "--xla_cpu_multi_thread_eigen=false "
+                "intra_op_parallelism_threads=1 "
+                "--xla_force_host_platform_device_count=1"
+            ),
+        }
+    )
     subprocess.run(
         command,
         cwd=REPO_ROOT,
@@ -251,7 +267,11 @@ def test_reference_elastic_metric_survives_nonlinear_residual_directions(
     tmp_path: Path,
 ) -> None:
     output_path = tmp_path / "he_reference_metric_nonlinear.json"
+    pinned_cpu = min(os.sched_getaffinity(0))
     command = [
+        "taskset",
+        "--cpu-list",
+        str(pinned_cpu),
         str(PYTHON),
         str(CASE_RUNNER),
         "--problem",
@@ -323,15 +343,19 @@ def test_reference_elastic_metric_survives_nonlinear_residual_directions(
     environment = dict(os.environ)
     environment.update(
         {
+            "BLIS_NUM_THREADS": "1",
             "FNE_SKIP_REORDERED_WARMUP": "1",
             "JAX_ENABLE_X64": "True",
             "JAX_PLATFORMS": "cpu",
             "MKL_NUM_THREADS": "1",
+            "NUMEXPR_NUM_THREADS": "1",
             "OMP_NUM_THREADS": "1",
             "OPENBLAS_NUM_THREADS": "1",
             "PYTHONHASHSEED": "0",
+            "VECLIB_MAXIMUM_THREADS": "1",
             "XLA_FLAGS": (
                 "--xla_cpu_multi_thread_eigen=false "
+                "intra_op_parallelism_threads=1 "
                 "--xla_force_host_platform_device_count=1"
             ),
         }

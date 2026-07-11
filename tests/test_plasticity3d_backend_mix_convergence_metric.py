@@ -195,7 +195,23 @@ def test_backend_mix_reference_elastic_metric_mpi_smoke(
         "1e-8",
     ]
     environment = dict(os.environ)
-    environment["FNE_SKIP_REORDERED_WARMUP"] = "1"
+    environment.update(
+        {
+            "BLIS_NUM_THREADS": "1",
+            "FNE_SKIP_REORDERED_WARMUP": "1",
+            "JAX_PLATFORMS": "cpu",
+            "MKL_NUM_THREADS": "1",
+            "NUMEXPR_NUM_THREADS": "1",
+            "OMP_NUM_THREADS": "1",
+            "OPENBLAS_NUM_THREADS": "1",
+            "VECLIB_MAXIMUM_THREADS": "1",
+            "XLA_FLAGS": (
+                "--xla_cpu_multi_thread_eigen=false "
+                "intra_op_parallelism_threads=1 "
+                "--xla_force_host_platform_device_count=1"
+            ),
+        }
+    )
     subprocess.run(
         command,
         cwd=REPO_ROOT,

@@ -268,14 +268,21 @@ def _input_hashes(paths: Iterable[Path]) -> dict[str, str]:
 
 def _base_environment() -> dict[str, str]:
     return {
+        "BLIS_NUM_THREADS": "1",
         "FNE_SKIP_REORDERED_WARMUP": "1",
         "JAX_ENABLE_X64": "True",
         "JAX_PLATFORMS": "cpu",
         "MKL_NUM_THREADS": "1",
+        "NUMEXPR_NUM_THREADS": "1",
         "OMP_NUM_THREADS": "1",
         "OPENBLAS_NUM_THREADS": "1",
         "PYTHONHASHSEED": "0",
-        "XLA_FLAGS": "--xla_cpu_multi_thread_eigen=false --xla_force_host_platform_device_count=1",
+        "VECLIB_MAXIMUM_THREADS": "1",
+        "XLA_FLAGS": (
+            "--xla_cpu_multi_thread_eigen=false "
+            "intra_op_parallelism_threads=1 "
+            "--xla_force_host_platform_device_count=1"
+        ),
     }
 
 
@@ -923,6 +930,7 @@ def build_plan(
         TRUST_RUNNER_PATH,
         P3D_BACKEND_PATH,
         P3D_ROUTE_PATH,
+        Path("src/core/cli/threading.py"),
         Path("src/core/petsc/metrics.py"),
         Path("src/core/petsc/scalar_problem_driver.py"),
         Path("src/problems/ginzburg_landau/jax_petsc/solver.py"),

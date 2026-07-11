@@ -74,6 +74,11 @@ The publication sequence is deliberately non-overwriting:
   --plan artifacts/reproduction/exp_stop_001_local_<commit>/plan.json
 ```
 
+Every required-local row freezes one CPU thread for XLA, OpenMP, MKL,
+OpenBLAS, BLIS, vecLib, and NumExpr. The trust-case launcher uses the shared
+thread-policy helper, so its effective XLA configuration cannot silently drift
+from the campaign manifest.
+
 Publication preparation and execution require the frozen commit and a clean
 worktree. Diagnostic preparation from a dirty tree must say both
 `--run-kind diagnostic` and `--allow-dirty`; such output is never publication

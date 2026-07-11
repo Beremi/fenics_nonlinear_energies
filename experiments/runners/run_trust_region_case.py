@@ -10,17 +10,11 @@ from types import SimpleNamespace
 from mpi4py import MPI
 
 from src.core.benchmark.run_record import atomic_write_json, strict_json_dumps
+from src.core.cli.threading import configure_jax_cpu_threading
 
 
 def _configure_thread_env(nproc_threads: int) -> None:
-    threads = max(1, int(nproc_threads))
-    os.environ["XLA_FLAGS"] = (
-        "--xla_cpu_multi_thread_eigen=false "
-        "--xla_force_host_platform_device_count=1"
-    )
-    os.environ["OMP_NUM_THREADS"] = str(threads)
-    os.environ["MKL_NUM_THREADS"] = str(threads)
-    os.environ["OPENBLAS_NUM_THREADS"] = str(threads)
+    configure_jax_cpu_threading(nproc_threads)
 
 
 def _build_parser() -> argparse.ArgumentParser:
