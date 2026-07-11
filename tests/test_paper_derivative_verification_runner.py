@@ -148,7 +148,9 @@ def test_p3d_assembled_derivative_routes_agree_without_a_solver(tmp_path: Path) 
     assert resources["routes"]["local_sfd"]["process_rss_hwm_gib"] > 0.0
     assert resources["requested_sfd_hvp_batch_size"] == 4
     assert resources["memory_guard_total_gib"] == 48.0
+    assert resources["process_address_space_limit_gib"] == 64.0
     assert resources["csr_comparison_mode"] == "temporary_disk_backed_chunked"
+    assert payload["provenance"]["process_address_space_limit_gib"] == 64.0
     assert assembled["algebraic_scope"]["linear_solver_called"] is False
     assert assembled["algebraic_scope"]["nonlinear_solver_called"] is False
     assert assembled["algebraic_scope"]["ksp_tolerance_used_for_comparison"] is None

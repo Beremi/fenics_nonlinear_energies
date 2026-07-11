@@ -92,6 +92,25 @@ def _chunked_hessian_errors(
     return absolute, float(absolute / scale), float(maximum)
 
 
+def _apply_address_space_limit(limit_gib: float) -> float:
+    """Apply a process-local virtual-memory ceiling and return its GiB value."""
+    limit_gib = float(limit_gib)
+    if not np.isfinite(limit_gib) or limit_gib <= 0.0:
+        raise ValueError("process_address_space_limit_gib must be positive and finite")
+    requested = int(limit_gib * float(1024**3))
+    current_soft, current_hard = resource.getrlimit(resource.RLIMIT_AS)
+    infinity = int(resource.RLIM_INFINITY)
+    if current_hard != infinity and requested > int(current_hard):
+        requested = int(current_hard)
+    effective = requested
+    if current_soft != infinity:
+        effective = min(effective, int(current_soft))
+    if effective <= 0:
+        raise ValueError("existing process address-space limit is not usable")
+    resource.setrlimit(resource.RLIMIT_AS, (effective, current_hard))
+    return float(effective) / float(1024**3)
+
+
 def _relative_error(left: np.ndarray, right: np.ndarray) -> float:
     left = np.asarray(left, dtype=np.float64)
     right = np.asarray(right, dtype=np.float64)
@@ -461,6 +480,7 @@ def verify_assembled_route_equivalence(
     symmetry_tolerance: float,
     sfd_hvp_batch_size: int,
     memory_guard_total_gib: float,
+    process_address_space_limit_gib: float,
     scratch_parent: Path,
 ) -> dict[str, object]:
     """Compare all maintained local derivative routes without solving a system."""
@@ -674,6 +694,7 @@ def verify_assembled_route_equivalence(
     }
     execution_resources = {
         "memory_guard_total_gib": float(memory_guard_total_gib),
+        "process_address_space_limit_gib": float(process_address_space_limit_gib),
         "requested_sfd_hvp_batch_size": int(sfd_hvp_batch_size),
         "csr_comparison_mode": "temporary_disk_backed_chunked",
         "csr_structure_chunk_entries": 4_000_000,
@@ -879,6 +900,9 @@ def run(args: argparse.Namespace) -> dict[str, object]:
         raise ValueError("assembled_sfd_hvp_batch_size must be positive")
     if float(args.assembled_memory_guard_gib) <= 0.0:
         raise ValueError("assembled_memory_guard_gib must be positive")
+    effective_address_space_limit_gib = _apply_address_space_limit(
+        float(args.process_address_space_limit_gib)
+    )
     data = _load_element(
         str(args.mesh_name), int(args.degree), int(args.element_index), float(args.lambda_target)
     )
@@ -944,6 +968,7 @@ def run(args: argparse.Namespace) -> dict[str, object]:
             symmetry_tolerance=float(args.assembled_symmetry_tolerance),
             sfd_hvp_batch_size=int(args.assembled_sfd_hvp_batch_size),
             memory_guard_total_gib=float(args.assembled_memory_guard_gib),
+            process_address_space_limit_gib=effective_address_space_limit_gib,
             scratch_parent=Path(args.output).resolve().parent,
         )
     passed = bool(
@@ -1003,6 +1028,7 @@ def run(args: argparse.Namespace) -> dict[str, object]:
             "numpy": np.__version__,
             "jax_enable_x64": bool(jax.config.x64_enabled),
             "jax_platforms": os.environ.get("JAX_PLATFORMS", ""),
+            "process_address_space_limit_gib": effective_address_space_limit_gib,
             "command": " ".join(sys.argv),
         },
     }
@@ -1041,6 +1067,7 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--assembled-symmetry-tolerance", type=float, default=1.0e-12)
     parser.add_argument("--assembled-sfd-hvp-batch-size", type=int, default=4)
     parser.add_argument("--assembled-memory-guard-gib", type=float, default=48.0)
+    parser.add_argument("--process-address-space-limit-gib", type=float, default=64.0)
     parser.add_argument("--output", type=Path, required=True)
     return parser
 
