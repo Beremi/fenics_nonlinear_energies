@@ -316,7 +316,7 @@ class SlopeStability3DReorderedElementAssembler(ReorderedElementAssemblerBase):
         required = ("elems_scalar", "freedofs", "nodes")
         missing = [key for key in required if key not in self.params]
         degree = int(self.params.get("element_degree", 0))
-        if missing or int(self.block_size) != 3 or self.layout.perm.size == 0:
+        if missing or self.layout.perm.size == 0:
             if degree == 4:
                 detail = ", ".join(missing) if missing else "compatible global permutation"
                 raise MemoryError(
