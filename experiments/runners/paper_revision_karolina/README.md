@@ -103,6 +103,27 @@ because the seven cluster STOP results and final adjudication do not yet exist.
 A future real execution must regenerate separate training and holdout archives
 from an authorized clean commit and bind the same valid STOP adjudication.
 
+### Completed clean workstation calibration
+
+The locally executable `EXP-ROUTE-001` campaign was completed from clean commit
+`566eaf24f3f2a498f33d5a25b0871bea9c7142a8` under a 32 GiB address-space
+limit at
+`artifacts/reproduction/paper_revision_workstation/exp_route_001_completed_566eaf2`.
+All 36 sequential route processes and all 12 balanced P1/P2 fixed-state blocks
+completed without failure or censoring. Each of the six route permutations was
+used twice. The maximum four-probe action discrepancy was
+`2.34e-16` relative, while saved states and gradient/residual comparisons were
+exact at the recorded precision. The maximum rank-local process high-water RSS
+was 6.77 GiB.
+
+The recursive 273-file output closure and frozen source/configuration/input
+inventories passed independent revalidation. The manifest SHA-256 is
+`2e40257087a71a4bd261a7a90c2eb0cc196b9667db6a4cb3dce2b2b3a65028ee`.
+These records admit the workstation correctness/calibration input only; every
+block deliberately records `timing_claim_released: false`. Route-ordering,
+crossover, and second-architecture timing claims remain blocked on the
+Karolina training and holdout archives.
+
 ### Superseded version-10 provenance
 
 The following version-10 scheduler-free archives were generated from clean

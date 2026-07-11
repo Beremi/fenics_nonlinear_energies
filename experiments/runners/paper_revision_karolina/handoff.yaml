@@ -90,6 +90,21 @@ campaign:
       status: prepared_not_executed
       address_space_limit_bytes: 34359738368
       plan_sha256: 29932cfb0f8371b5aad890229a41e920799d7e49f867483f6730e0660cacee91
+  latest_completed_workstation_route_campaign:
+    root: artifacts/reproduction/paper_revision_workstation/exp_route_001_completed_566eaf2
+    source_commit: 566eaf24f3f2a498f33d5a25b0871bea9c7142a8
+    status: completed
+    blocks_completed: 12
+    route_processes_launched: 36
+    route_processes_completed: 36
+    route_processes_failed: 0
+    route_processes_censored: 0
+    output_closure_files: 273
+    address_space_limit_bytes: 34359738368
+    maximum_peak_rss_bytes: 7267348480
+    timing_claim_released: false
+    manifest_sha256: 2e40257087a71a4bd261a7a90c2eb0cc196b9667db6a4cb3dce2b2b3a65028ee
+    independent_provenance_gate: completed_frozen_workstation_campaign
   route_analysis_contract: paper/protocols/EXP-ROUTE-001-analysis-contract.json
   route_analysis_contract_sha256: 22e63a402cdeab9f4127f72ecf8dcbe15dabbeea4f002f34f7571e92c862d5de
   route_endpoint_analyzer: experiments/analysis/analyze_plasticity3d_route_endpoints.py

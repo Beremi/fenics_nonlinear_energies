@@ -2,10 +2,20 @@
 
 ## Status and decision
 
-**Local finite-map diagnostic complete; expanded Karolina campaign prepared,
-not submitted.** The local rows are dirty-worktree diagnostic pilots, not
-publication evidence. The train/holdout split, cost-model features, error
-thresholds, ordering gate, and structural-censor policy are frozen in
+**Clean workstation correctness/calibration campaign complete; expanded
+Karolina campaign prepared, not submitted.** A clean one-rank campaign from
+commit `566eaf24f3f2a498f33d5a25b0871bea9c7142a8` completed all 12 balanced
+P1/P2 fixed-state blocks and all 36 sequential route processes without failure
+or censoring. All blocks passed the four-action, state, and gradient/residual
+checks; the largest action discrepancy was $2.34\times10^{-16}$ relative. The
+recursive archive closure and frozen-input inventories passed independent
+revalidation. These records are workstation calibration inputs, and every
+block retains `timing_claim_released: false`; they do not support a route-speed,
+crossover, or architecture-comparison claim. Earlier local rows remain
+dirty-worktree diagnostic pilots and are not publication evidence.
+
+The train/holdout split, cost-model features, error thresholds, ordering gate,
+and structural-censor policy are frozen in
 [`EXP-ROUTE-001-analysis-contract.json`](EXP-ROUTE-001-analysis-contract.json)
 as contract version 3 before any Karolina result exists. The exact executable Karolina rows are
 frozen in
