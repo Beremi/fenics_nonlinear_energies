@@ -931,20 +931,20 @@ def render_table(audit: Mapping[str, object]) -> str:
     if not isinstance(summaries, list) or len(summaries) != 4:
         raise AdmissionError("audit method summary is incomplete")
     labels = {
-        "gl_l5_np2": r"Ginzburg--Landau, L5, 2 ranks",
-        "he_l2_np2_step1": r"Hyperelasticity, L2, step 1, 2 ranks",
+        "gl_l5_np2": r"Ginzburg--Landau, $L_5$, 2 ranks",
+        "he_l2_np2_step1": r"Hyperelasticity, $L_2$, step 1, 2 ranks",
         "newton_armijo": r"Newton--Armijo",
         "reduced_trust_armijo": r"Reduced trust--Armijo",
     }
     lines = [
         r"\begin{table}[t]",
-        r"\centering",
-        r"\caption{Observed terminal outcomes for the frozen local controlled-globalization design.}",
-        r"\label{tab:globalization-local-status}",
-        r"\begin{tabular}{llrr}",
-        r"\toprule",
-        r"Problem & Method & Completed & Failed \\",
-        r"\midrule",
+        r"  \caption{Observed terminal outcomes for the frozen local controlled-globalization design.}",
+        r"  \label{tab:globalization-local-status}",
+        r"  \centering",
+        r"  \begin{tabularx}{\linewidth}{C{1.55}C{1.15}C{0.65}C{0.65}}",
+        r"    \toprule",
+        r"    Problem & Method & Completed & Failed \\",
+        r"    \midrule",
     ]
     for row in summaries:
         benchmark = str(row.get("benchmark"))
@@ -952,23 +952,23 @@ def render_table(audit: Mapping[str, object]) -> str:
         if benchmark not in labels or method not in labels:
             raise AdmissionError("method summary contains an unknown label")
         lines.append(
-            f"{labels[benchmark]} & {labels[method]} & "
+            f"    {labels[benchmark]} & {labels[method]} & "
             f"{int(row.get('completed', -1))}/{int(row.get('total', -1))} & "
             f"{int(row.get('failed', -1))}/{int(row.get('total', -1))} \\\\"
         )
     lines.extend(
         [
-            r"\bottomrule",
-            r"\end{tabular}",
-            r"\begin{minipage}{0.96\linewidth}\small",
+            r"    \bottomrule",
+            r"  \end{tabularx}",
+            r"  \begin{minipage}{0.96\linewidth}\small",
             (
-                r"Counts are outcomes for three prescribed starts and five process "
+                r"    Counts are outcomes for three prescribed starts and five process "
                 r"repetitions per method. Timing and performance ordering are excluded. "
                 r"The starts are deterministic sensitivity instances, so no robustness "
                 r"generalization is made. A paired method comparison is admissible only "
                 r"when both methods terminate at the same independently identified endpoint."
             ),
-            r"\end{minipage}",
+            r"  \end{minipage}",
             r"\end{table}",
             "",
         ]

@@ -375,6 +375,9 @@ def test_audit_closes_campaign_and_renders_deterministically(tmp_path: Path) -> 
     first = evidence.render_table(audit)
     second = evidence.render_table(audit)
     assert first.encode() == second.encode()
+    assert r"Ginzburg--Landau, $L_5$, 2 ranks" in first
+    assert r"Hyperelasticity, $L_2$, step 1, 2 ranks" in first
+    assert r"\begin{tabularx}{\linewidth}" in first
     assert "performance ordering are excluded" in first
     assert "speedup" not in first.lower()
 
