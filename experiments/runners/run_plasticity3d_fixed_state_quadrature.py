@@ -105,6 +105,39 @@ def _vector_difference(values: np.ndarray, reference: np.ndarray) -> dict[str, f
 
 def run(args: argparse.Namespace) -> dict[str, object]:
     state_path = Path(args.state).resolve()
+    output_value = getattr(args, "output", None)
+    experiment_root = (
+        Path(output_value).resolve().parent if output_value is not None else None
+    )
+    state_record = str(state_path)
+    if experiment_root is not None:
+        try:
+            state_record = state_path.relative_to(experiment_root).as_posix()
+        except ValueError as exc:
+            raise RuntimeError(
+                "publication quadrature state must be contained in the output "
+                "experiment directory"
+            ) from exc
+    if not state_path.is_file():
+        raise ValueError("quadrature state must be an existing regular file")
+
+    action_output_dir = (
+        Path(args.action_output_dir).resolve()
+        if getattr(args, "action_output_dir", None) is not None
+        else None
+    )
+    if experiment_root is not None and action_output_dir is not None:
+        try:
+            action_output_dir.relative_to(experiment_root)
+        except ValueError as exc:
+            raise RuntimeError(
+                "publication quadrature artifacts must be contained in the output "
+                "experiment directory"
+            ) from exc
+    if action_output_dir is not None and action_output_dir.exists():
+        if not action_output_dir.is_dir():
+            raise ValueError("quadrature artifact output path must be a directory")
+
     with np.load(state_path, allow_pickle=False) as state:
         mesh_name = str(_scalar(state, "mesh_name", ""))
         element_degree = int(_scalar(state, "element_degree", 0))
@@ -172,11 +205,6 @@ def run(args: argparse.Namespace) -> dict[str, object]:
         for rule_id in rules
     ]
     evaluations = [dict(item.summary) for item in diagnostics]
-    action_output_dir = (
-        Path(args.action_output_dir).resolve()
-        if getattr(args, "action_output_dir", None) is not None
-        else None
-    )
     for item, row in zip(diagnostics, evaluations):
         action = np.asarray(item.hessian_action, dtype=np.float64)
         residual = np.asarray(item.full_residual, dtype=np.float64)
@@ -326,13 +354,7 @@ def run(args: argparse.Namespace) -> dict[str, object]:
     if len(direction_hashes) != 1 or not free_dof_sets_match:
         raise RuntimeError("cross-rule diagnostics did not use one common direction/free-DOF set")
 
-    output_value = getattr(args, "output", None)
-    state_record = str(state_path)
-    if output_value is not None:
-        output_parent = Path(output_value).resolve().parent
-        if state_path.parent != output_parent:
-            raise RuntimeError("publication quadrature state must share the output directory")
-        state_record = state_path.name
+    if experiment_root is not None:
         for row in evaluations:
             for key in (
                 "hessian_action_artifact",
@@ -343,10 +365,13 @@ def run(args: argparse.Namespace) -> dict[str, object]:
                 if isinstance(artifact, dict):
                     artifact_path = Path(str(artifact["path"])).resolve()
                     try:
-                        artifact["path"] = str(artifact_path.relative_to(output_parent))
+                        artifact["path"] = artifact_path.relative_to(
+                            experiment_root
+                        ).as_posix()
                     except ValueError as exc:
                         raise RuntimeError(
-                            "publication quadrature artifact escapes the output directory"
+                            "publication quadrature artifact escapes the output experiment "
+                            "directory"
                         ) from exc
     return {
         "experiment_id": "EXP-DISC-001-P3D-FIXED-STATE-QUADRATURE",

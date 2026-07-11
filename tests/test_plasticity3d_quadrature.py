@@ -9,6 +9,7 @@ from pathlib import Path
 import h5py
 from mpi4py import MPI
 import numpy as np
+import pytest
 
 from src.core.benchmark.run_record import ExperimentPreflight
 from src.problems.slope_stability_3d.support.fixed_state import (
@@ -315,7 +316,9 @@ def test_fixed_state_runner_saves_hashable_actions_and_strict_json(
     case_path = tmp_path / "case.h5"
     case = _one_tetra_case(TETRA_QUADRATURE_24POINT)
     write_case_hdf5(case_path, case)
-    state_path = tmp_path / "state.npz"
+    experiment_root = tmp_path / "EXP-DISC-001"
+    state_path = experiment_root / "clean_inputs" / "state.npz"
+    state_path.parent.mkdir(parents=True)
     displacement = 1.0e-5 * np.asarray(case.nodes, dtype=np.float64)
     np.savez(
         state_path,
@@ -332,10 +335,12 @@ def test_fixed_state_runner_saves_hashable_actions_and_strict_json(
         "ensure_same_mesh_case_hdf5",
         lambda *args, **kwargs: case_path,
     )
-    action_dir = tmp_path / "actions"
+    action_dir = experiment_root / "actions" / "p1_l1"
+    output_path = experiment_root / "p1_l1_fixed_state_quadrature_v2.json"
     payload = fixed_runner.run(
         argparse.Namespace(
             state=state_path,
+            output=output_path,
             constraint_variant=None,
             quadrature_rules=(
                 f"{TETRA_QUADRATURE_1POINT},{TETRA_QUADRATURE_DUFFY_125POINT}"
@@ -347,19 +352,22 @@ def test_fixed_state_runner_saves_hashable_actions_and_strict_json(
     )
 
     assert payload["common_free_dof_set"] is True
+    assert payload["state_path"] == "clean_inputs/state.npz"
     assert len(payload["common_direction_content_sha256"]) == 64
     assert payload["reference_rule_id"] == TETRA_QUADRATURE_DUFFY_125POINT
     assert len(payload["evaluations"]) == 2
     for row in payload["evaluations"]:
         artifact = row["hessian_action_artifact"]
-        action_path = Path(artifact["path"])
+        assert artifact["path"].startswith("actions/p1_l1/")
+        action_path = experiment_root / artifact["path"]
         assert action_path.is_file()
         action = np.load(action_path, allow_pickle=False)
         assert action.shape == (12,)
         assert np.all(np.isfinite(action))
         assert hashlib.sha256(action_path.read_bytes()).hexdigest() == artifact["sha256"]
         residual_artifact = row["residual_artifact"]
-        residual_path = Path(residual_artifact["path"])
+        assert residual_artifact["path"].startswith("actions/p1_l1/")
+        residual_path = experiment_root / residual_artifact["path"]
         residual = np.load(residual_path, allow_pickle=False)
         assert residual.shape == (12,)
         assert np.all(np.isfinite(residual))
@@ -367,7 +375,8 @@ def test_fixed_state_runner_saves_hashable_actions_and_strict_json(
             "sha256"
         ]
         branch_artifact = row["branch_map_artifact"]
-        branch_path = Path(branch_artifact["path"])
+        assert branch_artifact["path"].startswith("actions/p1_l1/")
+        branch_path = experiment_root / branch_artifact["path"]
         branch_map = np.load(branch_path, allow_pickle=False)
         assert branch_map.dtype == np.int8
         assert branch_map.size == row["branch_sample_points"]
@@ -381,6 +390,48 @@ def test_fixed_state_runner_saves_hashable_actions_and_strict_json(
         assert "free_residual_vector_comparison_to_last_rule" in row
         assert "branch_comparison_to_last_rule" in row
     json.dumps(payload, allow_nan=False)
+
+
+@pytest.mark.parametrize("escaping_path", ["state", "actions"])
+def test_fixed_state_runner_rejects_experiment_root_escape_before_evaluation(
+    tmp_path: Path,
+    monkeypatch,
+    escaping_path: str,
+) -> None:
+    experiment_root = tmp_path / "EXP-DISC-001"
+    contained_state = experiment_root / "clean_inputs" / "state.npz"
+    contained_state.parent.mkdir(parents=True)
+    np.savez(contained_state, placeholder=np.asarray(1, dtype=np.int64))
+    outside_state = tmp_path / "outside_state.npz"
+    np.savez(outside_state, placeholder=np.asarray(1, dtype=np.int64))
+    state_path = outside_state if escaping_path == "state" else contained_state
+    action_dir = (
+        tmp_path / "outside_actions"
+        if escaping_path == "actions"
+        else experiment_root / "actions" / "p1_l1"
+    )
+
+    def fail_if_evaluated(*_args, **_kwargs):
+        raise AssertionError("path validation must precede fixed-state evaluation")
+
+    monkeypatch.setattr(
+        fixed_runner,
+        "evaluate_fixed_state_quadrature_diagnostics",
+        fail_if_evaluated,
+    )
+    with pytest.raises(RuntimeError, match="contained in the output experiment directory"):
+        fixed_runner.run(
+            argparse.Namespace(
+                state=state_path,
+                output=experiment_root / "p1_l1_fixed_state_quadrature_v2.json",
+                constraint_variant=None,
+                quadrature_rules=TETRA_QUADRATURE_1POINT,
+                element_chunk_size=1,
+                coordinate_atol=1.0e-12,
+                action_output_dir=action_dir,
+            )
+        )
+    assert not action_dir.exists()
 
 
 def test_prescribed_state_preparer_exports_constraint_aware_state(

@@ -87,14 +87,19 @@ completed row that does not pass the residual gate.
 
 For the managed local source campaign, every named rule writes the full
 residual, deterministic Hessian action, and element-major branch map as a
-separate non-object NPY array. The execution plan declares all 12 arrays per
+separate non-object NPY array. The prepared state under `clean_inputs/`, the
+summary JSON, and the arrays under `actions/` share the common
+`EXP-DISC-001/` experiment directory; they need not have the same immediate
+parent. The raw summary records the state and array paths relative to that
+common experiment directory. The execution plan declares all 12 arrays per
 degree before execution. Each nested JSON artifact descriptor records a
-canonical staging-relative path, file SHA-256, array-content SHA-256, dtype,
-and shape. The managed receipt, companion manifest, and finalization manifest
-must bind the same complete path/hash set. Finalization and the independent
-admission audit reload every array with pickling disabled, recompute both
-hashes, and reject missing files, path traversal, symlink traversal, dtype or
-shape drift, and any descriptor/receipt disagreement.
+canonical relative path, file SHA-256, array-content SHA-256, dtype, and shape.
+The managed receipt, companion manifest, and finalization manifest must bind
+the same complete path/hash set. Finalization and the independent admission
+audit reload every array with pickling disabled, recompute both hashes, and
+reject missing files, path traversal, symlink traversal, dtype or shape drift,
+and any descriptor/receipt disagreement. The runner validates state and array
+containment before performing the fixed-state evaluations or writing arrays.
 
 ## Prespecified analysis
 
