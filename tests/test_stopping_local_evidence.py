@@ -578,8 +578,12 @@ def test_audit_recomputes_complete_local_policy_grid_and_table(tmp_path: Path) -
     assert scientific["timing_claim_admissible"] is False
     table = evidence.render_table(audit)
     assert table == evidence.render_table(audit)
-    assert "necessary but not sufficient" in table
-    assert "separately hash-bound EXP-DISC" in table
+    assert r"\begin{tabularx}{\linewidth}" in table
+    assert "Completed executions" in table
+    assert r"$P_4(L_1)$" in table
+    assert "parallel-cluster resources remain" in table
+    assert "receipts" not in table.lower()
+    assert "adjudication" not in table.lower()
 
 
 def test_independent_endpoint_schema_matches_producer_for_all_local_rows(

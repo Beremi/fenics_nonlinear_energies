@@ -675,7 +675,7 @@
   "evidence_root": "artifacts/reproduction/paper_revision_local_692bc6d50544/EXP-GLOB-001",
   "experiment_id": "EXP-GLOB-001",
   "outputs": {
-    "globalization_local_status.tex": "a34fb30d4a93642415dcc07af612e978ccf3da00f94bb3aada4866e19cb57bf4"
+    "globalization_local_status.tex": "a7a7c95624b18a47af25a17b4cb8905e5c86a2986d3dfcb1a678739bd25136ab"
   },
   "population_robustness_claim_admissible": false,
   "publication_evidence": true,
@@ -699,7 +699,7 @@
     },
     "validator": {
       "path": "paper/scripts/globalization_local_evidence.py",
-      "sha256": "65682e128f864ba356ef52fdeb574bbc3c9b12f0701f46dd415e9039ed42f0a1"
+      "sha256": "ccb2831b90776bd0bf7570e0d9425b397907cc5331dc67c8e18fbd4c27af0f61"
     }
   }
 }

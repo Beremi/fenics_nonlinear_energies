@@ -378,7 +378,10 @@ def test_audit_closes_campaign_and_renders_deterministically(tmp_path: Path) -> 
     assert r"Ginzburg--Landau, $L_5$, 2 ranks" in first
     assert r"Hyperelasticity, $L_2$, step 1, 2 ranks" in first
     assert r"\begin{tabularx}{\linewidth}" in first
-    assert "performance ordering are excluded" in first
+    assert "five executions" in first
+    assert "process repetitions" not in first
+    assert "do not establish a performance ordering" in first
+    assert "campaign" not in first.lower()
     assert "speedup" not in first.lower()
 
 

@@ -1,18 +1,15 @@
 PYTHON := ../.venv/bin/python
 LATEXMK := latexmk
 MAIN := main.tex
-REVISION_EVIDENCE_ROOT ?= ../artifacts/reproduction/paper_revision_2026_07_10/pilots
-REVISION_EVIDENCE_CLASS ?= diagnostic
+REVISION_DIAGNOSTIC_EVIDENCE_ROOT ?= ../artifacts/reproduction/paper_revision_2026_07_10/pilots
+REVISION_DIAGNOSTIC_OUT_DIR ?= build/diagnostic-revision-tables
+REVISION_EVIDENCE_ROOT ?=
 REVISION_EVIDENCE_MANIFEST ?=
 DISTRIBUTED_COLORED_EVIDENCE_ROOT ?=
 GLOBALIZATION_LOCAL_EVIDENCE_ROOT ?=
 STOPPING_LOCAL_EVIDENCE_ROOT ?=
-REVISION_EVIDENCE_ARGS = --evidence-root $(REVISION_EVIDENCE_ROOT) --evidence-class $(REVISION_EVIDENCE_CLASS)
-ifneq ($(strip $(REVISION_EVIDENCE_MANIFEST)),)
-REVISION_EVIDENCE_ARGS += --evidence-manifest $(REVISION_EVIDENCE_MANIFEST)
-endif
-
 .PHONY: all layout figures tables literature literature-check validate publish-check submission-check release-check release-blockers submission-bundle pdf clean \
+	revision-diagnostic-tables revision-publication-tables publication-local-check \
 	distributed-colored-table distributed-colored-check distributed-colored-check-if-present \
 	globalization-local-table globalization-local-check globalization-local-check-if-present \
 	stopping-local-table stopping-local-check stopping-local-check-if-present \
@@ -30,7 +27,24 @@ figures: layout
 
 tables: layout
 	$(PYTHON) scripts/generate_paper_tables.py
-	$(PYTHON) scripts/generate_revision_evidence_tables.py $(REVISION_EVIDENCE_ARGS)
+
+# Diagnostic revision tables never write into the canonical publication directory.
+revision-diagnostic-tables:
+	mkdir -p "$(REVISION_DIAGNOSTIC_OUT_DIR)"
+	$(PYTHON) scripts/generate_revision_evidence_tables.py \
+		--out-dir "$(REVISION_DIAGNOSTIC_OUT_DIR)" \
+		--evidence-root "$(REVISION_DIAGNOSTIC_EVIDENCE_ROOT)" \
+		--evidence-class diagnostic
+
+# Canonical revision tables require an explicitly supplied publication manifest.
+revision-publication-tables:
+	test -n "$(REVISION_EVIDENCE_ROOT)"
+	test -n "$(REVISION_EVIDENCE_MANIFEST)"
+	$(PYTHON) scripts/generate_revision_evidence_tables.py \
+		--out-dir tables/generated \
+		--evidence-root "$(REVISION_EVIDENCE_ROOT)" \
+		--evidence-class publication \
+		--evidence-manifest "$(REVISION_EVIDENCE_MANIFEST)"
 
 distributed-colored-table:
 	test -n "$(DISTRIBUTED_COLORED_EVIDENCE_ROOT)"
@@ -68,6 +82,11 @@ stopping-local-check-if-present:
 		$(PYTHON) scripts/check_stopping_local_manifest.py; \
 	fi
 
+publication-local-check:
+	$(PYTHON) scripts/check_distributed_colored_manifest.py
+	$(PYTHON) scripts/check_globalization_local_manifest.py
+	$(PYTHON) scripts/check_stopping_local_manifest.py
+
 literature:
 	$(PYTHON) scripts/generate_literature_sources.py
 
@@ -102,6 +121,7 @@ validate: figures tables
 	$(PYTHON) scripts/validate_paper_assets.py
 
 publish-check:
+	$(MAKE) publication-local-check
 	$(MAKE) literature-check
 	$(PYTHON) scripts/check_submission_bundle_manifest.py
 	$(PYTHON) scripts/validate_paper_assets.py --archive-neutral
@@ -114,9 +134,7 @@ submission-check:
 	$(PYTHON) scripts/check_float_placements.py
 	$(PYTHON) scripts/check_manuscript_hygiene.py build/main.pdf
 	$(PYTHON) scripts/check_revision_evidence_manifest.py
-	$(MAKE) distributed-colored-check-if-present
-	$(MAKE) globalization-local-check-if-present
-	$(MAKE) stopping-local-check-if-present
+	$(MAKE) publication-local-check
 	$(MAKE) literature-check
 	$(PYTHON) scripts/check_submission_bundle_manifest.py
 	$(PYTHON) scripts/validate_paper_assets.py --archive-neutral
@@ -132,4 +150,3 @@ pdf: validate
 clean:
 	rm -rf build
 	rm -f figures/generated/*
-	rm -f tables/generated/*

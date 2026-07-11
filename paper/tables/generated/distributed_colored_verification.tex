@@ -1,23 +1,23 @@
 \begin{table}[t]
-  \caption{Independent fixed-state verification of distributed colored sparse recovery. The state vectors and CSR topology are checked exactly. The residual and tangent gate rejects a comparison only when its relative error exceeds $1 \times 10^{-8}$ and its absolute error exceeds $1 \times 10^{-10}$. No timing measurements enter this correctness comparison.}
+  \caption{Fixed-state verification of distributed colored sparse recovery. State vectors and CSR sparsity patterns agree exactly. Each residual or tangent comparison is accepted when its relative error is at most $1 \times 10^{-8}$ or its absolute error is at most $1 \times 10^{-10}$. Timings are not included.}
   \label{tab:distributed-colored-verification}
   \centering
   \begin{tabularx}{\linewidth}{C{0.70}C{1.05}C{0.65}C{1.20}C{1.20}C{1.20}}
     \toprule
     Element & State & Ranks & Gradient rel. error & Max. action rel. error & CSR-value rel. error \\
     \midrule
-    $P1$ & Elastic & 1 & $0$ & $0$ & $0$ \\
-    $P1$ & Elastic & 2 & $0$ & $0$ & -- \\
-    $P1$ & Elastic & 4 & $0$ & $0$ & -- \\
-    $P1$ & Mixed & 1 & $0$ & $0$ & $0$ \\
-    $P1$ & Mixed & 2 & $0$ & $0$ & -- \\
-    $P1$ & Mixed & 4 & $0$ & $0$ & -- \\
-    $P2$ & Elastic & 1 & $0$ & $0$ & $0$ \\
-    $P2$ & Elastic & 2 & $0$ & $0$ & -- \\
-    $P2$ & Elastic & 4 & $0$ & $0$ & -- \\
-    $P2$ & Mixed & 1 & $0$ & $0$ & $0$ \\
-    $P2$ & Mixed & 2 & $0$ & $0$ & -- \\
-    $P2$ & Mixed & 4 & $0$ & $0$ & -- \\
+    $P_1(L_1)$ & Elastic & 1 & $0$ & $0$ & $0$ \\
+    $P_1(L_1)$ & Elastic & 2 & $0$ & $0$ & -- \\
+    $P_1(L_1)$ & Elastic & 4 & $0$ & $0$ & -- \\
+    $P_1(L_1)$ & Mixed & 1 & $0$ & $0$ & $0$ \\
+    $P_1(L_1)$ & Mixed & 2 & $0$ & $0$ & -- \\
+    $P_1(L_1)$ & Mixed & 4 & $0$ & $0$ & -- \\
+    $P_2(L_1)$ & Elastic & 1 & $0$ & $0$ & $0$ \\
+    $P_2(L_1)$ & Elastic & 2 & $0$ & $0$ & -- \\
+    $P_2(L_1)$ & Elastic & 4 & $0$ & $0$ & -- \\
+    $P_2(L_1)$ & Mixed & 1 & $0$ & $0$ & $0$ \\
+    $P_2(L_1)$ & Mixed & 2 & $0$ & $0$ & -- \\
+    $P_2(L_1)$ & Mixed & 4 & $0$ & $0$ & -- \\
     \bottomrule
   \end{tabularx}
 \end{table}

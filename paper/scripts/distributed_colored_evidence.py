@@ -906,11 +906,10 @@ def render_table(audit: Mapping[str, object]) -> str:
         raise AdmissionError("numerical revalidation must contain 12 table rows")
     lines = [
         "\\begin{table}[t]",
-        "  \\caption{Independent fixed-state verification of distributed colored sparse recovery. "
-        "The state vectors and CSR topology are checked exactly. The residual and tangent gate "
-        "rejects a comparison only when its relative error exceeds $1 \\times 10^{-8}$ and its "
-        "absolute error exceeds $1 \\times 10^{-10}$. No timing measurements enter this "
-        "correctness comparison.}",
+        "  \\caption{Fixed-state verification of distributed colored sparse recovery. "
+        "State vectors and CSR sparsity patterns agree exactly. Each residual or tangent "
+        "comparison is accepted when its relative error is at most $1 \\times 10^{-8}$ "
+        "or its absolute error is at most $1 \\times 10^{-10}$. Timings are not included.}",
         "  \\label{tab:distributed-colored-verification}",
         "  \\centering",
         "  \\begin{tabularx}{\\linewidth}{C{0.70}C{1.05}C{0.65}C{1.20}C{1.20}C{1.20}}",
@@ -923,7 +922,7 @@ def render_table(audit: Mapping[str, object]) -> str:
             raise AdmissionError("table row must be an object")
         lines.append(
             "    "
-            f"$P{int(row['degree'])}$ & {str(row['state']).capitalize()} & {int(row['ranks'])} & "
+            f"$P_{int(row['degree'])}(L_1)$ & {str(row['state']).capitalize()} & {int(row['ranks'])} & "
             f"{_tex_number(float(row['colored_gradient_relative_error']))} & "
             f"{_tex_number(float(row['colored_action_relative_error']))} & "
             f"{_tex_number(None if row['colored_csr_relative_error'] is None else float(row['colored_csr_relative_error']))} \\\\"

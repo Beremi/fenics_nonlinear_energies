@@ -938,7 +938,7 @@ def render_table(audit: Mapping[str, object]) -> str:
     }
     lines = [
         r"\begin{table}[t]",
-        r"  \caption{Observed terminal outcomes for the frozen local controlled-globalization design.}",
+        r"  \caption{Terminal outcomes for prescribed initial states in the local globalization comparison.}",
         r"  \label{tab:globalization-local-status}",
         r"  \centering",
         r"  \begin{tabularx}{\linewidth}{C{1.55}C{1.15}C{0.65}C{0.65}}",
@@ -962,11 +962,12 @@ def render_table(audit: Mapping[str, object]) -> str:
             r"  \end{tabularx}",
             r"  \begin{minipage}{0.96\linewidth}\small",
             (
-                r"    Counts are outcomes for three prescribed starts and five process "
-                r"repetitions per method. Timing and performance ordering are excluded. "
-                r"The starts are deterministic sensitivity instances, so no robustness "
-                r"generalization is made. A paired method comparison is admissible only "
-                r"when both methods terminate at the same independently identified endpoint."
+                r"    Each count combines three prescribed initial states and five executions "
+                r"per method and initial state. These initial states form a deterministic "
+                r"sensitivity study, not a random sample; no population-level robustness "
+                r"conclusion is drawn. Timings are omitted, and the results do not establish "
+                r"a performance ordering. Methods are compared pairwise only when both "
+                r"terminate at the same independently identified endpoint."
             ),
             r"  \end{minipage}",
             r"\end{table}",

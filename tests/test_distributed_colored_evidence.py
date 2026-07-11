@@ -333,7 +333,10 @@ def test_independent_admission_accepts_closed_campaign_and_renders_deterministic
     first = evidence.render_table(audit)
     second = evidence.render_table(audit)
     assert first.encode("utf-8") == second.encode("utf-8")
-    assert "No timing measurements enter" in first
+    assert r"$P_1(L_1)$" in first
+    assert r"$P_2(L_1)$" in first
+    assert "Timings are not included" in first
+    assert "campaign" not in first.lower()
     assert "speedup" not in first.lower()
 
 

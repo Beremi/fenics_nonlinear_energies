@@ -311,7 +311,7 @@
   "evidence_root": "artifacts/reproduction/exp_stop_001_local_5b2f3b5",
   "experiment_id": "EXP-STOP-001",
   "outputs": {
-    "stopping_local_status.tex": "7f5edc852dcd34beae00d0cf61eebfef9ed2c99f3589d93721da0c6fd67fa9ab"
+    "stopping_local_status.tex": "072b579dedde40689292a0b8182db9c2517bae2a0bcc59c7f00058b9daaeb387"
   },
   "population_robustness_claim_admissible": false,
   "publication_evidence": true,
@@ -339,7 +339,7 @@
     },
     "validator": {
       "path": "paper/scripts/stopping_local_evidence.py",
-      "sha256": "f6d67fc47fdf36437b45f3564e34fa717d07f91fc6232aeb66d2a603b3962fa6"
+      "sha256": "317e3baedc63685b2007eb14a00c3d4ed0aa995f81d355a27b00bad70f2a9fb4"
     }
   }
 }

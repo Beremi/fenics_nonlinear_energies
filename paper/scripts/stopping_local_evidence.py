@@ -2035,42 +2035,42 @@ def render_table(audit: Mapping[str, object]) -> str:
         "ginzburg_landau": "Ginzburg--Landau endpoints",
         "hyperelasticity_reference_riesz": "Hyperelasticity metric checks",
         "hyperelasticity_nonlinear_stopping": "Hyperelasticity nonlinear endpoints",
-        "plasticity3d_fixed_state_linear": "Plasticity3D fixed-state solves",
-        "plasticity3d_nonlinear_stopping": "Plasticity3D nonlinear endpoints",
+        "plasticity3d_fixed_state_linear": "Three-dimensional plasticity, fixed state",
+        "plasticity3d_nonlinear_stopping": "Three-dimensional plasticity, nonlinear",
     }
     lines = [
         r"\begin{table}[t]",
-        r"\centering",
-        r"\caption{Fail-closed status of the local stopping-calibration tranche.}",
-        r"\label{tab:stopping-local-status}",
-        r"\begin{tabular}{lrrr}",
-        r"\toprule",
-        r"Family & Receipts & Admitted endpoints & Accepted comparisons \\",
-        r"\midrule",
+        r"  \centering",
+        r"  \caption{Status of the local stopping-tolerance sensitivity study.}",
+        r"  \label{tab:stopping-local-status}",
+        r"  \begin{tabularx}{\linewidth}{L{1.70}C{0.75}C{0.75}C{0.75}}",
+        r"    \toprule",
+        r"    Problem family & Completed executions & Valid endpoints & Accepted comparisons \\",
+        r"    \midrule",
     ]
     for row in rows:
         family = str(row.get("family"))
         if family not in labels:
             raise AdmissionError("family summary contains an unknown family")
         lines.append(
-            f"{labels[family]} & {int(row['completed_receipts'])}/{int(row['required_local'])} & "
+            f"    {labels[family]} & {int(row['completed_receipts'])}/{int(row['required_local'])} & "
             f"{int(row['admitted_endpoints'])}/{int(row['required_local'])} & "
             f"{int(row['accepted_comparisons'])}/{int(row['comparison_rows'])} \\\\"
         )
     lines.extend(
         [
-            r"\bottomrule",
-            r"\end{tabular}",
-            r"\begin{minipage}{0.96\linewidth}\small",
+            r"    \bottomrule",
+            r"  \end{tabularx}",
+            r"  \begin{minipage}{0.96\linewidth}\small",
             (
-                r"All 45 serial rows are hash-bound and independently rechecked. "
-                r"Four P4 nonlinear rows and three MPI-consistency rows remain "
-                r"cluster-deferred. Closing them is necessary but not sufficient for a "
-                r"complete EXP-STOP-001 pass: separately hash-bound EXP-DISC evidence "
-                r"and final adjudication are also required. Timing, "
-                r"scaling, performance, and population claims are excluded."
+                r"    All 45 prescribed local executions were completed and independently "
+                r"rechecked. Seven computations requiring parallel-cluster resources remain: "
+                r"four nonlinear $P_4(L_1)$ executions and three cross-rank consistency "
+                r"checks. Consequently, this local study does not establish a complete "
+                r"stopping-tolerance conclusion. Timings, scaling, performance, and "
+                r"population-level robustness are outside the scope of this table."
             ),
-            r"\end{minipage}",
+            r"  \end{minipage}",
             r"\end{table}",
             "",
         ]
