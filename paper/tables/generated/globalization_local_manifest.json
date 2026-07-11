@@ -1,0 +1,705 @@
+{
+  "allow_unreferenced_tables": true,
+  "audit": {
+    "artifact_count": 251,
+    "artifact_hashes": {
+      "raw/controlled/smoke/_canonical_starts/gl_l5_np2/mode_minus.npz": "8bfd3e7de1fd7650136b7fab9c2bfb11e6cb93a12a64b7fc5c55978652d31569",
+      "raw/controlled/smoke/_canonical_starts/gl_l5_np2/mode_plus.npz": "1abd85411f63a8aa6d8de000bb5e2fa6b04ee772de98ef4b5cb4bb6267ff2d87",
+      "raw/controlled/smoke/_canonical_starts/gl_l5_np2/nominal.npz": "4f953c031f06b685b5f821eb545498dee7b6d4f38b6f3e9c4320f92d8f900ef1",
+      "raw/controlled/smoke/_canonical_starts/he_l2_np2_step1/mode_minus.npz": "8f3922c23c912fc7128fb0b89b8c3c2db9783c7c35dab0b776e48b8396490cae",
+      "raw/controlled/smoke/_canonical_starts/he_l2_np2_step1/mode_plus.npz": "9f3cb369449c1d7c6bbebe42fe4d368691eb7e79da20d869b97b9564959de51b",
+      "raw/controlled/smoke/_canonical_starts/he_l2_np2_step1/nominal.npz": "d1e76db77386781386a0acebc24fdb93623f7b9cc77952fd7eaa11976660dff5",
+      "raw/controlled/smoke/_canonical_starts/manifest.json": "7a5f08a4c65ea41494e56b904c5e6a53aa17e743edc9bbf5d8078a99a755fccc",
+      "raw/controlled/smoke/campaign_manifest.json": "81ae305b77b1f0155e3a2bdef1947d270da85bd3743d8a40ecacec0fed36ebfd",
+      "raw/controlled/smoke/gl_l5_np2_mode_minus_newton_armijo_r01/final_state.npz": "09d903bc1c88323bd52b04f768f0258ae1c9d55ce966c9dc1e49f619a248e751",
+      "raw/controlled/smoke/gl_l5_np2_mode_minus_newton_armijo_r01/output.json": "7bbbef7ca8b310c16dc0a5f62ff9d95a4f573bb5d942dc58b258cc4fe4a52223",
+      "raw/controlled/smoke/gl_l5_np2_mode_minus_newton_armijo_r01/run.log": "41bb4aac9f6ad1481dd9a19bbda2b96dcbca5bd951bff7db56effafee571ab7a",
+      "raw/controlled/smoke/gl_l5_np2_mode_minus_newton_armijo_r01/run_record.json": "8e6209939865928cfe400ac5cbcecac218139b3633edfc8874380be1e20f97d7",
+      "raw/controlled/smoke/gl_l5_np2_mode_minus_newton_armijo_r02/final_state.npz": "09d903bc1c88323bd52b04f768f0258ae1c9d55ce966c9dc1e49f619a248e751",
+      "raw/controlled/smoke/gl_l5_np2_mode_minus_newton_armijo_r02/output.json": "5bf2e35973a83a55a401c78617a476163263fdcf56ecb2e287027db1ba91a1e5",
+      "raw/controlled/smoke/gl_l5_np2_mode_minus_newton_armijo_r02/run.log": "084f1cd7bfabcb94d67478ccd81df472f6413195b01103e63123581c4fbda98b",
+      "raw/controlled/smoke/gl_l5_np2_mode_minus_newton_armijo_r02/run_record.json": "8bc94dfc2ae98499c7726020215376c53763ac157f946856801c181214718095",
+      "raw/controlled/smoke/gl_l5_np2_mode_minus_newton_armijo_r03/final_state.npz": "09d903bc1c88323bd52b04f768f0258ae1c9d55ce966c9dc1e49f619a248e751",
+      "raw/controlled/smoke/gl_l5_np2_mode_minus_newton_armijo_r03/output.json": "77efae28c7775d7b7b0ca31ccde7d4b63e161ac5416a6b22b5814570adfa6ea8",
+      "raw/controlled/smoke/gl_l5_np2_mode_minus_newton_armijo_r03/run.log": "39b87780ba38f1ae8be07c059c51fa800ab7e0960bc77880acf12427bf59f46c",
+      "raw/controlled/smoke/gl_l5_np2_mode_minus_newton_armijo_r03/run_record.json": "40ae14edfec4986bd857388506aef126192be4b7931013c7c708ba08a2e34d63",
+      "raw/controlled/smoke/gl_l5_np2_mode_minus_newton_armijo_r04/final_state.npz": "09d903bc1c88323bd52b04f768f0258ae1c9d55ce966c9dc1e49f619a248e751",
+      "raw/controlled/smoke/gl_l5_np2_mode_minus_newton_armijo_r04/output.json": "038e46a44c50c085016b9a8707f130d026812f0f494962c740c978346c5d687a",
+      "raw/controlled/smoke/gl_l5_np2_mode_minus_newton_armijo_r04/run.log": "0e332684ad8dbc3ce639636bf16befeb291107c319d3c818968d17cfde64f42b",
+      "raw/controlled/smoke/gl_l5_np2_mode_minus_newton_armijo_r04/run_record.json": "1e7fffd02deb0843af0781a90f73750bdcfdd9c61fcae9e1bc140311fd9b9789",
+      "raw/controlled/smoke/gl_l5_np2_mode_minus_newton_armijo_r05/final_state.npz": "09d903bc1c88323bd52b04f768f0258ae1c9d55ce966c9dc1e49f619a248e751",
+      "raw/controlled/smoke/gl_l5_np2_mode_minus_newton_armijo_r05/output.json": "97039f223f561fdd5d9dcd3d5a79fccdbd6fbb054adc813261421242446a0cf6",
+      "raw/controlled/smoke/gl_l5_np2_mode_minus_newton_armijo_r05/run.log": "5859797476dfa556f88df4a2e3d4ce6079cd07b48c5afa0e91ac59db99ea5e7f",
+      "raw/controlled/smoke/gl_l5_np2_mode_minus_newton_armijo_r05/run_record.json": "ddb782a0af75996a59749282e9fff127b9821307fc49a984f69bf3189226983a",
+      "raw/controlled/smoke/gl_l5_np2_mode_minus_reduced_trust_armijo_r01/final_state.npz": "96e4ba3f27fa391030e98ee1f57ebfdf84b75f6ebdd9e2fa976784214e0bbe73",
+      "raw/controlled/smoke/gl_l5_np2_mode_minus_reduced_trust_armijo_r01/output.json": "25799341fb1b3db4f9a542ac3befd839c7aabf8eecf67e4ea9994a887fef08c1",
+      "raw/controlled/smoke/gl_l5_np2_mode_minus_reduced_trust_armijo_r01/run.log": "30fb03389d2955a310fe4970c5ba461989ddcf9de8fd06938e42f2dc249c739d",
+      "raw/controlled/smoke/gl_l5_np2_mode_minus_reduced_trust_armijo_r01/run_record.json": "e6057dc833960561de6cb847e0447cd4f116afd246ee2e98989f9e9477722656",
+      "raw/controlled/smoke/gl_l5_np2_mode_minus_reduced_trust_armijo_r02/final_state.npz": "96e4ba3f27fa391030e98ee1f57ebfdf84b75f6ebdd9e2fa976784214e0bbe73",
+      "raw/controlled/smoke/gl_l5_np2_mode_minus_reduced_trust_armijo_r02/output.json": "7f91fc0ffb337fa150c980ebe3d75d8c0d88253d0bce9b06d0dc0e830e19ebaa",
+      "raw/controlled/smoke/gl_l5_np2_mode_minus_reduced_trust_armijo_r02/run.log": "cc066e77f0885bd7c60e15dfb0882468285f8d67dc2a0decc8f2531d85c7ec5c",
+      "raw/controlled/smoke/gl_l5_np2_mode_minus_reduced_trust_armijo_r02/run_record.json": "b61e4cb1dbcefaa71cac21e70b2c4b2ca9f6932a7bbd2ff61c5284c0e2607760",
+      "raw/controlled/smoke/gl_l5_np2_mode_minus_reduced_trust_armijo_r03/final_state.npz": "96e4ba3f27fa391030e98ee1f57ebfdf84b75f6ebdd9e2fa976784214e0bbe73",
+      "raw/controlled/smoke/gl_l5_np2_mode_minus_reduced_trust_armijo_r03/output.json": "5e3ada661ad0f44a03496c24a629b4afb9c23ddae5617d41dbc6e3a1f3ad3d1c",
+      "raw/controlled/smoke/gl_l5_np2_mode_minus_reduced_trust_armijo_r03/run.log": "40ff364c8f3fb2292e18599b8bea367492023f575d27e3401049de4e0f313629",
+      "raw/controlled/smoke/gl_l5_np2_mode_minus_reduced_trust_armijo_r03/run_record.json": "ae8f06befe1d31639258d6d3d1f1a508575b05abb311cd0188a51113a2aa4797",
+      "raw/controlled/smoke/gl_l5_np2_mode_minus_reduced_trust_armijo_r04/final_state.npz": "96e4ba3f27fa391030e98ee1f57ebfdf84b75f6ebdd9e2fa976784214e0bbe73",
+      "raw/controlled/smoke/gl_l5_np2_mode_minus_reduced_trust_armijo_r04/output.json": "b05c14533cda7b09992d80baba49837677376551adf136773ab3f77bd645a70f",
+      "raw/controlled/smoke/gl_l5_np2_mode_minus_reduced_trust_armijo_r04/run.log": "dfda4580fcb27ec46d744357cdcb112232542f38598a494535b2f1dc36449260",
+      "raw/controlled/smoke/gl_l5_np2_mode_minus_reduced_trust_armijo_r04/run_record.json": "92ffb1f5ef3c569085ea4d40b8aaeffc939e4f3991030af96299bcbc6204e846",
+      "raw/controlled/smoke/gl_l5_np2_mode_minus_reduced_trust_armijo_r05/final_state.npz": "96e4ba3f27fa391030e98ee1f57ebfdf84b75f6ebdd9e2fa976784214e0bbe73",
+      "raw/controlled/smoke/gl_l5_np2_mode_minus_reduced_trust_armijo_r05/output.json": "3897c46e96ac98439ccf10051c54ddf06a7da9a9c6ef523b5870231de1036c17",
+      "raw/controlled/smoke/gl_l5_np2_mode_minus_reduced_trust_armijo_r05/run.log": "1d5862cb2ec19773637336caaefb47b960d5af3d7c3e860e9b8d04f9e50fd8b1",
+      "raw/controlled/smoke/gl_l5_np2_mode_minus_reduced_trust_armijo_r05/run_record.json": "924e925fe87129527d4714505840862e866c2e8e0441d6ecf6dc31af17680bf8",
+      "raw/controlled/smoke/gl_l5_np2_mode_plus_newton_armijo_r01/final_state.npz": "7f7e561912712397f3da7dc40a6b8f4fbc15528ced284e2ac31ecdac7c042caa",
+      "raw/controlled/smoke/gl_l5_np2_mode_plus_newton_armijo_r01/output.json": "08f36923a8831dd44a1b734ca0014ab2208411d51cca089e43aab62f8e8dd96d",
+      "raw/controlled/smoke/gl_l5_np2_mode_plus_newton_armijo_r01/run.log": "a78b5d5a5e34123822bdfae24fe0093579bd41fea14348959a42f89b134d0942",
+      "raw/controlled/smoke/gl_l5_np2_mode_plus_newton_armijo_r01/run_record.json": "d5bf6a67ff72ebc54b9c601e1a9bf5875b9d22ff53c5794b2f9a1e45f2b91dca",
+      "raw/controlled/smoke/gl_l5_np2_mode_plus_newton_armijo_r02/final_state.npz": "7f7e561912712397f3da7dc40a6b8f4fbc15528ced284e2ac31ecdac7c042caa",
+      "raw/controlled/smoke/gl_l5_np2_mode_plus_newton_armijo_r02/output.json": "1bcc5b9b944d9f8b1e71e2adcc81c19a4dce15ec89ff1a941c92b27dde411fe5",
+      "raw/controlled/smoke/gl_l5_np2_mode_plus_newton_armijo_r02/run.log": "3acbd36a71ea1800c755500fdf9a2bcb2af452086dcb2d7357cf826bb511d750",
+      "raw/controlled/smoke/gl_l5_np2_mode_plus_newton_armijo_r02/run_record.json": "4af3912d5c4cf08c1682606a9dce038f5d93e502ec65f72fbe96a50083e21055",
+      "raw/controlled/smoke/gl_l5_np2_mode_plus_newton_armijo_r03/final_state.npz": "7f7e561912712397f3da7dc40a6b8f4fbc15528ced284e2ac31ecdac7c042caa",
+      "raw/controlled/smoke/gl_l5_np2_mode_plus_newton_armijo_r03/output.json": "a3827221b3e6339b08d853ac7cbda61e4f0e626ce180478804c2e59a500f3de3",
+      "raw/controlled/smoke/gl_l5_np2_mode_plus_newton_armijo_r03/run.log": "eb8b7831ae67c65df14e1925317216a278f9376ac90c3d6415307c3efae16403",
+      "raw/controlled/smoke/gl_l5_np2_mode_plus_newton_armijo_r03/run_record.json": "dcd3da31aca7a5148613816bb4c7870773b37afc248116f797eac84ba13e174a",
+      "raw/controlled/smoke/gl_l5_np2_mode_plus_newton_armijo_r04/final_state.npz": "7f7e561912712397f3da7dc40a6b8f4fbc15528ced284e2ac31ecdac7c042caa",
+      "raw/controlled/smoke/gl_l5_np2_mode_plus_newton_armijo_r04/output.json": "cc52b022b01f4d1349a44bd1f2902630af9c3bb406c3ad126967544fa68bac37",
+      "raw/controlled/smoke/gl_l5_np2_mode_plus_newton_armijo_r04/run.log": "8d604c6b4a89bebbb128c7bba5faafe4a706372a6dcdf3197498f06dcd82961a",
+      "raw/controlled/smoke/gl_l5_np2_mode_plus_newton_armijo_r04/run_record.json": "b7e94c53689e9ea2350a160ccb75bb178f406faae554a9a1b4d01a5d17ccf107",
+      "raw/controlled/smoke/gl_l5_np2_mode_plus_newton_armijo_r05/final_state.npz": "7f7e561912712397f3da7dc40a6b8f4fbc15528ced284e2ac31ecdac7c042caa",
+      "raw/controlled/smoke/gl_l5_np2_mode_plus_newton_armijo_r05/output.json": "45d78141bbc22176874481717d554c003bf105191fbb5da848cb2b9999d30adc",
+      "raw/controlled/smoke/gl_l5_np2_mode_plus_newton_armijo_r05/run.log": "b6299b7ea6ec51f247b2bd20ef7550e2ad4b61443b7e78d70cb47fe9dbc49f1a",
+      "raw/controlled/smoke/gl_l5_np2_mode_plus_newton_armijo_r05/run_record.json": "6a1ed64cc299fcd8453dbf0dac4dce91db60bc20c812297feb1d0e3c9cfeb1fe",
+      "raw/controlled/smoke/gl_l5_np2_mode_plus_reduced_trust_armijo_r01/final_state.npz": "b5e5f7ce7b7784dd63ecef5124cca114d94f88417957861cd04ef0590a97fe24",
+      "raw/controlled/smoke/gl_l5_np2_mode_plus_reduced_trust_armijo_r01/output.json": "68d357668eb93df19f783a2e18755149fba03bab4bbce4ff3c2faf530d1b917a",
+      "raw/controlled/smoke/gl_l5_np2_mode_plus_reduced_trust_armijo_r01/run.log": "8f6466aef0dd8d3640dfaf1de2ca4b498376a3100890f27299454dc0fc6ada4d",
+      "raw/controlled/smoke/gl_l5_np2_mode_plus_reduced_trust_armijo_r01/run_record.json": "b19206eaa6397cdfd20995e5fb86c85b565259018fb57675f253f42eeff28aab",
+      "raw/controlled/smoke/gl_l5_np2_mode_plus_reduced_trust_armijo_r02/final_state.npz": "b5e5f7ce7b7784dd63ecef5124cca114d94f88417957861cd04ef0590a97fe24",
+      "raw/controlled/smoke/gl_l5_np2_mode_plus_reduced_trust_armijo_r02/output.json": "5e5915e68e6a70edbb4bcc21441a5c506a27b74ce85a90d2d715594cf052f895",
+      "raw/controlled/smoke/gl_l5_np2_mode_plus_reduced_trust_armijo_r02/run.log": "a244eb0a0ab42212e3735bf035277738985cc4a4c7f6dbdbfc87fc3d52861431",
+      "raw/controlled/smoke/gl_l5_np2_mode_plus_reduced_trust_armijo_r02/run_record.json": "53da3a49292ebe7b7d51a6560d8bc453f89d59c44a05d87251634cd55e3039ba",
+      "raw/controlled/smoke/gl_l5_np2_mode_plus_reduced_trust_armijo_r03/final_state.npz": "b5e5f7ce7b7784dd63ecef5124cca114d94f88417957861cd04ef0590a97fe24",
+      "raw/controlled/smoke/gl_l5_np2_mode_plus_reduced_trust_armijo_r03/output.json": "812fcc220a293e656cf2b73bcd47412f28bdfbefa43f461b9ca9df6237ba5eb4",
+      "raw/controlled/smoke/gl_l5_np2_mode_plus_reduced_trust_armijo_r03/run.log": "f14f049ed02c6e8c4711bf7b08d65f0dcee7b195e46fb7eebdc081034721376a",
+      "raw/controlled/smoke/gl_l5_np2_mode_plus_reduced_trust_armijo_r03/run_record.json": "48ab3149641e7d3468fca8d5ec7ebfc79058bbf98ab709959d7ed0dbc9f5f192",
+      "raw/controlled/smoke/gl_l5_np2_mode_plus_reduced_trust_armijo_r04/final_state.npz": "b5e5f7ce7b7784dd63ecef5124cca114d94f88417957861cd04ef0590a97fe24",
+      "raw/controlled/smoke/gl_l5_np2_mode_plus_reduced_trust_armijo_r04/output.json": "cdf005b81c68ad0ec11ada5eb73d22a57676fb253435bdbb0293273178e3300c",
+      "raw/controlled/smoke/gl_l5_np2_mode_plus_reduced_trust_armijo_r04/run.log": "760eef5ca3309075fc1df6e9f1a8d12265e659f7c73fca913b66299fb1df1501",
+      "raw/controlled/smoke/gl_l5_np2_mode_plus_reduced_trust_armijo_r04/run_record.json": "c3489cc4a8e95fd7f105c4e7db4f2f53beeb87a45771b771f45c69f670a60ad5",
+      "raw/controlled/smoke/gl_l5_np2_mode_plus_reduced_trust_armijo_r05/final_state.npz": "b5e5f7ce7b7784dd63ecef5124cca114d94f88417957861cd04ef0590a97fe24",
+      "raw/controlled/smoke/gl_l5_np2_mode_plus_reduced_trust_armijo_r05/output.json": "41960a7bcdc6a49949e0c63016a4f3e8191c31430803fceb8337c6a4f51af1dd",
+      "raw/controlled/smoke/gl_l5_np2_mode_plus_reduced_trust_armijo_r05/run.log": "762d680ca0e0a7339a2ed23e56756229923ce5da944257e209daa74561f9e2a8",
+      "raw/controlled/smoke/gl_l5_np2_mode_plus_reduced_trust_armijo_r05/run_record.json": "49c5e68788803d5c805c866335b9c0e18a58eb9599d05c921df59767587f4b73",
+      "raw/controlled/smoke/gl_l5_np2_nominal_newton_armijo_r01/final_state.npz": "2411ae041b0c01f9a96a925ba95ee491dc86145b75585bd5b155a006829b7637",
+      "raw/controlled/smoke/gl_l5_np2_nominal_newton_armijo_r01/output.json": "c1f809db000600d53ad13b3b36b10f2d02f12c3ed42398356bd72cece604985a",
+      "raw/controlled/smoke/gl_l5_np2_nominal_newton_armijo_r01/run.log": "5b142d6ecd9e4672a08ded6e384e7ef1ca3c09d0decdbe9afd12500f80319ace",
+      "raw/controlled/smoke/gl_l5_np2_nominal_newton_armijo_r01/run_record.json": "5261ac38369c4903aa5cd606231e4826ef8b970ae4431686faa126cc9834a662",
+      "raw/controlled/smoke/gl_l5_np2_nominal_newton_armijo_r02/final_state.npz": "2411ae041b0c01f9a96a925ba95ee491dc86145b75585bd5b155a006829b7637",
+      "raw/controlled/smoke/gl_l5_np2_nominal_newton_armijo_r02/output.json": "be3c10a6948333e5cb30c0c3a930aff464b80d59cf43d335f7d6a5a816f8e01e",
+      "raw/controlled/smoke/gl_l5_np2_nominal_newton_armijo_r02/run.log": "384203ce96923b3d6b5fe545f92527e14d8e47c79bec95ce43c9ae015f793dfd",
+      "raw/controlled/smoke/gl_l5_np2_nominal_newton_armijo_r02/run_record.json": "d86e420d7b8d1ae722725413f9081f3ce161b5e72d2a5ace5889ffcfe4abd781",
+      "raw/controlled/smoke/gl_l5_np2_nominal_newton_armijo_r03/final_state.npz": "2411ae041b0c01f9a96a925ba95ee491dc86145b75585bd5b155a006829b7637",
+      "raw/controlled/smoke/gl_l5_np2_nominal_newton_armijo_r03/output.json": "7b569138ac7d348181e04fa63bd420ac88cece4916890b7a0e4402c934663f38",
+      "raw/controlled/smoke/gl_l5_np2_nominal_newton_armijo_r03/run.log": "006f95b720526a6ddf91823a7bc2bc9466a31cfe95c46e707482ab07baede364",
+      "raw/controlled/smoke/gl_l5_np2_nominal_newton_armijo_r03/run_record.json": "4a0d7576d263411516b3dc42349df98a06bd7241d8bd728fc4e56cde6d8ca243",
+      "raw/controlled/smoke/gl_l5_np2_nominal_newton_armijo_r04/final_state.npz": "2411ae041b0c01f9a96a925ba95ee491dc86145b75585bd5b155a006829b7637",
+      "raw/controlled/smoke/gl_l5_np2_nominal_newton_armijo_r04/output.json": "d39748aa5eee411d152b5002e524dac6cbf77df34e9e89a794f3c8b54f0e85a5",
+      "raw/controlled/smoke/gl_l5_np2_nominal_newton_armijo_r04/run.log": "e5317304bc844466d6ef41982fd03056057f2d269a5ada9697bd616a12fc8946",
+      "raw/controlled/smoke/gl_l5_np2_nominal_newton_armijo_r04/run_record.json": "8dbb0019e9618ca0e9978750c77420b6ec2c076a4a0f3116e57cc963298f9f03",
+      "raw/controlled/smoke/gl_l5_np2_nominal_newton_armijo_r05/final_state.npz": "2411ae041b0c01f9a96a925ba95ee491dc86145b75585bd5b155a006829b7637",
+      "raw/controlled/smoke/gl_l5_np2_nominal_newton_armijo_r05/output.json": "d2826ee89e1c07efc821546ce0c131eba519179274848b6b0a821755fd8ec776",
+      "raw/controlled/smoke/gl_l5_np2_nominal_newton_armijo_r05/run.log": "94c75560431d3e32fc9f8947274088a9310db1cf4456a5d3c2764adb00b45422",
+      "raw/controlled/smoke/gl_l5_np2_nominal_newton_armijo_r05/run_record.json": "0e9943c51b85bb2c0d2beeabe06b729b8ac0e0d2a56d1bbd039abfa261f5c22b",
+      "raw/controlled/smoke/gl_l5_np2_nominal_reduced_trust_armijo_r01/final_state.npz": "4851d57c0062d5371e3de817163b7f8ca62d91ec787eb6f3074e7dd2e04aaa57",
+      "raw/controlled/smoke/gl_l5_np2_nominal_reduced_trust_armijo_r01/output.json": "de07846fddc3ed33e2a303fdb4658c0189d88f17b07a7def525d402239044fc2",
+      "raw/controlled/smoke/gl_l5_np2_nominal_reduced_trust_armijo_r01/run.log": "ce7a1cdd96949fca366ce9aa2ffea17d7f4c1a17a8e0081e1c5189d9fb990227",
+      "raw/controlled/smoke/gl_l5_np2_nominal_reduced_trust_armijo_r01/run_record.json": "f8699db8daba8e10b15e0039dbdb557d024fa48613776266daad6064708de537",
+      "raw/controlled/smoke/gl_l5_np2_nominal_reduced_trust_armijo_r02/final_state.npz": "4851d57c0062d5371e3de817163b7f8ca62d91ec787eb6f3074e7dd2e04aaa57",
+      "raw/controlled/smoke/gl_l5_np2_nominal_reduced_trust_armijo_r02/output.json": "80973908eee143e4778552321cfc0bace14e16152b59df60393d4e13bae1a72f",
+      "raw/controlled/smoke/gl_l5_np2_nominal_reduced_trust_armijo_r02/run.log": "c4775b114f7d9d38129666035a37400e0725aeebd8c1c437cb5373573e791322",
+      "raw/controlled/smoke/gl_l5_np2_nominal_reduced_trust_armijo_r02/run_record.json": "987a4f114c512bf89d99f639e30e5e006b700e17d0aefba7cffb7e24ae2255bb",
+      "raw/controlled/smoke/gl_l5_np2_nominal_reduced_trust_armijo_r03/final_state.npz": "4851d57c0062d5371e3de817163b7f8ca62d91ec787eb6f3074e7dd2e04aaa57",
+      "raw/controlled/smoke/gl_l5_np2_nominal_reduced_trust_armijo_r03/output.json": "79160e6ae1ffae9d85147b82f384677245df964a56d416db4b0a64ce3fca2ee4",
+      "raw/controlled/smoke/gl_l5_np2_nominal_reduced_trust_armijo_r03/run.log": "91881e80e8b6d856c3daadfdbdaa1ec8e817514e3a5e67b509fd6d4d22b65147",
+      "raw/controlled/smoke/gl_l5_np2_nominal_reduced_trust_armijo_r03/run_record.json": "3beda533b7723e04d9a6b0f9562b457ed429b6e735717cb960dc972f790aae0b",
+      "raw/controlled/smoke/gl_l5_np2_nominal_reduced_trust_armijo_r04/final_state.npz": "4851d57c0062d5371e3de817163b7f8ca62d91ec787eb6f3074e7dd2e04aaa57",
+      "raw/controlled/smoke/gl_l5_np2_nominal_reduced_trust_armijo_r04/output.json": "48f4150f311f0fa7768273d95c89cf19081aede0dedbc648bbd6508a220052b6",
+      "raw/controlled/smoke/gl_l5_np2_nominal_reduced_trust_armijo_r04/run.log": "f3943369ec8d60bf9e4d7946c98565f152fd228a2cc5a819e43e4664e271804f",
+      "raw/controlled/smoke/gl_l5_np2_nominal_reduced_trust_armijo_r04/run_record.json": "b98514847605d502551c4d8499480c0ea8680338078b3910d1d3dc967dc6a074",
+      "raw/controlled/smoke/gl_l5_np2_nominal_reduced_trust_armijo_r05/final_state.npz": "4851d57c0062d5371e3de817163b7f8ca62d91ec787eb6f3074e7dd2e04aaa57",
+      "raw/controlled/smoke/gl_l5_np2_nominal_reduced_trust_armijo_r05/output.json": "4f3561929fab687ddbf57f3a0fd444f77787298f5784936962df0d8d15077ef9",
+      "raw/controlled/smoke/gl_l5_np2_nominal_reduced_trust_armijo_r05/run.log": "f1a885a6ee2530e51850fdd3c749db45cbb6dbbee3a3f9e809bd8686d755b093",
+      "raw/controlled/smoke/gl_l5_np2_nominal_reduced_trust_armijo_r05/run_record.json": "6a3fbc4b8f006081799522852aa6463c6ae5ce50af6d71a6276c81e08c0290bd",
+      "raw/controlled/smoke/he_l2_np2_step1_mode_minus_newton_armijo_r01/final_state.npz": "f08ce5103e7624a8fdc2e6fc308f95431c763fb40e2c30f2cdb092d97e9ad477",
+      "raw/controlled/smoke/he_l2_np2_step1_mode_minus_newton_armijo_r01/output.json": "e15983483022b83301685731d37a52f3b82d7bb3e08ce85ea991a81843c2e8fb",
+      "raw/controlled/smoke/he_l2_np2_step1_mode_minus_newton_armijo_r01/run.log": "2c832a64c952412f108de5afb41b3e99e424b8f6540171797ebc2b35b76727c8",
+      "raw/controlled/smoke/he_l2_np2_step1_mode_minus_newton_armijo_r01/run_record.json": "b475e2afd97b88191a669a5fdd45b94f0e0f960304019d620368052223de22b1",
+      "raw/controlled/smoke/he_l2_np2_step1_mode_minus_newton_armijo_r02/final_state.npz": "f08ce5103e7624a8fdc2e6fc308f95431c763fb40e2c30f2cdb092d97e9ad477",
+      "raw/controlled/smoke/he_l2_np2_step1_mode_minus_newton_armijo_r02/output.json": "746dff8ec63749b4cf9420cd5abc5284b77f1dd664695f67821a685df3c198ef",
+      "raw/controlled/smoke/he_l2_np2_step1_mode_minus_newton_armijo_r02/run.log": "5094ee76345e92959546a4ff42afa1c172d9d916962f93960186b4c9f5052a3f",
+      "raw/controlled/smoke/he_l2_np2_step1_mode_minus_newton_armijo_r02/run_record.json": "9d2679a4b6cdbf0e57f10c8f4238a876bdd4acff36af9dde03115b7e1594c95f",
+      "raw/controlled/smoke/he_l2_np2_step1_mode_minus_newton_armijo_r03/final_state.npz": "f08ce5103e7624a8fdc2e6fc308f95431c763fb40e2c30f2cdb092d97e9ad477",
+      "raw/controlled/smoke/he_l2_np2_step1_mode_minus_newton_armijo_r03/output.json": "c39055c5e2f65cbded4f25d88a1d001dba8de3df9d80fbd578922f2a391213a9",
+      "raw/controlled/smoke/he_l2_np2_step1_mode_minus_newton_armijo_r03/run.log": "0a36688a9608d5f1bffb6fa2b79666189eaf1e77480f2f31e2cbfd702d23c469",
+      "raw/controlled/smoke/he_l2_np2_step1_mode_minus_newton_armijo_r03/run_record.json": "db4cd6fbe17741013221e4012b203f2731cc83e690d4a7b5b4dd9d3e634ea626",
+      "raw/controlled/smoke/he_l2_np2_step1_mode_minus_newton_armijo_r04/final_state.npz": "f08ce5103e7624a8fdc2e6fc308f95431c763fb40e2c30f2cdb092d97e9ad477",
+      "raw/controlled/smoke/he_l2_np2_step1_mode_minus_newton_armijo_r04/output.json": "db87a543da1f9756700105997f867064be284bc54065aa49b58d60f38fb11cbb",
+      "raw/controlled/smoke/he_l2_np2_step1_mode_minus_newton_armijo_r04/run.log": "ba44455d619d92aa600239e62f0a05c7f3668b013836a5644b95ceecf9825b1f",
+      "raw/controlled/smoke/he_l2_np2_step1_mode_minus_newton_armijo_r04/run_record.json": "0abda448991a87b42eea09a817a43baf400647df0cce879c2e175c4ebaa8cf35",
+      "raw/controlled/smoke/he_l2_np2_step1_mode_minus_newton_armijo_r05/final_state.npz": "f08ce5103e7624a8fdc2e6fc308f95431c763fb40e2c30f2cdb092d97e9ad477",
+      "raw/controlled/smoke/he_l2_np2_step1_mode_minus_newton_armijo_r05/output.json": "0e24cf7caf955f965ee78faecfd3888d6dea964d07253c6ff603e993a399f392",
+      "raw/controlled/smoke/he_l2_np2_step1_mode_minus_newton_armijo_r05/run.log": "ac02719de06cf2de9dbebd4a5eec8b2a61d5e3382a488afc42fda3498424611e",
+      "raw/controlled/smoke/he_l2_np2_step1_mode_minus_newton_armijo_r05/run_record.json": "103502c4735c235e4fba74f46b7e55a2a7f47a91780589b4660c762d5d280c4b",
+      "raw/controlled/smoke/he_l2_np2_step1_mode_minus_reduced_trust_armijo_r01/final_state.npz": "9ef40e2c32a3ea545e77fbc549a8ccc29900877defb2c2f410d6bca9790c4e42",
+      "raw/controlled/smoke/he_l2_np2_step1_mode_minus_reduced_trust_armijo_r01/output.json": "01186e5bc5459c8eaea5be93f03dd849f4c38d92c08b5dbd7deb05e3937738c4",
+      "raw/controlled/smoke/he_l2_np2_step1_mode_minus_reduced_trust_armijo_r01/run.log": "4756d278571c1e195c84fa66c910f2b8182224ba363dc3bdaa974495c5fe3efb",
+      "raw/controlled/smoke/he_l2_np2_step1_mode_minus_reduced_trust_armijo_r01/run_record.json": "211db61070f1eff6db25e508226f5eb26047506b7be7d67b8560a4b7b78de368",
+      "raw/controlled/smoke/he_l2_np2_step1_mode_minus_reduced_trust_armijo_r02/final_state.npz": "9ef40e2c32a3ea545e77fbc549a8ccc29900877defb2c2f410d6bca9790c4e42",
+      "raw/controlled/smoke/he_l2_np2_step1_mode_minus_reduced_trust_armijo_r02/output.json": "b40ce5ada90e19a402bec1cb67a013b2f5d1964b797da5bdcefff0fc996782e1",
+      "raw/controlled/smoke/he_l2_np2_step1_mode_minus_reduced_trust_armijo_r02/run.log": "5d54fb206cc128610b26f65fca54efda7966c703a2a7608be56f43ad2319f3ad",
+      "raw/controlled/smoke/he_l2_np2_step1_mode_minus_reduced_trust_armijo_r02/run_record.json": "c26bb4bc650252f253c0bc5876098f473e3a603c78638d379de24473d8e6d8ed",
+      "raw/controlled/smoke/he_l2_np2_step1_mode_minus_reduced_trust_armijo_r03/final_state.npz": "9ef40e2c32a3ea545e77fbc549a8ccc29900877defb2c2f410d6bca9790c4e42",
+      "raw/controlled/smoke/he_l2_np2_step1_mode_minus_reduced_trust_armijo_r03/output.json": "b44c0486417ebf88c2c2d028d0dc510af703e2a8917d981f930bd1ea4344a2db",
+      "raw/controlled/smoke/he_l2_np2_step1_mode_minus_reduced_trust_armijo_r03/run.log": "3c8f14a64caff1a839380b5d4bad94554818977028ba46f2f50620749f277cef",
+      "raw/controlled/smoke/he_l2_np2_step1_mode_minus_reduced_trust_armijo_r03/run_record.json": "f7b2f391d09683ab68bb81041a16c659f0f87b1e3840acf7fe9a863a746a1599",
+      "raw/controlled/smoke/he_l2_np2_step1_mode_minus_reduced_trust_armijo_r04/final_state.npz": "9ef40e2c32a3ea545e77fbc549a8ccc29900877defb2c2f410d6bca9790c4e42",
+      "raw/controlled/smoke/he_l2_np2_step1_mode_minus_reduced_trust_armijo_r04/output.json": "8d5a5be5dddbddc8fa85c725a9013917c185d731439debe6d86287dd4cf96bc6",
+      "raw/controlled/smoke/he_l2_np2_step1_mode_minus_reduced_trust_armijo_r04/run.log": "e58e965357394c31c7b32cab10741b593b989b4aafcf87dc46c3591577511279",
+      "raw/controlled/smoke/he_l2_np2_step1_mode_minus_reduced_trust_armijo_r04/run_record.json": "0a07f29b3ae11d34b7736bf02d363dd81446dcd4cceb36a36de407fedde5bf56",
+      "raw/controlled/smoke/he_l2_np2_step1_mode_minus_reduced_trust_armijo_r05/final_state.npz": "9ef40e2c32a3ea545e77fbc549a8ccc29900877defb2c2f410d6bca9790c4e42",
+      "raw/controlled/smoke/he_l2_np2_step1_mode_minus_reduced_trust_armijo_r05/output.json": "a900349c5a64fafe7bd614e23146c299e8a8b249697b498220b4e6a6ab7b01f6",
+      "raw/controlled/smoke/he_l2_np2_step1_mode_minus_reduced_trust_armijo_r05/run.log": "cf372331361e826d0e1017408a7b79628fc582e39e15e8699e45c76e18773e0b",
+      "raw/controlled/smoke/he_l2_np2_step1_mode_minus_reduced_trust_armijo_r05/run_record.json": "b5e8661bf2b315987fe3b6d0e4b20263d8f09c368030f8479414f8d3d58a2151",
+      "raw/controlled/smoke/he_l2_np2_step1_mode_plus_newton_armijo_r01/final_state.npz": "c89a49995a2c69937a47b4bde2af24eef90fda2618bdcc2d794d78b31994de4b",
+      "raw/controlled/smoke/he_l2_np2_step1_mode_plus_newton_armijo_r01/output.json": "85608bffea5ae984d121531720f837de5dc8cd6cd9e45d32efd68f3144d35c7f",
+      "raw/controlled/smoke/he_l2_np2_step1_mode_plus_newton_armijo_r01/run.log": "155ddf329db0c596e442b68f252ffe3eb5b9b988f6d36e120b620cfed898e1fe",
+      "raw/controlled/smoke/he_l2_np2_step1_mode_plus_newton_armijo_r01/run_record.json": "a3ae9d17231d32f386d37bc9f3e022a1d82d70ca30d9693c81d6e31836f3a034",
+      "raw/controlled/smoke/he_l2_np2_step1_mode_plus_newton_armijo_r02/final_state.npz": "c89a49995a2c69937a47b4bde2af24eef90fda2618bdcc2d794d78b31994de4b",
+      "raw/controlled/smoke/he_l2_np2_step1_mode_plus_newton_armijo_r02/output.json": "573f3030cd92f6045c595cefb90081da2c14b0c416dd854c1204324d76bfc99e",
+      "raw/controlled/smoke/he_l2_np2_step1_mode_plus_newton_armijo_r02/run.log": "ef308091814bf7a4ba200f904ce39212006768c07bf5113b19190451dc117031",
+      "raw/controlled/smoke/he_l2_np2_step1_mode_plus_newton_armijo_r02/run_record.json": "4cb333348462d3dd09a6f8b46d7c62dbb5115bdf4750d86bee226391bf0734c7",
+      "raw/controlled/smoke/he_l2_np2_step1_mode_plus_newton_armijo_r03/final_state.npz": "c89a49995a2c69937a47b4bde2af24eef90fda2618bdcc2d794d78b31994de4b",
+      "raw/controlled/smoke/he_l2_np2_step1_mode_plus_newton_armijo_r03/output.json": "b7e708e837bce50a13fc391ce08d63a1ebccca79baa21b7c8fd13bc916cac5cf",
+      "raw/controlled/smoke/he_l2_np2_step1_mode_plus_newton_armijo_r03/run.log": "7970ac577709ea26075d8808bb58585c9a1d3ce362c124d3109e81438a9113f9",
+      "raw/controlled/smoke/he_l2_np2_step1_mode_plus_newton_armijo_r03/run_record.json": "ee7cd51ea43cedc989d698fb2dac3d62b348ede0e1ac2acacd9bf1aa5237f8a1",
+      "raw/controlled/smoke/he_l2_np2_step1_mode_plus_newton_armijo_r04/final_state.npz": "c89a49995a2c69937a47b4bde2af24eef90fda2618bdcc2d794d78b31994de4b",
+      "raw/controlled/smoke/he_l2_np2_step1_mode_plus_newton_armijo_r04/output.json": "c72a79f7e06ec42e4020ceb7a5fe4ee564a2c4fab72b156cae54fd56403e0cf3",
+      "raw/controlled/smoke/he_l2_np2_step1_mode_plus_newton_armijo_r04/run.log": "8fb262ee223f141ac930ac44b39947c417eec55cf833f192f43d155e47deebe6",
+      "raw/controlled/smoke/he_l2_np2_step1_mode_plus_newton_armijo_r04/run_record.json": "182499917d38a079f1cfb639309c01e8dc98a2f7a27fc1c52c6a02dd87fa51f6",
+      "raw/controlled/smoke/he_l2_np2_step1_mode_plus_newton_armijo_r05/final_state.npz": "c89a49995a2c69937a47b4bde2af24eef90fda2618bdcc2d794d78b31994de4b",
+      "raw/controlled/smoke/he_l2_np2_step1_mode_plus_newton_armijo_r05/output.json": "4870e263af8da9ac06da0cbcbd13206abfa00ab39b0309ced1d6115106ecb462",
+      "raw/controlled/smoke/he_l2_np2_step1_mode_plus_newton_armijo_r05/run.log": "75355bb5504beae355fbc93763539983f8c08c41891b924957504df8a0218b4e",
+      "raw/controlled/smoke/he_l2_np2_step1_mode_plus_newton_armijo_r05/run_record.json": "ae38117e02320d2c85b0f88e2cc0c6a6bf3496fa3e460de8da800321fcd46af1",
+      "raw/controlled/smoke/he_l2_np2_step1_mode_plus_reduced_trust_armijo_r01/final_state.npz": "c9a2de77fb1c5b7b17f62aee10496435f3eba2195500a81dbdcaf8984a03f361",
+      "raw/controlled/smoke/he_l2_np2_step1_mode_plus_reduced_trust_armijo_r01/output.json": "45872d8e231caaa67f09bf60aca6489fced6dcdd2a4c01c6e203d7af4d723696",
+      "raw/controlled/smoke/he_l2_np2_step1_mode_plus_reduced_trust_armijo_r01/run.log": "5e880394055288e8bf3882217c289f64f07a8a09590eb57c6c3e0802585bc123",
+      "raw/controlled/smoke/he_l2_np2_step1_mode_plus_reduced_trust_armijo_r01/run_record.json": "93662682670156caf4d12c6288fcd5a329a25387f403775a7ca724be0d8b9a9c",
+      "raw/controlled/smoke/he_l2_np2_step1_mode_plus_reduced_trust_armijo_r02/final_state.npz": "c9a2de77fb1c5b7b17f62aee10496435f3eba2195500a81dbdcaf8984a03f361",
+      "raw/controlled/smoke/he_l2_np2_step1_mode_plus_reduced_trust_armijo_r02/output.json": "ccf1c81210ad429ce108912364f706fc7422ffe9aadcb2022f66cd23947e087e",
+      "raw/controlled/smoke/he_l2_np2_step1_mode_plus_reduced_trust_armijo_r02/run.log": "fa0a4fa646434e9624e815ba1e02a0765d46f8e63ac2ccc3171f19402989b6a2",
+      "raw/controlled/smoke/he_l2_np2_step1_mode_plus_reduced_trust_armijo_r02/run_record.json": "390deb81e576cf969282fafe0aee591c73f567c94904ca1f80dfcce80429eefb",
+      "raw/controlled/smoke/he_l2_np2_step1_mode_plus_reduced_trust_armijo_r03/final_state.npz": "c9a2de77fb1c5b7b17f62aee10496435f3eba2195500a81dbdcaf8984a03f361",
+      "raw/controlled/smoke/he_l2_np2_step1_mode_plus_reduced_trust_armijo_r03/output.json": "cef4e20a551fad0877c542cf87b71455f2b4cb32da5cb4adde66530b581a3729",
+      "raw/controlled/smoke/he_l2_np2_step1_mode_plus_reduced_trust_armijo_r03/run.log": "b9658c65b60d75a41f4edd2bbb397e49fd0c79241cdd32492714cf5de44c5653",
+      "raw/controlled/smoke/he_l2_np2_step1_mode_plus_reduced_trust_armijo_r03/run_record.json": "015d1efe522ff462b73761b72dc970d5aae8a5c459cf1fa68b4b610e3b28beba",
+      "raw/controlled/smoke/he_l2_np2_step1_mode_plus_reduced_trust_armijo_r04/final_state.npz": "c9a2de77fb1c5b7b17f62aee10496435f3eba2195500a81dbdcaf8984a03f361",
+      "raw/controlled/smoke/he_l2_np2_step1_mode_plus_reduced_trust_armijo_r04/output.json": "c3418bdb5075a83dc8672abd6a0cf3e9cbf4fb41423fe7fed699a264a0ff2041",
+      "raw/controlled/smoke/he_l2_np2_step1_mode_plus_reduced_trust_armijo_r04/run.log": "3c91d02caa65d11f888ae1c66f529d647e9f5a140e803c21ef9a552ab2f61371",
+      "raw/controlled/smoke/he_l2_np2_step1_mode_plus_reduced_trust_armijo_r04/run_record.json": "9038d70d16add2aba5e8638ae36d14598f122f0ca65600066591b27b29e190a7",
+      "raw/controlled/smoke/he_l2_np2_step1_mode_plus_reduced_trust_armijo_r05/final_state.npz": "c9a2de77fb1c5b7b17f62aee10496435f3eba2195500a81dbdcaf8984a03f361",
+      "raw/controlled/smoke/he_l2_np2_step1_mode_plus_reduced_trust_armijo_r05/output.json": "6d6bb685ed183d917d5190bb2ed14299343afee6e0bf0ae8fefec170b454e18a",
+      "raw/controlled/smoke/he_l2_np2_step1_mode_plus_reduced_trust_armijo_r05/run.log": "64de122099af5d0119d9f7d29f5921d9bf8381ae3e71ff8b44866235f413a114",
+      "raw/controlled/smoke/he_l2_np2_step1_mode_plus_reduced_trust_armijo_r05/run_record.json": "0e225880d494d5605a499c35475142c15a9ece959a2b00e3b0cd6af936665bff",
+      "raw/controlled/smoke/he_l2_np2_step1_nominal_newton_armijo_r01/final_state.npz": "0ec2b0889947f00e619740031eaf0b795ebb5b83d1ef3ad8207f8e74b8d5bf8b",
+      "raw/controlled/smoke/he_l2_np2_step1_nominal_newton_armijo_r01/output.json": "4a63c9c9aa0117e4815912f9044da0e68244517cb453cc7c9518174bfeeea8f9",
+      "raw/controlled/smoke/he_l2_np2_step1_nominal_newton_armijo_r01/run.log": "a1efd9c1dac997c66aff82b9fedf691671561da4ea5d8e8b336901354f248c1b",
+      "raw/controlled/smoke/he_l2_np2_step1_nominal_newton_armijo_r01/run_record.json": "68e4317c9ace6059d8555a97d29b040beef19bab89efb9137b6109234b936e4a",
+      "raw/controlled/smoke/he_l2_np2_step1_nominal_newton_armijo_r02/final_state.npz": "0ec2b0889947f00e619740031eaf0b795ebb5b83d1ef3ad8207f8e74b8d5bf8b",
+      "raw/controlled/smoke/he_l2_np2_step1_nominal_newton_armijo_r02/output.json": "60a2324218d4750a98ccd15e1660b1504b6f84d79aac723c9c67cd80bcb51000",
+      "raw/controlled/smoke/he_l2_np2_step1_nominal_newton_armijo_r02/run.log": "f1191c486b10bd8f313267270eb52fae43901ffe80411b09d878ffd68b66c6b5",
+      "raw/controlled/smoke/he_l2_np2_step1_nominal_newton_armijo_r02/run_record.json": "02ff2c32abd24d5c89466d4d789bcdbd3a5bbc4a89d7a6a250c60e1de0f95368",
+      "raw/controlled/smoke/he_l2_np2_step1_nominal_newton_armijo_r03/final_state.npz": "0ec2b0889947f00e619740031eaf0b795ebb5b83d1ef3ad8207f8e74b8d5bf8b",
+      "raw/controlled/smoke/he_l2_np2_step1_nominal_newton_armijo_r03/output.json": "94bc791ab35056f058a709122bf3ce9a53b8f6d7db1321b2240b932c8ae8a072",
+      "raw/controlled/smoke/he_l2_np2_step1_nominal_newton_armijo_r03/run.log": "4c36107b9991ff85d5d61510e2560d924452fbe31e0e580623f2c248a1194062",
+      "raw/controlled/smoke/he_l2_np2_step1_nominal_newton_armijo_r03/run_record.json": "b8fccafe111c40c4c247282cc19bd54939f745523cd873b2011c1d7dad19fb71",
+      "raw/controlled/smoke/he_l2_np2_step1_nominal_newton_armijo_r04/final_state.npz": "0ec2b0889947f00e619740031eaf0b795ebb5b83d1ef3ad8207f8e74b8d5bf8b",
+      "raw/controlled/smoke/he_l2_np2_step1_nominal_newton_armijo_r04/output.json": "9e862e803b929751152fe77b8847401266a1a9d2bed0d8dada253ab23f5d4516",
+      "raw/controlled/smoke/he_l2_np2_step1_nominal_newton_armijo_r04/run.log": "604f123a597ff6d4b295128b71d967d7d3e1a81408065a6d2200612b8a77fce8",
+      "raw/controlled/smoke/he_l2_np2_step1_nominal_newton_armijo_r04/run_record.json": "fd72506c06624b0cf111859efeed88a7c9cf05838ae6490e5114ad775140a008",
+      "raw/controlled/smoke/he_l2_np2_step1_nominal_newton_armijo_r05/final_state.npz": "0ec2b0889947f00e619740031eaf0b795ebb5b83d1ef3ad8207f8e74b8d5bf8b",
+      "raw/controlled/smoke/he_l2_np2_step1_nominal_newton_armijo_r05/output.json": "f3eaaf12c132c752863713e3b2967fccc6f8fedd35f39647dd7c99d7c7f1f9d3",
+      "raw/controlled/smoke/he_l2_np2_step1_nominal_newton_armijo_r05/run.log": "6c1dc602db18d99d32ea7b6ff3da79838dbbf12d2247e89f54d92b009a4426e7",
+      "raw/controlled/smoke/he_l2_np2_step1_nominal_newton_armijo_r05/run_record.json": "9123981554e48948c26b8401d5b875322061ed3d7f67424ee3f288b48769e6e3",
+      "raw/controlled/smoke/he_l2_np2_step1_nominal_reduced_trust_armijo_r01/final_state.npz": "41602cbc997707359b7bcaf773a0572d76b3adc93fca61e0658567dffb6ec5ba",
+      "raw/controlled/smoke/he_l2_np2_step1_nominal_reduced_trust_armijo_r01/output.json": "5a466ea5e4f636df779c3086f60475cf6d4c408d7c3744b1f17cb01395cb8311",
+      "raw/controlled/smoke/he_l2_np2_step1_nominal_reduced_trust_armijo_r01/run.log": "d2272d855be1b4899c8bf5eef2272a437a07b03057ce013f898734a809db04b7",
+      "raw/controlled/smoke/he_l2_np2_step1_nominal_reduced_trust_armijo_r01/run_record.json": "71ebc7940ee7ec3ceb41365661444e307ef0cef2199af537362f632e71f9ad8f",
+      "raw/controlled/smoke/he_l2_np2_step1_nominal_reduced_trust_armijo_r02/final_state.npz": "41602cbc997707359b7bcaf773a0572d76b3adc93fca61e0658567dffb6ec5ba",
+      "raw/controlled/smoke/he_l2_np2_step1_nominal_reduced_trust_armijo_r02/output.json": "3758eb9cfe1e73366e611fbbe3c0b0db1273f8dffc7c59ebe5f1f39330b76ccf",
+      "raw/controlled/smoke/he_l2_np2_step1_nominal_reduced_trust_armijo_r02/run.log": "8ede2b63cf1a2010bdbab3e6aae2bcee7f8e0f78adf479b8804907666081b782",
+      "raw/controlled/smoke/he_l2_np2_step1_nominal_reduced_trust_armijo_r02/run_record.json": "184f726091bbb365a55503e491459c381e2fda315b4e61874954a6529918d986",
+      "raw/controlled/smoke/he_l2_np2_step1_nominal_reduced_trust_armijo_r03/final_state.npz": "41602cbc997707359b7bcaf773a0572d76b3adc93fca61e0658567dffb6ec5ba",
+      "raw/controlled/smoke/he_l2_np2_step1_nominal_reduced_trust_armijo_r03/output.json": "fbaa57d366423fa9863c580efcdf00a45f5987433b5ffccb4422128f7616cbbf",
+      "raw/controlled/smoke/he_l2_np2_step1_nominal_reduced_trust_armijo_r03/run.log": "990ba0ff09d25de96aa57548cb52e73edf0489ebd66bb7b35f173f641f965682",
+      "raw/controlled/smoke/he_l2_np2_step1_nominal_reduced_trust_armijo_r03/run_record.json": "208297396f6f000699d784965a39c3e6a2a8916a2fe42668e8256636d0468abe",
+      "raw/controlled/smoke/he_l2_np2_step1_nominal_reduced_trust_armijo_r04/final_state.npz": "41602cbc997707359b7bcaf773a0572d76b3adc93fca61e0658567dffb6ec5ba",
+      "raw/controlled/smoke/he_l2_np2_step1_nominal_reduced_trust_armijo_r04/output.json": "d7573361ffcc10c5665678a7c7ed3092f7bafa7b02731f12ac2532dfd7e25d01",
+      "raw/controlled/smoke/he_l2_np2_step1_nominal_reduced_trust_armijo_r04/run.log": "8cdfd8f5ea9b0bd335593c85e6236eb410e989e7ef1f4d94047344ade62a75f3",
+      "raw/controlled/smoke/he_l2_np2_step1_nominal_reduced_trust_armijo_r04/run_record.json": "02a7fe1c21f2081972e82070bda1c28e90f7e0422896a294c54fb570dc2492b2",
+      "raw/controlled/smoke/he_l2_np2_step1_nominal_reduced_trust_armijo_r05/final_state.npz": "41602cbc997707359b7bcaf773a0572d76b3adc93fca61e0658567dffb6ec5ba",
+      "raw/controlled/smoke/he_l2_np2_step1_nominal_reduced_trust_armijo_r05/output.json": "cbf8dd83dc0f3fb92333affa6f1d4ec2278276976ca9d526b000a0f70293bbc1",
+      "raw/controlled/smoke/he_l2_np2_step1_nominal_reduced_trust_armijo_r05/run.log": "cf104caea5b944e0563b488945c7fc4b48c18962f804dde8b90c6baf41c686b8",
+      "raw/controlled/smoke/he_l2_np2_step1_nominal_reduced_trust_armijo_r05/run_record.json": "b4b62b994e48e23c8d9910a51f8d7d66ddb34f59c630b86f36e3f63ec098583f",
+      "reports/controlled/smoke_identity_audit.json": "17562289b5f631ec5c54204ee49fad5d80aaac6759442c6b2fd0618f7e2b80d0",
+      "reports/controlled/smoke_summary.csv": "e098158305cca4e7fcf49dd9c4176fcc6ef3c940fb612f76a3ca9d36c77b00b7",
+      "reports/controlled/smoke_summary.json": "3f6def004ae8cf61cb62a19b240d26dde93635d4371ea20495fdf7259fb90bc0"
+    },
+    "artifact_hashes_sha256": "a3983a0e7d0c8bb6d112e68f7ecac0649769955d67f29e5a22d248f4b9c00ed4",
+    "campaign_manifest_sha256": "81ae305b77b1f0155e3a2bdef1947d270da85bd3743d8a40ecacec0fed36ebfd",
+    "experiment_id": "EXP-GLOB-001",
+    "population_robustness_claim_admissible": false,
+    "schema_id": "fenics-nonlinear-energies.exp-glob-001-local-paper-admission",
+    "schema_version": 1,
+    "scientific_adjudication": {
+      "all_methods_completed_gate_passed": false,
+      "claim_refusals": [
+        "No timing, speedup, or performance-ordering claim is admitted.",
+        "No robustness generalization is admitted because the starts are not population samples.",
+        "A paired method comparison requires successful termination at one exact endpoint identity."
+      ],
+      "claim_scope": "Observed completion/failure counts for the frozen two-problem, three-start, five-repetition deterministic local design only.",
+      "common_start_gate_passed": true,
+      "method_summaries": [
+        {
+          "benchmark": "gl_l5_np2",
+          "completed": 0,
+          "failed": 15,
+          "method": "newton_armijo",
+          "total": 15
+        },
+        {
+          "benchmark": "gl_l5_np2",
+          "completed": 15,
+          "failed": 0,
+          "method": "reduced_trust_armijo",
+          "total": 15
+        },
+        {
+          "benchmark": "he_l2_np2_step1",
+          "completed": 15,
+          "failed": 0,
+          "method": "newton_armijo",
+          "total": 15
+        },
+        {
+          "benchmark": "he_l2_np2_step1",
+          "completed": 15,
+          "failed": 0,
+          "method": "reduced_trust_armijo",
+          "total": 15
+        }
+      ],
+      "paired_units": [
+        {
+          "all_methods_completed": false,
+          "benchmark": "gl_l5_np2",
+          "common_start_passed": true,
+          "instance": "mode_minus",
+          "repetition": 1,
+          "results": {
+            "newton_armijo": "failed",
+            "reduced_trust_armijo": "completed"
+          },
+          "same_endpoint_passed": false
+        },
+        {
+          "all_methods_completed": false,
+          "benchmark": "gl_l5_np2",
+          "common_start_passed": true,
+          "instance": "mode_minus",
+          "repetition": 2,
+          "results": {
+            "newton_armijo": "failed",
+            "reduced_trust_armijo": "completed"
+          },
+          "same_endpoint_passed": false
+        },
+        {
+          "all_methods_completed": false,
+          "benchmark": "gl_l5_np2",
+          "common_start_passed": true,
+          "instance": "mode_minus",
+          "repetition": 3,
+          "results": {
+            "newton_armijo": "failed",
+            "reduced_trust_armijo": "completed"
+          },
+          "same_endpoint_passed": false
+        },
+        {
+          "all_methods_completed": false,
+          "benchmark": "gl_l5_np2",
+          "common_start_passed": true,
+          "instance": "mode_minus",
+          "repetition": 4,
+          "results": {
+            "newton_armijo": "failed",
+            "reduced_trust_armijo": "completed"
+          },
+          "same_endpoint_passed": false
+        },
+        {
+          "all_methods_completed": false,
+          "benchmark": "gl_l5_np2",
+          "common_start_passed": true,
+          "instance": "mode_minus",
+          "repetition": 5,
+          "results": {
+            "newton_armijo": "failed",
+            "reduced_trust_armijo": "completed"
+          },
+          "same_endpoint_passed": false
+        },
+        {
+          "all_methods_completed": false,
+          "benchmark": "gl_l5_np2",
+          "common_start_passed": true,
+          "instance": "mode_plus",
+          "repetition": 1,
+          "results": {
+            "newton_armijo": "failed",
+            "reduced_trust_armijo": "completed"
+          },
+          "same_endpoint_passed": false
+        },
+        {
+          "all_methods_completed": false,
+          "benchmark": "gl_l5_np2",
+          "common_start_passed": true,
+          "instance": "mode_plus",
+          "repetition": 2,
+          "results": {
+            "newton_armijo": "failed",
+            "reduced_trust_armijo": "completed"
+          },
+          "same_endpoint_passed": false
+        },
+        {
+          "all_methods_completed": false,
+          "benchmark": "gl_l5_np2",
+          "common_start_passed": true,
+          "instance": "mode_plus",
+          "repetition": 3,
+          "results": {
+            "newton_armijo": "failed",
+            "reduced_trust_armijo": "completed"
+          },
+          "same_endpoint_passed": false
+        },
+        {
+          "all_methods_completed": false,
+          "benchmark": "gl_l5_np2",
+          "common_start_passed": true,
+          "instance": "mode_plus",
+          "repetition": 4,
+          "results": {
+            "newton_armijo": "failed",
+            "reduced_trust_armijo": "completed"
+          },
+          "same_endpoint_passed": false
+        },
+        {
+          "all_methods_completed": false,
+          "benchmark": "gl_l5_np2",
+          "common_start_passed": true,
+          "instance": "mode_plus",
+          "repetition": 5,
+          "results": {
+            "newton_armijo": "failed",
+            "reduced_trust_armijo": "completed"
+          },
+          "same_endpoint_passed": false
+        },
+        {
+          "all_methods_completed": false,
+          "benchmark": "gl_l5_np2",
+          "common_start_passed": true,
+          "instance": "nominal",
+          "repetition": 1,
+          "results": {
+            "newton_armijo": "failed",
+            "reduced_trust_armijo": "completed"
+          },
+          "same_endpoint_passed": false
+        },
+        {
+          "all_methods_completed": false,
+          "benchmark": "gl_l5_np2",
+          "common_start_passed": true,
+          "instance": "nominal",
+          "repetition": 2,
+          "results": {
+            "newton_armijo": "failed",
+            "reduced_trust_armijo": "completed"
+          },
+          "same_endpoint_passed": false
+        },
+        {
+          "all_methods_completed": false,
+          "benchmark": "gl_l5_np2",
+          "common_start_passed": true,
+          "instance": "nominal",
+          "repetition": 3,
+          "results": {
+            "newton_armijo": "failed",
+            "reduced_trust_armijo": "completed"
+          },
+          "same_endpoint_passed": false
+        },
+        {
+          "all_methods_completed": false,
+          "benchmark": "gl_l5_np2",
+          "common_start_passed": true,
+          "instance": "nominal",
+          "repetition": 4,
+          "results": {
+            "newton_armijo": "failed",
+            "reduced_trust_armijo": "completed"
+          },
+          "same_endpoint_passed": false
+        },
+        {
+          "all_methods_completed": false,
+          "benchmark": "gl_l5_np2",
+          "common_start_passed": true,
+          "instance": "nominal",
+          "repetition": 5,
+          "results": {
+            "newton_armijo": "failed",
+            "reduced_trust_armijo": "completed"
+          },
+          "same_endpoint_passed": false
+        },
+        {
+          "all_methods_completed": true,
+          "benchmark": "he_l2_np2_step1",
+          "common_start_passed": true,
+          "instance": "mode_minus",
+          "repetition": 1,
+          "results": {
+            "newton_armijo": "completed",
+            "reduced_trust_armijo": "completed"
+          },
+          "same_endpoint_passed": false
+        },
+        {
+          "all_methods_completed": true,
+          "benchmark": "he_l2_np2_step1",
+          "common_start_passed": true,
+          "instance": "mode_minus",
+          "repetition": 2,
+          "results": {
+            "newton_armijo": "completed",
+            "reduced_trust_armijo": "completed"
+          },
+          "same_endpoint_passed": false
+        },
+        {
+          "all_methods_completed": true,
+          "benchmark": "he_l2_np2_step1",
+          "common_start_passed": true,
+          "instance": "mode_minus",
+          "repetition": 3,
+          "results": {
+            "newton_armijo": "completed",
+            "reduced_trust_armijo": "completed"
+          },
+          "same_endpoint_passed": false
+        },
+        {
+          "all_methods_completed": true,
+          "benchmark": "he_l2_np2_step1",
+          "common_start_passed": true,
+          "instance": "mode_minus",
+          "repetition": 4,
+          "results": {
+            "newton_armijo": "completed",
+            "reduced_trust_armijo": "completed"
+          },
+          "same_endpoint_passed": false
+        },
+        {
+          "all_methods_completed": true,
+          "benchmark": "he_l2_np2_step1",
+          "common_start_passed": true,
+          "instance": "mode_minus",
+          "repetition": 5,
+          "results": {
+            "newton_armijo": "completed",
+            "reduced_trust_armijo": "completed"
+          },
+          "same_endpoint_passed": false
+        },
+        {
+          "all_methods_completed": true,
+          "benchmark": "he_l2_np2_step1",
+          "common_start_passed": true,
+          "instance": "mode_plus",
+          "repetition": 1,
+          "results": {
+            "newton_armijo": "completed",
+            "reduced_trust_armijo": "completed"
+          },
+          "same_endpoint_passed": false
+        },
+        {
+          "all_methods_completed": true,
+          "benchmark": "he_l2_np2_step1",
+          "common_start_passed": true,
+          "instance": "mode_plus",
+          "repetition": 2,
+          "results": {
+            "newton_armijo": "completed",
+            "reduced_trust_armijo": "completed"
+          },
+          "same_endpoint_passed": false
+        },
+        {
+          "all_methods_completed": true,
+          "benchmark": "he_l2_np2_step1",
+          "common_start_passed": true,
+          "instance": "mode_plus",
+          "repetition": 3,
+          "results": {
+            "newton_armijo": "completed",
+            "reduced_trust_armijo": "completed"
+          },
+          "same_endpoint_passed": false
+        },
+        {
+          "all_methods_completed": true,
+          "benchmark": "he_l2_np2_step1",
+          "common_start_passed": true,
+          "instance": "mode_plus",
+          "repetition": 4,
+          "results": {
+            "newton_armijo": "completed",
+            "reduced_trust_armijo": "completed"
+          },
+          "same_endpoint_passed": false
+        },
+        {
+          "all_methods_completed": true,
+          "benchmark": "he_l2_np2_step1",
+          "common_start_passed": true,
+          "instance": "mode_plus",
+          "repetition": 5,
+          "results": {
+            "newton_armijo": "completed",
+            "reduced_trust_armijo": "completed"
+          },
+          "same_endpoint_passed": false
+        },
+        {
+          "all_methods_completed": true,
+          "benchmark": "he_l2_np2_step1",
+          "common_start_passed": true,
+          "instance": "nominal",
+          "repetition": 1,
+          "results": {
+            "newton_armijo": "completed",
+            "reduced_trust_armijo": "completed"
+          },
+          "same_endpoint_passed": false
+        },
+        {
+          "all_methods_completed": true,
+          "benchmark": "he_l2_np2_step1",
+          "common_start_passed": true,
+          "instance": "nominal",
+          "repetition": 2,
+          "results": {
+            "newton_armijo": "completed",
+            "reduced_trust_armijo": "completed"
+          },
+          "same_endpoint_passed": false
+        },
+        {
+          "all_methods_completed": true,
+          "benchmark": "he_l2_np2_step1",
+          "common_start_passed": true,
+          "instance": "nominal",
+          "repetition": 3,
+          "results": {
+            "newton_armijo": "completed",
+            "reduced_trust_armijo": "completed"
+          },
+          "same_endpoint_passed": false
+        },
+        {
+          "all_methods_completed": true,
+          "benchmark": "he_l2_np2_step1",
+          "common_start_passed": true,
+          "instance": "nominal",
+          "repetition": 4,
+          "results": {
+            "newton_armijo": "completed",
+            "reduced_trust_armijo": "completed"
+          },
+          "same_endpoint_passed": false
+        },
+        {
+          "all_methods_completed": true,
+          "benchmark": "he_l2_np2_step1",
+          "common_start_passed": true,
+          "instance": "nominal",
+          "repetition": 5,
+          "results": {
+            "newton_armijo": "completed",
+            "reduced_trust_armijo": "completed"
+          },
+          "same_endpoint_passed": false
+        }
+      ],
+      "population_robustness_claim_admissible": false,
+      "same_endpoint_comparison_gate_passed": false,
+      "status": "bounded_outcomes_admitted",
+      "tested_instance_method_comparison_admissible": false,
+      "timing_claim_admissible": false
+    },
+    "source_commit": "692bc6d505444c48d61cd84848eb334e4660bb9f",
+    "status": "admitted_bounded_local_outcomes",
+    "timing_claim_admissible": false
+  },
+  "evidence_root": "artifacts/reproduction/paper_revision_local_692bc6d50544/EXP-GLOB-001",
+  "experiment_id": "EXP-GLOB-001",
+  "outputs": {
+    "globalization_local_status.tex": "a34fb30d4a93642415dcc07af612e978ccf3da00f94bb3aada4866e19cb57bf4"
+  },
+  "population_robustness_claim_admissible": false,
+  "publication_evidence": true,
+  "schema_id": "fenics-nonlinear-energies.exp-glob-001-local-table-manifest",
+  "schema_version": 1,
+  "source_campaign_manifest": {
+    "path": "artifacts/reproduction/paper_revision_local_692bc6d50544/EXP-GLOB-001/raw/controlled/smoke/campaign_manifest.json",
+    "sha256": "81ae305b77b1f0155e3a2bdef1947d270da85bd3743d8a40ecacec0fed36ebfd"
+  },
+  "source_commit": "692bc6d505444c48d61cd84848eb334e4660bb9f",
+  "status": "admitted_bounded_local_outcomes",
+  "timing_claim_admissible": false,
+  "tools": {
+    "checker": {
+      "path": "paper/scripts/check_globalization_local_manifest.py",
+      "sha256": "cc56bf0ac72e353a86d0e4673e629b1ea97f39a0de0794c5f6055da26525a333"
+    },
+    "generator": {
+      "path": "paper/scripts/generate_globalization_local_status.py",
+      "sha256": "e14ebff2814602dffce6ccf878a6ec445d149a63885ace86572d70a9b4d59ce9"
+    },
+    "validator": {
+      "path": "paper/scripts/globalization_local_evidence.py",
+      "sha256": "65682e128f864ba356ef52fdeb574bbc3c9b12f0701f46dd415e9039ed42f0a1"
+    }
+  }
+}
