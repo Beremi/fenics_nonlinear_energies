@@ -140,6 +140,29 @@ The restricted assignment therefore recovers that entry, and unique ownership
 assembles each recovered row once.
 \end{proof}
 
+\begin{proposition}[Component-lifted scalar coloring]
+\label{prop:component-lifted-coloring}
+Let $S$ be the scalar finite-element support and suppose that the structural
+pattern of a $d$-component vector Hessian is a subpattern of
+$S\otimes\mathbf{1}_{d\times d}$. If $c_s$ is a column-intersection coloring
+of $S$, then
+\begin{equation}
+  c(a,k):=d\,c_s(a)+k,
+  \qquad k\in\{0,\ldots,d-1\},
+  \label{eq:component-lifted-color}
+\end{equation}
+is a valid column-intersection coloring of every constrained vector subpattern.
+\end{proposition}
+
+\begin{proof}
+Suppose that vector columns $(a,k)$ and $(b,\ell)$ meet one structural row. If
+$a\ne b$, then scalar columns $a$ and $b$ meet the corresponding scalar support
+row, so $c_s(a)\ne c_s(b)$. If $a=b$, distinct vector columns have
+$k\ne\ell$. Equation~\eqref{eq:component-lifted-color} therefore assigns
+different colors in both cases. Removing constrained columns cannot introduce
+a conflict.
+\end{proof}
+
 The proposition permits different rank-local color labels and counts because
 each rank evaluates its own complete incident-element Hessian and inserts only
 its owned pattern. It does not permit a missing incident element or structural

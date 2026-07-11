@@ -76,6 +76,9 @@ XLA_FLAGS=--xla_cpu_multi_thread_eigen=false \
   --symmetry-tolerance 1e-10 \
   --fd-tolerance 1e-7 \
   --assembled-route-equivalence \
+  --assembled-sfd-hvp-batch-size 4 \
+  --assembled-memory-guard-gib 48 \
+  --process-address-space-limit-gib 64 \
   --output OUTPUT.json
 ```
 
@@ -84,6 +87,16 @@ the element-AD, exact local-SFD/JVP, and constitutive-AD matrices without
 calling a linear or nonlinear solver. It does not replace the separately
 admitted distributed matrix/action checks. Publication use requires execution
 from a clean immutable commit through the managed finalization driver.
+
+For the vector-valued Plasticity3D cases, the SFD route colors the active
+scalar-node support at distance two with PETSc's deterministic lexical greedy
+policy, validates the coloring row by row, and lifts it by displacement
+component. Four exact JAX actions are evaluated per fixed-shape batch; the last
+batch is zero padded and recovered entries are scattered immediately. The
+three full CSR routes are retained on transient disk and compared in bounded
+chunks. The 48 GiB modeled-memory guard and 64 GiB process ceiling are part of
+the frozen command. Exceeding either limit fails the case; it does not relax a
+derivative gate or admit a partial matrix.
 
 ## Inputs
 

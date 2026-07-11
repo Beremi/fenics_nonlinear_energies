@@ -21,17 +21,28 @@ boundary changes. This choice prevents a residual-formula difference from
 being hidden inside a tangent comparison.
 
 The colored route first builds the complete structural pattern of every owned
-row. It colors the overlap-local column-interference graph, forms one seed per
-color, evaluates JAX Hessian-vector products, and extracts the uniquely
-identified entries. The implementation does not assume that different ranks
-obtain the same color labels. It relies instead on
-Proposition~\ref{prop:owned-row-colored-recovery} and unique PETSc row
-ownership.
+row. For the three-dimensional vector problem, it colors the active scalar-node
+support at distance two with deterministic lexical weights and lifts a scalar
+color $c_s(a)$ to displacement component $k$ as $3c_s(a)+k$. The lift is
+validated against every scalar support row before differentiation. It is a
+conservative coloring of the vector column-interference graph by
+Proposition~\ref{prop:component-lifted-coloring}, including under componentwise
+constraints. Exact JAX Hessian-vector products are then evaluated in fixed
+batches of four colors, and each batch is inserted into the uniquely identified
+owned entries before the next batch is formed. The final incomplete batch is
+zero padded, so compilation shape does not depend on the color count. The
+implementation does not assume that different ranks obtain the same color
+labels. It relies instead on Proposition~\ref{prop:owned-row-colored-recovery}
+and unique PETSc row ownership.
 
 All three routes use 64-bit arithmetic. Compilation and kernel warmup occur
 before measured repetitions. Compiled element, constitutive, and action kernels
 remain separate because their traces and intermediate arrays are different
-scientific costs.
+scientific costs. The serial full-mesh derivative comparison is executed with a
+48~GiB modeled-memory guard inside a 64~GiB process address-space ceiling.
+Route CSR arrays are written to transient disk-backed storage and compared in
+bounded chunks; the complete matrix norms and maximum entrywise defects are
+still evaluated, rather than sampled.
 
 \subsection{Rank-local mesh and sparse assembly}
 \label{subsec:rank-local-assembly}
