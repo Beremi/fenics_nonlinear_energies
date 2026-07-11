@@ -716,6 +716,44 @@ def test_frozen_admission_design_matches_the_actual_plan_producer(
     ) == plan["inputs"]["manifested_file_hashes"]
 
 
+def test_plan_accepts_only_the_commit_bound_legacy_thread_policy(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    repo, root, commit = _fixture(tmp_path)
+    plan_path = root / evidence.PLAN_NAME
+    plan = evidence.read_strict_json(plan_path)
+    plan["source"]["relevant_file_hashes"].pop("src/core/cli/threading.py")
+    plan["environment"]["command_environment"] = dict(
+        evidence.LEGACY_EXPECTED_ENVIRONMENT
+    )
+    for row in plan["rows"]:
+        if row["execution_class"] == "required_local":
+            row["environment"] = dict(evidence.LEGACY_EXPECTED_ENVIRONMENT)
+    _write_json(plan_path, plan)
+
+    monkeypatch.setattr(evidence, "LEGACY_SOURCE_COMMIT", commit)
+    validated, source_commit, _rows = evidence._validate_plan(
+        plan_path,
+        repo_root=repo,
+        evidence_root=root,
+        require_release_clean=False,
+    )
+    assert validated["environment"]["command_environment"] == (
+        evidence.LEGACY_EXPECTED_ENVIRONMENT
+    )
+    assert source_commit == commit
+
+    monkeypatch.setattr(evidence, "LEGACY_SOURCE_COMMIT", "f" * 40)
+    with pytest.raises(evidence.AdmissionError, match="exact canonical set"):
+        evidence._validate_plan(
+            plan_path,
+            repo_root=repo,
+            evidence_root=root,
+            require_release_clean=False,
+        )
+
+
 def test_plan_admission_rejects_substitute_inventory_commands_and_semantics(
     tmp_path: Path,
 ) -> None:

@@ -36,6 +36,20 @@ MANIFEST_NAME = "stopping_local_manifest.json"
 HEX40 = re.compile(r"[0-9a-f]{40}")
 HEX64 = re.compile(r"[0-9a-f]{64}")
 
+LEGACY_EXPECTED_ENVIRONMENT = {
+    "FNE_SKIP_REORDERED_WARMUP": "1",
+    "JAX_ENABLE_X64": "True",
+    "JAX_PLATFORMS": "cpu",
+    "MKL_NUM_THREADS": "1",
+    "OMP_NUM_THREADS": "1",
+    "OPENBLAS_NUM_THREADS": "1",
+    "PYTHONHASHSEED": "0",
+    "XLA_FLAGS": (
+        "--xla_cpu_multi_thread_eigen=false "
+        "--xla_force_host_platform_device_count=1"
+    ),
+}
+
 EXPECTED_ENVIRONMENT = {
     "BLIS_NUM_THREADS": "1",
     "FNE_SKIP_REORDERED_WARMUP": "1",
@@ -67,6 +81,10 @@ EXPECTED_SOURCE_PATHS = (
     "src/problems/slope_stability_3d/jax_petsc/solver.py",
     "src/problems/slope_stability_3d/support/fixed_state.py",
 )
+LEGACY_EXPECTED_SOURCE_PATHS = tuple(
+    path for path in EXPECTED_SOURCE_PATHS if path != "src/core/cli/threading.py"
+)
+LEGACY_SOURCE_COMMIT = "5b2f3b50a37b08ba9532ad03721996f44a0c50a0"
 EXPECTED_INPUT_PATHS = (
     "paper/protocols/EXP-STOP-001.md",
     "data/meshes/GinzburgLandau/GL_level5.h5",
@@ -812,6 +830,7 @@ def expected_plan_row(
     *,
     evidence_root: Path,
     python: str,
+    command_environment: Mapping[str, str] = EXPECTED_ENVIRONMENT,
 ) -> dict[str, object]:
     """Materialize the exact producer row, excluding no scientific fields."""
 
@@ -837,7 +856,7 @@ def expected_plan_row(
     row["command"] = _expected_command(
         row_id, spec, evidence_root=evidence_root, python=python
     )
-    row["environment"] = EXPECTED_ENVIRONMENT
+    row["environment"] = dict(command_environment)
     row["expected_outputs"] = [
         str((evidence_root / raw).absolute()) for raw in spec["expected_outputs"]
     ]
@@ -885,7 +904,15 @@ def _validate_plan(
         source.get("relevant_file_hashes"), repo_root=repo_root,
         commit=source_commit, label="plan source hashes"
     )
-    if set(source_inventory) != set(EXPECTED_SOURCE_PATHS):
+    source_paths = set(source_inventory)
+    if source_paths == set(EXPECTED_SOURCE_PATHS):
+        expected_command_environment = EXPECTED_ENVIRONMENT
+    elif (
+        source_paths == set(LEGACY_EXPECTED_SOURCE_PATHS)
+        and source_commit == LEGACY_SOURCE_COMMIT
+    ):
+        expected_command_environment = LEGACY_EXPECTED_ENVIRONMENT
+    else:
         raise AdmissionError("plan source inventory differs from the exact canonical set")
     inputs = plan.get("inputs")
     if not isinstance(inputs, dict) or set(inputs) != {
@@ -913,7 +940,7 @@ def _validate_plan(
     if not isinstance(environment, dict) or set(environment) != {
         "python", "python_executable", "platform", "machine", "packages",
         "command_environment",
-    } or environment.get("command_environment") != EXPECTED_ENVIRONMENT:
+    } or environment.get("command_environment") != expected_command_environment:
         raise AdmissionError("plan command environment differs from the frozen policy")
     expected_python = str((repo_root / ".venv/bin/python").absolute())
     if environment.get("python_executable") != expected_python or not Path(
@@ -973,6 +1000,7 @@ def _validate_plan(
             spec,
             evidence_root=evidence_root,
             python=expected_python,
+            command_environment=expected_command_environment,
         )
         if row != canonical:
             raise AdmissionError(
