@@ -35,14 +35,20 @@ implementation does not assume that different ranks obtain the same color
 labels. It relies instead on Proposition~\ref{prop:owned-row-colored-recovery}
 and unique PETSc row ownership.
 
-All three routes use 64-bit arithmetic. Compilation and kernel warmup occur
+Some archived schemas retain the historical identifier
+\code{colored\_sfd} for this route. In the reported implementation, however,
+every probe is an exact AD Hessian-vector product; no finite-difference gradient
+probe is used.
+
+All three routes use binary64 arithmetic. Compilation and kernel warmup occur
 before measured repetitions. Compiled element, constitutive, and action kernels
 remain separate because their traces and intermediate arrays are different
-scientific costs. The serial full-mesh derivative comparison is executed with a
-48~GiB modeled-memory guard inside a 64~GiB process address-space ceiling.
-Route CSR arrays are written to transient disk-backed storage and compared in
-bounded chunks; the complete matrix norms and maximum entrywise defects are
-still evaluated, rather than sampled.
+scientific costs. At the feasible one-rank $P_1$ route points, full-mesh
+compressed sparse row (CSR) arrays are written to transient disk-backed storage
+and compared in bounded chunks; the complete matrix norms and maximum entrywise
+defects are evaluated rather than sampled. Other full-mesh route points use four
+prescribed tangent actions, while the fixed-element verifiers compare complete
+local Hessians.
 
 \subsection{Rank-local mesh and sparse assembly}
 \label{subsec:rank-local-assembly}
@@ -87,11 +93,12 @@ a post-step search is requested. Thus a method label fixes the actual
 globalization algorithm rather than selecting an undocumented fallback.
 
 Each accepted Newton direction is produced by a PETSc Krylov solve on the
-current tangent. The result record contains the requested and effective KSP
-tolerances, iteration count, convergence reason, and independently recomputed
-true residual. A nonconverged KSP, nonfinite direction, rejected line search,
-trust-region rejection cap, or nonlinear iteration cap remains a failure. Such
-a row is never converted into a successful observation with a large time.
+current tangent. The result record contains the requested and effective
+Krylov-solver tolerances, iteration count, convergence reason, and an
+independently recomputed true residual. A nonconverged Krylov solve, nonfinite
+direction, rejected line search, trust-region rejection cap, or nonlinear
+iteration cap remains a failure. Such a row is never converted into a
+successful observation with a large time.
 
 The primary verification configurations use ordinary Krylov methods and Hypre
 or direct MUMPS factors. Multigrid policies remain available for subsequent
@@ -117,9 +124,9 @@ and scaling options; admission requires
   (n_-,n_0,n_+)=(0,0,n_{\mathrm{free}}).
   \label{eq:riesz-inertia-gate}
 \end{equation}
-The dual norm is evaluated by an independent CG solve with a recomputed true-
-residual threshold. PETSc options cannot silently modify this solve unless an
-explicit, namespaced override is recorded. At every terminal state, the driver
+The dual norm is evaluated by an independent conjugate-gradient (CG) solve with
+a recomputed true-residual threshold. PETSc options cannot silently modify this
+solve unless an explicit, namespaced override is recorded. At every terminal state, the driver
 re-evaluates the energy, gradient, primal state norm, dual residual, and
 correction from the final stored vector. A failed run therefore cannot inherit
 an initial or pre-step residual as its endpoint value.
@@ -127,13 +134,14 @@ an initial or pre-step residual as its endpoint value.
 \subsection{Canonical records and timing}
 \label{subsec:canonical-records}
 
-Every runner writes strict JSON: nonfinite sentinels are serialized as
+Every runner writes strict JavaScript Object Notation (JSON): nonfinite
+sentinels are serialized as
 \code{null}, and the file becomes visible only after an atomic replacement.
 The schema records the experiment, case, route, repetition, MPI size, threads,
 input and code identities, solver controls, terminal status, norms, work
-counters, timing phases, and state hashes. Canonical NPZ states use the original
-global ordering and include coordinate, connectivity, constraint, and metric
-metadata.
+counters, timing phases, and state hashes. Canonical NumPy zipped-archive (NPZ)
+states use the original global ordering and include coordinate, connectivity,
+constraint, and metric metadata.
 
 Fixed-state tangent construction is measured after one in-process warmup and
 five warm repetitions. Three-route comparisons use three independent cyclic
@@ -143,16 +151,21 @@ cold-process paired blocks with no embedded warmup. Both series reduce elapsed
 time by the maximum over participating ranks and retain every rank-local value.
 The base route order is seeded by the first 16 hexadecimal digits of the
 SHA-256 of the comparison identifier, then cyclically rotated for three routes
-or alternated with its reverse for two. Setup,
-differentiation, contraction, insertion, communication, preconditioner, Krylov,
-and total phases are reported separately. The implementation also supports
+or alternated with its reverse for two. The outer wall time is the primary route
+measurement. Cumulative callback diagnostics record Hessian actions, extraction,
+insertion, and communication across compilation, warmup, and measured calls;
+they are not treated as an additive phase decomposition. Full-solve records
+additionally keep setup, preconditioner, Krylov, and total timings distinct. The
+implementation also supports
 structural censoring when a route exceeds a prespecified memory or color-count
 bound. The active route set at a comparison point excludes only censors declared
 in the frozen contract. The high-order colored slot remains visible as a
 prespecified, risk-based non-attempt without a measured threshold; it is never
 called an out-of-memory observation, imputed, or used as a model row.
 
-The local data available in this revision predate the complete timing design.
-They are diagnostically admitted only to correctness and covariate checks. The prepared
-distributed design uses the stricter paired-block implementation and has not
-contributed performance numbers to the manuscript.
+The reported local executions use this machinery only for correctness and
+covariate checks. Although the workstation blocks satisfy the balanced-order
+and collective-reduction contract, they do not satisfy the prespecified
+conditions for reporting timings. The second-architecture train--holdout
+experiment has not been executed, so no performance number from the route
+instrumentation enters the manuscript.
