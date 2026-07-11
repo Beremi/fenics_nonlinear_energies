@@ -1,5 +1,5 @@
 {
-  "contract_version": 2,
+  "contract_version": 3,
   "experiment_id": "EXP-ROUTE-001",
   "frozen_before_karolina_results": true,
   "route_order": [
@@ -170,15 +170,23 @@
       "independent_slurm_block_repetitions",
       "factorized_quadrature_production_route_blocks",
       "four_actions_gradient_residual_and_feasible_direct_matrix_checks",
+      "stop_aligned_degree_specific_initial_relative_gradient_endpoints",
       "strict_high_and_low_order_full_solve_endpoint_analyzer"
     ],
     "clean_git_commit_required": true,
     "workstation_manifest_required": true,
     "workstation_plan_sha256": "ce3a518889516288dfa1017fea638b697770c13e56e6151193d2fd366ccec04f",
     "karolina_prepared_manifest_required": true,
-    "karolina_matrix_sha256": "0010453084157f5ccf0ba307ed26b377c4aff80ad9f095fa359270e90ad5b1a5",
+    "karolina_matrix_sha256": "cfc137573f1ae19b5a7916cf459526ec203b68cf14ddfe8b6df16a6ac04132b5",
     "karolina_manifest_status_for_results": "submitted",
     "endpoint_analysis_required_for_selector": true,
+    "endpoint_analysis_schema_version": 2,
+    "tier_b_stopping_policy_path": "paper/protocols/EXP-ROUTE-001-tier-b-stopping-policy.json",
+    "tier_b_stopping_policy_sha256": "f4516244a1f0f62c2f150ee9ccb73dbc698b68968e5a078843632f153ffdcc7f",
+    "tier_b_stopping_adjudication_required_before_submission": true,
+    "tier_b_stopping_adjudication_schema_version": 3,
+    "tier_b_stopping_p4_reference_row_id": "p3d_p4_nonlinear_1em07_cluster",
+    "tier_b_stopping_p4_reference_status": "accepted",
     "endpoint_required_rows": 30,
     "endpoint_allowed_terminal_decisions": [
       "tier_b_descriptive_timing_only",

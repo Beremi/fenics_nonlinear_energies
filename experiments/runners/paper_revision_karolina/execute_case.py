@@ -19,6 +19,15 @@ import numpy as np
 
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
+
+from experiments.runners.paper_revision_karolina.tier_b_stopping import (
+    is_tier_b_row,
+    row_contract,
+)
+
+
 P3D_CASE_RUNNER = REPO_ROOT / "experiments/runners/run_plasticity3d_backend_mix_case.py"
 P3D_FIXED_RUNNER = REPO_ROOT / "experiments/runners/run_plasticity3d_fixed_state_route_screen.py"
 P3D_QUADRATURE_RUNNER = REPO_ROOT / "experiments/runners/run_plasticity3d_fixed_state_quadrature.py"
@@ -150,6 +159,32 @@ def p3d_solve_command(
     row: dict[str, str], *, python: str, run_dir: Path, route: str | None = None
 ) -> list[str]:
     selected_route = str(row["route"] if route is None else route)
+    tier_b = is_tier_b_row(row)
+    if tier_b:
+        contract = row_contract(row)
+        nonlinear = dict(contract["nonlinear_solver"])
+        riesz = dict(contract["riesz_solver"])
+        convergence_mode = str(nonlinear["convergence_mode"])
+        riesz_ksp_type = str(riesz["ksp_type"])
+        riesz_pc_type = str(riesz["pc_type"])
+        riesz_rtol = str(riesz["rtol"])
+        riesz_atol = str(riesz["atol"])
+        riesz_max_it = str(riesz["max_it"])
+        riesz_true_residual_rtol = str(riesz["true_residual_rtol"])
+        riesz_factor_solver = str(riesz["spd_factor_solver_type"])
+        riesz_symmetry_tol = str(riesz["symmetry_relative_tolerance"])
+    else:
+        # DISC/SCALE retain their separately frozen legacy policy.  Tier-B is
+        # deliberately the only tranche coupled to EXP-STOP-001.
+        convergence_mode = "all"
+        riesz_ksp_type = "gmres"
+        riesz_pc_type = "hypre"
+        riesz_rtol = "1e-10"
+        riesz_atol = "1e-14"
+        riesz_max_it = "1000"
+        riesz_true_residual_rtol = "1e-8"
+        riesz_factor_solver = "mumps"
+        riesz_symmetry_tol = "1e-12"
     command = [
         *srun_prefix(row),
         python,
@@ -180,25 +215,25 @@ def p3d_solve_command(
         "--ksp-max-it",
         row["ksp_max_it"],
         "--convergence-mode",
-        "all",
+        convergence_mode,
         "--convergence-metric",
         "reference_elastic_energy",
         "--riesz-ksp-type",
-        "gmres",
+        riesz_ksp_type,
         "--riesz-pc-type",
-        "hypre",
+        riesz_pc_type,
         "--riesz-ksp-rtol",
-        "1e-10",
+        riesz_rtol,
         "--riesz-ksp-atol",
-        "1e-14",
+        riesz_atol,
         "--riesz-ksp-max-it",
-        "1000",
+        riesz_max_it,
         "--riesz-true-residual-rtol",
-        "1e-8",
+        riesz_true_residual_rtol,
         "--riesz-spd-factor-solver-type",
-        "mumps",
+        riesz_factor_solver,
         "--riesz-symmetry-tol",
-        "1e-12",
+        riesz_symmetry_tol,
         "--stop-tol",
         row["stop_tol"],
         "--grad-stop-tol",
@@ -212,6 +247,11 @@ def p3d_solve_command(
         "--use-trust-region",
         "--trust-subproblem-line-search",
     ]
+    if tier_b:
+        # The matrix stop_tol column carries the frozen relative dual-residual
+        # target for provenance parity.  The actual gradient-only gate is the
+        # explicit relative option below; grad_stop_tol is frozen to zero.
+        command.extend(["--grad-stop-rtol", row["stop_tol"]])
     if row["tier"] != "smoke" or row["experiment_id"] == "EXP-DISC-001":
         command.extend(["--state-out", str(run_dir / "state.npz")])
     return command
@@ -768,6 +808,41 @@ def validate_p3d_solve_output(
     if configuration.get("correction_normalization") != "metric_current_state":
         raise ValueError("output did not use metric-current-state correction normalization")
 
+    tier_b = is_tier_b_row(row)
+    if tier_b:
+        contract = row_contract(row)
+        if payload.get("status") != "completed" or payload.get("solver_success") is not True:
+            raise ValueError("Tier-B output is not a completed successful solve")
+        nonlinear_policy = dict(contract["nonlinear_solver"])
+        riesz_policy = dict(contract["riesz_solver"])
+        relative_target = float(contract["relative_dual_residual_target"])
+        exact_requested = {
+            "ksp_type": str(riesz_policy["ksp_type"]),
+            "pc_type": str(riesz_policy["pc_type"]),
+            "rtol": float(riesz_policy["rtol"]),
+            "atol": float(riesz_policy["atol"]),
+            "max_it": int(riesz_policy["max_it"]),
+            "true_residual_rtol": float(riesz_policy["true_residual_rtol"]),
+            "spd_factor_solver_type": str(riesz_policy["spd_factor_solver_type"]),
+            "symmetry_relative_tolerance": float(
+                riesz_policy["symmetry_relative_tolerance"]
+            ),
+        }
+    else:
+        nonlinear_policy = {}
+        riesz_policy = {}
+        relative_target = math.nan
+        exact_requested = {
+            "ksp_type": "gmres",
+            "pc_type": "hypre",
+            "rtol": 1.0e-10,
+            "atol": 1.0e-14,
+            "max_it": 1000,
+            "true_residual_rtol": 1.0e-8,
+            "spd_factor_solver_type": "mumps",
+            "symmetry_relative_tolerance": 1.0e-12,
+        }
+
     metric = dict(convergence.get("metric") or {})
     provenance = dict(metric.get("provenance") or {})
     certificate = dict(provenance.get("spd_certificate") or {})
@@ -789,16 +864,6 @@ def validate_p3d_solve_output(
         raise ValueError("SPD certification did not use the frozen MUMPS factor route")
 
     requested = dict(payload.get("riesz_solver_requested") or {})
-    exact_requested = {
-        "ksp_type": "gmres",
-        "pc_type": "hypre",
-        "rtol": 1.0e-10,
-        "atol": 1.0e-14,
-        "max_it": 1000,
-        "true_residual_rtol": 1.0e-8,
-        "spd_factor_solver_type": "mumps",
-        "symmetry_relative_tolerance": 1.0e-12,
-    }
     for key, expected in exact_requested.items():
         actual = requested.get(key)
         if isinstance(expected, float):
@@ -808,15 +873,15 @@ def validate_p3d_solve_output(
         elif actual != expected:
             raise ValueError(f"requested Riesz {key} changed from the frozen value")
     metric_expected = {
-        "ksp_type": "gmres",
-        "pc_type": "hypre",
-        "requested_rtol": 1.0e-10,
-        "requested_atol": 1.0e-14,
-        "requested_max_it": 1000,
-        "effective_rtol": 1.0e-10,
-        "effective_atol": 1.0e-14,
-        "effective_max_it": 1000,
-        "true_residual_rtol_gate": 1.0e-8,
+        "ksp_type": exact_requested["ksp_type"],
+        "pc_type": exact_requested["pc_type"],
+        "requested_rtol": exact_requested["rtol"],
+        "requested_atol": exact_requested["atol"],
+        "requested_max_it": exact_requested["max_it"],
+        "effective_rtol": exact_requested["rtol"],
+        "effective_atol": exact_requested["atol"],
+        "effective_max_it": exact_requested["max_it"],
+        "true_residual_rtol_gate": exact_requested["true_residual_rtol"],
     }
     for key, expected in metric_expected.items():
         actual = metric.get(key)
@@ -826,6 +891,12 @@ def validate_p3d_solve_output(
                 raise ValueError(f"effective metric Riesz {key} is not frozen")
         elif actual != expected:
             raise ValueError(f"effective metric Riesz {key} is not frozen")
+    if tier_b:
+        if metric.get("set_from_petsc_options") is not False:
+            raise ValueError("Tier-B metric allowed PETSc options to alter the Riesz solve")
+        for key in ("requested_norm_type", "effective_norm_type"):
+            if metric.get(key) != riesz_policy["norm_type"]:
+                raise ValueError(f"effective metric Riesz {key} is not frozen")
 
     initial = _required_finite(
         dict(convergence.get("initial_absolute_dual_residual") or {}).get("value"),
@@ -837,6 +908,74 @@ def validate_p3d_solve_output(
     )
     if initial < 0.0 or terminal < 0.0:
         raise ValueError("dual residual norms cannot be negative")
+    initial_relative: float | None = None
+    if tier_b:
+        if initial <= 0.0:
+            raise ValueError("Tier-B relative stopping requires a positive initial residual")
+        initial_relative = _required_finite(
+            dict(convergence.get("initial_relative_dual_residual") or {}).get(
+                "value"
+            ),
+            field="terminal initial-relative dual residual",
+        )
+        if initial_relative < 0.0 or not math.isclose(
+            initial_relative,
+            terminal / initial,
+            rel_tol=1.0e-10,
+            abs_tol=1.0e-15,
+        ):
+            raise ValueError("Tier-B relative residual is missing or internally stale")
+        for key, expected in {
+            "stop_tol": relative_target,
+            "grad_stop_tol": float(nonlinear_policy["absolute_residual_tolerance"]),
+            "grad_stop_rtol": relative_target,
+        }.items():
+            actual = _required_finite(payload.get(key), field=f"root Tier-B {key}")
+            if not math.isclose(actual, expected, rel_tol=1.0e-14, abs_tol=0.0):
+                raise ValueError(f"root Tier-B {key} changed from the frozen policy")
+        if payload.get("stop_metric_name") != "dual_residual_norm":
+            raise ValueError("Tier-B output did not use the dual-residual stopping metric")
+        expected_ksp_rtol = float(nonlinear_policy["ksp_rtol"])
+        expected_ksp_max_it = int(nonlinear_policy["ksp_max_it"])
+        for key, expected in {
+            "ksp_rtol": expected_ksp_rtol,
+            "ksp_max_it": expected_ksp_max_it,
+        }.items():
+            actual = _required_finite(payload.get(key), field=f"root Tier-B {key}")
+            if not math.isclose(actual, float(expected), rel_tol=1.0e-14, abs_tol=0.0):
+                raise ValueError(f"root Tier-B {key} changed from the frozen policy")
+
+        def validate_effective_ksp(raw: object, *, label: str) -> None:
+            effective = dict(raw or {})
+            if effective.get("captured_after_set_from_options") is not True:
+                raise ValueError(f"{label} lacks post-options effective KSP evidence")
+            rtol = _required_finite(effective.get("rtol"), field=f"{label} KSP rtol")
+            max_it = int(effective.get("max_it", -1))
+            if (
+                not math.isclose(
+                    rtol, expected_ksp_rtol, rel_tol=1.0e-14, abs_tol=0.0
+                )
+                or max_it != expected_ksp_max_it
+            ):
+                raise ValueError(f"{label} effective KSP policy changed")
+
+        initial_guess = dict(payload.get("initial_guess") or {})
+        if initial_guess.get("success") is not True or int(
+            initial_guess.get("ksp_reason_code", 0)
+        ) <= 0:
+            raise ValueError("Tier-B initial-guess KSP did not converge")
+        validate_effective_ksp(
+            initial_guess.get("effective_ksp"), label="Tier-B initial guess"
+        )
+        history = payload.get("linear_history")
+        if not isinstance(history, list) or not history:
+            raise ValueError("Tier-B output lacks nonlinear KSP history")
+        for index, record in enumerate(history):
+            if not isinstance(record, dict) or int(record.get("ksp_reason_code", 0)) <= 0:
+                raise ValueError(f"Tier-B nonlinear KSP solve {index} did not converge")
+            validate_effective_ksp(
+                record.get("effective_ksp"), label=f"Tier-B nonlinear solve {index}"
+            )
     state_norm = _required_finite(
         dict(convergence.get("state_norm") or {}).get("value"),
         field="terminal state norm",
@@ -866,17 +1005,7 @@ def validate_p3d_solve_output(
     )
     if reason <= 0 or relative_true > true_gate:
         raise ValueError("terminal Riesz solve failed its convergence/true-residual gate")
-    last_expected = {
-        "ksp_type": "gmres",
-        "pc_type": "hypre",
-        "requested_rtol": 1.0e-10,
-        "requested_atol": 1.0e-14,
-        "requested_max_it": 1000,
-        "effective_rtol": 1.0e-10,
-        "effective_atol": 1.0e-14,
-        "effective_max_it": 1000,
-        "true_residual_rtol_gate": 1.0e-8,
-    }
+    last_expected = dict(metric_expected)
     for key, expected in last_expected.items():
         actual = last_riesz.get(key)
         if isinstance(expected, float):
@@ -885,6 +1014,14 @@ def validate_p3d_solve_output(
                 raise ValueError(f"endpoint Riesz {key} is not frozen")
         elif actual != expected:
             raise ValueError(f"endpoint Riesz {key} is not frozen")
+    if tier_b:
+        for key in (
+            "requested_norm_type",
+            "effective_norm_type",
+            "reported_residual_norm_type",
+        ):
+            if last_riesz.get(key) != riesz_policy["norm_type"]:
+                raise ValueError(f"endpoint Riesz {key} is not frozen")
     rhs_norm = _required_finite(last_riesz.get("rhs_norm"), field="endpoint Riesz rhs norm")
     if rhs_norm < 0.0 or not math.isclose(
         rhs_norm, coefficient_gradient, rel_tol=1.0e-12, abs_tol=1.0e-14
@@ -899,19 +1036,74 @@ def validate_p3d_solve_output(
         bool(payload.get("solver_success")) or payload.get("status") == "completed"
     ) and residual_gate.get("passed") is not True:
         raise ValueError("a completed solver row did not pass the Riesz residual gate")
+    if tier_b:
+        absolute_tolerance = _required_finite(
+            residual_gate.get("absolute_tolerance"),
+            field="Tier-B residual-gate absolute tolerance",
+        )
+        relative_tolerance = _required_finite(
+            residual_gate.get("initial_relative_tolerance"),
+            field="Tier-B residual-gate relative tolerance",
+        )
+        effective_target = _required_finite(
+            residual_gate.get("effective_absolute_target"),
+            field="Tier-B effective residual target",
+        )
+        if (
+            absolute_tolerance != 0.0
+            or not math.isclose(
+                relative_tolerance, relative_target, rel_tol=1.0e-14, abs_tol=0.0
+            )
+            or not math.isclose(
+                effective_target,
+                initial * relative_target,
+                rel_tol=1.0e-12,
+                abs_tol=1.0e-15,
+            )
+            or terminal > effective_target
+            or initial_relative is None
+            or initial_relative > relative_target
+        ):
+            raise ValueError("completed Tier-B row did not satisfy its relative residual gate")
     return {
         "status": "passed",
         "selection": "reference_elastic_energy",
         "positive_inertia": positive,
         "initial_absolute_dual_residual": initial,
+        "terminal_initial_relative_dual_residual": initial_relative,
         "terminal_absolute_dual_residual": terminal,
         "terminal_state_norm": state_norm,
         "terminal_relative_correction": relative_correction,
+        "correction_diagnostic_limit": (
+            float(nonlinear_policy["relative_correction_diagnostic_limit"])
+            if tier_b
+            else None
+        ),
+        "correction_diagnostic_within_limit": (
+            relative_correction
+            <= float(nonlinear_policy["relative_correction_diagnostic_limit"])
+            if tier_b
+            else None
+        ),
         "terminal_coefficient_gradient_l2": coefficient_gradient,
         "terminal_riesz_reason": reason,
         "terminal_relative_true_residual": relative_true,
         "terminal_true_residual_gate": true_gate,
         "solver_residual_gate_passed": bool(residual_gate.get("passed")),
+        "tier_b_stopping_policy": (
+            {
+                "path": contract["policy_path"],
+                "sha256": contract["policy_sha256"],
+                "degree": contract["degree"],
+                "relative_dual_residual_target": contract[
+                    "relative_dual_residual_target"
+                ],
+                "target_status": contract["target_status"],
+                "reference_row_id": contract["reference_row_id"],
+            }
+            if tier_b
+            else None
+        ),
     }
 
 

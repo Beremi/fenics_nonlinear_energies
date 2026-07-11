@@ -5,7 +5,7 @@ scientifically released**, Karolina
 CPU artifacts for `EXP-ROUTE-001`, `EXP-DISC-001`, and `EXP-SCALE-001`. The
 authoritative row-level specification is
 [`campaign_matrix.csv`](campaign_matrix.csv); its SHA-256 at preparation time is
-`0010453084157f5ccf0ba307ed26b377c4aff80ad9f095fa359270e90ad5b1a5`.
+`cfc137573f1ae19b5a7916cf459526ec203b68cf14ddfe8b6df16a6ac04132b5`.
 
 The recorded IT4I allocation ends on **2026-07-11**. No command in this bundle
 may be admitted or submitted from that historical record. Before even a Slurm
@@ -47,9 +47,11 @@ CAMPAIGN_ID=paper_revision_karolina_prepared_v10 \
 bash experiments/runners/paper_revision_karolina/submit_prepared_campaigns.sh
 ```
 
-The latest scheduler-free preparation was generated from clean commit
-`f62b4278ae59ad8eefe3b41aa43c127a149148ee`. The following four archives
-contain plans only; no scientific process or scheduler command was launched:
+The following version-10 scheduler-free archives were generated from clean
+commit `f62b4278ae59ad8eefe3b41aa43c127a149148ee`. They contain plans only; no
+scientific process or scheduler command was launched. They are now
+**superseded and non-submittable** because they predate the STOP-aligned
+Tier-B policy and current matrix hash; preserve them as immutable provenance:
 
 - `paper_revision_karolina_prepared_v10`: 115 required rows,
   99.95 node-hours, plan SHA-256
@@ -281,14 +283,26 @@ batch script repeats the allocation and clean-commit checks on the compute node.
 - Colored SFD at `P4(L1)` is a prespecified non-attempt motivated by pilot
   memory risk. It has no Slurm row, carries no measured memory threshold,
   remains visible in the finite empirical map, and is never imputed.
-- Tier-B route confirmations use `ksp_rtol=1e-8` and KSP cap 500. The matrix
-  validator rejects the obsolete loose `1e-2` policy that produced
-  route-sensitive one-step states in the local pilot.
+- Tier-B route confirmations use `ksp_rtol=1e-8`, KSP cap 1000, and
+  gradient-only reference-elastic stopping. The initial-relative dual-residual
+  target is `1e-6` for P1 and the fixed tight-reference `1e-7` for P4; the
+  absolute tolerance is zero. Correction `2e-3` is diagnostic only. The Riesz
+  solve is CG/Jacobi with the unpreconditioned norm, `rtol=1e-10`, zero
+  absolute tolerance, cap 5000, and an independent `1e-8` true-residual gate.
+  The matrix validator rejects any drift from this hash-bound policy.
+- Any Tier-B preparation without `STOPPING_ADJUDICATION` records
+  `submission_admissible: false`. Both admission-test and real `--execute`
+  paths fail before scheduler contact unless this variable names the detached
+  version-3 final STOP adjudication. The file is copied into each phase
+  archive, independently revalidated on preflight/resume, and must be
+  byte-identical across training and holdout. Rejected loose calibration
+  candidates are descriptive; the gate requires the tight P4 reference, a
+  valid selected P4 policy, and all three MPI-consistency comparisons.
 - Every `p3d_solve` row, including discretization and optional scaling rows,
   uses the numerically checked reference-elastic-energy Riesz stopping metric. The
   executor rejects coefficient stopping, invalid SPD inertia, stale endpoint
-  Riesz evidence, changed GMRES/Hypre tolerances, and completed rows that fail
-  the residual gate.
+  Riesz evidence, changed requested or effective solver tolerances/norm types,
+  and completed rows that fail the applicable residual gate.
 - `EXP-DISC-001` has five explicit sequential release stages: P4(L1) smoke;
   the paired P4(L1) 24/125-point quadrature stage; P4(L2) 24-point mesh stage;
   P4(L2) 125-point mesh-quadrature stage; and the tight-tolerance stage. A
@@ -336,4 +350,8 @@ from a complete 45-row local calibration and therefore use the separate
 `qcpu_exp` node, with a total ceiling of 23 node-hours. The preparer uses the
 same reviewed source-freeze, hash-bound environment, command inventory,
 offline accounting, and copy-back checksum conventions as this directory.
-Its default is preparation-only and no scheduler command has been run.
+Its default is preparation-only and no scheduler command has been run. Its
+version-3 final adjudication distinguishes the frozen computation commit from
+the later clean adjudicator commit and script hash. Expected rejected loose P4
+trials do not censor calibration; only the tight-reference/selected-policy and
+MPI-consistency gates control downstream Tier-B admission.

@@ -25,6 +25,17 @@ from typing import Iterable
 
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
+
+from experiments.runners.paper_revision_karolina.tier_b_stopping import (
+    POLICY_PATH as TIER_B_STOPPING_POLICY,
+    is_tier_b_row,
+    row_contract,
+    validate_stop_adjudication,
+)
+
+
 DEFAULT_MATRIX = Path(__file__).with_name("campaign_matrix.csv")
 ROUTE_ANALYSIS_CONTRACT = REPO_ROOT / "paper/protocols/EXP-ROUTE-001-analysis-contract.json"
 SBATCH_RUNNER = Path(__file__).with_name("run_revision_case.sbatch")
@@ -51,6 +62,10 @@ PROTOCOLS = {
 }
 REVIEWED_SOURCES = {
     "analysis_contract": ROUTE_ANALYSIS_CONTRACT,
+    "tier_b_stopping_policy": TIER_B_STOPPING_POLICY,
+    "tier_b_stopping_validator": Path(__file__).with_name("tier_b_stopping.py"),
+    "stop_cluster_adjudicator": REPO_ROOT
+    / "experiments/runners/prepare_exp_stop_001_karolina.py",
     "route_protocol": REPO_ROOT / "paper/protocols/EXP-ROUTE-001.md",
     "discretization_protocol": REPO_ROOT / "paper/protocols/EXP-DISC-001.md",
     "scaling_protocol": REPO_ROOT / "paper/protocols/EXP-SCALE-001.md",
@@ -96,6 +111,10 @@ REVIEWED_SOURCES = {
     / "src/problems/slope_stability_3d/support/fixed_state.py",
     "quadrature_support": REPO_ROOT
     / "src/problems/slope_stability_3d/support/mesh.py",
+    "riesz_metric_support": REPO_ROOT / "src/core/petsc/metrics.py",
+    "nonlinear_stopping_support": REPO_ROOT / "src/core/petsc/minimizers.py",
+    "plasticity3d_solver": REPO_ROOT
+    / "src/problems/slope_stability_3d/jax_petsc/solver.py",
     "release_authorization_schema": RELEASE_AUTHORIZATION_SCHEMA,
     "release_authorization_example": RELEASE_AUTHORIZATION_EXAMPLE,
     "model_freeze_schema": MODEL_FREEZE_SCHEMA,
@@ -401,15 +420,8 @@ def read_matrix(path: Path) -> list[dict[str, str]]:
                 f"{case_id} must use convergence_metric={expected_metric}; "
                 f"got {row.get('convergence_metric')!r}"
             )
-        if (
-            row["experiment_id"] == "EXP-ROUTE-001"
-            and row["tier"] in {"full_solve_confirmation", "low_order_confirmation"}
-            and float(row["ksp_rtol"]) > 1.0e-8
-        ):
-            raise ValueError(
-                f"{case_id} uses obsolete loose route-comparison KSP tolerance; "
-                "Tier-B requires ksp_rtol <= 1e-8"
-            )
+        if is_tier_b_row(row):
+            row_contract(row)
     _validate_route_design(rows)
     return rows
 
@@ -877,6 +889,71 @@ def _archive_release_authorization(
     }
 
 
+def _tier_b_stopping_record(
+    validated: dict[str, object] | None, *, out_root: Path
+) -> dict[str, object]:
+    policy = {
+        "path": _repo_relative(TIER_B_STOPPING_POLICY),
+        "sha256": _sha256(TIER_B_STOPPING_POLICY),
+    }
+    if validated is None:
+        return {
+            "status": "pending_required_before_scheduler_contact",
+            "submission_admissible": False,
+            "policy": policy,
+            "adjudication": None,
+        }
+    source = Path(str(validated["path"])).resolve()
+    destination = out_root / "stopping_adjudication.json"
+    shutil.copy2(source, destination)
+    archived = validate_stop_adjudication(destination)
+    for key, expected in validated.items():
+        if key != "path" and archived.get(key) != expected:
+            raise RuntimeError("STOP adjudication changed during campaign archival")
+    archived["path"] = destination.name
+    return {
+        "status": "validated_and_archived_before_scheduler_contact",
+        "submission_admissible": True,
+        "policy": policy,
+        "adjudication": archived,
+    }
+
+
+def _validate_archived_tier_b_stopping(
+    root: Path, record: object
+) -> dict[str, object]:
+    if not isinstance(record, dict):
+        raise RuntimeError("Tier-B campaign lacks its STOP adjudication record")
+    policy = record.get("policy")
+    if policy != {
+        "path": _repo_relative(TIER_B_STOPPING_POLICY),
+        "sha256": _sha256(TIER_B_STOPPING_POLICY),
+    }:
+        raise RuntimeError("Tier-B campaign stopping-policy binding is stale")
+    if (
+        record.get("status")
+        != "validated_and_archived_before_scheduler_contact"
+        or record.get("submission_admissible") is not True
+    ):
+        raise RuntimeError("Tier-B campaign was not admitted by final STOP evidence")
+    adjudication = record.get("adjudication")
+    if not isinstance(adjudication, dict):
+        raise RuntimeError("Tier-B campaign STOP adjudication metadata is malformed")
+    path = _archive_member(
+        root,
+        adjudication.get("path"),
+        name="tier_b_stopping_gate.adjudication.path",
+    )
+    if not path.is_file():
+        raise RuntimeError("Tier-B campaign STOP adjudication is missing")
+    validated = validate_stop_adjudication(path)
+    expected = dict(validated)
+    expected["path"] = str(adjudication.get("path"))
+    if adjudication != expected:
+        raise RuntimeError("Tier-B campaign STOP adjudication binding is stale")
+    return validated
+
+
 def _case_ids_sha256(case_ids: Iterable[str]) -> str:
     canonical = json.dumps(sorted(case_ids), separators=(",", ":")).encode("utf-8")
     return hashlib.sha256(canonical).hexdigest()
@@ -1001,6 +1078,10 @@ def _validate_freeze_training_manifest(
         != _case_ids_sha256(expected_ids)
     ):
         raise RuntimeError(f"{scope_name} manifest has stale scope or source identity")
+    if is_tier_b:
+        _validate_archived_tier_b_stopping(
+            root, manifest.get("tier_b_stopping_gate")
+        )
     plan_path = _archive_member(root, manifest.get("plan_file"), name=f"{scope_name}.plan")
     if manifest.get("plan_sha256") != _sha256(plan_path):
         raise RuntimeError(f"{scope_name} plan hash is stale")
@@ -1285,6 +1366,11 @@ def _archive_model_freeze_receipt(
             for record in list(dict(release_payload).get("reviewed_artifacts") or []):
                 if isinstance(record, dict):
                     relative_sources.add(Path(str(record.get("path", ""))))
+        stopping = training_manifest.get("tier_b_stopping_gate")
+        if isinstance(stopping, dict):
+            adjudication = stopping.get("adjudication")
+            if isinstance(adjudication, dict):
+                relative_sources.add(Path(str(adjudication.get("path", ""))))
         for relative in sorted(relative_sources, key=str):
             if relative.is_absolute() or not str(relative):
                 raise RuntimeError("route training provenance path is not archive-relative")
@@ -1565,6 +1651,29 @@ def _validate_archived_model_freeze(
     is_tier_b = manifest.get("only_optional") is True
     if manifest.get("include_optional") is not is_tier_b:
         raise RuntimeError("rank-32 holdout mixes required and Tier-B scope")
+    if is_tier_b:
+        holdout_stop = _validate_archived_tier_b_stopping(
+            root, manifest.get("tier_b_stopping_gate")
+        )
+        training_manifest_path = Path(
+            dict(validated["artifacts"])["tier_b_training_manifest"]
+        )
+        with training_manifest_path.open(encoding="utf-8") as handle:
+            training_manifest = json.load(handle)
+        if not isinstance(training_manifest, dict):
+            raise RuntimeError("Tier-B training manifest is malformed")
+        training_stop = _validate_archived_tier_b_stopping(
+            training_manifest_path.parent,
+            training_manifest.get("tier_b_stopping_gate"),
+        )
+        holdout_identity = {key: value for key, value in holdout_stop.items() if key != "path"}
+        training_identity = {
+            key: value for key, value in training_stop.items() if key != "path"
+        }
+        if holdout_identity != training_identity:
+            raise RuntimeError(
+                "Tier-B training and holdout bind different STOP adjudications"
+            )
     scope_name = "tier_b_holdout" if is_tier_b else "cost_model_holdout"
     expected_rows = _route_scopes(matrix)[scope_name]
     expected_ids = sorted(row["case_id"] for row in expected_rows)
@@ -1732,6 +1841,43 @@ def offline_preflight(out_root: Path, *, matrix: Path = DEFAULT_MATRIX) -> dict[
         ):
             raise RuntimeError("prepared route phase case-ID hash is stale")
 
+    tier_b_plan = any(is_tier_b_row(row) for row in plan)
+    stopping_record = manifest.get("tier_b_stopping_gate")
+    if tier_b_plan:
+        if (
+            isinstance(stopping_record, dict)
+            and stopping_record.get("status")
+            == "validated_and_archived_before_scheduler_contact"
+        ):
+            _validate_archived_tier_b_stopping(root, stopping_record)
+        elif not (
+            manifest.get("status") == "prepared_not_submitted"
+            and isinstance(stopping_record, dict)
+            and stopping_record
+            == {
+                "status": "pending_required_before_scheduler_contact",
+                "submission_admissible": False,
+                "policy": {
+                    "path": _repo_relative(TIER_B_STOPPING_POLICY),
+                    "sha256": _sha256(TIER_B_STOPPING_POLICY),
+                },
+                "adjudication": None,
+            }
+        ):
+            raise RuntimeError(
+                "Tier-B archive lacks a valid pre-submission STOP adjudication state"
+            )
+    elif stopping_record != {
+        "status": "not_applicable",
+        "submission_admissible": True,
+        "policy": {
+            "path": _repo_relative(TIER_B_STOPPING_POLICY),
+            "sha256": _sha256(TIER_B_STOPPING_POLICY),
+        },
+        "adjudication": None,
+    }:
+        raise RuntimeError("non-Tier-B archive has an invalid stopping-gate record")
+
     real_submission_record = (
         manifest.get("test_only_commands") is False
         and manifest.get("status")
@@ -1845,6 +1991,22 @@ def prepare(args: argparse.Namespace) -> dict[str, object]:
             only_optional=bool(args.only_optional),
             route_phase=getattr(args, "route_phase", None),
         )
+    tier_b_selected = any(is_tier_b_row(row) for row in selected)
+    stopping_argument = getattr(args, "stopping_adjudication", None)
+    if stopping_argument is not None and not tier_b_selected:
+        raise RuntimeError(
+            "--stopping-adjudication is only valid for an EXP-ROUTE-001 Tier-B tranche"
+        )
+    stopping_adjudication = (
+        validate_stop_adjudication(Path(stopping_argument))
+        if stopping_argument is not None
+        else None
+    )
+    if args.execute and tier_b_selected and stopping_adjudication is None:
+        raise RuntimeError(
+            "Tier-B scheduler contact requires --stopping-adjudication from the "
+            "completed, checksum-sealed cluster STOP campaign"
+        )
     total_node_hours = sum(float(row["estimated_node_hours"]) for row in selected)
     if total_node_hours > float(args.max_node_hours):
         raise RuntimeError(
@@ -1880,6 +2042,19 @@ def prepare(args: argparse.Namespace) -> dict[str, object]:
         raise RuntimeError(
             "scheduler admission or submission requires reviewed --env-setup and --env-lock"
         )
+    tier_b_stopping_gate = (
+        _tier_b_stopping_record(stopping_adjudication, out_root=out_root)
+        if tier_b_selected
+        else {
+            "status": "not_applicable",
+            "submission_admissible": True,
+            "policy": {
+                "path": _repo_relative(TIER_B_STOPPING_POLICY),
+                "sha256": _sha256(TIER_B_STOPPING_POLICY),
+            },
+            "adjudication": None,
+        }
+    )
     commands = [
         sbatch_command(
             row,
@@ -1919,6 +2094,7 @@ def prepare(args: argparse.Namespace) -> dict[str, object]:
         "reviewed_source_sha256": reviewed_source_hashes,
         "queued_source_freeze": source_freeze,
         "environment_contract": environment_contract,
+        "tier_b_stopping_gate": tier_b_stopping_gate,
         "selected_experiments": sorted({row["experiment_id"] for row in selected}),
         "selected_tiers": sorted({row["tier"] for row in selected}),
         "protocol_cards": {
@@ -1969,6 +2145,10 @@ def prepare(args: argparse.Namespace) -> dict[str, object]:
     _atomic_write_json(manifest_path, manifest)
 
     if args.execute:
+        if tier_b_selected:
+            _validate_archived_tier_b_stopping(
+                out_root, manifest["tier_b_stopping_gate"]
+            )
         _require_revalidation(test_only=bool(args.test_only))
         release_authorization = _require_staged_real_submission(
             args,
@@ -2134,6 +2314,14 @@ def _parser() -> argparse.ArgumentParser:
         "--admission-gate",
         type=Path,
         help="Passed JSON gate required before downstream DISC/SCALE/Tier-B tranches.",
+    )
+    parser.add_argument(
+        "--stopping-adjudication",
+        type=Path,
+        help=(
+            "Checksum-bound final EXP-STOP-001 adjudication required before any "
+            "Tier-B scheduler contact."
+        ),
     )
     parser.add_argument(
         "--model-freeze-receipt",

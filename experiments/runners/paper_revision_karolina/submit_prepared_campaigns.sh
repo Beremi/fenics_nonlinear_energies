@@ -18,6 +18,7 @@ ONLY_OPTIONAL="${ONLY_OPTIONAL:-0}"
 EXPERIMENTS="${EXPERIMENTS:-}"
 TIERS="${TIERS:-}"
 ADMISSION_GATE="${ADMISSION_GATE:-}"
+STOPPING_ADJUDICATION="${STOPPING_ADJUDICATION:-}"
 ROUTE_PHASE="${ROUTE_PHASE:-}"
 MODEL_FREEZE_RECEIPT="${MODEL_FREEZE_RECEIPT:-}"
 ENV_SETUP="${ENV_SETUP:-}"
@@ -66,6 +67,9 @@ if [[ -n "$TIERS" ]]; then
 fi
 if [[ -n "$ADMISSION_GATE" ]]; then
   args+=(--admission-gate "$ADMISSION_GATE")
+fi
+if [[ -n "$STOPPING_ADJUDICATION" ]]; then
+  args+=(--stopping-adjudication "$STOPPING_ADJUDICATION")
 fi
 if [[ -n "$ROUTE_PHASE" ]]; then
   args+=(--route-phase "$ROUTE_PHASE")

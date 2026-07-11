@@ -1,0 +1,65 @@
+{
+  "schema_id": "fenics-nonlinear-energies.exp-route-001-tier-b-stopping-policy",
+  "schema_version": 1,
+  "status": "frozen_conditional_on_cluster_stop_adjudication",
+  "local_calibration": {
+    "analysis_path": "artifacts/reproduction/exp_stop_001_local_5b2f3b5/analysis.json",
+    "analysis_sha256": "d526e844750f43d244f2d26ab920268f9cff3387512c93baf77afcc382cbed90",
+    "plan_path": "artifacts/reproduction/exp_stop_001_local_5b2f3b5/plan.json",
+    "plan_sha256": "aa05d389af6e856a654c221559fc7fd7006417cad1e045212537f6603602efe1",
+    "source_commit": "5b2f3b50a37b08ba9532ad03721996f44a0c50a0",
+    "terminal_decision": "local_calibration_complete_cluster_computations_deferred"
+  },
+  "nonlinear_solver": {
+    "convergence_metric": "reference_elastic_energy",
+    "convergence_mode": "gradient_only",
+    "nonlinear_max_it": 80,
+    "ksp_rtol": 1e-08,
+    "ksp_max_it": 1000,
+    "absolute_residual_tolerance": 0.0,
+    "relative_correction_is_termination_gate": false,
+    "relative_correction_diagnostic_limit": 0.002,
+    "targets_by_degree": {
+      "1": {
+        "relative_dual_residual_target": 1e-06,
+        "status": "selected_from_admitted_local_calibration",
+        "reference_row_id": "p3d_p1_nonlinear_1em07",
+        "selected_row_id": "p3d_p1_nonlinear_1em06"
+      },
+      "4": {
+        "relative_dual_residual_target": 1e-07,
+        "status": "tight_reference_requires_cluster_adjudication",
+        "reference_row_id": "p3d_p4_nonlinear_1em07_cluster",
+        "selected_row_id": null
+      }
+    }
+  },
+  "riesz_solver": {
+    "ksp_type": "cg",
+    "pc_type": "jacobi",
+    "norm_type": "unpreconditioned",
+    "rtol": 1e-10,
+    "atol": 0.0,
+    "max_it": 5000,
+    "true_residual_rtol": 1e-08,
+    "spd_factor_solver_type": "mumps",
+    "symmetry_relative_tolerance": 1e-12,
+    "set_from_petsc_options": false
+  },
+  "submission_gate": {
+    "required_schema_id": "fenics-nonlinear-energies.exp-stop-001.final-adjudication",
+    "required_schema_version": 3,
+    "required_calibration_scope_passed": true,
+    "required_mpi_comparison_ids": [
+      "ginzburg_landau_mpi_consistency_cluster",
+      "hyperelasticity_mpi_consistency_cluster",
+      "plasticity3d_mpi_consistency_cluster"
+    ],
+    "required_p4_reference_comparison_status": "accepted",
+    "required_p4_reference_row_id": "p3d_p4_nonlinear_1em07_cluster",
+    "required_p4_selected_policy_key": "p3d_p4_nonlinear_cluster",
+    "required_selected_policy_status": "selected_loosest_accepted_same_discretization_policy",
+    "submission_without_gate_admissible": false
+  },
+  "claim_boundary": "The fixed P4 target is the tight cluster reference, not a selected loosest tolerance. No Tier-B job may be submitted until the detached, checksum-bound STOP adjudication admits that reference."
+}

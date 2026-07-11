@@ -26,6 +26,11 @@ if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
 from src.core.benchmark.run_record import atomic_write_json
+from experiments.runners.paper_revision_karolina.tier_b_stopping import (
+    POLICY_PATH as TIER_B_STOPPING_POLICY,
+    sha256_file as stopping_sha256,
+    validate_stop_adjudication,
+)
 
 
 MATRIX = REPO_ROOT / "experiments/runners/paper_revision_karolina/campaign_matrix.csv"
@@ -213,6 +218,40 @@ def _validate_environment(
             raise AggregationError(f"{phase} environment {role} is missing or stale")
         result[f"{role}_path"] = str(artifact)
         result[f"{role}_sha256"] = str(digest)
+    return result
+
+
+def _validate_stopping_gate(
+    root: Path, manifest: dict[str, Any], *, phase: str
+) -> dict[str, Any]:
+    record = manifest.get("tier_b_stopping_gate")
+    if not isinstance(record, dict):
+        raise AggregationError(f"{phase} manifest lacks its Tier-B STOP gate")
+    if record.get("policy") != {
+        "path": str(TIER_B_STOPPING_POLICY.relative_to(REPO_ROOT)),
+        "sha256": stopping_sha256(TIER_B_STOPPING_POLICY),
+    }:
+        raise AggregationError(f"{phase} manifest has a stale Tier-B stopping policy")
+    if (
+        record.get("status")
+        != "validated_and_archived_before_scheduler_contact"
+        or record.get("submission_admissible") is not True
+    ):
+        raise AggregationError(f"{phase} manifest was not admitted by final STOP evidence")
+    declared = record.get("adjudication")
+    if not isinstance(declared, dict):
+        raise AggregationError(f"{phase} STOP adjudication metadata is malformed")
+    path = _within(root, declared.get("path"), label=f"{phase} STOP adjudication")
+    if not path.is_file():
+        raise AggregationError(f"{phase} STOP adjudication is missing")
+    validated = validate_stop_adjudication(path)
+    expected = dict(validated)
+    expected["path"] = str(declared.get("path"))
+    if declared != expected:
+        raise AggregationError(f"{phase} STOP adjudication binding is stale")
+    result = dict(validated)
+    result["absolute_path"] = str(path)
+    result.pop("path", None)
     return result
 
 
@@ -627,6 +666,7 @@ def _validate_phase(
         expected_case_ids=set(expected_rows),
     )
     environment = _validate_environment(root, manifest, phase=phase)
+    stopping_gate = _validate_stopping_gate(root, manifest, phase=phase)
     release = _validate_release(
         root,
         manifest,
@@ -663,6 +703,7 @@ def _validate_phase(
         "ledger_sha256": _sha256(ledger_path),
         "job_ids": job_ids,
         "environment": environment,
+        "stopping_gate": stopping_gate,
         "release": release,
         "model_freeze": model_freeze,
     }
@@ -714,6 +755,13 @@ def aggregate(
     }
     if len(setup_hashes) != 1 or len(lock_hashes) != 1:
         raise AggregationError("training and holdout use different environment contracts")
+    stopping_identities = []
+    for phase in PHASES:
+        stopping = dict(phases[phase]["stopping_gate"])
+        stopping.pop("absolute_path", None)
+        stopping_identities.append(stopping)
+    if stopping_identities[0] != stopping_identities[1]:
+        raise AggregationError("training and holdout bind different STOP adjudications")
     all_job_ids = [job_id for phase in PHASES for job_id in phases[phase]["job_ids"]]
     if len(set(all_job_ids)) != len(all_job_ids):
         raise AggregationError("training and holdout ledgers reuse a Slurm job ID")
@@ -746,6 +794,7 @@ def aggregate(
         environment = dict(record["environment"])
         release = dict(record["release"])
         model_freeze = record["model_freeze"]
+        stopping = dict(record["stopping_gate"])
         phase_records[phase] = {
             "phase_archive_root": _archive_relative(
                 Path(record["root"]),
@@ -787,6 +836,12 @@ def aggregate(
             ),
             "release_authorization_sha256": release["sha256"],
             "release_reviewer": release["reviewer"],
+            "stopping_adjudication_path": _archive_relative(
+                Path(stopping["absolute_path"]),
+                archive_root=archive_root,
+                label=f"{phase} STOP adjudication",
+            ),
+            "stopping_adjudication_sha256": stopping["sha256"],
             "route_model_freeze": (
                 None
                 if model_freeze is None
@@ -816,7 +871,7 @@ def aggregate(
         }
     return {
         "schema_id": MASTER_SCHEMA_ID,
-        "schema_version": 1,
+        "schema_version": 2,
         "status": "submitted_phase_archives_complete",
         "experiment_id": EXPERIMENT_ID,
         "archive_root": ".",
@@ -831,6 +886,18 @@ def aggregate(
             "status": "same_hash_bound_contract",
             "setup_sha256": next(iter(setup_hashes)),
             "lock_sha256": next(iter(lock_hashes)),
+        },
+        "tier_b_stopping_gate": {
+            "status": "same_adjudication_bound_before_both_phase_submissions",
+            "policy": {
+                "path": str(TIER_B_STOPPING_POLICY.relative_to(REPO_ROOT)),
+                "sha256": stopping_sha256(TIER_B_STOPPING_POLICY),
+            },
+            "adjudication": stopping_identities[0],
+            "phase_paths": {
+                phase: phase_records[phase]["stopping_adjudication_path"]
+                for phase in PHASES
+            },
         },
         "case_to_phase": dict(sorted(case_to_phase.items())),
         "phases": phase_records,

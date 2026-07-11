@@ -123,9 +123,9 @@ def _matrix_rows() -> list[dict[str, str]]:
                         "pmg_strategy": strategy,
                         "maxit": "80",
                         "ksp_rtol": "1e-8",
-                        "ksp_max_it": "500",
-                        "stop_tol": "0.002",
-                        "grad_stop_tol": "0.0001",
+                        "ksp_max_it": "1000",
+                        "stop_tol": "1e-7" if degree == 4 else "1e-6",
+                        "grad_stop_tol": "0.0",
                         "convergence_metric": "reference_elastic_energy",
                         "notes": "paired randomized route block",
                     }
@@ -158,19 +158,79 @@ def _hashes() -> dict[str, str]:
     }
 
 
+def _write_stopping_adjudication(root: Path) -> tuple[Path, dict[str, object]]:
+    policy = analysis.TIER_B_STOPPING_POLICY
+    local = dict(policy["local_calibration"])
+    reference_id = "p3d_p4_nonlinear_1em07_cluster"
+    comparison_ids = (
+        "p3d_p4_nonlinear_1em02_cluster",
+        "p3d_p4_nonlinear_1em04_cluster",
+        "p3d_p4_nonlinear_1em06_cluster",
+        reference_id,
+        "ginzburg_landau_mpi_consistency_cluster",
+        "hyperelasticity_mpi_consistency_cluster",
+        "plasticity3d_mpi_consistency_cluster",
+    )
+    comparisons = {
+        case_id: {
+            "status": "accepted",
+            "reference_row_id": reference_id,
+            "gates": {"passed": True},
+        }
+        for case_id in comparison_ids
+    }
+    adjudicator = REPO_ROOT / "experiments/runners/prepare_exp_stop_001_karolina.py"
+    payload = {
+        "schema_id": "fenics-nonlinear-energies.exp-stop-001.final-adjudication",
+        "schema_version": 3,
+        "experiment_id": "EXP-STOP-001",
+        "terminal_decision": "CALIBRATION_SCOPED_PASS_PENDING_DISCRETIZATION_GATE",
+        "complete_exp_stop_pass": False,
+        "calibration_scope_passed": True,
+        "computation_source_commit": local["source_commit"],
+        "adjudicator": {
+            "source_commit": "0123456789abcdef0123456789abcdef01234567",
+            "source_dirty": False,
+            "path": "experiments/runners/prepare_exp_stop_001_karolina.py",
+            "sha256": hashlib.sha256(adjudicator.read_bytes()).hexdigest(),
+        },
+        "local_analysis_sha256": local["analysis_sha256"],
+        "cluster_archive_checksum_sha256": "a" * 64,
+        "cluster_case_count": 7,
+        "publication_timing_admissible": False,
+        "comparisons": comparisons,
+        "rejected_or_censored_cases": [],
+        "required_gate_failures": [],
+        "selected_policies": {
+            "p3d_p4_nonlinear_cluster": {
+                "status": "selected_loosest_accepted_same_discretization_policy",
+                "row_id": "p3d_p4_nonlinear_1em06_cluster",
+                "parameter": "relative_dual_residual_target",
+                "tolerance": 1.0e-6,
+            }
+        },
+    }
+    path = root / "stopping_adjudication.json"
+    path.write_text(json.dumps(payload) + "\n", encoding="utf-8")
+    binding = analysis.validate_stop_adjudication(path)
+    binding["path"] = path.name
+    return path, binding
+
+
 def _output(row: dict[str, str], route: str) -> dict[str, object]:
     backend = {
         "element_ad": "local",
         "constitutive_ad": "local_constitutiveAD",
     }[route]
     mode = "element" if route == "element_ad" else "constitutive"
+    relative_target = 1.0e-7 if int(row["element_degree"]) == 4 else 1.0e-6
     hashes = _hashes()
     requested = {
-        "ksp_type": "gmres",
-        "pc_type": "hypre",
+        "ksp_type": "cg",
+        "pc_type": "jacobi",
         "rtol": 1.0e-10,
-        "atol": 1.0e-14,
-        "max_it": 1000,
+        "atol": 0.0,
+        "max_it": 5000,
         "true_residual_rtol": 1.0e-8,
         "spd_factor_solver_type": "mumps",
         "symmetry_relative_tolerance": 1.0e-12,
@@ -178,14 +238,16 @@ def _output(row: dict[str, str], route: str) -> dict[str, object]:
     metric = {
         "name": "plasticity3d_reference_elastic_energy",
         "riesz_operator": "petsc_matrix",
-        "ksp_type": "gmres",
-        "pc_type": "hypre",
+        "ksp_type": "cg",
+        "pc_type": "jacobi",
         "requested_rtol": 1.0e-10,
-        "requested_atol": 1.0e-14,
-        "requested_max_it": 1000,
+        "requested_atol": 0.0,
+        "requested_max_it": 5000,
+        "requested_norm_type": "unpreconditioned",
         "effective_rtol": 1.0e-10,
-        "effective_atol": 1.0e-14,
-        "effective_max_it": 1000,
+        "effective_atol": 0.0,
+        "effective_max_it": 5000,
+        "effective_norm_type": "unpreconditioned",
         "true_residual_rtol_gate": 1.0e-8,
         "set_from_petsc_options": False,
         "petsc_options_prefix": "",
@@ -258,24 +320,27 @@ def _output(row: dict[str, str], route: str) -> dict[str, object]:
     }
     last_riesz = {
         "riesz_solve": "iterative",
-        "ksp_type": "gmres",
-        "pc_type": "hypre",
+        "ksp_type": "cg",
+        "pc_type": "jacobi",
         "iterations": 3,
         "reason": 2,
         "rhs_norm": 2.5,
         "relative_true_residual": 2.0e-10,
         "requested_rtol": 1.0e-10,
-        "requested_atol": 1.0e-14,
-        "requested_max_it": 1000,
+        "requested_atol": 0.0,
+        "requested_max_it": 5000,
+        "requested_norm_type": "unpreconditioned",
         "effective_rtol": 1.0e-10,
-        "effective_atol": 1.0e-14,
-        "effective_max_it": 1000,
+        "effective_atol": 0.0,
+        "effective_max_it": 5000,
+        "effective_norm_type": "unpreconditioned",
+        "reported_residual_norm_type": "unpreconditioned",
         "true_residual_rtol_gate": 1.0e-8,
     }
     return {
         "status": "completed",
         "solver_success": True,
-        "message": "Converged: all required criteria met",
+        "message": "Gradient norm converged",
         "assembly_backend": backend,
         "solver_backend": "local_pmg",
         "mesh_name": row["mesh_name"],
@@ -286,10 +351,12 @@ def _output(row: dict[str, str], route: str) -> dict[str, object]:
         "pmg_strategy": row["pmg_strategy"],
         "ranks": int(row["total_ranks"]),
         "maxit": 80,
-        "ksp_max_it": 500,
+        "ksp_max_it": 1000,
         "ksp_rtol": 1.0e-8,
-        "stop_tol": 2.0e-3,
-        "grad_stop_tol": 1.0e-4,
+        "stop_tol": relative_target,
+        "grad_stop_tol": 0.0,
+        "grad_stop_rtol": relative_target,
+        "stop_metric_name": "dual_residual_norm",
         "line_search": "armijo",
         "linesearch_tol": 1.0e-3,
         "use_trust_region": True,
@@ -339,7 +406,7 @@ def _output(row: dict[str, str], route: str) -> dict[str, object]:
                     "rtol": 1.0e-8,
                     "atol": 1.0e-50,
                     "dtol": 1.0e5,
-                    "max_it": 500,
+                    "max_it": 1000,
                     "captured_after_set_from_options": True,
                 },
             }
@@ -355,7 +422,7 @@ def _output(row: dict[str, str], route: str) -> dict[str, object]:
                 "rtol": 1.0e-8,
                 "atol": 1.0e-50,
                 "dtol": 1.0e5,
-                "max_it": 500,
+                "max_it": 1000,
                 "captured_after_set_from_options": True,
             },
         },
@@ -370,17 +437,22 @@ def _output(row: dict[str, str], route: str) -> dict[str, object]:
                 "correction_normalization": "metric_current_state",
                 "state_scale_source": "initial_nonlinear_iterate_primal_norm",
                 "state_scale": 1.5,
+                "initial_relative_dual_residual_definition": (
+                    "absolute_dual_residual/initial_absolute_dual_residual"
+                ),
             },
             "metric": metric,
             "initial_absolute_dual_residual": {"value": 1.0},
-            "absolute_dual_residual": {"value": 5.0e-5},
+            "absolute_dual_residual": {"value": 0.5 * relative_target},
+            "initial_relative_dual_residual": {"value": 0.5 * relative_target},
             "state_norm": {"value": 2.0},
             "relative_correction": {"value": 1.0e-3},
             "coefficient_gradient_l2": 2.5,
             "last_riesz_solve": last_riesz,
             "residual_gate": {
-                "absolute_tolerance": 1.0e-4,
-                "effective_absolute_target": 1.0e-4,
+                "absolute_tolerance": 0.0,
+                "initial_relative_tolerance": relative_target,
+                "effective_absolute_target": relative_target,
                 "passed": True,
             },
         },
@@ -718,6 +790,7 @@ def _campaign(
     }
     release_path = root / "release_authorization.json"
     release_path.write_text(json.dumps(release_record) + "\n", encoding="utf-8")
+    _stopping_path, stopping_binding = _write_stopping_adjudication(root)
     manifest = {
         "status": "submitted",
         "matrix_sha256": hashlib.sha256(matrix.read_bytes()).hexdigest(),
@@ -745,6 +818,19 @@ def _campaign(
                 "sha256": hashlib.sha256(lock.read_bytes()).hexdigest(),
             },
         },
+        "tier_b_stopping_gate": {
+            "status": "validated_and_archived_before_scheduler_contact",
+            "submission_admissible": True,
+            "policy": {
+                "path": str(
+                    analysis.TIER_B_STOPPING_POLICY_PATH.relative_to(REPO_ROOT)
+                ),
+                "sha256": hashlib.sha256(
+                    analysis.TIER_B_STOPPING_POLICY_PATH.read_bytes()
+                ).hexdigest(),
+            },
+            "adjudication": stopping_binding,
+        },
         "release_authorization": {
             "schema_id": "fenics-nonlinear-energies.human-release-authorization",
             "path": "release_authorization.json",
@@ -758,8 +844,8 @@ def _campaign(
 
 def test_complete_balanced_campaign_admits_only_collective_max_timing(tmp_path: Path) -> None:
     matrix, root, _rows = _campaign(tmp_path)
-    result = analysis.analyze(matrix, root, root / "prepared_manifest.json")
-    assert result["schema"] == {"id": analysis.SCHEMA_ID, "version": 1}
+    result = analysis.analyze(matrix, root, root / "prepared_manifest.json", root / "stopping_adjudication.json")
+    assert result["schema"] == {"id": analysis.SCHEMA_ID, "version": 2}
     assert result["timing_admissible"] is True
     assert result["endpoint_correct_timing_admissible"] is True
     assert result["descriptive_timing_available"] is True
@@ -789,6 +875,79 @@ def test_complete_balanced_campaign_admits_only_collective_max_timing(tmp_path: 
         ] == 1.0
 
 
+def test_correction_above_diagnostic_limit_does_not_reject_gradient_stopping(
+    tmp_path: Path,
+) -> None:
+    def large_correction(_row, _route, output):
+        output["nonlinear_convergence"]["relative_correction"]["value"] = 1.0e-2
+
+    matrix, root, _rows = _campaign(
+        tmp_path,
+        target_case="route_p1l1_np8_block_01",
+        mutate_output=large_correction,
+    )
+    result = analysis.analyze(
+        matrix,
+        root,
+        root / "prepared_manifest.json",
+        root / "stopping_adjudication.json",
+    )
+    assert result["timing_admissible"] is True
+    target = next(
+        block
+        for block in result["blocks"]
+        if block["case_id"] == "route_p1l1_np8_block_01"
+    )
+    assert all(
+        route["relative_correction_diagnostic_passed"] is False
+        for route in target["routes"].values()
+    )
+
+
+def test_relative_residual_gate_rejects_tiny_absolute_residual_above_target(
+    tmp_path: Path,
+) -> None:
+    def wrong_relative(_row, _route, output):
+        convergence = output["nonlinear_convergence"]
+        convergence["initial_absolute_dual_residual"]["value"] = 1.0e-12
+        convergence["absolute_dual_residual"]["value"] = 2.0e-18
+        convergence["initial_relative_dual_residual"]["value"] = 2.0e-6
+        convergence["residual_gate"]["effective_absolute_target"] = 1.0e-18
+
+    matrix, root, _rows = _campaign(
+        tmp_path,
+        target_case="route_p1l1_np8_block_01",
+        mutate_output=wrong_relative,
+    )
+    result = analysis.analyze(
+        matrix,
+        root,
+        root / "prepared_manifest.json",
+        root / "stopping_adjudication.json",
+    )
+    failed = next(
+        block
+        for block in result["blocks"]
+        if block["case_id"] == "route_p1l1_np8_block_01"
+    )
+    assert failed["status"] == "invalid"
+    assert "relative dual residual exceeds" in failed["reason"]
+
+
+def test_endpoint_rejects_post_submission_stop_file_mutation(tmp_path: Path) -> None:
+    matrix, root, _rows = _campaign(tmp_path)
+    stop = root / "stopping_adjudication.json"
+    stop.write_text(stop.read_text(encoding="utf-8") + "\n", encoding="utf-8")
+    result = analysis.analyze(
+        matrix,
+        root,
+        root / "prepared_manifest.json",
+        stop,
+    )
+    assert result["timing_admissible"] is False
+    assert "manifest_stopping_gate_failed" in result["manifest"]["reason"]
+
+
 def test_tier_b_rejects_incomplete_environment_and_accounting_shape(
     tmp_path: Path,
 ) -> None:
@@ -801,7 +960,7 @@ def test_tier_b_rejects_incomplete_environment_and_accounting_shape(
         original_environment.replace("SLURM_JOB_QOS=3571_6328\n", ""),
         encoding="utf-8",
     )
-    result = analysis.analyze(matrix, root, root / "prepared_manifest.json")
+    result = analysis.analyze(matrix, root, root / "prepared_manifest.json", root / "stopping_adjudication.json")
     failed = next(
         block for block in result["blocks"] if block["case_id"] == target["case_id"]
     )
@@ -813,7 +972,7 @@ def test_tier_b_rejects_incomplete_environment_and_accounting_shape(
     accounting = json.loads(accounting_path.read_text(encoding="utf-8"))
     accounting["allocation"]["alloc_cpus"] += 1
     accounting_path.write_text(json.dumps(accounting) + "\n", encoding="utf-8")
-    result = analysis.analyze(matrix, root, root / "prepared_manifest.json")
+    result = analysis.analyze(matrix, root, root / "prepared_manifest.json", root / "stopping_adjudication.json")
     failed = next(
         block for block in result["blocks"] if block["case_id"] == target["case_id"]
     )
@@ -825,11 +984,14 @@ def test_complete_tier_b_record_tree_is_relocatable_and_rejects_escape(
     tmp_path: Path,
 ) -> None:
     matrix, root, rows = _campaign(tmp_path)
-    before = analysis.analyze(matrix, root, root / "prepared_manifest.json")
+    before = analysis.analyze(matrix, root, root / "prepared_manifest.json", root / "stopping_adjudication.json")
     relocated = tmp_path / "relocated_campaign"
     root.rename(relocated)
     after = analysis.analyze(
-        matrix, relocated, relocated / "prepared_manifest.json"
+        matrix,
+        relocated,
+        relocated / "prepared_manifest.json",
+        relocated / "stopping_adjudication.json",
     )
     assert after["terminal_decision"] == before["terminal_decision"]
     assert after["status_counts"] == before["status_counts"]
@@ -848,7 +1010,10 @@ def test_complete_tier_b_record_tree_is_relocatable_and_rejects_escape(
     block["routes"]["element_ad"]["output_json"] = "../../matrix_row.json"
     block_path.write_text(json.dumps(block) + "\n", encoding="utf-8")
     rejected = analysis.analyze(
-        matrix, relocated, relocated / "prepared_manifest.json"
+        matrix,
+        relocated,
+        relocated / "prepared_manifest.json",
+        relocated / "stopping_adjudication.json",
     )
     failed = next(
         row for row in rejected["blocks"] if row["case_id"] == target["case_id"]
@@ -864,7 +1029,7 @@ def test_comparative_ranking_requires_paired_and_order_stratified_intervals(
         tmp_path,
         route_times={"element_ad": 1.0, "constitutive_ad": 1.5},
     )
-    result = analysis.analyze(matrix, root, root / "prepared_manifest.json")
+    result = analysis.analyze(matrix, root, root / "prepared_manifest.json", root / "stopping_adjudication.json")
     assert result["endpoint_correct_timing_admissible"] is True
     assert result["comparative_ranking_admissible"] is True
     assert result["terminal_decision"] == "tier_b_comparative_ranking_admissible"
@@ -885,7 +1050,7 @@ def test_tier_b_requires_hash_bound_human_release_authorization(
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
     manifest.pop("release_authorization")
     manifest_path.write_text(json.dumps(manifest) + "\n", encoding="utf-8")
-    result = analysis.analyze(matrix, root, manifest_path)
+    result = analysis.analyze(matrix, root, manifest_path, root / "stopping_adjudication.json")
     assert result["endpoint_correct_timing_admissible"] is False
     assert "manifest_release_authorization_missing" in result[
         "coverage_and_campaign_failure_reasons"
@@ -899,7 +1064,7 @@ def test_endpoint_state_failure_withholds_every_campaign_timing(tmp_path: Path) 
         target_case=target,
         state_delta=1.0e-4,
     )
-    result = analysis.analyze(matrix, root, root / "prepared_manifest.json")
+    result = analysis.analyze(matrix, root, root / "prepared_manifest.json", root / "stopping_adjudication.json")
     assert result["timing_admissible"] is False
     failed = next(block for block in result["blocks"] if block["case_id"] == target)
     assert failed["status"] == "invalid"
@@ -926,7 +1091,7 @@ def test_pointwise_branch_map_mismatch_withholds_timing(tmp_path: Path) -> None:
         target_case=target,
         mutate_output=swap_map,
     )
-    result = analysis.analyze(matrix, root, root / "prepared_manifest.json")
+    result = analysis.analyze(matrix, root, root / "prepared_manifest.json", root / "stopping_adjudication.json")
     failed = next(block for block in result["blocks"] if block["case_id"] == target)
     assert failed["status"] == "invalid"
     assert "pointwise branch maps" in failed["reason"]
@@ -946,7 +1111,7 @@ def test_missing_low_order_and_censored_rows_remain_visible(tmp_path: Path) -> N
         omit_case=missing,
         censored_case=censored,
     )
-    result = analysis.analyze(matrix, root, root / "prepared_manifest.json")
+    result = analysis.analyze(matrix, root, root / "prepared_manifest.json", root / "stopping_adjudication.json")
     by_case = {block["case_id"]: block for block in result["blocks"]}
     assert by_case[missing]["status"] == "missing"
     assert by_case[censored]["status"] == "censored"
@@ -979,6 +1144,8 @@ def test_stale_riesz_evidence_is_invalid_and_cli_returns_two_when_required(
             str(matrix),
             "--campaign-root",
             str(root),
+            "--stopping-adjudication",
+            str(root / "stopping_adjudication.json"),
             "--output-json",
             str(output_json),
             "--output-csv",
@@ -1006,7 +1173,7 @@ def test_matrix_policy_mutation_is_reported_without_reading_timing(tmp_path: Pat
     manifest = json.loads((root / "prepared_manifest.json").read_text(encoding="utf-8"))
     manifest["matrix_sha256"] = hashlib.sha256(matrix.read_bytes()).hexdigest()
     (root / "prepared_manifest.json").write_text(json.dumps(manifest), encoding="utf-8")
-    result = analysis.analyze(matrix, root, root / "prepared_manifest.json")
+    result = analysis.analyze(matrix, root, root / "prepared_manifest.json", root / "stopping_adjudication.json")
     assert result["timing_admissible"] is False
     assert any("ksp_rtol" in row["reason"] for row in result["matrix_policy_violations"])
     first = next(block for block in result["blocks"] if block["case_id"] == rows[0]["case_id"])
@@ -1032,7 +1199,7 @@ def test_rank_timing_vector_must_prove_the_declared_collective_max(tmp_path: Pat
     block = json.loads(block_path.read_text(encoding="utf-8"))
     block["routes"]["element_ad"]["per_rank_wall_times_s"][0] = 0.5
     block_path.write_text(json.dumps(block), encoding="utf-8")
-    result = analysis.analyze(matrix, root, root / "prepared_manifest.json")
+    result = analysis.analyze(matrix, root, root / "prepared_manifest.json", root / "stopping_adjudication.json")
     failed = next(
         row for row in result["blocks"] if row["case_id"] == target["case_id"]
     )

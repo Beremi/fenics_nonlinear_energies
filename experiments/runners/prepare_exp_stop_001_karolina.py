@@ -537,6 +537,11 @@ def _compare(
 def adjudicate(root: Path, *, expected_checksum: str) -> dict[str, Any]:
     root = Path(root).resolve()
     verify_archive(root, expected_manifest_sha256=expected_checksum)
+    adjudicator_git = reviewed.git_metadata()
+    if adjudicator_git.get("dirty") is not False:
+        raise reviewed.CampaignContractError(
+            "STOP final adjudication requires a clean adjudicator checkout"
+        )
     manifest, cluster_plan = reviewed.load_plan(root)
     if manifest.get("status") != "submitted":
         raise reviewed.CampaignContractError("STOP adjudication requires a submitted archive")
@@ -591,12 +596,33 @@ def adjudicate(root: Path, *, expected_checksum: str) -> dict[str, Any]:
         comparisons[case_id] = _compare(
             rows[case_id], endpoints[case_id], reference_row, reference_endpoint, analysis_contract
         )
-    rejected = sorted(case_id for case_id, value in comparisons.items() if value.get("status") != "accepted")
+    rejected = sorted(
+        case_id
+        for case_id, value in comparisons.items()
+        if value.get("status") != "accepted"
+    )
     selected = deepcopy(local_analysis["selected_local_policies"])
     p4_policy = local._selected_group_policy(
         [rows[key] for key in sorted(rows) if key.startswith("p3d_p4_")], comparisons
     )
     selected["p3d_p4_nonlinear_cluster"] = p4_policy
+    required_gate_failures = sorted(
+        [
+            case_id
+            for case_id in MPI_GROUPS
+            if comparisons[case_id].get("status") != "accepted"
+        ]
+        + (
+            []
+            if comparisons[p4_reference_id].get("status") == "accepted"
+            else [p4_reference_id]
+        )
+        + (
+            []
+            if p4_policy.get("status") == local.ACCEPTED_POLICY_STATUS
+            else ["p3d_p4_nonlinear_cluster:selected_policy"]
+        )
+    )
     nonlinear_targets = {
         float(record["tolerance"])
         for group, record in selected.items()
@@ -605,7 +631,7 @@ def adjudicate(root: Path, *, expected_checksum: str) -> dict[str, Any]:
         }
         and record.get("status") == "selected_loosest_accepted_same_discretization_policy"
     }
-    if rejected:
+    if required_gate_failures:
         terminal = "CENSORED"
     elif len(nonlinear_targets) == 1:
         terminal = "CALIBRATION_PASS_PENDING_DISCRETIZATION_GATE"
@@ -617,18 +643,25 @@ def adjudicate(root: Path, *, expected_checksum: str) -> dict[str, Any]:
     }
     return {
         "schema_id": "fenics-nonlinear-energies.exp-stop-001.final-adjudication",
-        "schema_version": 2,
+        "schema_version": 3,
         "experiment_id": "EXP-STOP-001",
         "terminal_decision": terminal,
         "complete_exp_stop_pass": False,
         "calibration_scope_passed": calibration_scope_passed,
-        "source_commit": cluster_plan["source_commit"],
+        "computation_source_commit": cluster_plan["source_commit"],
+        "adjudicator": {
+            "source_commit": str(adjudicator_git["commit"]),
+            "source_dirty": False,
+            "path": str(Path(__file__).resolve().relative_to(REPO_ROOT)),
+            "sha256": reviewed.sha256_file(Path(__file__).resolve()),
+        },
         "local_analysis_sha256": reviewed.sha256_file(analysis_path),
         "cluster_archive_checksum_sha256": expected_checksum,
         "cluster_case_count": 7,
         "publication_timing_admissible": False,
         "comparisons": comparisons,
         "rejected_or_censored_cases": rejected,
+        "required_gate_failures": required_gate_failures,
         "selected_policies": selected,
         "discretization_gate": {
             "status": "not_bound",

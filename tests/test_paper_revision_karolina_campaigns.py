@@ -14,6 +14,8 @@ from types import SimpleNamespace
 import numpy as np
 import pytest
 
+from experiments.runners.paper_revision_karolina import tier_b_stopping
+
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 CAMPAIGN_DIR = REPO_ROOT / "experiments/runners/paper_revision_karolina"
@@ -281,7 +283,10 @@ def test_route_matrix_has_exact_second_architecture_screen_and_confirmation() ->
     }
     assert all((int(row["warmups"]), int(row["repetitions"])) == (0, 1) for row in full + low)
     assert all(float(row["ksp_rtol"]) <= 1.0e-8 for row in full + low)
-    assert all(int(row["ksp_max_it"]) == 500 for row in full + low)
+    assert all(int(row["ksp_max_it"]) == 1000 for row in full + low)
+    assert all(float(row["grad_stop_tol"]) == 0.0 for row in full + low)
+    assert all(float(row["stop_tol"]) == 1.0e-7 for row in full)
+    assert all(float(row["stop_tol"]) == 1.0e-6 for row in low)
     assert all(
         row["convergence_metric"] == "reference_elastic_energy" for row in full + low
     )
@@ -523,6 +528,70 @@ def _prepare_args(out_root: Path, *, execute: bool) -> SimpleNamespace:
     )
 
 
+def _tier_b_prepare_args(
+    out_root: Path, *, execute: bool, stopping_adjudication: Path | None
+) -> SimpleNamespace:
+    args = _prepare_args(out_root, execute=execute)
+    args.only_optional = True
+    args.tier = ["full_solve_confirmation", "low_order_confirmation"]
+    args.stopping_adjudication = stopping_adjudication
+    return args
+
+
+def _write_valid_stop_adjudication(path: Path) -> Path:
+    local = dict(tier_b_stopping.load_policy()["local_calibration"])
+    reference_id = "p3d_p4_nonlinear_1em07_cluster"
+    comparison_ids = (
+        "p3d_p4_nonlinear_1em02_cluster",
+        "p3d_p4_nonlinear_1em04_cluster",
+        "p3d_p4_nonlinear_1em06_cluster",
+        reference_id,
+        "ginzburg_landau_mpi_consistency_cluster",
+        "hyperelasticity_mpi_consistency_cluster",
+        "plasticity3d_mpi_consistency_cluster",
+    )
+    adjudicator = REPO_ROOT / "experiments/runners/prepare_exp_stop_001_karolina.py"
+    payload = {
+        "schema_id": "fenics-nonlinear-energies.exp-stop-001.final-adjudication",
+        "schema_version": 3,
+        "experiment_id": "EXP-STOP-001",
+        "terminal_decision": "CALIBRATION_SCOPED_PASS_PENDING_DISCRETIZATION_GATE",
+        "complete_exp_stop_pass": False,
+        "calibration_scope_passed": True,
+        "computation_source_commit": local["source_commit"],
+        "adjudicator": {
+            "source_commit": "0123456789abcdef0123456789abcdef01234567",
+            "source_dirty": False,
+            "path": "experiments/runners/prepare_exp_stop_001_karolina.py",
+            "sha256": hashlib.sha256(adjudicator.read_bytes()).hexdigest(),
+        },
+        "local_analysis_sha256": local["analysis_sha256"],
+        "cluster_archive_checksum_sha256": "a" * 64,
+        "cluster_case_count": 7,
+        "publication_timing_admissible": False,
+        "comparisons": {
+            case_id: {
+                "status": "accepted",
+                "reference_row_id": reference_id,
+                "gates": {"passed": True},
+            }
+            for case_id in comparison_ids
+        },
+        "rejected_or_censored_cases": [],
+        "required_gate_failures": [],
+        "selected_policies": {
+            "p3d_p4_nonlinear_cluster": {
+                "status": "selected_loosest_accepted_same_discretization_policy",
+                "row_id": "p3d_p4_nonlinear_1em06_cluster",
+                "parameter": "relative_dual_residual_target",
+                "tolerance": 1.0e-6,
+            }
+        },
+    }
+    path.write_text(json.dumps(payload) + "\n", encoding="utf-8")
+    return path
+
+
 def test_preparation_requires_a_fresh_output_root(tmp_path: Path, monkeypatch) -> None:
     module = _load_preparer()
     reviewed_hashes = _current_reviewed_hashes(module)
@@ -538,6 +607,85 @@ def test_preparation_requires_a_fresh_output_root(tmp_path: Path, monkeypatch) -
     module.prepare(_prepare_args(out_root, execute=False))
     with pytest.raises(RuntimeError, match="already exists"):
         module.prepare(_prepare_args(out_root, execute=False))
+
+
+def test_tier_b_preparation_is_pending_without_final_stop_gate(
+    tmp_path: Path, monkeypatch
+) -> None:
+    module = _load_preparer()
+    monkeypatch.setattr(
+        module, "_validate_reviewed_sources", lambda: _current_reviewed_hashes(module)
+    )
+    monkeypatch.setattr(
+        module,
+        "_git_metadata",
+        lambda: {"commit": "0" * 40, "dirty": True},
+    )
+    root = tmp_path / "tier_b_pending"
+    manifest = module.prepare(
+        _tier_b_prepare_args(root, execute=False, stopping_adjudication=None)
+    )
+    assert manifest["case_count"] == 20
+    assert manifest["tier_b_stopping_gate"] == {
+        "status": "pending_required_before_scheduler_contact",
+        "submission_admissible": False,
+        "policy": {
+            "path": "paper/protocols/EXP-ROUTE-001-tier-b-stopping-policy.json",
+            "sha256": hashlib.sha256(
+                tier_b_stopping.POLICY_PATH.read_bytes()
+            ).hexdigest(),
+        },
+        "adjudication": None,
+    }
+    assert module.offline_preflight(root, matrix=MATRIX)["status"] == "passed"
+
+
+def test_tier_b_scheduler_contact_fails_before_output_without_stop_gate(
+    tmp_path: Path, monkeypatch
+) -> None:
+    module = _load_preparer()
+    monkeypatch.setattr(
+        module, "_validate_reviewed_sources", lambda: _current_reviewed_hashes(module)
+    )
+    root = tmp_path / "tier_b_blocked"
+    with pytest.raises(RuntimeError, match="requires --stopping-adjudication"):
+        module.prepare(
+            _tier_b_prepare_args(root, execute=True, stopping_adjudication=None)
+        )
+    assert not root.exists()
+
+
+def test_tier_b_stop_gate_is_archived_relocatably_and_tamper_evident(
+    tmp_path: Path, monkeypatch
+) -> None:
+    module = _load_preparer()
+    monkeypatch.setattr(
+        module, "_validate_reviewed_sources", lambda: _current_reviewed_hashes(module)
+    )
+    monkeypatch.setattr(
+        module,
+        "_git_metadata",
+        lambda: {
+            "commit": "0123456789abcdef0123456789abcdef01234567",
+            "dirty": False,
+        },
+    )
+    stop = _write_valid_stop_adjudication(tmp_path / "final_stop.json")
+    root = tmp_path / "tier_b_valid"
+    manifest = module.prepare(
+        _tier_b_prepare_args(root, execute=False, stopping_adjudication=stop)
+    )
+    record = manifest["tier_b_stopping_gate"]
+    assert record["submission_admissible"] is True
+    assert record["adjudication"]["path"] == "stopping_adjudication.json"
+
+    relocated = tmp_path / "tier_b_relocated"
+    root.rename(relocated)
+    assert module.offline_preflight(relocated, matrix=MATRIX)["status"] == "passed"
+    archived = relocated / "stopping_adjudication.json"
+    archived.write_text(archived.read_text(encoding="utf-8") + "\n", encoding="utf-8")
+    with pytest.raises(RuntimeError, match="binding is stale"):
+        module.offline_preflight(relocated, matrix=MATRIX)
 
 
 def test_partial_submission_is_persisted_fail_closed(tmp_path: Path, monkeypatch) -> None:
@@ -864,6 +1012,116 @@ def _valid_riesz_output() -> dict[str, object]:
     }
 
 
+def _valid_tier_b_output(
+    row: dict[str, str], *, relative_correction: float = 3.0e-3
+) -> dict[str, object]:
+    target = float(row["stop_tol"])
+    initial = 4.0
+    terminal = 0.5 * initial * target
+    effective_ksp = {
+        "ksp_type": "fgmres",
+        "pc_type": "mg",
+        "rtol": 1.0e-8,
+        "max_it": 1000,
+        "captured_after_set_from_options": True,
+    }
+    metric = {
+        "ksp_type": "cg",
+        "pc_type": "jacobi",
+        "requested_rtol": 1.0e-10,
+        "requested_atol": 0.0,
+        "requested_max_it": 5000,
+        "requested_norm_type": "unpreconditioned",
+        "effective_rtol": 1.0e-10,
+        "effective_atol": 0.0,
+        "effective_max_it": 5000,
+        "effective_norm_type": "unpreconditioned",
+        "true_residual_rtol_gate": 1.0e-8,
+        "set_from_petsc_options": False,
+        "provenance": {
+            "free_dofs": 12,
+            "spd_certificate": {
+                "certified_spd": True,
+                "factor_solver_type": "mumps",
+                "inertia": {"negative": 0, "zero": 0, "positive": 12},
+            },
+        },
+    }
+    last = {
+        "riesz_solve": "iterative",
+        "ksp_type": "cg",
+        "pc_type": "jacobi",
+        "requested_rtol": 1.0e-10,
+        "requested_atol": 0.0,
+        "requested_max_it": 5000,
+        "requested_norm_type": "unpreconditioned",
+        "effective_rtol": 1.0e-10,
+        "effective_atol": 0.0,
+        "effective_max_it": 5000,
+        "effective_norm_type": "unpreconditioned",
+        "reported_residual_norm_type": "unpreconditioned",
+        "reason": 2,
+        "rhs_norm": 2.5,
+        "relative_true_residual": 2.0e-10,
+        "true_residual_rtol_gate": 1.0e-8,
+    }
+    return {
+        "status": "completed",
+        "solver_success": True,
+        "convergence_metric_requested": "reference_elastic_energy",
+        "convergence_metric": "reference_elastic_energy",
+        "stop_metric_name": "dual_residual_norm",
+        "stop_tol": target,
+        "grad_stop_tol": 0.0,
+        "grad_stop_rtol": target,
+        "ksp_rtol": 1.0e-8,
+        "ksp_max_it": 1000,
+        "final_grad_norm": 2.5,
+        "riesz_solver_requested": {
+            "ksp_type": "cg",
+            "pc_type": "jacobi",
+            "rtol": 1.0e-10,
+            "atol": 0.0,
+            "max_it": 5000,
+            "true_residual_rtol": 1.0e-8,
+            "spd_factor_solver_type": "mumps",
+            "symmetry_relative_tolerance": 1.0e-12,
+        },
+        "parallel_setup": {"owned_free_dofs_sum": 12},
+        "initial_guess": {
+            "success": True,
+            "ksp_reason_code": 2,
+            "effective_ksp": dict(effective_ksp),
+        },
+        "linear_history": [
+            {
+                "ksp_reason_code": 2,
+                "effective_ksp": dict(effective_ksp),
+            }
+        ],
+        "nonlinear_convergence": {
+            "configuration": {
+                "selection": "reference_elastic_energy",
+                "correction_normalization": "metric_current_state",
+            },
+            "metric": metric,
+            "initial_absolute_dual_residual": {"value": initial},
+            "initial_relative_dual_residual": {"value": terminal / initial},
+            "absolute_dual_residual": {"value": terminal},
+            "state_norm": {"value": 8.0},
+            "relative_correction": {"value": relative_correction},
+            "coefficient_gradient_l2": 2.5,
+            "last_riesz_solve": last,
+            "residual_gate": {
+                "absolute_tolerance": 0.0,
+                "initial_relative_tolerance": target,
+                "effective_absolute_target": initial * target,
+                "passed": True,
+            },
+        },
+    }
+
+
 def test_executor_hard_validates_riesz_output_and_rejects_coefficient_stopping() -> None:
     module = _load_executor()
     row = next(row for row in _rows() if row["runner"] == "p3d_solve")
@@ -908,6 +1166,69 @@ def test_executor_hard_validates_riesz_output_and_rejects_coefficient_stopping()
         assert "residual gate" in str(exc)
     else:
         raise AssertionError("completed row with failed residual gate was admitted")
+
+
+def test_tier_b_commands_and_outputs_use_stop_aligned_relative_policy(
+    tmp_path: Path,
+) -> None:
+    module = _load_executor()
+    rows = {row["case_id"]: row for row in _rows()}
+    for case_id, target in (
+        ("route_full_block_p1l1_np8_b01", 1.0e-6),
+        ("route_full_block_p4l1_np8_b01", 1.0e-7),
+    ):
+        row = rows[case_id]
+        command = module.p3d_solve_command(
+            row, python="python", run_dir=tmp_path / case_id, route="element_ad"
+        )
+        assert command[command.index("--convergence-mode") + 1] == "gradient_only"
+        assert float(command[command.index("--grad-stop-rtol") + 1]) == target
+        assert float(command[command.index("--grad-stop-tol") + 1]) == 0.0
+        assert float(command[command.index("--stop-tol") + 1]) == target
+        assert command[command.index("--riesz-ksp-type") + 1] == "cg"
+        assert command[command.index("--riesz-pc-type") + 1] == "jacobi"
+        assert float(command[command.index("--riesz-ksp-atol") + 1]) == 0.0
+        assert int(command[command.index("--riesz-ksp-max-it") + 1]) == 5000
+
+        result = module.validate_p3d_solve_output(
+            _valid_tier_b_output(row), row
+        )
+        assert result["status"] == "passed"
+        assert result["terminal_initial_relative_dual_residual"] == pytest.approx(
+            0.5 * target
+        )
+        assert result["correction_diagnostic_within_limit"] is False
+        assert result["tier_b_stopping_policy"][
+            "relative_dual_residual_target"
+        ] == target
+
+
+def test_tier_b_output_rejects_effective_ksp_norm_and_relative_gate_drift() -> None:
+    module = _load_executor()
+    row = next(
+        row
+        for row in _rows()
+        if row["tier"] == "low_order_confirmation"
+    )
+
+    effective = _valid_tier_b_output(row)
+    effective["linear_history"][0]["effective_ksp"]["max_it"] = 999
+    with pytest.raises(ValueError, match="effective KSP policy"):
+        module.validate_p3d_solve_output(effective, row)
+
+    norm = _valid_tier_b_output(row)
+    norm["nonlinear_convergence"]["last_riesz_solve"][
+        "reported_residual_norm_type"
+    ] = "preconditioned"
+    with pytest.raises(ValueError, match="reported_residual_norm_type"):
+        module.validate_p3d_solve_output(norm, row)
+
+    residual = _valid_tier_b_output(row)
+    residual["nonlinear_convergence"]["initial_relative_dual_residual"][
+        "value"
+    ] = 2.0e-6
+    with pytest.raises(ValueError, match="internally stale|relative residual gate"):
+        module.validate_p3d_solve_output(residual, row)
 
 
 def test_matrix_validator_rejects_any_p3d_coefficient_stopping_row(tmp_path: Path) -> None:

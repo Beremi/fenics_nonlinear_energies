@@ -57,10 +57,17 @@ from experiments.analysis.collect_slurm_accounting import (
     parse_sacct,
 )
 from experiments.analysis import aggregate_route_tier_b_manifests
+from experiments.runners.paper_revision_karolina.tier_b_stopping import (
+    POLICY_PATH as TIER_B_STOPPING_POLICY_PATH,
+    load_policy as load_tier_b_stopping_policy,
+    row_contract as tier_b_row_contract,
+    sha256_file as stopping_sha256_file,
+    validate_stop_adjudication,
+)
 
 
 SCHEMA_ID = "fenics-nonlinear-energies.exp-route-001.tier-b-endpoints"
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2
 EXPERIMENT_ID = "EXP-ROUTE-001"
 ROUTE_ANALYSIS_CONTRACT = REPO_ROOT / "paper/protocols/EXP-ROUTE-001-analysis-contract.json"
 with ROUTE_ANALYSIS_CONTRACT.open(encoding="utf-8") as _contract_handle:
@@ -75,6 +82,9 @@ ROUTE_BACKENDS = {
     "element_ad": "local",
     "constitutive_ad": "local_constitutiveAD",
 }
+TIER_B_STOPPING_POLICY = load_tier_b_stopping_policy()
+TIER_B_NONLINEAR_POLICY = dict(TIER_B_STOPPING_POLICY["nonlinear_solver"])
+TIER_B_RIESZ_POLICY = dict(TIER_B_STOPPING_POLICY["riesz_solver"])
 
 # These gates are part of the analysis implementation, rather than CLI
 # parameters, so they cannot be relaxed after inspecting cluster results.
@@ -89,24 +99,30 @@ FROZEN_GATES: dict[str, Any] = {
     "work_absolute_max": 1.0e-8,
     "u_max_relative_max": 1.0e-7,
     "u_max_absolute_max": 1.0e-8,
-    "dual_residual_relative_difference_max": 0.25,
+    "initial_relative_dual_residual_relative_difference_max": 0.25,
     "relative_correction_relative_difference_max": 0.25,
     "nonlinear_iterations_exact": True,
     "total_krylov_iterations_exact": True,
     "per_solve_krylov_iterations_exact": True,
-    "solver_ksp_rtol": 1.0e-8,
-    "solver_ksp_max_it": 500,
-    "nonlinear_max_it": 80,
-    "relative_correction_target": 2.0e-3,
-    "absolute_dual_residual_target": 1.0e-4,
-    "riesz_ksp_type": "gmres",
-    "riesz_pc_type": "hypre",
-    "riesz_ksp_rtol": 1.0e-10,
-    "riesz_ksp_atol": 1.0e-14,
-    "riesz_ksp_max_it": 1000,
-    "riesz_true_residual_rtol": 1.0e-8,
-    "riesz_spd_factor_solver_type": "mumps",
-    "riesz_symmetry_relative_tolerance": 1.0e-12,
+    "solver_ksp_rtol": TIER_B_NONLINEAR_POLICY["ksp_rtol"],
+    "solver_ksp_max_it": TIER_B_NONLINEAR_POLICY["ksp_max_it"],
+    "nonlinear_max_it": TIER_B_NONLINEAR_POLICY["nonlinear_max_it"],
+    "relative_correction_diagnostic_limit": TIER_B_NONLINEAR_POLICY[
+        "relative_correction_diagnostic_limit"
+    ],
+    "riesz_ksp_type": TIER_B_RIESZ_POLICY["ksp_type"],
+    "riesz_pc_type": TIER_B_RIESZ_POLICY["pc_type"],
+    "riesz_norm_type": TIER_B_RIESZ_POLICY["norm_type"],
+    "riesz_ksp_rtol": TIER_B_RIESZ_POLICY["rtol"],
+    "riesz_ksp_atol": TIER_B_RIESZ_POLICY["atol"],
+    "riesz_ksp_max_it": TIER_B_RIESZ_POLICY["max_it"],
+    "riesz_true_residual_rtol": TIER_B_RIESZ_POLICY["true_residual_rtol"],
+    "riesz_spd_factor_solver_type": TIER_B_RIESZ_POLICY[
+        "spd_factor_solver_type"
+    ],
+    "riesz_symmetry_relative_tolerance": TIER_B_RIESZ_POLICY[
+        "symmetry_relative_tolerance"
+    ],
     "minimum_normalized_branch_margin": 1.0e-8,
     "maximum_near_branch_fraction": 0.0,
     "bootstrap_seed": 20260710,
@@ -283,6 +299,10 @@ def _validate_matrix_row(row: dict[str, str]) -> None:
     tier = str(row.get("tier", ""))
     if tier not in TIERS:
         raise AdmissionError("matrix row has an unsupported endpoint tier")
+    try:
+        tier_b_row_contract(row)
+    except ValueError as exc:
+        raise AdmissionError(str(exc)) from exc
     scope = EXPECTED_SCOPES[tier]
     exact = {
         "experiment_id": EXPERIMENT_ID,
@@ -330,19 +350,6 @@ def _validate_matrix_row(row: dict[str, str]) -> None:
     if _integer(row.get("warmups"), "warmups", minimum=0) != 0:
         raise AdmissionError("independent comparison blocks must not embed warmup repetitions")
     _exact_float(row.get("state_amplitude"), 0.0, "matrix state_amplitude")
-    _exact_float(
-        row.get("ksp_rtol"), FROZEN_GATES["solver_ksp_rtol"], "matrix ksp_rtol"
-    )
-    _exact_float(
-        row.get("stop_tol"),
-        FROZEN_GATES["relative_correction_target"],
-        "matrix stop_tol",
-    )
-    _exact_float(
-        row.get("grad_stop_tol"),
-        FROZEN_GATES["absolute_dual_residual_target"],
-        "matrix grad_stop_tol",
-    )
     if row.get("pmg_strategy") != scope["pmg_strategy"]:
         raise AdmissionError("matrix PMG strategy changed from the frozen tier policy")
 
@@ -385,6 +392,45 @@ def _manifest_environment_contract(
     )
 
 
+def _stopping_identity(binding: dict[str, Any]) -> dict[str, Any]:
+    return {key: value for key, value in binding.items() if key != "path"}
+
+
+def _validate_phase_manifest_stopping(
+    manifest_path: Path, payload: dict[str, Any]
+) -> dict[str, Any]:
+    record = payload.get("tier_b_stopping_gate")
+    if not isinstance(record, dict):
+        raise AdmissionError("manifest lacks the pre-submission Tier-B STOP gate")
+    if record.get("policy") != {
+        "path": str(TIER_B_STOPPING_POLICY_PATH.relative_to(REPO_ROOT)),
+        "sha256": stopping_sha256_file(TIER_B_STOPPING_POLICY_PATH),
+    }:
+        raise AdmissionError("manifest Tier-B stopping-policy binding is stale")
+    if (
+        record.get("status")
+        != "validated_and_archived_before_scheduler_contact"
+        or record.get("submission_admissible") is not True
+    ):
+        raise AdmissionError("manifest was submitted without final STOP admission")
+    declared = record.get("adjudication")
+    if not isinstance(declared, dict):
+        raise AdmissionError("manifest STOP adjudication metadata is malformed")
+    path = _path_within(
+        manifest_path.parent,
+        declared.get("path"),
+        manifest_path.parent / "missing-stopping-adjudication.json",
+    )
+    if not path.is_file():
+        raise AdmissionError("manifest STOP adjudication is missing")
+    validated = validate_stop_adjudication(path)
+    expected = dict(validated)
+    expected["path"] = str(declared.get("path"))
+    if declared != expected:
+        raise AdmissionError("manifest STOP adjudication binding is stale")
+    return validated
+
+
 def _validate_master_manifest(
     manifest_path: Path,
     matrix_path: Path,
@@ -423,6 +469,34 @@ def _validate_master_manifest(
     if payload != semantic:
         result["reason"] = "tier_b_master_manifest_semantic_content_mismatch"
         return result
+    stopping_record = semantic.get("tier_b_stopping_gate")
+    if not isinstance(stopping_record, dict):
+        result["reason"] = "tier_b_master_manifest_lacks_stopping_gate"
+        return result
+    stopping_identity = stopping_record.get("adjudication")
+    phase_paths = stopping_record.get("phase_paths")
+    if not isinstance(stopping_identity, dict) or not isinstance(phase_paths, dict):
+        result["reason"] = "tier_b_master_manifest_stopping_gate_is_malformed"
+        return result
+    validated_stopping: dict[str, Any] | None = None
+    try:
+        for phase in ("training", "holdout"):
+            path = _path_within(
+                manifest_path.parent,
+                phase_paths.get(phase),
+                manifest_path.parent / f"missing-{phase}-stopping-adjudication.json",
+            )
+            current = validate_stop_adjudication(path)
+            if _stopping_identity(current) != stopping_identity:
+                raise AdmissionError("phase STOP adjudication differs from the master binding")
+            if validated_stopping is None:
+                validated_stopping = current
+            elif _stopping_identity(current) != _stopping_identity(validated_stopping):
+                raise AdmissionError("training and holdout STOP adjudications differ")
+    except (OSError, ValueError, json.JSONDecodeError) as exc:
+        result["reason"] = f"tier_b_master_manifest_stopping_gate_failed: {exc}"
+        return result
+    assert validated_stopping is not None
     case_archive_roots: dict[str, str] = {}
     for case_id, phase in dict(semantic["case_to_phase"]).items():
         phase_record = dict(dict(semantic["phases"])[str(phase)])
@@ -436,6 +510,7 @@ def _validate_master_manifest(
             "environment_contract": dict(semantic["environment_contract"]),
             "case_archive_roots": case_archive_roots,
             "manifest_type": "tier_b_phase_master",
+            "stopping_adjudication": validated_stopping,
         }
     )
     return result
@@ -514,6 +589,13 @@ def _validate_manifest(manifest_path: Path, matrix_path: Path) -> dict[str, Any]
         return result
     if environment_contract_reason is not None:
         result["reason"] = environment_contract_reason
+        return result
+    try:
+        result["stopping_adjudication"] = _validate_phase_manifest_stopping(
+            manifest_path, payload
+        )
+    except (OSError, ValueError, json.JSONDecodeError) as exc:
+        result["reason"] = f"manifest_stopping_gate_failed: {exc}"
         return result
     release = payload.get("release_authorization")
     if not isinstance(release, dict):
@@ -625,6 +707,11 @@ def _path_within(base: Path, raw: object, default: Path) -> Path:
 
 
 def _validate_riesz_evidence(payload: dict[str, Any], row: dict[str, str]) -> dict[str, Any]:
+    try:
+        stopping_contract = tier_b_row_contract(row)
+    except ValueError as exc:
+        raise AdmissionError(str(exc)) from exc
+    relative_target = float(stopping_contract["relative_dual_residual_target"])
     if payload.get("convergence_metric_requested") != "reference_elastic_energy":
         raise AdmissionError("output did not request reference_elastic_energy")
     if payload.get("convergence_metric") != "reference_elastic_energy":
@@ -637,6 +724,11 @@ def _validate_riesz_evidence(payload: dict[str, Any], row: dict[str, str]) -> di
         raise AdmissionError("correction did not use metric-current-state normalization")
     if configuration.get("state_scale_source") != "initial_nonlinear_iterate_primal_norm":
         raise AdmissionError("Riesz state scale did not come from the initial nonlinear iterate")
+    if (
+        configuration.get("initial_relative_dual_residual_definition")
+        != "absolute_dual_residual/initial_absolute_dual_residual"
+    ):
+        raise AdmissionError("relative dual-residual definition is missing or changed")
     state_scale = _finite(configuration.get("state_scale"), "Riesz state scale")
     if state_scale <= 0.0:
         raise AdmissionError("Riesz state scale must be positive")
@@ -679,6 +771,9 @@ def _validate_riesz_evidence(payload: dict[str, Any], row: dict[str, str]) -> di
     for key, expected in expected_metric.items():
         if metric.get(key) != expected:
             raise AdmissionError(f"effective Riesz {key} changed from {expected!r}")
+    for key in ("requested_norm_type", "effective_norm_type"):
+        if metric.get(key) != FROZEN_GATES["riesz_norm_type"]:
+            raise AdmissionError(f"effective Riesz {key} changed from the frozen norm")
     for key, expected in {
         "requested_rtol": FROZEN_GATES["riesz_ksp_rtol"],
         "effective_rtol": FROZEN_GATES["riesz_ksp_rtol"],
@@ -797,11 +892,25 @@ def _validate_riesz_evidence(payload: dict[str, Any], row: dict[str, str]) -> di
         "initial absolute dual residual",
         nonnegative=True,
     )
+    if initial <= 0.0:
+        raise AdmissionError("initial dual residual must be positive for relative stopping")
     residual = _finite(
         dict(convergence.get("absolute_dual_residual") or {}).get("value"),
         "terminal absolute dual residual",
         nonnegative=True,
     )
+    initial_relative = _finite(
+        dict(convergence.get("initial_relative_dual_residual") or {}).get("value"),
+        "terminal initial-relative dual residual",
+        nonnegative=True,
+    )
+    if not math.isclose(
+        initial_relative,
+        residual / initial,
+        rel_tol=1.0e-10,
+        abs_tol=1.0e-15,
+    ):
+        raise AdmissionError("terminal relative dual residual is internally stale")
     state_norm = _finite(
         dict(convergence.get("state_norm") or {}).get("value"),
         "terminal Riesz state norm",
@@ -850,6 +959,13 @@ def _validate_riesz_evidence(payload: dict[str, Any], row: dict[str, str]) -> di
         "true_residual_rtol_gate": FROZEN_GATES["riesz_true_residual_rtol"],
     }.items():
         _exact_float(last.get(key), expected, f"terminal Riesz {key}")
+    for key in (
+        "requested_norm_type",
+        "effective_norm_type",
+        "reported_residual_norm_type",
+    ):
+        if last.get(key) != FROZEN_GATES["riesz_norm_type"]:
+            raise AdmissionError(f"terminal Riesz {key} changed from the frozen norm")
     true_relative = _finite(
         last.get("relative_true_residual"), "terminal Riesz true residual", nonnegative=True
     )
@@ -863,23 +979,38 @@ def _validate_riesz_evidence(payload: dict[str, Any], row: dict[str, str]) -> di
         raise AdmissionError("completed output did not pass its nonlinear residual gate")
     _exact_float(
         residual_gate.get("absolute_tolerance"),
-        FROZEN_GATES["absolute_dual_residual_target"],
+        0.0,
         "nonlinear absolute residual target",
+    )
+    _exact_float(
+        residual_gate.get("initial_relative_tolerance"),
+        relative_target,
+        "nonlinear initial-relative residual target",
     )
     effective = _finite(
         residual_gate.get("effective_absolute_target"),
         "effective nonlinear residual target",
         nonnegative=True,
     )
-    if residual >= effective or residual >= FROZEN_GATES["absolute_dual_residual_target"]:
-        raise AdmissionError("terminal dual residual is not below the frozen target")
-    if correction >= FROZEN_GATES["relative_correction_target"]:
-        raise AdmissionError("terminal relative correction is not below the frozen target")
+    if not math.isclose(
+        effective,
+        initial * relative_target,
+        rel_tol=1.0e-12,
+        abs_tol=1.0e-15,
+    ):
+        raise AdmissionError("effective relative residual target is internally stale")
+    if residual > effective or initial_relative > relative_target:
+        raise AdmissionError("terminal relative dual residual exceeds the frozen target")
+    correction_limit = float(FROZEN_GATES["relative_correction_diagnostic_limit"])
     return {
         "initial_absolute_dual_residual": initial,
         "absolute_dual_residual": residual,
+        "initial_relative_dual_residual": initial_relative,
+        "relative_dual_residual_target": relative_target,
         "state_norm": state_norm,
         "relative_correction": correction,
+        "relative_correction_diagnostic_limit": correction_limit,
+        "relative_correction_diagnostic_passed": correction <= correction_limit,
         "state_scale": state_scale,
         "coefficient_gradient_l2": coefficient_gradient,
         "relative_true_residual": true_relative,
@@ -1138,6 +1269,11 @@ def _validate_route_output(
     expected_job_id: str,
 ) -> dict[str, Any]:
     payload = _read_json(path)
+    try:
+        stopping_contract = tier_b_row_contract(row)
+    except ValueError as exc:
+        raise AdmissionError(str(exc)) from exc
+    relative_target = float(stopping_contract["relative_dual_residual_target"])
     exact = {
         "status": "completed",
         "solver_success": True,
@@ -1170,8 +1306,11 @@ def _validate_route_output(
         raise AdmissionError(f"{route} output does not carry a converged terminal message")
     _exact_float(payload.get("lambda_target"), 1.55, f"{route} load factor")
     _exact_float(payload.get("ksp_rtol"), FROZEN_GATES["solver_ksp_rtol"], f"{route} KSP rtol")
-    _exact_float(payload.get("stop_tol"), FROZEN_GATES["relative_correction_target"], f"{route} correction target")
-    _exact_float(payload.get("grad_stop_tol"), FROZEN_GATES["absolute_dual_residual_target"], f"{route} residual target")
+    _exact_float(payload.get("stop_tol"), relative_target, f"{route} relative target metadata")
+    _exact_float(payload.get("grad_stop_tol"), 0.0, f"{route} absolute residual target")
+    _exact_float(payload.get("grad_stop_rtol"), relative_target, f"{route} relative residual target")
+    if payload.get("stop_metric_name") != "dual_residual_norm":
+        raise AdmissionError(f"{route} did not use dual-residual gradient stopping")
     _exact_float(payload.get("linesearch_tol"), 1.0e-3, f"{route} line-search tolerance")
     expected_quadrature_points = 24 if int(row["element_degree"]) == 4 else 1
     if _integer(payload.get("quadrature_points"), f"{route} quadrature points") != expected_quadrature_points:
@@ -1321,19 +1460,17 @@ def _endpoint_equivalence(records: dict[str, dict[str, Any]]) -> dict[str, Any]:
             raise AdmissionError(f"endpoint {name} equivalence gate failed")
 
     residual_relative = _relative_difference(
-        left["riesz"]["absolute_dual_residual"],
-        right["riesz"]["absolute_dual_residual"],
+        left["riesz"]["initial_relative_dual_residual"],
+        right["riesz"]["initial_relative_dual_residual"],
     )
     correction_relative = _relative_difference(
         left["riesz"]["relative_correction"],
         right["riesz"]["relative_correction"],
     )
-    if residual_relative > FROZEN_GATES["dual_residual_relative_difference_max"]:
-        raise AdmissionError("route terminal dual residuals differ beyond the frozen gate")
-    if correction_relative > FROZEN_GATES[
-        "relative_correction_relative_difference_max"
+    if residual_relative > FROZEN_GATES[
+        "initial_relative_dual_residual_relative_difference_max"
     ]:
-        raise AdmissionError("route terminal corrections differ beyond the frozen gate")
+        raise AdmissionError("route terminal dual residuals differ beyond the frozen gate")
     left_work = left["work_counts"]
     right_work = right["work_counts"]
     if left_work["nonlinear_iterations"] != right_work["nonlinear_iterations"]:
@@ -1355,8 +1492,10 @@ def _endpoint_equivalence(records: dict[str, dict[str, Any]]) -> dict[str, Any]:
         "branch_counts": left["branch_diagnostics"]["counts"],
         "branch_map_sha256": left["branch_diagnostics"]["canonical_map_sha256"],
         "scalars": scalar_gates,
-        "dual_residual_relative_difference": residual_relative,
+        "initial_relative_dual_residual_relative_difference": residual_relative,
         "relative_correction_relative_difference": correction_relative,
+        "relative_correction_difference_diagnostic_passed": correction_relative
+        <= FROZEN_GATES["relative_correction_relative_difference_max"],
         "nonlinear_iterations": left_work["nonlinear_iterations"],
         "total_krylov_iterations": left_work["krylov_iterations_total"],
         "per_solve_krylov_iterations": left_work["krylov_iterations_per_solve"],
@@ -1797,7 +1936,16 @@ def _analyze_job(
                 "work": record["work"],
                 "u_max": record["u_max"],
                 "absolute_dual_residual": record["riesz"]["absolute_dual_residual"],
+                "initial_relative_dual_residual": record["riesz"][
+                    "initial_relative_dual_residual"
+                ],
+                "relative_dual_residual_target": record["riesz"][
+                    "relative_dual_residual_target"
+                ],
                 "relative_correction": record["riesz"]["relative_correction"],
+                "relative_correction_diagnostic_passed": record["riesz"][
+                    "relative_correction_diagnostic_passed"
+                ],
                 "nonlinear_iterations": record["work_counts"]["nonlinear_iterations"],
                 "total_krylov_iterations": record["work_counts"][
                     "krylov_iterations_total"
@@ -2015,11 +2163,25 @@ def _timing_summary(blocks: list[dict[str, Any]], timings: dict[str, dict[str, f
     return summary
 
 
-def analyze(matrix_path: Path, campaign_root: Path, manifest_path: Path) -> dict[str, Any]:
+def analyze(
+    matrix_path: Path,
+    campaign_root: Path,
+    manifest_path: Path,
+    stopping_adjudication: Path,
+) -> dict[str, Any]:
     matrix_path = matrix_path.resolve()
     campaign_root = campaign_root.resolve()
+    manifest_path = manifest_path.resolve()
+    stopping_path = stopping_adjudication.resolve()
+    try:
+        stopping_path.relative_to(manifest_path.parent)
+    except ValueError as exc:
+        raise AdmissionError(
+            "STOP adjudication must be inside the submitted campaign/master archive"
+        ) from exc
+    explicit_stopping = validate_stop_adjudication(stopping_path)
     rows, matrix_violations = _load_matrix(matrix_path)
-    manifest = _validate_manifest(manifest_path.resolve(), matrix_path)
+    manifest = _validate_manifest(manifest_path, matrix_path)
     blocks: list[dict[str, Any]] = []
     timing_values: dict[str, dict[str, float]] = {}
     violations_by_case = {row["case_id"]: row["reason"] for row in matrix_violations}
@@ -2097,6 +2259,14 @@ def analyze(matrix_path: Path, campaign_root: Path, manifest_path: Path) -> dict
     campaign_reasons.extend(coverage_reasons)
     if manifest.get("eligible") is not True:
         campaign_reasons.append(str(manifest.get("reason")))
+    manifest_stopping = manifest.get("stopping_adjudication")
+    stopping_binding_matches_manifest = bool(
+        isinstance(manifest_stopping, dict)
+        and _stopping_identity(manifest_stopping)
+        == _stopping_identity(explicit_stopping)
+    )
+    if not stopping_binding_matches_manifest:
+        campaign_reasons.append("explicit_STOP_adjudication_differs_from_submission_binding")
     campaign_reasons = list(dict.fromkeys(campaign_reasons))
     endpoint_correct_timing_admissible = not campaign_reasons
     timing_summary: list[dict[str, Any]] = []
@@ -2148,6 +2318,7 @@ def analyze(matrix_path: Path, campaign_root: Path, manifest_path: Path) -> dict
         and required_rows == 30
         and admitted_rows == required_rows
         and manifest.get("eligible") is True
+        and stopping_binding_matches_manifest
         and analysis_git.get("dirty") is False
         and analysis_git.get("commit") == manifest.get("source_commit")
     )
@@ -2161,6 +2332,12 @@ def analyze(matrix_path: Path, campaign_root: Path, manifest_path: Path) -> dict
         "analysis_contract_sha256": _sha256_file(ROUTE_ANALYSIS_CONTRACT),
         "analysis_script_path": str(Path(__file__).resolve()),
         "analysis_script_sha256": _sha256_file(Path(__file__).resolve()),
+        "stopping_policy": {
+            "path": str(TIER_B_STOPPING_POLICY_PATH),
+            "sha256": stopping_sha256_file(TIER_B_STOPPING_POLICY_PATH),
+        },
+        "stopping_adjudication": explicit_stopping,
+        "stopping_binding_matches_manifest": stopping_binding_matches_manifest,
         "campaign_root": str(campaign_root),
         "manifest": manifest,
         "frozen_gates": FROZEN_GATES,
@@ -2231,7 +2408,10 @@ def _write_csv(path: Path, analysis: dict[str, Any]) -> None:
         "work",
         "u_max",
         "absolute_dual_residual",
+        "initial_relative_dual_residual",
+        "relative_dual_residual_target",
         "relative_correction",
+        "relative_correction_diagnostic_passed",
         "nonlinear_iterations",
         "total_krylov_iterations",
         "timing_exposed",
@@ -2265,7 +2445,16 @@ def _write_csv(path: Path, analysis: dict[str, Any]) -> None:
                         "absolute_dual_residual": route_row.get(
                             "absolute_dual_residual", ""
                         ),
+                        "initial_relative_dual_residual": route_row.get(
+                            "initial_relative_dual_residual", ""
+                        ),
+                        "relative_dual_residual_target": route_row.get(
+                            "relative_dual_residual_target", ""
+                        ),
                         "relative_correction": route_row.get("relative_correction", ""),
+                        "relative_correction_diagnostic_passed": route_row.get(
+                            "relative_correction_diagnostic_passed", ""
+                        ),
                         "nonlinear_iterations": route_row.get("nonlinear_iterations", ""),
                         "total_krylov_iterations": route_row.get(
                             "total_krylov_iterations", ""
@@ -2288,6 +2477,15 @@ def _parser() -> argparse.ArgumentParser:
         type=Path,
         help="Defaults to CAMPAIGN_ROOT/prepared_manifest.json.",
     )
+    parser.add_argument(
+        "--stopping-adjudication",
+        type=Path,
+        required=True,
+        help=(
+            "Final checksum-bound EXP-STOP-001 adjudication already archived "
+            "before both Tier-B submissions."
+        ),
+    )
     parser.add_argument("--output-json", type=Path, required=True)
     parser.add_argument("--output-csv", type=Path)
     parser.add_argument(
@@ -2306,7 +2504,16 @@ def main(argv: Iterable[str] | None = None) -> int:
         if args.manifest is not None
         else campaign_root / "prepared_manifest.json"
     )
-    result = analyze(Path(args.matrix), campaign_root, manifest)
+    try:
+        result = analyze(
+            Path(args.matrix),
+            campaign_root,
+            manifest,
+            Path(args.stopping_adjudication),
+        )
+    except (AdmissionError, OSError, ValueError, json.JSONDecodeError) as exc:
+        print(str(exc), file=sys.stderr)
+        return 2
     atomic_write_json(Path(args.output_json), result, nonfinite_as_null=False)
     if args.output_csv is not None:
         _write_csv(Path(args.output_csv), result)

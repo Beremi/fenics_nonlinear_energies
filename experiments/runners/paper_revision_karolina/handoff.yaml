@@ -1,4 +1,4 @@
-handoff_version: 6
+handoff_version: 7
 status: prepared_not_submitted
 software:
   repository: fenics_nonlinear_energies
@@ -41,11 +41,11 @@ data:
   checksum_policy: record matrix and input-file SHA-256 values in each collected run manifest
 campaign:
   matrix: experiments/runners/paper_revision_karolina/campaign_matrix.csv
-  matrix_sha256: 0010453084157f5ccf0ba307ed26b377c4aff80ad9f095fa359270e90ad5b1a5
+  matrix_sha256: cfc137573f1ae19b5a7916cf459526ec203b68cf14ddfe8b6df16a6ac04132b5
   submitter: experiments/runners/paper_revision_karolina/submit_prepared_campaigns.sh
-  submitter_sha256: 7935dc18d1ddc5fcb93e5f64d9c901cb77c735b9a791eb42dd07d3934a3d0abb
+  submitter_sha256: de3667d728f298d136f5b471ac7d0947f9da417aee4d77f8c6cd8d7d5b1c2c3f
   preparer: experiments/runners/paper_revision_karolina/prepare_campaign.py
-  preparer_sha256: b5d8f247ae9516b518cff8bce19da5e04a25bb00d1d0a955c7433a8b061edc22
+  preparer_sha256: 3bb1b3c9a56714359084a65d0e263e6eb9526d6eab00661b866e08941950255a
   batch_runner: experiments/runners/paper_revision_karolina/run_revision_case.sbatch
   batch_runner_sha256: 2527ee1bc065e6b9678464c960b73c9b22caa9f3c6abcfeab1a15f7db1cbd355
   partial_submission_resumer: experiments/runners/paper_revision_karolina/resume_partial_submission.py
@@ -59,7 +59,7 @@ campaign:
   latest_scheduler_free_inventory:
     source_commit: f62b4278ae59ad8eefe3b41aa43c127a149148ee
     scheduler_contacted: false
-    reviewed_source_count: 32
+    reviewed_source_count: 37
     source_freeze_sha256: dd037cf6c09fce89c34627e13f0c51e080dc5d0dd847384449c436da7df1a88a
     required:
       root: artifacts/reproduction/paper_revision_karolina/paper_revision_karolina_prepared_v10
@@ -83,11 +83,11 @@ campaign:
       route_processes_launched: 0
       plan_sha256: ce3a518889516288dfa1017fea638b697770c13e56e6151193d2fd366ccec04f
   route_analysis_contract: paper/protocols/EXP-ROUTE-001-analysis-contract.json
-  route_analysis_contract_sha256: 275f08e03221aed13a1b3cdbd1649a99274cb26b2c6d949f62bb4c3e6012fb00
+  route_analysis_contract_sha256: 34ecaed9b930131b142ce0c0e294ff6088c0c178396bd3bbda1274d1eecd3ff2
   route_endpoint_analyzer: experiments/analysis/analyze_plasticity3d_route_endpoints.py
   route_cost_analyzer: experiments/analysis/analyze_plasticity3d_route_cost_model.py
   route_cost_analyzer_sha256: 3cfb725c930668b771471bae6ae522c3fc3e9d04ec2a6c739fa5ccafeed5470e
-  route_endpoint_analyzer_sha256: 7f97ff5cea6c39afa92807e50800766daa5f7fec8a78327642cd2ad7eddef1bf
+  route_endpoint_analyzer_sha256: ac4a665fba4c6ed3aa864bcefc6846045fea3c4aa3942c1ddad95b1e2384092a
   route_discretization_analyzer: experiments/analysis/analyze_plasticity3d_discretization.py
   route_discretization_analyzer_sha256: f7fcf949260ed290ad842496a392ab52b78f78bad7ffd014a813c99b67651800
   route_scaling_analyzer: experiments/analysis/analyze_exp_scale_001.py
@@ -105,7 +105,7 @@ campaign:
   route_tranche_aggregator: experiments/analysis/aggregate_route_tranche_manifests.py
   route_tranche_aggregator_sha256: c38c8e5ff6c779cee2d6aae974b3f8961b9f317af46518040f4fd7eb60e38731
   route_tier_b_aggregator: experiments/analysis/aggregate_route_tier_b_manifests.py
-  route_tier_b_aggregator_sha256: 028e19a583b04fc06014402d3d1cab74943ca3c2b4256930c8555dc84a9e69a6
+  route_tier_b_aggregator_sha256: 3447b719ad02b243f614490427d95884769fb6b48d7af4c6c4dac65357c8bd8d
   route_training_freezer: experiments/analysis/freeze_route_training_model.py
   route_training_freezer_sha256: 0396197b1f003a78cadb4e9e53f8a1780569ab850cda9fb700f6a65c863e13ad
   campaign_archive_finalizer: experiments/analysis/finalize_karolina_campaign_archive.py
@@ -130,7 +130,10 @@ correctness:
     - identical state SHA-256 across derivative routes
     - tangent-action comparison at prespecified relative tolerance
     - derivative verification gate already passed for selected degree/rule
-    - Tier-B full solves use ksp_rtol 1e-8 and KSP cap 500; loose 1e-2 is forbidden
+    - Tier-B full solves use ksp_rtol 1e-8 and KSP cap 1000; loose 1e-2 is forbidden
+    - Tier-B stopping is gradient-only with initial-relative dual-residual targets P1 1e-6 and fixed tight-reference P4 1e-7; absolute tolerance is zero
+    - correction 2e-3 is diagnostic only and cannot terminate or reject Tier-B solves
+    - both Tier-B phases require the same archived version-3 final STOP adjudication before any scheduler contact
     - P1(L1), P1(L2), P2(L1), and P4(L1) at ranks 1, 8, and 32
     - ranks 1 and 8 are training; rank 32 is untouched holdout
     - P4(L1) colored SFD is a prespecified non-attempt motivated by pilot memory risk; no threshold is claimed
@@ -142,7 +145,7 @@ correctness:
   p3d_convergence:
     - all p3d_solve rows use reference_elastic_energy
     - MUMPS inertia numerically checks positive definiteness on the glued free space
-    - GMRES/Hypre Riesz solve uses rtol 1e-10, atol 1e-14, and cap 1000
+    - Tier-B Riesz solve uses CG/Jacobi with unpreconditioned norm, rtol 1e-10, atol 0, and cap 5000
     - independently recomputed Riesz true residual must be at most 1e-8
     - endpoint Riesz RHS must equal both coefficient-gradient diagnostics
     - completed rows must pass the Riesz residual gate

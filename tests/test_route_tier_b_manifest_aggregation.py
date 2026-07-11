@@ -12,6 +12,7 @@ import pytest
 
 from experiments.analysis import aggregate_route_tier_b_manifests as aggregation
 from experiments.analysis import analyze_plasticity3d_route_endpoints as endpoint_analysis
+from experiments.runners.paper_revision_karolina import tier_b_stopping
 
 
 SCRIPT = (
@@ -86,6 +87,72 @@ def _environment(root: Path, *, lock_text: str = "shared-lock-v1\n") -> dict[str
             "path": str(lock.relative_to(root)),
             "sha256": _sha256(lock),
         },
+    }
+
+
+def _stopping_gate(root: Path, *, checksum: str = "a" * 64) -> dict[str, object]:
+    policy = tier_b_stopping.load_policy()
+    local = dict(policy["local_calibration"])
+    reference_id = "p3d_p4_nonlinear_1em07_cluster"
+    comparison_ids = (
+        "p3d_p4_nonlinear_1em02_cluster",
+        "p3d_p4_nonlinear_1em04_cluster",
+        "p3d_p4_nonlinear_1em06_cluster",
+        reference_id,
+        "ginzburg_landau_mpi_consistency_cluster",
+        "hyperelasticity_mpi_consistency_cluster",
+        "plasticity3d_mpi_consistency_cluster",
+    )
+    adjudicator = aggregation.REPO_ROOT / "experiments/runners/prepare_exp_stop_001_karolina.py"
+    payload = {
+        "schema_id": "fenics-nonlinear-energies.exp-stop-001.final-adjudication",
+        "schema_version": 3,
+        "experiment_id": "EXP-STOP-001",
+        "terminal_decision": "CALIBRATION_SCOPED_PASS_PENDING_DISCRETIZATION_GATE",
+        "complete_exp_stop_pass": False,
+        "calibration_scope_passed": True,
+        "computation_source_commit": local["source_commit"],
+        "adjudicator": {
+            "source_commit": SOURCE_COMMIT,
+            "source_dirty": False,
+            "path": "experiments/runners/prepare_exp_stop_001_karolina.py",
+            "sha256": _sha256(adjudicator),
+        },
+        "local_analysis_sha256": local["analysis_sha256"],
+        "cluster_archive_checksum_sha256": checksum,
+        "cluster_case_count": 7,
+        "publication_timing_admissible": False,
+        "comparisons": {
+            case_id: {
+                "status": "accepted",
+                "reference_row_id": reference_id,
+                "gates": {"passed": True},
+            }
+            for case_id in comparison_ids
+        },
+        "rejected_or_censored_cases": [],
+        "required_gate_failures": [],
+        "selected_policies": {
+            "p3d_p4_nonlinear_cluster": {
+                "status": "selected_loosest_accepted_same_discretization_policy",
+                "row_id": "p3d_p4_nonlinear_1em06_cluster",
+                "parameter": "relative_dual_residual_target",
+                "tolerance": 1.0e-6,
+            }
+        },
+    }
+    path = root / "stopping_adjudication.json"
+    _write_json(path, payload)
+    binding = aggregation.validate_stop_adjudication(path)
+    binding["path"] = path.name
+    return {
+        "status": "validated_and_archived_before_scheduler_contact",
+        "submission_admissible": True,
+        "policy": {
+            "path": str(aggregation.TIER_B_STOPPING_POLICY.relative_to(aggregation.REPO_ROOT)),
+            "sha256": aggregation.stopping_sha256(aggregation.TIER_B_STOPPING_POLICY),
+        },
+        "adjudication": binding,
     }
 
 
@@ -262,6 +329,7 @@ def _phase_archive(
     tier_b_training_manifest: Path | None = None,
     first_job_id: int,
     lock_text: str = "shared-lock-v1\n",
+    stopping_checksum: str = "a" * 64,
 ) -> Path:
     root = archive_root / phase
     root.mkdir(parents=True)
@@ -322,6 +390,7 @@ def _phase_archive(
             tiers=tiers,
             phase=phase,
         ),
+        "tier_b_stopping_gate": _stopping_gate(root, checksum=stopping_checksum),
         "route_model_freeze": route_model_freeze,
     }
     path = root / "prepared_manifest.json"
@@ -330,7 +399,10 @@ def _phase_archive(
 
 
 def _archives(
-    tmp_path: Path, *, holdout_lock: str = "shared-lock-v1\n"
+    tmp_path: Path,
+    *,
+    holdout_lock: str = "shared-lock-v1\n",
+    holdout_stopping_checksum: str = "a" * 64,
 ) -> tuple[Path, Path, Path]:
     root = tmp_path / "tier_b_archive"
     root.mkdir()
@@ -352,6 +424,7 @@ def _archives(
         tier_b_training_manifest=training,
         first_job_id=2000,
         lock_text=holdout_lock,
+        stopping_checksum=holdout_stopping_checksum,
     )
     return root, training, holdout
 
@@ -425,6 +498,20 @@ def test_cli_writes_atomic_master_without_scheduler_code(tmp_path: Path) -> None
 def test_rejects_different_training_and_holdout_environment_locks(tmp_path: Path) -> None:
     root, training, holdout = _archives(tmp_path, holdout_lock="other-lock\n")
     with pytest.raises(aggregation.AggregationError, match="different environment"):
+        aggregation.aggregate(
+            training_manifest=training,
+            holdout_manifest=holdout,
+            archive_root=root,
+        )
+
+
+def test_rejects_different_training_and_holdout_stop_adjudications(
+    tmp_path: Path,
+) -> None:
+    root, training, holdout = _archives(
+        tmp_path, holdout_stopping_checksum="b" * 64
+    )
+    with pytest.raises(aggregation.AggregationError, match="different STOP"):
         aggregation.aggregate(
             training_manifest=training,
             holdout_manifest=holdout,

@@ -182,10 +182,16 @@ remain unsatisfied.
 - Routes: element AD and constitutive AD.
 - MPI ranks: 8 and 32 on one Karolina node.
 - Solver: identical rank-local assembly, fixed Hypre PMG policy, Armijo plus
-  trust-region safeguards, `ksp_rtol=1e-8`, KSP cap 500, correction tolerance
-  `2e-3`, gradient tolerance `1e-4`, and at most 80 nonlinear iterations.
-  Stopping uses the numerically checked reference-elastic-energy Riesz metric with a
-  separately audited GMRES/Hypre norm solve and a $10^{-8}$ true-residual gate.
+  trust-region safeguards, `ksp_rtol=1e-8`, KSP cap 1000, and at most 80
+  nonlinear iterations. Stopping is gradient-only in the numerically checked
+  reference-elastic-energy Riesz metric. The terminal dual residual is divided
+  by the initial residual of the same solve, with target $10^{-6}$ for
+  `P1(L1)` and the fixed tight-reference target $10^{-7}$ for `P4(L1)`; the
+  absolute residual tolerance is zero. The relative correction threshold
+  $2\times10^{-3}$ is reported only as a diagnostic and cannot terminate or
+  reject a solve. The separately audited Riesz solve uses CG/Jacobi with the
+  unpreconditioned residual norm, relative tolerance $10^{-10}$, zero absolute
+  tolerance, cap 5000, and a $10^{-8}$ independent true-residual gate.
   Both nonlinear routes build this metric through the same forced element-AD
   elastic reference operator; the nonlinear plastic tangent route remains the
   factor under comparison.
@@ -206,7 +212,15 @@ evidence, clean commit and Slurm-job identity, per-rank timing provenance,
 reference-elastic Riesz distance between endpoint states, physical maximum
 state error, exact canonical pointwise branch-map hashes, branch counts and
 margin, energy/work/observable,
-residual, correction, iteration, and Krylov gates before exposing timing. It
+initial-relative residual, iteration, and Krylov gates before exposing timing;
+correction size remains diagnostic. Before either Tier-B phase may contact the
+scheduler, its manifest must archive the same detached version-3 final
+`EXP-STOP-001` adjudication. That adjudication must bind the admitted local
+calibration, the checksum-sealed cluster archive, the clean adjudicator
+commit/hash, all three MPI-consistency checks, and acceptance of the fixed
+`p3d_p4_nonlinear_1em07_cluster` reference. Preparation without this artifact
+is intentionally non-submittable. The analyzer independently revalidates the
+artifact and its pre-submission manifest binding. It
 reports deterministic paired nonparametric-bootstrap 95% intervals for route
 medians and time ratios (10,000 resamples, base seed 20260710). Failed or
 missing blocks remain censored. Endpoint-correct timing admission, descriptive
@@ -222,10 +236,14 @@ The tight linear tolerance is a correctness control, not a tuned production
 claim. Completed local route pilots showed that `ksp_rtol=1e-2` produced
 route-sensitive one-step states, whereas `ksp_rtol=1e-8` reduced relative state
 disagreement to approximately `5e-11`. The matrix validator therefore rejects
-every Tier-B row with `ksp_rtol>1e-8`; the obsolete loose comparison cannot be
-admitted accidentally. If `EXP-STOP-001` later selects a different calibrated
-policy, revise every Tier-B row together, re-establish route equivalence, and
-regenerate the reviewed matrix hash before submission.
+every Tier-B row whose linear, relative-gradient, or Riesz parameters differ
+from the hash-bound policy; the obsolete loose comparison cannot be admitted
+accidentally. The P1 target is selected from admitted local calibration. The
+P4 target is deliberately the tight cluster reference rather than a post hoc
+loosest accepted target, and execution remains blocked until that reference is
+accepted. Any future policy change requires revising all Tier-B rows together,
+re-establishing route equivalence, and regenerating the reviewed matrix hash
+before submission.
 
 ## Completed local route diagnostic
 

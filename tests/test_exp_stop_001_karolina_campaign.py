@@ -426,12 +426,24 @@ def test_offline_archive_settlement_and_final_merge_are_hash_bound(
         stop,
         "_compare",
         lambda row, endpoint, reference_row, reference, contract: {
-            "status": "accepted",
+            "status": (
+                "rejected"
+                if row["row_id"] == "p3d_p4_nonlinear_1em02_cluster"
+                else "accepted"
+            ),
             "row_id": row["row_id"],
         },
     )
+    monkeypatch.setattr(
+        reviewed,
+        "git_metadata",
+        lambda: {
+            "commit": "0123456789abcdef0123456789abcdef01234567",
+            "dirty": False,
+        },
+    )
     result = stop.adjudicate(root, expected_checksum=digest)
-    assert result["schema_version"] == 2
+    assert result["schema_version"] == 3
     assert (
         result["terminal_decision"]
         == "CALIBRATION_SCOPED_PASS_PENDING_DISCRETIZATION_GATE"
@@ -443,6 +455,10 @@ def test_offline_archive_settlement_and_final_merge_are_hash_bound(
         "hash-bound EXP-DISC-001 discretization-error adjudication"
     ]
     assert len(result["comparisons"]) == 7
+    assert result["rejected_or_censored_cases"] == [
+        "p3d_p4_nonlinear_1em02_cluster"
+    ]
+    assert result["required_gate_failures"] == []
     assert result["publication_timing_admissible"] is False
 
     (root / "unindexed.txt").write_text("tamper\n", encoding="utf-8")
