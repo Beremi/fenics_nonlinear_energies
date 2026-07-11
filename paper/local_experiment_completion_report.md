@@ -10,9 +10,9 @@ and no scheduler, remote shell, or cluster command was invoked during this
 work.
 
 The current managed source campaign was executed from clean commit
-`c18b413998ea2e5ba621efa2d9f97bbe5b9378d2`. Its canonical 17-command plan has
+`d71ba78aa29259a86296dfac0eb9ce86166bed23`. Its canonical 17-command plan has
 SHA-256
-`7204b5579224b767f35091672ffb8914c6b8ce85a3755e1e49a00d97a26361fd`.
+`d4ad05dd0c9d646d53c703b2ab7553ca2dfc6b307384de36e526431eec405c5d`.
 We executed the 16 commands whose inputs and outputs are local. All 16 receipts
 passed the finalizer's independent fingerprint, clean-commit, producer,
 configuration, input, output, and referenced-artifact checks. The remaining
@@ -25,12 +25,12 @@ We ran one managed command at a time. Each command inherited one thread for
 OpenMP, OpenBLAS, and MKL, used the CPU JAX backend, and ran inside a systemd
 scope with `MemoryHigh=28G`, `MemoryMax=32G`, no swap, and `OOMPolicy=kill`.
 The process address-space ceiling was 64 GiB. The P4 derivative check was the
-only material memory risk; its three route high-water marks were 15.78, 24.93,
-and 27.26 GiB. The scope completed without an out-of-memory event, and host
-memory returned to 12 GiB used after the campaign.
+only material memory risk; its three route high-water marks were 15.61, 24.65,
+and 27.04 GiB. The scope completed without an out-of-memory event, and host
+memory returned to 15 GiB used after the campaign.
 
 The managed archive is
-`artifacts/reproduction/paper_revision_local_c18b413/publication_campaign`.
+`artifacts/reproduction/paper_revision_local_d71ba78/publication_campaign`.
 It occupies approximately 75 MiB and contains the immutable plan, command
 logs, 16 execution receipts, raw source payloads, prescribed states, and
 quadrature arrays. We did not run the final bundle decoration because that
@@ -127,8 +127,14 @@ after unrelated documentation changes.
   complete. Topology optimization remains supplementary, with no KKT-quality
   or optimization-solution claim.
 - `EXP-ROUTE-001` workstation calibration: all 12 balanced blocks and 36
-  sequential route processes completed at commit `566eaf2`; the 273-file hash
-  closure passed, and every block retains `timing_claim_released: false`.
+  sequential route processes completed at commit `d71ba78`; the 273-file hash
+  closure and independent 12-row archive validator passed. The manifest
+  SHA-256 is
+  `9ff54f117f34dfb03e93fee7dbd88243278ecd1fe989604f7e7b8fc042cb4dab`.
+  All six route permutations occurred twice; the maximum action discrepancy
+  was $2.34\times10^{-16}$, the saved-state and gradient/residual discrepancies
+  were zero at stored precision, and the maximum process RSS was 6.09 GiB.
+  Every block retains `timing_claim_released: false`.
 
 ## Computations that remain cluster-only
 
@@ -138,18 +144,34 @@ independent protocol sign-off, explicit human release, and a clean frozen
 commit.
 
 1. Complete the seven `EXP-STOP-001` parallel rows: four P4 nonlinear
-   calibrations and three publication-rank MPI-consistency checks. These rows
-   produce the detached STOP adjudication required by Tier B.
+   calibrations and three publication-rank MPI-consistency checks. The
+   scheduler-free archive
+   `artifacts/reproduction/EXP-STOP-001-karolina-5b2f3b5` is bound to the
+   matching 45-row local campaign, contains a 23.0-node-hour ceiling, and
+   passed offline preflight without scheduler contact. It is intentionally
+   non-submittable until an environment contract and human release exist.
+   These rows produce the detached STOP adjudication required by Tier B.
 2. Run the required Karolina route, factor, discretization, and
-   hyperelastic-scaling tranches. The current dry-run inventory contains 115
-   required rows with a 99.95-node-hour ceiling.
+   hyperelastic-scaling tranches. The current offline-preflighted inventory is
+   `paper_revision_karolina_prepared_v12_d71ba78`; it contains 115 required
+   rows with a 99.95-node-hour ceiling, plan SHA-256
+   `d84c798cbf19dfc86dfe1a558fee5db5f0e0cf5a6f084a034e629d733f4fd08c`,
+   and source-freeze SHA-256
+   `3b3f4ab511395d956e31818627eff157203c7fa774d51a53224ff9ed061dc420`.
 3. Run the 30 optional Tier-B route rows only after the detached version-3
-   STOP adjudication passes. The present preparation is explicitly
-   non-submittable.
-4. Run the three optional Plasticity3D scaling rows only as a separate tranche.
+   STOP adjudication passes. The archive
+   `paper_revision_karolina_route_optional_v12_d71ba78` has a 45.0-node-hour
+   ceiling and is explicitly non-submittable.
+4. Run the three optional Plasticity3D scaling rows only as the separate
+   `paper_revision_karolina_p3d_scaling_optional_v12_d71ba78` tranche, whose
+   ceiling is 17.5 node-hours.
 5. If the globalization result remains in the paper, run its prescribed
-   full-rank matrix. The local negative outcome does not establish a
-   probability or performance comparison.
+   full-rank matrix. The scheduler-free archive
+   `artifacts/reproduction/EXP-GLOB-001-karolina-d71ba78` contains 60 rows
+   (30 Ginzburg--Landau and 30 hyperelasticity) and a 12.5-node-hour ceiling;
+   it passed offline preflight and is explicitly non-submittable. The local
+   negative outcome does not establish a probability or performance
+   comparison.
 6. After copy-back and checksum closure, execute the route endpoint and cost-
    model analyses locally. Fit the frozen model only after its training,
    holdout, endpoint, and coverage gates pass.

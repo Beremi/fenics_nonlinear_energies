@@ -1,4 +1,4 @@
-handoff_version: 7
+handoff_version: 8
 status: prepared_not_submitted
 software:
   repository: fenics_nonlinear_energies
@@ -57,42 +57,57 @@ campaign:
   total_node_hours: 162.45
   total_jobs: 148
   latest_scheduler_free_inventory:
-    source_commit: c18fbac73208ab5176d0af47adaf5b34f0aeb6e4
+    source_commit: d71ba78aa29259a86296dfac0eb9ce86166bed23
     scheduler_contacted: false
     scientific_processes_launched: 0
     reviewed_source_count: 38
-    source_freeze_sha256: ca229777598d19318882c60309592ad3dcc2b1d261b381307d5619f9610d8dbe
+    source_freeze_sha256: 3b3f4ab511395d956e31818627eff157203c7fa774d51a53224ff9ed061dc420
+    static_campaign_manifest_sha256: 6fe357797744b3ab628fb3fa792b62840f16d1dadd4cd074e37a6dca656fd666
     required:
-      root: artifacts/reproduction/paper_revision_karolina/paper_revision_karolina_prepared_v11_c18fbac
+      root: artifacts/reproduction/paper_revision_karolina/paper_revision_karolina_prepared_v12_d71ba78
       rows: 115
       estimated_node_hours: 99.95
       plan_sha256: d84c798cbf19dfc86dfe1a558fee5db5f0e0cf5a6f084a034e629d733f4fd08c
+      commands_sha256: 9a2e3e78b39f0d28108ba7b3d01ec1b0d5ce73d54eb4b44efe77d34985c452cd
       offline_preflight_status: passed
     optional_tier_b:
-      root: artifacts/reproduction/paper_revision_karolina/paper_revision_karolina_route_optional_v11_c18fbac
+      root: artifacts/reproduction/paper_revision_karolina/paper_revision_karolina_route_optional_v12_d71ba78
       rows: 30
       estimated_node_hours: 45.00
       plan_sha256: 48dcc38250ea1986628250f77b1bc7e5955ac81d9c9207b8861ede06eb25293d
+      commands_sha256: 332812caeb23f1be8714ea8787c0ad9cc755b093d59cbff6bf7c4710b3d4ad1d
       offline_preflight_status: passed
       stopping_gate_status: pending_required_before_scheduler_contact
       submission_admissible: false
     optional_plasticity3d_scaling:
-      root: artifacts/reproduction/paper_revision_karolina/paper_revision_karolina_p3d_scaling_optional_v11_c18fbac
+      root: artifacts/reproduction/paper_revision_karolina/paper_revision_karolina_p3d_scaling_optional_v12_d71ba78
       rows: 3
       estimated_node_hours: 17.50
       plan_sha256: 9dc349b92f32c7f5672d1c5d4180731f95af3b179d5bba15f6a37d03893374de
+      commands_sha256: f0019163c7aee536fcbde878e8119430cf28695ca0527f7a6a59624e755c089b
       offline_preflight_status: passed
-    workstation:
-      root: artifacts/reproduction/paper_revision_workstation/exp_route_001_prepared_v11_c18fbac
-      blocks: 12
-      route_process_commands: 36
-      route_processes_launched: 0
-      status: prepared_not_executed
-      address_space_limit_bytes: 34359738368
-      plan_sha256: 29932cfb0f8371b5aad890229a41e920799d7e49f867483f6730e0660cacee91
+  companion_scheduler_free_inventories:
+    stopping:
+      root: artifacts/reproduction/EXP-STOP-001-karolina-5b2f3b5
+      source_commit: 5b2f3b50a37b08ba9532ad03721996f44a0c50a0
+      rows: 7
+      estimated_node_hours: 23.00
+      plan_sha256: 3d6ca110b7bf5eb1300d7d504a2d99af1cf5757830f7a7472ff92f6dc811217f
+      commands_sha256: efa987449703005d81051445e5019fccf03af584df406d7fd9ab20dc2df4fa20
+      offline_preflight_status: passed_without_scheduler_contact
+      submission_admissible: false
+    globalization:
+      root: artifacts/reproduction/EXP-GLOB-001-karolina-d71ba78
+      source_commit: d71ba78aa29259a86296dfac0eb9ce86166bed23
+      rows: 60
+      estimated_node_hours: 12.50
+      plan_sha256: 701134314cbbd6bd012b93cd990c9abd007aee25fcd0c8f315c0a4d07e0741f0
+      commands_sha256: 64ae3961e4b620d7363c5cd3d3216d9b6f14a1580ba4cfdbec27c9a40cca2605
+      offline_preflight_status: passed_without_scheduler_contact
+      submission_admissible: false
   latest_completed_workstation_route_campaign:
-    root: artifacts/reproduction/paper_revision_workstation/exp_route_001_completed_566eaf2
-    source_commit: 566eaf24f3f2a498f33d5a25b0871bea9c7142a8
+    root: artifacts/reproduction/paper_revision_workstation/exp_route_001_completed_d71ba78
+    source_commit: d71ba78aa29259a86296dfac0eb9ce86166bed23
     status: completed
     blocks_completed: 12
     route_processes_launched: 36
@@ -101,10 +116,15 @@ campaign:
     route_processes_censored: 0
     output_closure_files: 273
     address_space_limit_bytes: 34359738368
-    maximum_peak_rss_bytes: 7267348480
+    maximum_peak_rss_bytes: 6536073216
+    maximum_action_relative_error: 2.3379762570066966e-16
+    maximum_state_relative_error: 0.0
+    maximum_gradient_residual_relative_error: 0.0
     timing_claim_released: false
-    manifest_sha256: 2e40257087a71a4bd261a7a90c2eb0cc196b9667db6a4cb3dce2b2b3a65028ee
+    manifest_sha256: 9ff54f117f34dfb03e93fee7dbd88243278ecd1fe989604f7e7b8fc042cb4dab
+    recursive_inventory_sha256: 510964ea61515dacea69c12c3a4de05b37aa7e4e7af9f2c331f84a01b8700239
     independent_provenance_gate: completed_frozen_workstation_campaign
+    independent_archive_validation: passed_12_admitted_rows
   route_analysis_contract: paper/protocols/EXP-ROUTE-001-analysis-contract.json
   route_analysis_contract_sha256: 22e63a402cdeab9f4127f72ecf8dcbe15dabbeea4f002f34f7571e92c862d5de
   route_endpoint_analyzer: experiments/analysis/analyze_plasticity3d_route_endpoints.py

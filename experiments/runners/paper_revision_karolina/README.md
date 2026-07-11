@@ -40,62 +40,52 @@ contain no `--exclusive`, `--mem`, or `--mem-per-cpu` option.
 ## Safe local preparation
 
 The following scheduler-free commands were exercised from clean commit
-`c18fbac73208ab5176d0af47adaf5b34f0aeb6e4`. Each driver inherited a 32 GiB
-address-space limit. None of the commands contains `--execute`, and no
-scientific process, scheduler admission test, or scheduler submission was
-launched.
+`d71ba78aa29259a86296dfac0eb9ce86166bed23`. Each preparation driver inherited
+an 8 GiB address-space limit. These commands only write inert command text and
+manifests; no scientific process, scheduler query, admission test, or
+submission was launched.
 
 ```bash
-/usr/bin/prlimit --as=34359738368:34359738368 -- \
-  /usr/bin/env DRY_RUN=1 MAX_NODE_HOURS=100 \
-  CAMPAIGN_ID=paper_revision_karolina_prepared_v11_c18fbac \
-  bash experiments/runners/paper_revision_karolina/submit_prepared_campaigns.sh
+/usr/bin/prlimit --as=8589934592:8589934592 -- \
+  ./.venv/bin/python experiments/runners/paper_revision_karolina/prepare_campaign.py \
+  --matrix experiments/runners/paper_revision_karolina/campaign_matrix.csv \
+  --out-root artifacts/reproduction/paper_revision_karolina/paper_revision_karolina_prepared_v12_d71ba78 \
+  --max-node-hours 100
 
-/usr/bin/prlimit --as=34359738368:34359738368 -- \
-  /usr/bin/env DRY_RUN=1 MAX_NODE_HOURS=100 ONLY_OPTIONAL=1 \
-  EXPERIMENTS=EXP-ROUTE-001 \
-  CAMPAIGN_ID=paper_revision_karolina_route_optional_v11_c18fbac \
-  bash experiments/runners/paper_revision_karolina/submit_prepared_campaigns.sh
+/usr/bin/prlimit --as=8589934592:8589934592 -- \
+  ./.venv/bin/python experiments/runners/paper_revision_karolina/prepare_campaign.py \
+  --matrix experiments/runners/paper_revision_karolina/campaign_matrix.csv \
+  --out-root artifacts/reproduction/paper_revision_karolina/paper_revision_karolina_route_optional_v12_d71ba78 \
+  --max-node-hours 100 --only-optional --experiment EXP-ROUTE-001
 
-/usr/bin/prlimit --as=34359738368:34359738368 -- \
-  /usr/bin/env DRY_RUN=1 MAX_NODE_HOURS=100 ONLY_OPTIONAL=1 \
-  EXPERIMENTS=EXP-SCALE-001 \
-  CAMPAIGN_ID=paper_revision_karolina_p3d_scaling_optional_v11_c18fbac \
-  bash experiments/runners/paper_revision_karolina/submit_prepared_campaigns.sh
-
-/usr/bin/env -u WORKSTATION_RUN_CONFIRMED \
-  JAX_PLATFORMS=cpu JAX_ENABLE_X64=True OMP_NUM_THREADS=1 \
-  OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1 NUMEXPR_NUM_THREADS=1 \
-  XLA_PYTHON_CLIENT_PREALLOCATE=false \
-  XLA_FLAGS=--xla_cpu_multi_thread_eigen=false \
-  /usr/bin/prlimit --as=34359738368:34359738368 -- \
-  ./.venv/bin/python experiments/runners/run_workstation_route_campaign.py \
-  --plan paper/protocols/EXP-ROUTE-001-workstation-plan.json \
-  --out-root artifacts/reproduction/paper_revision_workstation/exp_route_001_prepared_v11_c18fbac \
-  --python ./.venv/bin/python --run-id prepared-v11-c18fbac \
-  --expected-commit c18fbac73208ab5176d0af47adaf5b34f0aeb6e4 \
-  --row-wall-s 3600 --campaign-wall-s 43200
+/usr/bin/prlimit --as=8589934592:8589934592 -- \
+  ./.venv/bin/python experiments/runners/paper_revision_karolina/prepare_campaign.py \
+  --matrix experiments/runners/paper_revision_karolina/campaign_matrix.csv \
+  --out-root artifacts/reproduction/paper_revision_karolina/paper_revision_karolina_p3d_scaling_optional_v12_d71ba78 \
+  --max-node-hours 100 --only-optional --experiment EXP-SCALE-001
 ```
 
 The resulting current inventories are:
 
-- `paper_revision_karolina_prepared_v11_c18fbac`: 115 required rows,
+- `paper_revision_karolina_prepared_v12_d71ba78`: 115 required rows,
   99.95 node-hours, plan SHA-256
-  `d84c798cbf19dfc86dfe1a558fee5db5f0e0cf5a6f084a034e629d733f4fd08c`;
-- `paper_revision_karolina_route_optional_v11_c18fbac`: 30 optional Tier-B
+  `d84c798cbf19dfc86dfe1a558fee5db5f0e0cf5a6f084a034e629d733f4fd08c`
+  and command-inventory SHA-256
+  `9a2e3e78b39f0d28108ba7b3d01ec1b0d5ce73d54eb4b44efe77d34985c452cd`;
+- `paper_revision_karolina_route_optional_v12_d71ba78`: 30 optional Tier-B
   rows, 45.00 node-hours, plan SHA-256
-  `48dcc38250ea1986628250f77b1bc7e5955ac81d9c9207b8861ede06eb25293d`;
-- `paper_revision_karolina_p3d_scaling_optional_v11_c18fbac`: three optional
+  `48dcc38250ea1986628250f77b1bc7e5955ac81d9c9207b8861ede06eb25293d`
+  and command-inventory SHA-256
+  `332812caeb23f1be8714ea8787c0ad9cc755b093d59cbff6bf7c4710b3d4ad1d`;
+- `paper_revision_karolina_p3d_scaling_optional_v12_d71ba78`: three optional
   Plasticity3D rows, 17.50 node-hours, plan SHA-256
-  `9dc349b92f32c7f5672d1c5d4180731f95af3b179d5bba15f6a37d03893374de`;
-- `exp_route_001_prepared_v11_c18fbac`: 12 workstation blocks and 36
-  normalized route-process commands, with `route_processes_launched: 0` and
-  plan SHA-256
-  `29932cfb0f8371b5aad890229a41e920799d7e49f867483f6730e0660cacee91`.
+  `9dc349b92f32c7f5672d1c5d4180731f95af3b179d5bba15f6a37d03893374de`
+  and command-inventory SHA-256
+  `f0019163c7aee536fcbde878e8119430cf28695ca0527f7a6a59624e755c089b`.
 
 All three Karolina archives have `source_dirty: false`, the common 38-source
 freeze SHA-256
-`ca229777598d19318882c60309592ad3dcc2b1d261b381307d5619f9610d8dbe`,
+`3b3f4ab511395d956e31818627eff157203c7fa774d51a53224ff9ed061dc420`,
 and a repeated `offline_preflight.status: passed`. The combined Tier-B archive
 is an inventory only: it records
 `pending_required_before_scheduler_contact` and `submission_admissible: false`
@@ -103,22 +93,37 @@ because the seven cluster STOP results and final adjudication do not yet exist.
 A future real execution must regenerate separate training and holdout archives
 from an authorized clean commit and bind the same valid STOP adjudication.
 
+Two companion preparations cover the remaining cluster-only prerequisites.
+`artifacts/reproduction/EXP-STOP-001-karolina-5b2f3b5` binds the matching
+45-row local STOP calibration and contains seven rows, a 23.0-node-hour
+ceiling, and plan SHA-256
+`3d6ca110b7bf5eb1300d7d504a2d99af1cf5757830f7a7472ff92f6dc811217f`.
+`artifacts/reproduction/EXP-GLOB-001-karolina-d71ba78` contains 60 rows, a
+12.5-node-hour ceiling, and plan SHA-256
+`701134314cbbd6bd012b93cd990c9abd007aee25fcd0c8f315c0a4d07e0741f0`.
+Both passed their dedicated offline preflights without scheduler contact and
+remain explicitly non-submittable because their reviewed environment bindings
+and human release records are absent.
+
 ### Completed clean workstation calibration
 
 The locally executable `EXP-ROUTE-001` campaign was completed from clean commit
-`566eaf24f3f2a498f33d5a25b0871bea9c7142a8` under a 32 GiB address-space
+`d71ba78aa29259a86296dfac0eb9ce86166bed23` under a 32 GiB address-space
 limit at
-`artifacts/reproduction/paper_revision_workstation/exp_route_001_completed_566eaf2`.
+`artifacts/reproduction/paper_revision_workstation/exp_route_001_completed_d71ba78`.
 All 36 sequential route processes and all 12 balanced P1/P2 fixed-state blocks
 completed without failure or censoring. Each of the six route permutations was
 used twice. The maximum four-probe action discrepancy was
 `2.34e-16` relative, while saved states and gradient/residual comparisons were
 exact at the recorded precision. The maximum rank-local process high-water RSS
-was 6.77 GiB.
+was 6.09 GiB.
 
 The recursive 273-file output closure and frozen source/configuration/input
-inventories passed independent revalidation. The manifest SHA-256 is
-`2e40257087a71a4bd261a7a90c2eb0cc196b9667db6a4cb3dce2b2b3a65028ee`.
+inventories passed independent revalidation, and the cost-map analyzer admitted
+all 12 empirical rows. The manifest SHA-256 is
+`9ff54f117f34dfb03e93fee7dbd88243278ecd1fe989604f7e7b8fc042cb4dab`;
+the recursive inventory SHA-256 is
+`510964ea61515dacea69c12c3a4de05b37aa7e4e7af9f2c331f84a01b8700239`.
 These records admit the workstation correctness/calibration input only; every
 block deliberately records `timing_claim_released: false`. Route-ordering,
 crossover, and second-architecture timing claims remain blocked on the
