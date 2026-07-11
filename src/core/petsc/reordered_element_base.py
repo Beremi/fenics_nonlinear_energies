@@ -1327,6 +1327,24 @@ class ReorderedElementAssemblerBase:
     def memory_summary(self) -> dict[str, float | int]:
         return dict(self._memory_summary)
 
+    def sfd_summary(self) -> dict[str, object]:
+        if self.local_hessian_mode not in {"sfd_local", "sfd_local_vmap"}:
+            return {
+                "enabled": False,
+                "backend": "not_applicable",
+                "number_of_colors": 0,
+                "hvp_batch_size": 0,
+            }
+        summary = dict(getattr(self, "_sfd_coloring_metadata", {}))
+        summary.update(
+            {
+                "enabled": True,
+                "number_of_colors": int(self._sfd_n_colors),
+                "hvp_batch_size": int(self._sfd_hvp_batch_size),
+            }
+        )
+        return summary
+
     def _reset_owned_hessian_values(self) -> np.ndarray:
         if not self.reuse_hessian_value_buffers:
             return np.zeros(int(self.layout.owned_rows.size), dtype=np.float64)
@@ -1393,10 +1411,13 @@ class ReorderedElementAssemblerBase:
     def _warmup_hessian(self, v_local: np.ndarray) -> None:
         self._elem_hess_jit(jnp.asarray(v_local)).block_until_ready()
 
-    def _setup_local_sfd(self):
+    def _build_sfd_column_coloring(
+        self,
+        local_reord: np.ndarray,
+    ) -> tuple[np.ndarray, np.ndarray, np.ndarray, dict[str, object]]:
+        """Build the default explicit conflict graph for a local SFD domain."""
         import igraph
 
-        local_reord = self.layout.total_to_free_reord[self.local_data.local_total_nodes]
         rows = self.layout.coo_rows
         cols = self.layout.coo_cols
         mask = np.isin(rows, local_reord) & np.isin(cols, local_reord)
@@ -1411,6 +1432,14 @@ class ReorderedElementAssemblerBase:
         J_to_idx = np.full(self.layout.n_free, -1, dtype=np.int64)
         J_to_idx[J_arr] = np.arange(n_J, dtype=np.int64)
 
+        explicit_nnz_limit = 25_000_000
+        if int(row_arr.size) > explicit_nnz_limit:
+            raise MemoryError(
+                "explicit SFD conflict formation is disabled above "
+                f"{explicit_nnz_limit} pattern entries; provide a memory-bounded "
+                "column-coloring backend"
+            )
+
         conflicts = _sfd_column_conflict_matrix(
             J_to_idx[row_arr],
             J_to_idx[col_arr],
@@ -1423,7 +1452,31 @@ class ReorderedElementAssemblerBase:
             n_J, edges.tolist() if len(edges) > 0 else [], directed=False
         )
         coloring_raw = graph.vertex_coloring_greedy()
-        self._sfd_local_coloring = np.array(coloring_raw, dtype=np.int32).ravel()
+        coloring = np.array(coloring_raw, dtype=np.int32).ravel()
+        return (
+            J_arr,
+            J_to_idx,
+            coloring,
+            {
+                "backend": "explicit_scipy_igraph",
+                "pattern_nonzeros": int(row_arr.size),
+                "conflict_nonzeros": int(conflicts.nnz),
+                "number_of_colors": (
+                    int(coloring.max() + 1) if coloring.size else 0
+                ),
+                "validated": True,
+            },
+        )
+
+    def _setup_local_sfd(self):
+        local_reord = self.layout.total_to_free_reord[self.local_data.local_total_nodes]
+        (
+            J_arr,
+            J_to_idx,
+            self._sfd_local_coloring,
+            self._sfd_coloring_metadata,
+        ) = self._build_sfd_column_coloring(local_reord)
+        n_J = int(J_arr.size)
         self._sfd_n_colors = (
             int(self._sfd_local_coloring.max() + 1) if n_J > 0 else 0
         )

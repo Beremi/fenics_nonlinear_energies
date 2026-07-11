@@ -231,6 +231,7 @@ class SlopeStability3DReorderedElementAssembler(ReorderedElementAssemblerBase):
         petsc_log_events=False,
         jax_trace_dir="",
         memory_guard_total_gib=None,
+        sfd_hvp_batch_size=None,
     ):
         self.constitutive_mode = "plastic"
         self._kernel_cache: dict[str, dict[str, object]] = {}
@@ -285,6 +286,7 @@ class SlopeStability3DReorderedElementAssembler(ReorderedElementAssemblerBase):
             assembly_backend=assembly_backend,
             petsc_log_events=petsc_log_events,
             memory_guard_total_gib=memory_guard_total_gib,
+            sfd_hvp_batch_size=sfd_hvp_batch_size,
         )
         self._update_p4_chunk_scatter_memory_summary(0)
 
@@ -300,6 +302,82 @@ class SlopeStability3DReorderedElementAssembler(ReorderedElementAssemblerBase):
                     "the current reduced system has component-wise constraints and is not block-compatible"
                 )
         return backend_name
+
+    def _build_sfd_column_coloring(
+        self,
+        local_reord: np.ndarray,
+    ) -> tuple[np.ndarray, np.ndarray, np.ndarray, dict[str, object]]:
+        """Color scalar support at distance two, then lift by component."""
+        from src.problems.slope_stability_3d.jax_petsc.sfd_coloring import (
+            color_free_scalar_support,
+            lift_scalar_colors_to_reordered_free_dofs,
+        )
+
+        required = ("elems_scalar", "freedofs", "nodes")
+        missing = [key for key in required if key not in self.params]
+        degree = int(self.params.get("element_degree", 0))
+        if missing or int(self.block_size) != 3 or self.layout.perm.size == 0:
+            if degree == 4:
+                detail = ", ".join(missing) if missing else "compatible global permutation"
+                raise MemoryError(
+                    "P4 SFD recovery requires the memory-bounded scalar-support "
+                    f"coloring backend; missing {detail}"
+                )
+            return super()._build_sfd_column_coloring(local_reord)
+
+        elems_scalar = np.asarray(self.params["elems_scalar"], dtype=np.int64)
+        freedofs = np.asarray(self.params["freedofs"], dtype=np.int64)
+        nodes = np.asarray(self.params["nodes"], dtype=np.float64)
+        raw_pair_upper_bound = int(
+            elems_scalar.shape[0] * elems_scalar.shape[1] * elems_scalar.shape[1]
+        )
+        # Conservative host-side bound for pair keys, CSR conversion, the
+        # temporary PETSc matrix, and coloring work. The measured P4 graph is
+        # substantially smaller, but publication execution fails before this
+        # step when the configured total guard cannot absorb the bound.
+        planned_extra_gib = float(raw_pair_upper_bound * 128) / float(1024**3)
+        self._check_memory_guard(
+            extra_local_gib=planned_extra_gib,
+            reason="scalar-support PETSc distance-2 coloring",
+        )
+        scalar = color_free_scalar_support(
+            elems_scalar,
+            freedofs,
+            number_of_nodes=int(nodes.shape[0]),
+        )
+
+        J_arr = np.unique(local_reord[local_reord >= 0]).astype(np.int64)
+        J_to_idx = np.full(self.layout.n_free, -1, dtype=np.int64)
+        J_to_idx[J_arr] = np.arange(J_arr.size, dtype=np.int64)
+        coloring = lift_scalar_colors_to_reordered_free_dofs(
+            scalar,
+            freedofs=freedofs,
+            reordered_to_original_free=np.asarray(self.layout.perm, dtype=np.int64),
+            reordered_dofs=J_arr,
+        )
+        return (
+            J_arr,
+            J_to_idx,
+            coloring,
+            {
+                "backend": "petsc_scalar_distance2_component_lift",
+                "algorithm": "greedy",
+                "weight_type": "lexical",
+                "distance": 2,
+                "validated": True,
+                "scalar_vertices": int(scalar.number_of_vertices),
+                "scalar_support_nonzeros": int(scalar.number_of_nonzeros),
+                "scalar_colors": int(scalar.number_of_colors),
+                "number_of_colors": (
+                    int(coloring.max() + 1) if coloring.size else 0
+                ),
+                "raw_pair_upper_bound": int(scalar.raw_pair_upper_bound),
+                "build_seconds": float(scalar.build_seconds),
+                "coloring_seconds": float(scalar.coloring_seconds),
+                "validation_seconds": float(scalar.validation_seconds),
+                "structural_lift": "3*scalar_color+displacement_component",
+            },
+        )
 
     def _chunk_trace(self, name: str):
         if not self._jax_trace_enabled:
