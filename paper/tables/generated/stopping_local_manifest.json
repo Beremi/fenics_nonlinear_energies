@@ -339,7 +339,7 @@
     },
     "validator": {
       "path": "paper/scripts/stopping_local_evidence.py",
-      "sha256": "ba9bdafe0fe0e2a7cb170f150a2b3940c36b4e75d16a36330e22ba0d5cbfaee3"
+      "sha256": "f6d67fc47fdf36437b45f3564e34fa717d07f91fc6232aeb66d2a603b3962fa6"
     }
   }
 }
