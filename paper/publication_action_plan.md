@@ -1,6 +1,113 @@
 # Publication Action Plan
 
-Last updated: 2026-07-10.
+Last updated: 2026-07-11.
+
+## Status Addendum — 2026-07-11
+
+This addendum supersedes the 2026-07-10 status and dependency assignments for
+the selected submission scope. The detailed performance protocols below are
+preserved for a possible future expansion, but cluster stopping, route
+crossover, scaling, nonlinear quadrature endpoints, and full-rank
+globalization are not dependencies of the present
+correctness-and-verification paper.
+
+### Completed local evidence
+
+The immutable experiment commit is
+`d71ba78aa29259a86296dfac0eb9ce86166bed23`. Its managed 17-command plan has
+SHA-256
+`d4ad05dd0c9d646d53c703b2ab7553ca2dfc6b307384de36e526431eec405c5d`.
+Sixteen local commands completed, and every receipt passed independent
+fingerprint, clean-commit, producer, configuration, input, output, and
+referenced-artifact validation. The sole unexecuted managed-plan command is
+`route_cost_analysis`. It depends on deferred cluster evidence and is outside
+the selected manuscript scope; its absence does not block the narrowed
+release.
+
+The completed local scope now contains:
+
+1. independent scalar and hyperelastic manufactured or analytic verification;
+2. smooth and $P_1$/$P_2$/$P_4$ derivative-route checks;
+3. five-branch Mohr--Coulomb material-point checks, including interfaces,
+   rotations, and repeated spectra;
+4. one-, two-, and four-rank canonical hyperelastic equivalence;
+5. fixed-state quadrature sensitivity for $P_1$, $P_2$, and $P_4$;
+6. all 45 locally feasible stopping executions, with seven higher-rank cases
+   remaining cluster-only;
+7. 12 distributed-colored blocks comprising 36 route executions;
+8. 60 controlled globalization executions, admitted only as bounded outcomes
+   because the paired endpoint-identity condition fails;
+9. 12 balanced workstation route blocks comprising 36 sequential executions,
+   with timing release explicitly false; and
+10. the supplementary topology diagnostic, with no KKT or optimization-solution
+    claim.
+
+These clean sources support the retained manuscript claims. The legacy
+14-source performance bundle remains intentionally incomplete and is not
+required for the narrowed release; a narrowed-scope manifest and public deposit
+remain outstanding. The exact local status and numerical claim boundary are
+recorded in `local_experiment_completion_report.md`.
+
+### Prepared but never executed remotely
+
+No scheduler, Slurm admission test, scheduler query, SSH command, or cluster
+computation was run. The current scheduler-free inventories are:
+
+| Inventory | Rows | Ceiling | Plan SHA-256 | Current state |
+| --- | ---: | ---: | --- | --- |
+| `artifacts/reproduction/EXP-STOP-001-karolina-5b2f3b5` | 7 | 23.0 node-hours | `3d6ca110b7bf5eb1300d7d504a2d99af1cf5757830f7a7472ff92f6dc811217f` | offline preflight passed; not submittable |
+| `artifacts/reproduction/paper_revision_karolina/paper_revision_karolina_prepared_v12_d71ba78` | 115 | 99.95 node-hours | `d84c798cbf19dfc86dfe1a558fee5db5f0e0cf5a6f084a034e629d733f4fd08c` | offline preflight passed; prepared only |
+| `artifacts/reproduction/paper_revision_karolina/paper_revision_karolina_route_optional_v12_d71ba78` | 30 | 45.0 node-hours | `48dcc38250ea1986628250f77b1bc7e5955ac81d9c9207b8861ede06eb25293d` | blocked on STOP adjudication; not submittable |
+| `artifacts/reproduction/paper_revision_karolina/paper_revision_karolina_p3d_scaling_optional_v12_d71ba78` | 3 | 17.5 node-hours | `9dc349b92f32c7f5672d1c5d4180731f95af3b179d5bba15f6a37d03893374de` | offline preflight passed; prepared only |
+| `artifacts/reproduction/EXP-GLOB-001-karolina-d71ba78` | 60 | 12.5 node-hours | `701134314cbbd6bd012b93cd990c9abd007aee25fcd0c8f315c0a4d07e0741f0` | offline preflight passed; not submittable |
+
+The three d71 Karolina inventories share source-freeze SHA-256
+`3b3f4ab511395d956e31818627eff157203c7fa774d51a53224ff9ed061dc420`.
+Every inventory remains prepared but not submitted. Any future scheduler
+contact requires explicit human tranche release, current allocation and
+environment revalidation, and the prerequisite named by its manifest.
+
+### Current manuscript and resolved scope
+
+The selected submission is the correctness-and-verification paper titled
+*Derivative Placement in Distributed Nonlinear Finite Elements: Conditional
+Equivalence and Distributed Verification*. Route timing, crossover prediction,
+performance ranking, scaling, nonlinear robustness probabilities, and KKT
+claims are `REMOVED FROM SCOPE` for this submission and retained only as
+prepared future protocols. The target venue family is SISC or a comparable
+scientific-computing journal. A SIOPT submission would require a genuine
+optimization-method, KKT, or convergence contribution beyond the verified
+derivative-construction framework.
+
+The legacy 14-source/four-table performance finalizer is therefore not the
+release contract for this manuscript and must not be bypassed or repurposed.
+The remaining evidence task is to create a versioned narrowed-scope manifest
+that binds the admitted local sources and the three included evidence tables.
+
+### Ordered remaining tasks
+
+1. **Finish the resolved-scope evidence binding.** Complete the narrowed claim
+   ledger and versioned release-evidence contract.
+2. **Freeze the manuscript evidence.** Commit the manuscript and regenerate
+   and verify its three evidence tables from the bound local sources.
+3. **Create the release archive.** Deposit code, meshes, canonical states, raw
+   records, commands, environment locks, manifests, and checksums in a licensed
+   immutable archive; obtain a persistent DOI; and update Code and Data
+   Availability without claiming an identifier before it exists.
+4. **Run final independent QA.** From a clean release commit, run the full test,
+   paper-build, evidence, citation, hygiene, float, PDF-integrity, and visual
+   checks. Repeat mathematical, numerical, reproducibility, and journal-fit
+   reviews, and resolve every critical or major finding before tagging the
+   release.
+
+### Deferred future performance campaign
+
+The five scheduler-free inventories above remain available for a separate
+performance expansion. Before any future submission, revalidate the Karolina
+allocation, software environment, source identity, and stopping prerequisites;
+obtain explicit human tranche authorization; execute only the authorized rows;
+copy the results back; and run their detached adjudicators. These steps are not
+part of the selected correctness manuscript.
 
 ## Purpose And Authority
 
@@ -2218,8 +2325,35 @@ After Step 18 findings and all resulting corrections are resolved:
 
 ## Minimal Progress Record
 
-Update this table whenever a step changes state. Link the evidence rather than
-writing a project diary.
+This resolved-scope record supersedes the 2026-07-10 table retained below.
+
+| Step | Current status | Evidence or remaining blocker | Last updated |
+| ---: | --- | --- | --- |
+| 1 | DONE | SISC-family correctness-and-verification scope selected; performance selection removed | 2026-07-11 |
+| 2 | IN PROGRESS | Clean experiment commit `d71ba78` and 16 validated local receipts exist; narrowed release manifest and independent release review remain | 2026-07-11 |
+| 3 | DONE | Conditional derivative and distributed-recovery propositions are stated and independently audited | 2026-07-11 |
+| 4 | EVIDENCE COMPLETE | Retained Riesz and deterministic same-discretization stopping claims have exact gates and admitted local evidence | 2026-07-11 |
+| 5 | EVIDENCE COMPLETE | Smooth, branch-interior, material-point, and one-/two-/four-rank fixed-state derivative checks pass | 2026-07-11 |
+| 6 | EVIDENCE COMPLETE | Independent scalar, affine, nonaffine, and distributed hyperelastic verification is admitted | 2026-07-11 |
+| 7 | REMOVED FROM SCOPE | Tier-B full-solve route performance is preserved only as a future prepared protocol | 2026-07-11 |
+| 8 | REMOVED FROM SCOPE | Crossover model, route ranking, and cluster timing are not manuscript claims | 2026-07-11 |
+| 9 | EVIDENCE COMPLETE | Globalization evidence supports only the reported deterministic completion/failure counts | 2026-07-11 |
+| 10 | EVIDENCE COMPLETE | Fixed-state quadrature sensitivity is admitted; nonlinear quadrature endpoints are removed | 2026-07-11 |
+| 11 | REMOVED FROM SCOPE | Topology remains a separate diagnostic with no KKT or solution claim | 2026-07-11 |
+| 12 | REMOVED FROM SCOPE | Cluster scaling and accounting are preserved as future preparations | 2026-07-11 |
+| 13 | IN PROGRESS | Narrowed claim ledger and release-evidence manifest remain to be versioned | 2026-07-11 |
+| 14 | IN PROGRESS | Manuscript architecture is resolved; final release binding and independent scientific edit remain | 2026-07-11 |
+| 15 | IN PROGRESS | Style-guide rewrite and local copyedit pass; final release-candidate proofreading remains | 2026-07-11 |
+| 16 | IN PROGRESS | Three evidence tables are integrated; narrowed manifest, public archive, and DOI remain | 2026-07-11 |
+| 17 | BLOCKED | Final release requires a licensed immutable public archive, DOI, and reproduction check | 2026-07-11 |
+| 18 | IN PROGRESS | Internal red-team reviews are resolved; genuinely independent release-candidate review remains | 2026-07-11 |
+| 19 | BLOCKED | Final tag and submission wait only on Steps 13--18 that apply to the narrowed scope | 2026-07-11 |
+
+### Superseded 2026-07-10 progress snapshot
+
+The following table is retained for historical provenance and does not define
+the current submission dependencies. Link the evidence rather than writing a
+project diary.
 
 Before Step 2 is marked complete, replace every blank responsibility cell for a
 `P0` step with an owner and a separate evidence reviewer.
@@ -2250,6 +2384,9 @@ Before Step 2 is marked complete, replace every blank responsibility cell for a
 
 The revision is complete when a skeptical reviewer can answer all of the
 following from the paper and its archive:
+
+Questions associated with experiments marked `REMOVED FROM SCOPE` are not
+applicable and do not keep the corresponding step open.
 
 1. What precise optimization or scientific-computing problem is solved?
 2. What is new relative to the closest methods?

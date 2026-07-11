@@ -1,6 +1,26 @@
-# Publication Revision Execution Report and Remaining Action Plan
+# Historical Publication Revision Execution Report and Remaining Action Plan
 
-Last updated: 2026-07-10.
+Historical snapshot: 2026-07-10.
+
+> **Superseded status notice (2026-07-11).** This document preserves the
+> implementation and decision history at the end of 2026-07-10. Its statements
+> about dirty pilots, absent clean reruns, one/two-rank coverage, v8 Karolina
+> preparations, diagnostic tables, the old manuscript title, and the 0/14
+> evidence state are no longer current. Do not use its numerical status or
+> remaining-work section as the publication handoff. The authoritative current
+> status is the 2026-07-11 addendum in
+> [`publication_action_plan.md`](publication_action_plan.md), together with
+> [`local_experiment_completion_report.md`](local_experiment_completion_report.md).
+> The historical discussion below remains useful only for rationale and
+> provenance.
+
+> **Current resolved decision (2026-07-11).** The selected manuscript is the
+> correctness-and-distributed-verification paper. Route performance, crossover
+> modeling, scaling, full-rank globalization, cluster stopping, and nonlinear
+> quadrature endpoints are deferred future work and are not submission
+> blockers. The current blockers are the versioned narrowed-scope evidence
+> manifest, a clean manuscript/release commit, a licensed archive and DOI, and
+> final independent QA.
 
 ## 1. Purpose and decision
 
