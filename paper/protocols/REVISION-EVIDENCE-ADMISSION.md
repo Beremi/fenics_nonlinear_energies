@@ -113,6 +113,11 @@ the stored input records and deterministic audit digest exactly.
   and publication-model eligible, exactly 74 training and 22 untouched holdout
   rows, the six frozen $P_4$ colored-recovery non-attempts with null timing
   fields, no invalid records, and a hash-bound 30-of-30 Tier-B endpoint analysis.
+  The endpoint is native schema version 2 and must carry both the frozen
+  stopping-policy hash and the same detached version-3 final STOP adjudication
+  that was archived before Tier-B submission. The actual STOP JSON is staged,
+  copied, parsed, and revalidated as an independent artifact; a digest-only or
+  post hoc endpoint annotation is insufficient.
   The negative branch contains only its status, selector rejection, frozen
   feature order, row counts, and named failure decision.  It contains no
   coefficients, predictions, winner/order rows, recommendation, crossover, or
@@ -133,7 +138,7 @@ the stored input records and deterministic audit digest exactly.
 
 The evidence directory component `analysis_contract_v1` is the stable layout
 name for `analysis_schema_version: 1`; it is not the scientific route-contract
-version.  The hash-bound scientific contract is currently `contract_version: 2`
+version.  The hash-bound scientific contract is currently `contract_version: 3`
 in `EXP-ROUTE-001-analysis-contract.json`.  Keeping these namespaces distinct
 avoids moving the exact 14-source interface whenever the frozen scientific
 contract is revised before execution.
@@ -152,21 +157,26 @@ EVIDENCE=artifacts/reproduction/<campaign>
   --workstation-source /path/to/completed/workstation/archive \
   --karolina-source /path/to/copied-back/karolina/archive \
   --endpoint-relative path/inside/karolina/to/tier_b_endpoint_analysis.json \
+  --stopping-relative path/inside/karolina/to/stopping_adjudication.json \
   --output "$EVIDENCE/route_dependency_plan.json"
 ```
 
-Plan generation independently applies the frozen workstation, Karolina, and
-Tier-B endpoint gates.  It also records every regular file and SHA-256 digest
-in each source tree.  Symbolic links, incomplete workstation closure,
-nonadmissible route rows, stale endpoint evidence, mixed commits, or later
-source-tree changes block staging.
+Plan generation independently applies the frozen workstation, Karolina,
+Tier-B endpoint, and detached STOP gates. The two archive-relative paths are
+explicit so a checksum-verified copied-back archive remains valid after local
+relocation; the endpoint's embedded STOP identity is still cross-checked
+against the specified file. It also records every regular file and SHA-256
+digest in each source tree. Symbolic links, incomplete workstation closure,
+nonadmissible route rows, stale endpoint or STOP evidence, mixed commits, or
+later source-tree changes block staging.
 
-Execute the three local preparation commands in the recorded order:
+Execute the four local preparation commands in the recorded order:
 
 ```bash
 for COMMAND_ID in \
   prepare_workstation_archive \
   prepare_route_campaign_master \
+  prepare_route_stopping_adjudication \
   prepare_tier_b_endpoint_analysis
 do
   ./.venv/bin/python experiments/analysis/finalize_revision_publication_campaign.py execute \
@@ -178,10 +188,16 @@ done
 
 These commands perform local validation and file copying only.  They neither
 submit work nor contact a remote system.  The managed executor writes the
-three fingerprinted receipts required by the canonical source plan.  The
-canonical Tier-B endpoint copy remains inside the relocated Karolina archive,
-so the route analyzer can enforce its independent archive-confinement gate.
-The dependency plan and receipts must be retained with the final evidence.
+four fingerprinted receipts required by the canonical source plan.  The
+detached STOP JSON is copied and attested before the endpoint copy; the latter
+consumes that receipt and revalidates the same semantic identity.  Both
+canonical copies remain inside the relocated Karolina archive, so the route
+analyzer can enforce its independent archive-confinement gate.  The dependency
+plan and receipts must be retained with the final evidence. Finalization
+requires all four receipts to share the tracked
+`paper_revision_route_dependencies_v1` plan, command order, staging producer,
+validator set, and recursive source inventories; a hand-written substitute
+preparation plan is rejected.
 
 These checks establish admission for the quantities consumed by the revision
 tables.  They do not broaden the scientific scope of an experiment.

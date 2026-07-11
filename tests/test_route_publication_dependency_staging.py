@@ -19,6 +19,22 @@ def _write(path: Path, content: str) -> None:
     path.write_text(content, encoding="utf-8")
 
 
+def _stopping_binding(path: Path, *, declared_path: str | None = None) -> dict[str, object]:
+    return {
+        "schema_id": "fenics-nonlinear-energies.exp-stop-001.final-adjudication",
+        "schema_version": 3,
+        "path": declared_path if declared_path is not None else str(path.resolve()),
+        "sha256": staging._sha256(path),
+        "computation_source_commit": "1" * 40,
+        "adjudicator_source_commit": "2" * 40,
+        "adjudicator_sha256": "3" * 64,
+        "local_analysis_sha256": "4" * 64,
+        "cluster_archive_checksum_sha256": "5" * 64,
+        "p4_reference_row_id": "p3d_p4_nonlinear_1em07_cluster",
+        "p4_reference_status": "accepted",
+    }
+
+
 def _closure_fixture(root: Path) -> None:
     _write(root / "environment.json", "{}\n")
     _write(root / "nested/result.txt", "result\n")
@@ -111,6 +127,148 @@ def test_tree_staging_rejects_source_change_bound_by_plan(tmp_path: Path) -> Non
     assert not destination.exists()
 
 
+def test_endpoint_gate_cross_checks_actual_stop_identity(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    karolina = tmp_path / "karolina"
+    workstation = tmp_path / "workstation"
+    workstation.mkdir()
+    endpoint = karolina / "analysis/endpoint.json"
+    stopping = karolina / "evidence/stopping.json"
+    _write(endpoint, '{"schema": {"version": 2}}\n')
+    _write(stopping, '{"schema_version": 3}\n')
+    validated = _stopping_binding(stopping)
+    gate_binding = dict(validated)
+    gate_binding["sha256"] = "9" * 64
+    monkeypatch.setattr(
+        staging.route_analysis,
+        "_endpoint_analysis_gate",
+        lambda *_args, **_kwargs: {
+            "publication_admissible": True,
+            "stopping_binding_matches_manifest": True,
+            "stopping_adjudication": gate_binding,
+        },
+    )
+    monkeypatch.setattr(
+        staging,
+        "validate_stop_adjudication",
+        lambda _path: validated,
+    )
+    with pytest.raises(staging.RouteDependencyError, match="identities differ"):
+        staging._require_endpoint_gate(
+            endpoint,
+            stopping,
+            sources=[
+                ("workstation_local", workstation),
+                ("karolina_cpu", karolina),
+            ],
+            contract={},
+        )
+
+
+def test_endpoint_declared_stop_must_be_an_actual_confined_json(tmp_path: Path) -> None:
+    karolina = tmp_path / "karolina"
+    endpoint = karolina / "analysis/endpoint.json"
+    stopping = karolina / "evidence/stopping.json"
+    _write(stopping, '{"schema_version": 3}\n')
+    _write(
+        endpoint,
+        json.dumps(
+            {
+                "schema": {"version": 2},
+                "stopping_adjudication": {"path": "evidence/stopping.json"},
+            }
+        )
+        + "\n",
+    )
+    actual, relative = staging._declared_stopping_adjudication(
+        endpoint,
+        karolina_root=karolina,
+    )
+    assert actual == stopping.resolve()
+    assert relative == Path("evidence/stopping.json")
+
+    stopping.unlink()
+    with pytest.raises(staging.RouteDependencyError, match="not a regular file"):
+        staging._declared_stopping_adjudication(
+            endpoint,
+            karolina_root=karolina,
+        )
+
+
+def test_stop_staging_is_independently_hash_bound_and_rejects_tampering(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    staging_root = tmp_path / "_publication_staging"
+    workstation = staging_root / staging.WORKSTATION_TARGET
+    karolina = staging_root / staging.KAROLINA_TARGET
+    workstation.mkdir(parents=True)
+    endpoint_relative = Path("analysis/endpoint.json")
+    stopping_relative = Path("evidence/stopping.json")
+    _write(karolina / endpoint_relative, '{"schema": {"version": 2}}\n')
+    _write(karolina / stopping_relative, '{"schema_version": 3}\n')
+    expected = staging._sha256(karolina / stopping_relative)
+    binding = _stopping_binding(karolina / stopping_relative)
+    validation = {
+        "publication_admissible": True,
+        "endpoint": {
+            "stopping_binding_matches_manifest": True,
+            "stopping_adjudication": {
+                **staging._stopping_identity(binding),
+                "path": stopping_relative.as_posix(),
+            },
+        },
+    }
+    monkeypatch.setattr(
+        staging,
+        "validate_complete_route_evidence",
+        lambda **_kwargs: validation,
+    )
+    monkeypatch.setattr(
+        staging,
+        "_require_endpoint_gate",
+        lambda *_args, **_kwargs: (
+            {
+                "publication_admissible": True,
+                "stopping_binding_matches_manifest": True,
+                "stopping_adjudication": binding,
+            },
+            binding,
+        ),
+    )
+    destination = staging_root / staging.CANONICAL_STOPPING_ADJUDICATION
+    result = staging.stage_stopping_adjudication(
+        workstation_root=workstation,
+        karolina_root=karolina,
+        endpoint_relative=endpoint_relative,
+        stopping_relative=stopping_relative,
+        destination=destination,
+        contract_path=staging.REPO_ROOT / staging.DEFAULT_CONTRACT,
+        expected_commit=COMMIT,
+        expected_sha256=expected,
+    )
+    assert result["schema_version"] == 3
+    assert result["sha256"] == expected
+    assert destination.read_bytes() == (karolina / stopping_relative).read_bytes()
+
+    destination.unlink()
+    _write(karolina / stopping_relative, '{"schema_version": 3, "tampered": true}\n')
+    with pytest.raises(staging.RouteDependencyError, match="changed after dependency-plan"):
+        staging.stage_stopping_adjudication(
+            workstation_root=workstation,
+            karolina_root=karolina,
+            endpoint_relative=endpoint_relative,
+            stopping_relative=stopping_relative,
+            destination=destination,
+            contract_path=staging.REPO_ROOT / staging.DEFAULT_CONTRACT,
+            expected_commit=COMMIT,
+            expected_sha256=expected,
+        )
+    assert not destination.exists()
+
+
 def test_dependency_plan_binds_every_file_and_matches_finalizer_contract(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -121,15 +279,48 @@ def test_dependency_plan_binds_every_file_and_matches_finalizer_contract(
     _write(workstation / "cases/result.bin", "workstation\n")
     _write(karolina / "route_campaign_master_manifest.json", "{}\n")
     endpoint_relative = Path("analysis/tier_b_endpoint_analysis.json")
-    _write(karolina / endpoint_relative, '{"endpoint": true}\n')
-    monkeypatch.setattr(
-        staging,
-        "validate_complete_route_evidence",
-        lambda **_kwargs: {
+    _write(
+        karolina / endpoint_relative,
+        json.dumps(
+            {
+                "endpoint": True,
+                "stopping_adjudication": {
+                    "path": "/obsolete/cluster/archive/stopping_adjudication.json"
+                },
+            }
+        )
+        + "\n",
+    )
+    stopping_relative = Path("evidence/final_stopping_adjudication.json")
+    stopping_path = karolina / stopping_relative
+    _write(stopping_path, '{"schema_version": 3}\n')
+    stopping_binding = _stopping_binding(
+        stopping_path,
+        declared_path=stopping_relative.as_posix(),
+    )
+    def validate_with_explicit_relocated_stop(**kwargs):
+        assert Path(kwargs["stopping_adjudication_path"]).resolve() == (
+            stopping_path.resolve()
+        )
+        return {
             "experiment_id": "EXP-ROUTE-001",
             "source_commit": COMMIT,
             "publication_admissible": True,
-        },
+            "endpoint": {
+                "stopping_binding_matches_manifest": True,
+                "stopping_adjudication": stopping_binding,
+            },
+        }
+
+    monkeypatch.setattr(
+        staging,
+        "validate_complete_route_evidence",
+        validate_with_explicit_relocated_stop,
+    )
+    monkeypatch.setattr(
+        staging,
+        "validate_stop_adjudication",
+        lambda path: _stopping_binding(Path(path)),
     )
 
     plan = staging.build_dependency_plan(
@@ -137,12 +328,14 @@ def test_dependency_plan_binds_every_file_and_matches_finalizer_contract(
         workstation_source=workstation,
         karolina_source=karolina,
         endpoint_relative=endpoint_relative,
+        stopping_relative=stopping_relative,
     )
     commands = finalizer._plan_command_map(plan)
     assert plan["plan_kind"] == "dependency_preparation"
     assert plan["execution_order"] == [
         "prepare_workstation_archive",
         "prepare_route_campaign_master",
+        "prepare_route_stopping_adjudication",
         "prepare_tier_b_endpoint_analysis",
     ]
     workstation_expected = set(commands["prepare_workstation_archive"]["expected_artifacts"])
@@ -166,12 +359,77 @@ def test_dependency_plan_binds_every_file_and_matches_finalizer_contract(
             "attestation": {
                 "path": "_publication_receipts/prepare_route_campaign_master.json"
             },
+        },
+        {
+            "scope": "staging",
+            "path": staging.CANONICAL_STOPPING_ADJUDICATION.as_posix(),
+            "attestation": {
+                "path": "_publication_receipts/prepare_route_stopping_adjudication.json"
+            },
+        },
+    ]
+    stopping_command = commands["prepare_route_stopping_adjudication"]
+    assert stopping_command["expected_artifacts"] == [
+        staging.CANONICAL_STOPPING_ADJUDICATION.as_posix()
+    ]
+    assert stopping_command["input_files"] == [
+        {
+            "scope": "staging",
+            "path": (staging.KAROLINA_TARGET / stopping_relative).as_posix(),
+            "attestation": {
+                "path": "_publication_receipts/prepare_route_campaign_master.json"
+            },
         }
     ]
+    required_validators = {
+        "paper/protocols/EXP-ROUTE-001-tier-b-stopping-policy.json",
+        "experiments/runners/paper_revision_karolina/tier_b_stopping.py",
+        "experiments/runners/prepare_exp_stop_001_karolina.py",
+    }
+    assert all(
+        required_validators.issubset(set(command["configuration_files"]))
+        for command in commands.values()
+    )
+    assert plan["tier_b_stopping_adjudication"] == {
+        "source_relative": stopping_relative.as_posix(),
+        "source_sha256": staging._sha256(stopping_path),
+        "canonical_target": staging.CANONICAL_STOPPING_ADJUDICATION.as_posix(),
+        "identity": staging._stopping_identity(stopping_binding),
+    }
     assert plan["source_archives"]["workstation"]["files"] == {
         "cases/result.bin": hashlib.sha256(b"workstation\n").hexdigest(),
         "workstation_manifest.json": hashlib.sha256(b"{}\n").hexdigest(),
     }
+    assert plan["source_archives"]["karolina"]["files"][
+        stopping_relative.as_posix()
+    ] == staging._sha256(stopping_path)
+
+    plan_path = tmp_path / "canonical_dependency_plan.json"
+    _write(plan_path, json.dumps(plan, indent=2) + "\n")
+    finalizer._validate_route_dependency_plan_contract(
+        plan_path,
+        experiment_commit=COMMIT,
+    )
+
+    substituted = json.loads(json.dumps(plan))
+    substituted["commands"][0]["producer"] = (
+        "experiments/analysis/finalize_revision_publication_campaign.py"
+    )
+    _write(plan_path, json.dumps(substituted, indent=2) + "\n")
+    with pytest.raises(finalizer.FinalizationError, match="canonical staging contract"):
+        finalizer._validate_route_dependency_plan_contract(
+            plan_path,
+            experiment_commit=COMMIT,
+        )
+
+    substituted = json.loads(json.dumps(plan))
+    substituted["commands"][2]["argv"][2] = "stage-endpoint"
+    _write(plan_path, json.dumps(substituted, indent=2) + "\n")
+    with pytest.raises(finalizer.FinalizationError, match="canonical staging contract"):
+        finalizer._validate_route_dependency_plan_contract(
+            plan_path,
+            experiment_commit=COMMIT,
+        )
 
 
 def test_plan_writer_requires_the_exact_clean_experiment_head(
@@ -187,6 +445,7 @@ def test_plan_writer_requires_the_exact_clean_experiment_head(
             workstation_source=tmp_path / "missing-workstation",
             karolina_source=tmp_path / "missing-karolina",
             endpoint_relative=Path("analysis/endpoint.json"),
+            stopping_relative=Path("analysis/stopping.json"),
             contract_path=staging.REPO_ROOT / staging.DEFAULT_CONTRACT,
         )
     assert not output.exists()
@@ -196,9 +455,13 @@ def test_canonical_source_plan_passes_endpoint_inside_karolina_archive() -> None
     plan = finalizer.build_execution_plan_template(experiment_commit=COMMIT)
     command = finalizer._plan_command_map(plan)["route_cost_analysis"]
     endpoint = staging.CANONICAL_ENDPOINT.as_posix()
+    stopping = staging.CANONICAL_STOPPING_ADJUDICATION.as_posix()
     endpoint_index = command["argv"].index("--endpoint-analysis")
     assert command["argv"][endpoint_index + 1] == f"{{staging_root}}/{endpoint}"
     assert command["route_endpoint_analysis"] == endpoint
+    stopping_index = command["argv"].index("--stopping-adjudication")
+    assert command["argv"][stopping_index + 1] == f"{{staging_root}}/{stopping}"
+    assert command["route_stopping_adjudication"] == stopping
     assert (
         "EXP-ROUTE-001/analysis_contract_v1/endpoint_analysis.json"
         in command["expected_artifacts"]
@@ -208,6 +471,12 @@ def test_canonical_source_plan_passes_endpoint_inside_karolina_archive() -> None
     )
     assert endpoint_input["attestation"]["path"].endswith(
         "prepare_tier_b_endpoint_analysis.json"
+    )
+    stopping_input = next(
+        row for row in command["input_files"] if row["path"] == stopping
+    )
+    assert stopping_input["attestation"]["path"].endswith(
+        "prepare_route_stopping_adjudication.json"
     )
 
 
@@ -394,16 +663,26 @@ def test_endpoint_staging_is_hash_and_semantic_bound(
     workstation.mkdir(parents=True)
     endpoint_relative = Path("analysis/endpoint.json")
     _write(karolina / endpoint_relative, '{"endpoint": true}\n')
+    stopping = karolina / "reviewed_inputs/stopping_adjudication.json"
+    _write(stopping, '{"schema_version": 3}\n')
     expected = staging._sha256(karolina / endpoint_relative)
     monkeypatch.setattr(
         staging,
         "validate_complete_route_evidence",
         lambda **_kwargs: {"publication_admissible": True},
     )
+    stopping_binding = _stopping_binding(stopping)
     monkeypatch.setattr(
-        staging.route_analysis,
-        "_endpoint_analysis_gate",
-        lambda *_args, **_kwargs: {"publication_admissible": True},
+        staging,
+        "_require_endpoint_gate",
+        lambda *_args, **_kwargs: (
+            {
+                "publication_admissible": True,
+                "stopping_binding_matches_manifest": True,
+                "stopping_adjudication": stopping_binding,
+            },
+            stopping_binding,
+        ),
     )
 
     destination = staging_root / staging.CANONICAL_ENDPOINT
@@ -411,6 +690,7 @@ def test_endpoint_staging_is_hash_and_semantic_bound(
         workstation_root=workstation,
         karolina_root=karolina,
         endpoint_relative=endpoint_relative,
+        stopping_adjudication=stopping,
         destination=destination,
         contract_path=staging.REPO_ROOT / staging.DEFAULT_CONTRACT,
         expected_commit=COMMIT,
@@ -425,6 +705,7 @@ def test_endpoint_staging_is_hash_and_semantic_bound(
             workstation_root=workstation,
             karolina_root=karolina,
             endpoint_relative=endpoint_relative,
+            stopping_adjudication=stopping,
             destination=destination,
             contract_path=staging.REPO_ROOT / staging.DEFAULT_CONTRACT,
             expected_commit=COMMIT,

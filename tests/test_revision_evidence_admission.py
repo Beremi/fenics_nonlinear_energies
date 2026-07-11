@@ -322,7 +322,8 @@ def _clean_negative_route_payload() -> dict:
             "failed_gates": ["median_absolute_percentage_error"],
         },
         "endpoint_analysis": {
-            "schema_version": 1,
+            "schema_id": "fenics-nonlinear-energies.exp-route-001.tier-b-endpoints",
+            "schema_version": 2,
             "terminal_decision": "tier_b_descriptive_timing_only",
             "comparative_ranking_admissible": False,
             "publication_admissible": True,
@@ -330,6 +331,28 @@ def _clean_negative_route_payload() -> dict:
             "admitted_rows": 30,
             "path": "EXP-ROUTE-001/analysis_contract_v1/tier_b_endpoint_analysis.json",
             "sha256": "3" * 64,
+            "stopping_policy": {
+                "path": contract["publication_model_input_gates"][
+                    "tier_b_stopping_policy_path"
+                ],
+                "sha256": contract["publication_model_input_gates"][
+                    "tier_b_stopping_policy_sha256"
+                ],
+            },
+            "stopping_adjudication": {
+                "schema_id": "fenics-nonlinear-energies.exp-stop-001.final-adjudication",
+                "schema_version": 3,
+                "path": "EXP-ROUTE-001/analysis_contract_v1/stopping_adjudication.json",
+                "sha256": "4" * 64,
+                "computation_source_commit": "5" * 40,
+                "adjudicator_source_commit": "6" * 40,
+                "adjudicator_sha256": "7" * 64,
+                "local_analysis_sha256": "8" * 64,
+                "cluster_archive_checksum_sha256": "9" * 64,
+                "p4_reference_row_id": "p3d_p4_nonlinear_1em07_cluster",
+                "p4_reference_status": "accepted",
+            },
+            "stopping_binding_matches_manifest": True,
         },
         "factorized_microbenchmark_gate": {
             "passed": False,
@@ -722,6 +745,57 @@ def test_endpoint_terminal_and_comparative_flag_must_agree() -> None:
         payload["endpoint_analysis"]["comparative_ranking_admissible"] = comparative
         errors = admission._semantic_gate_errors(spec, payload)
         assert any("comparative-ranking flag" in error for error in errors)
+
+
+def test_route_admission_requires_hash_bound_stop_policy_and_adjudication() -> None:
+    spec = next(
+        spec for spec in admission.EVIDENCE_SPECS if spec.key == "route_analysis"
+    )
+    missing = _clean_negative_route_payload()
+    missing["endpoint_analysis"].pop("stopping_adjudication")
+    errors = admission._semantic_gate_errors(spec, missing)
+    assert any("STOP adjudication" in error for error in errors)
+
+    stale_policy = _clean_negative_route_payload()
+    stale_policy["endpoint_analysis"]["stopping_policy"]["sha256"] = "0" * 64
+    errors = admission._semantic_gate_errors(spec, stale_policy)
+    assert any("stopping-policy binding is stale" in error for error in errors)
+
+    rejected_reference = _clean_negative_route_payload()
+    rejected_reference["endpoint_analysis"]["stopping_adjudication"][
+        "p4_reference_status"
+    ] = "rejected"
+    errors = admission._semantic_gate_errors(spec, rejected_reference)
+    assert any("fixed P4 tight reference" in error for error in errors)
+
+    wrong_schema = _clean_negative_route_payload()
+    wrong_schema["endpoint_analysis"]["schema_id"] = "forged.endpoint.schema"
+    errors = admission._semantic_gate_errors(spec, wrong_schema)
+    assert any("schema_id is invalid" in error for error in errors)
+
+    extra_endpoint_claim = _clean_negative_route_payload()
+    extra_endpoint_claim["endpoint_analysis"]["recommended_route"] = "element_ad"
+    errors = admission._semantic_gate_errors(spec, extra_endpoint_claim)
+    assert any("endpoint_analysis has unexpected" in error for error in errors)
+
+    extra_stop_claim = _clean_negative_route_payload()
+    extra_stop_claim["endpoint_analysis"]["stopping_adjudication"][
+        "selected_route"
+    ] = "constitutive_ad"
+    errors = admission._semantic_gate_errors(spec, extra_stop_claim)
+    assert any("stopping_adjudication has unexpected" in error for error in errors)
+
+    relocated_endpoint = _clean_negative_route_payload()
+    relocated_endpoint["endpoint_analysis"]["path"] = "elsewhere/endpoint.json"
+    errors = admission._semantic_gate_errors(spec, relocated_endpoint)
+    assert any("canonical publication path" in error for error in errors)
+
+    relocated_stop = _clean_negative_route_payload()
+    relocated_stop["endpoint_analysis"]["stopping_adjudication"]["path"] = (
+        "elsewhere/stopping.json"
+    )
+    errors = admission._semantic_gate_errors(spec, relocated_stop)
+    assert any("canonical publication STOP path" in error for error in errors)
 
 
 def test_vacuous_or_self_loosened_family_payloads_are_rejected() -> None:

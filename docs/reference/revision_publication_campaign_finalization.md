@@ -97,8 +97,9 @@ does not select either terminal.
    does not satisfy the contract.
 
 4. Stage the completed workstation campaign and copied-back Karolina route
-   archive with the tracked offline dependency producer. The endpoint argument
-   is relative to the copied-back Karolina archive:
+   archive with the tracked offline dependency producer. The endpoint and STOP
+   arguments are relative to the copied-back Karolina archive, so verified
+   copy-back evidence remains relocatable:
 
    ```bash
    HEAD=<full-40-digit-experiment-commit>
@@ -107,11 +108,13 @@ does not select either terminal.
      --workstation-source /path/to/completed/workstation/archive \
      --karolina-source /path/to/copied-back/karolina/archive \
      --endpoint-relative path/to/tier_b_endpoint_analysis.json \
+     --stopping-relative path/to/stopping_adjudication.json \
      --output "$ROOT/route_dependency_plan.json"
 
    for COMMAND_ID in \
      prepare_workstation_archive \
      prepare_route_campaign_master \
+     prepare_route_stopping_adjudication \
      prepare_tier_b_endpoint_analysis
    do
      ./.venv/bin/python experiments/analysis/finalize_revision_publication_campaign.py \
@@ -122,11 +125,14 @@ does not select either terminal.
 
    This path performs no scheduler or remote operation. It applies the route
    analyzer's workstation, Karolina, complete-map, factor-diagnostic, and
-   Tier-B endpoint gates before and after copying. The dependency plan freezes
-   every regular source file by relative path and SHA-256; links, changed
-   source trees, incomplete workstation closure, and mixed commits are
-   rejected. The managed receipts, their plan, their logs, and every planned
-   output are revalidated when a source command consumes an attested input.
+   Tier-B endpoint and detached-STOP gates before and after copying. The
+   dependency plan freezes every regular source file by relative path and
+   SHA-256; links, changed source trees, incomplete workstation closure, and
+   mixed commits are rejected. The managed receipts, their plan, their logs,
+   and every planned output are revalidated when a source command consumes an
+   attested input. All four route receipts must share the canonical
+   `paper_revision_route_dependencies_v1` plan and tracked staging producer;
+   alternate preparation commands or receipt mappings are rejected.
 
    The Karolina route master must recursively bind every tranche manifest,
    submitted-job ledger, human release authorization, and reviewed

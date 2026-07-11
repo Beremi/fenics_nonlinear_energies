@@ -1081,8 +1081,9 @@ The comparison \(m_e^2\) versus \(n_qs^2\) may be one term, but it is not a
 complete cost model because all routes must ultimately provide the same owned
 sparse operator or operator action.
 
-Because the fitted response is an MPI collective maximum, contract version 2
-uses the maximum rank-local overlap workload. With
+Because the fitted response is an MPI collective maximum, the feature
+introduced in contract version 2 and retained unchanged in version 3 uses the
+maximum rank-local overlap workload. With
 \(n_{e,r}^{\mathrm{loc}}\) overlap elements and \(c_r\) colors on rank \(r\),
 the single route-work feature is `log1p` of
 

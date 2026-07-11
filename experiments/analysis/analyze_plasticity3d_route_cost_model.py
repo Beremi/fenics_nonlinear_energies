@@ -33,6 +33,11 @@ if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
 from experiments.analysis import aggregate_route_tranche_manifests
+from experiments.runners.paper_revision_karolina.tier_b_stopping import (
+    POLICY_PATH as TIER_B_STOPPING_POLICY_PATH,
+    sha256_file as stopping_sha256_file,
+    validate_stop_adjudication,
+)
 from src.core.benchmark.run_record import atomic_write_json
 
 
@@ -939,8 +944,25 @@ def _source_provenance_gate(
     }
 
 
+def _stopping_semantic_binding_matches(
+    observed: object, expected: dict[str, Any]
+) -> bool:
+    """Compare a STOP binding while allowing its archive path to relocate."""
+    expected_keys = set(expected)
+    semantic_keys = expected_keys - {"path"}
+    return bool(
+        isinstance(observed, dict)
+        and set(observed) == expected_keys
+        and isinstance(observed.get("path"), str)
+        and bool(str(observed.get("path", "")).strip())
+        and {key: observed.get(key) for key in semantic_keys}
+        == {key: expected[key] for key in semantic_keys}
+    )
+
+
 def _endpoint_analysis_gate(
     raw_path: Path | None,
+    stopping_adjudication_path: Path | None,
     *,
     sources: list[tuple[str, Path]],
     contract: dict[str, Any],
@@ -950,6 +972,11 @@ def _endpoint_analysis_gate(
             "publication_admissible": False,
             "reason": "tier_b_endpoint_analysis_missing",
         }
+    if stopping_adjudication_path is None:
+        return {
+            "publication_admissible": False,
+            "reason": "tier_b_stopping_adjudication_missing",
+        }
     karolina_roots = [root.resolve() for hardware, root in sources if hardware == "karolina_cpu"]
     if len(karolina_roots) != 1:
         return {
@@ -958,6 +985,7 @@ def _endpoint_analysis_gate(
         }
     source_root = karolina_roots[0]
     path = raw_path.resolve()
+    stopping_path = stopping_adjudication_path.resolve()
     try:
         relative_path = path.relative_to(source_root)
     except ValueError:
@@ -966,13 +994,62 @@ def _endpoint_analysis_gate(
             "reason": "tier_b_endpoint_analysis_escapes_karolina_source",
         }
     try:
+        stopping_relative_path = stopping_path.relative_to(source_root)
+    except ValueError:
+        return {
+            "publication_admissible": False,
+            "reason": "tier_b_stopping_adjudication_escapes_karolina_source",
+        }
+    try:
         payload = _read_json(path)
     except (OSError, ValueError, json.JSONDecodeError) as exc:
         return {
             "publication_admissible": False,
             "reason": f"tier_b_endpoint_analysis_invalid: {exc}",
         }
+    try:
+        validated_stopping = validate_stop_adjudication(stopping_path)
+    except (OSError, ValueError, json.JSONDecodeError) as exc:
+        return {
+            "publication_admissible": False,
+            "reason": f"tier_b_stopping_adjudication_invalid: {exc}",
+            "path": str(relative_path),
+            "sha256": _sha256_file(path),
+        }
     gates = contract["publication_model_input_gates"]
+    expected_policy = {
+        "path": str(TIER_B_STOPPING_POLICY_PATH.relative_to(REPO_ROOT)),
+        "sha256": stopping_sha256_file(TIER_B_STOPPING_POLICY_PATH),
+    }
+    if (
+        gates.get("tier_b_stopping_policy_path") != expected_policy["path"]
+        or gates.get("tier_b_stopping_policy_sha256") != expected_policy["sha256"]
+        or gates.get("tier_b_stopping_adjudication_required_before_submission")
+        is not True
+        or gates.get("tier_b_stopping_adjudication_schema_version")
+        != validated_stopping["schema_version"]
+        or gates.get("tier_b_stopping_p4_reference_row_id")
+        != validated_stopping["p4_reference_row_id"]
+        or gates.get("tier_b_stopping_p4_reference_status")
+        != validated_stopping["p4_reference_status"]
+        or payload.get("stopping_policy") != expected_policy
+        or payload.get("stopping_binding_matches_manifest") is not True
+    ):
+        return {
+            "publication_admissible": False,
+            "reason": "tier_b_endpoint_stopping_policy_or_contract_binding_failed",
+            "path": str(relative_path),
+            "sha256": _sha256_file(path),
+        }
+    if not _stopping_semantic_binding_matches(
+        payload.get("stopping_adjudication"), validated_stopping
+    ):
+        return {
+            "publication_admissible": False,
+            "reason": "tier_b_endpoint_nested_stopping_binding_failed",
+            "path": str(relative_path),
+            "sha256": _sha256_file(path),
+        }
     expected_rows = int(gates["endpoint_required_rows"])
     schema = dict(payload.get("schema") or {})
     blocks = payload.get("blocks")
@@ -989,7 +1066,8 @@ def _endpoint_analysis_gate(
     expected_censor_reason = str(contract["structural_censors"][0]["reason"])
     semantic_passed = bool(
         schema.get("id") == "fenics-nonlinear-energies.exp-route-001.tier-b-endpoints"
-        and int(schema.get("version", -1)) == 1
+        and int(schema.get("version", -1))
+        == int(gates["endpoint_analysis_schema_version"])
         and payload.get("experiment_id") == contract["experiment_id"]
         and payload.get("matrix_sha256") == gates["karolina_matrix_sha256"]
         and payload.get("analysis_contract_sha256") == _sha256_file(DEFAULT_CONTRACT)
@@ -1030,6 +1108,9 @@ def _endpoint_analysis_gate(
         not semantic_passed
         or source_gate.get("eligible") is not True
         or endpoint_manifest.get("source_commit") != source_gate.get("source_commit")
+        or not _stopping_semantic_binding_matches(
+            endpoint_manifest.get("stopping_adjudication"), validated_stopping
+        )
     ):
         return {
             "publication_admissible": False,
@@ -1042,13 +1123,52 @@ def _endpoint_analysis_gate(
         "reason": "hash_bound_tier_b_endpoint_analysis_admitted",
         "path": str(relative_path),
         "sha256": _sha256_file(path),
-        "schema_version": 1,
+        "schema_version": int(gates["endpoint_analysis_schema_version"]),
         "terminal_decision": str(payload["terminal_decision"]),
         "required_rows": expected_rows,
         "admitted_rows": expected_rows,
         "comparative_ranking_admissible": comparative,
+        "stopping_policy": expected_policy,
+        "stopping_adjudication": {
+            **validated_stopping,
+            "path": str(stopping_relative_path),
+        },
+        "stopping_binding_matches_manifest": True,
         "_source_path": str(path),
+        "_stopping_adjudication_source_path": str(stopping_path),
     }
+
+
+def _archive_endpoint_gate(
+    endpoint_gate: dict[str, Any], output_dir: Path
+) -> tuple[dict[str, Any], Path | None, Path | None]:
+    """Copy admitted endpoint and STOP evidence into one analysis archive."""
+    private_keys = {"_source_path", "_stopping_adjudication_source_path"}
+    public = {key: value for key, value in endpoint_gate.items() if key not in private_keys}
+    if endpoint_gate.get("publication_admissible") is not True:
+        return public, None, None
+    output_dir = output_dir.resolve()
+    archived_endpoint = output_dir / "endpoint_analysis.json"
+    archived_stopping = output_dir / "stopping_adjudication.json"
+    source_endpoint = Path(str(endpoint_gate["_source_path"])).resolve()
+    source_stopping = Path(
+        str(endpoint_gate["_stopping_adjudication_source_path"])
+    ).resolve()
+    if source_endpoint != archived_endpoint:
+        shutil.copy2(source_endpoint, archived_endpoint)
+    if source_stopping != archived_stopping:
+        shutil.copy2(source_stopping, archived_stopping)
+    if _sha256_file(archived_endpoint) != endpoint_gate["sha256"]:
+        raise ValueError("Tier-B endpoint analysis changed during archival")
+    stopping_binding = dict(endpoint_gate["stopping_adjudication"])
+    if _sha256_file(archived_stopping) != stopping_binding["sha256"]:
+        raise ValueError("Tier-B STOP adjudication changed during archival")
+    public["source_archive_path"] = public["path"]
+    public["path"] = archived_endpoint.name
+    stopping_binding["source_archive_path"] = stopping_binding["path"]
+    stopping_binding["path"] = archived_stopping.name
+    public["stopping_adjudication"] = stopping_binding
+    return public, archived_endpoint, archived_stopping
 
 
 def _scan_source(
@@ -2996,6 +3116,10 @@ def analyze(args: argparse.Namespace) -> dict[str, Any]:
     sources = [_parse_source(value) for value in args.source]
     endpoint_argument = getattr(args, "endpoint_analysis", None)
     endpoint_input = None if endpoint_argument is None else Path(endpoint_argument).resolve()
+    stopping_argument = getattr(args, "stopping_adjudication", None)
+    stopping_input = (
+        None if stopping_argument is None else Path(stopping_argument).resolve()
+    )
     normalized_command = shlex.join(
         [
             sys.executable,
@@ -3011,6 +3135,11 @@ def analyze(args: argparse.Namespace) -> dict[str, Any]:
                 []
                 if endpoint_input is None
                 else ["--endpoint-analysis", str(endpoint_input)]
+            ),
+            *(
+                []
+                if stopping_input is None
+                else ["--stopping-adjudication", str(stopping_input)]
             ),
             "--output-dir",
             str(Path(args.output_dir).resolve()),
@@ -3047,6 +3176,7 @@ def analyze(args: argparse.Namespace) -> dict[str, Any]:
     factorized_gate = _factorized_microbenchmark_gate(sources, contract)
     endpoint_gate = _endpoint_analysis_gate(
         endpoint_input,
+        stopping_input,
         sources=sources,
         contract=contract,
     )
@@ -3064,19 +3194,9 @@ def analyze(args: argparse.Namespace) -> dict[str, Any]:
     model = _publication_safe_cost_model(fitted_model)
     output_dir = Path(args.output_dir).resolve()
     output_dir.mkdir(parents=True, exist_ok=True)
-    endpoint_public = {
-        key: value for key, value in endpoint_gate.items() if key != "_source_path"
-    }
-    archived_endpoint: Path | None = None
-    if endpoint_gate.get("publication_admissible") is True:
-        archived_endpoint = output_dir / "endpoint_analysis.json"
-        source_endpoint = Path(str(endpoint_gate["_source_path"]))
-        if source_endpoint.resolve() != archived_endpoint.resolve():
-            shutil.copy2(source_endpoint, archived_endpoint)
-        if _sha256_file(archived_endpoint) != endpoint_gate["sha256"]:
-            raise ValueError("Tier-B endpoint analysis changed during archival")
-        endpoint_public["source_archive_path"] = endpoint_public["path"]
-        endpoint_public["path"] = archived_endpoint.name
+    endpoint_public, archived_endpoint, archived_stopping = _archive_endpoint_gate(
+        endpoint_gate, output_dir
+    )
     _write_csv(output_dir / "empirical_route_map.csv", empirical_rows)
     result = {
         "analysis_schema_version": 1,
@@ -3133,7 +3253,10 @@ def analyze(args: argparse.Namespace) -> dict[str, Any]:
                     else [
                         _evidence_entry(
                             archived_endpoint, "tier_b_endpoint_analysis"
-                        )
+                        ),
+                        _evidence_entry(
+                            archived_stopping, "tier_b_stopping_adjudication"
+                        ),
                     ]
                 ),
             ],
@@ -3194,17 +3317,38 @@ def analyze(args: argparse.Namespace) -> dict[str, Any]:
             "code_hashes": {
                 str(Path(__file__).resolve().relative_to(REPO_ROOT)): _sha256_file(
                     Path(__file__).resolve()
-                )
+                ),
+                str(
+                    Path(validate_stop_adjudication.__code__.co_filename)
+                    .resolve()
+                    .relative_to(REPO_ROOT)
+                ): _sha256_file(
+                    Path(validate_stop_adjudication.__code__.co_filename).resolve()
+                ),
             },
             "output_hashes": {
                 analysis_path.name: _sha256_file(analysis_path),
                 map_path.name: _sha256_file(map_path),
                 report_path.name: _sha256_file(report_path),
+                **(
+                    {}
+                    if archived_endpoint is None
+                    else {
+                        archived_endpoint.name: _sha256_file(archived_endpoint),
+                        archived_stopping.name: _sha256_file(archived_stopping),
+                    }
+                ),
             },
             "input_hashes": (
                 {}
                 if archived_endpoint is None
-                else {archived_endpoint.name: _sha256_file(archived_endpoint)}
+                else {
+                    archived_endpoint.name: _sha256_file(archived_endpoint),
+                    archived_stopping.name: _sha256_file(archived_stopping),
+                    str(TIER_B_STOPPING_POLICY_PATH.relative_to(REPO_ROOT)): (
+                        stopping_sha256_file(TIER_B_STOPPING_POLICY_PATH)
+                    ),
+                }
             ),
             "endpoint_analysis": endpoint_public,
             "provenance": result["provenance"],
@@ -3227,6 +3371,15 @@ def _parser() -> argparse.ArgumentParser:
         "--endpoint-analysis",
         type=Path,
         help="Hash-bound Tier-B endpoint analysis archived under the Karolina source.",
+    )
+    parser.add_argument(
+        "--stopping-adjudication",
+        type=Path,
+        required=True,
+        help=(
+            "Final checksum-bound EXP-STOP-001 adjudication archived under the "
+            "same Karolina source as the Tier-B endpoint analysis."
+        ),
     )
     return parser
 

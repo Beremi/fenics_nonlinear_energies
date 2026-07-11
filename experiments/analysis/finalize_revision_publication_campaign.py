@@ -60,6 +60,12 @@ from src.core.benchmark.run_record import (  # noqa: E402
     check_experiment_preflight,
     validate_run_record,
 )
+from experiments.runners.paper_revision_karolina.tier_b_stopping import (  # noqa: E402
+    POLICY_PATH as TIER_B_STOPPING_POLICY_PATH,
+    TierBStoppingError,
+    sha256_file as stopping_sha256_file,
+    validate_stop_adjudication,
+)
 
 
 PLAN_SCHEMA_ID = "fenics-nonlinear-energies.revision-publication-execution-plan"
@@ -81,6 +87,95 @@ RECEIPT_DIRECTORY = "_publication_receipts"
 LOG_DIRECTORY = "_publication_logs"
 FINALIZATION_MANIFEST = "publication/finalization_manifest.json"
 FINALIZER_PATH = Path("experiments/analysis/finalize_revision_publication_campaign.py")
+ROUTE_ENDPOINT_SCHEMA_ID = "fenics-nonlinear-energies.exp-route-001.tier-b-endpoints"
+ROUTE_ENDPOINT_SCHEMA_VERSION = 2
+ROUTE_ENDPOINT_PUBLICATION_PATH = Path(
+    "EXP-ROUTE-001/analysis_contract_v1/tier_b_endpoint_analysis.json"
+)
+ROUTE_STOPPING_PUBLICATION_PATH = Path(
+    "EXP-ROUTE-001/analysis_contract_v1/stopping_adjudication.json"
+)
+ROUTE_KAROLINA_SOURCE_PATH = Path("EXP-ROUTE-001/source_archives/karolina")
+ROUTE_ENDPOINT_STAGING_PATH = (
+    ROUTE_KAROLINA_SOURCE_PATH / "reviewed_inputs/tier_b_endpoint_analysis.json"
+)
+ROUTE_STOPPING_STAGING_PATH = (
+    ROUTE_KAROLINA_SOURCE_PATH / "reviewed_inputs/stopping_adjudication.json"
+)
+ROUTE_WORKSTATION_SOURCE_PATH = Path("EXP-ROUTE-001/source_archives/workstation")
+ROUTE_ANALYSIS_OUTPUT_PATH = Path("EXP-ROUTE-001/analysis_contract_v1")
+ROUTE_ANALYSIS_MANIFEST_PATH = ROUTE_ANALYSIS_OUTPUT_PATH / "manifest.json"
+ROUTE_REQUIRED_ANALYSIS_ARTIFACTS = frozenset(
+    {
+        ROUTE_ANALYSIS_OUTPUT_PATH / "empirical_route_map.csv",
+        ROUTE_ANALYSIS_OUTPUT_PATH / "report.md",
+        ROUTE_ANALYSIS_MANIFEST_PATH,
+        ROUTE_ANALYSIS_OUTPUT_PATH / "endpoint_analysis.json",
+        ROUTE_ANALYSIS_OUTPUT_PATH / "stopping_adjudication.json",
+    }
+)
+ROUTE_COST_ANALYZER_PATH = Path(
+    "experiments/analysis/analyze_plasticity3d_route_cost_model.py"
+)
+ROUTE_STOPPING_HELPER_PATH = Path(
+    "experiments/runners/paper_revision_karolina/tier_b_stopping.py"
+)
+ROUTE_STOPPING_ADJUDICATOR_PATH = Path(
+    "experiments/runners/prepare_exp_stop_001_karolina.py"
+)
+ROUTE_ANALYSIS_CONFIGURATION_PATHS = (
+    Path("paper/protocols/EXP-ROUTE-001-analysis-contract.json"),
+    TIER_B_STOPPING_POLICY_PATH.relative_to(REPO_ROOT),
+    ROUTE_STOPPING_HELPER_PATH,
+    ROUTE_STOPPING_ADJUDICATOR_PATH,
+)
+ROUTE_MASTER_STAGING_PATH = (
+    ROUTE_KAROLINA_SOURCE_PATH / "route_campaign_master_manifest.json"
+)
+ROUTE_WORKSTATION_MANIFEST_STAGING_PATH = (
+    ROUTE_WORKSTATION_SOURCE_PATH / "workstation_manifest.json"
+)
+ROUTE_DEPENDENCY_CAMPAIGN_ID = "paper_revision_route_dependencies_v1"
+ROUTE_DEPENDENCY_PRODUCER_PATH = Path(
+    "experiments/analysis/stage_route_publication_dependencies.py"
+)
+ROUTE_DEPENDENCY_COMMAND_IDS = (
+    "prepare_workstation_archive",
+    "prepare_route_campaign_master",
+    "prepare_route_stopping_adjudication",
+    "prepare_tier_b_endpoint_analysis",
+)
+ROUTE_DEPENDENCY_CONFIGURATION_PATHS = (
+    Path("paper/protocols/EXP-ROUTE-001-analysis-contract.json"),
+    Path("paper/protocols/EXP-ROUTE-001-workstation-plan.json"),
+    Path("experiments/runners/paper_revision_karolina/campaign_matrix.csv"),
+    ROUTE_COST_ANALYZER_PATH,
+    Path("experiments/analysis/analyze_plasticity3d_route_endpoints.py"),
+    Path("experiments/analysis/aggregate_route_tranche_manifests.py"),
+    Path("experiments/analysis/aggregate_route_tier_b_manifests.py"),
+    TIER_B_STOPPING_POLICY_PATH.relative_to(REPO_ROOT),
+    ROUTE_STOPPING_HELPER_PATH,
+    ROUTE_STOPPING_ADJUDICATOR_PATH,
+    Path("src/core/benchmark/run_record.py"),
+)
+ROUTE_INPUT_ATTESTATIONS = (
+    (
+        ROUTE_ENDPOINT_STAGING_PATH,
+        Path(RECEIPT_DIRECTORY) / "prepare_tier_b_endpoint_analysis.json",
+    ),
+    (
+        ROUTE_STOPPING_STAGING_PATH,
+        Path(RECEIPT_DIRECTORY) / "prepare_route_stopping_adjudication.json",
+    ),
+    (
+        ROUTE_MASTER_STAGING_PATH,
+        Path(RECEIPT_DIRECTORY) / "prepare_route_campaign_master.json",
+    ),
+    (
+        ROUTE_WORKSTATION_MANIFEST_STAGING_PATH,
+        Path(RECEIPT_DIRECTORY) / "prepare_workstation_archive.json",
+    ),
+)
 MANIFESTED_MESH_MANIFEST = Path(
     "data/meshes/SlopeStability3D/hetero_ssr/publication_mesh_manifest.json"
 )
@@ -812,7 +907,11 @@ def _plan_command_map(plan: Mapping[str, Any]) -> dict[str, dict[str, Any]]:
                 f"source-free command {command_id!r} must declare role='preparation'"
             )
         argv = command.get("argv")
-        if not isinstance(argv, list) or not argv:
+        if (
+            not isinstance(argv, list)
+            or not argv
+            or any(not isinstance(value, str) or not value for value in argv)
+        ):
             raise FinalizationError(f"plan command {command_id!r} argv must be non-empty")
         environment = command.get("environment", {})
         if not isinstance(environment, Mapping) or any(
@@ -853,14 +952,78 @@ def _plan_command_map(plan: Mapping[str, Any]) -> dict[str, dict[str, Any]]:
         if "route_analysis" in source_keys:
             endpoint_path = command.get("route_endpoint_analysis")
             _canonical_relative(endpoint_path or "", label="route_endpoint_analysis")
-            declared_staging_inputs = {
-                str(item.get("path"))
-                for item in command.get("input_files", [])
-                if isinstance(item, Mapping) and item.get("scope") == "staging"
-            }
-            if endpoint_path not in declared_staging_inputs:
+            stopping_path = command.get("route_stopping_adjudication")
+            _canonical_relative(
+                stopping_path or "", label="route_stopping_adjudication"
+            )
+            if stopping_path == endpoint_path:
                 raise FinalizationError(
-                    "route_endpoint_analysis must also be a hash-bound staging input"
+                    "route endpoint analysis and STOP adjudication must be distinct inputs"
+                )
+            if endpoint_path != ROUTE_ENDPOINT_STAGING_PATH.as_posix():
+                raise FinalizationError(
+                    "route_endpoint_analysis must use the canonical reviewed Karolina path"
+                )
+            if stopping_path != ROUTE_STOPPING_STAGING_PATH.as_posix():
+                raise FinalizationError(
+                    "route_stopping_adjudication must use the canonical reviewed Karolina path"
+                )
+            expected_argv = [
+                "{python}",
+                "experiments/analysis/analyze_plasticity3d_route_cost_model.py",
+                "--contract",
+                "{repo_root}/paper/protocols/EXP-ROUTE-001-analysis-contract.json",
+                "--source",
+                f"workstation_local={{staging_root}}/{ROUTE_WORKSTATION_SOURCE_PATH.as_posix()}",
+                "--source",
+                f"karolina_cpu={{staging_root}}/{ROUTE_KAROLINA_SOURCE_PATH.as_posix()}",
+                "--endpoint-analysis",
+                f"{{staging_root}}/{endpoint_path}",
+                "--stopping-adjudication",
+                f"{{staging_root}}/{stopping_path}",
+                "--output-dir",
+                f"{{staging_root}}/{ROUTE_ANALYSIS_OUTPUT_PATH.as_posix()}",
+            ]
+            if argv != expected_argv:
+                raise FinalizationError(
+                    "route analysis argv must match the exact canonical data-selection contract"
+                )
+            observed_route_configurations = {
+                _canonical_relative(value, label="route analysis configuration")
+                for value in command.get("configuration_files", [])
+            }
+            if (
+                len(command.get("configuration_files", []))
+                != len(ROUTE_ANALYSIS_CONFIGURATION_PATHS)
+                or observed_route_configurations
+                != set(ROUTE_ANALYSIS_CONFIGURATION_PATHS)
+            ):
+                raise FinalizationError(
+                    "route analysis configuration files differ from the exact validator set"
+                )
+            observed_route_artifacts = set(artifact_paths)
+            if observed_route_artifacts != ROUTE_REQUIRED_ANALYSIS_ARTIFACTS:
+                raise FinalizationError(
+                    "route analysis artifacts differ from the exact publication closure: "
+                    + ", ".join(
+                        path.as_posix()
+                        for path in sorted(
+                            observed_route_artifacts ^ ROUTE_REQUIRED_ANALYSIS_ARTIFACTS
+                        )
+                    )
+                )
+            expected_route_inputs = [
+                {
+                    "scope": "staging",
+                    "path": path.as_posix(),
+                    "attestation": {"path": receipt.as_posix()},
+                }
+                for path, receipt in ROUTE_INPUT_ATTESTATIONS
+            ]
+            if command.get("input_files") != expected_route_inputs:
+                raise FinalizationError(
+                    "route analysis must use the exact four hash-bound staging inputs "
+                    "and canonical dependency receipts"
                 )
         result[command_id] = command
     plan_kind = plan.get("plan_kind", "source_campaign")
@@ -889,6 +1052,378 @@ def load_plan(path: Path) -> tuple[dict[str, Any], dict[str, dict[str, Any]]]:
         raise FinalizationError("execution plan experiment_commit must be a full 40-digit commit")
     commands = _plan_command_map(plan)
     return plan, commands
+
+
+def _validate_route_dependency_plan_contract(
+    plan_path: Path, *, experiment_commit: str
+) -> dict[str, Any]:
+    """Validate the exact offline route-staging plan behind four receipts."""
+
+    plan, commands = load_plan(plan_path)
+    expected_top_level = {
+        "schema_id",
+        "schema_version",
+        "campaign_id",
+        "plan_kind",
+        "experiment_commit",
+        "commands",
+        "execution_order",
+        "source_archives",
+        "tier_b_endpoint",
+        "tier_b_stopping_adjudication",
+        "semantic_validation",
+        "safety",
+    }
+    if (
+        set(plan) != expected_top_level
+        or plan.get("campaign_id") != ROUTE_DEPENDENCY_CAMPAIGN_ID
+        or plan.get("plan_kind") != "dependency_preparation"
+        or plan.get("experiment_commit") != experiment_commit
+        or plan.get("execution_order") != list(ROUTE_DEPENDENCY_COMMAND_IDS)
+        or tuple(commands) != ROUTE_DEPENDENCY_COMMAND_IDS
+        or plan.get("safety")
+        != {
+            "scheduler_commands": False,
+            "remote_access": False,
+            "copy_policy": "validated_local_regular_files_only",
+            "overwrite_policy": "empty_managed_executor_skeleton_only",
+        }
+    ):
+        raise FinalizationError(
+            "route dependency plan identity, order, or safety contract is invalid"
+        )
+
+    archives = plan.get("source_archives")
+    if not isinstance(archives, Mapping) or set(archives) != {
+        "workstation",
+        "karolina",
+    }:
+        raise FinalizationError("route dependency plan source archives are invalid")
+
+    def archive_record(
+        name: str, *, expected_target: Path
+    ) -> tuple[dict[str, Any], dict[str, str], list[Path]]:
+        raw = archives.get(name)
+        if not isinstance(raw, Mapping) or set(raw) != {
+            "source",
+            "target",
+            "file_count",
+            "inventory_sha256",
+            "files",
+        }:
+            raise FinalizationError(
+                f"route dependency {name} archive record is malformed"
+            )
+        source = raw.get("source")
+        files = raw.get("files")
+        if (
+            not isinstance(source, str)
+            or not Path(source).is_absolute()
+            or str(Path(source)) != source
+            or raw.get("target") != expected_target.as_posix()
+            or not isinstance(files, Mapping)
+            or not files
+        ):
+            raise FinalizationError(
+                f"route dependency {name} archive identity is invalid"
+            )
+        normalized: dict[str, str] = {}
+        for raw_relative, digest in files.items():
+            if not isinstance(raw_relative, str):
+                raise FinalizationError(
+                    f"route dependency {name} inventory path is invalid"
+                )
+            relative = _canonical_relative(
+                raw_relative, label=f"route dependency {name} inventory"
+            )
+            if relative.as_posix() != raw_relative or not isinstance(
+                digest, str
+            ) or not HEX64_RE.fullmatch(digest):
+                raise FinalizationError(
+                    f"route dependency {name} inventory entry is invalid"
+                )
+            normalized[raw_relative] = digest
+        inventory_sha256 = hashlib.sha256(
+            json.dumps(
+                dict(sorted(normalized.items())),
+                sort_keys=True,
+                allow_nan=False,
+            ).encode("utf-8")
+        ).hexdigest()
+        if (
+            raw.get("file_count") != len(normalized)
+            or raw.get("inventory_sha256") != inventory_sha256
+        ):
+            raise FinalizationError(
+                f"route dependency {name} inventory fingerprint is stale"
+            )
+        outputs = [
+            expected_target / relative for relative in sorted(normalized)
+        ]
+        return dict(raw), normalized, outputs
+
+    workstation, workstation_files, workstation_outputs = archive_record(
+        "workstation", expected_target=ROUTE_WORKSTATION_SOURCE_PATH
+    )
+    karolina, karolina_files, karolina_outputs = archive_record(
+        "karolina", expected_target=ROUTE_KAROLINA_SOURCE_PATH
+    )
+    endpoint = plan.get("tier_b_endpoint")
+    stopping = plan.get("tier_b_stopping_adjudication")
+    if not isinstance(endpoint, Mapping) or set(endpoint) != {
+        "source_relative",
+        "source_sha256",
+        "canonical_target",
+    }:
+        raise FinalizationError("route dependency endpoint record is malformed")
+    if not isinstance(stopping, Mapping) or set(stopping) != {
+        "source_relative",
+        "source_sha256",
+        "canonical_target",
+        "identity",
+    }:
+        raise FinalizationError("route dependency STOP record is malformed")
+    endpoint_relative = _canonical_relative(
+        endpoint.get("source_relative", ""), label="route dependency endpoint source"
+    )
+    stopping_relative = _canonical_relative(
+        stopping.get("source_relative", ""), label="route dependency STOP source"
+    )
+    if (
+        endpoint.get("canonical_target") != ROUTE_ENDPOINT_STAGING_PATH.as_posix()
+        or stopping.get("canonical_target")
+        != ROUTE_STOPPING_STAGING_PATH.as_posix()
+        or endpoint_relative.as_posix() not in karolina_files
+        or stopping_relative.as_posix() not in karolina_files
+        or endpoint.get("source_sha256")
+        != karolina_files[endpoint_relative.as_posix()]
+        or stopping.get("source_sha256")
+        != karolina_files[stopping_relative.as_posix()]
+        or endpoint_relative
+        == ROUTE_ENDPOINT_STAGING_PATH.relative_to(ROUTE_KAROLINA_SOURCE_PATH)
+        or stopping_relative
+        == ROUTE_STOPPING_STAGING_PATH.relative_to(ROUTE_KAROLINA_SOURCE_PATH)
+    ):
+        raise FinalizationError(
+            "route dependency endpoint or STOP source/target binding is invalid"
+        )
+    stopping_identity = stopping.get("identity")
+    expected_identity_keys = {
+        "schema_id",
+        "schema_version",
+        "sha256",
+        "computation_source_commit",
+        "adjudicator_source_commit",
+        "adjudicator_sha256",
+        "local_analysis_sha256",
+        "cluster_archive_checksum_sha256",
+        "p4_reference_row_id",
+        "p4_reference_status",
+    }
+    if (
+        not isinstance(stopping_identity, Mapping)
+        or set(stopping_identity) != expected_identity_keys
+        or stopping_identity.get("schema_id")
+        != "fenics-nonlinear-energies.exp-stop-001.final-adjudication"
+        or stopping_identity.get("schema_version") != 3
+        or stopping_identity.get("sha256") != stopping.get("source_sha256")
+        or stopping_identity.get("p4_reference_row_id")
+        != "p3d_p4_nonlinear_1em07_cluster"
+        or stopping_identity.get("p4_reference_status") != "accepted"
+    ):
+        raise FinalizationError("route dependency STOP identity is invalid")
+    for key in (
+        "sha256",
+        "adjudicator_sha256",
+        "local_analysis_sha256",
+        "cluster_archive_checksum_sha256",
+    ):
+        if not HEX64_RE.fullmatch(str(stopping_identity.get(key, ""))):
+            raise FinalizationError(
+                f"route dependency STOP identity {key} is invalid"
+            )
+    for key in ("computation_source_commit", "adjudicator_source_commit"):
+        if not HEX40_RE.fullmatch(str(stopping_identity.get(key, ""))):
+            raise FinalizationError(
+                f"route dependency STOP identity {key} is invalid"
+            )
+    semantic = plan.get("semantic_validation")
+    if (
+        not isinstance(semantic, Mapping)
+        or semantic.get("experiment_id") != "EXP-ROUTE-001"
+        or semantic.get("source_commit") != experiment_commit
+        or semantic.get("publication_admissible") is not True
+    ):
+        raise FinalizationError(
+            "route dependency plan lacks its publication-admissible semantic gate"
+        )
+
+    configuration_files = [
+        path.as_posix() for path in ROUTE_DEPENDENCY_CONFIGURATION_PATHS
+    ]
+    environment = {
+        "OMP_NUM_THREADS": "1",
+        "OPENBLAS_NUM_THREADS": "1",
+        "MKL_NUM_THREADS": "1",
+        "NUMEXPR_NUM_THREADS": "1",
+    }
+    workstation_receipt = (
+        Path(RECEIPT_DIRECTORY) / "prepare_workstation_archive.json"
+    ).as_posix()
+    karolina_receipt = (
+        Path(RECEIPT_DIRECTORY) / "prepare_route_campaign_master.json"
+    ).as_posix()
+    stopping_receipt = (
+        Path(RECEIPT_DIRECTORY) / "prepare_route_stopping_adjudication.json"
+    ).as_posix()
+
+    def staging_input(path: Path, receipt: str) -> dict[str, Any]:
+        return {
+            "scope": "staging",
+            "path": path.as_posix(),
+            "attestation": {"path": receipt},
+        }
+
+    def expected_command(
+        command_id: str,
+        argv: list[str],
+        *,
+        outputs: Sequence[Path],
+        inputs: Sequence[Mapping[str, Any]] = (),
+    ) -> dict[str, Any]:
+        return {
+            "id": command_id,
+            "source_keys": [],
+            "role": "preparation",
+            "producer": ROUTE_DEPENDENCY_PRODUCER_PATH.as_posix(),
+            "argv": argv,
+            "environment": environment,
+            "configuration_files": configuration_files,
+            "input_files": [dict(value) for value in inputs],
+            "expected_artifacts": [path.as_posix() for path in outputs],
+        }
+
+    contract_argument = (
+        "{repo_root}/paper/protocols/EXP-ROUTE-001-analysis-contract.json"
+    )
+    expected_commands = [
+        expected_command(
+            "prepare_workstation_archive",
+            [
+                "{python}",
+                ROUTE_DEPENDENCY_PRODUCER_PATH.as_posix(),
+                "stage-workstation",
+                "--source",
+                str(workstation["source"]),
+                "--destination",
+                f"{{staging_root}}/{ROUTE_WORKSTATION_SOURCE_PATH.as_posix()}",
+                "--contract",
+                contract_argument,
+                "--expected-commit",
+                experiment_commit,
+                "--expected-inventory-sha256",
+                str(workstation["inventory_sha256"]),
+            ],
+            outputs=workstation_outputs,
+        ),
+        expected_command(
+            "prepare_route_campaign_master",
+            [
+                "{python}",
+                ROUTE_DEPENDENCY_PRODUCER_PATH.as_posix(),
+                "stage-karolina",
+                "--source",
+                str(karolina["source"]),
+                "--destination",
+                f"{{staging_root}}/{ROUTE_KAROLINA_SOURCE_PATH.as_posix()}",
+                "--workstation-root",
+                f"{{staging_root}}/{ROUTE_WORKSTATION_SOURCE_PATH.as_posix()}",
+                "--endpoint-relative",
+                endpoint_relative.as_posix(),
+                "--stopping-relative",
+                stopping_relative.as_posix(),
+                "--contract",
+                contract_argument,
+                "--expected-commit",
+                experiment_commit,
+                "--expected-inventory-sha256",
+                str(karolina["inventory_sha256"]),
+            ],
+            outputs=karolina_outputs,
+            inputs=[
+                staging_input(path, workstation_receipt)
+                for path in workstation_outputs
+            ],
+        ),
+        expected_command(
+            "prepare_route_stopping_adjudication",
+            [
+                "{python}",
+                ROUTE_DEPENDENCY_PRODUCER_PATH.as_posix(),
+                "stage-stopping-adjudication",
+                "--workstation-root",
+                f"{{staging_root}}/{ROUTE_WORKSTATION_SOURCE_PATH.as_posix()}",
+                "--karolina-root",
+                f"{{staging_root}}/{ROUTE_KAROLINA_SOURCE_PATH.as_posix()}",
+                "--endpoint-relative",
+                endpoint_relative.as_posix(),
+                "--stopping-relative",
+                stopping_relative.as_posix(),
+                "--destination",
+                f"{{staging_root}}/{ROUTE_STOPPING_STAGING_PATH.as_posix()}",
+                "--contract",
+                contract_argument,
+                "--expected-commit",
+                experiment_commit,
+                "--expected-sha256",
+                str(stopping["source_sha256"]),
+            ],
+            outputs=[ROUTE_STOPPING_STAGING_PATH],
+            inputs=[
+                staging_input(
+                    ROUTE_KAROLINA_SOURCE_PATH / stopping_relative,
+                    karolina_receipt,
+                )
+            ],
+        ),
+        expected_command(
+            "prepare_tier_b_endpoint_analysis",
+            [
+                "{python}",
+                ROUTE_DEPENDENCY_PRODUCER_PATH.as_posix(),
+                "stage-endpoint",
+                "--workstation-root",
+                f"{{staging_root}}/{ROUTE_WORKSTATION_SOURCE_PATH.as_posix()}",
+                "--karolina-root",
+                f"{{staging_root}}/{ROUTE_KAROLINA_SOURCE_PATH.as_posix()}",
+                "--endpoint-relative",
+                endpoint_relative.as_posix(),
+                "--stopping-adjudication",
+                f"{{staging_root}}/{ROUTE_STOPPING_STAGING_PATH.as_posix()}",
+                "--destination",
+                f"{{staging_root}}/{ROUTE_ENDPOINT_STAGING_PATH.as_posix()}",
+                "--contract",
+                contract_argument,
+                "--expected-commit",
+                experiment_commit,
+                "--expected-sha256",
+                str(endpoint["source_sha256"]),
+            ],
+            outputs=[ROUTE_ENDPOINT_STAGING_PATH],
+            inputs=[
+                staging_input(
+                    ROUTE_KAROLINA_SOURCE_PATH / endpoint_relative,
+                    karolina_receipt,
+                ),
+                staging_input(ROUTE_STOPPING_STAGING_PATH, stopping_receipt),
+            ],
+        ),
+    ]
+    if plan.get("commands") != expected_commands:
+        raise FinalizationError(
+            "route dependency commands differ from the canonical staging contract"
+        )
+    return plan
 
 
 def _validate_staging_attestation(
@@ -2017,7 +2552,12 @@ def _route_endpoint_summary(
     *,
     command: Mapping[str, Any],
     evidence_root: Path,
-) -> tuple[dict[str, Any], dict[str, str], Path, bytes]:
+) -> tuple[
+    dict[str, Any],
+    dict[str, str],
+    tuple[Path, bytes],
+    tuple[Path, bytes],
+]:
     relative = _canonical_relative(
         command.get("route_endpoint_analysis", ""), label="route endpoint analysis"
     )
@@ -2031,11 +2571,49 @@ def _route_endpoint_summary(
     schema = payload.get("schema")
     if (
         not isinstance(schema, Mapping)
-        or schema.get("id") != "fenics-nonlinear-energies.exp-route-001.tier-b-endpoints"
-        or schema.get("version") != 1
+        or schema.get("id") != ROUTE_ENDPOINT_SCHEMA_ID
+        or schema.get("version") != ROUTE_ENDPOINT_SCHEMA_VERSION
         or payload.get("experiment_id") != "EXP-ROUTE-001"
     ):
         raise FinalizationError("Tier-B endpoint analysis has the wrong schema or experiment")
+    stopping_relative = _canonical_relative(
+        command.get("route_stopping_adjudication", ""),
+        label="route STOP adjudication",
+    )
+    stopping_path = _confined(
+        evidence_root / STAGING_DIRECTORY,
+        stopping_relative,
+        label="route STOP adjudication",
+        require_exists=True,
+    )
+    # Reject non-finite or non-object additions before invoking the frozen
+    # scientific validator.  The shared helper then enforces the exact STOP
+    # comparison grid, selected-policy, calibration, and code-provenance gates.
+    _read_json(stopping_path)
+    try:
+        stopping_validation = dict(validate_stop_adjudication(stopping_path))
+    except (TierBStoppingError, OSError, ValueError, json.JSONDecodeError) as exc:
+        raise FinalizationError(f"Tier-B STOP adjudication is invalid: {exc}") from exc
+    stopping_bytes = stopping_path.read_bytes()
+    stopping_hash = hashlib.sha256(stopping_bytes).hexdigest()
+    if stopping_validation.get("sha256") != stopping_hash:
+        raise FinalizationError("Tier-B STOP helper returned a stale file binding")
+    endpoint_stopping = payload.get("stopping_adjudication")
+    if not isinstance(endpoint_stopping, Mapping) or {
+        key: value for key, value in endpoint_stopping.items() if key != "path"
+    } != {
+        key: value for key, value in stopping_validation.items() if key != "path"
+    }:
+        raise FinalizationError(
+            "Tier-B endpoint analysis is not bound to the staged STOP adjudication"
+        )
+    stopping_policy = payload.get("stopping_policy")
+    expected_stopping_policy = {
+        "path": TIER_B_STOPPING_POLICY_PATH.relative_to(REPO_ROOT).as_posix(),
+        "sha256": stopping_sha256_file(TIER_B_STOPPING_POLICY_PATH),
+    }
+    if stopping_policy != expected_stopping_policy:
+        raise FinalizationError("Tier-B endpoint analysis has a stale stopping policy")
     terminal = payload.get("terminal_decision")
     allowed_terminal = {
         "tier_b_descriptive_timing_only",
@@ -2058,14 +2636,17 @@ def _route_endpoint_summary(
         else "tier_b_descriptive_timing_only"
     )
     publication_admissible = bool(
-        payload.get("endpoint_correct_timing_admissible") is True
+        payload.get("publication_admissible") is True
+        and payload.get("endpoint_correct_timing_admissible") is True
         and terminal in allowed_terminal
         and isinstance(comparative, bool)
         and terminal == expected_terminal
         and admitted_rows == 30
+        and isinstance(blocks, list)
         and len(blocks) == 30
         and payload.get("matrix_policy_violations") == []
         and payload.get("coverage_and_campaign_failure_reasons") == []
+        and payload.get("stopping_binding_matches_manifest") is True
     )
     if not publication_admissible:
         raise FinalizationError(
@@ -2085,9 +2666,10 @@ def _route_endpoint_summary(
     ):
         raise FinalizationError("Tier-B endpoint analysis contains an uncontracted structural censor")
     archive_path = (Path(STAGING_DIRECTORY) / relative).as_posix()
-    publication_relative = Path(
-        "EXP-ROUTE-001/analysis_contract_v1/tier_b_endpoint_analysis.json"
-    )
+    stopping_archive_path = (Path(STAGING_DIRECTORY) / stopping_relative).as_posix()
+    publication_stopping = dict(stopping_validation)
+    publication_stopping["path"] = ROUTE_STOPPING_PUBLICATION_PATH.as_posix()
+    publication_stopping["sha256"] = stopping_hash
     publication_payload = json.loads(json.dumps(payload, allow_nan=False))
     publication_payload.update(
         {
@@ -2095,31 +2677,255 @@ def _route_endpoint_summary(
             "required_rows": 30,
             "admitted_rows": admitted_rows,
             "raw_analysis": {"path": archive_path, "sha256": sha256_file(path)},
+            "stopping_policy": {
+                **expected_stopping_policy,
+            },
+            "stopping_adjudication": publication_stopping,
         }
     )
     publication_bytes = _json_bytes(publication_payload)
     summary = {
-        "path": publication_relative.as_posix(),
+        "path": ROUTE_ENDPOINT_PUBLICATION_PATH.as_posix(),
         "sha256": hashlib.sha256(publication_bytes).hexdigest(),
-        "schema_version": 1,
+        "schema_id": ROUTE_ENDPOINT_SCHEMA_ID,
+        "schema_version": ROUTE_ENDPOINT_SCHEMA_VERSION,
         "terminal_decision": terminal,
         "comparative_ranking_admissible": comparative,
         "publication_admissible": True,
         "required_rows": 30,
         "admitted_rows": admitted_rows,
+        "stopping_policy": {
+            **expected_stopping_policy,
+        },
+        "stopping_adjudication": publication_stopping,
+        "stopping_binding_matches_manifest": True,
     }
     return (
         summary,
-        {archive_path: sha256_file(path)},
-        publication_relative,
-        publication_bytes,
+        {
+            archive_path: sha256_file(path),
+            stopping_archive_path: stopping_hash,
+        },
+        (ROUTE_ENDPOINT_PUBLICATION_PATH, publication_bytes),
+        (ROUTE_STOPPING_PUBLICATION_PATH, stopping_bytes),
     )
+
+
+def _route_cost_endpoint_binding_gate(
+    *,
+    payload: Mapping[str, Any],
+    endpoint_summary: Mapping[str, Any],
+    endpoint_hashes: Mapping[str, str],
+) -> None:
+    """Prove that the cost analyzer used the endpoint and STOP being published."""
+
+    raw = payload.get("endpoint_analysis")
+    expected_raw_keys = {
+        "publication_admissible",
+        "reason",
+        "path",
+        "sha256",
+        "schema_version",
+        "terminal_decision",
+        "required_rows",
+        "admitted_rows",
+        "comparative_ranking_admissible",
+        "stopping_policy",
+        "stopping_adjudication",
+        "stopping_binding_matches_manifest",
+        "source_archive_path",
+    }
+    if not isinstance(raw, Mapping) or set(raw) != expected_raw_keys:
+        raise FinalizationError(
+            "raw route analysis lacks the exact admitted Tier-B endpoint binding"
+        )
+    endpoint_archive_key = (
+        Path(STAGING_DIRECTORY) / ROUTE_ENDPOINT_STAGING_PATH
+    ).as_posix()
+    stopping_archive_key = (
+        Path(STAGING_DIRECTORY) / ROUTE_STOPPING_STAGING_PATH
+    ).as_posix()
+    endpoint_sha256 = endpoint_hashes.get(endpoint_archive_key)
+    stopping_sha256 = endpoint_hashes.get(stopping_archive_key)
+    expected_endpoint_source = ROUTE_ENDPOINT_STAGING_PATH.relative_to(
+        ROUTE_KAROLINA_SOURCE_PATH
+    ).as_posix()
+    expected_stopping_source = ROUTE_STOPPING_STAGING_PATH.relative_to(
+        ROUTE_KAROLINA_SOURCE_PATH
+    ).as_posix()
+    for key in (
+        "schema_version",
+        "terminal_decision",
+        "required_rows",
+        "admitted_rows",
+        "comparative_ranking_admissible",
+        "stopping_policy",
+        "stopping_binding_matches_manifest",
+    ):
+        if raw.get(key) != endpoint_summary.get(key):
+            raise FinalizationError(
+                f"raw route endpoint binding disagrees with publication endpoint at {key}"
+            )
+    if (
+        raw.get("publication_admissible") is not True
+        or raw.get("reason") != "hash_bound_tier_b_endpoint_analysis_admitted"
+        or raw.get("path") != "endpoint_analysis.json"
+        or raw.get("source_archive_path") != expected_endpoint_source
+        or raw.get("sha256") != endpoint_sha256
+    ):
+        raise FinalizationError(
+            "raw route analysis did not use the selected staged endpoint artifact"
+        )
+    raw_stopping = raw.get("stopping_adjudication")
+    published_stopping = endpoint_summary.get("stopping_adjudication")
+    if not isinstance(raw_stopping, Mapping) or not isinstance(
+        published_stopping, Mapping
+    ):
+        raise FinalizationError("raw route analysis lacks its STOP binding")
+    if set(raw_stopping) != set(published_stopping) | {"source_archive_path"}:
+        raise FinalizationError("raw route STOP binding has an unexpected shape")
+    if (
+        raw_stopping.get("path") != "stopping_adjudication.json"
+        or raw_stopping.get("source_archive_path") != expected_stopping_source
+        or raw_stopping.get("sha256") != stopping_sha256
+        or any(
+            raw_stopping.get(key) != value
+            for key, value in published_stopping.items()
+            if key != "path"
+        )
+    ):
+        raise FinalizationError(
+            "raw route analysis did not use the selected staged STOP adjudication"
+        )
+
+
+def _route_analysis_manifest_gate(
+    *, payload: Mapping[str, Any], evidence_root: Path, repo_root: Path
+) -> None:
+    """Require the route analyzer's own clean publication decision and hashes."""
+
+    manifest_path = _confined(
+        evidence_root / STAGING_DIRECTORY,
+        ROUTE_ANALYSIS_MANIFEST_PATH,
+        label="route analysis manifest",
+        require_exists=True,
+    )
+    manifest = _read_json(manifest_path)
+    raw_provenance = payload.get("provenance")
+    normalized_command = (
+        raw_provenance.get("normalized_exact_command")
+        if isinstance(raw_provenance, Mapping)
+        else None
+    )
+    if (
+        manifest.get("manifest_version") != 1
+        or manifest.get("experiment_id") != "EXP-ROUTE-001"
+        or manifest.get("publication_evidence") is not True
+        or manifest.get("status") != "publication_evidence"
+        or manifest.get("run_kind") != "publication"
+        or manifest.get("terminal_decision") != payload.get("terminal_decision")
+        or not isinstance(normalized_command, str)
+        or not normalized_command
+        or manifest.get("normalized_exact_command") != normalized_command
+        or manifest.get("command") != normalized_command
+        or manifest.get("endpoint_analysis") != payload.get("endpoint_analysis")
+    ):
+        raise FinalizationError(
+            "route analyzer manifest does not independently admit its raw analysis"
+        )
+    output_hashes = manifest.get("output_hashes")
+    required_outputs = {
+        "analysis.json",
+        "empirical_route_map.csv",
+        "report.md",
+        "endpoint_analysis.json",
+        "stopping_adjudication.json",
+    }
+    if not isinstance(output_hashes, Mapping) or set(output_hashes) != required_outputs:
+        raise FinalizationError(
+            "route analyzer manifest lacks the exact publication output closure"
+        )
+    raw_endpoint = payload.get("endpoint_analysis")
+    raw_stopping = (
+        raw_endpoint.get("stopping_adjudication")
+        if isinstance(raw_endpoint, Mapping)
+        else None
+    )
+    if (
+        not isinstance(raw_stopping, Mapping)
+        or output_hashes.get("endpoint_analysis.json")
+        != raw_endpoint.get("sha256")
+        or output_hashes.get("stopping_adjudication.json")
+        != raw_stopping.get("sha256")
+    ):
+        raise FinalizationError(
+            "route analyzer manifest copies differ from its admitted endpoint or STOP"
+        )
+    expected_code_hashes = {
+        ROUTE_COST_ANALYZER_PATH.as_posix(): sha256_file(
+            _confined(
+                repo_root,
+                ROUTE_COST_ANALYZER_PATH,
+                label="route cost analyzer",
+                require_exists=True,
+            )
+        ),
+        ROUTE_STOPPING_HELPER_PATH.as_posix(): sha256_file(
+            _confined(
+                repo_root,
+                ROUTE_STOPPING_HELPER_PATH,
+                label="route stopping helper",
+                require_exists=True,
+            )
+        ),
+    }
+    expected_input_hashes = {
+        "endpoint_analysis.json": raw_endpoint.get("sha256"),
+        "stopping_adjudication.json": raw_stopping.get("sha256"),
+        TIER_B_STOPPING_POLICY_PATH.relative_to(REPO_ROOT).as_posix(): sha256_file(
+            _confined(
+                repo_root,
+                TIER_B_STOPPING_POLICY_PATH.relative_to(REPO_ROOT),
+                label="route stopping policy",
+                require_exists=True,
+            )
+        ),
+    }
+    contract_path = ROUTE_ANALYSIS_CONFIGURATION_PATHS[0]
+    if (
+        manifest.get("code_hashes") != expected_code_hashes
+        or manifest.get("input_hashes") != expected_input_hashes
+        or manifest.get("contract_sha256")
+        != sha256_file(
+            _confined(
+                repo_root,
+                contract_path,
+                label="route analysis contract",
+                require_exists=True,
+            )
+        )
+    ):
+        raise FinalizationError(
+            "route analyzer manifest code, input, or contract binding is stale"
+        )
+    for name, expected in output_hashes.items():
+        path = _confined(
+            evidence_root / STAGING_DIRECTORY,
+            ROUTE_ANALYSIS_OUTPUT_PATH / name,
+            label="route analyzer manifest output",
+            require_exists=True,
+        )
+        if not isinstance(expected, str) or sha256_file(path) != expected:
+            raise FinalizationError(
+                f"route analyzer manifest output hash is stale: {name}"
+            )
 
 
 def _route_input_evidence(
     *,
     payload: Mapping[str, Any],
     evidence_root: Path,
+    produced: Mapping[str, str],
 ) -> tuple[dict[str, str], list[dict[str, Any]]]:
     provenance = payload.get("provenance")
     entries = provenance.get("input_files") if isinstance(provenance, Mapping) else None
@@ -2150,6 +2956,11 @@ def _route_input_evidence(
         confined = _confined(staging_root, relative, label="route analyzer input", require_exists=True)
         if not confined.is_file() or confined.is_symlink() or sha256_file(confined) != digest.lower():
             raise FinalizationError(f"route analyzer input hash is stale: {raw_path}")
+        if produced.get(relative.as_posix()) != digest.lower():
+            raise FinalizationError(
+                "route analyzer input lacks an identical managed producer receipt: "
+                f"{relative.as_posix()}"
+            )
         archive_path = (Path(STAGING_DIRECTORY) / relative).as_posix()
         hashes[archive_path] = digest.lower()
         roles.add(role)
@@ -2256,6 +3067,61 @@ def finalize_campaign(
             archived = Path(archived_path)
             if archived.parts and archived.parts[0] == STAGING_DIRECTORY:
                 produced[Path(*archived.parts[1:]).as_posix()] = digest
+    # Route archives are prepared by a separate dependency plan. Their four
+    # receipts are therefore not members of the source plan above, but every
+    # one is an explicit source-command attestation. Revalidate those receipts
+    # and add their complete recursive-tree output inventories to the same
+    # managed-producer closure used below for analyzer provenance.
+    route_receipt_paths = {
+        receipt.as_posix() for _path, receipt in ROUTE_INPUT_ATTESTATIONS
+    }
+    route_dependency_plans: set[Path] = set()
+    for command in commands.values():
+        for item in command.get("input_files", []):
+            if not isinstance(item, Mapping) or item.get("scope") != "staging":
+                continue
+            attestation = item.get("attestation")
+            if not isinstance(attestation, Mapping):
+                continue
+            attestation_relative = _canonical_relative(
+                attestation.get("path", ""), label="staging input attestation"
+            )
+            attested = _validate_staging_attestation(
+                _confined(
+                    evidence_root,
+                    attestation_relative,
+                    label="staging input attestation",
+                    require_exists=True,
+                ),
+                repo_root=repo_root,
+                evidence_root=evidence_root,
+                experiment_commit=experiment_commit,
+            )
+            if attestation_relative.as_posix() in route_receipt_paths:
+                attested_plan = Path(str(attested["plan"]["path"])).resolve()
+                if attested_plan not in route_dependency_plans:
+                    _validate_route_dependency_plan_contract(
+                        attested_plan,
+                        experiment_commit=experiment_commit,
+                    )
+                    route_dependency_plans.add(attested_plan)
+            for archived_path, digest in attested["raw_output_hashes"].items():
+                archived = Path(archived_path)
+                if not archived.parts or archived.parts[0] != STAGING_DIRECTORY:
+                    raise FinalizationError(
+                        "attested dependency output is outside managed staging"
+                    )
+                relative = Path(*archived.parts[1:]).as_posix()
+                previous = produced.get(relative)
+                if previous is not None and previous != digest:
+                    raise FinalizationError(
+                        f"conflicting managed producer hashes for {relative}"
+                    )
+                produced[relative] = digest
+    if len(route_dependency_plans) != 1:
+        raise FinalizationError(
+            "route inputs must share one canonical dependency-preparation plan"
+        )
     for command_id, receipt in receipts.items():
         for item in commands[command_id].get("input_files", []):
             if not isinstance(item, Mapping) or item.get("scope") != "staging":
@@ -2281,6 +3147,7 @@ def finalize_campaign(
     record_bytes: dict[Path, bytes] = {}
     route_archive_input_hashes: dict[str, str] = {}
     route_endpoint_output: tuple[Path, bytes] | None = None
+    route_stopping_output: tuple[Path, bytes] | None = None
     for spec in SOURCE_SPECS:
         command_id = source_to_command[spec.key]
         receipt = receipts[command_id]
@@ -2307,14 +3174,44 @@ def finalize_campaign(
             _contract_path, contract = _route_contract(repo_root, raw_payload)
             _route_empirical_map_gate(raw_payload, contract)
             _route_terminal_decision_gate(raw_payload, contract)
-            endpoint_summary, endpoint_hashes, endpoint_relative, endpoint_bytes = _route_endpoint_summary(
+            (
+                endpoint_summary,
+                endpoint_hashes,
+                route_endpoint_output,
+                route_stopping_output,
+            ) = _route_endpoint_summary(
                 command=commands[command_id], evidence_root=evidence_root
             )
-            route_endpoint_output = (endpoint_relative, endpoint_bytes)
+            _route_cost_endpoint_binding_gate(
+                payload=raw_payload,
+                endpoint_summary=endpoint_summary,
+                endpoint_hashes=endpoint_hashes,
+            )
+            _route_analysis_manifest_gate(
+                payload=raw_payload,
+                evidence_root=evidence_root,
+                repo_root=repo_root,
+            )
             route_archive_input_hashes, relocated_route_inputs = _route_input_evidence(
-                payload=raw_payload, evidence_root=evidence_root
+                payload=raw_payload,
+                evidence_root=evidence_root,
+                produced=produced,
             )
             route_archive_input_hashes.update(endpoint_hashes)
+            stopping_archive_path = (
+                Path(STAGING_DIRECTORY)
+                / _canonical_relative(
+                    commands[command_id]["route_stopping_adjudication"],
+                    label="route STOP adjudication",
+                )
+            ).as_posix()
+            relocated_route_inputs.append(
+                {
+                    "role": "tier_b_stopping_adjudication",
+                    "path": stopping_archive_path,
+                    "sha256": endpoint_hashes[stopping_archive_path],
+                }
+            )
             decorated[spec.key]["endpoint_analysis"] = endpoint_summary
             decorated_provenance = decorated[spec.key].get("provenance")
             if not isinstance(decorated_provenance, dict):
@@ -2346,6 +3243,8 @@ def finalize_campaign(
     destinations.extend({spec.companion_manifest for spec in SOURCE_SPECS})
     if route_endpoint_output is not None:
         destinations.append(route_endpoint_output[0])
+    if route_stopping_output is not None:
+        destinations.append(route_stopping_output[0])
     destinations.append(Path(FINALIZATION_MANIFEST))
     for relative in destinations:
         path = _confined(evidence_root, relative, label="final publication output")
@@ -2411,10 +3310,15 @@ def finalize_campaign(
                 ][raw_record_relative]
                 output_hashes[record_path.as_posix()] = record_hashes[record_path]
         if any(spec.key == "route_analysis" for spec in specs):
-            if route_endpoint_output is None:
-                raise FinalizationError("route endpoint publication copy is missing")
+            if route_endpoint_output is None or route_stopping_output is None:
+                raise FinalizationError(
+                    "route endpoint or STOP publication copy is missing"
+                )
             output_hashes[route_endpoint_output[0].as_posix()] = hashlib.sha256(
                 route_endpoint_output[1]
+            ).hexdigest()
+            output_hashes[route_stopping_output[0].as_posix()] = hashlib.sha256(
+                route_stopping_output[1]
             ).hexdigest()
         companion_payloads[companion_path] = {
             "schema_id": COMPANION_SCHEMA_ID,
@@ -2462,6 +3366,10 @@ def finalize_campaign(
         output_hash_manifest[route_endpoint_output[0].as_posix()] = hashlib.sha256(
             route_endpoint_output[1]
         ).hexdigest()
+    if route_stopping_output is not None:
+        output_hash_manifest[route_stopping_output[0].as_posix()] = hashlib.sha256(
+            route_stopping_output[1]
+        ).hexdigest()
     finalized_raw_hashes: dict[str, str] = {}
     for receipt in receipts.values():
         for relative, digest in receipt["raw_output_hashes"].items():
@@ -2503,6 +3411,8 @@ def finalize_campaign(
         writes[evidence_root / relative] = data
     if route_endpoint_output is not None:
         writes[evidence_root / route_endpoint_output[0]] = route_endpoint_output[1]
+    if route_stopping_output is not None:
+        writes[evidence_root / route_stopping_output[0]] = route_stopping_output[1]
     manifest_path = evidence_root / FINALIZATION_MANIFEST
     writes[manifest_path] = _json_bytes(finalization_payload)
     _write_many_atomically(writes)
@@ -2870,6 +3780,13 @@ def build_execution_plan_template(*, experiment_commit: str) -> dict[str, Any]:
         "reviewed_inputs/tier_b_endpoint_analysis.json"
     )
     endpoint_receipt = f"{RECEIPT_DIRECTORY}/prepare_tier_b_endpoint_analysis.json"
+    stopping_adjudication = (
+        "EXP-ROUTE-001/source_archives/karolina/"
+        "reviewed_inputs/stopping_adjudication.json"
+    )
+    stopping_receipt = (
+        f"{RECEIPT_DIRECTORY}/prepare_route_stopping_adjudication.json"
+    )
     master = "EXP-ROUTE-001/source_archives/karolina/route_campaign_master_manifest.json"
     master_receipt = f"{RECEIPT_DIRECTORY}/prepare_route_campaign_master.json"
     workstation_manifest = "EXP-ROUTE-001/source_archives/workstation/workstation_manifest.json"
@@ -2889,12 +3806,17 @@ def build_execution_plan_template(*, experiment_commit: str) -> dict[str, Any]:
                 "karolina_cpu={staging_root}/EXP-ROUTE-001/source_archives/karolina",
                 "--endpoint-analysis",
                 f"{{staging_root}}/{endpoint}",
+                "--stopping-adjudication",
+                f"{{staging_root}}/{stopping_adjudication}",
                 "--output-dir",
                 "{staging_root}/EXP-ROUTE-001/analysis_contract_v1",
             ],
             protocol="paper/protocols/EXP-ROUTE-001-analysis-contract.json",
             inputs=[
                 _template_input("staging", endpoint, attestation=endpoint_receipt),
+                _template_input(
+                    "staging", stopping_adjudication, attestation=stopping_receipt
+                ),
                 _template_input("staging", master, attestation=master_receipt),
                 _template_input(
                     "staging", workstation_manifest, attestation=workstation_receipt
@@ -2905,8 +3827,15 @@ def build_execution_plan_template(*, experiment_commit: str) -> dict[str, Any]:
                 "EXP-ROUTE-001/analysis_contract_v1/report.md",
                 "EXP-ROUTE-001/analysis_contract_v1/manifest.json",
                 "EXP-ROUTE-001/analysis_contract_v1/endpoint_analysis.json",
+                "EXP-ROUTE-001/analysis_contract_v1/stopping_adjudication.json",
             ],
-            extra={"route_endpoint_analysis": endpoint},
+            extra={
+                "configuration_files": [
+                    path.as_posix() for path in ROUTE_ANALYSIS_CONFIGURATION_PATHS
+                ],
+                "route_endpoint_analysis": endpoint,
+                "route_stopping_adjudication": stopping_adjudication,
+            },
         )
     )
     return {
@@ -2926,6 +3855,7 @@ def build_execution_plan_template(*, experiment_commit: str) -> dict[str, Any]:
             ],
             "route_receipts": [
                 endpoint_receipt,
+                stopping_receipt,
                 master_receipt,
                 workstation_receipt,
             ],

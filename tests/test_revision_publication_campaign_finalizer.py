@@ -13,11 +13,118 @@ import numpy as np
 import pytest
 
 from experiments.analysis import finalize_revision_publication_campaign as finalizer
+from experiments.analysis import stage_route_publication_dependencies as route_staging
 from src.core.benchmark.run_record import RUN_RECORD_SCHEMA_ID, RUN_RECORD_SCHEMA_VERSION
 
 
 COMMIT = "a" * 40
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "paper/scripts"))
+
+
+def _write_route_stopping_adjudication(path: Path) -> dict[str, object]:
+    policy = json.loads(
+        finalizer.TIER_B_STOPPING_POLICY_PATH.read_text(encoding="utf-8")
+    )
+    local = dict(policy["local_calibration"])
+    reference_id = "p3d_p4_nonlinear_1em07_cluster"
+    comparison_ids = (
+        "p3d_p4_nonlinear_1em02_cluster",
+        "p3d_p4_nonlinear_1em04_cluster",
+        "p3d_p4_nonlinear_1em06_cluster",
+        reference_id,
+        "ginzburg_landau_mpi_consistency_cluster",
+        "hyperelasticity_mpi_consistency_cluster",
+        "plasticity3d_mpi_consistency_cluster",
+    )
+    comparisons = {
+        case_id: {
+            "status": "accepted",
+            "reference_row_id": reference_id,
+            "gates": {"passed": True},
+        }
+        for case_id in comparison_ids
+    }
+    adjudicator = (
+        finalizer.REPO_ROOT
+        / "experiments/runners/prepare_exp_stop_001_karolina.py"
+    )
+    payload = {
+        "schema_id": "fenics-nonlinear-energies.exp-stop-001.final-adjudication",
+        "schema_version": 3,
+        "experiment_id": "EXP-STOP-001",
+        "terminal_decision": "CALIBRATION_SCOPED_PASS_PENDING_DISCRETIZATION_GATE",
+        "complete_exp_stop_pass": False,
+        "calibration_scope_passed": True,
+        "computation_source_commit": local["source_commit"],
+        "adjudicator": {
+            "source_commit": "0123456789abcdef0123456789abcdef01234567",
+            "source_dirty": False,
+            "path": "experiments/runners/prepare_exp_stop_001_karolina.py",
+            "sha256": finalizer.sha256_file(adjudicator),
+        },
+        "local_analysis_sha256": local["analysis_sha256"],
+        "cluster_archive_checksum_sha256": "a" * 64,
+        "cluster_case_count": 7,
+        "publication_timing_admissible": False,
+        "comparisons": comparisons,
+        "rejected_or_censored_cases": [],
+        "required_gate_failures": [],
+        "selected_policies": {
+            "p3d_p4_nonlinear_cluster": {
+                "status": "selected_loosest_accepted_same_discretization_policy",
+                "row_id": "p3d_p4_nonlinear_1em06_cluster",
+                "parameter": "relative_dual_residual_target",
+                "tolerance": 1.0e-6,
+            }
+        },
+    }
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(payload) + "\n", encoding="utf-8")
+    return dict(finalizer.validate_stop_adjudication(path))
+
+
+def _route_endpoint_payload(
+    stopping_binding: dict[str, object],
+    *,
+    terminal: str = "tier_b_comparative_ranking_admissible",
+    comparative: bool = True,
+) -> dict[str, object]:
+    return {
+        "schema": {
+            "id": finalizer.ROUTE_ENDPOINT_SCHEMA_ID,
+            "version": finalizer.ROUTE_ENDPOINT_SCHEMA_VERSION,
+        },
+        "experiment_id": "EXP-ROUTE-001",
+        "terminal_decision": terminal,
+        "comparative_ranking_admissible": comparative,
+        "endpoint_correct_timing_admissible": True,
+        "publication_admissible": True,
+        "required_rows": 30,
+        "admitted_rows": 30,
+        "matrix_policy_violations": [],
+        "coverage_and_campaign_failure_reasons": [],
+        "stopping_policy": {
+            "path": finalizer.TIER_B_STOPPING_POLICY_PATH.relative_to(
+                finalizer.REPO_ROOT
+            ).as_posix(),
+            "sha256": finalizer.stopping_sha256_file(
+                finalizer.TIER_B_STOPPING_POLICY_PATH
+            ),
+        },
+        "stopping_adjudication": stopping_binding,
+        "stopping_binding_matches_manifest": True,
+        "blocks": [{"status": "timing_admitted"} for _ in range(30)],
+        "structural_censors": [
+            {
+                "status": "censored",
+                "reason": "prespecified_not_attempted_memory_risk_no_threshold_claim",
+                "route": "colored_sfd",
+                "timing_exposed": False,
+                "admitted_collective_max_wall_time_s": None,
+            }
+            for _ in range(2)
+        ],
+    }
 
 
 def _assembled_derivative_block(degree: int) -> dict:
@@ -591,7 +698,22 @@ def test_canonical_template_covers_every_source_and_clean_dependency() -> None:
         }
     route = commands["route_cost_analysis"]
     assert route["route_endpoint_analysis"].endswith("tier_b_endpoint_analysis.json")
-    assert len(route["input_files"]) == 3
+    assert route["route_stopping_adjudication"].endswith(
+        "reviewed_inputs/stopping_adjudication.json"
+    )
+    assert len(route["input_files"]) == 4
+    assert route["argv"].count("--stopping-adjudication") == 1
+    assert (
+        "EXP-ROUTE-001/analysis_contract_v1/stopping_adjudication.json"
+        in route["expected_artifacts"]
+    )
+    assert any(
+        item["path"] == route["route_stopping_adjudication"]
+        and item["attestation"]["path"].endswith(
+            "prepare_route_stopping_adjudication.json"
+        )
+        for item in route["input_files"]
+    )
 
 
 def test_expand_argv_preserves_virtualenv_python_launcher(
@@ -629,6 +751,49 @@ def test_plan_rejects_missing_or_escaping_quadrature_artifact_declarations() -> 
     command = next(row for row in plan["commands"] if row["id"] == "disc_p1")
     command["expected_artifacts"].append("../escaped.npy")
     with pytest.raises(finalizer.FinalizationError, match="canonical relative path"):
+        finalizer._plan_command_map(plan)
+
+
+def test_plan_requires_distinct_hash_bound_route_stopping_adjudication() -> None:
+    plan = finalizer.build_execution_plan_template(experiment_commit=COMMIT)
+    route = next(row for row in plan["commands"] if row["id"] == "route_cost_analysis")
+    stopping_path = route.pop("route_stopping_adjudication")
+    with pytest.raises(finalizer.FinalizationError, match="route_stopping_adjudication"):
+        finalizer._plan_command_map(plan)
+
+    plan = finalizer.build_execution_plan_template(experiment_commit=COMMIT)
+    route = next(row for row in plan["commands"] if row["id"] == "route_cost_analysis")
+    route["input_files"] = [
+        item for item in route["input_files"] if item["path"] != stopping_path
+    ]
+    with pytest.raises(finalizer.FinalizationError, match="hash-bound staging input"):
+        finalizer._plan_command_map(plan)
+
+    plan = finalizer.build_execution_plan_template(experiment_commit=COMMIT)
+    route = next(row for row in plan["commands"] if row["id"] == "route_cost_analysis")
+    stop_index = route["argv"].index("--stopping-adjudication")
+    route["argv"][stop_index + 1] = "{staging_root}/substituted/stop.json"
+    with pytest.raises(finalizer.FinalizationError, match="exact canonical data-selection"):
+        finalizer._plan_command_map(plan)
+
+    plan = finalizer.build_execution_plan_template(experiment_commit=COMMIT)
+    route = next(row for row in plan["commands"] if row["id"] == "route_cost_analysis")
+    route["route_endpoint_analysis"] = "alternate/endpoint.json"
+    with pytest.raises(finalizer.FinalizationError, match="canonical reviewed Karolina"):
+        finalizer._plan_command_map(plan)
+
+    plan = finalizer.build_execution_plan_template(experiment_commit=COMMIT)
+    route = next(row for row in plan["commands"] if row["id"] == "route_cost_analysis")
+    route["expected_artifacts"].append("EXP-ROUTE-001/analysis_contract_v1/extra.json")
+    with pytest.raises(finalizer.FinalizationError, match="exact publication closure"):
+        finalizer._plan_command_map(plan)
+
+    plan = finalizer.build_execution_plan_template(experiment_commit=COMMIT)
+    route = next(row for row in plan["commands"] if row["id"] == "route_cost_analysis")
+    route["input_files"][0]["attestation"]["path"] = (
+        "_publication_receipts/substituted_endpoint.json"
+    )
+    with pytest.raises(finalizer.FinalizationError, match="exact four hash-bound"):
         finalizer._plan_command_map(plan)
 
 
@@ -866,41 +1031,225 @@ def test_finalizer_rejects_endpoint_terminal_boolean_mismatch(
     tmp_path: Path, terminal: str, comparative: bool
 ) -> None:
     relative = Path("route/endpoint.json")
+    stopping_relative = Path("route/stopping.json")
+    stopping_binding = _write_route_stopping_adjudication(
+        tmp_path / finalizer.STAGING_DIRECTORY / stopping_relative
+    )
     path = tmp_path / finalizer.STAGING_DIRECTORY / relative
-    path.parent.mkdir(parents=True)
+    path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(
         json.dumps(
-            {
-                "schema": {
-                    "id": "fenics-nonlinear-energies.exp-route-001.tier-b-endpoints",
-                    "version": 1,
-                },
-                "experiment_id": "EXP-ROUTE-001",
-                "terminal_decision": terminal,
-                "comparative_ranking_admissible": comparative,
-                "endpoint_correct_timing_admissible": True,
-                "matrix_policy_violations": [],
-                "coverage_and_campaign_failure_reasons": [],
-                "blocks": [{"status": "timing_admitted"} for _ in range(30)],
-                "structural_censors": [
-                    {
-                        "status": "censored",
-                        "reason": "prespecified_not_attempted_memory_risk_no_threshold_claim",
-                        "route": "colored_sfd",
-                        "timing_exposed": False,
-                        "admitted_collective_max_wall_time_s": None,
-                    }
-                    for _ in range(2)
-                ],
-            }
+            _route_endpoint_payload(
+                stopping_binding, terminal=terminal, comparative=comparative
+            )
         )
         + "\n",
         encoding="utf-8",
     )
     with pytest.raises(finalizer.FinalizationError, match="not publication-admissible"):
         finalizer._route_endpoint_summary(
-            command={"route_endpoint_analysis": relative.as_posix()},
+            command={
+                "route_endpoint_analysis": relative.as_posix(),
+                "route_stopping_adjudication": stopping_relative.as_posix(),
+            },
             evidence_root=tmp_path,
+        )
+
+
+def test_finalizer_rejects_endpoint_bound_to_different_stop_file(tmp_path: Path) -> None:
+    relative = Path("route/endpoint.json")
+    stopping_relative = Path("route/stopping.json")
+    stopping_binding = _write_route_stopping_adjudication(
+        tmp_path / finalizer.STAGING_DIRECTORY / stopping_relative
+    )
+    stopping_binding["cluster_archive_checksum_sha256"] = "b" * 64
+    path = tmp_path / finalizer.STAGING_DIRECTORY / relative
+    path.write_text(
+        json.dumps(_route_endpoint_payload(stopping_binding)) + "\n",
+        encoding="utf-8",
+    )
+    with pytest.raises(finalizer.FinalizationError, match="not bound to the staged STOP"):
+        finalizer._route_endpoint_summary(
+            command={
+                "route_endpoint_analysis": relative.as_posix(),
+                "route_stopping_adjudication": stopping_relative.as_posix(),
+            },
+            evidence_root=tmp_path,
+        )
+
+
+def test_finalizer_rejects_noncanonical_endpoint_policy_path(tmp_path: Path) -> None:
+    relative = Path("route/endpoint.json")
+    stopping_relative = Path("route/stopping.json")
+    stopping_binding = _write_route_stopping_adjudication(
+        tmp_path / finalizer.STAGING_DIRECTORY / stopping_relative
+    )
+    payload = _route_endpoint_payload(stopping_binding)
+    payload["stopping_policy"]["path"] = str(finalizer.TIER_B_STOPPING_POLICY_PATH)
+    path = tmp_path / finalizer.STAGING_DIRECTORY / relative
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(payload) + "\n", encoding="utf-8")
+    with pytest.raises(finalizer.FinalizationError, match="stale stopping policy"):
+        finalizer._route_endpoint_summary(
+            command={
+                "route_endpoint_analysis": relative.as_posix(),
+                "route_stopping_adjudication": stopping_relative.as_posix(),
+            },
+            evidence_root=tmp_path,
+        )
+
+
+def test_raw_route_analysis_is_bound_to_selected_endpoint_stop_and_manifest(
+    tmp_path: Path,
+) -> None:
+    staging = tmp_path / finalizer.STAGING_DIRECTORY
+    stopping_path = staging / finalizer.ROUTE_STOPPING_STAGING_PATH
+    stopping_binding = _write_route_stopping_adjudication(stopping_path)
+    endpoint_path = staging / finalizer.ROUTE_ENDPOINT_STAGING_PATH
+    endpoint_path.parent.mkdir(parents=True, exist_ok=True)
+    endpoint_path.write_text(
+        json.dumps(_route_endpoint_payload(stopping_binding)) + "\n",
+        encoding="utf-8",
+    )
+    summary, hashes, _endpoint_output, _stopping_output = (
+        finalizer._route_endpoint_summary(
+            command={
+                "route_endpoint_analysis": finalizer.ROUTE_ENDPOINT_STAGING_PATH.as_posix(),
+                "route_stopping_adjudication": finalizer.ROUTE_STOPPING_STAGING_PATH.as_posix(),
+            },
+            evidence_root=tmp_path,
+        )
+    )
+    raw_stopping = dict(summary["stopping_adjudication"])
+    raw_stopping["path"] = "stopping_adjudication.json"
+    raw_stopping["source_archive_path"] = (
+        finalizer.ROUTE_STOPPING_STAGING_PATH.relative_to(
+            finalizer.ROUTE_KAROLINA_SOURCE_PATH
+        ).as_posix()
+    )
+    raw_endpoint = {
+        "publication_admissible": True,
+        "reason": "hash_bound_tier_b_endpoint_analysis_admitted",
+        "path": "endpoint_analysis.json",
+        "sha256": finalizer.sha256_file(endpoint_path),
+        "schema_version": summary["schema_version"],
+        "terminal_decision": summary["terminal_decision"],
+        "required_rows": summary["required_rows"],
+        "admitted_rows": summary["admitted_rows"],
+        "comparative_ranking_admissible": summary[
+            "comparative_ranking_admissible"
+        ],
+        "stopping_policy": summary["stopping_policy"],
+        "stopping_adjudication": raw_stopping,
+        "stopping_binding_matches_manifest": True,
+        "source_archive_path": finalizer.ROUTE_ENDPOINT_STAGING_PATH.relative_to(
+            finalizer.ROUTE_KAROLINA_SOURCE_PATH
+        ).as_posix(),
+    }
+    payload = {
+        "terminal_decision": "finite_empirical_map_only",
+        "endpoint_analysis": raw_endpoint,
+        "provenance": {
+            "normalized_exact_command": "synthetic canonical route analysis"
+        },
+    }
+    finalizer._route_cost_endpoint_binding_gate(
+        payload=payload,
+        endpoint_summary=summary,
+        endpoint_hashes=hashes,
+    )
+
+    substituted = deepcopy(payload)
+    substituted["endpoint_analysis"]["sha256"] = "0" * 64
+    with pytest.raises(finalizer.FinalizationError, match="selected staged endpoint"):
+        finalizer._route_cost_endpoint_binding_gate(
+            payload=substituted,
+            endpoint_summary=summary,
+            endpoint_hashes=hashes,
+        )
+
+    substituted = deepcopy(payload)
+    substituted["endpoint_analysis"]["stopping_adjudication"][
+        "cluster_archive_checksum_sha256"
+    ] = "b" * 64
+    with pytest.raises(finalizer.FinalizationError, match="selected staged STOP"):
+        finalizer._route_cost_endpoint_binding_gate(
+            payload=substituted,
+            endpoint_summary=summary,
+            endpoint_hashes=hashes,
+        )
+
+    route_output = staging / finalizer.ROUTE_ANALYSIS_OUTPUT_PATH
+    route_output.mkdir(parents=True, exist_ok=True)
+    (route_output / "analysis.json").write_text(
+        json.dumps(payload) + "\n", encoding="utf-8"
+    )
+    (route_output / "empirical_route_map.csv").write_text(
+        "synthetic\n", encoding="utf-8"
+    )
+    (route_output / "report.md").write_text("synthetic\n", encoding="utf-8")
+    (route_output / "endpoint_analysis.json").write_bytes(endpoint_path.read_bytes())
+    (route_output / "stopping_adjudication.json").write_bytes(
+        stopping_path.read_bytes()
+    )
+    manifest = {
+        "manifest_version": 1,
+        "experiment_id": "EXP-ROUTE-001",
+        "publication_evidence": True,
+        "status": "publication_evidence",
+        "run_kind": "publication",
+        "terminal_decision": payload["terminal_decision"],
+        "contract_sha256": finalizer.sha256_file(
+            finalizer.REPO_ROOT
+            / finalizer.ROUTE_ANALYSIS_CONFIGURATION_PATHS[0]
+        ),
+        "normalized_exact_command": payload["provenance"][
+            "normalized_exact_command"
+        ],
+        "command": payload["provenance"]["normalized_exact_command"],
+        "code_hashes": {
+            finalizer.ROUTE_COST_ANALYZER_PATH.as_posix(): finalizer.sha256_file(
+                finalizer.REPO_ROOT / finalizer.ROUTE_COST_ANALYZER_PATH
+            ),
+            finalizer.ROUTE_STOPPING_HELPER_PATH.as_posix(): finalizer.sha256_file(
+                finalizer.REPO_ROOT / finalizer.ROUTE_STOPPING_HELPER_PATH
+            ),
+        },
+        "input_hashes": {
+            "endpoint_analysis.json": raw_endpoint["sha256"],
+            "stopping_adjudication.json": raw_stopping["sha256"],
+            finalizer.TIER_B_STOPPING_POLICY_PATH.relative_to(
+                finalizer.REPO_ROOT
+            ).as_posix(): finalizer.sha256_file(
+                finalizer.TIER_B_STOPPING_POLICY_PATH
+            ),
+        },
+        "endpoint_analysis": raw_endpoint,
+        "output_hashes": {
+            name: finalizer.sha256_file(route_output / name)
+            for name in (
+                "analysis.json",
+                "empirical_route_map.csv",
+                "report.md",
+                "endpoint_analysis.json",
+                "stopping_adjudication.json",
+            )
+        },
+    }
+    manifest_path = staging / finalizer.ROUTE_ANALYSIS_MANIFEST_PATH
+    manifest_path.write_text(json.dumps(manifest) + "\n", encoding="utf-8")
+    finalizer._route_analysis_manifest_gate(
+        payload=payload,
+        evidence_root=tmp_path,
+        repo_root=finalizer.REPO_ROOT,
+    )
+    manifest["publication_evidence"] = False
+    manifest_path.write_text(json.dumps(manifest) + "\n", encoding="utf-8")
+    with pytest.raises(finalizer.FinalizationError, match="independently admit"):
+        finalizer._route_analysis_manifest_gate(
+            payload=payload,
+            evidence_root=tmp_path,
+            repo_root=finalizer.REPO_ROOT,
         )
 
 
@@ -925,6 +1274,28 @@ def _initialize_fake_repo(path: Path) -> str:
     contract.write_bytes(
         (finalizer.REPO_ROOT / "paper/protocols/EXP-ROUTE-001-analysis-contract.json").read_bytes()
     )
+    stopping_policy = path / "paper/protocols/EXP-ROUTE-001-tier-b-stopping-policy.json"
+    stopping_policy.write_bytes(finalizer.TIER_B_STOPPING_POLICY_PATH.read_bytes())
+    stopping_helper = (
+        path
+        / "experiments/runners/paper_revision_karolina/tier_b_stopping.py"
+    )
+    stopping_helper.parent.mkdir(parents=True, exist_ok=True)
+    stopping_helper.write_bytes(
+        (
+            finalizer.REPO_ROOT
+            / "experiments/runners/paper_revision_karolina/tier_b_stopping.py"
+        ).read_bytes()
+    )
+    stopping_adjudicator = (
+        path / "experiments/runners/prepare_exp_stop_001_karolina.py"
+    )
+    stopping_adjudicator.write_bytes(
+        (
+            finalizer.REPO_ROOT
+            / "experiments/runners/prepare_exp_stop_001_karolina.py"
+        ).read_bytes()
+    )
     generator = path / "paper/scripts/generate_revision_evidence_tables.py"
     generator.parent.mkdir(parents=True, exist_ok=True)
     generator.write_bytes(
@@ -943,6 +1314,14 @@ def _initialize_fake_repo(path: Path) -> str:
     run_record.write_bytes(
         (finalizer.REPO_ROOT / "src/core/benchmark/run_record.py").read_bytes()
     )
+    for relative in (
+        *finalizer.ROUTE_DEPENDENCY_CONFIGURATION_PATHS,
+        finalizer.ROUTE_DEPENDENCY_PRODUCER_PATH,
+    ):
+        source = finalizer.REPO_ROOT / relative
+        destination = path / relative
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        destination.write_bytes(source.read_bytes())
     subprocess.run(["git", "-C", str(path), "add", "."], check=True)
     subprocess.run(["git", "-C", str(path), "commit", "-m", "experiment"], check=True, capture_output=True)
     return _git(path, "rev-parse", "HEAD")
@@ -950,7 +1329,17 @@ def _initialize_fake_repo(path: Path) -> str:
 
 def _minimal_plan(commit: str) -> dict:
     commands = []
+    canonical_route = next(
+        deepcopy(command)
+        for command in finalizer.build_execution_plan_template(
+            experiment_commit=commit
+        )["commands"]
+        if command["source_keys"] == ["route_analysis"]
+    )
     for spec in finalizer.SOURCE_SPECS:
+        if spec.key == "route_analysis":
+            commands.append(canonical_route)
+            continue
         command = {
             "id": f"produce_{spec.key}",
             "source_keys": [spec.key],
@@ -968,9 +1357,6 @@ def _minimal_plan(commit: str) -> dict:
                     finalizer.QUADRATURE_DEGREES[spec.key]
                 )
             ]
-        if spec.key == "route_analysis":
-            command["route_endpoint_analysis"] = "route/endpoint.json"
-            command["input_files"] = [{"scope": "staging", "path": "route/endpoint.json"}]
         commands.append(command)
     return {
         "schema_id": finalizer.PLAN_SCHEMA_ID,
@@ -1229,6 +1615,19 @@ def _write_receipt(
         )
         for relative in required
     }
+    log_root = evidence / finalizer.LOG_DIRECTORY
+    log_root.mkdir(parents=True, exist_ok=True)
+    stdout_log = log_root / f"{command['id']}.stdout.log"
+    stderr_log = log_root / f"{command['id']}.stderr.log"
+    stdout_log.write_text("synthetic receipt stdout\n", encoding="utf-8")
+    stderr_log.write_text("", encoding="utf-8")
+    configuration_hashes, input_hashes = finalizer._input_hashes(
+        command,
+        repo_root=repo,
+        evidence_root=evidence,
+        staging_root=evidence / finalizer.STAGING_DIRECTORY,
+        experiment_commit=commit,
+    )
     receipt = {
         "schema_id": finalizer.RECEIPT_SCHEMA_ID,
         "schema_version": finalizer.RECEIPT_SCHEMA_VERSION,
@@ -1247,7 +1646,12 @@ def _write_receipt(
         "postflight": {"git_commit": commit, "git_clean": True},
         "command": {
             "argv_template": command["argv"],
-            "argv": command["argv"],
+            "argv": finalizer._expand_argv(
+                command["argv"],
+                repo_root=repo,
+                evidence_root=evidence,
+                staging_root=evidence / finalizer.STAGING_DIRECTORY,
+            ),
             "working_directory": ".",
             "return_code": 0,
             "execution_error": None,
@@ -1260,16 +1664,8 @@ def _write_receipt(
             "path": command["producer"],
             "sha256": finalizer.sha256_file(producer),
         },
-        "configuration_hashes": {
-            relative: finalizer.sha256_file(repo / relative)
-            for relative in command["configuration_files"]
-        },
-        "input_hashes": {
-            (Path(finalizer.STAGING_DIRECTORY) / item["path"]).as_posix(): finalizer.sha256_file(
-                evidence / finalizer.STAGING_DIRECTORY / item["path"]
-            )
-            for item in command.get("input_files", [])
-        },
+        "configuration_hashes": configuration_hashes,
+        "input_hashes": input_hashes,
         "raw_output_hashes": raw_hashes,
         "referenced_artifact_hashes": {
             relative: digest
@@ -1281,7 +1677,14 @@ def _write_receipt(
             ))
         },
         "artifact_validation_errors": [],
-        "logs": {},
+        "logs": {
+            stdout_log.relative_to(evidence).as_posix(): finalizer.sha256_file(
+                stdout_log
+            ),
+            stderr_log.relative_to(evidence).as_posix(): finalizer.sha256_file(
+                stderr_log
+            ),
+        },
         "missing_outputs": [],
     }
     receipt["receipt_fingerprint_sha256"] = finalizer._json_sha256(receipt)
@@ -1294,13 +1697,17 @@ def _write_receipt(
     ["predictive_selector_admissible", "finite_empirical_map_only"],
 )
 def test_finalizer_supports_clean_descendant_and_rejects_raw_and_final_tampering(
-    tmp_path: Path, route_terminal: str,
+    tmp_path: Path,
+    route_terminal: str,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     repo = tmp_path / "repo"
     repo.mkdir()
     experiment_commit = _initialize_fake_repo(repo)
     evidence = repo / "artifacts/evidence"
     staging = evidence / finalizer.STAGING_DIRECTORY
+    workstation_source = tmp_path / "workstation-source"
+    karolina_source = tmp_path / "karolina-source"
 
     route_evidence_roles = (
         "route_campaign_master",
@@ -1311,58 +1718,137 @@ def test_finalizer_supports_clean_descendant_and_rejects_raw_and_final_tampering
     )
     route_evidence_entries = []
     for role in route_evidence_roles:
-        path = staging / "EXP-ROUTE-001/source_archives/karolina" / f"{role}.json"
+        filename = (
+            "route_campaign_master_manifest.json"
+            if role == "route_campaign_master"
+            else f"{role}.json"
+        )
+        relative = finalizer.ROUTE_KAROLINA_SOURCE_PATH / filename
+        source_path = karolina_source / filename
+        source_path.parent.mkdir(parents=True, exist_ok=True)
+        source_path.write_text(json.dumps({"role": role}) + "\n", encoding="utf-8")
+        path = staging / relative
         path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(json.dumps({"role": role}) + "\n", encoding="utf-8")
+        path.write_bytes(source_path.read_bytes())
         route_evidence_entries.append(
             {"role": role, "path": path.as_posix(), "sha256": finalizer.sha256_file(path)}
         )
-    endpoint_relative = Path("EXP-ROUTE-001/reviewed_inputs/tier_b_endpoint_analysis.json")
+    workstation_manifest_relative = (
+        finalizer.ROUTE_WORKSTATION_SOURCE_PATH / "workstation_manifest.json"
+    )
+    workstation_manifest = staging / workstation_manifest_relative
+    workstation_manifest.parent.mkdir(parents=True, exist_ok=True)
+    workstation_manifest.write_text("{}\n", encoding="utf-8")
+    source_workstation_manifest = workstation_source / "workstation_manifest.json"
+    source_workstation_manifest.parent.mkdir(parents=True, exist_ok=True)
+    source_workstation_manifest.write_bytes(workstation_manifest.read_bytes())
+    endpoint_relative = finalizer.ROUTE_ENDPOINT_STAGING_PATH
+    stopping_relative = finalizer.ROUTE_STOPPING_STAGING_PATH
+    endpoint_source_relative = Path("analysis/tier_b_endpoint_analysis.json")
+    stopping_source_relative = Path("analysis/stopping_adjudication.json")
+    stopping_binding = _write_route_stopping_adjudication(
+        staging / stopping_relative
+    )
+    source_stopping = karolina_source / stopping_source_relative
+    source_stopping.parent.mkdir(parents=True, exist_ok=True)
+    source_stopping.write_bytes((staging / stopping_relative).read_bytes())
+    staged_source_stopping = (
+        staging / finalizer.ROUTE_KAROLINA_SOURCE_PATH / stopping_source_relative
+    )
+    staged_source_stopping.parent.mkdir(parents=True, exist_ok=True)
+    staged_source_stopping.write_bytes(source_stopping.read_bytes())
     endpoint_path = staging / endpoint_relative
     endpoint_path.parent.mkdir(parents=True, exist_ok=True)
+    endpoint_source_payload = _route_endpoint_payload(stopping_binding)
     endpoint_path.write_text(
-        json.dumps(
-            {
-                "schema": {
-                    "id": "fenics-nonlinear-energies.exp-route-001.tier-b-endpoints",
-                    "version": 1,
-                },
-                "experiment_id": "EXP-ROUTE-001",
-                "terminal_decision": "tier_b_comparative_ranking_admissible",
-                "comparative_ranking_admissible": True,
-                "endpoint_correct_timing_admissible": True,
-                "matrix_policy_violations": [],
-                "coverage_and_campaign_failure_reasons": [],
-                "blocks": [{"status": "timing_admitted"} for _ in range(30)],
-                "structural_censors": [
-                    {
-                        "status": "censored",
-                        "reason": "prespecified_not_attempted_memory_risk_no_threshold_claim",
-                        "route": "colored_sfd",
-                        "timing_exposed": False,
-                        "admitted_collective_max_wall_time_s": None,
-                    }
-                    for _ in range(2)
-                ],
-            }
-        )
-        + "\n",
+        json.dumps(endpoint_source_payload) + "\n",
         encoding="utf-8",
+    )
+    source_endpoint = karolina_source / endpoint_source_relative
+    source_endpoint.parent.mkdir(parents=True, exist_ok=True)
+    source_endpoint.write_bytes(endpoint_path.read_bytes())
+    staged_source_endpoint = (
+        staging / finalizer.ROUTE_KAROLINA_SOURCE_PATH / endpoint_source_relative
+    )
+    staged_source_endpoint.parent.mkdir(parents=True, exist_ok=True)
+    staged_source_endpoint.write_bytes(source_endpoint.read_bytes())
+
+    route_contract = repo / "paper/protocols/EXP-ROUTE-001-analysis-contract.json"
+
+    def relocated_stop_binding(path: Path) -> dict[str, object]:
+        binding = dict(stopping_binding)
+        binding["path"] = str(Path(path).resolve())
+        binding["sha256"] = finalizer.sha256_file(Path(path))
+        return binding
+
+    def dependency_semantic_validation(**kwargs) -> dict[str, object]:
+        assert Path(kwargs["stopping_adjudication_path"]).resolve() == (
+            source_stopping.resolve()
+        )
+        validated = relocated_stop_binding(source_stopping)
+        validated["path"] = stopping_source_relative.as_posix()
+        return {
+            "experiment_id": "EXP-ROUTE-001",
+            "source_commit": experiment_commit,
+            "publication_admissible": True,
+            "endpoint": {
+                "path": endpoint_source_relative.as_posix(),
+                "sha256": finalizer.sha256_file(source_endpoint),
+                "terminal_decision": "tier_b_comparative_ranking_admissible",
+                "schema_version": 2,
+                "stopping_binding_matches_manifest": True,
+                "stopping_adjudication": validated,
+            },
+        }
+
+    monkeypatch.setattr(
+        route_staging,
+        "validate_complete_route_evidence",
+        dependency_semantic_validation,
+    )
+    monkeypatch.setattr(
+        route_staging,
+        "validate_stop_adjudication",
+        relocated_stop_binding,
+    )
+    dependency_plan = route_staging.build_dependency_plan(
+        expected_commit=experiment_commit,
+        workstation_source=workstation_source,
+        karolina_source=karolina_source,
+        endpoint_relative=endpoint_source_relative,
+        stopping_relative=stopping_source_relative,
+    )
+    dependency_plan_path = evidence / "route_dependency_plan.json"
+    dependency_plan_path.parent.mkdir(parents=True, exist_ok=True)
+    dependency_plan_path.write_text(
+        json.dumps(dependency_plan, indent=2) + "\n", encoding="utf-8"
     )
 
     commands = []
-    route_contract = repo / "paper/protocols/EXP-ROUTE-001-analysis-contract.json"
+    canonical_route_command = next(
+        deepcopy(command)
+        for command in finalizer.build_execution_plan_template(
+            experiment_commit=experiment_commit
+        )["commands"]
+        if command["source_keys"] == ["route_analysis"]
+    )
     for spec in finalizer.SOURCE_SPECS:
-        command = {
-            "id": f"produce_{spec.key}",
-            "source_keys": [spec.key],
-            "producer": spec.producer_path.as_posix(),
-            "argv": ["python", spec.producer_path.as_posix()],
-            "environment": {},
-            "configuration_files": ["paper/protocols/EXP-ROUTE-001-analysis-contract.json"],
-            "input_files": [],
-            "expected_artifacts": [],
-        }
+        command = (
+            deepcopy(canonical_route_command)
+            if spec.key == "route_analysis"
+            else {
+                "id": f"produce_{spec.key}",
+                "source_keys": [spec.key],
+                "producer": spec.producer_path.as_posix(),
+                "argv": ["python", spec.producer_path.as_posix()],
+                "environment": {},
+                "configuration_files": [
+                    "paper/protocols/EXP-ROUTE-001-analysis-contract.json"
+                ],
+                "input_files": [],
+                "expected_artifacts": [],
+            }
+        )
         raw = _scientific_raw_payload(spec, commit=experiment_commit)
         if spec.key in finalizer.QUADRATURE_DEGREES:
             command["expected_artifacts"] = [
@@ -1504,6 +1990,56 @@ def test_finalizer_supports_clean_descendant_and_rejects_raw_and_final_tampering
                     "independent_blocks_per_rank": 3,
                 }
             )
+            route_output = staging / finalizer.ROUTE_ANALYSIS_OUTPUT_PATH
+            route_output.mkdir(parents=True, exist_ok=True)
+            archived_endpoint = route_output / "endpoint_analysis.json"
+            archived_stopping = route_output / "stopping_adjudication.json"
+            archived_endpoint.write_bytes(endpoint_path.read_bytes())
+            archived_stopping.write_bytes((staging / stopping_relative).read_bytes())
+            (route_output / "empirical_route_map.csv").write_text(
+                "synthetic,route,map\n", encoding="utf-8"
+            )
+            (route_output / "report.md").write_text(
+                "# Synthetic route report\n", encoding="utf-8"
+            )
+            route_evidence_entries.extend(
+                [
+                    {
+                        "role": "tier_b_endpoint_analysis",
+                        "path": archived_endpoint.as_posix(),
+                        "sha256": finalizer.sha256_file(archived_endpoint),
+                    },
+                    {
+                        "role": "tier_b_stopping_adjudication",
+                        "path": archived_stopping.as_posix(),
+                        "sha256": finalizer.sha256_file(archived_stopping),
+                    },
+                ]
+            )
+            raw_stopping = dict(stopping_binding)
+            raw_stopping["path"] = archived_stopping.name
+            raw_stopping["source_archive_path"] = stopping_relative.relative_to(
+                finalizer.ROUTE_KAROLINA_SOURCE_PATH
+            ).as_posix()
+            raw_endpoint_binding = {
+                "publication_admissible": True,
+                "reason": "hash_bound_tier_b_endpoint_analysis_admitted",
+                "path": archived_endpoint.name,
+                "sha256": finalizer.sha256_file(endpoint_path),
+                "schema_version": finalizer.ROUTE_ENDPOINT_SCHEMA_VERSION,
+                "terminal_decision": endpoint_source_payload["terminal_decision"],
+                "required_rows": 30,
+                "admitted_rows": 30,
+                "comparative_ranking_admissible": endpoint_source_payload[
+                    "comparative_ranking_admissible"
+                ],
+                "stopping_policy": endpoint_source_payload["stopping_policy"],
+                "stopping_adjudication": raw_stopping,
+                "stopping_binding_matches_manifest": True,
+                "source_archive_path": endpoint_relative.relative_to(
+                    finalizer.ROUTE_KAROLINA_SOURCE_PATH
+                ).as_posix(),
+            }
             raw.update(
                 {
                     "analysis_schema_version": 1,
@@ -1522,22 +2058,70 @@ def test_finalizer_supports_clean_descendant_and_rejects_raw_and_final_tampering
                     ],
                     "empirical_map": rows,
                     "cost_model": cost_model,
+                    "endpoint_analysis": raw_endpoint_binding,
                     "factorized_microbenchmark_gate": factor_gate,
                     "invalid_records": [],
-                    "provenance": {
-                        "git": {"commit": experiment_commit, "dirty": False},
-                        "input_files": route_evidence_entries,
-                    },
+                        "provenance": {
+                            "git": {"commit": experiment_commit, "dirty": False},
+                            "normalized_exact_command": "synthetic canonical route analysis",
+                            "input_files": route_evidence_entries,
+                        },
                 }
             )
-            command["route_endpoint_analysis"] = endpoint_relative.as_posix()
-            command["input_files"] = [
-                {"scope": "staging", "path": endpoint_relative.as_posix()}
-            ]
-            command["expected_artifacts"] = [endpoint_relative.as_posix()]
         raw_path = staging / spec.relative_path
         raw_path.parent.mkdir(parents=True, exist_ok=True)
         raw_path.write_text(json.dumps(raw) + "\n", encoding="utf-8")
+        if spec.key == "route_analysis":
+            route_output = staging / finalizer.ROUTE_ANALYSIS_OUTPUT_PATH
+            route_manifest = {
+                "manifest_version": 1,
+                "experiment_id": "EXP-ROUTE-001",
+                "publication_evidence": True,
+                "status": "publication_evidence",
+                "run_kind": "publication",
+                "terminal_decision": raw["terminal_decision"],
+                "contract_sha256": finalizer.sha256_file(route_contract),
+                "normalized_exact_command": raw["provenance"][
+                    "normalized_exact_command"
+                ],
+                "command": raw["provenance"]["normalized_exact_command"],
+                "code_hashes": {
+                    finalizer.ROUTE_COST_ANALYZER_PATH.as_posix(): finalizer.sha256_file(
+                        repo / finalizer.ROUTE_COST_ANALYZER_PATH
+                    ),
+                    finalizer.ROUTE_STOPPING_HELPER_PATH.as_posix(): finalizer.sha256_file(
+                        repo / finalizer.ROUTE_STOPPING_HELPER_PATH
+                    ),
+                },
+                "input_hashes": {
+                    "endpoint_analysis.json": raw["endpoint_analysis"]["sha256"],
+                    "stopping_adjudication.json": raw["endpoint_analysis"][
+                        "stopping_adjudication"
+                    ]["sha256"],
+                    finalizer.TIER_B_STOPPING_POLICY_PATH.relative_to(
+                        finalizer.REPO_ROOT
+                    ).as_posix(): finalizer.sha256_file(
+                        repo
+                        / finalizer.TIER_B_STOPPING_POLICY_PATH.relative_to(
+                            finalizer.REPO_ROOT
+                        )
+                    ),
+                },
+                "endpoint_analysis": raw["endpoint_analysis"],
+                "output_hashes": {
+                    name: finalizer.sha256_file(route_output / name)
+                    for name in (
+                        "analysis.json",
+                        "empirical_route_map.csv",
+                        "report.md",
+                        "endpoint_analysis.json",
+                        "stopping_adjudication.json",
+                    )
+                },
+            }
+            (route_output / "manifest.json").write_text(
+                json.dumps(route_manifest) + "\n", encoding="utf-8"
+            )
         producer_hash = finalizer.sha256_file(repo / spec.producer_path)
         for index, record_path in enumerate(spec.run_records):
             record = _run_record(
@@ -1553,6 +2137,25 @@ def test_finalizer_supports_clean_descendant_and_rejects_raw_and_final_tampering
             destination.write_text(json.dumps(record) + "\n", encoding="utf-8")
         commands.append(command)
 
+    finalizer._validate_route_dependency_plan_contract(
+        dependency_plan_path,
+        experiment_commit=experiment_commit,
+    )
+    for dependency_command in dependency_plan["commands"]:
+        _write_receipt(
+            path=(
+                evidence
+                / finalizer.RECEIPT_DIRECTORY
+                / f"{dependency_command['id']}.json"
+            ),
+            command=dependency_command,
+            plan=dependency_plan,
+            plan_path=dependency_plan_path,
+            repo=repo,
+            evidence=evidence,
+            commit=experiment_commit,
+        )
+
     plan = {
         "schema_id": finalizer.PLAN_SCHEMA_ID,
         "schema_version": finalizer.PLAN_SCHEMA_VERSION,
@@ -1561,7 +2164,8 @@ def test_finalizer_supports_clean_descendant_and_rejects_raw_and_final_tampering
         "experiment_commit": experiment_commit,
         "commands": commands,
     }
-    plan_path = tmp_path / "plan.json"
+    plan_path = evidence / "source_plan.json"
+    plan_path.parent.mkdir(parents=True, exist_ok=True)
     plan_path.write_text(json.dumps(plan, indent=2) + "\n", encoding="utf-8")
     finalizer._plan_command_map(plan)
     for command in commands:
@@ -1603,6 +2207,23 @@ def test_finalizer_supports_clean_descendant_and_rejects_raw_and_final_tampering
         (evidence / finalizer.SOURCE_BY_KEY["route_analysis"].relative_path).read_text()
     )
     assert route["endpoint_analysis"]["publication_admissible"] is True
+    published_stopping = evidence / finalizer.ROUTE_STOPPING_PUBLICATION_PATH
+    published_endpoint = json.loads(
+        (evidence / finalizer.ROUTE_ENDPOINT_PUBLICATION_PATH).read_text(
+            encoding="utf-8"
+        )
+    )
+    assert published_stopping.read_bytes() == (staging / stopping_relative).read_bytes()
+    assert published_endpoint["schema"]["version"] == 2
+    assert published_endpoint["stopping_adjudication"]["path"] == (
+        finalizer.ROUTE_STOPPING_PUBLICATION_PATH.as_posix()
+    )
+    assert published_endpoint["stopping_adjudication"] == route[
+        "endpoint_analysis"
+    ]["stopping_adjudication"]
+    assert published_endpoint["stopping_adjudication"]["sha256"] == (
+        finalizer.sha256_file(published_stopping)
+    )
     assert route["terminal_decision"] == route_terminal
     if route_terminal == "finite_empirical_map_only":
         assert route["cost_model"]["selector_claim_admissible"] is False
@@ -1616,7 +2237,7 @@ def test_finalizer_supports_clean_descendant_and_rejects_raw_and_final_tampering
     )
     assert set(route["provenance"]["input_files"][0]) >= {"role", "path", "sha256"}
     assert not Path(route["provenance"]["input_files"][0]["path"]).is_absolute()
-    assert len(companion["artifacts"]) == 6
+    assert len(companion["artifacts"]) == 9
 
     moved = repo / "artifacts/moved-evidence"
     shutil.move(evidence, moved)
@@ -1624,6 +2245,14 @@ def test_finalizer_supports_clean_descendant_and_rejects_raw_and_final_tampering
     finalizer.verify_finalized_campaign(
         manifest_path=manifest, evidence_root=moved, repo_root=repo
     )
+    moved_stopping = moved / finalizer.ROUTE_STOPPING_PUBLICATION_PATH
+    pristine_stopping = moved_stopping.read_bytes()
+    moved_stopping.write_bytes(pristine_stopping + b" ")
+    with pytest.raises(finalizer.FinalizationError, match="finalized output hash mismatch"):
+        finalizer.verify_finalized_campaign(
+            manifest_path=manifest, evidence_root=moved, repo_root=repo
+        )
+    moved_stopping.write_bytes(pristine_stopping)
     from paper.scripts import admit_revision_publication_evidence as admission
 
     audit = admission.audit_evidence(

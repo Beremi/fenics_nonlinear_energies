@@ -846,6 +846,12 @@ def test_complete_balanced_campaign_admits_only_collective_max_timing(tmp_path: 
     matrix, root, _rows = _campaign(tmp_path)
     result = analysis.analyze(matrix, root, root / "prepared_manifest.json", root / "stopping_adjudication.json")
     assert result["schema"] == {"id": analysis.SCHEMA_ID, "version": 2}
+    assert result["stopping_policy"]["path"] == (
+        "paper/protocols/EXP-ROUTE-001-tier-b-stopping-policy.json"
+    )
+    assert result["stopping_policy"]["sha256"] == analysis.stopping_sha256_file(
+        analysis.TIER_B_STOPPING_POLICY_PATH
+    )
     assert result["timing_admissible"] is True
     assert result["endpoint_correct_timing_admissible"] is True
     assert result["descriptive_timing_available"] is True

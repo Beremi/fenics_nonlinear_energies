@@ -33,6 +33,11 @@ from src.core.benchmark.run_record import (  # noqa: E402
     atomic_write_json,
     validate_run_record,
 )
+from experiments.runners.paper_revision_karolina.tier_b_stopping import (  # noqa: E402
+    POLICY_PATH as TIER_B_STOPPING_POLICY,
+    sha256_file as stopping_sha256_file,
+    validate_stop_adjudication,
+)
 
 
 SCHEMA_ID = "fenics-nonlinear-energies.revision-publication-evidence-source"
@@ -47,6 +52,44 @@ DEFAULT_MANIFEST_NAME = "publication_evidence_manifest.json"
 TABLE_GENERATOR = Path("paper/scripts/generate_revision_evidence_tables.py")
 HEX40_RE = re.compile(r"[0-9a-f]{40}")
 HEX64_RE = re.compile(r"[0-9a-f]{64}")
+ROUTE_ENDPOINT_SCHEMA_ID = "fenics-nonlinear-energies.exp-route-001.tier-b-endpoints"
+ROUTE_ENDPOINT_PUBLICATION_PATH = (
+    "EXP-ROUTE-001/analysis_contract_v1/tier_b_endpoint_analysis.json"
+)
+ROUTE_STOPPING_PUBLICATION_PATH = (
+    "EXP-ROUTE-001/analysis_contract_v1/stopping_adjudication.json"
+)
+ROUTE_ENDPOINT_SUMMARY_KEYS = frozenset(
+    {
+        "path",
+        "sha256",
+        "schema_id",
+        "schema_version",
+        "terminal_decision",
+        "comparative_ranking_admissible",
+        "publication_admissible",
+        "required_rows",
+        "admitted_rows",
+        "stopping_policy",
+        "stopping_adjudication",
+        "stopping_binding_matches_manifest",
+    }
+)
+ROUTE_STOPPING_BINDING_KEYS = frozenset(
+    {
+        "schema_id",
+        "schema_version",
+        "path",
+        "sha256",
+        "computation_source_commit",
+        "adjudicator_source_commit",
+        "adjudicator_sha256",
+        "local_analysis_sha256",
+        "cluster_archive_checksum_sha256",
+        "p4_reference_row_id",
+        "p4_reference_status",
+    }
+)
 QUADRATURE_RULE_IDS = (
     "tetra_1point",
     "tetra_11point",
@@ -1815,6 +1858,55 @@ def _negative_route_leakage_errors(
     return errors
 
 
+def _route_stopping_binding_errors(
+    binding: object, *, prefix: str
+) -> list[str]:
+    if not isinstance(binding, Mapping):
+        return [f"{prefix} must be a hash-bound STOP adjudication object"]
+    errors: list[str] = []
+    if set(binding) != ROUTE_STOPPING_BINDING_KEYS:
+        errors.append(
+            f"{prefix} has unexpected or missing fields: "
+            f"{sorted(str(key) for key in set(binding) ^ ROUTE_STOPPING_BINDING_KEYS)}"
+        )
+    if (
+        binding.get("schema_id")
+        != "fenics-nonlinear-energies.exp-stop-001.final-adjudication"
+        or binding.get("schema_version") != 3
+    ):
+        errors.append(f"{prefix} schema must be final EXP-STOP-001 version 3")
+    path = binding.get("path")
+    if (
+        not isinstance(path, str)
+        or path != ROUTE_STOPPING_PUBLICATION_PATH
+    ):
+        errors.append(
+            f"{prefix}.path must be the canonical publication STOP path"
+        )
+    for key in (
+        "sha256",
+        "local_analysis_sha256",
+        "cluster_archive_checksum_sha256",
+        "adjudicator_sha256",
+    ):
+        if not isinstance(binding.get(key), str) or not HEX64_RE.fullmatch(
+            str(binding.get(key))
+        ):
+            errors.append(f"{prefix}.{key} must be a SHA-256 digest")
+    for key in ("computation_source_commit", "adjudicator_source_commit"):
+        if not isinstance(binding.get(key), str) or not HEX40_RE.fullmatch(
+            str(binding.get(key))
+        ):
+            errors.append(f"{prefix}.{key} must be a Git commit")
+    if (
+        binding.get("p4_reference_row_id")
+        != "p3d_p4_nonlinear_1em07_cluster"
+        or binding.get("p4_reference_status") != "accepted"
+    ):
+        errors.append(f"{prefix} does not admit the fixed P4 tight reference")
+    return errors
+
+
 def _route_analysis_errors(payload: Mapping[str, Any]) -> list[str]:
     errors: list[str] = []
     contract_path = REPO_ROOT / "paper/protocols/EXP-ROUTE-001-analysis-contract.json"
@@ -1828,8 +1920,8 @@ def _route_analysis_errors(payload: Mapping[str, Any]) -> list[str]:
         "otherwise": FINITE_EMPIRICAL_MAP_TERMINAL,
         "never_impute_censored_or_missing_timings": True,
     }
-    if contract.get("contract_version") != 2:
-        errors.append("route analysis contract_version must be 2")
+    if contract.get("contract_version") != 3:
+        errors.append("route analysis contract_version must be 3")
     if contract.get("terminal_policy") != expected_terminal_policy:
         errors.append("route terminal policy differs from the frozen two-branch contract")
     terminal = payload.get("terminal_decision")
@@ -1850,8 +1942,15 @@ def _route_analysis_errors(payload: Mapping[str, Any]) -> list[str]:
     if not isinstance(endpoint, Mapping):
         errors.append("mandatory Tier-B endpoint_analysis binding is missing")
     else:
-        if endpoint.get("schema_version") not in {1, 2}:
-            errors.append("endpoint_analysis schema_version is unsupported")
+        if set(endpoint) != ROUTE_ENDPOINT_SUMMARY_KEYS:
+            errors.append(
+                "endpoint_analysis has unexpected or missing fields: "
+                f"{sorted(str(key) for key in set(endpoint) ^ ROUTE_ENDPOINT_SUMMARY_KEYS)}"
+            )
+        if endpoint.get("schema_id") != ROUTE_ENDPOINT_SCHEMA_ID:
+            errors.append("endpoint_analysis schema_id is invalid")
+        if endpoint.get("schema_version") != 2:
+            errors.append("endpoint_analysis schema_version must be 2")
         if endpoint.get("terminal_decision") not in {
             "tier_b_descriptive_timing_only",
             "tier_b_comparative_ranking_admissible",
@@ -1888,16 +1987,38 @@ def _route_analysis_errors(payload: Mapping[str, Any]) -> list[str]:
         if required_rows != 30 or admitted_rows != required_rows:
             errors.append("endpoint_analysis must admit all 30 required Tier-B rows")
         endpoint_path = endpoint.get("path")
-        if (
-            not isinstance(endpoint_path, str)
-            or Path(endpoint_path).is_absolute()
-            or ".." in Path(endpoint_path).parts
-        ):
-            errors.append("endpoint_analysis.path must be a safe evidence-root-relative path")
+        if endpoint_path != ROUTE_ENDPOINT_PUBLICATION_PATH:
+            errors.append("endpoint_analysis.path must be the canonical publication path")
         if not isinstance(endpoint.get("sha256"), str) or not HEX64_RE.fullmatch(
             str(endpoint.get("sha256"))
         ):
             errors.append("endpoint_analysis.sha256 must be a SHA-256 digest")
+        policy = endpoint.get("stopping_policy")
+        expected_policy = {
+            "path": contract["publication_model_input_gates"][
+                "tier_b_stopping_policy_path"
+            ],
+            "sha256": contract["publication_model_input_gates"][
+                "tier_b_stopping_policy_sha256"
+            ],
+        }
+        if expected_policy != {
+            "path": str(TIER_B_STOPPING_POLICY.relative_to(REPO_ROOT)),
+            "sha256": stopping_sha256_file(TIER_B_STOPPING_POLICY),
+        }:
+            errors.append("frozen route contract has a stale Tier-B stopping policy")
+        if policy != expected_policy:
+            errors.append("endpoint_analysis stopping-policy binding is stale")
+        errors.extend(
+            _route_stopping_binding_errors(
+                endpoint.get("stopping_adjudication"),
+                prefix="endpoint_analysis.stopping_adjudication",
+            )
+        )
+        if endpoint.get("stopping_binding_matches_manifest") is not True:
+            errors.append(
+                "endpoint_analysis must confirm its pre-submission STOP binding"
+            )
     sources = payload.get("sources")
     hardware_ids: set[str] = set()
     if not isinstance(sources, list):
@@ -2654,6 +2775,7 @@ def _payload_hash_errors(
 
     if spec.family == "route_analysis":
         entries = _nested(payload, "provenance", "input_files")
+        stopping_role_entries: list[Mapping[str, Any]] = []
         if not isinstance(entries, list) or not entries:
             errors.append("route provenance.input_files must be a nonempty evidence inventory")
         else:
@@ -2664,6 +2786,8 @@ def _payload_hash_errors(
                     continue
                 role = str(row.get("role", ""))
                 roles.add(role)
+                if role == "tier_b_stopping_adjudication":
+                    stopping_role_entries.append(row)
                 verify(
                     row.get("path"),
                     row.get("sha256"),
@@ -2675,6 +2799,7 @@ def _payload_hash_errors(
                 "route_tranche_manifest",
                 "route_submission_ledger",
                 "route_release_authorization",
+                "tier_b_stopping_adjudication",
             }
             missing_roles = sorted(required_roles - roles)
             if missing_roles:
@@ -2705,7 +2830,7 @@ def _payload_hash_errors(
                     schema = endpoint_payload.get("schema")
                     if not isinstance(schema, Mapping) or schema.get("id") != (
                         "fenics-nonlinear-energies.exp-route-001.tier-b-endpoints"
-                    ) or schema.get("version") != 1:
+                    ) or schema.get("version") != 2:
                         errors.append("endpoint analysis native schema is invalid")
                     if endpoint_payload.get("experiment_id") != "EXP-ROUTE-001":
                         errors.append("endpoint analysis experiment_id is invalid")
@@ -2733,6 +2858,42 @@ def _payload_hash_errors(
                         or endpoint_payload.get("coverage_and_campaign_failure_reasons") != []
                     ):
                         errors.append("endpoint analysis terminal/coverage gates disagree with binding")
+                    contract = _read_json(
+                        REPO_ROOT
+                        / "paper/protocols/EXP-ROUTE-001-analysis-contract.json"
+                    )
+                    expected_policy = {
+                        "path": contract["publication_model_input_gates"][
+                            "tier_b_stopping_policy_path"
+                        ],
+                        "sha256": contract["publication_model_input_gates"][
+                            "tier_b_stopping_policy_sha256"
+                        ],
+                    }
+                    if endpoint_payload.get("stopping_policy") != expected_policy:
+                        errors.append("endpoint native stopping-policy binding is stale")
+                    if endpoint_payload.get("stopping_binding_matches_manifest") is not True:
+                        errors.append(
+                            "endpoint native evidence does not confirm its submission STOP binding"
+                        )
+                    native_stop = endpoint_payload.get("stopping_adjudication")
+                    declared_stop = endpoint.get("stopping_adjudication")
+                    errors.extend(
+                        _route_stopping_binding_errors(
+                            native_stop,
+                            prefix="endpoint native stopping_adjudication",
+                        )
+                    )
+                    if isinstance(native_stop, Mapping) and isinstance(
+                        declared_stop, Mapping
+                    ):
+                        if any(
+                            native_stop.get(key) != declared_stop.get(key)
+                            for key in ROUTE_STOPPING_BINDING_KEYS
+                        ):
+                            errors.append(
+                                "endpoint native and route-summary STOP bindings disagree"
+                            )
                     blocks = endpoint_payload.get("blocks")
                     if not isinstance(blocks, list) or len(blocks) != 30 or any(
                         not isinstance(block, Mapping)
@@ -2752,6 +2913,49 @@ def _payload_hash_errors(
                         for row in structural
                     ):
                         errors.append("endpoint analysis structural censors are invalid")
+            declared_stop = endpoint.get("stopping_adjudication")
+            if isinstance(declared_stop, Mapping):
+                if not stopping_role_entries:
+                    errors.append(
+                        "route evidence inventory lacks a STOP artifact bound to the "
+                        "endpoint summary"
+                    )
+                elif any(
+                    row.get("sha256") != declared_stop.get("sha256")
+                    for row in stopping_role_entries
+                ):
+                    errors.append(
+                        "route STOP provenance digest disagrees with endpoint_analysis"
+                    )
+                verify(
+                    declared_stop.get("path"),
+                    declared_stop.get("sha256"),
+                    "endpoint_analysis.stopping_adjudication",
+                    evidence_only=True,
+                )
+                stop_relative = Path(str(declared_stop.get("path", "")))
+                stop_candidates = [
+                    evidence_root / spec.relative_path.parent / stop_relative,
+                    evidence_root / stop_relative,
+                ]
+                stop_path = next(
+                    (candidate for candidate in stop_candidates if candidate.is_file()),
+                    stop_candidates[0],
+                )
+                if stop_path.is_file() and _is_contained(stop_path, evidence_root):
+                    try:
+                        validated_stop = validate_stop_adjudication(stop_path)
+                    except (OSError, ValueError, json.JSONDecodeError) as exc:
+                        errors.append(f"STOP adjudication cannot be validated: {exc}")
+                    else:
+                        for key, value in validated_stop.items():
+                            if key != "path" and declared_stop.get(key) != value:
+                                errors.append(
+                                    "route-summary STOP binding disagrees with the "
+                                    f"validated artifact at {key}"
+                                )
+                        if declared_stop.get("sha256") != sha256_file(stop_path):
+                            errors.append("route-summary STOP artifact hash is stale")
     return errors
 
 

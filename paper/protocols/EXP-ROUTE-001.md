@@ -7,7 +7,7 @@ not submitted.** The local rows are dirty-worktree diagnostic pilots, not
 publication evidence. The train/holdout split, cost-model features, error
 thresholds, ordering gate, and structural-censor policy are frozen in
 [`EXP-ROUTE-001-analysis-contract.json`](EXP-ROUTE-001-analysis-contract.json)
-as contract version 2 before any Karolina result exists. The exact executable Karolina rows are
+as contract version 3 before any Karolina result exists. The exact executable Karolina rows are
 frozen in
 [`campaign_matrix.csv`](../../experiments/runners/paper_revision_karolina/campaign_matrix.csv).
 No predictive model may be fit unless the machine-readable preflight passes;
@@ -21,7 +21,7 @@ Karolina result yet exists.
 The publication artifact directory remains named `analysis_contract_v1`
 because it denotes machine-readable `analysis_schema_version: 1`, not the
 scientific contract revision. The separately hash-bound
-`EXP-ROUTE-001-analysis-contract.json` is `contract_version: 2`. The stable
+`EXP-ROUTE-001-analysis-contract.json` is `contract_version: 3`. The stable
 artifact-layout name therefore does not imply that a version-1 scientific
 contract is being applied.
 
@@ -45,8 +45,8 @@ The timing response is the MPI collective maximum, so its route-work proxy uses
 the busiest rank's overlap workload rather than the global number of uniquely
 owned elements. Let $n^{\mathrm{loc}}_{e,r}$ be the number of overlap elements
 evaluated on rank $r$, $c_r$ its local color count, $m_e$ the element DOF count,
-$n_q$ the quadrature count, and $s$ the constitutive dimension. Contract version
-2 fixes the single structural feature to
+$n_q$ the quadrature count, and $s$ the constitutive dimension. The structural
+feature introduced in contract version 2 and retained unchanged in version 3 is
 
 \[
 \begin{aligned}

@@ -125,7 +125,7 @@ def _observed(root: Path) -> dict[tuple[str, str, str, int, str], dict[str, obje
 def test_contract_freezes_split_features_and_terminal_gates() -> None:
     contract = _contract()
     model = contract["cost_model"]
-    assert contract["contract_version"] == 2
+    assert contract["contract_version"] == 3
     assert contract["terminal_policy"] == {
         "selector_claim_requires_all_model_gates": True,
         "selector_admitted": "predictive_selector_admissible",
@@ -141,6 +141,19 @@ def test_contract_freezes_split_features_and_terminal_gates() -> None:
         is True
     )
     assert contract["publication_model_input_gates"]["endpoint_required_rows"] == 30
+    assert (
+        contract["publication_model_input_gates"]["endpoint_analysis_schema_version"]
+        == 2
+    )
+    assert contract["publication_model_input_gates"][
+        "tier_b_stopping_policy_path"
+    ] == str(analysis.TIER_B_STOPPING_POLICY_PATH.relative_to(REPO_ROOT))
+    assert contract["publication_model_input_gates"][
+        "tier_b_stopping_policy_sha256"
+    ] == analysis.stopping_sha256_file(analysis.TIER_B_STOPPING_POLICY_PATH)
+    assert contract["publication_model_input_gates"][
+        "tier_b_stopping_adjudication_required_before_submission"
+    ] is True
     assert model["training_rule"] == (
         "workstation_local rows and karolina_cpu ranks 1 or 8"
     )
@@ -586,17 +599,83 @@ def test_workstation_provenance_requires_exact_controlled_environment(
     }
 
 
-def test_selector_endpoint_gate_is_hash_bound_and_semantically_deep(tmp_path: Path) -> None:
+def _write_valid_stopping_adjudication(
+    root: Path,
+) -> tuple[Path, dict[str, object]]:
+    policy = analysis._read_json(analysis.TIER_B_STOPPING_POLICY_PATH)
+    local = dict(policy["local_calibration"])
+    reference_id = "p3d_p4_nonlinear_1em07_cluster"
+    comparison_ids = (
+        "p3d_p4_nonlinear_1em02_cluster",
+        "p3d_p4_nonlinear_1em04_cluster",
+        "p3d_p4_nonlinear_1em06_cluster",
+        reference_id,
+        "ginzburg_landau_mpi_consistency_cluster",
+        "hyperelasticity_mpi_consistency_cluster",
+        "plasticity3d_mpi_consistency_cluster",
+    )
+    comparisons = {
+        case_id: {
+            "status": "accepted",
+            "reference_row_id": reference_id,
+            "gates": {"passed": True},
+        }
+        for case_id in comparison_ids
+    }
+    adjudicator = REPO_ROOT / "experiments/runners/prepare_exp_stop_001_karolina.py"
+    payload = {
+        "schema_id": "fenics-nonlinear-energies.exp-stop-001.final-adjudication",
+        "schema_version": 3,
+        "experiment_id": "EXP-STOP-001",
+        "terminal_decision": "CALIBRATION_SCOPED_PASS_PENDING_DISCRETIZATION_GATE",
+        "complete_exp_stop_pass": False,
+        "calibration_scope_passed": True,
+        "computation_source_commit": local["source_commit"],
+        "adjudicator": {
+            "source_commit": "0123456789abcdef0123456789abcdef01234567",
+            "source_dirty": False,
+            "path": "experiments/runners/prepare_exp_stop_001_karolina.py",
+            "sha256": analysis._sha256_file(adjudicator),
+        },
+        "local_analysis_sha256": local["analysis_sha256"],
+        "cluster_archive_checksum_sha256": "a" * 64,
+        "cluster_case_count": 7,
+        "publication_timing_admissible": False,
+        "comparisons": comparisons,
+        "rejected_or_censored_cases": [],
+        "required_gate_failures": [],
+        "selected_policies": {
+            "p3d_p4_nonlinear_cluster": {
+                "status": "selected_loosest_accepted_same_discretization_policy",
+                "row_id": "p3d_p4_nonlinear_1em06_cluster",
+                "parameter": "relative_dual_residual_target",
+                "tolerance": 1.0e-6,
+            }
+        },
+    }
+    path = root / "analysis" / "stopping_adjudication.json"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(payload) + "\n", encoding="utf-8")
+    return path, analysis.validate_stop_adjudication(path)
+
+
+def test_selector_endpoint_gate_revalidates_and_archives_stop_evidence(
+    tmp_path: Path,
+) -> None:
     contract = _contract()
     root = tmp_path / "karolina"
     master = _write_valid_route_master_archive(root, contract)
+    stopping_path, stopping_binding = _write_valid_stopping_adjudication(root)
     endpoint_path = root / "analysis" / "tier_b_endpoints.json"
-    endpoint_path.parent.mkdir()
     reason = contract["structural_censors"][0]["reason"]
+    nested_stopping = dict(stopping_binding)
+    # The semantic binding must survive archive relocation; the source path itself
+    # is re-established by the explicit, archive-confined input.
+    nested_stopping["path"] = "/relocated/source/stopping_adjudication.json"
     payload = {
         "schema": {
             "id": "fenics-nonlinear-energies.exp-route-001.tier-b-endpoints",
-            "version": 1,
+            "version": 2,
         },
         "experiment_id": "EXP-ROUTE-001",
         "matrix_sha256": contract["publication_model_input_gates"][
@@ -610,7 +689,20 @@ def test_selector_endpoint_gate_is_hash_bound_and_semantically_deep(tmp_path: Pa
         "publication_admissible": True,
         "required_rows": 30,
         "admitted_rows": 30,
-        "manifest": {"source_commit": master["source_commit"]},
+        "manifest": {
+            "source_commit": master["source_commit"],
+            "stopping_adjudication": dict(nested_stopping),
+        },
+        "stopping_policy": {
+            "path": str(
+                analysis.TIER_B_STOPPING_POLICY_PATH.relative_to(REPO_ROOT)
+            ),
+            "sha256": analysis.stopping_sha256_file(
+                analysis.TIER_B_STOPPING_POLICY_PATH
+            ),
+        },
+        "stopping_adjudication": dict(nested_stopping),
+        "stopping_binding_matches_manifest": True,
         "blocks": [
             {
                 "status": "timing_admitted",
@@ -635,28 +727,71 @@ def test_selector_endpoint_gate_is_hash_bound_and_semantically_deep(tmp_path: Pa
     endpoint_path.write_text(json.dumps(payload) + "\n", encoding="utf-8")
     gate = analysis._endpoint_analysis_gate(
         endpoint_path,
+        stopping_path,
         sources=[("karolina_cpu", root)],
         contract=contract,
     )
     assert gate["publication_admissible"] is True
     assert gate["required_rows"] == gate["admitted_rows"] == 30
-    payload["comparative_ranking_admissible"] = True
+    assert gate["schema_version"] == 2
+    assert gate["stopping_binding_matches_manifest"] is True
+    assert gate["stopping_adjudication"]["sha256"] == analysis._sha256_file(
+        stopping_path
+    )
+    assert gate["_stopping_adjudication_source_path"] == str(
+        stopping_path.resolve()
+    )
+
+    archive = tmp_path / "cost_model_archive"
+    archive.mkdir()
+    public, archived_endpoint, archived_stopping = analysis._archive_endpoint_gate(
+        gate, archive
+    )
+    assert archived_endpoint == archive / "endpoint_analysis.json"
+    assert archived_stopping == archive / "stopping_adjudication.json"
+    assert public["path"] == "endpoint_analysis.json"
+    assert public["stopping_adjudication"]["path"] == "stopping_adjudication.json"
+    assert public["stopping_adjudication"]["source_archive_path"] == (
+        "analysis/stopping_adjudication.json"
+    )
+    assert analysis._sha256_file(archived_endpoint) == gate["sha256"]
+    assert analysis._sha256_file(archived_stopping) == stopping_binding["sha256"]
+
+    payload["stopping_adjudication"]["cluster_archive_checksum_sha256"] = "b" * 64
     endpoint_path.write_text(json.dumps(payload) + "\n", encoding="utf-8")
     mismatched = analysis._endpoint_analysis_gate(
         endpoint_path,
+        stopping_path,
         sources=[("karolina_cpu", root)],
         contract=contract,
     )
     assert mismatched["publication_admissible"] is False
-    payload["comparative_ranking_admissible"] = False
-    payload["blocks"][0]["status"] = "invalid"
+    assert mismatched["reason"] == "tier_b_endpoint_nested_stopping_binding_failed"
+
+    payload["stopping_adjudication"] = dict(nested_stopping)
+    payload["stopping_policy"]["sha256"] = "0" * 64
     endpoint_path.write_text(json.dumps(payload) + "\n", encoding="utf-8")
     rejected = analysis._endpoint_analysis_gate(
         endpoint_path,
+        stopping_path,
         sources=[("karolina_cpu", root)],
         contract=contract,
     )
     assert rejected["publication_admissible"] is False
+    assert rejected["reason"] == (
+        "tier_b_endpoint_stopping_policy_or_contract_binding_failed"
+    )
+
+    outside = tmp_path / "outside_stop.json"
+    outside.write_bytes(stopping_path.read_bytes())
+    escaped = analysis._endpoint_analysis_gate(
+        endpoint_path,
+        outside,
+        sources=[("karolina_cpu", root)],
+        contract=contract,
+    )
+    assert escaped["publication_admissible"] is False
+    assert escaped["reason"] == "tier_b_stopping_adjudication_escapes_karolina_source"
 
 
 def test_balanced_independent_blocks_are_publication_model_eligible() -> None:

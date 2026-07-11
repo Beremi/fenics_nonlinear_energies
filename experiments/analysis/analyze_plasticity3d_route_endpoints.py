@@ -2333,7 +2333,7 @@ def analyze(
         "analysis_script_path": str(Path(__file__).resolve()),
         "analysis_script_sha256": _sha256_file(Path(__file__).resolve()),
         "stopping_policy": {
-            "path": str(TIER_B_STOPPING_POLICY_PATH),
+            "path": str(TIER_B_STOPPING_POLICY_PATH.relative_to(REPO_ROOT)),
             "sha256": stopping_sha256_file(TIER_B_STOPPING_POLICY_PATH),
         },
         "stopping_adjudication": explicit_stopping,

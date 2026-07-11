@@ -6,8 +6,9 @@ submit jobs, contact a scheduler, or access a remote host.  The ``plan`` mode
 validates completed workstation and copied-back Karolina evidence, freezes a
 recursive SHA-256 inventory of both source trees, and writes a dependency-
 preparation plan consumable by ``finalize_revision_publication_campaign.py``.
-The three staging modes are invoked by that managed executor to produce its
-normal fingerprinted receipts at the exact clean experiment commit.
+The four staging modes are invoked by that managed executor to produce its
+normal fingerprinted receipts at the exact clean experiment commit.  The
+endpoint-bound final STOP adjudication is independently copied and attested.
 
 The managed executor intentionally creates parents for every declared output
 before invoking a producer.  Whole-tree staging therefore accepts an existing
@@ -37,6 +38,10 @@ from experiments.analysis import (  # noqa: E402
     analyze_plasticity3d_route_cost_model as route_analysis,
 )
 from experiments.analysis import finalize_revision_publication_campaign as finalizer  # noqa: E402
+from experiments.runners.paper_revision_karolina.tier_b_stopping import (  # noqa: E402
+    POLICY_PATH as TIER_B_STOPPING_POLICY_PATH,
+    validate_stop_adjudication,
+)
 from src.core.benchmark.run_record import atomic_write_json, strict_json_dumps  # noqa: E402
 
 
@@ -46,6 +51,9 @@ WORKSTATION_TARGET = Path("EXP-ROUTE-001/source_archives/workstation")
 KAROLINA_TARGET = Path("EXP-ROUTE-001/source_archives/karolina")
 CANONICAL_ENDPOINT = (
     KAROLINA_TARGET / "reviewed_inputs/tier_b_endpoint_analysis.json"
+)
+CANONICAL_STOPPING_ADJUDICATION = (
+    KAROLINA_TARGET / "reviewed_inputs/stopping_adjudication.json"
 )
 DEPENDENCY_CAMPAIGN_ID = "paper_revision_route_dependencies_v1"
 HEX40 = frozenset("0123456789abcdef")
@@ -57,6 +65,9 @@ HASH_BOUND_VALIDATOR_FILES = (
     Path("experiments/analysis/analyze_plasticity3d_route_endpoints.py"),
     Path("experiments/analysis/aggregate_route_tranche_manifests.py"),
     Path("experiments/analysis/aggregate_route_tier_b_manifests.py"),
+    TIER_B_STOPPING_POLICY_PATH.relative_to(REPO_ROOT),
+    Path("experiments/runners/paper_revision_karolina/tier_b_stopping.py"),
+    Path("experiments/runners/prepare_exp_stop_001_karolina.py"),
     Path("src/core/benchmark/run_record.py"),
 )
 
@@ -257,6 +268,96 @@ def _load_contract(path: Path) -> tuple[Path, dict[str, Any]]:
     return resolved, contract
 
 
+def _stopping_identity(binding: Mapping[str, Any]) -> dict[str, Any]:
+    """Return the relocation-independent identity of one STOP adjudication."""
+
+    return {str(key): value for key, value in binding.items() if key != "path"}
+
+
+def _regular_file_within(
+    root: Path,
+    raw_path: str | Path,
+    *,
+    label: str,
+) -> tuple[Path, Path]:
+    root = _require_regular_tree(root, label=f"{label} archive")
+    candidate = Path(raw_path)
+    if not candidate.is_absolute():
+        candidate = root / candidate
+    if candidate.is_symlink() or not candidate.is_file():
+        raise RouteDependencyError(f"{label} is not a regular file: {candidate}")
+    resolved = candidate.resolve(strict=True)
+    try:
+        relative = resolved.relative_to(root)
+    except ValueError as exc:
+        raise RouteDependencyError(f"{label} escapes the Karolina archive") from exc
+    return resolved, relative
+
+
+def _declared_stopping_adjudication(
+    endpoint_path: Path,
+    *,
+    karolina_root: Path,
+) -> tuple[Path, Path]:
+    """Locate the real STOP JSON declared by the endpoint analysis.
+
+    The endpoint stores the complete validated STOP binding.  The path is the
+    only relocation-sensitive field, so dependency planning resolves it while
+    the copied-back archive is still in its reviewed location and then freezes
+    the archive-relative path and exact file hash.
+    """
+
+    endpoint = _read_object(endpoint_path)
+    binding = endpoint.get("stopping_adjudication")
+    if not isinstance(binding, Mapping):
+        raise RouteDependencyError(
+            "Tier-B endpoint lacks its validated STOP adjudication binding"
+        )
+    raw_path = binding.get("path")
+    if not isinstance(raw_path, str) or not raw_path.strip():
+        raise RouteDependencyError(
+            "Tier-B endpoint STOP adjudication path is missing"
+        )
+    return _regular_file_within(
+        karolina_root,
+        raw_path,
+        label="Tier-B STOP adjudication",
+    )
+
+
+def _require_endpoint_gate(
+    endpoint_path: Path,
+    stopping_adjudication_path: Path,
+    *,
+    sources: list[tuple[str, Path]],
+    contract: dict[str, Any],
+) -> tuple[dict[str, Any], dict[str, Any]]:
+    """Run the shared endpoint and STOP validators and cross-check identities."""
+
+    endpoint = route_analysis._endpoint_analysis_gate(
+        endpoint_path,
+        stopping_adjudication_path=stopping_adjudication_path,
+        sources=sources,
+        contract=contract,
+    )
+    if endpoint.get("publication_admissible") is not True:
+        raise RouteDependencyError(
+            "Tier-B endpoint/STOP gate failed: "
+            f"{endpoint.get('reason', 'unknown')}"
+        )
+    validated = validate_stop_adjudication(stopping_adjudication_path)
+    gate_binding = endpoint.get("stopping_adjudication")
+    if (
+        not isinstance(gate_binding, Mapping)
+        or _stopping_identity(gate_binding) != _stopping_identity(validated)
+        or endpoint.get("stopping_binding_matches_manifest") is not True
+    ):
+        raise RouteDependencyError(
+            "Tier-B endpoint and actual STOP adjudication identities differ"
+        )
+    return endpoint, dict(validated)
+
+
 def _require_source_gate(
     hardware_id: str,
     root: Path,
@@ -322,6 +423,7 @@ def validate_complete_route_evidence(
     workstation_root: Path,
     karolina_root: Path,
     endpoint_relative: Path,
+    stopping_adjudication_path: Path | None = None,
     contract: dict[str, Any],
     expected_commit: str,
 ) -> dict[str, Any]:
@@ -378,8 +480,24 @@ def validate_complete_route_evidence(
         raise RouteDependencyError(
             "Tier-B endpoint path escapes the Karolina archive"
         ) from exc
-    endpoint = route_analysis._endpoint_analysis_gate(
+    if endpoint_path.is_symlink() or not endpoint_path.is_file():
+        raise RouteDependencyError(
+            "Tier-B endpoint analysis is not a regular file in the Karolina archive"
+        )
+    if stopping_adjudication_path is None:
+        stopping_path, stopping_relative = _declared_stopping_adjudication(
+            endpoint_path,
+            karolina_root=karolina_root,
+        )
+    else:
+        stopping_path, stopping_relative = _regular_file_within(
+            karolina_root,
+            stopping_adjudication_path,
+            label="Tier-B STOP adjudication",
+        )
+    endpoint, stopping = _require_endpoint_gate(
         endpoint_path,
+        stopping_path,
         sources=sources,
         contract=contract,
     )
@@ -437,6 +555,14 @@ def validate_complete_route_evidence(
             "path": endpoint_relative.as_posix(),
             "sha256": _sha256(endpoint_path),
             "terminal_decision": endpoint.get("terminal_decision"),
+            "schema_version": endpoint.get("schema_version"),
+            "stopping_binding_matches_manifest": endpoint.get(
+                "stopping_binding_matches_manifest"
+            ),
+            "stopping_adjudication": {
+                **_stopping_identity(stopping),
+                "path": stopping_relative.as_posix(),
+            },
         },
     }
 
@@ -542,6 +668,7 @@ def stage_karolina(
     destination: Path,
     workstation_root: Path,
     endpoint_relative: Path,
+    stopping_relative: Path,
     contract_path: Path,
     expected_commit: str,
     expected_inventory_sha256: str,
@@ -550,12 +677,16 @@ def stage_karolina(
     endpoint_relative = _relative_path(
         endpoint_relative, label="Tier-B endpoint relative path"
     )
+    stopping_relative = _relative_path(
+        stopping_relative, label="Tier-B STOP adjudication relative path"
+    )
     _contract_path, contract = _load_contract(contract_path)
     _require_destination_suffix(destination, KAROLINA_TARGET)
     validate_complete_route_evidence(
         workstation_root=workstation_root,
         karolina_root=source,
         endpoint_relative=endpoint_relative,
+        stopping_adjudication_path=source / stopping_relative,
         contract=contract,
         expected_commit=expected_commit,
     )
@@ -569,6 +700,7 @@ def stage_karolina(
         workstation_root=workstation_root,
         karolina_root=destination,
         endpoint_relative=endpoint_relative,
+        stopping_adjudication_path=destination / stopping_relative,
         contract=contract,
         expected_commit=expected_commit,
     )
@@ -580,11 +712,101 @@ def stage_karolina(
     }
 
 
+def stage_stopping_adjudication(
+    *,
+    workstation_root: Path,
+    karolina_root: Path,
+    endpoint_relative: Path,
+    stopping_relative: Path,
+    destination: Path,
+    contract_path: Path,
+    expected_commit: str,
+    expected_sha256: str,
+) -> dict[str, Any]:
+    """Freeze the validated STOP JSON at its canonical staging path."""
+
+    expected_commit = _commit(expected_commit)
+    endpoint_relative = _relative_path(
+        endpoint_relative, label="Tier-B endpoint relative path"
+    )
+    stopping_relative = _relative_path(
+        stopping_relative, label="Tier-B STOP adjudication relative path"
+    )
+    _contract_path, contract = _load_contract(contract_path)
+    _require_destination_suffix(destination, CANONICAL_STOPPING_ADJUDICATION)
+    validation = validate_complete_route_evidence(
+        workstation_root=workstation_root,
+        karolina_root=karolina_root,
+        endpoint_relative=endpoint_relative,
+        stopping_adjudication_path=karolina_root / stopping_relative,
+        contract=contract,
+        expected_commit=expected_commit,
+    )
+    source, _source_relative = _regular_file_within(
+        karolina_root,
+        stopping_relative,
+        label="Tier-B STOP adjudication",
+    )
+    if _sha256(source) != expected_sha256:
+        raise RouteDependencyError(
+            "Tier-B STOP adjudication changed after dependency-plan review"
+        )
+    if source == destination.expanduser().resolve(strict=False):
+        raise RouteDependencyError(
+            "copied-back STOP adjudication already occupies its reserved canonical path"
+        )
+    if destination.exists() or destination.is_symlink():
+        raise RouteDependencyError(
+            f"refusing to overwrite staged STOP adjudication: {destination}"
+        )
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    temporary = destination.with_name(f".{destination.name}.stage-{uuid.uuid4().hex}")
+    try:
+        shutil.copy2(source, temporary)
+        if _sha256(temporary) != expected_sha256:
+            raise RouteDependencyError(
+                "Tier-B STOP adjudication changed while it was being copied"
+            )
+        os.replace(temporary, destination)
+    finally:
+        temporary.unlink(missing_ok=True)
+    if _sha256(destination) != expected_sha256:
+        raise RouteDependencyError(
+            "staged STOP adjudication failed post-copy hash verification"
+        )
+    endpoint_path = (karolina_root / endpoint_relative).resolve()
+    endpoint_gate, stopping = _require_endpoint_gate(
+        endpoint_path,
+        destination,
+        sources=[
+            ("workstation_local", workstation_root),
+            ("karolina_cpu", karolina_root),
+        ],
+        contract=contract,
+    )
+    if (
+        validation.get("endpoint", {}).get("stopping_binding_matches_manifest")
+        is not True
+        or endpoint_gate.get("stopping_binding_matches_manifest") is not True
+    ):
+        raise RouteDependencyError(
+            "canonical staged STOP adjudication failed endpoint identity validation"
+        )
+    return {
+        "status": "staged",
+        "target": CANONICAL_STOPPING_ADJUDICATION.as_posix(),
+        "sha256": expected_sha256,
+        "schema_id": stopping["schema_id"],
+        "schema_version": stopping["schema_version"],
+    }
+
+
 def stage_endpoint(
     *,
     workstation_root: Path,
     karolina_root: Path,
     endpoint_relative: Path,
+    stopping_adjudication: Path,
     destination: Path,
     contract_path: Path,
     expected_commit: str,
@@ -600,6 +822,7 @@ def stage_endpoint(
         workstation_root=workstation_root,
         karolina_root=karolina_root,
         endpoint_relative=endpoint_relative,
+        stopping_adjudication_path=stopping_adjudication,
         contract=contract,
         expected_commit=expected_commit,
     )
@@ -623,8 +846,9 @@ def stage_endpoint(
         raise RouteDependencyError(
             "staged Tier-B endpoint failed post-copy hash verification"
         )
-    endpoint_gate = route_analysis._endpoint_analysis_gate(
+    endpoint_gate, _stopping = _require_endpoint_gate(
         destination,
+        stopping_adjudication,
         sources=[
             ("workstation_local", workstation_root),
             ("karolina_cpu", karolina_root),
@@ -683,6 +907,7 @@ def build_dependency_plan(
     workstation_source: Path,
     karolina_source: Path,
     endpoint_relative: Path,
+    stopping_relative: Path,
     contract_path: Path = REPO_ROOT / DEFAULT_CONTRACT,
 ) -> dict[str, Any]:
     expected_commit = _commit(expected_commit)
@@ -695,18 +920,50 @@ def build_dependency_plan(
     endpoint_relative = _relative_path(
         endpoint_relative, label="Tier-B endpoint relative path"
     )
+    stopping_relative = _relative_path(
+        stopping_relative, label="Tier-B STOP adjudication relative path"
+    )
     _resolved_contract, contract = _load_contract(contract_path)
     if endpoint_relative == Path("reviewed_inputs/tier_b_endpoint_analysis.json"):
         raise RouteDependencyError(
             "the copied-back Karolina endpoint may not occupy the reserved canonical staging path"
         )
+    if stopping_relative == Path("reviewed_inputs/stopping_adjudication.json"):
+        raise RouteDependencyError(
+            "the copied-back STOP adjudication may not occupy the reserved canonical staging path"
+        )
+    stopping_source, observed_stopping_relative = _regular_file_within(
+        karolina_source,
+        stopping_relative,
+        label="Tier-B STOP adjudication",
+    )
+    if observed_stopping_relative != stopping_relative:
+        raise RouteDependencyError(
+            "Tier-B STOP adjudication path is not canonical within the Karolina archive"
+        )
     validation = validate_complete_route_evidence(
         workstation_root=workstation_source,
         karolina_root=karolina_source,
         endpoint_relative=endpoint_relative,
+        stopping_adjudication_path=stopping_source,
         contract=contract,
         expected_commit=expected_commit,
     )
+    endpoint_validation = validation.get("endpoint")
+    if not isinstance(endpoint_validation, Mapping):
+        raise RouteDependencyError(
+            "complete route validation lacks its Tier-B endpoint result"
+        )
+    stopping_binding = endpoint_validation.get("stopping_adjudication")
+    if not isinstance(stopping_binding, Mapping):
+        raise RouteDependencyError(
+            "complete route validation lacks its STOP adjudication binding"
+        )
+    stopping_validated = validate_stop_adjudication(stopping_source)
+    if _stopping_identity(stopping_validated) != _stopping_identity(stopping_binding):
+        raise RouteDependencyError(
+            "dependency validation STOP identity changed before plan construction"
+        )
     workstation_inventory = _tree_inventory(
         workstation_source, label="workstation archive"
     )
@@ -714,6 +971,7 @@ def build_dependency_plan(
     workstation_fingerprint = _inventory_fingerprint(workstation_inventory)
     karolina_fingerprint = _inventory_fingerprint(karolina_inventory)
     endpoint_sha256 = _sha256(karolina_source / endpoint_relative)
+    stopping_sha256 = _sha256(stopping_source)
     workstation_outputs = [
         WORKSTATION_TARGET / relative for relative in sorted(workstation_inventory)
     ]
@@ -725,6 +983,9 @@ def build_dependency_plan(
     )
     karolina_receipt = (
         f"{finalizer.RECEIPT_DIRECTORY}/prepare_route_campaign_master.json"
+    )
+    stopping_receipt = (
+        f"{finalizer.RECEIPT_DIRECTORY}/prepare_route_stopping_adjudication.json"
     )
     commands = [
         _preparation_command(
@@ -760,6 +1021,8 @@ def build_dependency_plan(
                 f"{{staging_root}}/{WORKSTATION_TARGET.as_posix()}",
                 "--endpoint-relative",
                 endpoint_relative.as_posix(),
+                "--stopping-relative",
+                stopping_relative.as_posix(),
                 "--contract",
                 f"{{repo_root}}/{DEFAULT_CONTRACT.as_posix()}",
                 "--expected-commit",
@@ -774,6 +1037,37 @@ def build_dependency_plan(
             ],
         ),
         _preparation_command(
+            "prepare_route_stopping_adjudication",
+            [
+                "{python}",
+                SCRIPT_PATH.as_posix(),
+                "stage-stopping-adjudication",
+                "--workstation-root",
+                f"{{staging_root}}/{WORKSTATION_TARGET.as_posix()}",
+                "--karolina-root",
+                f"{{staging_root}}/{KAROLINA_TARGET.as_posix()}",
+                "--endpoint-relative",
+                endpoint_relative.as_posix(),
+                "--stopping-relative",
+                stopping_relative.as_posix(),
+                "--destination",
+                f"{{staging_root}}/{CANONICAL_STOPPING_ADJUDICATION.as_posix()}",
+                "--contract",
+                f"{{repo_root}}/{DEFAULT_CONTRACT.as_posix()}",
+                "--expected-commit",
+                expected_commit,
+                "--expected-sha256",
+                stopping_sha256,
+            ],
+            expected_artifacts=[CANONICAL_STOPPING_ADJUDICATION],
+            inputs=[
+                _staging_input(
+                    KAROLINA_TARGET / stopping_relative,
+                    attestation=karolina_receipt,
+                )
+            ],
+        ),
+        _preparation_command(
             "prepare_tier_b_endpoint_analysis",
             [
                 "{python}",
@@ -785,6 +1079,8 @@ def build_dependency_plan(
                 f"{{staging_root}}/{KAROLINA_TARGET.as_posix()}",
                 "--endpoint-relative",
                 endpoint_relative.as_posix(),
+                "--stopping-adjudication",
+                f"{{staging_root}}/{CANONICAL_STOPPING_ADJUDICATION.as_posix()}",
                 "--destination",
                 f"{{staging_root}}/{CANONICAL_ENDPOINT.as_posix()}",
                 "--contract",
@@ -799,7 +1095,11 @@ def build_dependency_plan(
                 _staging_input(
                     KAROLINA_TARGET / endpoint_relative,
                     attestation=karolina_receipt,
-                )
+                ),
+                _staging_input(
+                    CANONICAL_STOPPING_ADJUDICATION,
+                    attestation=stopping_receipt,
+                ),
             ],
         ),
     ]
@@ -832,6 +1132,12 @@ def build_dependency_plan(
             "source_sha256": endpoint_sha256,
             "canonical_target": CANONICAL_ENDPOINT.as_posix(),
         },
+        "tier_b_stopping_adjudication": {
+            "source_relative": stopping_relative.as_posix(),
+            "source_sha256": stopping_sha256,
+            "canonical_target": CANONICAL_STOPPING_ADJUDICATION.as_posix(),
+            "identity": _stopping_identity(stopping_validated),
+        },
         "semantic_validation": validation,
         "safety": {
             "scheduler_commands": False,
@@ -851,6 +1157,7 @@ def write_dependency_plan(
     workstation_source: Path,
     karolina_source: Path,
     endpoint_relative: Path,
+    stopping_relative: Path,
     contract_path: Path,
 ) -> Path:
     output = output.expanduser().resolve(strict=False)
@@ -867,6 +1174,7 @@ def write_dependency_plan(
         workstation_source=workstation_source,
         karolina_source=karolina_source,
         endpoint_relative=endpoint_relative,
+        stopping_relative=stopping_relative,
         contract_path=contract_path,
     )
     output.parent.mkdir(parents=True, exist_ok=True)
@@ -891,6 +1199,12 @@ def _parser() -> argparse.ArgumentParser:
         required=True,
         help="Tier-B endpoint analysis path relative to --karolina-source",
     )
+    plan.add_argument(
+        "--stopping-relative",
+        type=Path,
+        required=True,
+        help="final STOP adjudication path relative to --karolina-source",
+    )
     plan.add_argument("--contract", type=Path, default=REPO_ROOT / DEFAULT_CONTRACT)
     plan.add_argument("--output", type=Path, required=True)
 
@@ -912,9 +1226,23 @@ def _parser() -> argparse.ArgumentParser:
     karolina.add_argument("--destination", type=Path, required=True)
     karolina.add_argument("--workstation-root", type=Path, required=True)
     karolina.add_argument("--endpoint-relative", type=Path, required=True)
+    karolina.add_argument("--stopping-relative", type=Path, required=True)
     karolina.add_argument("--contract", type=Path, required=True)
     karolina.add_argument("--expected-commit", required=True)
     karolina.add_argument("--expected-inventory-sha256", required=True)
+
+    stopping = subparsers.add_parser(
+        "stage-stopping-adjudication",
+        help="copy the endpoint-bound STOP adjudication to its canonical staging path",
+    )
+    stopping.add_argument("--workstation-root", type=Path, required=True)
+    stopping.add_argument("--karolina-root", type=Path, required=True)
+    stopping.add_argument("--endpoint-relative", type=Path, required=True)
+    stopping.add_argument("--stopping-relative", type=Path, required=True)
+    stopping.add_argument("--destination", type=Path, required=True)
+    stopping.add_argument("--contract", type=Path, required=True)
+    stopping.add_argument("--expected-commit", required=True)
+    stopping.add_argument("--expected-sha256", required=True)
 
     endpoint = subparsers.add_parser(
         "stage-endpoint",
@@ -923,6 +1251,7 @@ def _parser() -> argparse.ArgumentParser:
     endpoint.add_argument("--workstation-root", type=Path, required=True)
     endpoint.add_argument("--karolina-root", type=Path, required=True)
     endpoint.add_argument("--endpoint-relative", type=Path, required=True)
+    endpoint.add_argument("--stopping-adjudication", type=Path, required=True)
     endpoint.add_argument("--destination", type=Path, required=True)
     endpoint.add_argument("--contract", type=Path, required=True)
     endpoint.add_argument("--expected-commit", required=True)
@@ -940,6 +1269,7 @@ def main() -> None:
                 workstation_source=args.workstation_source,
                 karolina_source=args.karolina_source,
                 endpoint_relative=args.endpoint_relative,
+                stopping_relative=args.stopping_relative,
                 contract_path=args.contract,
             )
         elif args.mode == "stage-workstation":
@@ -956,15 +1286,28 @@ def main() -> None:
                 destination=args.destination,
                 workstation_root=args.workstation_root,
                 endpoint_relative=args.endpoint_relative,
+                stopping_relative=args.stopping_relative,
                 contract_path=args.contract,
                 expected_commit=args.expected_commit,
                 expected_inventory_sha256=args.expected_inventory_sha256,
+            )
+        elif args.mode == "stage-stopping-adjudication":
+            result = stage_stopping_adjudication(
+                workstation_root=args.workstation_root,
+                karolina_root=args.karolina_root,
+                endpoint_relative=args.endpoint_relative,
+                stopping_relative=args.stopping_relative,
+                destination=args.destination,
+                contract_path=args.contract,
+                expected_commit=args.expected_commit,
+                expected_sha256=args.expected_sha256,
             )
         else:
             result = stage_endpoint(
                 workstation_root=args.workstation_root,
                 karolina_root=args.karolina_root,
                 endpoint_relative=args.endpoint_relative,
+                stopping_adjudication=args.stopping_adjudication,
                 destination=args.destination,
                 contract_path=args.contract,
                 expected_commit=args.expected_commit,
