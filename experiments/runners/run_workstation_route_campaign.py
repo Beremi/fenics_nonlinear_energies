@@ -21,6 +21,7 @@ import os
 from pathlib import Path
 import platform
 import re
+import resource
 import shlex
 import shutil
 import socket
@@ -65,6 +66,7 @@ REQUIRED_WORKSTATION_ENVIRONMENT = {
     "XLA_PYTHON_CLIENT_PREALLOCATE": "false",
     "XLA_FLAGS": "--xla_cpu_multi_thread_eigen=false",
 }
+MAX_WORKSTATION_ADDRESS_SPACE_BYTES = 64 * 1024**3
 
 
 class WorkstationCampaignError(RuntimeError):
@@ -270,6 +272,45 @@ def _package_versions() -> dict[str, str]:
     return versions
 
 
+def _normalize_rlimit_value(value: int) -> int | None:
+    return None if value == resource.RLIM_INFINITY else int(value)
+
+
+def _capture_address_space_limit() -> dict[str, object]:
+    soft, hard = resource.getrlimit(resource.RLIMIT_AS)
+    return {
+        "resource": "RLIMIT_AS",
+        "soft_limit_bytes": _normalize_rlimit_value(soft),
+        "hard_limit_bytes": _normalize_rlimit_value(hard),
+    }
+
+
+def _require_execution_address_space_limit(
+    snapshot: Mapping[str, object],
+) -> None:
+    if snapshot.get("resource") != "RLIMIT_AS":
+        raise WorkstationCampaignError("address-space resource identity is invalid")
+    soft = snapshot.get("soft_limit_bytes")
+    if (
+        not isinstance(soft, int)
+        or isinstance(soft, bool)
+        or soft <= 0
+        or soft > MAX_WORKSTATION_ADDRESS_SPACE_BYTES
+    ):
+        raise WorkstationCampaignError(
+            "publication execution requires a finite positive RLIMIT_AS soft limit "
+            f"no larger than {MAX_WORKSTATION_ADDRESS_SPACE_BYTES} bytes"
+        )
+    hard = snapshot.get("hard_limit_bytes")
+    if hard is not None and (
+        not isinstance(hard, int)
+        or isinstance(hard, bool)
+        or hard <= 0
+        or hard < soft
+    ):
+        raise WorkstationCampaignError("RLIMIT_AS hard limit is invalid")
+
+
 def _require_workstation_environment() -> dict[str, str]:
     actual = {
         name: os.environ.get(name, "")
@@ -292,8 +333,13 @@ def _require_workstation_environment() -> dict[str, str]:
     return actual
 
 
-def _capture_environment(python_path: Path) -> dict[str, object]:
+def _capture_environment(
+    python_path: Path,
+    *,
+    address_space_limit: Mapping[str, object] | None = None,
+) -> dict[str, object]:
     controlled_environment = _require_workstation_environment()
+    limit = dict(address_space_limit or _capture_address_space_limit())
     return {
         "captured_at_utc": _utc_now(),
         "hostname": socket.gethostname(),
@@ -313,6 +359,9 @@ def _capture_environment(python_path: Path) -> dict[str, object]:
         "controlled_environment": {
             "status": "passed",
             "values": controlled_environment,
+        },
+        "process_resource_limits": {
+            "address_space": limit,
         },
     }
 
@@ -524,6 +573,7 @@ def _censor_record(
     reason: str,
     timeout_s: float | None,
     source_commit: str,
+    driver_address_space_limit: Mapping[str, object],
 ) -> dict[str, object]:
     now = _utc_now()
     return {
@@ -546,6 +596,9 @@ def _censor_record(
         "normalized_command_argv": list(normalized),
         "normalized_command_sha256": _json_sha256(list(normalized)),
         "source_commit": source_commit,
+        "driver_address_space_limit": dict(driver_address_space_limit),
+        "worker_address_space_limit": None,
+        "worker_limit_provenance": "not_launched",
     }
 
 
@@ -559,6 +612,9 @@ def prepare_or_execute(args: argparse.Namespace) -> dict[str, object]:
     git = _git_metadata()
     _preflight(args, out_root=out_root, git=git)
     python_path = _resolve_python(args.python)
+    address_space_limit = _capture_address_space_limit()
+    if args.execute:
+        _require_execution_address_space_limit(address_space_limit)
     run_id = str(args.run_id or uuid.uuid4())
     if RUN_ID_RE.fullmatch(run_id) is None:
         raise WorkstationCampaignError(
@@ -569,7 +625,10 @@ def prepare_or_execute(args: argparse.Namespace) -> dict[str, object]:
     code_hashes = _collect_code_hashes()
     configuration_hashes = _collect_configuration_hashes(plan_path)
     input_hashes = _collect_input_hashes(rows)
-    environment = _capture_environment(python_path)
+    environment = _capture_environment(
+        python_path,
+        address_space_limit=address_space_limit,
+    )
     command_plan = _command_plan(
         rows,
         out_root=out_root,
@@ -608,6 +667,17 @@ def prepare_or_execute(args: argparse.Namespace) -> dict[str, object]:
         "case_ids": [row["case_id"] for row in rows],
         "row_wall_cap_s": float(args.row_wall_s),
         "campaign_wall_cap_s": float(args.campaign_wall_s),
+        "memory_safety": {
+            "policy": "finite_posix_address_space_limit_inherited_by_direct_workers",
+            "maximum_soft_limit_bytes": MAX_WORKSTATION_ADDRESS_SPACE_BYTES,
+            "driver_start_address_space_limit": address_space_limit,
+            "worker_inheritance": "direct_subprocess_exec_inherits_RLIMIT_AS",
+            "terminal_verification": (
+                {"status": "pending"}
+                if args.execute
+                else {"status": "not_applicable_preparation_only"}
+            ),
+        },
         "environment_path": environment_path.name,
         "environment_sha256": _sha256(environment_path),
         "code_hashes": code_hashes,
@@ -631,6 +701,7 @@ def prepare_or_execute(args: argparse.Namespace) -> dict[str, object]:
 
     records: list[dict[str, object]] = []
     case_statuses: dict[str, str] = {}
+    resource_limit_errors: list[str] = []
     atomic_write_json(manifest_path, manifest)
     campaign_started = time.perf_counter()
     previous_run_id = os.environ.get("WORKSTATION_RUN_ID")
@@ -668,6 +739,7 @@ def prepare_or_execute(args: argparse.Namespace) -> dict[str, object]:
                 )
                 row_remaining = float(args.row_wall_s) - (now - row_started)
                 process_cap = min(campaign_remaining, row_remaining)
+                decision_limit = _capture_address_space_limit()
                 if incomplete_reason is not None:
                     raw_record = _censor_record(
                         case_id=case_id,
@@ -677,6 +749,7 @@ def prepare_or_execute(args: argparse.Namespace) -> dict[str, object]:
                         reason=incomplete_reason,
                         timeout_s=max(0.0, process_cap),
                         source_commit=str(git["commit"]),
+                        driver_address_space_limit=decision_limit,
                     )
                 elif campaign_remaining <= 0.0:
                     incomplete_reason = "campaign_wall_cap_exhausted_before_launch"
@@ -688,6 +761,7 @@ def prepare_or_execute(args: argparse.Namespace) -> dict[str, object]:
                         reason=incomplete_reason,
                         timeout_s=0.0,
                         source_commit=str(git["commit"]),
+                        driver_address_space_limit=decision_limit,
                     )
                 elif row_remaining <= 0.0:
                     incomplete_reason = "row_wall_cap_exhausted_before_launch"
@@ -699,6 +773,22 @@ def prepare_or_execute(args: argparse.Namespace) -> dict[str, object]:
                         reason=incomplete_reason,
                         timeout_s=0.0,
                         source_commit=str(git["commit"]),
+                        driver_address_space_limit=decision_limit,
+                    )
+                elif decision_limit != address_space_limit:
+                    resource_limit_errors.append(
+                        f"{case_id}/{route}: RLIMIT_AS differs from campaign start"
+                    )
+                    incomplete_reason = "address_space_limit_changed_before_launch"
+                    raw_record = _censor_record(
+                        case_id=case_id,
+                        route=route,
+                        command=command,
+                        normalized=normalized,
+                        reason=incomplete_reason,
+                        timeout_s=max(0.0, process_cap),
+                        source_commit=str(git["commit"]),
+                        driver_address_space_limit=decision_limit,
                     )
                 else:
                     started_utc = _utc_now()
@@ -756,6 +846,11 @@ def prepare_or_execute(args: argparse.Namespace) -> dict[str, object]:
                         "normalized_command_argv": normalized,
                         "normalized_command_sha256": _json_sha256(normalized),
                         "source_commit": str(git["commit"]),
+                        "driver_address_space_limit": decision_limit,
+                        "worker_address_space_limit": decision_limit,
+                        "worker_limit_provenance": (
+                            "inherited_across_direct_posix_subprocess_exec"
+                        ),
                     }
                 record = _write_process_record(route_dir, raw_record)
                 records.append(record)
@@ -811,6 +906,16 @@ def prepare_or_execute(args: argparse.Namespace) -> dict[str, object]:
             "passed": not frozen_hash_errors,
             "errors": frozen_hash_errors,
         }
+        terminal_limit = _capture_address_space_limit()
+        if terminal_limit != address_space_limit:
+            resource_limit_errors.append(
+                "terminal driver RLIMIT_AS differs from campaign start"
+            )
+        manifest["memory_safety"]["terminal_verification"] = {
+            "status": "passed" if not resource_limit_errors else "failed",
+            "terminal_address_space_limit": terminal_limit,
+            "errors": resource_limit_errors,
+        }
         counts = _terminal_counts(records)
         validation_failures = sum(
             status == "failed_validation" for status in case_statuses.values()
@@ -822,6 +927,8 @@ def prepare_or_execute(args: argparse.Namespace) -> dict[str, object]:
             manifest["status"] = "failed_source_changed_during_execution"
         elif frozen_hash_errors:
             manifest["status"] = "failed_frozen_hash_changed_during_execution"
+        elif resource_limit_errors:
+            manifest["status"] = "failed_resource_limit_changed_during_execution"
         elif counts["failed"] or validation_failures:
             manifest["status"] = "completed_with_failures"
         elif counts["censored"]:
@@ -837,14 +944,29 @@ def prepare_or_execute(args: argparse.Namespace) -> dict[str, object]:
         if manifest["status"] in {
             "failed_source_changed_during_execution",
             "failed_frozen_hash_changed_during_execution",
+            "failed_resource_limit_changed_during_execution",
         }:
             raise WorkstationCampaignError(
-                "source commit, worktree, or frozen hash changed during execution"
+                "source commit, worktree, frozen hash, or resource limit changed "
+                "during execution"
             )
         return manifest
     except BaseException as exc:
         if manifest.get("status") == "running":
             manifest["status"] = "failed_runner_exception"
+        terminal_memory = manifest.get("memory_safety", {}).get(
+            "terminal_verification", {}
+        )
+        if terminal_memory.get("status") == "pending":
+            terminal_limit = _capture_address_space_limit()
+            errors = list(resource_limit_errors)
+            if terminal_limit != address_space_limit:
+                errors.append("terminal driver RLIMIT_AS differs from campaign start")
+            manifest["memory_safety"]["terminal_verification"] = {
+                "status": "passed" if not errors else "failed",
+                "terminal_address_space_limit": terminal_limit,
+                "errors": errors,
+            }
         manifest["runner_exception"] = f"{type(exc).__name__}: {exc}"
         manifest["finished_at_utc"] = _utc_now()
         manifest["output_hash_closure"] = _output_hash_closure(out_root)

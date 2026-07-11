@@ -302,6 +302,17 @@ records are under
 
 ## Resource and failure policy
 
+The clean-workstation driver launches exactly one route process at a time. An
+execution is admissible only when the driver's POSIX address-space soft limit
+is finite, positive, and no larger than 64 GiB. The driver freezes that limit,
+checks it immediately before every direct child process, records the inherited
+limit in each process receipt, and verifies it again at campaign termination.
+Preparation without execution may record an unlimited address space, but such
+a record does not authorize execution. A changed limit, interruption, timeout,
+or worker failure leaves a diagnostic archive. The publication workflow never
+appends to or resumes that archive; a retry uses a fresh output root so that the
+admissible inventory remains exactly 36 launches in 12 independent blocks.
+
 The required Karolina preparation is 99.95 node-hours, including 64.20
 node-hours for 78 paired baseline blocks, 18 factorized-quadrature blocks, and
 nine component-diagnostic rows, plus the separately retained discretization
