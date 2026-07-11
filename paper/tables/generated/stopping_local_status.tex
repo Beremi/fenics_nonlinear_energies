@@ -1,0 +1,19 @@
+\begin{table}[t]
+\centering
+\caption{Fail-closed status of the local stopping-calibration tranche.}
+\label{tab:stopping-local-status}
+\begin{tabular}{lrrr}
+\toprule
+Family & Receipts & Admitted endpoints & Accepted comparisons \\
+\midrule
+Ginzburg--Landau endpoints & 8/8 & 8/8 & 5/8 \\
+Hyperelasticity metric checks & 6/6 & 6/6 & 6/6 \\
+Hyperelasticity nonlinear endpoints & 8/8 & 8/8 & 6/8 \\
+Plasticity3D fixed-state solves & 15/15 & 13/15 & 8/15 \\
+Plasticity3D nonlinear endpoints & 8/8 & 8/8 & 3/8 \\
+\bottomrule
+\end{tabular}
+\begin{minipage}{0.96\linewidth}\small
+All 45 serial rows are hash-bound and independently rechecked. Four P4 nonlinear rows and three MPI-consistency rows remain cluster-deferred. Closing them is necessary but not sufficient for a complete EXP-STOP-001 pass: separately hash-bound EXP-DISC evidence and final adjudication are also required. Timing, scaling, performance, and population claims are excluded.
+\end{minipage}
+\end{table}
