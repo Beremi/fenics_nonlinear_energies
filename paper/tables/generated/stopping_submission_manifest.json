@@ -1,0 +1,50 @@
+{
+  "allow_unreferenced_tables": false,
+  "claim_scope": "deterministic_same_discretization_local_subset",
+  "complete_exp_stop_pass": false,
+  "experiment_id": "EXP-STOP-001",
+  "outputs": {
+    "stopping_submission_status.tex": "7604d1bf5df323ae1d7e951ecf2723330e9870d497bae5df20c8a5dc29e41370"
+  },
+  "population_robustness_claim_admissible": false,
+  "presentation_counts": {
+    "accepted_comparisons": 28,
+    "accepted_nonreference_candidates": 17,
+    "admitted_records": 43,
+    "endpoint_censored_comparisons": 2,
+    "executions": 45,
+    "reference_self_comparisons": 11,
+    "rejected_comparisons": 15
+  },
+  "publication_evidence": true,
+  "reported_local_subset_complete": true,
+  "schema_id": "fenics-nonlinear-energies.exp-stop-001-submission-table-manifest",
+  "schema_version": 1,
+  "scope_exclusions": [
+    "degree-four nonlinear endpoints",
+    "rank-count stopping consistency",
+    "timing, scaling, and performance selection",
+    "population-level robustness"
+  ],
+  "source_analysis": {
+    "path": "artifacts/reproduction/exp_stop_001_local_5b2f3b5/analysis.json",
+    "sha256": "d526e844750f43d244f2d26ab920268f9cff3387512c93baf77afcc382cbed90"
+  },
+  "source_commit": "5b2f3b50a37b08ba9532ad03721996f44a0c50a0",
+  "source_manifest": {
+    "path": "paper/tables/generated/stopping_local_manifest.json",
+    "sha256": "e29219080cc4cae5849dcdea4a9136c50453e668ac100ef7eb801484259ca97c"
+  },
+  "status": "admitted_reported_local_subset",
+  "timing_claim_admissible": false,
+  "tools": {
+    "checker": {
+      "path": "paper/scripts/check_stopping_submission_manifest.py",
+      "sha256": "345aeccbea9ecddf2c5b39b54a6cd2fad022020fc3e331e2d405485d4df5470b"
+    },
+    "generator": {
+      "path": "paper/scripts/generate_stopping_submission_status.py",
+      "sha256": "37bc745e4d0fbf42d4b37f2c60679b2d0a048e34b51eee257d8db6c762af73a5"
+    }
+  }
+}

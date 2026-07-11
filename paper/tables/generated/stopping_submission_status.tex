@@ -1,0 +1,19 @@
+\begin{table}[t]
+  \centering
+  \caption{Deterministic local stopping-calibration outcomes. An accepted comparison satisfies every family-specific same-discretization gate in Appendix~\ref{subsec:stopping-study-scope}.}
+  \label{tab:stopping-local-status}
+  \begin{tabularx}{\linewidth}{L{1.70}C{0.75}C{0.75}C{0.75}}
+    \toprule
+    Problem family & Executions & Admitted records & Accepted comparisons \\
+    \midrule
+    Ginzburg--Landau endpoints & 8/8 & 8/8 & 5/8 \\
+    Hyperelasticity metric checks & 6/6 & 6/6 & 6/6 \\
+    Hyperelasticity nonlinear endpoints & 8/8 & 8/8 & 6/8 \\
+    Mohr--Coulomb surrogate, fixed state & 15/15 & 13/15 & 8/15 \\
+    Mohr--Coulomb surrogate, nonlinear endpoint & 8/8 & 8/8 & 3/8 \\
+    \bottomrule
+  \end{tabularx}
+  \begin{minipage}{0.96\linewidth}\small
+    The reported subset contains 45 of the 52 computations in the frozen plan. Four degree-four nonlinear rows and three MPI-consistency rows remain cluster-deferred; hence the complete stopping protocol has not passed.
+  \end{minipage}
+\end{table}

@@ -18,5 +18,4 @@ def test_focused_manuscript_assets_are_covered_by_their_manifests() -> None:
         text=True,
     )
     assert completed.returncode == 0, completed.stdout + completed.stderr
-    assert "4 tables" in completed.stdout
-
+    assert "3 tables" in completed.stdout

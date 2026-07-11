@@ -25,6 +25,7 @@ SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
 DISTRIBUTED_COLORED_MANIFEST = "distributed_colored_manifest.json"
 GLOBALIZATION_LOCAL_MANIFEST = "globalization_local_manifest.json"
 STOPPING_LOCAL_MANIFEST = "stopping_local_manifest.json"
+STOPPING_SUBMISSION_MANIFEST = "stopping_submission_manifest.json"
 PROVENANCE_BANNED_SNIPPETS = (
     "/home/",
     "\\/home\\/",
@@ -534,6 +535,154 @@ def _validate_stopping_local_manifest(tables_dir: Path) -> None:
         )
 
 
+def _stopping_submission_manifest(tables_dir: Path) -> dict[str, object]:
+    manifest_path = tables_dir / STOPPING_SUBMISSION_MANIFEST
+    if not manifest_path.exists():
+        return {}
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    if not isinstance(manifest, dict):
+        raise SystemExit("Stopping-submission table manifest must be a JSON object.")
+    return manifest
+
+
+def _stopping_submission_manifest_tables(tables_dir: Path) -> set[str]:
+    outputs = _stopping_submission_manifest(tables_dir).get("outputs", {})
+    if not isinstance(outputs, dict):
+        raise SystemExit(
+            "Stopping-submission manifest field outputs must be an object."
+        )
+    return {Path(str(name)).name for name in outputs}
+
+
+def _validate_stopping_submission_manifest(tables_dir: Path) -> None:
+    manifest = _stopping_submission_manifest(tables_dir)
+    if not manifest:
+        return
+    findings: list[str] = []
+    exact = {
+        "schema_id": (
+            "fenics-nonlinear-energies.exp-stop-001-submission-table-manifest"
+        ),
+        "schema_version": 1,
+        "status": "admitted_reported_local_subset",
+        "publication_evidence": True,
+        "experiment_id": "EXP-STOP-001",
+        "claim_scope": "deterministic_same_discretization_local_subset",
+        "reported_local_subset_complete": True,
+        "complete_exp_stop_pass": False,
+        "timing_claim_admissible": False,
+        "population_robustness_claim_admissible": False,
+        "allow_unreferenced_tables": False,
+    }
+    for key, expected in exact.items():
+        if manifest.get(key) != expected:
+            findings.append(f"field {key} must equal {expected!r}")
+    expected_counts = {
+        "executions": 45,
+        "admitted_records": 43,
+        "accepted_comparisons": 28,
+        "rejected_comparisons": 15,
+        "endpoint_censored_comparisons": 2,
+        "reference_self_comparisons": 11,
+        "accepted_nonreference_candidates": 17,
+    }
+    if manifest.get("presentation_counts") != expected_counts:
+        findings.append("presentation_counts differ from the admitted 45-row subset")
+
+    outputs = manifest.get("outputs")
+    if not isinstance(outputs, dict) or set(outputs) != {
+        "stopping_submission_status.tex"
+    }:
+        findings.append("outputs must bind exactly stopping_submission_status.tex")
+    else:
+        for name, expected_hash in outputs.items():
+            path = tables_dir / name
+            if (
+                not isinstance(expected_hash, str)
+                or SHA256_RE.fullmatch(expected_hash) is None
+                or not path.is_file()
+                or sha256_file(path) != expected_hash
+            ):
+                findings.append(f"{name}: output is missing or its SHA-256 hash is stale")
+
+    tools = manifest.get("tools")
+    if not isinstance(tools, dict) or set(tools) != {"generator", "checker"}:
+        findings.append("tools must bind generator and checker")
+    else:
+        for name, entry in sorted(tools.items()):
+            if not isinstance(entry, dict):
+                findings.append(f"tool {name}: record must be an object")
+                continue
+            raw = entry.get("path")
+            expected_hash = entry.get("sha256")
+            if (
+                not isinstance(raw, str)
+                or Path(raw).is_absolute()
+                or ".." in Path(raw).parts
+            ):
+                findings.append(f"tool {name}: path is not safe and repository-relative")
+                continue
+            path = (REPO_ROOT / raw).resolve()
+            try:
+                path.relative_to(REPO_ROOT)
+            except ValueError:
+                findings.append(f"tool {name}: path resolves outside the repository")
+            else:
+                if not path.is_file() or expected_hash != sha256_file(path):
+                    findings.append(f"tool {name}: file is missing or its hash is stale")
+
+    source_manifest = manifest.get("source_manifest")
+    if not isinstance(source_manifest, dict):
+        findings.append("source_manifest must be an object")
+    else:
+        raw = source_manifest.get("path")
+        expected_hash = source_manifest.get("sha256")
+        path = (
+            (REPO_ROOT / raw).resolve()
+            if isinstance(raw, str)
+            and not Path(raw).is_absolute()
+            and ".." not in Path(raw).parts
+            else None
+        )
+        canonical = (tables_dir / STOPPING_LOCAL_MANIFEST).resolve()
+        if path != canonical:
+            findings.append("source_manifest must identify stopping_local_manifest.json")
+        elif not path.is_file() or expected_hash != sha256_file(path):
+            findings.append("source_manifest is missing or has a stale hash")
+
+    source_analysis = manifest.get("source_analysis")
+    if not isinstance(source_analysis, dict):
+        findings.append("source_analysis must be an object")
+    else:
+        raw = source_analysis.get("path")
+        expected_hash = source_analysis.get("sha256")
+        if (
+            not isinstance(raw, str)
+            or Path(raw).is_absolute()
+            or ".." in Path(raw).parts
+        ):
+            findings.append("source_analysis path is not safe and repository-relative")
+        else:
+            path = (REPO_ROOT / raw).resolve()
+            reproduction = (REPO_ROOT / "artifacts/reproduction").resolve()
+            try:
+                path.relative_to(reproduction)
+            except ValueError:
+                findings.append("source_analysis is outside artifacts/reproduction")
+            else:
+                if (
+                    path.name != "analysis.json"
+                    or not path.is_file()
+                    or expected_hash != sha256_file(path)
+                ):
+                    findings.append("source_analysis is missing or has a stale hash")
+    if findings:
+        raise SystemExit(
+            "Stopping-submission table provenance is malformed:\n"
+            + "\n".join(findings)
+        )
+
+
 def _validate_no_unexpected_generated_tables(
     tables_dir: Path,
     *,
@@ -897,12 +1046,17 @@ def main() -> None:
     globalization_manifest_tables = _globalization_local_manifest_tables(args.tables_dir)
     stopping_manifest = _stopping_local_manifest(args.tables_dir)
     stopping_manifest_tables = _stopping_local_manifest_tables(args.tables_dir)
+    stopping_submission_manifest = _stopping_submission_manifest(args.tables_dir)
+    stopping_submission_manifest_tables = _stopping_submission_manifest_tables(
+        args.tables_dir
+    )
     all_manifest_tables = (
         base_manifest_tables
         | revision_manifest_tables
         | distributed_manifest_tables
         | globalization_manifest_tables
         | stopping_manifest_tables
+        | stopping_submission_manifest_tables
     )
     _validate_no_unexpected_generated_tables(
         args.tables_dir,
@@ -913,6 +1067,7 @@ def main() -> None:
             or distributed_manifest.get("allow_unreferenced_tables") is True
             or globalization_manifest.get("allow_unreferenced_tables") is True
             or stopping_manifest.get("allow_unreferenced_tables") is True
+            or stopping_submission_manifest.get("allow_unreferenced_tables") is True
         ),
     )
     missing_table_manifests = sorted(required_tables - all_manifest_tables)
@@ -930,6 +1085,7 @@ def main() -> None:
     _validate_distributed_colored_manifest(args.tables_dir)
     _validate_globalization_local_manifest(args.tables_dir)
     _validate_stopping_local_manifest(args.tables_dir)
+    _validate_stopping_submission_manifest(args.tables_dir)
     provenance_targets = _provenance_targets(args.tex, seen_tex, required_tables, args.figures_dir, args.tables_dir)
     _validate_provenance_text(provenance_targets)
     if args.archive_neutral:

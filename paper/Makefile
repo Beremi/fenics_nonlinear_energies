@@ -13,6 +13,7 @@ STOPPING_LOCAL_EVIDENCE_ROOT ?=
 	distributed-colored-table distributed-colored-check distributed-colored-check-if-present \
 	globalization-local-table globalization-local-check globalization-local-check-if-present \
 	stopping-local-table stopping-local-check stopping-local-check-if-present \
+	stopping-submission-table stopping-submission-check \
 	plasticity3d-validation-run plasticity3d-validation-assets \
 	plasticity3d-derivative-ablation-run plasticity3d-derivative-ablation-assets \
 	jax-fem-baseline-run jax-fem-baseline-assets reproducibility
@@ -82,10 +83,17 @@ stopping-local-check-if-present:
 		$(PYTHON) scripts/check_stopping_local_manifest.py; \
 	fi
 
+stopping-submission-table:
+	$(PYTHON) scripts/generate_stopping_submission_status.py
+
+stopping-submission-check:
+	$(PYTHON) scripts/check_stopping_submission_manifest.py
+
 publication-local-check:
 	$(PYTHON) scripts/check_distributed_colored_manifest.py
 	$(PYTHON) scripts/check_globalization_local_manifest.py
 	$(PYTHON) scripts/check_stopping_local_manifest.py
+	$(PYTHON) scripts/check_stopping_submission_manifest.py
 
 literature:
 	$(PYTHON) scripts/generate_literature_sources.py
