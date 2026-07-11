@@ -2636,6 +2636,7 @@ def build_execution_plan_template(*, experiment_commit: str) -> dict[str, Any]:
         producer: str,
         protocol: str,
         expected_artifacts: Sequence[str],
+        inputs: Sequence[Mapping[str, Any]] = (),
         environment: Mapping[str, str] | None = None,
     ) -> dict[str, Any]:
         return {
@@ -2646,7 +2647,7 @@ def build_execution_plan_template(*, experiment_commit: str) -> dict[str, Any]:
             "argv": list(argv),
             "environment": dict(environment or cpu_env),
             "configuration_files": [protocol],
-            "input_files": [],
+            "input_files": [dict(item) for item in inputs],
             "expected_artifacts": list(expected_artifacts),
         }
 
@@ -2791,6 +2792,15 @@ def build_execution_plan_template(*, experiment_commit: str) -> dict[str, Any]:
         state = f"EXP-DISC-001/clean_inputs/p{degree}_l1_state.npz"
         state_manifest = f"EXP-DISC-001/clean_inputs/p{degree}_l1_state_manifest.json"
         attestation = f"{RECEIPT_DIRECTORY}/prepare_p{degree}_l1_state.json"
+        mesh = (
+            "data/meshes/SlopeStability3D/hetero_ssr/"
+            f"hetero_ssr_L1_p{degree}_same_mesh_glued_bottom.h5"
+        )
+        manifested_mesh_input = _template_input(
+            "repo_manifested",
+            mesh,
+            manifest=MANIFESTED_MESH_MANIFEST.as_posix(),
+        )
         commands.append(
             preparation_command(
                 f"prepare_p{degree}_l1_state",
@@ -2811,6 +2821,8 @@ def build_execution_plan_template(*, experiment_commit: str) -> dict[str, Any]:
                     "0.02",
                     "--run-kind",
                     "publication",
+                    "--publication-mesh-manifest",
+                    f"{{repo_root}}/{MANIFESTED_MESH_MANIFEST.as_posix()}",
                     "--output",
                     f"{{staging_root}}/{state}",
                     "--manifest",
@@ -2819,6 +2831,7 @@ def build_execution_plan_template(*, experiment_commit: str) -> dict[str, Any]:
                 producer="experiments/runners/prepare_plasticity3d_fixed_state.py",
                 protocol="paper/protocols/EXP-DISC-001.md",
                 expected_artifacts=[state, state_manifest],
+                inputs=[manifested_mesh_input],
             )
         )
         commands.append(
@@ -2830,6 +2843,8 @@ def build_execution_plan_template(*, experiment_commit: str) -> dict[str, Any]:
                     "experiments/runners/run_plasticity3d_fixed_state_quadrature.py",
                     "--state",
                     f"{{staging_root}}/{state}",
+                    "--publication-mesh-manifest",
+                    f"{{repo_root}}/{MANIFESTED_MESH_MANIFEST.as_posix()}",
                     "--quadrature-rules",
                     "tetra_1point,tetra_11point,tetra_24point,tetra_duffy_125point",
                     "--action-output-dir",
@@ -2838,7 +2853,10 @@ def build_execution_plan_template(*, experiment_commit: str) -> dict[str, Any]:
                     f"{{staging_root}}/EXP-DISC-001/p{degree}_l1_fixed_state_quadrature_v2.json",
                 ],
                 protocol="paper/protocols/EXP-DISC-001.md",
-                inputs=[_template_input("staging", state, attestation=attestation)],
+                inputs=[
+                    _template_input("staging", state, attestation=attestation),
+                    manifested_mesh_input,
+                ],
                 expected_artifacts=[
                     path.as_posix() for path in _quadrature_expected_artifacts(degree)
                 ],

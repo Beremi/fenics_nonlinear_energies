@@ -4,8 +4,8 @@
 The state is analytic rather than a nonlinear-solver endpoint.  This keeps the
 quadrature and derivative checks independent of globalization and stopping
 behavior while ensuring that every degree uses the same dimensionless field.
-The managed publication receipt binds the resulting NPZ and this runner to one
-clean experiment commit.
+The managed publication receipt binds the resulting NPZ, this runner, and the
+manifested mesh input to one clean experiment commit.
 """
 
 from __future__ import annotations
@@ -28,6 +28,8 @@ from src.problems.slope_stability_3d.support.fixed_state import (
 from src.problems.slope_stability_3d.support.mesh import (
     default_tetra_quadrature_rule_id,
     load_same_mesh_case_hdf5_light,
+    manifested_same_mesh_case_provenance,
+    same_mesh_case_hdf5_path,
 )
 
 
@@ -53,12 +55,34 @@ def prepare(args: argparse.Namespace) -> dict[str, object]:
     )
     degree = int(args.degree)
     quadrature_rule_id = default_tetra_quadrature_rule_id(degree)
+    case_path = same_mesh_case_hdf5_path(
+        str(args.mesh_name),
+        degree,
+        str(args.constraint_variant),
+        quadrature_rule_id=quadrature_rule_id,
+    )
+    publication_mesh_manifest = getattr(args, "publication_mesh_manifest", None)
+    mesh_input = (
+        manifested_same_mesh_case_provenance(
+            case_path,
+            manifest_path=publication_mesh_manifest,
+        )
+        if publication_mesh_manifest is not None
+        else None
+    )
     case = load_same_mesh_case_hdf5_light(
         str(args.mesh_name),
         degree,
         constraint_variant=str(args.constraint_variant),
         quadrature_rule_id=quadrature_rule_id,
     )
+    if mesh_input is None:
+        mesh_input = {
+            "path": str(case_path.resolve()),
+            "sha256": sha256_file(case_path),
+            "bytes": int(case_path.stat().st_size),
+            "manifest": None,
+        }
     coords_ref = np.asarray(case["nodes"], dtype=np.float64)
     prescribed = prescribed_analytic_displacement(
         coords_ref,
@@ -125,6 +149,7 @@ def prepare(args: argparse.Namespace) -> dict[str, object]:
             "degrees_of_freedom": int(displacement.size),
             "free_degrees_of_freedom": int(freedofs.size),
         },
+        "mesh_input": mesh_input,
         "state": {
             "path": output.name,
             "sha256": sha256_file(output),
@@ -155,6 +180,7 @@ def _parser() -> argparse.ArgumentParser:
     parser.add_argument("--run-kind", choices=("publication", "pilot"), default="publication")
     parser.add_argument("--pilot-dirty-override", action="store_true")
     parser.add_argument("--pilot-override-reason")
+    parser.add_argument("--publication-mesh-manifest", type=Path)
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--manifest", type=Path, required=True)
     return parser

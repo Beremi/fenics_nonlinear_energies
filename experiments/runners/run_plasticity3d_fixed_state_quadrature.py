@@ -19,6 +19,8 @@ from src.problems.slope_stability_3d.support.mesh import (
     TETRA_QUADRATURE_RULE_IDS,
     ensure_same_mesh_case_hdf5,
     load_case_hdf5_fields,
+    manifested_same_mesh_case_provenance,
+    same_mesh_case_hdf5_path,
 )
 
 
@@ -154,12 +156,31 @@ def run(args: argparse.Namespace) -> dict[str, object]:
     constraint_variant = str(
         args.constraint_variant or state_constraint_variant or "glued_bottom"
     )
-    case_path = ensure_same_mesh_case_hdf5(
-        mesh_name,
-        element_degree,
-        constraint_variant=constraint_variant,
-        quadrature_rule_id=solve_quadrature_rule_id,
-    )
+    publication_mesh_manifest = getattr(args, "publication_mesh_manifest", None)
+    if publication_mesh_manifest is not None:
+        case_path = same_mesh_case_hdf5_path(
+            mesh_name,
+            element_degree,
+            constraint_variant,
+            quadrature_rule_id=solve_quadrature_rule_id,
+        )
+        mesh_input = manifested_same_mesh_case_provenance(
+            case_path,
+            manifest_path=publication_mesh_manifest,
+        )
+    else:
+        case_path = ensure_same_mesh_case_hdf5(
+            mesh_name,
+            element_degree,
+            constraint_variant=constraint_variant,
+            quadrature_rule_id=solve_quadrature_rule_id,
+        )
+        mesh_input = {
+            "path": str(case_path.resolve()),
+            "sha256": _sha256(case_path),
+            "bytes": int(case_path.stat().st_size),
+            "manifest": None,
+        }
     case_data, _adjacency = load_case_hdf5_fields(
         case_path,
         fields=(
@@ -377,7 +398,7 @@ def run(args: argparse.Namespace) -> dict[str, object]:
         "experiment_id": "EXP-DISC-001-P3D-FIXED-STATE-QUADRATURE",
         "status": "completed",
         "state_path": state_record,
-        "case_hdf5": str(case_path),
+        "mesh_input": mesh_input,
         "mesh_name": mesh_name,
         "element_degree": element_degree,
         "constraint_variant": constraint_variant,
@@ -415,6 +436,7 @@ def _build_parser() -> argparse.ArgumentParser:
         help="Comma-separated named rule IDs; the last rule is the comparison reference",
     )
     parser.add_argument("--element-chunk-size", type=int, default=256)
+    parser.add_argument("--publication-mesh-manifest", type=Path)
     parser.add_argument("--coordinate-atol", type=float, default=1.0e-10)
     parser.add_argument(
         "--action-output-dir",

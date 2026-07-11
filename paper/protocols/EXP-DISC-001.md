@@ -94,6 +94,12 @@ parent. The raw summary records the state and array paths relative to that
 common experiment directory. The execution plan declares all 12 arrays per
 degree before execution. Each nested JSON artifact descriptor records a
 canonical relative path, file SHA-256, array-content SHA-256, dtype, and shape.
+Both the clean-state producer and the named-rule evaluator independently bind
+their degree-specific HDF5 mesh input through the tracked
+`publication_mesh_manifest.json`. Their JSON records contain the
+repository-relative mesh path, file size, file SHA-256, and the manifest path
+and SHA-256; absolute workstation paths are excluded. The managed receipts
+also bind the manifest's tracked generator sources at the experiment commit.
 The managed receipt, companion manifest, and finalization manifest must bind
 the same complete path/hash set. Finalization and the independent admission
 audit reload every array with pickling disabled, recompute both hashes, and

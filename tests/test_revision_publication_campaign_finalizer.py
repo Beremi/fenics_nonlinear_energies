@@ -557,6 +557,16 @@ def test_canonical_template_covers_every_source_and_clean_dependency() -> None:
             f"EXP-DISC-001/clean_inputs/p{degree}_l1_state.npz",
             f"EXP-DISC-001/clean_inputs/p{degree}_l1_state_manifest.json",
         } == set(preparation["expected_artifacts"])
+        mesh_input = {
+            "scope": "repo_manifested",
+            "path": (
+                "data/meshes/SlopeStability3D/hetero_ssr/"
+                f"hetero_ssr_L1_p{degree}_same_mesh_glued_bottom.h5"
+            ),
+            "manifest": finalizer.MANIFESTED_MESH_MANIFEST.as_posix(),
+        }
+        assert preparation["input_files"] == [mesh_input]
+        assert preparation["argv"].count("--publication-mesh-manifest") == 1
         derivative_argv = commands[f"deriv_p{degree}"]["argv"]
         assert derivative_argv.count("--assembled-route-equivalence") == 1
         derivative_input = commands[f"deriv_p{degree}"]["input_files"][0]
@@ -571,6 +581,10 @@ def test_canonical_template_covers_every_source_and_clean_dependency() -> None:
         inputs = commands[f"disc_p{degree}"]["input_files"]
         assert inputs[0]["scope"] == "staging"
         assert inputs[0]["attestation"]["path"].endswith(f"p{degree}_l1_state.json")
+        assert inputs[1] == mesh_input
+        assert commands[f"disc_p{degree}"]["argv"].count(
+            "--publication-mesh-manifest"
+        ) == 1
         assert set(commands[f"disc_p{degree}"]["expected_artifacts"]) == {
             path.as_posix()
             for path in finalizer._quadrature_expected_artifacts(degree)

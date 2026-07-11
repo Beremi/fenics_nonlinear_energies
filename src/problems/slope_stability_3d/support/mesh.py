@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+import hashlib
+import json
 from pathlib import Path
 import re
 import runpy
@@ -41,6 +43,7 @@ COORD_DECIMALS = 12
 DEFAULT_MESH_NAME = "hetero_ssr_L1"
 RAW_MESH_ROOT = MESH_DATA_ROOT / "SlopeStability3D" / "hetero_ssr"
 DEFINITION_PATH = RAW_MESH_ROOT / "definition.py"
+PUBLICATION_MESH_MANIFEST_PATH = RAW_MESH_ROOT / "publication_mesh_manifest.json"
 _MESH_CASE_RE = re.compile(r"^SSR_hetero_(?P<kind>ada_L\d+|uni)\.msh$")
 _REFINED_MESH_RE = re.compile(r"^(?P<base>hetero_ssr_L\d+)(?P<suffix>(?:_\d+)*)$")
 SOURCE_INTERNAL_AXIS_ORDER = "xyz"
@@ -70,6 +73,86 @@ _PLASTICITY3D_CONSTRAINT_VARIANTS = frozenset(
 _LIGHT_CASE_CACHE: dict[tuple[str, int, str, str], dict[str, object]] = {}
 _RANK_LOCAL_LIGHT_CACHE: dict[tuple[str, int, str, str, str, int, int], dict[str, object]] = {}
 _RANK_LOCAL_HEAVY_CACHE: dict[tuple[str, int, str, str, str, int, int], dict[str, object]] = {}
+
+
+def _sha256_file(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for block in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(block)
+    return digest.hexdigest()
+
+
+def manifested_same_mesh_case_provenance(
+    case_path: str | Path,
+    *,
+    manifest_path: str | Path = PUBLICATION_MESH_MANIFEST_PATH,
+    repo_root: str | Path | None = None,
+) -> dict[str, object]:
+    """Return and verify the canonical publication identity of one mesh case.
+
+    The large generated HDF5 cases are intentionally ignored by Git.  This
+    helper therefore fails closed unless the file is listed by the tracked
+    publication mesh manifest and its size and SHA-256 still match.  Paths in
+    the returned record are repository-relative so publication artifacts do
+    not retain workstation-specific absolute paths.
+    """
+
+    root = (
+        Path(repo_root).resolve()
+        if repo_root is not None
+        else MESH_DATA_ROOT.parents[1].resolve()
+    )
+    case_source = Path(case_path)
+    manifest_source = Path(manifest_path)
+    if case_source.is_symlink():
+        raise ValueError("publication mesh input must not be a symlink")
+    if manifest_source.is_symlink():
+        raise ValueError("publication mesh manifest must not be a symlink")
+    case = case_source.resolve()
+    manifest = manifest_source.resolve()
+    try:
+        case_relative = case.relative_to(root)
+        manifest_relative = manifest.relative_to(root)
+    except ValueError as exc:
+        raise ValueError("publication mesh input or manifest escapes the repository") from exc
+    if not case.is_file():
+        raise ValueError("publication mesh input must be a regular file")
+    if not manifest.is_file():
+        raise ValueError("publication mesh manifest must be a regular file")
+    with manifest.open("r", encoding="utf-8") as handle:
+        payload = json.load(handle)
+    if (
+        payload.get("schema_id")
+        != "fenics-nonlinear-energies.manifested-generated-meshes"
+        or payload.get("schema_version") != 1
+        or payload.get("algorithm") != "sha256"
+        or not isinstance(payload.get("files"), dict)
+    ):
+        raise ValueError("publication mesh manifest has an invalid schema")
+    record = payload["files"].get(case_relative.as_posix())
+    if not isinstance(record, dict):
+        raise ValueError("publication mesh input is absent from the canonical manifest")
+    expected_sha256 = record.get("sha256")
+    expected_bytes = record.get("bytes")
+    actual_sha256 = _sha256_file(case)
+    if (
+        not isinstance(expected_sha256, str)
+        or re.fullmatch(r"[0-9a-f]{64}", expected_sha256) is None
+        or not isinstance(expected_bytes, int)
+        or case.stat().st_size != expected_bytes
+        or actual_sha256 != expected_sha256
+    ):
+        raise ValueError("publication mesh input differs from the canonical manifest")
+    return {
+        "path": case_relative.as_posix(),
+        "sha256": actual_sha256,
+        "bytes": int(expected_bytes),
+        "manifest": {
+            "path": manifest_relative.as_posix(),
+            "sha256": _sha256_file(manifest),
+        },
+    }
 
 
 def clear_same_mesh_case_hdf5_caches() -> None:

@@ -97,6 +97,58 @@ def _one_tetra_case(rule_id: str = TETRA_QUADRATURE_24POINT) -> SlopeStability3D
     )
 
 
+def test_manifested_same_mesh_case_provenance_is_relative_and_hash_bound(
+    tmp_path: Path,
+) -> None:
+    repo = tmp_path / "repo"
+    case = repo / "data/meshes/case.h5"
+    manifest = repo / "data/meshes/publication_mesh_manifest.json"
+    case.parent.mkdir(parents=True)
+    case.write_bytes(b"publication mesh fixture\n")
+    case_sha256 = hashlib.sha256(case.read_bytes()).hexdigest()
+    manifest.write_text(
+        json.dumps(
+            {
+                "schema_id": "fenics-nonlinear-energies.manifested-generated-meshes",
+                "schema_version": 1,
+                "algorithm": "sha256",
+                "files": {
+                    "data/meshes/case.h5": {
+                        "bytes": case.stat().st_size,
+                        "sha256": case_sha256,
+                    }
+                },
+            },
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    provenance = mesh_tools.manifested_same_mesh_case_provenance(
+        case,
+        manifest_path=manifest,
+        repo_root=repo,
+    )
+
+    assert provenance == {
+        "path": "data/meshes/case.h5",
+        "sha256": case_sha256,
+        "bytes": case.stat().st_size,
+        "manifest": {
+            "path": "data/meshes/publication_mesh_manifest.json",
+            "sha256": hashlib.sha256(manifest.read_bytes()).hexdigest(),
+        },
+    }
+    case.write_bytes(b"tampered\n")
+    with pytest.raises(ValueError, match="differs from the canonical manifest"):
+        mesh_tools.manifested_same_mesh_case_provenance(
+            case,
+            manifest_path=manifest,
+            repo_root=repo,
+        )
+
+
 def test_degree_defaults_and_nondefault_paths_preserve_legacy_names() -> None:
     assert default_tetra_quadrature_rule_id(1) == TETRA_QUADRATURE_1POINT
     assert default_tetra_quadrature_rule_id(2) == TETRA_QUADRATURE_11POINT
@@ -335,12 +387,32 @@ def test_fixed_state_runner_saves_hashable_actions_and_strict_json(
         "ensure_same_mesh_case_hdf5",
         lambda *args, **kwargs: case_path,
     )
+    monkeypatch.setattr(
+        fixed_runner,
+        "same_mesh_case_hdf5_path",
+        lambda *args, **kwargs: case_path,
+    )
+    mesh_input = {
+        "path": "data/meshes/case.h5",
+        "sha256": "a" * 64,
+        "bytes": int(case_path.stat().st_size),
+        "manifest": {
+            "path": "data/meshes/publication_mesh_manifest.json",
+            "sha256": "b" * 64,
+        },
+    }
+    monkeypatch.setattr(
+        fixed_runner,
+        "manifested_same_mesh_case_provenance",
+        lambda *args, **kwargs: mesh_input,
+    )
     action_dir = experiment_root / "actions" / "p1_l1"
     output_path = experiment_root / "p1_l1_fixed_state_quadrature_v2.json"
     payload = fixed_runner.run(
         argparse.Namespace(
             state=state_path,
             output=output_path,
+            publication_mesh_manifest=tmp_path / "publication_mesh_manifest.json",
             constraint_variant=None,
             quadrature_rules=(
                 f"{TETRA_QUADRATURE_1POINT},{TETRA_QUADRATURE_DUFFY_125POINT}"
@@ -353,6 +425,7 @@ def test_fixed_state_runner_saves_hashable_actions_and_strict_json(
 
     assert payload["common_free_dof_set"] is True
     assert payload["state_path"] == "clean_inputs/state.npz"
+    assert payload["mesh_input"] == mesh_input
     assert len(payload["common_direction_content_sha256"]) == 64
     assert payload["reference_rule_id"] == TETRA_QUADRATURE_DUFFY_125POINT
     assert len(payload["evaluations"]) == 2
@@ -456,6 +529,20 @@ def test_prescribed_state_preparer_exports_constraint_aware_state(
         "load_same_mesh_case_hdf5_light",
         lambda *args, **kwargs: case_mapping,
     )
+    mesh_input = {
+        "path": "data/meshes/one_tetra.h5",
+        "sha256": "c" * 64,
+        "bytes": 123,
+        "manifest": {
+            "path": "data/meshes/publication_mesh_manifest.json",
+            "sha256": "d" * 64,
+        },
+    }
+    monkeypatch.setattr(
+        state_preparer,
+        "manifested_same_mesh_case_provenance",
+        lambda *args, **kwargs: mesh_input,
+    )
     monkeypatch.setattr(
         state_preparer,
         "check_experiment_preflight",
@@ -478,6 +565,7 @@ def test_prescribed_state_preparer_exports_constraint_aware_state(
             run_kind="publication",
             pilot_dirty_override=False,
             pilot_override_reason=None,
+            publication_mesh_manifest=tmp_path / "publication_mesh_manifest.json",
             degree=1,
             mesh_name="one_tetra",
             constraint_variant="glued_bottom",
@@ -489,6 +577,7 @@ def test_prescribed_state_preparer_exports_constraint_aware_state(
 
     assert payload["status"] == "completed"
     assert payload["identifiers"]["state_kind"] == "analytic_not_solved"
+    assert payload["mesh_input"] == mesh_input
     assert payload["state"]["constrained_coefficients_match_reference"] is True
     assert manifest_path.is_file()
     with np.load(state_path, allow_pickle=False) as state:
