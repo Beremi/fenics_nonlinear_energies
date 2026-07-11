@@ -1,0 +1,169 @@
+{
+  "allow_unreferenced_tables": true,
+  "audit": {
+    "campaign_manifest_sha256": "c17c872d76570df4c5b8281a032afe3e70b8da9124de9476b027b8b4bb92bb84",
+    "campaign_output_files_sha256": "68b24e4f0901d4cbfef31426f431ceb6834924ebaf3011db28d70e97fee18c42",
+    "experiment_id": "EXP-DIST-001",
+    "numerical_revalidation": {
+      "comparison_tolerances": {
+        "absolute": 1e-10,
+        "integer_topology_and_state": "exact",
+        "relative": 1e-08
+      },
+      "maxima": {
+        "action_relative": 0.0,
+        "csr_value_relative": 0.0,
+        "gradient_relative": 0.0,
+        "rank_action_relative": 2.639589395776315e-16,
+        "rank_gradient_relative": 0.0
+      },
+      "rows": [
+        {
+          "colored_action_relative_error": 0.0,
+          "colored_csr_relative_error": 0.0,
+          "colored_gradient_relative_error": 0.0,
+          "degree": 1,
+          "ranks": 1,
+          "state": "elastic",
+          "state_exact": true
+        },
+        {
+          "colored_action_relative_error": 0.0,
+          "colored_csr_relative_error": null,
+          "colored_gradient_relative_error": 0.0,
+          "degree": 1,
+          "ranks": 2,
+          "state": "elastic",
+          "state_exact": true
+        },
+        {
+          "colored_action_relative_error": 0.0,
+          "colored_csr_relative_error": null,
+          "colored_gradient_relative_error": 0.0,
+          "degree": 1,
+          "ranks": 4,
+          "state": "elastic",
+          "state_exact": true
+        },
+        {
+          "colored_action_relative_error": 0.0,
+          "colored_csr_relative_error": 0.0,
+          "colored_gradient_relative_error": 0.0,
+          "degree": 1,
+          "ranks": 1,
+          "state": "mixed",
+          "state_exact": true
+        },
+        {
+          "colored_action_relative_error": 0.0,
+          "colored_csr_relative_error": null,
+          "colored_gradient_relative_error": 0.0,
+          "degree": 1,
+          "ranks": 2,
+          "state": "mixed",
+          "state_exact": true
+        },
+        {
+          "colored_action_relative_error": 0.0,
+          "colored_csr_relative_error": null,
+          "colored_gradient_relative_error": 0.0,
+          "degree": 1,
+          "ranks": 4,
+          "state": "mixed",
+          "state_exact": true
+        },
+        {
+          "colored_action_relative_error": 0.0,
+          "colored_csr_relative_error": 0.0,
+          "colored_gradient_relative_error": 0.0,
+          "degree": 2,
+          "ranks": 1,
+          "state": "elastic",
+          "state_exact": true
+        },
+        {
+          "colored_action_relative_error": 0.0,
+          "colored_csr_relative_error": null,
+          "colored_gradient_relative_error": 0.0,
+          "degree": 2,
+          "ranks": 2,
+          "state": "elastic",
+          "state_exact": true
+        },
+        {
+          "colored_action_relative_error": 0.0,
+          "colored_csr_relative_error": null,
+          "colored_gradient_relative_error": 0.0,
+          "degree": 2,
+          "ranks": 4,
+          "state": "elastic",
+          "state_exact": true
+        },
+        {
+          "colored_action_relative_error": 0.0,
+          "colored_csr_relative_error": 0.0,
+          "colored_gradient_relative_error": 0.0,
+          "degree": 2,
+          "ranks": 1,
+          "state": "mixed",
+          "state_exact": true
+        },
+        {
+          "colored_action_relative_error": 0.0,
+          "colored_csr_relative_error": null,
+          "colored_gradient_relative_error": 0.0,
+          "degree": 2,
+          "ranks": 2,
+          "state": "mixed",
+          "state_exact": true
+        },
+        {
+          "colored_action_relative_error": 0.0,
+          "colored_csr_relative_error": null,
+          "colored_gradient_relative_error": 0.0,
+          "degree": 2,
+          "ranks": 4,
+          "state": "mixed",
+          "state_exact": true
+        }
+      ],
+      "status": "passed",
+      "timing_claim_admissible": false
+    },
+    "run_id": "8be360eb49cd-colored-recovery",
+    "schema_id": "fenics-nonlinear-energies.distributed-colored-paper-admission",
+    "schema_version": 1,
+    "source_commit": "8be360eb49cd3a6202c2a5d09702aed8a26d1e6f",
+    "status": "admitted_correctness_only",
+    "timing_claim_admissible": false
+  },
+  "evidence_root": "artifacts/reproduction/paper_revision_local_8be360eb49cd/EXP-DIST-001/colored-recovery",
+  "experiment_id": "EXP-DIST-001",
+  "outputs": {
+    "distributed_colored_verification.tex": "fed89ceacd5a2fc0cb23a04cf5cb779222ab1abe61b01952cd9229614df1d1a4"
+  },
+  "publication_evidence": true,
+  "schema_id": "fenics-nonlinear-energies.distributed-colored-table-manifest",
+  "schema_version": 1,
+  "source_campaign_manifest": {
+    "path": "artifacts/reproduction/paper_revision_local_8be360eb49cd/EXP-DIST-001/colored-recovery/manifest.json",
+    "sha256": "c17c872d76570df4c5b8281a032afe3e70b8da9124de9476b027b8b4bb92bb84"
+  },
+  "source_commit": "8be360eb49cd3a6202c2a5d09702aed8a26d1e6f",
+  "status": "admitted_correctness_only",
+  "timing_claim_admissible": false,
+  "tools": {
+    "checker": {
+      "path": "paper/scripts/check_distributed_colored_manifest.py",
+      "sha256": "ef01f685946878def9ea52bfc4ab11a10c54f942f8d2584591c2d8fe70d804f9"
+    },
+    "generator": {
+      "path": "paper/scripts/generate_distributed_colored_table.py",
+      "sha256": "e19944d2db41df3035e4df8e1a5d4472e1679c93a146b299a541ed82deb5de1c"
+    },
+    "validator": {
+      "path": "paper/scripts/distributed_colored_evidence.py",
+      "sha256": "66074c99db65b172a65790d93ee9eda203e275656c68bf5161f17757faf9c25e"
+    }
+  }
+}
