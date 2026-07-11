@@ -5,11 +5,13 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 import os
 import platform
 import resource
 import subprocess
 import sys
+import tempfile
 from pathlib import Path
 
 import h5py
@@ -29,6 +31,65 @@ from src.problems.slope_stability_3d.support.reduction import davis_b_reduction_
 
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
+
+
+def _save_array(path: Path, value: np.ndarray) -> Path:
+    path = Path(path)
+    np.save(path, np.asarray(value), allow_pickle=False)
+    return path
+
+
+def _chunked_array_equal(
+    left_path: Path,
+    right_path: Path,
+    *,
+    chunk_entries: int = 4_000_000,
+) -> bool:
+    left = np.load(left_path, mmap_mode="r", allow_pickle=False)
+    right = np.load(right_path, mmap_mode="r", allow_pickle=False)
+    if left.shape != right.shape:
+        return False
+    chunk_entries = max(1, int(chunk_entries))
+    for start in range(0, int(left.size), chunk_entries):
+        stop = min(start + chunk_entries, int(left.size))
+        if not np.array_equal(left[start:stop], right[start:stop]):
+            return False
+    return True
+
+
+def _chunked_hessian_errors(
+    left_path: Path,
+    right_path: Path,
+    *,
+    chunk_entries: int = 1_000_000,
+) -> tuple[float, float, float]:
+    """Return absolute, relative, and maximum errors without a full difference."""
+    left = np.load(left_path, mmap_mode="r", allow_pickle=False)
+    right = np.load(right_path, mmap_mode="r", allow_pickle=False)
+    if left.shape != right.shape:
+        raise ValueError("Hessian value arrays have different shapes")
+    chunk_entries = max(1, int(chunk_entries))
+    difference_squares: list[float] = []
+    left_squares: list[float] = []
+    right_squares: list[float] = []
+    maximum = 0.0
+    for start in range(0, int(left.size), chunk_entries):
+        stop = min(start + chunk_entries, int(left.size))
+        left_chunk = np.asarray(left[start:stop], dtype=np.float64)
+        right_chunk = np.asarray(right[start:stop], dtype=np.float64)
+        difference = left_chunk - right_chunk
+        difference_squares.append(float(np.dot(difference, difference)))
+        left_squares.append(float(np.dot(left_chunk, left_chunk)))
+        right_squares.append(float(np.dot(right_chunk, right_chunk)))
+        if difference.size:
+            maximum = max(maximum, float(np.max(np.abs(difference))))
+    absolute = float(math.sqrt(math.fsum(difference_squares)))
+    scale = max(
+        float(math.sqrt(math.fsum(left_squares))),
+        float(math.sqrt(math.fsum(right_squares))),
+        np.finfo(float).tiny,
+    )
+    return absolute, float(absolute / scale), float(maximum)
 
 
 def _relative_error(left: np.ndarray, right: np.ndarray) -> float:
@@ -400,6 +461,7 @@ def verify_assembled_route_equivalence(
     symmetry_tolerance: float,
     sfd_hvp_batch_size: int,
     memory_guard_total_gib: float,
+    scratch_parent: Path,
 ) -> dict[str, object]:
     """Compare all maintained local derivative routes without solving a system."""
     from mpi4py import MPI
@@ -465,6 +527,13 @@ def verify_assembled_route_equivalence(
         ("local_sfd", "sfd_local", "element"),
         ("constitutive_ad", "element", "constitutive"),
     )
+    scratch_parent = Path(scratch_parent).resolve()
+    scratch_parent.mkdir(parents=True, exist_ok=True)
+    scratch_directory = tempfile.TemporaryDirectory(
+        prefix=".paper_derivative_csr_",
+        dir=scratch_parent,
+    )
+    scratch_root = Path(scratch_directory.name)
     snapshots: dict[str, dict[str, object]] = {}
     branch_diagnostics: dict[str, object] | None = None
     for name, local_hessian_mode, autodiff_tangent_mode in route_specs:
@@ -481,9 +550,12 @@ def verify_assembled_route_equivalence(
             gradient = np.asarray(grad.array[:], dtype=np.float64).copy()
             timing = assembler.assemble_hessian(state)
             indptr, indices, values = assembler.A.getValuesCSR()
-            indptr = np.asarray(indptr, dtype=np.int64).copy()
-            indices = np.asarray(indices, dtype=np.int64).copy()
-            values = np.asarray(values, dtype=np.float64).copy()
+            indptr = np.asarray(indptr)
+            indices = np.asarray(indices)
+            values = np.asarray(values, dtype=np.float64)
+            indptr_path = _save_array(scratch_root / f"{name}_indptr.npy", indptr)
+            indices_path = _save_array(scratch_root / f"{name}_indices.npy", indices)
+            values_path = _save_array(scratch_root / f"{name}_values.npy", values)
             matrix = sparse.csr_matrix(
                 (values, indices, indptr), shape=(n_free, n_free)
             )
@@ -499,9 +571,9 @@ def verify_assembled_route_equivalence(
             snapshots[name] = {
                 "energy": energy,
                 "gradient": gradient,
-                "indptr": indptr,
-                "indices": indices,
-                "hessian_values": values,
+                "indptr_path": indptr_path,
+                "indices_path": indices_path,
+                "hessian_values_path": values_path,
                 "gradient_norm": float(np.linalg.norm(gradient)),
                 "hessian_frobenius_norm": float(np.linalg.norm(values)),
                 "hessian_symmetry_defect": symmetry_defect,
@@ -537,22 +609,19 @@ def verify_assembled_route_equivalence(
                 np.finfo(float).tiny,
             )
             structure_equal = bool(
-                np.array_equal(left["indptr"], right["indptr"])
-                and np.array_equal(left["indices"], right["indices"])
+                _chunked_array_equal(left["indptr_path"], right["indptr_path"])
+                and _chunked_array_equal(
+                    left["indices_path"], right["indices_path"]
+                )
             )
             if structure_equal:
-                hessian_left = np.asarray(left["hessian_values"], dtype=np.float64)
-                hessian_right = np.asarray(right["hessian_values"], dtype=np.float64)
-                hessian_difference = hessian_left - hessian_right
-                hessian_absolute_error = float(np.linalg.norm(hessian_difference))
-                hessian_maximum_entry_error = float(np.max(np.abs(hessian_difference)))
-                hessian_scale = max(
-                    float(np.linalg.norm(hessian_left)),
-                    float(np.linalg.norm(hessian_right)),
-                    np.finfo(float).tiny,
-                )
-                hessian_relative_error: float | None = float(
-                    hessian_absolute_error / hessian_scale
+                (
+                    hessian_absolute_error,
+                    hessian_relative_error,
+                    hessian_maximum_entry_error,
+                ) = _chunked_hessian_errors(
+                    left["hessian_values_path"],
+                    right["hessian_values_path"],
                 )
             else:
                 hessian_absolute_error = None
@@ -594,9 +663,9 @@ def verify_assembled_route_equivalence(
             if key
             not in {
                 "gradient",
-                "indptr",
-                "indices",
-                "hessian_values",
+                "indptr_path",
+                "indices_path",
+                "hessian_values_path",
                 "process_rss_hwm_gib",
                 "sfd_recovery",
             }
@@ -606,6 +675,9 @@ def verify_assembled_route_equivalence(
     execution_resources = {
         "memory_guard_total_gib": float(memory_guard_total_gib),
         "requested_sfd_hvp_batch_size": int(sfd_hvp_batch_size),
+        "csr_comparison_mode": "temporary_disk_backed_chunked",
+        "csr_structure_chunk_entries": 4_000_000,
+        "csr_value_chunk_entries": 1_000_000,
         "routes": {
             name: {
                 "process_rss_hwm_gib": float(snapshot["process_rss_hwm_gib"]),
@@ -636,7 +708,7 @@ def verify_assembled_route_equivalence(
         and bool(branch_diagnostics["all_quadrature_points_strictly_elastic"])
         and all(bool(comparison["passed"]) for comparison in comparisons)
     )
-    return {
+    result = {
         "status": "passed" if passed else "failed",
         "case": {
             "mesh_name": str(mesh_name),
@@ -684,6 +756,8 @@ def verify_assembled_route_equivalence(
             ),
         },
     }
+    scratch_directory.cleanup()
+    return result
 
 
 def verify_state(
@@ -870,6 +944,7 @@ def run(args: argparse.Namespace) -> dict[str, object]:
             symmetry_tolerance=float(args.assembled_symmetry_tolerance),
             sfd_hvp_batch_size=int(args.assembled_sfd_hvp_batch_size),
             memory_guard_total_gib=float(args.assembled_memory_guard_gib),
+            scratch_parent=Path(args.output).resolve().parent,
         )
     passed = bool(
         fixed_element_passed
