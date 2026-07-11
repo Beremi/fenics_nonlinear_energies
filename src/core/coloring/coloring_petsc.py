@@ -65,10 +65,14 @@ def _configure_signatures(lib: ctypes.CDLL) -> None:
     lib.MatColoringSetDistance.restype = PetscErrorCode
     lib.MatColoringSetType.argtypes = [PetscObject, ctypes.c_char_p]
     lib.MatColoringSetType.restype = PetscErrorCode
+    lib.MatColoringSetWeightType.argtypes = [PetscObject, ctypes.c_int]
+    lib.MatColoringSetWeightType.restype = PetscErrorCode
     lib.MatColoringSetFromOptions.argtypes = [PetscObject]
     lib.MatColoringSetFromOptions.restype = PetscErrorCode
     lib.MatColoringApply.argtypes = [PetscObject, ctypes.POINTER(PetscObject)]
     lib.MatColoringApply.restype = PetscErrorCode
+    lib.MatColoringTest.argtypes = [PetscObject, PetscObject]
+    lib.MatColoringTest.restype = PetscErrorCode
     lib.MatColoringDestroy.argtypes = [ctypes.POINTER(PetscObject)]
     lib.MatColoringDestroy.restype = PetscErrorCode
 
@@ -160,6 +164,8 @@ def color_petsc(
     adjacency: sps.spmatrix,
     coloring_type: str = "greedy",
     distance: int = 2,
+    weight_type: str = "lexical",
+    allow_options: bool = False,
     comm: Optional[MPI.Comm] = None,
 ) -> tuple[int, np.ndarray]:
     """
@@ -176,6 +182,12 @@ def color_petsc(
         distance-2 coloring in supported PETSc builds.
     distance : int
         Coloring distance (2 = color the graph of P²).
+    weight_type : str
+        Deterministic vertex weighting. Publication runs use ``"lexical"``;
+        ``"lf"`` and ``"sl"`` are also supported.
+    allow_options : bool
+        If true, permit PETSc's ambient options database to override the
+        explicit contract. False by default for reproducibility.
     comm : MPI.Comm or None
         MPI communicator.  ``None`` → ``MPI.COMM_SELF`` (sequential).
 
@@ -199,6 +211,13 @@ def color_petsc(
         )
     if distance < 1:
         raise ValueError("distance must be at least one")
+    weight_type = str(weight_type).strip().lower()
+    weight_types = {"random": 0, "lexical": 1, "lf": 2, "sl": 3}
+    if weight_type not in weight_types:
+        raise ValueError(
+            f"Unsupported PETSc coloring weight type {weight_type!r}; "
+            f"choose one of {sorted(weight_types)}"
+        )
 
     lib = _get_libpetsc()
     mat = _scipy_coo_to_petsc_mat(adjacency, comm)
@@ -219,10 +238,19 @@ def color_petsc(
         lib.MatColoringSetType(mc, coloring_type.encode()),
         "MatColoringSetType",
     )
-    _check_petsc_error(lib.MatColoringSetFromOptions(mc), "MatColoringSetFromOptions")
+    _check_petsc_error(
+        lib.MatColoringSetWeightType(mc, ctypes.c_int(weight_types[weight_type])),
+        "MatColoringSetWeightType",
+    )
+    if bool(allow_options):
+        _check_petsc_error(
+            lib.MatColoringSetFromOptions(mc),
+            "MatColoringSetFromOptions",
+        )
 
     isc = ctypes.c_void_p()
     _check_petsc_error(lib.MatColoringApply(mc, ctypes.byref(isc)), "MatColoringApply")
+    _check_petsc_error(lib.MatColoringTest(mc, isc), "MatColoringTest")
 
     # --- Extract per-vertex colors ---
     n_colors_c = PetscInt()

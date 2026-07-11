@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import numpy as np
 import pytest
+from petsc4py import PETSc
 from scipy import sparse
 
 from src.core.coloring import coloring_petsc
@@ -52,3 +53,38 @@ def test_petsc_coloring_rejects_unsafe_or_unknown_types(coloring_type: str) -> N
 def test_petsc_coloring_rejects_nonpositive_distance() -> None:
     with pytest.raises(ValueError, match="distance must be at least one"):
         coloring_petsc.color_petsc(_path_pattern(4), distance=0)
+
+
+def test_petsc_coloring_ignores_ambient_options_and_is_repeatable() -> None:
+    options = PETSc.Options()
+    option = "mat_coloring_type"
+    try:
+        previous = options.getString(option)
+    except KeyError:
+        previous = None
+    options[option] = "natural"
+    try:
+        first = coloring_petsc.color_petsc(
+            _path_pattern(20),
+            coloring_type="greedy",
+            distance=2,
+            weight_type="lexical",
+        )
+        second = coloring_petsc.color_petsc(
+            _path_pattern(20),
+            coloring_type="greedy",
+            distance=2,
+            weight_type="lexical",
+        )
+    finally:
+        del options[option]
+        if previous is not None:
+            options[option] = previous
+
+    assert first[0] == second[0]
+    np.testing.assert_array_equal(first[1], second[1])
+
+
+def test_petsc_coloring_rejects_unknown_weight_type() -> None:
+    with pytest.raises(ValueError, match="Unsupported PETSc coloring weight type"):
+        coloring_petsc.color_petsc(_path_pattern(4), weight_type="unknown")
