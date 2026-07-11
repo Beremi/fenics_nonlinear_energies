@@ -907,14 +907,20 @@ def render_table(audit: Mapping[str, object]) -> str:
     lines = [
         "\\begin{table}[t]",
         "  \\caption{Fixed-state verification of distributed colored sparse recovery. "
-        "State vectors and CSR sparsity patterns agree exactly. Each residual or tangent "
-        "comparison is accepted when its relative error is at most $1 \\times 10^{-8}$ "
-        "or its absolute error is at most $1 \\times 10^{-10}$. Timings are not included.}",
+        "State vectors agree exactly in all 12 blocks. The common element-AD residual is "
+        "retained as a state and assembly consistency check. The four one-rank blocks "
+        "additionally compare complete CSR patterns and values; a dash denotes that no "
+        "direct distributed CSR comparison was performed. The tabulated route defects "
+        "compare colored recovery with element AD at the same state and rank; "
+        "constitutive-route and cross-rank discrepancies are summarized in the text. "
+        "Each tabulated numerical comparison is "
+        "accepted when its relative error is at most $1 \\times 10^{-8}$ or its absolute "
+        "error is at most $1 \\times 10^{-10}$. Timings are not included.}",
         "  \\label{tab:distributed-colored-verification}",
         "  \\centering",
         "  \\begin{tabularx}{\\linewidth}{C{0.70}C{1.05}C{0.65}C{1.20}C{1.20}C{1.20}}",
         "    \\toprule",
-        "    Element & State & Ranks & Gradient rel. error & Max. action rel. error & CSR-value rel. error \\\\",
+        "    Element & State & Ranks & Common residual rel. defect & Colored/element action rel. defect & Colored/element CSR-value rel. defect \\\\",
         "    \\midrule",
     ]
     for row in rows:

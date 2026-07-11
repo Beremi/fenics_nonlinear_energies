@@ -335,6 +335,14 @@ def test_independent_admission_accepts_closed_campaign_and_renders_deterministic
     assert first.encode("utf-8") == second.encode("utf-8")
     assert r"$P_1(L_1)$" in first
     assert r"$P_2(L_1)$" in first
+    assert "State vectors agree exactly in all 12 blocks" in first
+    assert "four one-rank blocks" in first
+    assert "no direct distributed CSR comparison" in first
+    assert "compare colored recovery with element AD" in first
+    assert "constitutive-route and cross-rank discrepancies" in first
+    assert "Common residual rel. defect" in first
+    assert "Colored/element action rel. defect" in first
+    assert "Colored/element CSR-value rel. defect" in first
     assert "Timings are not included" in first
     assert "campaign" not in first.lower()
     assert "speedup" not in first.lower()

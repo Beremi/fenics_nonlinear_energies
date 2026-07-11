@@ -1,148 +1,111 @@
 \label{sec:performance-solver-behavior}
 
-This section adjudicates the experiments that depend on quadrature, nonlinear
-stopping, or solver policy. The purpose is to determine which conclusions may
-follow from the verified derivatives. We report no publication timing because
-the available rows do not satisfy the paired and repeated design of
-Section~\ref{subsec:evidence-contract}.
+We now report numerical results for quadrature sensitivity, nonlinear stopping,
+controlled globalization, and fixed-state tangent-action agreement. These experiments
+clarify how the verified derivatives behave under the numerical choices used by
+the solver. The available local studies support correctness and bounded
+outcome statements, but not timing, scaling, or route-selection claims.
 
 \subsection{Fixed-state quadrature sensitivity}
 \label{subsec:quadrature-sensitivity}
 
-Table~\ref{tab:revision-quadrature-sensitivity} evaluates one prescribed fixed
-state for each degree with its degree-associated rule and with a common
-125-point Duffy rule. The residuals are raw free-coefficient $\ell^2$
-diagnostics and are not stopping metrics. Tangent actions use one deterministic
-unit direction shared by every rule.
+We evaluate one prescribed coefficient vector and one deterministic unit
+direction for each polynomial degree. The degree-associated tetrahedral rules
+use 1, 11, and 24 points for $P_1$, $P_2$, and $P_4$, respectively; every
+result is compared with the same 125-point Duffy rule. Let
+$\Pi_q=E_q^{\mathrm{int}}-W_q^{\mathrm{ext}}$ and define
+\begin{equation}
+  s_{\Pi,125}:=\max\bigl(
+  |E_{125}^{\mathrm{int}}|,|W_{125}^{\mathrm{ext}}|,|\Pi_{125}|,
+  \operatorname{tiny}_{64}\bigr),
+  \qquad
+  \delta_\Pi(q):=\frac{|\Pi_q-\Pi_{125}|}{s_{\Pi,125}},
+  \label{eq:quadrature-energy-scale}
+\end{equation}
+where $\operatorname{tiny}_{64}$ is the smallest positive normal binary64
+number. We report, in order, $\delta_\Pi$, the relative free-residual defect
+from \eqref{eq:verification-relative-defects}, the corresponding relative free
+Hessian-action defect, and the $L^1$ difference of the absolute-quadrature-
+weight branch fractions.
 
-\begin{table}[!htbp]
-  \centering
-  \caption{Fixed-state quadrature sensitivity. The degree-associated and
-  reference rules evaluate the same prescribed coefficient vector. Energy and
-  tangent differences are relative to the 125-point rule.}
-  \label{tab:revision-quadrature-sensitivity}
-  \input{tables/generated/revision_quadrature_sensitivity.tex}
-\end{table}
+For $P_1$, these four discrepancies are $3.51\times10^{-16}$,
+$2.79\times10^{-16}$, $3.60\times10^{-16}$, and
+$7.11\times10^{-17}$. The affine-element integrands therefore agree to
+roundoff. For $P_2$, the corresponding values are $7.11\times10^{-5}$,
+$3.43\times10^{-3}$, $3.24\times10^{-2}$, and
+$1.21\times10^{-2}$. For $P_4$, they increase to
+$6.28\times10^{-4}$, $2.68\times10^{-2}$,
+$6.91\times10^{-2}$, and $8.51\times10^{-3}$.
 
-The P1 integrand is constant on each affine tetrahedron, and all reported
-objects agree to roundoff. The P2 fixed state is nearly unchanged in energy:
-the 11-point and 125-point values differ by $1.84\times10^{-8}$ relatively.
-However, its enriched-rule residual is $7.84\times10^2$, and the tangent
-action changes by $2.08\%$. For P4, the corresponding values are
-$5.10\times10^{-6}$, $2.57\times10^3$, and $4.35\%$.
-One P2 reference-rule sample lies inside the $10^{-8}$ branch-margin exclusion
-band. Its action is therefore the derivative of the deterministically selected
-branch, not an ordinary Hessian at a smooth point.
+The energy discrepancy alone thus understates the residual and tangent
+sensitivity for both higher-order spaces. Because the states are prescribed,
+these comparisons do not measure endpoint stationarity or select a quadrature
+policy. The aggregate branch-fraction differences also do not locate a branch
+switch or establish differentiability there. A convergence conclusion requires
+separately converged nonlinear endpoints under each rule.
 
-These results show that energy agreement alone is insufficient for a
-derivative comparison. Because every state is prescribed rather than obtained
-from a nonlinear solve, this experiment neither measures endpoint stationarity
-nor establishes a quadrature policy. A separate high-order solved-endpoint
-study remains necessary before we draw conclusions about mesh, degree, or
-quadrature convergence.
-
-\subsection{Mesh-aware stopping diagnostics}
+\subsection{Mesh-aware stopping results}
 \label{subsec:stopping-results}
 
-The reconstructible two-rank scalar sensitivity pair uses the zero-source
-Ginzburg--Landau problem and compares a baseline policy with ten-times tighter
-linear and nonlinear tolerances. For the reduced-trust solve, the lumped-$L^2$
-state difference is $3.81\times10^{-7}$, or $2.22\times10^{-7}$ relative, and
-the energy difference is $1.20\times10^{-13}$. The tighter policy uses fewer
-Newton iterations but more total Krylov iterations. One deterministic instance
-supports only a local tolerance-sensitivity observation, not a work ranking.
-The attempted $p$-Laplace pair is excluded because its random initial free
-vector was neither seeded nor stored; its numerical difference is therefore
-not a controlled calibration result. Appendix~\ref{subsec:diagnostic-configurations}
-gives the complete retained configuration.
+Table~\ref{tab:stopping-local-status} summarizes the completed local stopping
+matrix. All 45 locally feasible executions have checksum-identified outputs and
+independent numerical rechecks. The endpoint gate admits 43 rows: all
+Ginzburg--Landau,
+hyperelasticity, and Plasticity3D nonlinear endpoints pass, while 13 of the 15
+Plasticity3D fixed-state endpoints pass. Applying the stricter comparison
+criteria admits 28 of the 45 local rows.
 
-The hyperelastic reference-Riesz smoke gives the same inertia
-$(0,0,2133)$ and state scale on one and two ranks. Its dual norms differ by
-$7.43\times10^{-12}$ relatively, and both inverse solves pass the independent
-$10^{-8}$ true-residual gate. Because the smoke takes no Newton step, it
-verifies the operator, MPI provenance, and terminal serialization only. It does
-not calibrate a nonlinear endpoint tolerance. The large CG/Jacobi iteration
-counts also preclude an efficiency conclusion for that inverse-norm policy.
+\input{tables/generated/stopping_local_status.tex}
 
-The earlier one-step Plasticity3D comparison explains why stopping precedes
-route time. Tightening the KSP relative tolerance from $10^{-2}$ to $10^{-8}$
-reduces the element-versus-constitutive state discrepancy to
-$5.28\times10^{-11}$ relative. Both rows remain capped after one Newton step,
-so the observation diagnoses inexact linear solves and cannot certify a final
-endpoint.
+Seven prescribed tests remain outside the local matrix: four $P_4$ nonlinear
+calibrations and three publication-rank MPI-consistency comparisons. Their
+absence prevents a complete mesh- and rank-aware stopping conclusion. The
+local counts therefore verify the stated endpoint checks on the tested rows;
+they do not identify a preferred stopping policy or support a timing claim.
 
-\subsection{Controlled globalization}
+\subsection{Controlled globalization outcomes}
 \label{subsec:globalization-results}
 
-For the retained Ginzburg--Landau instance, the controlled two-rank tier holds
-the discrete problem, deterministic starting state, Hessian route, ordinary
-Krylov solver, preconditioner, KSP tolerance, stopping settings, and thread
-count fixed. It changes only Newton--Armijo versus the reduced-subspace trust
-model with Armijo acceptance. The Newton direction is rejected by all 40
-Armijo trials at the first iteration. The solver correctly retains the initial
-state and reports line-search failure. The reduced-trust method reaches its
-criteria in 12 iterations. This is one controlled robustness observation, not
-a success probability. We exclude the $p$-Laplace pair because the two cold
-processes used unseeded, unstored random initial vectors.
+The controlled design uses three prescribed starts and five separate
+executions for each method and problem, giving the 60 two-rank
+outcomes in Table~\ref{tab:globalization-local-status}. For the
+Ginzburg--Landau problem on $L_5$, Newton--Armijo fails in all 15 executions, whereas
+reduced trust--Armijo completes all 15. For the first hyperelastic load step on
+$L_2$, both methods complete all 15 executions.
 
-Both methods execute two hyperelastic load steps from the same identity state
-at the first load. The second load is warm-started from each method's own first
-endpoint, so its starting vectors are not known to coincide. The final energies
-differ by $8.15\times10^{-5}$ under intentionally loose smoke tolerances, and
-no canonical state was stored. Those rows fail the endpoint gate. No solve-time
-value from the globalization diagnostic is therefore used.
+\input{tables/generated/globalization_local_status.tex}
 
-\subsection{Finite route map and cost-model decision}
+The common-start identity check passes, but the paired endpoint-identity gate
+does not. The Ginzburg--Landau pairs are incomplete because Newton--Armijo does
+not terminate successfully, and the saved hyperelastic endpoints from the two
+methods have different identities. Consequently, the experiment supports only
+the displayed completion and failure counts for these deterministic starts. It
+does not support a paired method ranking, a robustness probability, or a timing
+comparison.
+
+\subsection{Fixed-state tangent-action agreement}
 \label{subsec:route-map-results}
 
-The strict analysis first clusters rows by exact canonical state. At each
-comparison point, the expected active route set is the frozen route set minus
-contract-declared censors; censored slots remain visible and are never imputed.
-A group is admitted to the finite map only when all active routes are present, the
-declared tangent-action error is at most $10^{-8}$, and timing provenance proves
-the required MPI collective maximum. The twelve available local records predate
-that timing contract and are rejected before map admission. Their derivative
-arrays remain covered by the separate fixed-state checks, but none supplies an
-admitted route-map row.
+The checksum-verified workstation study compares element automatic differentiation,
+constitutive automatic differentiation, and colored sparse recovery for
+$P_1(L_1)$ and $P_2(L_1)$ at elastic and mixed states. The 12 balanced blocks
+contain 36 sequential route executions, and each of the six route orders occurs
+twice. All blocks complete, and the declared output inventory passes its
+independent checksum verification.
 
-\begin{table}[!htbp]
-  \centering
-  \caption{Current evidence decision for route selection. The legacy rows fail
-  the timing-provenance gate before finite-map or predictive-model admission.}
-  \label{tab:revision-evidence-status}
-  \input{tables/generated/revision_evidence_status.tex}
-\end{table}
+Across four deterministic probes per route and state, the largest relative
+tangent-action discrepancy is $2.34\times10^{-16}$. The saved states and the
+common element-AD residuals agree exactly at stored precision. This finite study
+therefore corroborates four-probe tangent-action agreement on the tested serial
+states. Since it contains neither a distributed timing design nor the full
+degree--rank coverage, it defines no finite performance map, crossover
+predictor, or route ranking.
 
-Table~\ref{tab:revision-evidence-status} gives the fail-closed outcome. In
-addition to the timing-provenance failure, every local record was generated
-from a nonimmutable revision state. Consequently, zero training and zero
-holdout rows are eligible for the publication model. The selector status is
-\code{not fitted}; no descriptive local median is used for a speedup or
-crossover conclusion.
-
-The distributed design covers $P_1(L_1)$, $P_1(L_2)$, $P_2(L_1)$, and
-$P_4(L_1)$; elastic and mixed states; and 1, 8, and 32 ranks. It includes
-visible prespecified censors, numerically checked Riesz-stopped confirmations, factorized cost
-measurements, multiple action probes, and endpoint validation. All routes in a
-timing block execute inside one allocation with randomized order and
-collective-max phase measurements. The design has been prepared and tested in
-dry-run mode, but it has not been executed and therefore contributes no
-numerical performance evidence.
+Together, these experiments quantify higher-order quadrature sensitivity,
+establish the local extent of the stopping checks, record bounded globalization
+outcomes, and verify serial four-probe tangent-action agreement. Their explicit
+scope excludes
+nonlinear quadrature convergence, a general stopping or globalization policy,
+parallel scaling, and performance-based route selection.
 
 \FloatBarrier
-\subsection{Excluded optimization evidence}
-\label{subsec:excluded-topology}
-
-The topology implementation now distinguishes normalized material fraction
-from material measure. On the corrected $64\times32$ three-step diagnostic,
-one and two ranks agree within $4.60\times10^{-6}$ relatively in compliance and
-$2.68\times10^{-6}$ in weighted density. Both rows nevertheless miss the
-material target, every design subsolve reaches its iteration cap, and no KKT
-metric is available. The result is a distributed unit/parity check, not an
-optimization solution. Topology is therefore removed from the central paper.
-
-\paragraph{Adjudication.}
-The diagnostically admitted results support, on the tested states, the stated
-derivative identities, independent spatial consistency, canonical fixed-state
-distribution, and several negative claim boundaries. They do not establish a route ranking, mesh-independent
-nonlinear accuracy, high-order quadrature convergence, or parallel scaling.

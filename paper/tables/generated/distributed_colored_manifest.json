@@ -140,7 +140,7 @@
   "evidence_root": "artifacts/reproduction/paper_revision_local_8be360eb49cd/EXP-DIST-001/colored-recovery",
   "experiment_id": "EXP-DIST-001",
   "outputs": {
-    "distributed_colored_verification.tex": "1cc416d71d51528b4dbb5f41d9612a22a9b1eafce71cd48e143a674570bdf552"
+    "distributed_colored_verification.tex": "41806a7bdc68b4cb9428212acde87650edc8c4fb06cf5959e78c9453d52c3219"
   },
   "publication_evidence": true,
   "schema_id": "fenics-nonlinear-energies.distributed-colored-table-manifest",
@@ -163,7 +163,7 @@
     },
     "validator": {
       "path": "paper/scripts/distributed_colored_evidence.py",
-      "sha256": "70376cab8af0488918b46730f1222427edb361c93c413aa4dad706ae7122389f"
+      "sha256": "611a74b04f221cd56dd3005ee2fc8be8fc0e68ba03b9b02e7c470d32187e15c4"
     }
   }
 }
