@@ -66,7 +66,8 @@ P3D_QUADRATURE = {
     2: "tetra_11point",
     4: "tetra_24point",
 }
-DEFERRED_NONLINEAR_TARGETS = (1.0e-2, 1.0e-4, 1.0e-6, 1.0e-8)
+HE_NONLINEAR_TARGETS = (1.0e-2, 1.0e-4, 1.0e-6, 1.0e-8)
+P3D_NONLINEAR_TARGETS = (1.0e-2, 1.0e-4, 1.0e-6, 1.0e-7)
 ACCEPTED_POLICY_STATUS = "selected_loosest_accepted_same_discretization_policy"
 COMPLETE_REQUIRED_LOCAL_GROUPS = frozenset(
     {
@@ -487,7 +488,7 @@ def _he_rows(output_root: Path, python: str) -> list[dict[str, Any]]:
                 "--riesz-ksp-rtol",
                 f"{tolerance:.0e}",
                 "--riesz-ksp-atol",
-                "1e-14",
+                "0",
                 "--riesz-ksp-max-it",
                 "5000",
                 "--riesz-true-residual-rtol",
@@ -510,7 +511,12 @@ def _he_rows(output_root: Path, python: str) -> list[dict[str, Any]]:
                     ),
                     parameters={
                         "mesh_level": level,
+                        "riesz_ksp_type": "cg",
+                        "riesz_pc_type": "jacobi",
+                        "riesz_ksp_norm_type": "unpreconditioned",
                         "riesz_ksp_rtol": tolerance,
+                        "riesz_ksp_atol": 0.0,
+                        "riesz_ksp_max_it": 5000,
                         "riesz_true_residual_safety_gate": 1.0e-6,
                         "nonlinear_max_iterations": 0,
                     },
@@ -525,7 +531,7 @@ def _he_rows(output_root: Path, python: str) -> list[dict[str, Any]]:
 def _he_nonlinear_rows(output_root: Path, python: str) -> list[dict[str, Any]]:
     rows: list[dict[str, Any]] = []
     for level in HE_LEVELS:
-        for target in DEFERRED_NONLINEAR_TARGETS:
+        for target in HE_NONLINEAR_TARGETS:
             tolerance_id = _float_id(target)
             row_id = f"he_l{level}_nonlinear_{tolerance_id}"
             row_root = output_root / "raw" / "he_nonlinear" / row_id
@@ -581,7 +587,7 @@ def _he_nonlinear_rows(output_root: Path, python: str) -> list[dict[str, Any]]:
                 "--riesz-ksp-rtol",
                 "1e-10",
                 "--riesz-ksp-atol",
-                "1e-14",
+                "0",
                 "--riesz-ksp-max-it",
                 "5000",
                 "--riesz-true-residual-rtol",
@@ -620,13 +626,19 @@ def _he_nonlinear_rows(output_root: Path, python: str) -> list[dict[str, Any]]:
                         "mesh_level": level,
                         "relative_dual_residual_target": target,
                         "linear_ksp_rtol": 1.0e-8,
+                        "riesz_ksp_type": "cg",
+                        "riesz_pc_type": "jacobi",
+                        "riesz_ksp_norm_type": "unpreconditioned",
                         "riesz_ksp_rtol": 1.0e-10,
+                        "riesz_ksp_atol": 0.0,
+                        "riesz_ksp_max_it": 5000,
+                        "riesz_true_residual_rtol": 1.0e-8,
                         "load_steps": 1,
                         "total_steps": 24,
                     },
                     command=command,
                     outputs=(result, state),
-                    reference=target == min(DEFERRED_NONLINEAR_TARGETS),
+                    reference=target == min(HE_NONLINEAR_TARGETS),
                 )
             )
     return rows
@@ -725,7 +737,7 @@ def _p3d_nonlinear_rows(output_root: Path, python: str) -> list[dict[str, Any]]:
     rows: list[dict[str, Any]] = []
     for degree in (1, 2):
         quadrature = P3D_QUADRATURE[degree]
-        for target in DEFERRED_NONLINEAR_TARGETS:
+        for target in P3D_NONLINEAR_TARGETS:
             tolerance_id = _float_id(target)
             row_id = f"p3d_p{degree}_nonlinear_{tolerance_id}"
             row_root = output_root / "raw" / "p3d_nonlinear" / row_id
@@ -776,7 +788,7 @@ def _p3d_nonlinear_rows(output_root: Path, python: str) -> list[dict[str, Any]]:
                 "--riesz-ksp-rtol",
                 "1e-10",
                 "--riesz-ksp-atol",
-                "1e-14",
+                "0",
                 "--riesz-ksp-max-it",
                 "5000",
                 "--riesz-true-residual-rtol",
@@ -810,11 +822,17 @@ def _p3d_nonlinear_rows(output_root: Path, python: str) -> list[dict[str, Any]]:
                         "quadrature_rule_id": quadrature,
                         "relative_dual_residual_target": target,
                         "linear_ksp_rtol": 1.0e-8,
+                        "riesz_ksp_type": "cg",
+                        "riesz_pc_type": "jacobi",
+                        "riesz_ksp_norm_type": "unpreconditioned",
                         "riesz_ksp_rtol": 1.0e-10,
+                        "riesz_ksp_atol": 0.0,
+                        "riesz_ksp_max_it": 5000,
+                        "riesz_true_residual_rtol": 1.0e-8,
                     },
                     command=command,
                     outputs=(result, state),
-                    reference=target == min(DEFERRED_NONLINEAR_TARGETS),
+                    reference=target == min(P3D_NONLINEAR_TARGETS),
                 )
             )
     return rows
@@ -822,7 +840,7 @@ def _p3d_nonlinear_rows(output_root: Path, python: str) -> list[dict[str, Any]]:
 
 def _cluster_censors() -> list[dict[str, Any]]:
     rows: list[dict[str, Any]] = []
-    for target in DEFERRED_NONLINEAR_TARGETS:
+    for target in P3D_NONLINEAR_TARGETS:
         rows.append(
             _deferred_row(
                 row_id=f"p3d_p4_nonlinear_{_float_id(target)}_cluster",
@@ -905,9 +923,11 @@ def build_plan(
         TRUST_RUNNER_PATH,
         P3D_BACKEND_PATH,
         P3D_ROUTE_PATH,
+        Path("src/core/petsc/metrics.py"),
         Path("src/core/petsc/scalar_problem_driver.py"),
         Path("src/problems/ginzburg_landau/jax_petsc/solver.py"),
         Path("src/problems/hyperelasticity/jax_petsc/solver.py"),
+        Path("src/problems/slope_stability_3d/jax_petsc/solver.py"),
         Path("src/problems/slope_stability_3d/support/fixed_state.py"),
     )
     input_paths = [
@@ -1038,6 +1058,35 @@ def _load_plan(plan_path: Path) -> tuple[dict[str, Any], Path]:
     return plan, output_root
 
 
+def _verify_frozen_plan_design(
+    plan: Mapping[str, Any],
+    *,
+    output_root: Path,
+) -> None:
+    policies = plan.get("policies")
+    source = plan.get("source")
+    if not isinstance(policies, Mapping) or not isinstance(source, Mapping):
+        raise CampaignError("plan policy or source identity is missing")
+    run_kind = str(plan.get("run_kind", ""))
+    p4_policy = str(policies.get("p4_fixed_state", ""))
+    p4_attested = policies.get("p4_local_feasibility_attested") is True
+    canonical = build_plan(
+        output_root,
+        run_kind=run_kind,
+        allow_dirty=run_kind == "diagnostic" and bool(source.get("dirty")),
+        p4_policy=p4_policy,
+        confirm_p4_local_feasible=p4_attested,
+    )
+    for key in ("rows", "row_counts", "policies", "claim_boundary"):
+        if plan.get(key) != canonical.get(key):
+            raise CampaignError(f"frozen plan {key} differs from the canonical design")
+    canonical_source = canonical["source"]["relevant_file_hashes"]
+    if source.get("relevant_file_hashes") != canonical_source:
+        raise CampaignError("frozen plan source inventory differs from the canonical design")
+    if plan.get("inputs") != canonical.get("inputs"):
+        raise CampaignError("frozen plan input inventory differs from the canonical design")
+
+
 def _verify_source_identity(plan: Mapping[str, Any]) -> None:
     git = _git_metadata()
     source = plan.get("source")
@@ -1088,6 +1137,7 @@ def execute_row(
 ) -> Path:
     plan, output_root = _load_plan(plan_path)
     _verify_source_identity(plan)
+    _verify_frozen_plan_design(plan, output_root=output_root)
     row = _row_by_id(plan, row_id)
     if row.get("execution_class") != "required_local":
         raise CampaignError(f"row {row_id} is a frozen cluster-deferred censor")
@@ -1262,6 +1312,136 @@ def _finite_number(value: Any, label: str) -> float:
     return result
 
 
+def _require_riesz_solver_contract(
+    row: Mapping[str, Any],
+    *,
+    metric: Mapping[str, Any],
+    norm_solve: Mapping[str, Any],
+) -> dict[str, Any]:
+    parameters = row.get("parameters")
+    if not isinstance(parameters, Mapping):
+        raise CampaignError(f"row {row.get('row_id')} has no Riesz parameters")
+    gate_keys = [
+        key
+        for key in (
+            "riesz_true_residual_rtol",
+            "riesz_true_residual_safety_gate",
+        )
+        if key in parameters
+    ]
+    if len(gate_keys) != 1:
+        raise CampaignError(
+            f"row {row.get('row_id')} must freeze exactly one Riesz true-residual gate"
+        )
+    expected_strings = {
+        "ksp_type": str(parameters.get("riesz_ksp_type", "")),
+        "pc_type": str(parameters.get("riesz_pc_type", "")),
+        "norm_type": str(parameters.get("riesz_ksp_norm_type", "")),
+    }
+    string_observations = {
+        "metric.ksp_type": metric.get("ksp_type"),
+        "metric.pc_type": metric.get("pc_type"),
+        "metric.requested_norm_type": metric.get("requested_norm_type"),
+        "metric.effective_norm_type": metric.get("effective_norm_type"),
+        "solve.ksp_type": norm_solve.get("ksp_type"),
+        "solve.pc_type": norm_solve.get("pc_type"),
+        "solve.requested_norm_type": norm_solve.get("requested_norm_type"),
+        "solve.effective_norm_type": norm_solve.get("effective_norm_type"),
+        "solve.reported_residual_norm_type": norm_solve.get(
+            "reported_residual_norm_type"
+        ),
+    }
+    expected_by_field = {
+        "metric.ksp_type": expected_strings["ksp_type"],
+        "metric.pc_type": expected_strings["pc_type"],
+        "metric.requested_norm_type": expected_strings["norm_type"],
+        "metric.effective_norm_type": expected_strings["norm_type"],
+        "solve.ksp_type": expected_strings["ksp_type"],
+        "solve.pc_type": expected_strings["pc_type"],
+        "solve.requested_norm_type": expected_strings["norm_type"],
+        "solve.effective_norm_type": expected_strings["norm_type"],
+        "solve.reported_residual_norm_type": expected_strings["norm_type"],
+    }
+    string_mismatches = [
+        name
+        for name, observed in string_observations.items()
+        if observed != expected_by_field[name]
+    ]
+    if string_mismatches:
+        raise CampaignError(
+            f"row {row.get('row_id')} Riesz solver provenance differs from the "
+            f"frozen plan: {', '.join(string_mismatches)}"
+        )
+    if metric.get("set_from_petsc_options") is not False:
+        raise CampaignError(
+            f"row {row.get('row_id')} allowed PETSc options to mutate the Riesz solve"
+        )
+
+    expected_rtol = _finite_number(
+        parameters.get("riesz_ksp_rtol"), "frozen Riesz relative tolerance"
+    )
+    expected_atol = _finite_number(
+        parameters.get("riesz_ksp_atol"), "frozen Riesz absolute tolerance"
+    )
+    expected_max_it = int(parameters.get("riesz_ksp_max_it", 0))
+    if expected_max_it <= 0:
+        raise CampaignError(f"row {row.get('row_id')} has an invalid Riesz iteration cap")
+    expected_gate = _finite_number(
+        parameters.get(gate_keys[0]), "frozen Riesz true-residual gate"
+    )
+    numeric_expectations = {
+        "metric.requested_rtol": expected_rtol,
+        "metric.effective_rtol": expected_rtol,
+        "solve.requested_rtol": expected_rtol,
+        "solve.effective_rtol": expected_rtol,
+        "metric.requested_atol": expected_atol,
+        "metric.effective_atol": expected_atol,
+        "solve.requested_atol": expected_atol,
+        "solve.effective_atol": expected_atol,
+        "metric.requested_max_it": float(expected_max_it),
+        "metric.effective_max_it": float(expected_max_it),
+        "solve.requested_max_it": float(expected_max_it),
+        "solve.effective_max_it": float(expected_max_it),
+        "metric.true_residual_rtol_gate": expected_gate,
+        "solve.true_residual_rtol_gate": expected_gate,
+    }
+    numeric_sources = {
+        "metric.requested_rtol": metric.get("requested_rtol"),
+        "metric.effective_rtol": metric.get("effective_rtol"),
+        "solve.requested_rtol": norm_solve.get("requested_rtol"),
+        "solve.effective_rtol": norm_solve.get("effective_rtol"),
+        "metric.requested_atol": metric.get("requested_atol"),
+        "metric.effective_atol": metric.get("effective_atol"),
+        "solve.requested_atol": norm_solve.get("requested_atol"),
+        "solve.effective_atol": norm_solve.get("effective_atol"),
+        "metric.requested_max_it": metric.get("requested_max_it"),
+        "metric.effective_max_it": metric.get("effective_max_it"),
+        "solve.requested_max_it": norm_solve.get("requested_max_it"),
+        "solve.effective_max_it": norm_solve.get("effective_max_it"),
+        "metric.true_residual_rtol_gate": metric.get("true_residual_rtol_gate"),
+        "solve.true_residual_rtol_gate": norm_solve.get("true_residual_rtol_gate"),
+    }
+    numeric_mismatches: list[str] = []
+    for name, expected in numeric_expectations.items():
+        observed = _finite_number(numeric_sources[name], name)
+        if observed != expected:
+            numeric_mismatches.append(name)
+    if numeric_mismatches:
+        raise CampaignError(
+            f"row {row.get('row_id')} Riesz tolerances differ from the frozen plan: "
+            f"{', '.join(numeric_mismatches)}"
+        )
+    return {
+        "ksp_type": expected_strings["ksp_type"],
+        "pc_type": expected_strings["pc_type"],
+        "norm_type": expected_strings["norm_type"],
+        "rtol": expected_rtol,
+        "atol": expected_atol,
+        "max_it": expected_max_it,
+        "true_residual_rtol_gate": expected_gate,
+    }
+
+
 def _gl_endpoint(row: Mapping[str, Any]) -> dict[str, Any]:
     payload = _read_json(_result_json_path(row))
     result = payload.get("result")
@@ -1314,6 +1494,11 @@ def _he_endpoint(row: Mapping[str, Any]) -> dict[str, Any]:
     metadata = convergence.get("dual_residual_metadata")
     if not isinstance(metric, Mapping) or not isinstance(metadata, Mapping):
         raise CampaignError("HE metric or norm-solve metadata is missing")
+    solver_contract = _require_riesz_solver_contract(
+        row,
+        metric=metric,
+        norm_solve=metadata,
+    )
     provenance = metric.get("provenance")
     certificate = provenance.get("spd_certificate") if isinstance(provenance, Mapping) else None
     certified_spd = isinstance(certificate, Mapping) and certificate.get("certified_spd") is True
@@ -1341,6 +1526,7 @@ def _he_endpoint(row: Mapping[str, Any]) -> dict[str, Any]:
         "riesz_reason": int(metadata.get("reason", 0)),
         "relative_true_residual": true_residual,
         "true_residual_rtol_gate": gate,
+        "riesz_solver_contract": solver_contract,
         "certified_spd": certified_spd,
     }
 
@@ -1361,6 +1547,11 @@ def _he_nonlinear_endpoint(row: Mapping[str, Any]) -> dict[str, Any]:
     metric = convergence.get("metric")
     if not isinstance(metadata, Mapping) or not isinstance(metric, Mapping):
         raise CampaignError("HE nonlinear Riesz metadata is missing")
+    solver_contract = _require_riesz_solver_contract(
+        row,
+        metric=metric,
+        norm_solve=metadata,
+    )
     provenance = metric.get("provenance")
     certificate = provenance.get("spd_certificate") if isinstance(provenance, Mapping) else None
     certified_spd = isinstance(certificate, Mapping) and certificate.get("certified_spd") is True
@@ -1432,6 +1623,7 @@ def _he_nonlinear_endpoint(row: Mapping[str, Any]) -> dict[str, Any]:
         ),
         "relative_true_residual": true_residual,
         "true_residual_rtol_gate": true_gate,
+        "riesz_solver_contract": solver_contract,
         "certified_spd": certified_spd,
         "state_sha256": state_sha,
         "state_file_sha256": _sha256_file(state_path),
@@ -1490,6 +1682,11 @@ def _p3d_nonlinear_endpoint(row: Mapping[str, Any]) -> dict[str, Any]:
     norm_solve = convergence.get("last_riesz_solve")
     if not all(isinstance(value, Mapping) for value in (configuration, metric, norm_solve)):
         raise CampaignError("P3D nonlinear Riesz contract is incomplete")
+    solver_contract = _require_riesz_solver_contract(
+        row,
+        metric=metric,
+        norm_solve=norm_solve,
+    )
     provenance = metric.get("provenance")
     certificate = provenance.get("spd_certificate") if isinstance(provenance, Mapping) else None
     certified_spd = isinstance(certificate, Mapping) and certificate.get("certified_spd") is True
@@ -1544,6 +1741,7 @@ def _p3d_nonlinear_endpoint(row: Mapping[str, Any]) -> dict[str, Any]:
         ),
         "relative_true_residual": true_residual,
         "true_residual_rtol_gate": true_gate,
+        "riesz_solver_contract": solver_contract,
         "certified_spd": certified_spd,
         "branch_diagnostics": dict(payload.get("branch_diagnostics", {})),
         "free_state_sha256": _sha256_array(free_state),
@@ -2073,6 +2271,8 @@ def _local_terminal_decision(
 
 def analyze_plan(plan_path: Path) -> dict[str, Any]:
     plan, output_root = _load_plan(plan_path)
+    _verify_source_identity(plan)
+    _verify_frozen_plan_design(plan, output_root=output_root)
     contract = plan["policies"]["analysis_contract"]
     local_rows = [row for row in plan["rows"] if row["execution_class"] == "required_local"]
     deferred_rows = [

@@ -52,9 +52,11 @@ EXPECTED_SOURCE_PATHS = (
     "experiments/runners/run_trust_region_case.py",
     "experiments/runners/run_plasticity3d_backend_mix_case.py",
     "experiments/runners/run_plasticity3d_fixed_state_route_screen.py",
+    "src/core/petsc/metrics.py",
     "src/core/petsc/scalar_problem_driver.py",
     "src/problems/ginzburg_landau/jax_petsc/solver.py",
     "src/problems/hyperelasticity/jax_petsc/solver.py",
+    "src/problems/slope_stability_3d/jax_petsc/solver.py",
     "src/problems/slope_stability_3d/support/fixed_state.py",
 )
 EXPECTED_INPUT_PATHS = (
@@ -413,6 +415,7 @@ def expected_design() -> dict[str, dict[str, object]]:
         }
 
     gl_targets = (1.0e-2, 1.0e-4, 1.0e-6, 1.0e-8)
+    p3d_nonlinear_targets = (1.0e-2, 1.0e-4, 1.0e-6, 1.0e-7)
     for level in (5, 6):
         for target in gl_targets:
             row_id = f"gl_l{level}_residual_{_suffix(target)}"
@@ -451,7 +454,12 @@ def expected_design() -> dict[str, dict[str, object]]:
                 outputs=(f"raw/he/{row_id}/result.json",),
                 parameters={
                     "mesh_level": level,
+                    "riesz_ksp_type": "cg",
+                    "riesz_pc_type": "jacobi",
+                    "riesz_ksp_norm_type": "unpreconditioned",
                     "riesz_ksp_rtol": tolerance,
+                    "riesz_ksp_atol": 0.0,
+                    "riesz_ksp_max_it": 5000,
                     "riesz_true_residual_safety_gate": 1.0e-6,
                     "nonlinear_max_iterations": 0,
                 },
@@ -476,7 +484,13 @@ def expected_design() -> dict[str, dict[str, object]]:
                     "mesh_level": level,
                     "relative_dual_residual_target": target,
                     "linear_ksp_rtol": 1.0e-8,
+                    "riesz_ksp_type": "cg",
+                    "riesz_pc_type": "jacobi",
+                    "riesz_ksp_norm_type": "unpreconditioned",
                     "riesz_ksp_rtol": 1.0e-10,
+                    "riesz_ksp_atol": 0.0,
+                    "riesz_ksp_max_it": 5000,
+                    "riesz_true_residual_rtol": 1.0e-8,
                     "load_steps": 1,
                     "total_steps": 24,
                 },
@@ -511,7 +525,7 @@ def expected_design() -> dict[str, dict[str, object]]:
                 },
             )
     for degree in (1, 2):
-        for target in gl_targets:
+        for target in p3d_nonlinear_targets:
             row_id = f"p3d_p{degree}_nonlinear_{_suffix(target)}"
             root = f"raw/p3d_nonlinear/{row_id}"
             local(
@@ -519,7 +533,7 @@ def expected_design() -> dict[str, dict[str, object]]:
                 "plasticity3d_nonlinear_stopping",
                 f"p3d_p{degree}_nonlinear",
                 scope="full_nonlinear_reference_riesz_endpoint_on_one_serial_rank",
-                reference=target == 1.0e-8,
+                reference=target == 1.0e-7,
                 parameter="relative_dual_residual_target",
                 tolerance=target,
                 outputs=(f"{root}/result.json", f"{root}/state.npz"),
@@ -529,10 +543,16 @@ def expected_design() -> dict[str, dict[str, object]]:
                     "quadrature_rule_id": quadrature[degree],
                     "relative_dual_residual_target": target,
                     "linear_ksp_rtol": 1.0e-8,
+                    "riesz_ksp_type": "cg",
+                    "riesz_pc_type": "jacobi",
+                    "riesz_ksp_norm_type": "unpreconditioned",
                     "riesz_ksp_rtol": 1.0e-10,
+                    "riesz_ksp_atol": 0.0,
+                    "riesz_ksp_max_it": 5000,
+                    "riesz_true_residual_rtol": 1.0e-8,
                 },
             )
-    for target in gl_targets:
+    for target in p3d_nonlinear_targets:
         row_id = f"p3d_p4_nonlinear_{_suffix(target)}_cluster"
         rows[row_id] = {
             "execution_class": "deferred_cluster_computation",
@@ -663,7 +683,7 @@ def _expected_command(
             "--riesz-ksp-type", "cg",
             "--riesz-pc-type", "jacobi",
             "--riesz-ksp-rtol", f"{tolerance:.0e}",
-            "--riesz-ksp-atol", "1e-14",
+            "--riesz-ksp-atol", "0",
             "--riesz-ksp-max-it", "5000",
             "--riesz-true-residual-rtol", "1e-6",
             "--riesz-spd-factor-solver-type", "mumps",
@@ -700,7 +720,7 @@ def _expected_command(
             "--riesz-ksp-type", "cg",
             "--riesz-pc-type", "jacobi",
             "--riesz-ksp-rtol", "1e-10",
-            "--riesz-ksp-atol", "1e-14",
+            "--riesz-ksp-atol", "0",
             "--riesz-ksp-max-it", "5000",
             "--riesz-true-residual-rtol", "1e-8",
             "--riesz-spd-factor-solver-type", "mumps",
@@ -763,7 +783,7 @@ def _expected_command(
             "--riesz-ksp-type", "cg",
             "--riesz-pc-type", "jacobi",
             "--riesz-ksp-rtol", "1e-10",
-            "--riesz-ksp-atol", "1e-14",
+            "--riesz-ksp-atol", "0",
             "--riesz-ksp-max-it", "5000",
             "--riesz-true-residual-rtol", "1e-8",
             "--riesz-spd-factor-solver-type", "mumps",
@@ -1023,6 +1043,145 @@ def _extract_gl(row: Mapping[str, object], *, repo_root: Path, evidence_root: Pa
     }
 
 
+def _require_riesz_solver_contract(
+    row: Mapping[str, object],
+    *,
+    metric: Mapping[str, object],
+    norm_solve: Mapping[str, object],
+) -> dict[str, object]:
+    parameters = row.get("parameters")
+    if not isinstance(parameters, Mapping):
+        raise AdmissionError(f"{row.get('row_id')}: frozen Riesz parameters are missing")
+    gate_keys = [
+        key
+        for key in (
+            "riesz_true_residual_rtol",
+            "riesz_true_residual_safety_gate",
+        )
+        if key in parameters
+    ]
+    if len(gate_keys) != 1:
+        raise AdmissionError(
+            f"{row.get('row_id')}: frozen Riesz gate is absent or ambiguous"
+        )
+    expected_strings = {
+        "ksp_type": str(parameters.get("riesz_ksp_type", "")),
+        "pc_type": str(parameters.get("riesz_pc_type", "")),
+        "norm_type": str(parameters.get("riesz_ksp_norm_type", "")),
+    }
+    if expected_strings != {
+        "ksp_type": "cg",
+        "pc_type": "jacobi",
+        "norm_type": "unpreconditioned",
+    }:
+        raise AdmissionError(f"{row.get('row_id')}: invalid frozen Riesz solver policy")
+    string_observations = {
+        "metric.ksp_type": metric.get("ksp_type"),
+        "metric.pc_type": metric.get("pc_type"),
+        "metric.requested_norm_type": metric.get("requested_norm_type"),
+        "metric.effective_norm_type": metric.get("effective_norm_type"),
+        "solve.ksp_type": norm_solve.get("ksp_type"),
+        "solve.pc_type": norm_solve.get("pc_type"),
+        "solve.requested_norm_type": norm_solve.get("requested_norm_type"),
+        "solve.effective_norm_type": norm_solve.get("effective_norm_type"),
+        "solve.reported_residual_norm_type": norm_solve.get(
+            "reported_residual_norm_type"
+        ),
+    }
+    expected_by_field = {
+        "metric.ksp_type": expected_strings["ksp_type"],
+        "metric.pc_type": expected_strings["pc_type"],
+        "metric.requested_norm_type": expected_strings["norm_type"],
+        "metric.effective_norm_type": expected_strings["norm_type"],
+        "solve.ksp_type": expected_strings["ksp_type"],
+        "solve.pc_type": expected_strings["pc_type"],
+        "solve.requested_norm_type": expected_strings["norm_type"],
+        "solve.effective_norm_type": expected_strings["norm_type"],
+        "solve.reported_residual_norm_type": expected_strings["norm_type"],
+    }
+    string_mismatches = [
+        name
+        for name, value in string_observations.items()
+        if value != expected_by_field[name]
+    ]
+    if string_mismatches:
+        raise AdmissionError(
+            f"{row.get('row_id')}: Riesz solver provenance differs from the frozen "
+            f"policy: {', '.join(string_mismatches)}"
+        )
+    if metric.get("set_from_petsc_options") is not False:
+        raise AdmissionError(
+            f"{row.get('row_id')}: Riesz solve allowed PETSc option mutation"
+        )
+    expected_rtol = _finite(
+        parameters.get("riesz_ksp_rtol"),
+        label="frozen Riesz relative tolerance",
+        nonnegative=True,
+    )
+    expected_atol = _finite(
+        parameters.get("riesz_ksp_atol"),
+        label="frozen Riesz absolute tolerance",
+        nonnegative=True,
+    )
+    expected_max_it = int(parameters.get("riesz_ksp_max_it", 0))
+    expected_gate = _finite(
+        parameters.get(gate_keys[0]),
+        label="frozen Riesz true-residual gate",
+        nonnegative=True,
+    )
+    if expected_max_it <= 0:
+        raise AdmissionError(f"{row.get('row_id')}: invalid frozen Riesz iteration cap")
+    numeric_expectations = {
+        "metric.requested_rtol": expected_rtol,
+        "metric.effective_rtol": expected_rtol,
+        "solve.requested_rtol": expected_rtol,
+        "solve.effective_rtol": expected_rtol,
+        "metric.requested_atol": expected_atol,
+        "metric.effective_atol": expected_atol,
+        "solve.requested_atol": expected_atol,
+        "solve.effective_atol": expected_atol,
+        "metric.requested_max_it": float(expected_max_it),
+        "metric.effective_max_it": float(expected_max_it),
+        "solve.requested_max_it": float(expected_max_it),
+        "solve.effective_max_it": float(expected_max_it),
+        "metric.true_residual_rtol_gate": expected_gate,
+        "solve.true_residual_rtol_gate": expected_gate,
+    }
+    numeric_sources = {
+        "metric.requested_rtol": metric.get("requested_rtol"),
+        "metric.effective_rtol": metric.get("effective_rtol"),
+        "solve.requested_rtol": norm_solve.get("requested_rtol"),
+        "solve.effective_rtol": norm_solve.get("effective_rtol"),
+        "metric.requested_atol": metric.get("requested_atol"),
+        "metric.effective_atol": metric.get("effective_atol"),
+        "solve.requested_atol": norm_solve.get("requested_atol"),
+        "solve.effective_atol": norm_solve.get("effective_atol"),
+        "metric.requested_max_it": metric.get("requested_max_it"),
+        "metric.effective_max_it": metric.get("effective_max_it"),
+        "solve.requested_max_it": norm_solve.get("requested_max_it"),
+        "solve.effective_max_it": norm_solve.get("effective_max_it"),
+        "metric.true_residual_rtol_gate": metric.get("true_residual_rtol_gate"),
+        "solve.true_residual_rtol_gate": norm_solve.get("true_residual_rtol_gate"),
+    }
+    numeric_mismatches = [
+        name
+        for name, expected in numeric_expectations.items()
+        if _finite(numeric_sources[name], label=name) != expected
+    ]
+    if numeric_mismatches:
+        raise AdmissionError(
+            f"{row.get('row_id')}: Riesz tolerances differ from the frozen policy: "
+            f"{', '.join(numeric_mismatches)}"
+        )
+    return {
+        **expected_strings,
+        "rtol": expected_rtol,
+        "atol": expected_atol,
+        "max_it": expected_max_it,
+        "true_residual_rtol_gate": expected_gate,
+    }
+
+
 def _extract_he_reference(row: Mapping[str, object], *, repo_root: Path, evidence_root: Path) -> dict[str, object]:
     payload = read_strict_json(_result_path(row, repo_root=repo_root, evidence_root=evidence_root))
     result = payload.get("result")
@@ -1038,6 +1197,11 @@ def _extract_he_reference(row: Mapping[str, object], *, repo_root: Path, evidenc
     certified = isinstance(certificate, dict) and certificate.get("certified_spd") is True
     if not isinstance(norm_solve, dict):
         raise AdmissionError("HE reference norm-solve metadata is missing")
+    if not isinstance(metric, dict):
+        raise AdmissionError("HE reference metric metadata is missing")
+    solver_contract = _require_riesz_solver_contract(
+        row, metric=metric, norm_solve=norm_solve
+    )
     true_residual = _finite(norm_solve.get("relative_true_residual"), label="HE true residual", nonnegative=True)
     true_gate = _finite(norm_solve.get("true_residual_rtol_gate"), label="HE true-residual gate", nonnegative=True)
     reason = int(norm_solve.get("reason", 0))
@@ -1053,6 +1217,8 @@ def _extract_he_reference(row: Mapping[str, object], *, repo_root: Path, evidenc
         "riesz_reason": reason,
         "relative_true_residual": true_residual,
         "true_residual_rtol_gate": true_gate,
+        "riesz_ksp_norm_type": solver_contract["norm_type"],
+        "riesz_solver_contract": solver_contract,
         "certified_spd": certified,
     }
 
@@ -1073,6 +1239,11 @@ def _extract_he_nonlinear(row: Mapping[str, object], *, repo_root: Path, evidenc
     certified = isinstance(certificate, dict) and certificate.get("certified_spd") is True
     if not isinstance(norm_solve, dict):
         raise AdmissionError("HE nonlinear norm-solve metadata is missing")
+    if not isinstance(metric, dict):
+        raise AdmissionError("HE nonlinear metric metadata is missing")
+    solver_contract = _require_riesz_solver_contract(
+        row, metric=metric, norm_solve=norm_solve
+    )
     true_residual = _finite(norm_solve.get("relative_true_residual"), label="HE nonlinear true residual", nonnegative=True)
     true_gate = _finite(norm_solve.get("true_residual_rtol_gate"), label="HE nonlinear true-residual gate", nonnegative=True)
     relative = _finite(convergence.get("dual_residual_relative"), label="HE nonlinear relative residual", nonnegative=True)
@@ -1102,6 +1273,8 @@ def _extract_he_nonlinear(row: Mapping[str, object], *, repo_root: Path, evidenc
         "state_scale": _finite(convergence.get("state_scale"), label="HE nonlinear state scale", nonnegative=True),
         "relative_true_residual": true_residual,
         "true_residual_rtol_gate": true_gate,
+        "riesz_ksp_norm_type": solver_contract["norm_type"],
+        "riesz_solver_contract": solver_contract,
         "certified_spd": certified,
         "state_sha256": array_sha256(np.asarray(arrays["displacement"], dtype=np.float64)),
         "state_file_sha256": sha256_file(state_path),
@@ -1176,6 +1349,9 @@ def _extract_p3d_nonlinear(row: Mapping[str, object], *, repo_root: Path, eviden
     assert isinstance(configuration, dict)
     assert isinstance(metric, dict)
     assert isinstance(norm_solve, dict)
+    solver_contract = _require_riesz_solver_contract(
+        row, metric=metric, norm_solve=norm_solve
+    )
     certificate = ((metric.get("provenance") or {}).get("spd_certificate") if isinstance(metric.get("provenance"), dict) else None)
     certified = isinstance(certificate, dict) and certificate.get("certified_spd") is True
     true_residual = _finite(norm_solve.get("relative_true_residual"), label="P3D nonlinear true residual", nonnegative=True)
@@ -1218,6 +1394,8 @@ def _extract_p3d_nonlinear(row: Mapping[str, object], *, repo_root: Path, eviden
         "relative_correction": _finite(correction_row.get("value"), label="P3D nonlinear correction", nonnegative=True),
         "relative_true_residual": true_residual,
         "true_residual_rtol_gate": true_gate,
+        "riesz_ksp_norm_type": solver_contract["norm_type"],
+        "riesz_solver_contract": solver_contract,
         "certified_spd": certified,
         "branch_diagnostics": dict(payload.get("branch_diagnostics", {})),
         "free_state_sha256": array_sha256(free),

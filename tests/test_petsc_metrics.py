@@ -23,6 +23,19 @@ def _diag(values: list[float]) -> PETSc.Mat:
     return mat
 
 
+def _dense(values: list[list[float]]) -> PETSc.Mat:
+    array = np.asarray(values, dtype=np.float64)
+    mat = PETSc.Mat().createAIJ(array.shape, comm=PETSc.COMM_SELF)
+    mat.setUp()
+    for row in range(array.shape[0]):
+        for column in range(array.shape[1]):
+            if array[row, column] != 0.0:
+                mat.setValue(row, column, float(array[row, column]))
+    mat.assemblyBegin()
+    mat.assemblyEnd()
+    return mat
+
+
 def test_euclidean_metric_matches_petsc_norm() -> None:
     vec = _vec([3.0, 4.0])
     other = _vec([0.0, 0.0])
@@ -83,6 +96,8 @@ def test_matrix_riesz_petsc_options_are_disabled_by_default_and_namespaced() -> 
         default_description = default_metric.describe()
         assert default_description["set_from_petsc_options"] is False
         assert default_description["effective_rtol"] == pytest.approx(1.0e-10)
+        assert default_description["requested_norm_type"] == "unpreconditioned"
+        assert default_description["effective_norm_type"] == "unpreconditioned"
 
         options[prefixed_key] = 0.125
         configured_metric = MatrixRieszMetric(
@@ -122,6 +137,9 @@ def test_matrix_riesz_metric_reports_certified_dual_solve() -> None:
         assert dual.value == pytest.approx(1.0)
         assert dual.metadata["reason"] > 0
         assert dual.metadata["relative_true_residual"] <= 1.0e-12
+        assert dual.metadata["requested_norm_type"] == "unpreconditioned"
+        assert dual.metadata["effective_norm_type"] == "unpreconditioned"
+        assert dual.metadata["reported_residual_norm_type"] == "unpreconditioned"
         assert metric.first_dual_evaluation is not None
         assert metric.first_dual_evaluation.value == pytest.approx(1.0)
         assert metric.distance(vec, zero).value == pytest.approx(np.sqrt(34.0))
@@ -130,6 +148,79 @@ def test_matrix_riesz_metric_reports_certified_dual_solve() -> None:
         operator.destroy()
         vec.destroy()
         zero.destroy()
+
+
+def test_matrix_riesz_metric_records_namespaced_norm_override() -> None:
+    operator = _diag([2.0, 8.0])
+    options = PETSc.Options()
+    key = "unit_norm_override_ksp_norm_type"
+    previous = ((key in options), options[key] if key in options else None)
+    metric = None
+    try:
+        options[key] = "preconditioned"
+        metric = MatrixRieszMetric(
+            operator,
+            name="norm_override",
+            norm_type="unpreconditioned",
+            set_from_options=True,
+            options_prefix="unit_norm_override",
+        )
+        description = metric.describe()
+        assert description["requested_norm_type"] == "unpreconditioned"
+        assert description["effective_norm_type"] == "preconditioned"
+    finally:
+        if metric is not None:
+            metric.destroy()
+        if previous[0]:
+            options[key] = previous[1]
+        elif key in options:
+            del options[key]
+        operator.destroy()
+
+
+def test_matrix_riesz_metric_rejects_unknown_ksp_norm_type() -> None:
+    operator = _diag([2.0, 8.0])
+    try:
+        with pytest.raises(ValueError, match="norm_type"):
+            MatrixRieszMetric(
+                operator,
+                name="unknown_norm",
+                norm_type="not-a-petsc-norm",
+            )
+    finally:
+        operator.destroy()
+
+
+def test_matrix_riesz_true_residual_failure_reports_solver_contract() -> None:
+    operator = _dense([[4.0, 1.0], [1.0, 3.0]])
+    vec = _vec([1.0, 0.0])
+    metric = MatrixRieszMetric(
+        operator,
+        name="detailed_failure",
+        pc_type="jacobi",
+        rtol=0.9,
+        true_residual_rtol=1.0e-14,
+    )
+    try:
+        with pytest.raises(RuntimeError) as exc_info:
+            metric.dual_norm(vec)
+        message = str(exc_info.value)
+        for field in (
+            "reason=",
+            "iterations=",
+            "norm_type=unpreconditioned",
+            "reported_residual=",
+            "true_residual=",
+            "relative_true_residual=",
+            "rhs_norm=",
+            "requested_rtol=",
+            "effective_rtol=",
+        ):
+            assert field in message
+    finally:
+        metric.destroy()
+        operator.destroy()
+        vec.destroy()
 
 
 def test_riesz_metrics_reject_nonfinite_quadratic_forms() -> None:

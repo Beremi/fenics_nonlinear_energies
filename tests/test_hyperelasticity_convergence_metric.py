@@ -125,6 +125,8 @@ def test_reference_metric_uses_initial_deformation_map_norm_as_state_scale() -> 
         assert configuration["state_scale_source"] == (
             "initial_reference_deformation_map_primal_norm"
         )
+        assert configuration["metric"]["requested_norm_type"] == "unpreconditioned"
+        assert configuration["metric"]["effective_norm_type"] == "unpreconditioned"
         certificate = configuration["metric"]["provenance"]["spd_certificate"]
         assert certificate["certified_spd"] is True
         assert certificate["inertia"] == {"negative": 0, "zero": 0, "positive": 2}
@@ -194,6 +196,8 @@ def test_reference_elastic_metric_p1_mpi_smoke(
         "jacobi",
         "--riesz-ksp-rtol",
         "1e-10",
+        "--riesz-ksp-atol",
+        "0",
         "--riesz-ksp-max-it",
         "5000",
         "--riesz-true-residual-rtol",
@@ -232,6 +236,7 @@ def test_reference_elastic_metric_p1_mpi_smoke(
     assert result["nonlinear_convergence"]["terminal"] == step_convergence
     norm_solve = step_convergence["dual_residual_metadata"]
     assert norm_solve["reason"] > 0
+    assert norm_solve["effective_norm_type"] == "unpreconditioned"
     assert norm_solve["relative_true_residual"] <= norm_solve[
         "true_residual_rtol_gate"
     ]
@@ -240,3 +245,143 @@ def test_reference_elastic_metric_p1_mpi_smoke(
     ]
     assert len(partitions) == mpi_ranks
     assert all(len(row["values_sha256"]) == 64 for row in partitions)
+
+
+def test_reference_elastic_metric_survives_nonlinear_residual_directions(
+    tmp_path: Path,
+) -> None:
+    output_path = tmp_path / "he_reference_metric_nonlinear.json"
+    command = [
+        str(PYTHON),
+        str(CASE_RUNNER),
+        "--problem",
+        "he",
+        "--backend",
+        "element",
+        "--level",
+        "1",
+        "--out",
+        str(output_path),
+        "--steps",
+        "1",
+        "--total-steps",
+        "24",
+        "--maxit",
+        "80",
+        "--problem-build-mode",
+        "rank_local",
+        "--he-mesh-source",
+        "procedural",
+        "--he-element-degree",
+        "1",
+        "--distribution-strategy",
+        "overlap_p2p",
+        "--assembly-backend",
+        "coo_local",
+        "--element-reorder-mode",
+        "block_xyz",
+        "--local-hessian-mode",
+        "element",
+        "--ksp-type",
+        "gmres",
+        "--pc-type",
+        "hypre",
+        "--ksp-rtol",
+        "1e-8",
+        "--ksp-max-it",
+        "1000",
+        "--convergence-metric",
+        "reference_elastic_energy",
+        "--riesz-ksp-type",
+        "cg",
+        "--riesz-pc-type",
+        "jacobi",
+        "--riesz-ksp-rtol",
+        "1e-10",
+        "--riesz-ksp-atol",
+        "0",
+        "--riesz-ksp-max-it",
+        "5000",
+        "--riesz-true-residual-rtol",
+        "1e-8",
+        "--tolf",
+        "1e300",
+        "--tolg",
+        "0",
+        "--tolg-rel",
+        "1e-2",
+        "--tolx-rel",
+        "1e300",
+        "--tolx-abs",
+        "1e300",
+        "--line-search",
+        "armijo",
+        "--no-retry-on-failure",
+        "--save-history",
+        "--quiet",
+    ]
+    environment = dict(os.environ)
+    environment.update(
+        {
+            "FNE_SKIP_REORDERED_WARMUP": "1",
+            "JAX_ENABLE_X64": "True",
+            "JAX_PLATFORMS": "cpu",
+            "MKL_NUM_THREADS": "1",
+            "OMP_NUM_THREADS": "1",
+            "OPENBLAS_NUM_THREADS": "1",
+            "PYTHONHASHSEED": "0",
+            "XLA_FLAGS": (
+                "--xla_cpu_multi_thread_eigen=false "
+                "--xla_force_host_platform_device_count=1"
+            ),
+        }
+    )
+    subprocess.run(
+        command,
+        cwd=REPO_ROOT,
+        env=environment,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+
+    payload = json.loads(output_path.read_text(encoding="utf-8"))
+    step = payload["result"]["steps"][0]
+    assert step["success"] is True
+    assert step["nit"] > 0
+
+    def mappings(value: object):
+        if isinstance(value, dict):
+            yield value
+            for child in value.values():
+                yield from mappings(child)
+        elif isinstance(value, list):
+            for child in value:
+                yield from mappings(child)
+
+    norm_solves = [
+        item
+        for item in mappings(step)
+        if "relative_true_residual" in item and "true_residual_rtol_gate" in item
+    ]
+    assert norm_solves
+    assert all(item["ksp_type"] == "cg" for item in norm_solves)
+    assert all(item["pc_type"] == "jacobi" for item in norm_solves)
+    assert all(item["requested_norm_type"] == "unpreconditioned" for item in norm_solves)
+    assert all(item["effective_norm_type"] == "unpreconditioned" for item in norm_solves)
+    assert all(
+        item["reported_residual_norm_type"] == "unpreconditioned"
+        for item in norm_solves
+    )
+    assert all(item["requested_rtol"] == pytest.approx(1.0e-10) for item in norm_solves)
+    assert all(item["effective_rtol"] == pytest.approx(1.0e-10) for item in norm_solves)
+    assert all(item["requested_atol"] == 0.0 for item in norm_solves)
+    assert all(item["effective_atol"] == 0.0 for item in norm_solves)
+    assert all(
+        item["true_residual_rtol_gate"] == pytest.approx(1.0e-8)
+        for item in norm_solves
+    )
+    assert all(
+        item["relative_true_residual"] <= item["true_residual_rtol_gate"]
+        for item in norm_solves
+    )

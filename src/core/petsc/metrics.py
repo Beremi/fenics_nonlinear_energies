@@ -12,6 +12,23 @@ from mpi4py import MPI
 from petsc4py import PETSc
 
 
+_KSP_NORM_TYPES = {
+    "default": PETSc.KSP.NormType.DEFAULT,
+    "unpreconditioned": PETSc.KSP.NormType.UNPRECONDITIONED,
+}
+
+
+def _ksp_norm_type_name(value: int) -> str:
+    names = {
+        int(PETSc.KSP.NormType.DEFAULT): "default",
+        int(PETSc.KSP.NormType.NONE): "none",
+        int(PETSc.KSP.NormType.PRECONDITIONED): "preconditioned",
+        int(PETSc.KSP.NormType.UNPRECONDITIONED): "unpreconditioned",
+        int(PETSc.KSP.NormType.NATURAL): "natural",
+    }
+    return names.get(int(value), f"unknown_{int(value)}")
+
+
 def certify_spd_by_cholesky(
     operator: PETSc.Mat,
     *,
@@ -253,7 +270,14 @@ class DiagonalRieszMetric:
 
 
 class MatrixRieszMetric:
-    """Primal/dual norms induced by an SPD PETSc matrix on the free space."""
+    """Primal/dual norms induced by an SPD PETSc matrix on the free space.
+
+    The default KSP stopping norm is the unpreconditioned Euclidean residual.
+    With the zero initial guess used by :meth:`dual_norm`, its relative test uses
+    the same Euclidean norm and right-hand-side scaling as the independently
+    rebuilt certificate. The explicit rebuild still detects recursive-residual
+    drift in finite precision.
+    """
 
     def __init__(
         self,
@@ -268,6 +292,7 @@ class MatrixRieszMetric:
         max_it: int = 1000,
         require_symmetric: bool = True,
         true_residual_rtol: float | None = None,
+        norm_type: str = "unpreconditioned",
         set_from_options: bool = False,
         options_prefix: str | None = None,
     ) -> None:
@@ -288,6 +313,13 @@ class MatrixRieszMetric:
         self.true_residual_rtol = (
             None if true_residual_rtol is None else float(true_residual_rtol)
         )
+        self.requested_norm_type = str(norm_type).strip().lower()
+        if self.requested_norm_type not in _KSP_NORM_TYPES:
+            raise ValueError(
+                "Riesz KSP norm_type must be one of "
+                f"{sorted(_KSP_NORM_TYPES)}, got {norm_type!r}"
+            )
+        self.effective_norm_type = self.requested_norm_type
         self.set_from_options = bool(set_from_options)
         prefix = str(options_prefix or "").strip()
         if self.set_from_options and not prefix:
@@ -324,6 +356,8 @@ class MatrixRieszMetric:
             self.ksp.setOperators(operator)
             self.ksp.setType(str(ksp_type))
             self.ksp.getPC().setType(str(pc_type))
+            self.ksp.setNormType(_KSP_NORM_TYPES[self.requested_norm_type])
+            self.ksp.setInitialGuessNonzero(False)
             self.ksp.setTolerances(
                 rtol=self.requested_rtol,
                 atol=self.requested_atol,
@@ -332,6 +366,7 @@ class MatrixRieszMetric:
             if self.set_from_options:
                 self.ksp.setFromOptions()
             self.ksp.setUp()
+            self.effective_norm_type = _ksp_norm_type_name(self.ksp.getNormType())
             (
                 self.effective_rtol,
                 self.effective_atol,
@@ -370,15 +405,40 @@ class MatrixRieszMetric:
         rhs_norm = float(vec.norm(PETSc.NormType.NORM_2))
         relative_true_residual = true_residual / max(rhs_norm, np.finfo(np.float64).tiny)
         squared = float(vec.dot(self.solution))
+        iterations = int(self.ksp.getIterationNumber())
+        reported_residual = float(self.ksp.getResidualNorm())
+        diagnostics = (
+            f"reason={reason}, iterations={iterations}, "
+            f"norm_type={self.effective_norm_type}, "
+            f"reported_residual={reported_residual:.6e}, "
+            f"true_residual={true_residual:.6e}, "
+            f"relative_true_residual={relative_true_residual:.6e}, "
+            f"rhs_norm={rhs_norm:.6e}, requested_rtol={self.requested_rtol:.6e}, "
+            f"effective_rtol={float(self.effective_rtol):.6e}, "
+            f"requested_atol={self.requested_atol:.6e}, "
+            f"effective_atol={float(self.effective_atol):.6e}"
+        )
         if not all(
             np.isfinite(value)
-            for value in (true_residual, rhs_norm, relative_true_residual, squared)
+            for value in (
+                true_residual,
+                rhs_norm,
+                relative_true_residual,
+                squared,
+                reported_residual,
+                float(self.effective_rtol),
+                float(self.effective_atol),
+                float(self.effective_dtol),
+            )
         ):
-            raise ValueError("The inverse-Riesz solve or quadratic form is nonfinite.")
+            raise ValueError(
+                "The inverse-Riesz solve, residual metadata, or quadratic form is "
+                "nonfinite."
+            )
         tolerance = 256.0 * np.finfo(np.float64).eps * max(1.0, abs(squared))
         if reason <= 0:
             raise RuntimeError(
-                f"Riesz solve failed with PETSc reason {reason}; dual norm is not certified."
+                "Riesz solve failed; dual norm is not certified: " + diagnostics
             )
         if (
             self.true_residual_rtol is not None
@@ -386,8 +446,9 @@ class MatrixRieszMetric:
         ):
             raise RuntimeError(
                 "Riesz solve reported convergence but failed the independently "
-                "recomputed true-residual gate: "
-                f"{relative_true_residual:.3e} > {self.true_residual_rtol:.3e}."
+                "recomputed true-residual gate "
+                f"({relative_true_residual:.3e} > {self.true_residual_rtol:.3e}): "
+                + diagnostics
             )
         if squared < -tolerance:
             raise ValueError("The inverse Riesz quadratic form is negative.")
@@ -400,9 +461,12 @@ class MatrixRieszMetric:
                 "riesz_solve": "iterative",
                 "ksp_type": self.ksp.getType(),
                 "pc_type": self.ksp.getPC().getType(),
-                "iterations": int(self.ksp.getIterationNumber()),
+                "requested_norm_type": self.requested_norm_type,
+                "effective_norm_type": self.effective_norm_type,
+                "iterations": iterations,
                 "reason": reason,
-                "reported_residual": float(self.ksp.getResidualNorm()),
+                "reported_residual": reported_residual,
+                "reported_residual_norm_type": self.effective_norm_type,
                 "true_residual": true_residual,
                 "relative_true_residual": relative_true_residual,
                 "rhs_norm": rhs_norm,
@@ -441,6 +505,8 @@ class MatrixRieszMetric:
             "provenance": self.provenance,
             "ksp_type": self.ksp.getType(),
             "pc_type": self.ksp.getPC().getType(),
+            "requested_norm_type": self.requested_norm_type,
+            "effective_norm_type": self.effective_norm_type,
             "requested_rtol": float(self.requested_rtol),
             "requested_atol": float(self.requested_atol),
             "requested_max_it": int(self.requested_max_it),

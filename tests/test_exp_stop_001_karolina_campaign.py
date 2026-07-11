@@ -291,6 +291,7 @@ def test_preparation_freezes_exact_seven_rows_and_never_contacts_scheduler(
     root = _prepare(tmp_path, monkeypatch)
     receipt = stop.preflight(root)
     _manifest, plan = reviewed.load_plan(root)
+    source_freeze = reviewed.read_object(root / "reviewed_source_freeze.json")
 
     assert receipt["status"] == "passed_without_scheduler_contact"
     assert receipt["submission_admissible"] is False
@@ -314,6 +315,11 @@ def test_preparation_freezes_exact_seven_rows_and_never_contacts_scheduler(
         set(reference["artifacts"]) == {"result", "state", "receipt", "stdout", "stderr"}
         for reference in references.values()
     )
+    assert {
+        "src/core/petsc/metrics.py",
+        "src/problems/hyperelasticity/jax_petsc/solver.py",
+        "src/problems/slope_stability_3d/jax_petsc/solver.py",
+    } <= set(source_freeze["reviewed_sources"])
     assert submitter.submit(root, execute=False, confirmed=False)["status"] == "dry_run_no_scheduler_contact"
 
 
@@ -365,6 +371,23 @@ def test_preparation_rejects_fabricated_complete_summary_with_missing_receipts(
     with pytest.raises(
         reviewed.CampaignContractError,
         match="differs from a fresh 45-row reanalysis",
+    ):
+        stop._local_inputs(analysis_path)
+
+
+def test_preparation_rejects_local_riesz_contract_failure(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    analysis_path = _local_campaign(tmp_path, monkeypatch)
+
+    def fail_reanalysis(_plan_path: Path) -> dict[str, object]:
+        raise local.CampaignError("Riesz solver provenance differs from frozen plan")
+
+    monkeypatch.setattr(local, "analyze_plan", fail_reanalysis)
+    with pytest.raises(
+        reviewed.CampaignContractError,
+        match="could not be independently reanalyzed",
     ):
         stop._local_inputs(analysis_path)
 

@@ -40,6 +40,40 @@ def _git(repo: Path, *args: str) -> str:
     return result.stdout.strip()
 
 
+def _riesz_metric_contract(rtol: float, gate: float) -> dict[str, object]:
+    return {
+        "ksp_type": "cg",
+        "pc_type": "jacobi",
+        "requested_norm_type": "unpreconditioned",
+        "effective_norm_type": "unpreconditioned",
+        "requested_rtol": rtol,
+        "effective_rtol": rtol,
+        "requested_atol": 0.0,
+        "effective_atol": 0.0,
+        "requested_max_it": 5000,
+        "effective_max_it": 5000,
+        "true_residual_rtol_gate": gate,
+        "set_from_petsc_options": False,
+    }
+
+
+def _riesz_solve_contract(rtol: float, gate: float) -> dict[str, object]:
+    return {
+        "ksp_type": "cg",
+        "pc_type": "jacobi",
+        "requested_norm_type": "unpreconditioned",
+        "effective_norm_type": "unpreconditioned",
+        "reported_residual_norm_type": "unpreconditioned",
+        "requested_rtol": rtol,
+        "effective_rtol": rtol,
+        "requested_atol": 0.0,
+        "effective_atol": 0.0,
+        "requested_max_it": 5000,
+        "effective_max_it": 5000,
+        "true_residual_rtol_gate": gate,
+    }
+
+
 def _result_gl(path: Path, target: float) -> None:
     _write_json(
         path,
@@ -63,7 +97,7 @@ def _result_gl(path: Path, target: float) -> None:
     )
 
 
-def _result_he_reference(path: Path) -> None:
+def _result_he_reference(path: Path, rtol: float) -> None:
     _write_json(
         path,
         {
@@ -76,15 +110,16 @@ def _result_he_reference(path: Path) -> None:
                             "dual_residual_relative": 1.0,
                             "state_scale": 1.0,
                             "metric": {
+                                **_riesz_metric_contract(rtol, 1.0e-6),
                                 "provenance": {
                                     "spd_certificate": {"certified_spd": True}
                                 }
                             },
                             "dual_residual_metadata": {
+                                **_riesz_solve_contract(rtol, 1.0e-6),
                                 "iterations": 2,
                                 "reason": 2,
                                 "relative_true_residual": 1.0e-12,
-                                "true_residual_rtol_gate": 1.0e-8,
                             },
                         },
                     }
@@ -110,15 +145,16 @@ def _result_he_nonlinear(path: Path, target: float) -> None:
                             "relative_correction": 1.0e-9,
                             "state_scale": 1.0,
                             "metric": {
+                                **_riesz_metric_contract(1.0e-10, 1.0e-8),
                                 "provenance": {
                                     "spd_certificate": {"certified_spd": True}
                                 }
                             },
                             "dual_residual_metadata": {
+                                **_riesz_solve_contract(1.0e-10, 1.0e-8),
                                 "iterations": 2,
                                 "reason": 2,
                                 "relative_true_residual": 1.0e-12,
-                                "true_residual_rtol_gate": 1.0e-8,
                             },
                         },
                     }
@@ -171,14 +207,15 @@ def _result_p3d_nonlinear(path: Path, target: float) -> None:
             "nonlinear_convergence": {
                 "configuration": {"selection": "reference_elastic_energy"},
                 "metric": {
+                    **_riesz_metric_contract(1.0e-10, 1.0e-8),
                     "provenance": {
                         "spd_certificate": {"certified_spd": True}
                     }
                 },
                 "last_riesz_solve": {
+                    **_riesz_solve_contract(1.0e-10, 1.0e-8),
                     "reason": 2,
                     "relative_true_residual": 1.0e-12,
-                    "true_residual_rtol_gate": 1.0e-8,
                 },
                 "initial_relative_dual_residual": {
                     "value": min(1.0e-9, target / 10.0)
@@ -374,7 +411,7 @@ def _fixture(tmp_path: Path) -> tuple[Path, Path, str]:
             )
             _result_gl(result_path, target)
         elif family == "hyperelasticity_reference_riesz":
-            _result_he_reference(result_path)
+            _result_he_reference(result_path, target)
         elif family == "hyperelasticity_nonlinear_stopping":
             state_path = state_paths[0]
             state_path.parent.mkdir(parents=True, exist_ok=True)
@@ -543,6 +580,65 @@ def test_audit_recomputes_complete_local_policy_grid_and_table(tmp_path: Path) -
     assert table == evidence.render_table(audit)
     assert "necessary but not sufficient" in table
     assert "separately hash-bound EXP-DISC" in table
+
+
+def test_riesz_solver_contract_rejects_inconsistent_provenance() -> None:
+    row = {
+        "row_id": "he_l1_nonlinear_1em08",
+        "parameters": {
+            "riesz_ksp_type": "cg",
+            "riesz_pc_type": "jacobi",
+            "riesz_ksp_norm_type": "unpreconditioned",
+            "riesz_ksp_rtol": 1.0e-10,
+            "riesz_ksp_atol": 0.0,
+            "riesz_ksp_max_it": 5000,
+            "riesz_true_residual_rtol": 1.0e-8,
+        },
+    }
+    metric = _riesz_metric_contract(1.0e-10, 1.0e-8)
+    solve = _riesz_solve_contract(1.0e-10, 1.0e-8)
+    assert (
+        evidence._require_riesz_solver_contract(
+            row,
+            metric=metric,
+            norm_solve=solve,
+        )["norm_type"]
+        == "unpreconditioned"
+    )
+
+    inconsistent = dict(solve)
+    inconsistent["effective_norm_type"] = "preconditioned"
+    with pytest.raises(evidence.AdmissionError, match="provenance differs"):
+        evidence._require_riesz_solver_contract(
+            row,
+            metric=metric,
+            norm_solve=inconsistent,
+        )
+
+
+def test_audit_rejects_hash_consistent_riesz_contract_mutation(tmp_path: Path) -> None:
+    repo, root, _commit = _fixture(tmp_path)
+    plan = evidence.read_strict_json(root / evidence.PLAN_NAME)
+    row = next(
+        value
+        for value in plan["rows"]
+        if value["row_id"] == "he_l1_nonlinear_1em08"
+    )
+    result_path = next(
+        Path(value) for value in row["expected_outputs"] if value.endswith(".json")
+    )
+    payload = evidence.read_strict_json(result_path)
+    convergence = payload["result"]["steps"][0]["convergence"]
+    convergence["dual_residual_metadata"]["effective_rtol"] = 1.0e-6
+    _write_json(result_path, payload)
+
+    receipt_path = root / "receipts/he_l1_nonlinear_1em08.json"
+    receipt = evidence.read_strict_json(receipt_path)
+    receipt["output_hashes"][str(result_path)] = evidence.sha256_file(result_path)
+    _write_json(receipt_path, receipt)
+
+    with pytest.raises(evidence.AdmissionError, match="tolerances differ"):
+        evidence.audit_campaign(root, repo_root=repo)
 
 
 def test_frozen_admission_design_matches_the_actual_plan_producer(

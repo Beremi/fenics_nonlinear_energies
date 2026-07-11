@@ -96,6 +96,45 @@ def test_backend_mix_reference_status_requires_fresh_residual_gate() -> None:
     ) == "failed"
 
 
+def test_gradient_only_policy_preserves_explicit_zero_absolute_tolerance() -> None:
+    policy = case_runner._gradient_stopping_policy(
+        convergence_mode="gradient_only",
+        grad_stop_tol=0.0,
+        grad_stop_rtol=1.0e-8,
+        stop_tol=1.0e-8,
+    )
+    assert policy["configured_absolute"] == 0.0
+    assert policy["gradient_target"] == 0.0
+    assert policy["relative_gradient_target"] == pytest.approx(1.0e-8)
+    assert policy["require_all_convergence"] is False
+
+    relative_only = case_runner._gradient_stopping_policy(
+        convergence_mode="gradient_only",
+        grad_stop_tol=None,
+        grad_stop_rtol=1.0e-8,
+        stop_tol=1.0e-8,
+    )
+    assert relative_only["gradient_target"] == 0.0
+    assert relative_only["relative_gradient_target"] == pytest.approx(1.0e-8)
+
+
+def test_gradient_stopping_policy_rejects_invalid_tolerances() -> None:
+    with pytest.raises(ValueError, match="nonnegative"):
+        case_runner._gradient_stopping_policy(
+            convergence_mode="gradient_only",
+            grad_stop_tol=-1.0,
+            grad_stop_rtol=1.0e-8,
+            stop_tol=1.0e-8,
+        )
+    with pytest.raises(ValueError, match="finite"):
+        case_runner._gradient_stopping_policy(
+            convergence_mode="gradient_only",
+            grad_stop_tol=0.0,
+            grad_stop_rtol=float("nan"),
+            stop_tol=1.0e-8,
+        )
+
+
 @pytest.mark.parametrize("ranks", [1, 2])
 def test_backend_mix_reference_elastic_metric_mpi_smoke(
     tmp_path: Path,

@@ -30,7 +30,10 @@ from experiments.runners import run_exp_stop_001_local_calibration as local
 
 PROTOCOL = REPO_ROOT / "paper/protocols/EXP-STOP-001.md"
 CAMPAIGN_ID = "exp_stop_001_karolina_deferred_v1"
-P4_TARGETS = (1.0e-2, 1.0e-4, 1.0e-6, 1.0e-8)
+P4_TARGETS = local.P3D_NONLINEAR_TARGETS
+P4_REFERENCE_ID = (
+    f"p3d_p4_nonlinear_{local._float_id(min(P4_TARGETS))}_cluster"
+)
 MPI_GROUPS = {
     "ginzburg_landau_mpi_consistency_cluster": ("gl_l6", 16, "01:00:00"),
     "hyperelasticity_mpi_consistency_cluster": ("he_l2_nonlinear", 32, "02:00:00"),
@@ -292,7 +295,7 @@ def build_cases(analysis: Mapping[str, Any], plan: Mapping[str, Any]) -> list[di
                     "element_degree": 4,
                     "quadrature_rule_id": "tetra_24point",
                     "relative_dual_residual_target": target,
-                    "reference_case_id": "p3d_p4_nonlinear_1em08_cluster",
+                    "reference_case_id": P4_REFERENCE_ID,
                     "timing_claim_admissible": False,
                 },
             }
@@ -347,6 +350,9 @@ def prepare(args: argparse.Namespace) -> dict[str, Any]:
         REPO_ROOT / local.RUNNER_PATH,
         REPO_ROOT / local.TRUST_RUNNER_PATH,
         REPO_ROOT / local.P3D_BACKEND_PATH,
+        REPO_ROOT / "src/core/petsc/metrics.py",
+        REPO_ROOT / "src/problems/hyperelasticity/jax_petsc/solver.py",
+        REPO_ROOT / "src/problems/slope_stability_3d/jax_petsc/solver.py",
     }
     return reviewed.prepare_campaign(
         output_root=args.output_root,
@@ -557,7 +563,7 @@ def adjudicate(root: Path, *, expected_checksum: str) -> dict[str, Any]:
         endpoints[case["case_id"]] = _endpoint(row)
     analysis_contract = local_plan["policies"]["analysis_contract"]
     comparisons: dict[str, dict[str, Any]] = {}
-    p4_reference_id = "p3d_p4_nonlinear_1em08_cluster"
+    p4_reference_id = P4_REFERENCE_ID
     p4_reference_row = rows[p4_reference_id]
     p4_reference = endpoints[p4_reference_id]
     for case_id in sorted(case for case in rows if case.startswith("p3d_p4_")):

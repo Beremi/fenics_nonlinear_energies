@@ -2424,6 +2424,67 @@ def _optional_finite(value: object) -> float | None:
     return converted if np.isfinite(converted) else None
 
 
+def _gradient_stopping_policy(
+    *,
+    convergence_mode: str,
+    grad_stop_tol: float | None,
+    grad_stop_rtol: float | None,
+    stop_tol: float,
+) -> dict[str, float | bool | None]:
+    def optional_nonnegative(value: float | None, label: str) -> float | None:
+        if value is None:
+            return None
+        converted = float(value)
+        if not np.isfinite(converted) or converted < 0.0:
+            raise ValueError(f"{label} must be finite and nonnegative")
+        return converted
+
+    mode = str(convergence_mode)
+    absolute = optional_nonnegative(grad_stop_tol, "grad_stop_tol")
+    relative = optional_nonnegative(grad_stop_rtol, "grad_stop_rtol")
+    if mode == "gradient_only":
+        if absolute is None and relative is None:
+            gradient_target = 1.0e-2
+            relative_target = 0.0
+        else:
+            gradient_target = 0.0 if absolute is None else absolute
+            relative_target = 0.0 if relative is None else relative
+        return {
+            "configured_absolute": absolute,
+            "configured_relative": relative,
+            "gradient_target": gradient_target,
+            "relative_gradient_target": relative_target,
+            "combined_gradient_stop": False,
+            "require_all_convergence": False,
+            "energy_tolerance": 0.0,
+            "relative_step_tolerance": 0.0,
+        }
+    if mode != "all":
+        raise ValueError(f"unsupported convergence_mode {mode!r}")
+    combined_gradient_stop = bool(
+        (absolute is not None and absolute > 0.0)
+        or (relative is not None and relative > 0.0)
+    )
+    return {
+        "configured_absolute": absolute,
+        "configured_relative": relative,
+        "gradient_target": (
+            (0.0 if absolute is None else absolute)
+            if combined_gradient_stop
+            else 1.0e100
+        ),
+        "relative_gradient_target": (
+            (0.0 if relative is None else relative)
+            if combined_gradient_stop
+            else 0.0
+        ),
+        "combined_gradient_stop": combined_gradient_stop,
+        "require_all_convergence": True,
+        "energy_tolerance": 1.0e100,
+        "relative_step_tolerance": float(stop_tol),
+    }
+
+
 def _backend_convergence_payload(
     result: dict[str, object],
     *,
@@ -2550,16 +2611,6 @@ def _run_local_solver_backend(
     started = float(stage_started if stage_started is not None else time.perf_counter())
     constraint_variant = normalize_constraint_variant(constraint_variant)
     convergence_mode = str(convergence_mode)
-    grad_stop_tol_value = (
-        float(grad_stop_tol)
-        if grad_stop_tol is not None and np.isfinite(float(grad_stop_tol))
-        else None
-    )
-    grad_stop_rtol_value = (
-        float(grad_stop_rtol)
-        if grad_stop_rtol is not None and np.isfinite(float(grad_stop_rtol))
-        else None
-    )
     progress_path = out_dir / "data" / "progress.jsonl"
 
     def _ensure_pmg_support() -> LocalPMGSupport:
@@ -2842,47 +2893,20 @@ def _run_local_solver_backend(
             "backend does not provide one."
         )
 
-    combined_gradient_stop = bool(
-        convergence_mode != "gradient_only"
-        and (
-            (grad_stop_tol_value is not None and grad_stop_tol_value > 0.0)
-            or (grad_stop_rtol_value is not None and grad_stop_rtol_value > 0.0)
-        )
+    stopping_policy = _gradient_stopping_policy(
+        convergence_mode=convergence_mode,
+        grad_stop_tol=grad_stop_tol,
+        grad_stop_rtol=grad_stop_rtol,
+        stop_tol=stop_tol,
     )
-    if convergence_mode == "gradient_only":
-        grad_target = (
-            float(grad_stop_tol_value)
-            if grad_stop_tol_value is not None and grad_stop_tol_value > 0.0
-            else 1.0e-2
-        )
-        grad_target_rel = (
-            float(grad_stop_rtol_value)
-            if grad_stop_rtol_value is not None and grad_stop_rtol_value > 0.0
-            else 0.0
-        )
-        require_all_convergence = False
-        energy_tol = 0.0
-        step_tol_rel = 0.0
-    elif combined_gradient_stop:
-        grad_target = (
-            float(grad_stop_tol_value)
-            if grad_stop_tol_value is not None and grad_stop_tol_value > 0.0
-            else 0.0
-        )
-        grad_target_rel = (
-            float(grad_stop_rtol_value)
-            if grad_stop_rtol_value is not None and grad_stop_rtol_value > 0.0
-            else 0.0
-        )
-        require_all_convergence = True
-        energy_tol = 1.0e100
-        step_tol_rel = float(stop_tol)
-    else:
-        grad_target = 1.0e100
-        grad_target_rel = 0.0
-        require_all_convergence = True
-        energy_tol = 1.0e100
-        step_tol_rel = float(stop_tol)
+    grad_stop_tol_value = stopping_policy["configured_absolute"]
+    grad_stop_rtol_value = stopping_policy["configured_relative"]
+    grad_target = float(stopping_policy["gradient_target"])
+    grad_target_rel = float(stopping_policy["relative_gradient_target"])
+    combined_gradient_stop = bool(stopping_policy["combined_gradient_stop"])
+    require_all_convergence = bool(stopping_policy["require_all_convergence"])
+    energy_tol = float(stopping_policy["energy_tolerance"])
+    step_tol_rel = float(stopping_policy["relative_step_tolerance"])
 
     try:
         result = local_newton(
@@ -3119,16 +3143,6 @@ def _run_local_solver_backend_with_source_linear(
     started = float(stage_started if stage_started is not None else time.perf_counter())
     constraint_variant = normalize_constraint_variant(constraint_variant)
     convergence_mode = str(convergence_mode)
-    grad_stop_tol_value = (
-        float(grad_stop_tol)
-        if grad_stop_tol is not None and np.isfinite(float(grad_stop_tol))
-        else None
-    )
-    grad_stop_rtol_value = (
-        float(grad_stop_rtol)
-        if grad_stop_rtol is not None and np.isfinite(float(grad_stop_rtol))
-        else None
-    )
     progress_path = out_dir / "data" / "progress.jsonl"
     linear_solver = _make_source_dfgmres_solver(
         pmg_support=pmg_support,
@@ -3282,47 +3296,20 @@ def _run_local_solver_backend_with_source_linear(
 
     solve_t0 = time.perf_counter()
     _append_stage_event(stage_path, stage="local_newton_start", started=started)
-    combined_gradient_stop = bool(
-        convergence_mode != "gradient_only"
-        and (
-            (grad_stop_tol_value is not None and grad_stop_tol_value > 0.0)
-            or (grad_stop_rtol_value is not None and grad_stop_rtol_value > 0.0)
-        )
+    stopping_policy = _gradient_stopping_policy(
+        convergence_mode=convergence_mode,
+        grad_stop_tol=grad_stop_tol,
+        grad_stop_rtol=grad_stop_rtol,
+        stop_tol=stop_tol,
     )
-    if convergence_mode == "gradient_only":
-        grad_target = (
-            float(grad_stop_tol_value)
-            if grad_stop_tol_value is not None and grad_stop_tol_value > 0.0
-            else 1.0e-2
-        )
-        grad_target_rel = (
-            float(grad_stop_rtol_value)
-            if grad_stop_rtol_value is not None and grad_stop_rtol_value > 0.0
-            else 0.0
-        )
-        require_all_convergence = False
-        energy_tol = 0.0
-        step_tol_rel = 0.0
-    elif combined_gradient_stop:
-        grad_target = (
-            float(grad_stop_tol_value)
-            if grad_stop_tol_value is not None and grad_stop_tol_value > 0.0
-            else 0.0
-        )
-        grad_target_rel = (
-            float(grad_stop_rtol_value)
-            if grad_stop_rtol_value is not None and grad_stop_rtol_value > 0.0
-            else 0.0
-        )
-        require_all_convergence = True
-        energy_tol = 1.0e100
-        step_tol_rel = float(stop_tol)
-    else:
-        grad_target = 1.0e100
-        grad_target_rel = 0.0
-        require_all_convergence = True
-        energy_tol = 1.0e100
-        step_tol_rel = float(stop_tol)
+    grad_stop_tol_value = stopping_policy["configured_absolute"]
+    grad_stop_rtol_value = stopping_policy["configured_relative"]
+    grad_target = float(stopping_policy["gradient_target"])
+    grad_target_rel = float(stopping_policy["relative_gradient_target"])
+    combined_gradient_stop = bool(stopping_policy["combined_gradient_stop"])
+    require_all_convergence = bool(stopping_policy["require_all_convergence"])
+    energy_tol = float(stopping_policy["energy_tolerance"])
+    step_tol_rel = float(stopping_policy["relative_step_tolerance"])
 
     try:
         result = local_newton(

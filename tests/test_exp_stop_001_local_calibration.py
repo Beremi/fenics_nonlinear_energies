@@ -31,6 +31,56 @@ def _prepare_args(root: Path, **overrides: object) -> SimpleNamespace:
     return SimpleNamespace(**values)
 
 
+def _riesz_contract_payload(rtol: float, gate: float) -> tuple[dict, dict]:
+    common = {
+        "ksp_type": "cg",
+        "pc_type": "jacobi",
+        "requested_norm_type": "unpreconditioned",
+        "effective_norm_type": "unpreconditioned",
+        "requested_rtol": rtol,
+        "effective_rtol": rtol,
+        "requested_atol": 0.0,
+        "effective_atol": 0.0,
+        "requested_max_it": 5000,
+        "effective_max_it": 5000,
+        "true_residual_rtol_gate": gate,
+    }
+    metric = {**common, "set_from_petsc_options": False}
+    solve = {**common, "reported_residual_norm_type": "unpreconditioned"}
+    return metric, solve
+
+
+def test_producer_riesz_solver_contract_is_fail_closed() -> None:
+    row = {
+        "row_id": "p3d_p1_nonlinear_1em07",
+        "parameters": {
+            "riesz_ksp_type": "cg",
+            "riesz_pc_type": "jacobi",
+            "riesz_ksp_norm_type": "unpreconditioned",
+            "riesz_ksp_rtol": 1.0e-10,
+            "riesz_ksp_atol": 0.0,
+            "riesz_ksp_max_it": 5000,
+            "riesz_true_residual_rtol": 1.0e-8,
+        },
+    }
+    metric, solve = _riesz_contract_payload(1.0e-10, 1.0e-8)
+    contract = campaign._require_riesz_solver_contract(
+        row,
+        metric=metric,
+        norm_solve=solve,
+    )
+    assert contract["norm_type"] == "unpreconditioned"
+
+    changed_gate = dict(solve)
+    changed_gate["true_residual_rtol_gate"] = 1.0e-6
+    with pytest.raises(campaign.CampaignError, match="tolerances differ"):
+        campaign._require_riesz_solver_contract(
+            row,
+            metric=metric,
+            norm_solve=changed_gate,
+        )
+
+
 def test_frozen_default_matrix_is_runnable_and_scientifically_scoped(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -79,6 +129,8 @@ def test_frozen_default_matrix_is_runnable_and_scientifically_scoped(
         row for row in local_rows if row["row_id"] == "he_l1_riesz_1em08"
     )
     assert he_setup["parameters"]["nonlinear_max_iterations"] == 0
+    assert he_setup["parameters"]["riesz_ksp_norm_type"] == "unpreconditioned"
+    assert he_setup["parameters"]["riesz_ksp_atol"] == 0.0
     assert "--maxit" in he_setup["command"]
     assert he_setup["command"][he_setup["command"].index("--maxit") + 1] == "0"
 
@@ -87,6 +139,19 @@ def test_frozen_default_matrix_is_runnable_and_scientifically_scoped(
     )
     assert "--state-out" in he_nonlinear["command"]
     assert he_nonlinear["parameters"]["load_steps"] == 1
+    assert he_nonlinear["parameters"]["riesz_ksp_type"] == "cg"
+    assert he_nonlinear["parameters"]["riesz_pc_type"] == "jacobi"
+    assert he_nonlinear["parameters"]["riesz_ksp_norm_type"] == "unpreconditioned"
+    assert (
+        he_nonlinear["command"][
+            he_nonlinear["command"].index("--riesz-pc-type") + 1
+        ]
+        == "jacobi"
+    )
+    assert (
+        he_setup["command"][he_setup["command"].index("--riesz-pc-type") + 1]
+        == "jacobi"
+    )
 
     p3d_nonlinear = next(
         row for row in local_rows if row["row_id"] == "p3d_p1_nonlinear_1em02"
@@ -94,6 +159,20 @@ def test_frozen_default_matrix_is_runnable_and_scientifically_scoped(
     assert "--convergence-metric" in p3d_nonlinear["command"]
     assert "reference_elastic_energy" in p3d_nonlinear["command"]
     assert "--state-out" in p3d_nonlinear["command"]
+    assert p3d_nonlinear["parameters"]["riesz_ksp_norm_type"] == "unpreconditioned"
+    assert p3d_nonlinear["parameters"]["riesz_ksp_atol"] == 0.0
+    p3d_nonlinear_rows = [
+        row
+        for row in local_rows
+        if row["group_id"] == "p3d_p1_nonlinear"
+    ]
+    assert {
+        row["parameters"]["relative_dual_residual_target"]
+        for row in p3d_nonlinear_rows
+    } == set(campaign.P3D_NONLINEAR_TARGETS)
+    assert [row["row_id"] for row in p3d_nonlinear_rows if row["reference_row"]] == [
+        "p3d_p1_nonlinear_1em07"
+    ]
 
     deferred = [
         row
@@ -152,6 +231,24 @@ def test_clean_preflight_fresh_root_and_p4_attestation(
     assert (root / "receipts").is_dir()
     with pytest.raises(campaign.CampaignError, match="already exists"):
         campaign.prepare_campaign(_prepare_args(root))
+
+
+def test_frozen_plan_design_rejects_command_mutation(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(campaign, "_git_metadata", _clean_git)
+    output_root = tmp_path / "campaign"
+    plan = campaign.build_plan(
+        output_root,
+        run_kind="publication",
+        allow_dirty=False,
+        p4_policy="local",
+        confirm_p4_local_feasible=True,
+    )
+    plan["rows"][0]["command"][-1] = "mutated"
+    with pytest.raises(campaign.CampaignError, match="canonical design"):
+        campaign._verify_frozen_plan_design(plan, output_root=output_root)
 
 
 def test_incomplete_analysis_retains_cluster_censors(

@@ -932,6 +932,7 @@ def _build_certified_reference_elastic_metric(
             true_residual_rtol=float(
                 getattr(args, "riesz_true_residual_rtol", 1.0e-8)
             ),
+            norm_type="unpreconditioned",
             set_from_options=False,
         )
         initial_reference_norm = float(metric.primal_norm(initial_state).value)

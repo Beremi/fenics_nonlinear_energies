@@ -188,6 +188,8 @@ def test_problem_metric_uses_initial_primal_norm_as_dimensioned_state_scale(
         assert state_scale == pytest.approx(np.sqrt(34.0))
         assert metadata["state_scale_source"] == "initial_nonlinear_iterate_primal_norm"
         assert metadata["relative_correction_units"] == "dimensionless"
+        assert metadata["metric"]["requested_norm_type"] == "unpreconditioned"
+        assert metadata["metric"]["effective_norm_type"] == "unpreconditioned"
         assert metadata["metric"]["provenance"]["spd_certificate"]["certified_spd"]
     finally:
         if metric is not None:
@@ -283,6 +285,8 @@ def test_reference_elastic_metric_small_solver_smoke(tmp_path: Path) -> None:
         "reference_elastic_energy",
         "--riesz-ksp-rtol",
         "1e-10",
+        "--riesz-ksp-atol",
+        "0",
         "--riesz-true-residual-rtol",
         "1e-8",
         "--quiet",
@@ -332,6 +336,13 @@ def test_reference_elastic_metric_small_solver_smoke(tmp_path: Path) -> None:
     )
     norm_solve = convergence["last_riesz_solve"]
     assert norm_solve["reason"] > 0
+    assert norm_solve["ksp_type"] == "cg"
+    assert norm_solve["pc_type"] == "jacobi"
+    assert norm_solve["requested_norm_type"] == "unpreconditioned"
+    assert norm_solve["effective_norm_type"] == "unpreconditioned"
+    assert norm_solve["reported_residual_norm_type"] == "unpreconditioned"
+    assert norm_solve["requested_atol"] == 0.0
+    assert norm_solve["effective_atol"] == 0.0
     assert norm_solve["rhs_norm"] == pytest.approx(payload["final_grad_norm"])
     assert norm_solve["relative_true_residual"] <= norm_solve[
         "true_residual_rtol_gate"

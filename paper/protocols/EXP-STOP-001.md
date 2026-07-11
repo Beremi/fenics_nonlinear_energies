@@ -33,12 +33,14 @@ executes the locally feasible portion of this card. Its default plan contains
 - HyperElasticity reference-Riesz setup/terminal-residual checks on levels 1
   and 2 at norm-solve tolerances `1e-8`, `1e-10`, and `1e-12`;
 - one-load-step nonlinear HyperElasticity endpoints on levels 1 and 2 at the
-  four residual targets above;
+  four residual targets above, with the CG stopping test evaluated in the
+  unpreconditioned Euclidean residual norm;
 - Plasticity3D P1/P2 fixed-state tangent solves at requested KSP tolerances
   `1e-2`, `1e-4`, `1e-6`, `1e-8`, and `1e-10`, with an independently rebuilt
   true residual; and
-- full nonlinear reference-Riesz Plasticity3D P1/P2 endpoints at the four
-  residual targets above.
+- full nonlinear reference-Riesz Plasticity3D P1/P2 endpoints at relative
+  targets `1e-2`, `1e-4`, `1e-6`, and `1e-7`, using the same unpreconditioned
+  CG stopping-norm contract and independent true-residual check.
 
 The default plan also retains 12 explicit censors: five P4 fixed-state rows
 whose local feasibility has not been attested, four nonlinear P4 rows, and one
@@ -79,6 +81,35 @@ evidence. A missing row leaves the analysis incomplete. A failed local command
 is retained as an unclassified runtime censor, and failure of the tightest
 same-discretization reference invalidates that comparison group.
 
+The first clean local plan at commit `ae34cf7` completed all eight scalar rows
+and all six HyperElasticity setup rows. Its first nonlinear HyperElasticity row
+then failed the independent Riesz-solve gate: PETSc had stopped CG in its
+default preconditioned norm, but the certification rebuilt the Euclidean
+relative residual and obtained $7.97 \times 10^{-8}$, above the required
+$1 \times 10^{-8}$. The immutable receipt is
+`artifacts/reproduction/exp_stop_001_local_ae34cf7/receipts/he_l1_nonlinear_1em02.json`;
+its frozen plan has SHA-256
+`ff76474db1a7f0dfc3b0dfa51541a564450f57ae52e1e95abed304515b080f3f`.
+Tightening the tolerance without changing the norm left the discrepancy
+unchanged. The corrected metric selects the unpreconditioned norm explicitly,
+records the requested and effective norm types, and retains the independent
+gate. A fresh single-commit plan must reproduce all 45 local rows before
+admission.
+
+Subsequent bounded Plasticity3D P1/P2 probes were run from a dirty worktree and
+remain unarchived implementation diagnostics, not publication evidence. They
+exposed two defects: explicit zero was replaced by the legacy absolute
+dual-residual threshold, and a nonzero inverse-Riesz absolute tolerance could
+terminate CG for a small right-hand side. Alternative Armijo,
+residual-bisection, and trust-region probes did not satisfy the original
+$1 \times 10^{-8}$ P1 target. The corrected backend preserves explicit zero,
+treats a relative-only policy as having no absolute threshold, and rejects
+negative or nonfinite tolerances. Those probes motivated the prespecified
+$1 \times 10^{-7}$ scoped reference and zero inverse-Riesz absolute tolerance;
+their numerical outcomes remain inadmissible until the clean campaign
+reproduces them on both P1 and P2. Final acceptance also remains conditional on
+the discretization-error gate.
+
 ## Reviewed Karolina completion path
 
 After a clean local plan has executed all 45 locally feasible rows, the
@@ -94,7 +125,7 @@ missing receipts or altered policy fields cannot cross this handoff.
 
 | Cluster row group | Ranks | Nodes | Wall-time ceiling per row | Rows |
 | --- | ---: | ---: | ---: | ---: |
-| Plasticity3D `P4(L1)` nonlinear targets $10^{-2}$, $10^{-4}$, $10^{-6}$, and $10^{-8}$ | 32 | 1 | 4 h | 4 |
+| Plasticity3D `P4(L1)` nonlinear targets $10^{-2}$, $10^{-4}$, $10^{-6}$, and $10^{-7}$ | 32 | 1 | 4 h | 4 |
 | Ginzburg--Landau MPI consistency at the selected level-6 policy | 16 | 1 | 1 h | 1 |
 | HyperElasticity MPI consistency at the selected level-2 nonlinear policy | 32 | 1 | 2 h | 1 |
 | Plasticity3D `P2(L1)` MPI consistency at the selected nonlinear policy | 32 | 1 | 4 h | 1 |
@@ -283,11 +314,11 @@ tier passes.
    Record the achieved true residual and state correction for every row.
 3. **Nonlinear stopping sweep.** On a small smooth case, HyperElasticity on at
    least two mesh levels, and Plasticity3D `P1(L1)`, `P2(L1)`, and `P4(L1)`,
-   cross the accepted linear policy with
-   Riesz-scaled nonlinear residual targets from `1e-2` through `1e-6` and a
-   correction criterion. Save every successful endpoint. A cap, divergence,
-   nonfinite value, or branch-changing endpoint remains an explicit censored
-   row.
+   cross the accepted linear policy with Riesz-scaled nonlinear residual
+   targets from `1e-2` through `1e-6`, plus the scoped tight references `1e-8`
+   for HyperElasticity and `1e-7` for Plasticity3D. Save every successful
+   endpoint. A cap, divergence, nonfinite value, or branch-changing endpoint
+   remains an explicit censored row.
 4. **Observable adjudication.** Compare energy, work, maximum displacement,
    branch fractions, scaled state, nonlinear work, and Krylov work with the
    tightest successful same-discretization reference. A candidate policy is
