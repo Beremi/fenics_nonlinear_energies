@@ -43,9 +43,32 @@ The following is the only command exercised while preparing the paper:
 
 ```bash
 DRY_RUN=1 \
-CAMPAIGN_ID=paper_revision_karolina_prepared_v9 \
+CAMPAIGN_ID=paper_revision_karolina_prepared_v10 \
 bash experiments/runners/paper_revision_karolina/submit_prepared_campaigns.sh
 ```
+
+The latest scheduler-free preparation was generated from clean commit
+`f62b4278ae59ad8eefe3b41aa43c127a149148ee`. The following four archives
+contain plans only; no scientific process or scheduler command was launched:
+
+- `paper_revision_karolina_prepared_v10`: 115 required rows,
+  99.95 node-hours, plan SHA-256
+  `d84c798cbf19dfc86dfe1a558fee5db5f0e0cf5a6f084a034e629d733f4fd08c`;
+- `paper_revision_karolina_route_optional_v10`: 30 optional Tier-B rows,
+  45.00 node-hours, plan SHA-256
+  `abcd425bc49ea4fa00615d989649e93266a80d05929a8816a1a166f8dbf8772b`;
+- `paper_revision_karolina_p3d_scaling_optional_v10`: three optional
+  Plasticity3D rows, 17.50 node-hours, plan SHA-256
+  `9dc349b92f32c7f5672d1c5d4180731f95af3b179d5bba15f6a37d03893374de`;
+- `exp_route_001_prepared_v10`: 12 workstation blocks and 36 normalized
+  route-process commands, with `route_processes_launched: 0` and plan SHA-256
+  `ce3a518889516288dfa1017fea638b697770c13e56e6151193d2fd366ccec04f`.
+
+All three Karolina manifests record `source_dirty: false`, the common
+32-source freeze SHA-256
+`dd037cf6c09fce89c34627e13f0c51e080dc5d0dd847384449c436da7df1a88a`,
+and `offline_preflight.status: passed`. A future real execution must use the
+exact recorded commit or regenerate fresh plans from a later clean commit.
 
 Route evidence has four non-overlapping tranches: the required 76-row
 cost-model training scope, optional 20-row Tier-B training scope, required
