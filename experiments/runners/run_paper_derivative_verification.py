@@ -7,6 +7,7 @@ import argparse
 import json
 import os
 import platform
+import resource
 import subprocess
 import sys
 from pathlib import Path
@@ -397,6 +398,8 @@ def verify_assembled_route_equivalence(
     hessian_atol: float,
     hessian_rtol: float,
     symmetry_tolerance: float,
+    sfd_hvp_batch_size: int,
+    memory_guard_total_gib: float,
 ) -> dict[str, object]:
     """Compare all maintained local derivative routes without solving a system."""
     from mpi4py import MPI
@@ -454,6 +457,8 @@ def verify_assembled_route_equivalence(
         "distribution_strategy": "overlap_allgather",
         "use_near_nullspace": False,
         "assembly_backend": "coo",
+        "sfd_hvp_batch_size": int(sfd_hvp_batch_size),
+        "memory_guard_total_gib": float(memory_guard_total_gib),
     }
     route_specs = (
         ("element_ad", "element", "element"),
@@ -502,6 +507,11 @@ def verify_assembled_route_equivalence(
                 "hessian_symmetry_defect": symmetry_defect,
                 "assembly_mode": str(timing.get("assembly_mode", "")),
                 "hessian_nonzeros": int(values.size),
+                "sfd_recovery": assembler.sfd_summary(),
+                "process_rss_hwm_gib": float(
+                    int(resource.getrusage(resource.RUSAGE_SELF).ru_maxrss) * 1024
+                )
+                / float(1024**3),
             }
         finally:
             grad.destroy()
@@ -581,9 +591,28 @@ def verify_assembled_route_equivalence(
         name: {
             key: value
             for key, value in snapshot.items()
-            if key not in {"gradient", "indptr", "indices", "hessian_values"}
+            if key
+            not in {
+                "gradient",
+                "indptr",
+                "indices",
+                "hessian_values",
+                "process_rss_hwm_gib",
+                "sfd_recovery",
+            }
         }
         for name, snapshot in snapshots.items()
+    }
+    execution_resources = {
+        "memory_guard_total_gib": float(memory_guard_total_gib),
+        "requested_sfd_hvp_batch_size": int(sfd_hvp_batch_size),
+        "routes": {
+            name: {
+                "process_rss_hwm_gib": float(snapshot["process_rss_hwm_gib"]),
+                "sfd_recovery": snapshot["sfd_recovery"],
+            }
+            for name, snapshot in snapshots.items()
+        },
     }
     all_finite = bool(
         all(
@@ -635,6 +664,7 @@ def verify_assembled_route_equivalence(
         },
         "branch_diagnostics": branch_diagnostics,
         "routes": routes,
+        "execution_resources": execution_resources,
         "pairwise_comparisons": comparisons,
         "all_values_finite": all_finite,
         "all_hessians_symmetric_within_tolerance": symmetry_passed,
@@ -771,6 +801,10 @@ def verify_state(
 
 
 def run(args: argparse.Namespace) -> dict[str, object]:
+    if int(args.assembled_sfd_hvp_batch_size) <= 0:
+        raise ValueError("assembled_sfd_hvp_batch_size must be positive")
+    if float(args.assembled_memory_guard_gib) <= 0.0:
+        raise ValueError("assembled_memory_guard_gib must be positive")
     data = _load_element(
         str(args.mesh_name), int(args.degree), int(args.element_index), float(args.lambda_target)
     )
@@ -834,6 +868,8 @@ def run(args: argparse.Namespace) -> dict[str, object]:
             hessian_atol=float(args.assembled_hessian_atol),
             hessian_rtol=float(args.assembled_hessian_rtol),
             symmetry_tolerance=float(args.assembled_symmetry_tolerance),
+            sfd_hvp_batch_size=int(args.assembled_sfd_hvp_batch_size),
+            memory_guard_total_gib=float(args.assembled_memory_guard_gib),
         )
     passed = bool(
         fixed_element_passed
@@ -928,6 +964,8 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--assembled-hessian-atol", type=float, default=1.0e-8)
     parser.add_argument("--assembled-hessian-rtol", type=float, default=1.0e-12)
     parser.add_argument("--assembled-symmetry-tolerance", type=float, default=1.0e-12)
+    parser.add_argument("--assembled-sfd-hvp-batch-size", type=int, default=4)
+    parser.add_argument("--assembled-memory-guard-gib", type=float, default=48.0)
     parser.add_argument("--output", type=Path, required=True)
     return parser
 

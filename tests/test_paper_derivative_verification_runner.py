@@ -105,6 +105,15 @@ def test_p3d_assembled_derivative_routes_agree_without_a_solver(tmp_path: Path) 
         "constitutive_ad",
     }
     assert assembled["routes"]["local_sfd"]["assembly_mode"] == "sfd_overlap_local"
+    resources = assembled["execution_resources"]
+    assert resources["routes"]["local_sfd"]["sfd_recovery"]["backend"] == (
+        "petsc_scalar_distance2_component_lift"
+    )
+    assert resources["routes"]["local_sfd"]["sfd_recovery"]["validated"] is True
+    assert resources["routes"]["local_sfd"]["sfd_recovery"]["hvp_batch_size"] == 4
+    assert resources["routes"]["local_sfd"]["process_rss_hwm_gib"] > 0.0
+    assert resources["requested_sfd_hvp_batch_size"] == 4
+    assert resources["memory_guard_total_gib"] == 48.0
     assert assembled["algebraic_scope"]["linear_solver_called"] is False
     assert assembled["algebraic_scope"]["nonlinear_solver_called"] is False
     assert assembled["algebraic_scope"]["ksp_tolerance_used_for_comparison"] is None
