@@ -39,13 +39,71 @@ contain no `--exclusive`, `--mem`, or `--mem-per-cpu` option.
 
 ## Safe local preparation
 
-The following is the only command exercised while preparing the paper:
+The following scheduler-free commands were exercised from clean commit
+`c18fbac73208ab5176d0af47adaf5b34f0aeb6e4`. Each driver inherited a 32 GiB
+address-space limit. None of the commands contains `--execute`, and no
+scientific process, scheduler admission test, or scheduler submission was
+launched.
 
 ```bash
-DRY_RUN=1 \
-CAMPAIGN_ID=paper_revision_karolina_prepared_v10 \
-bash experiments/runners/paper_revision_karolina/submit_prepared_campaigns.sh
+/usr/bin/prlimit --as=34359738368:34359738368 -- \
+  /usr/bin/env DRY_RUN=1 MAX_NODE_HOURS=100 \
+  CAMPAIGN_ID=paper_revision_karolina_prepared_v11_c18fbac \
+  bash experiments/runners/paper_revision_karolina/submit_prepared_campaigns.sh
+
+/usr/bin/prlimit --as=34359738368:34359738368 -- \
+  /usr/bin/env DRY_RUN=1 MAX_NODE_HOURS=100 ONLY_OPTIONAL=1 \
+  EXPERIMENTS=EXP-ROUTE-001 \
+  CAMPAIGN_ID=paper_revision_karolina_route_optional_v11_c18fbac \
+  bash experiments/runners/paper_revision_karolina/submit_prepared_campaigns.sh
+
+/usr/bin/prlimit --as=34359738368:34359738368 -- \
+  /usr/bin/env DRY_RUN=1 MAX_NODE_HOURS=100 ONLY_OPTIONAL=1 \
+  EXPERIMENTS=EXP-SCALE-001 \
+  CAMPAIGN_ID=paper_revision_karolina_p3d_scaling_optional_v11_c18fbac \
+  bash experiments/runners/paper_revision_karolina/submit_prepared_campaigns.sh
+
+/usr/bin/env -u WORKSTATION_RUN_CONFIRMED \
+  JAX_PLATFORMS=cpu JAX_ENABLE_X64=True OMP_NUM_THREADS=1 \
+  OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1 NUMEXPR_NUM_THREADS=1 \
+  XLA_PYTHON_CLIENT_PREALLOCATE=false \
+  XLA_FLAGS=--xla_cpu_multi_thread_eigen=false \
+  /usr/bin/prlimit --as=34359738368:34359738368 -- \
+  ./.venv/bin/python experiments/runners/run_workstation_route_campaign.py \
+  --plan paper/protocols/EXP-ROUTE-001-workstation-plan.json \
+  --out-root artifacts/reproduction/paper_revision_workstation/exp_route_001_prepared_v11_c18fbac \
+  --python ./.venv/bin/python --run-id prepared-v11-c18fbac \
+  --expected-commit c18fbac73208ab5176d0af47adaf5b34f0aeb6e4 \
+  --row-wall-s 3600 --campaign-wall-s 43200
 ```
+
+The resulting current inventories are:
+
+- `paper_revision_karolina_prepared_v11_c18fbac`: 115 required rows,
+  99.95 node-hours, plan SHA-256
+  `d84c798cbf19dfc86dfe1a558fee5db5f0e0cf5a6f084a034e629d733f4fd08c`;
+- `paper_revision_karolina_route_optional_v11_c18fbac`: 30 optional Tier-B
+  rows, 45.00 node-hours, plan SHA-256
+  `48dcc38250ea1986628250f77b1bc7e5955ac81d9c9207b8861ede06eb25293d`;
+- `paper_revision_karolina_p3d_scaling_optional_v11_c18fbac`: three optional
+  Plasticity3D rows, 17.50 node-hours, plan SHA-256
+  `9dc349b92f32c7f5672d1c5d4180731f95af3b179d5bba15f6a37d03893374de`;
+- `exp_route_001_prepared_v11_c18fbac`: 12 workstation blocks and 36
+  normalized route-process commands, with `route_processes_launched: 0` and
+  plan SHA-256
+  `29932cfb0f8371b5aad890229a41e920799d7e49f867483f6730e0660cacee91`.
+
+All three Karolina archives have `source_dirty: false`, the common 38-source
+freeze SHA-256
+`ca229777598d19318882c60309592ad3dcc2b1d261b381307d5619f9610d8dbe`,
+and a repeated `offline_preflight.status: passed`. The combined Tier-B archive
+is an inventory only: it records
+`pending_required_before_scheduler_contact` and `submission_admissible: false`
+because the seven cluster STOP results and final adjudication do not yet exist.
+A future real execution must regenerate separate training and holdout archives
+from an authorized clean commit and bind the same valid STOP adjudication.
+
+### Superseded version-10 provenance
 
 The following version-10 scheduler-free archives were generated from clean
 commit `f62b4278ae59ad8eefe3b41aa43c127a149148ee`. They contain plans only; no

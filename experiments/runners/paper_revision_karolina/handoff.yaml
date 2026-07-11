@@ -57,31 +57,39 @@ campaign:
   total_node_hours: 162.45
   total_jobs: 148
   latest_scheduler_free_inventory:
-    source_commit: f62b4278ae59ad8eefe3b41aa43c127a149148ee
+    source_commit: c18fbac73208ab5176d0af47adaf5b34f0aeb6e4
     scheduler_contacted: false
-    reviewed_source_count: 37
-    source_freeze_sha256: dd037cf6c09fce89c34627e13f0c51e080dc5d0dd847384449c436da7df1a88a
+    scientific_processes_launched: 0
+    reviewed_source_count: 38
+    source_freeze_sha256: ca229777598d19318882c60309592ad3dcc2b1d261b381307d5619f9610d8dbe
     required:
-      root: artifacts/reproduction/paper_revision_karolina/paper_revision_karolina_prepared_v10
+      root: artifacts/reproduction/paper_revision_karolina/paper_revision_karolina_prepared_v11_c18fbac
       rows: 115
       estimated_node_hours: 99.95
       plan_sha256: d84c798cbf19dfc86dfe1a558fee5db5f0e0cf5a6f084a034e629d733f4fd08c
+      offline_preflight_status: passed
     optional_tier_b:
-      root: artifacts/reproduction/paper_revision_karolina/paper_revision_karolina_route_optional_v10
+      root: artifacts/reproduction/paper_revision_karolina/paper_revision_karolina_route_optional_v11_c18fbac
       rows: 30
       estimated_node_hours: 45.00
-      plan_sha256: abcd425bc49ea4fa00615d989649e93266a80d05929a8816a1a166f8dbf8772b
+      plan_sha256: 48dcc38250ea1986628250f77b1bc7e5955ac81d9c9207b8861ede06eb25293d
+      offline_preflight_status: passed
+      stopping_gate_status: pending_required_before_scheduler_contact
+      submission_admissible: false
     optional_plasticity3d_scaling:
-      root: artifacts/reproduction/paper_revision_karolina/paper_revision_karolina_p3d_scaling_optional_v10
+      root: artifacts/reproduction/paper_revision_karolina/paper_revision_karolina_p3d_scaling_optional_v11_c18fbac
       rows: 3
       estimated_node_hours: 17.50
       plan_sha256: 9dc349b92f32c7f5672d1c5d4180731f95af3b179d5bba15f6a37d03893374de
+      offline_preflight_status: passed
     workstation:
-      root: artifacts/reproduction/paper_revision_workstation/exp_route_001_prepared_v10
+      root: artifacts/reproduction/paper_revision_workstation/exp_route_001_prepared_v11_c18fbac
       blocks: 12
       route_process_commands: 36
       route_processes_launched: 0
-      plan_sha256: ce3a518889516288dfa1017fea638b697770c13e56e6151193d2fd366ccec04f
+      status: prepared_not_executed
+      address_space_limit_bytes: 34359738368
+      plan_sha256: 29932cfb0f8371b5aad890229a41e920799d7e49f867483f6730e0660cacee91
   route_analysis_contract: paper/protocols/EXP-ROUTE-001-analysis-contract.json
   route_analysis_contract_sha256: 22e63a402cdeab9f4127f72ecf8dcbe15dabbeea4f002f34f7571e92c862d5de
   route_endpoint_analyzer: experiments/analysis/analyze_plasticity3d_route_endpoints.py
